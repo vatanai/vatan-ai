@@ -10,7 +10,7 @@
   --green:#0BBF53; --accent:#a07af5; --red:#f05c5c; --orange:#f5923a;
 }
 *{box-sizing:border-box;}
-body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
+body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 
 /* ── LAYOUT ── */
 .admin-wrap{display:flex;min-height:100vh;}
@@ -41,7 +41,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .breadcrumb a{color:var(--text2);text-decoration:none;transition:color .15s;}
 .breadcrumb a:hover{color:var(--text);}
 .breadcrumb .current{color:var(--text);font-weight:600;}
-.hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
+.hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
 
@@ -71,7 +71,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .form-label{font-size:12px;font-weight:600;color:var(--text2);}
 .form-label .req{color:var(--red);margin-right:2px;}
 .form-label .hint{font-size:10px;font-weight:400;color:var(--text3);margin-right:4px;}
-.form-input,.form-select,.form-textarea{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:'Vazirmatn',sans-serif;outline:none;direction:rtl;transition:border-color .15s;width:100%;}
+.form-input,.form-select,.form-textarea{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:'IRANSansXFaNum',sans-serif;outline:none;direction:rtl;transition:border-color .15s;width:100%;}
 .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
 .form-textarea{resize:vertical;min-height:90px;line-height:1.6;}
 .form-input::placeholder,.form-textarea::placeholder{color:var(--text3);}
@@ -94,7 +94,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .tag-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(160,122,245,.12);border:1px solid rgba(160,122,245,.25);border-radius:6px;padding:3px 8px;font-size:11.5px;color:var(--accent);}
 .tag-chip button{background:none;border:none;cursor:pointer;color:var(--text3);padding:0;line-height:1;font-size:11px;}
 .tag-chip button:hover{color:var(--red);}
-.tags-input-wrap input{background:none;border:none;outline:none;font-family:'Vazirmatn',sans-serif;font-size:13px;color:var(--text);flex:1;min-width:80px;direction:rtl;}
+.tags-input-wrap input{background:none;border:none;outline:none;font-family:'IRANSansXFaNum',sans-serif;font-size:13px;color:var(--text);flex:1;min-width:80px;direction:rtl;}
 
 /* upload zones */
 .upload-zone{border:1.5px dashed var(--b2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--s1);}
@@ -112,7 +112,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .model-badge-primary{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);white-space:nowrap;}
 .model-badge-fallback{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(160,122,245,.08);color:var(--accent);border:1px solid rgba(160,122,245,.2);white-space:nowrap;}
 .model-drag{color:var(--text3);cursor:grab;font-size:13px;flex-shrink:0;}
-.model-remove{background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:4px 8px;border-radius:6px;transition:all .15s;font-family:'Vazirmatn',sans-serif;white-space:nowrap;}
+.model-remove{background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:4px 8px;border-radius:6px;transition:all .15s;font-family:'IRANSansXFaNum',sans-serif;white-space:nowrap;}
 .model-remove:hover{background:rgba(240,92,92,.1);color:var(--red);}
 
 /* input schema builder */
@@ -125,7 +125,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .req-toggle:not(.on){color:var(--text3);}
 .field-remove{width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);transition:all .15s;}
 .field-remove:hover{border-color:var(--red);color:var(--red);background:rgba(240,92,92,.05);}
-.add-field-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1.5px dashed var(--b2);background:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Vazirmatn',sans-serif;transition:all .15s;}
+.add-field-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1.5px dashed var(--b2);background:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;}
 .add-field-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(160,122,245,.04);}
 
 /* prompt */
@@ -139,7 +139,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 
 /* footer */
 .form-footer{position:sticky;bottom:0;background:var(--s1);border-top:1px solid var(--b1);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;z-index:40;}
-.btn-lg{display:inline-flex;align-items:center;gap:8px;padding:0 22px;height:40px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;}
+.btn-lg{display:inline-flex;align-items:center;gap:8px;padding:0 22px;height:40px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;}
 .btn-primary{background:var(--accent);color:#fff;}
 .btn-primary:hover{background:#8f68e0;}
 .btn-secondary{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
@@ -190,11 +190,11 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div class="snav-sub-label">داشبورد محصولات</div>
           <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(245,146,58,.08);color:var(--orange);border:1px solid rgba(245,146,58,.2);">در حال طراحی</span>
         </div>
-        <a href="/admin/dashboard/products" class="snav-sub-item" style="text-decoration:none;">
+        <a href="/admin/products" class="snav-sub-item" style="text-decoration:none;">
           <div class="snav-dot"></div>
           <div class="snav-sub-label">لیست محصولات</div>
         </a>
-        <a href="/admin/dashboard/products/create" class="snav-sub-item active" style="text-decoration:none;">
+        <a href="/admin/products/create" class="snav-sub-item active" style="text-decoration:none;">
           <div class="snav-dot"></div>
           <div class="snav-sub-label">ثبت محصول جدید</div>
         </a>
@@ -236,12 +236,12 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div class="breadcrumb">
         <a href="/admin/dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i></a>
         <span style="color:var(--text3);font-size:10px;"><i class="fa-solid fa-chevron-left"></i></span>
-        <a href="/admin/dashboard/products">محصولات</a>
+        <a href="/admin/products">محصولات</a>
         <span style="color:var(--text3);font-size:10px;"><i class="fa-solid fa-chevron-left"></i></span>
         <span class="current">ثبت محصول جدید</span>
       </div>
       <div style="flex:1;"></div>
-      <a href="/admin/dashboard/products" class="hdr-btn hdr-btn-outline">
+      <a href="/admin/products" class="hdr-btn hdr-btn-outline">
         <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i>
         بازگشت به لیست
       </a>
@@ -931,7 +931,7 @@ function saveDraft(e) {
 }
 function submitProduct() {
   if (confirm('محصول به‌صورت نهایی ثبت شود؟')) {
-    window.location.href = '/admin/dashboard/products';
+    window.location.href = '/admin/products';
   }
 }
 </script>

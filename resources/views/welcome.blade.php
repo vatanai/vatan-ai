@@ -221,4 +221,4 @@
         @endif
     </body>
 </html>
-<link href="https://cdn.jsdelivr.net/npm/vazirmatn@33.003/Vazirmatn.css" rel="stylesheet">
+<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">

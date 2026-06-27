@@ -11,7 +11,7 @@
   --green: #0BBF53; --accent: #a07af5; --red: #f05c5c; --orange: #f5923a;
 }
 * { box-sizing: border-box; }
-body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(--text); direction: rtl; }
+body { font-family: 'IRANSansXFaNum', sans-serif; background: var(--bg); color: var(--text); direction: rtl; }
 
 /* ── LAYOUT ── */
 .admin-wrap  { display: flex; min-height: 100vh; }
@@ -44,7 +44,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(-
 .breadcrumb a:hover { color: var(--text); }
 .breadcrumb .sep { color: var(--text3); font-size: 10px; }
 .breadcrumb .current { color: var(--text); font-weight: 600; }
-.hdr-btn { display: flex; align-items: center; gap: 6px; padding: 0 14px; height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; font-family: 'Vazirmatn', sans-serif; transition: all .15s; text-decoration: none; }
+.hdr-btn { display: flex; align-items: center; gap: 6px; padding: 0 14px; height: 34px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; font-family: 'IRANSansXFaNum', sans-serif; transition: all .15s; text-decoration: none; }
 .hdr-btn-primary { background: var(--accent); color: #fff; }
 .hdr-btn-primary:hover { background: #8f68e0; }
 .hdr-btn-outline { background: var(--s2); color: var(--text2); border: 1px solid var(--b1); }
@@ -61,10 +61,10 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(-
 /* ── FILTER BAR ── */
 .filter-bar { background: var(--s2); border: 1px solid var(--b1); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .filter-search { flex: 1; min-width: 200px; position: relative; }
-.filter-search input { width: 100%; background: var(--s1); border: 1px solid var(--b1); border-radius: 8px; padding: 8px 36px 8px 12px; font-size: 13px; color: var(--text); font-family: 'Vazirmatn', sans-serif; outline: none; direction: rtl; }
+.filter-search input { width: 100%; background: var(--s1); border: 1px solid var(--b1); border-radius: 8px; padding: 8px 36px 8px 12px; font-size: 13px; color: var(--text); font-family: 'IRANSansXFaNum', sans-serif; outline: none; direction: rtl; }
 .filter-search input:focus { border-color: var(--accent); }
 .filter-search .icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; }
-.filter-select { background: var(--s1); border: 1px solid var(--b1); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--text2); font-family: 'Vazirmatn', sans-serif; outline: none; cursor: pointer; direction: rtl; min-width: 130px; }
+.filter-select { background: var(--s1); border: 1px solid var(--b1); border-radius: 8px; padding: 8px 12px; font-size: 12.5px; color: var(--text2); font-family: 'IRANSansXFaNum', sans-serif; outline: none; cursor: pointer; direction: rtl; min-width: 130px; }
 .filter-select:focus { border-color: var(--accent); }
 .filter-count { font-size: 12px; color: var(--text3); margin-right: auto; white-space: nowrap; }
 
@@ -149,16 +149,16 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(-
         <i class="fa-solid fa-chevron-down" style="font-size:9px;color:var(--text3);"></i>
       </div>
       <div class="snav-sub">
-        <div class="snav-sub-item" onclick="window.location='/admin/dashboard/products/overview'">
+        <div class="snav-sub-item" onclick="window.location='/admin/products/overview'">
           <div class="snav-dot"></div>
           <div class="snav-sub-label">داشبورد محصولات</div>
           <span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(245,146,58,.08);color:var(--orange);border:1px solid rgba(245,146,58,.2);">در حال طراحی</span>
         </div>
-        <a href="/admin/dashboard/products" class="snav-sub-item active" style="text-decoration:none;">
+        <a href="/admin/products" class="snav-sub-item active" style="text-decoration:none;">
           <div class="snav-dot"></div>
           <div class="snav-sub-label">لیست محصولات</div>
         </a>
-        <a href="/admin/dashboard/products/create" class="snav-sub-item" style="text-decoration:none;">
+        <a href="/admin/products/create" class="snav-sub-item" style="text-decoration:none;">
           <div class="snav-dot"></div>
           <div class="snav-sub-label">ثبت محصول جدید</div>
         </a>
@@ -214,7 +214,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(-
       <div class="breadcrumb">
         <a href="/admin/dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i></a>
         <span class="sep"><i class="fa-solid fa-chevron-left" style="font-size:8px;"></i></span>
-        <a href="/admin/dashboard/products">محصولات</a>
+        <a href="/admin/products">محصولات</a>
         <span class="sep"><i class="fa-solid fa-chevron-left" style="font-size:8px;"></i></span>
         <span class="current">لیست محصولات</span>
       </div>
@@ -223,7 +223,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--bg); color: var(-
         <i class="fa-solid fa-arrow-down-to-line" style="font-size:11px;"></i>
         خروجی Excel
       </button>
-      <a href="/admin/dashboard/products/create" class="hdr-btn hdr-btn-primary">
+      <a href="/admin/products/create" class="hdr-btn hdr-btn-primary">
         <i class="fa-solid fa-plus" style="font-size:11px;"></i>
         ثبت محصول جدید
       </a>

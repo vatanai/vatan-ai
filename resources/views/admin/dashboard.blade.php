@@ -75,17 +75,17 @@
 .crm-kanban-card-title{font-size:13px;line-height:1.5;margin-bottom:8px;color:var(--text)}
 .crm-kanban-card-meta{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3)}
 .crm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.crm-modal{background:var(--s2);border:1px solid var(--b2);border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;font-family:'Vazirmatn',sans-serif}
+.crm-modal{background:var(--s2);border:1px solid var(--b2);border-radius:12px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;font-family:'IRANSansXFaNum',sans-serif}
 .crm-modal-header{padding:18px 20px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
 .crm-modal-title{font-size:15px;font-weight:600;color:var(--text)}
 .crm-modal-body{padding:20px}
 .crm-modal-footer{padding:14px 20px;border-top:1px solid var(--b1);display:flex;gap:8px;justify-content:flex-end}
 .crm-form-row{margin-bottom:14px}
 .crm-form-label{font-size:12px;color:var(--text2);margin-bottom:6px;display:block}
-.crm-form-input{font-family:'Vazirmatn',sans-serif;font-size:13px;color:var(--text);background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;outline:none;width:100%;direction:rtl}
+.crm-form-input{font-family:'IRANSansXFaNum',sans-serif;font-size:13px;color:var(--text);background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;outline:none;width:100%;direction:rtl}
 .crm-form-input:focus{border-color:var(--accent)}
 .crm-form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.crm-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s1);color:var(--text);font-family:'Vazirmatn',sans-serif;transition:background .15s}
+.crm-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s1);color:var(--text);font-family:'IRANSansXFaNum',sans-serif;transition:background .15s}
 .crm-btn:hover{background:var(--b1)}
 .crm-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .crm-btn-primary:hover{opacity:0.9}
@@ -133,7 +133,7 @@
 .crm-chart-bar-fill{width:100%;border-radius:6px 6px 0 0;transition:height .6s ease}
 .crm-chart-bar-label{font-size:11px;color:var(--text3)}
 .crm-toggle-group{display:inline-flex;gap:4px;background:var(--b1);padding:3px;border-radius:8px}
-.crm-toggle-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:none;background:none;color:var(--text2);cursor:pointer;font-family:'Vazirmatn',sans-serif}
+.crm-toggle-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:none;background:none;color:var(--text2);cursor:pointer;font-family:'IRANSansXFaNum',sans-serif}
 .crm-toggle-btn.active{background:var(--s1);color:var(--text);font-weight:600}
 .crm-team-card{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:16px 18px}
 .crm-team-stats{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px}
@@ -150,7 +150,7 @@
 .crm-personnel-perf-count{font-size:11px;color:var(--text3);min-width:50px}
 .crm-member-avatar-mini{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;border:2px solid var(--s2);margin-inline-start:-8px;flex-shrink:0}
 .crm-member-avatar-mini:first-child{margin-inline-start:0}
-.datepicker-plot-area{background:var(--s2)!important;border:1px solid var(--b1)!important;border-radius:12px!important;font-family:'Vazirmatn',sans-serif!important;box-shadow:0 8px 32px rgba(0,0,0,0.4)!important;direction:rtl!important}
+.datepicker-plot-area{background:var(--s2)!important;border:1px solid var(--b1)!important;border-radius:12px!important;font-family:'IRANSansXFaNum',sans-serif!important;box-shadow:0 8px 32px rgba(0,0,0,0.4)!important;direction:rtl!important}
 .datepicker-plot-area .header-view{background:var(--s1)!important;border-bottom:1px solid var(--b1)!important;border-radius:12px 12px 0 0!important;color:var(--text)!important}
 .datepicker-plot-area .day-view .table td,.datepicker-plot-area .day-view .table th{color:var(--text2)!important;font-size:12px!important}
 .datepicker-plot-area .day-view .table td.selected{background:var(--accent)!important;color:#fff!important;border-radius:50%!important}
@@ -241,10 +241,10 @@
       </div>
       <div class="sub-nav hidden pt-[2px] pb-1">
         <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','داشبورد محصولات')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">داشبورد محصولات</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
-        <a href="/admin/dashboard/products" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست محصولات</div></a>
-        <a href="/admin/dashboard/products/create" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ثبت محصول جدید</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">جدید</span></a>
-        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','دسته‌بندی‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">دسته‌بندی‌ها</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
-        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','قیمت‌گذاری')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیمت‌گذاری</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+        <a href="/admin/products" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست محصولات</div></a>
+        <a href="/admin/products/create" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ثبت محصول جدید</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">جدید</span></a>
+        <a href="/admin/products/categories" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">دسته‌بندی‌ها</div></a>
+        <a href="/admin/products/pricing" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیمت‌گذاری</div></a>
       </div>
 
       <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'سفارشات')">
@@ -841,8 +841,8 @@
   <div id="crm-page-kanban" style="display:none">
     <h2 style="font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:14px"><i class="fa-solid fa-chart-kanban"></i> وضعیت پروژه‌ها</h2>
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px">
-      <input type="text" id="crm-kanban-search" oninput="crmRenderKanban()" placeholder="جستجوی پروژه..." style="font-family:'Vazirmatn',sans-serif;font-size:12px;padding:6px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--text);outline:none;direction:rtl;flex:1;min-width:160px">
-      <select id="crm-kanban-manager-filter" onchange="crmRenderKanban()" style="font-family:'Vazirmatn',sans-serif;font-size:12px;padding:6px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--text);outline:none;direction:rtl">
+      <input type="text" id="crm-kanban-search" oninput="crmRenderKanban()" placeholder="جستجوی پروژه..." style="font-family:'IRANSansXFaNum',sans-serif;font-size:12px;padding:6px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--text);outline:none;direction:rtl;flex:1;min-width:160px">
+      <select id="crm-kanban-manager-filter" onchange="crmRenderKanban()" style="font-family:'IRANSansXFaNum',sans-serif;font-size:12px;padding:6px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;color:var(--text);outline:none;direction:rtl">
         <option value="">مدیر پروژه (همه)</option>
       </select>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)">
@@ -868,7 +868,7 @@
       <div style="margin-bottom:16px">
         <div style="position:relative">
           <i class="fa-solid fa-magnifying-glass" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:12px"></i>
-          <input type="text" id="crm-personnel-search" class="bg-s1 border border-b1 rounded-[10px] text-[13px] text-watan-text" style="width:100%;height:38px;padding:0 38px 0 14px;outline:none;font-family:'Vazirmatn',sans-serif" placeholder="جستجوی پرسنل..." oninput="crmRenderPersonnel()">
+          <input type="text" id="crm-personnel-search" class="bg-s1 border border-b1 rounded-[10px] text-[13px] text-watan-text" style="width:100%;height:38px;padding:0 38px 0 14px;outline:none;font-family:'IRANSansXFaNum',sans-serif" placeholder="جستجوی پرسنل..." oninput="crmRenderPersonnel()">
         </div>
         <div id="crm-personnel-search-count" style="font-size:11px;color:var(--text3);margin-top:6px"></div>
       </div>
@@ -1120,7 +1120,7 @@ function openShamsiPicker(inputEl) {
   picker.style.cssText = `
     position:fixed;z-index:9999;background:var(--s2);border:1px solid var(--b1);
     border-radius:12px;padding:12px;width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.5);
-    font-family:'Vazirmatn',sans-serif;direction:rtl;
+    font-family:'IRANSansXFaNum',sans-serif;direction:rtl;
   `;
 
   function render(y,m) {
@@ -1134,10 +1134,10 @@ function openShamsiPicker(inputEl) {
           style="background:var(--b1);border:none;color:var(--text);border-radius:6px;
           width:28px;height:28px;cursor:pointer;font-size:14px">‹</button>
         <div style="display:flex;gap:4px;align-items:center">
-          <select onchange="this.closest('.shamsi-picker')._monthChange(this.value)" style="background:var(--b1);border:none;color:var(--text);border-radius:6px;padding:2px 6px;font-family:'Vazirmatn',sans-serif;font-size:12px;cursor:pointer">
+          <select onchange="this.closest('.shamsi-picker')._monthChange(this.value)" style="background:var(--b1);border:none;color:var(--text);border-radius:6px;padding:2px 6px;font-family:'IRANSansXFaNum',sans-serif;font-size:12px;cursor:pointer">
             ${['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'].map((name,i)=>`<option value="${i+1}" ${m===i+1?'selected':''}>${name}</option>`).join('')}
           </select>
-          <select onchange="this.closest('.shamsi-picker')._yearChange(this.value)" style="background:var(--b1);border:none;color:var(--text);border-radius:6px;padding:2px 6px;font-family:'Vazirmatn',sans-serif;font-size:12px;cursor:pointer">
+          <select onchange="this.closest('.shamsi-picker')._yearChange(this.value)" style="background:var(--b1);border:none;color:var(--text);border-radius:6px;padding:2px 6px;font-family:'IRANSansXFaNum',sans-serif;font-size:12px;cursor:pointer">
             ${Array.from({length:11},(_,i)=>1400+i).map(yr=>`<option value="${yr}" ${y===yr?'selected':''}>${ShamsiCal.toFA(yr)}</option>`).join('')}
           </select>
         </div>
@@ -1173,12 +1173,12 @@ function openShamsiPicker(inputEl) {
         display:flex;justify-content:space-between">
         <button onclick="this.closest('.shamsi-picker')._pick(...ShamsiCal.today())"
           style="background:var(--b1);border:none;color:var(--text2);border-radius:6px;
-          padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Vazirmatn',sans-serif">
+          padding:4px 10px;font-size:11px;cursor:pointer;font-family:'IRANSansXFaNum',sans-serif">
           امروز
         </button>
         <button onclick="this.closest('.shamsi-picker').remove()"
           style="background:transparent;border:none;color:var(--text3);
-          font-size:11px;cursor:pointer;font-family:'Vazirmatn',sans-serif">
+          font-size:11px;cursor:pointer;font-family:'IRANSansXFaNum',sans-serif">
           بستن
         </button>
       </div>

@@ -78,8 +78,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
 
     // صفحات UI ادمین (موحسن)
     Route::get('/crm',             fn() => view('admin.crm'))->name('crm');
-    Route::get('/products',        fn() => view('admin.products'))->name('products');
-    Route::get('/products/create', fn() => view('admin.products-create'))->name('products.create');
+    Route::get('/products',            fn() => view('admin.products'))->name('products');
+    Route::get('/products/create',     fn() => view('admin.products-create'))->name('products.create');
+    Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
+    Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
+    Route::get('/orders',              fn() => view('admin.orders'))->name('orders');
+    Route::get('/analytics',           fn() => view('admin.analytics'))->name('analytics');
     Route::get('/jobs',            fn() => view('admin.jobs'))->name('jobs');
     Route::get('/payments',        fn() => view('admin.payments'))->name('payments');
     Route::get('/bloggers',        fn() => view('admin.bloggers'))->name('bloggers');

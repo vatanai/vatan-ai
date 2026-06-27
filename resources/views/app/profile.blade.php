@@ -27,24 +27,24 @@
           </div>
         </div>
         <div style="text-align:center;">
-          <p class="profile-name" style="font-size:14px;font-weight:700;color:#ffffff;margin:0;font-family:'Yekan','Vazirmatn',sans-serif;">محسن آقاجانی</p>
-          <p class="profile-phone" style="font-size:12px;color:#a8c4a8;margin:3px 0 0 0;font-family:'Yekan','Vazirmatn',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+          <p class="profile-name" style="font-size:14px;font-weight:700;color:#ffffff;margin:0;font-family:'Yekan','IRANSansXFaNum',sans-serif;">محسن آقاجانی</p>
+          <p class="profile-phone" style="font-size:12px;color:#a8c4a8;margin:3px 0 0 0;font-family:'Yekan','IRANSansXFaNum',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
         </div>
       </div>
 
       {{-- Stats --}}
       <div style="display:flex;flex:1;justify-content:space-around;align-items:center;direction:rtl;">
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">۳۵</span>
-          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','Vazirmatn',sans-serif;">پست</span>
+          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">۳۵</span>
+          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;">پست</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">۱۸۱۰</span>
-          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','Vazirmatn',sans-serif;">ساخته‌شده</span>
+          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">۱۸۱۰</span>
+          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;">ساخته‌شده</span>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">۱۴</span>
-          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','Vazirmatn',sans-serif;">روز عضویت</span>
+          <span class="profile-stat-number" style="font-size:22px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">۱۴</span>
+          <span class="profile-stat-label" style="font-size:12px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;">روز عضویت</span>
         </div>
       </div>
 
@@ -64,14 +64,14 @@
 
       {{-- پشتیبانی --}}
       <button type="button" data-card="support"
-        style="flex:1;border-radius:10px;padding:10px 0;border:1px solid #222230;background:#16161c;color:#ffffff;font-size:14px;font-weight:700;font-family:'Yekan','Vazirmatn',sans-serif;cursor:pointer;">
+        style="flex:1;border-radius:10px;padding:10px 0;border:1px solid #222230;background:#16161c;color:#ffffff;font-size:14px;font-weight:700;font-family:'Yekan','IRANSansXFaNum',sans-serif;cursor:pointer;">
         پشتیبانی
       </button>
 
       {{-- خرید اشتراک ویژه + badge --}}
-      <button type="button" style="flex:1;border-radius:10px;padding:10px 12px;background:#0BBF53;color:#ffffff;font-size:14px;font-weight:700;font-family:'Yekan','Vazirmatn',sans-serif;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;">
+      <button type="button" style="flex:1;border-radius:10px;padding:10px 12px;background:#0BBF53;color:#ffffff;font-size:14px;font-weight:700;font-family:'Yekan','IRANSansXFaNum',sans-serif;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;">
         <span>خرید اشتراک ویژه</span>
-        <span style="background:#e91e8c;color:#ffffff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;font-family:'Yekan','Vazirmatn',sans-serif;white-space:nowrap;">
+        <span style="background:#e91e8c;color:#ffffff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;font-family:'Yekan','IRANSansXFaNum',sans-serif;white-space:nowrap;">
           ۱۵٪ تخفیف
         </span>
       </button>
@@ -84,10 +84,10 @@
     <div data-card="affiliate" style="background:#0d2818;border:1px solid #1a5c32;border-radius:10px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;direction:rtl;gap:12px;">
 
       <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-        <p style="color:#0BBF53;font-size:14px;font-weight:700;margin:0;font-family:'Yekan','Vazirmatn',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">برنامه ویژه کسب درآمد مستمر</p>
+        <p style="color:#0BBF53;font-size:14px;font-weight:700;margin:0;font-family:'Yekan','IRANSansXFaNum',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">برنامه ویژه کسب درآمد مستمر</p>
       </div>
 
-      <button style="background:#0BBF53;color:#ffffff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;border:none;white-space:nowrap;font-family:'Yekan','Vazirmatn',sans-serif;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:6px;">
+      <button style="background:#0BBF53;color:#ffffff;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;border:none;white-space:nowrap;font-family:'Yekan','IRANSansXFaNum',sans-serif;cursor:pointer;flex-shrink:0;display:flex;align-items:center;gap:6px;">
         <i class="fa-solid fa-crown" style="color:#ffffff;font-size:20px;"></i>
         همکاری در فروش
       </button>
@@ -159,8 +159,8 @@
             <img src="https://i.pravatar.cc/150?img=12" style="width:100%;height:100%;object-fit:cover;">
           </div>
           <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">محسن آقاجانی</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;font-family:'Yekan','Vazirmatn',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">محسن آقاجانی</p>
+            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
           </div>
         </div>
         <button id="theme-toggle" type="button" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
@@ -171,13 +171,13 @@
       {{-- تنظیمات --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #222230;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">تنظیمات</span>
+        <span style="font-size:13px;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">تنظیمات</span>
       </div>
 
       {{-- خروج --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <i class="fa-solid fa-right-from-bracket" style="font-size:14px;color:#f05c5c;width:16px;text-align:center;"></i>
-        <span style="font-size:13px;color:#f05c5c;font-family:'Yekan','Vazirmatn',sans-serif;">خروج</span>
+        <span style="font-size:13px;color:#f05c5c;font-family:'Yekan','IRANSansXFaNum',sans-serif;">خروج</span>
       </div>
 
     </div>
@@ -207,7 +207,7 @@
     min-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
-    font-family: 'Yekan', 'Vazirmatn', sans-serif;
+    font-family: 'Yekan', 'IRANSansXFaNum', sans-serif;
   }
 
   .home-logo-wrap {

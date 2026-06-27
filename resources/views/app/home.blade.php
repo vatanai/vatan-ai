@@ -55,8 +55,8 @@
             <img src="https://i.pravatar.cc/150?img=12" style="width:100%;height:100%;object-fit:cover;">
           </div>
           <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">محسن آقاجانی</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;font-family:'Yekan','Vazirmatn',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">محسن آقاجانی</p>
+            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
           </div>
         </div>
         <button id="theme-toggle" type="button" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
@@ -67,13 +67,13 @@
       {{-- تنظیمات --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #222230;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:#ffffff;font-family:'Yekan','Vazirmatn',sans-serif;">تنظیمات</span>
+        <span style="font-size:13px;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">تنظیمات</span>
       </div>
 
       {{-- خروج --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <i class="fa-solid fa-right-from-bracket" style="font-size:14px;color:#f05c5c;width:16px;text-align:center;"></i>
-        <span style="font-size:13px;color:#f05c5c;font-family:'Yekan','Vazirmatn',sans-serif;">خروج</span>
+        <span style="font-size:13px;color:#f05c5c;font-family:'Yekan','IRANSansXFaNum',sans-serif;">خروج</span>
       </div>
 
     </div>

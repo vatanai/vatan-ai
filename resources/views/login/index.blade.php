@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>ورود | وطن استودیو</title>
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 @vite(['resources/css/app.css'])
 </head>
-<body class="m-0 min-h-screen min-h-[100dvh] flex items-center justify-center p-6 max-[480px]:p-4 bg-bg text-watan-text font-[Vazirmatn,_sans-serif]">
+<body class="m-0 min-h-screen min-h-[100dvh] flex items-center justify-center p-6 max-[480px]:p-4 bg-bg text-watan-text font-[IRANSansXFaNum,_sans-serif]">
 
 <div class="fixed inset-0 -z-10 bg-bg overflow-hidden before:content-[''] before:absolute before:rounded-full before:blur-[90px] before:opacity-[0.14] before:w-[420px] before:h-[420px] before:bg-green before:-top-[120px] before:-right-[100px] after:content-[''] after:absolute after:rounded-full after:blur-[90px] after:opacity-[0.14] after:w-[380px] after:h-[380px] after:bg-green after:-bottom-[140px] after:-left-[100px]"></div>
 

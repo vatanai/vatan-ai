@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AIPIX — هوش مصنوعی</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Vazirmatn', sans-serif;
+            font-family: 'IRANSansXFaNum', sans-serif;
             background: #000000;
             color: #ffffff;
             min-height: 100vh;
@@ -49,7 +47,7 @@
             height: 54px;
             background: #0BBF53;
             color: #ffffff;
-            font-family: 'Vazirmatn', sans-serif;
+            font-family: 'IRANSansXFaNum', sans-serif;
             font-size: 16px;
             font-weight: 700;
             border: none;
