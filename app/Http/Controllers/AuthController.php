@@ -233,13 +233,25 @@ class AuthController extends Controller
      */
     public function loginWithEmail(Request $request)
     {
-        $credentials = $request->validate([
-            'email'    => 'required|email',
+        $request->validate([
+            'email'    => 'required|string',
             'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials, true)) {
-            $request->session()->regenerate(); // امنیت سشن
+        $input    = $request->input('email');
+        $password = $request->input('password');
+
+        // تلاش با ایمیل
+        $user = \App\Models\User::where('email', $input)->first();
+
+        // اگر پیدا نشد، با نام کاربری (name) جستجو کن
+        if (!$user) {
+            $user = \App\Models\User::where('name', $input)->first();
+        }
+
+        if ($user && Hash::check($password, $user->password)) {
+            Auth::login($user, true);
+            $request->session()->regenerate();
 
             $this->bindGuestGenerations(Auth::id());
 
@@ -248,20 +260,23 @@ class AuthController extends Controller
                 message: 'وارد حساب کاربری شد',
                 userId: Auth::id(),
                 level: 'success',
-                meta: ['method' => 'email', 'email' => $credentials['email']],
+                meta: ['method' => 'email', 'input' => $input],
             );
 
-            return response()->json(['message' => 'ورود موفقیت‌آمیز بود.']);
+            return response()->json([
+                'message'     => 'ورود موفقیت‌آمیز بود.',
+                'redirect_to' => '/admin/dashboard',
+            ]);
         }
 
         ActivityLog::record(
             type: 'login_failed',
-            message: 'تلاش ناموفق برای ورود (ایمیل یا رمز عبور اشتباه)',
+            message: 'تلاش ناموفق برای ورود',
             level: 'warning',
-            meta: ['email' => $credentials['email']],
+            meta: ['input' => $input],
         );
 
-        return response()->json(['message' => 'ایمیل یا رمز عبور اشتباه است.'], 422);
+        return response()->json(['message' => 'نام کاربری یا رمز عبور اشتباه است.'], 422);
     }
 
     /**

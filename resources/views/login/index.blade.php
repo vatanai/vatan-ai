@@ -414,7 +414,33 @@ document.querySelectorAll('.otp-box').forEach((box, i, all) => {
 syncStageHeight();
 window.addEventListener('load', syncStageHeight);
 window.addEventListener('resize', syncStageHeight);
+
+function adminLogin() {
+  const u = document.getElementById('admin-user').value.trim();
+  const p = document.getElementById('admin-pass').value.trim();
+  const err = document.getElementById('admin-err');
+  if (!u || !p) { err.textContent = 'پر کن'; err.style.display='block'; return; }
+  err.style.display = 'none';
+  fetch('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ email: u, password: p }),
+  })
+  .then(async r => { const d = await r.json(); return { ok: r.ok, d }; })
+  .then(({ ok, d }) => {
+    if (!ok) { err.textContent = d.message || 'خطا'; err.style.display='block'; return; }
+    window.location.href = d.redirect_to || '/admin/dashboard';
+  })
+  .catch(() => { err.textContent = 'خطای شبکه'; err.style.display='block'; });
+}
 </script>
+
+<div style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111116;border:1px solid #222230;border-radius:14px;padding:14px 18px;display:flex;gap:8px;align-items:center;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+  <input id="admin-user" type="text" placeholder="یوزرنیم" value="mohsen" style="background:#0c0c10;border:1px solid #222230;border-radius:8px;padding:7px 10px;color:#fff;font-family:'IRANSansXFaNum',sans-serif;font-size:12px;width:90px;outline:none;" dir="ltr">
+  <input id="admin-pass" type="password" placeholder="رمز" value="11111" style="background:#0c0c10;border:1px solid #222230;border-radius:8px;padding:7px 10px;color:#fff;font-family:'IRANSansXFaNum',sans-serif;font-size:12px;width:70px;outline:none;" dir="ltr">
+  <button onclick="adminLogin()" style="background:#0BBF53;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:'IRANSansXFaNum',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">ادمین</button>
+  <span id="admin-err" style="color:#f05c5c;font-size:11px;display:none;"></span>
+</div>
 
 </body>
 </html>
