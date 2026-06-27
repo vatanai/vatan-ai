@@ -1,289 +1,250 @@
-{{-- resources/views/admin/partials/sidebar.blade.php --}}
-<aside id="adminSidebar" class="fixed inset-y-0 right-0 z-50 w-72 bg-[#121217] border-l border-white/5 flex flex-col justify-between sidebar-transition transform translate-x-full lg:translate-x-0">
+<aside class="sidebar fixed top-0 bottom-0 right-0 z-[100] w-64 min-h-screen bg-s1 border-l border-b1 flex flex-col overflow-y-auto max-[900px]:translate-x-full max-[900px]:transition-transform max-[900px]:duration-[250ms] max-[900px]:shadow-[-12px_0_32px_rgba(0,0,0,0.4)]" style="scrollbar-width:none;-ms-overflow-style:none;" onscroll="void(0)">
 
-    {{-- دکمه شناور باز/بسته کردن سایدبار - روی لبه، وسط ارتفاع --}}
-    <button onclick="toggleSidebarCollapse()" class="hidden lg:flex absolute top-1/2 -translate-y-1/2 -left-3.5 w-7 h-7 bg-[#1c1c24] hover:bg-[#0BBF53] border border-white/10 hover:border-[#0BBF53] rounded-full items-center justify-center text-[#8a91ad] hover:text-[#0d0d12] cursor-pointer shadow-lg shadow-black/40 z-50 group" id="collapseBtn" title="تغییر اندازه منو">
-        <i class="fa-solid fa-chevron-left text-[10px] transition-transform duration-300" id="collapseIcon"></i>
-    </button>
+  <div class="flex items-center gap-[10px] py-[18px] px-4 border-b border-b1 flex-shrink-0">
+    <div class="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-[0_0_16px_rgba(11,191,83,0.25)]" style="background:rgba(11,191,83,.08);border:1px solid rgba(11,191,83,.2);">
+      <img src="/assets/img/iconvatanai.svg" alt="Vatan AI" class="w-6 h-6" style="filter:drop-shadow(0 0 4px rgba(11,191,83,.4));">
+    </div>
+    <div>
+      <div class="text-sm font-extrabold text-watan-text tracking-[-0.3px]">وطن استودیو</div>
+      <div class="text-[9px] text-watan-text3 tracking-[2.5px] uppercase mt-px">Admin Panel</div>
+    </div>
+  </div>
 
-    {{-- محتوای سایدبار بدون اسکرول‌بار ظاهری --}}
-    <div class="flex flex-col flex-1 overflow-y-auto custom-hide-scrollbar">
-        
-        {{-- بخش هدر سایدبار (لوگو) --}}
-        <div class="flex items-center justify-between px-6 py-5 border-b border-white/5 sidebar-header-wrapper">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-[#0BBF53]/10 text-[#0BBF53] flex items-center justify-center font-black text-lg min-w-[36px]">
-                    و
-                </div>
-                <div class="sidebar-text-element transition-opacity duration-200">
-                    <div class="text-sm font-black text-white">وطن استودیو</div>
-                    <div class="text-[10px] text-[#454c6c] font-bold tracking-wider uppercase mt-0.5">Admin Panel</div>
-                </div>
-            </div>
-        </div>
+  <div class="flex items-center gap-[10px] py-3 px-[14px] border-b border-b1 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-[#6a4dcc] flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0">م</div>
+    <div class="flex-1 min-w-0">
+      <div class="text-xs font-bold text-watan-text">محسن رضایی</div>
+      <div class="text-[9px] font-bold py-px px-[6px] rounded-[4px] bg-accent/[0.1] text-accent border border-accent/[0.25] inline-block mt-[2px]">مدیر کل</div>
+    </div>
+    <div class="w-[7px] h-[7px] rounded-full bg-green shadow-[0_0_6px_rgb(var(--green))] flex-shrink-0"></div>
+  </div>
 
-        {{-- مشخصات کاربر لاگین شده --}}
-        <div class="flex items-center justify-between mx-4 my-4 p-3 bg-white/[0.02] border border-white/5 rounded-2xl user-box">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-sm min-w-[40px]">
-                    م
-                </div>
-                <div class="sidebar-text-element transition-opacity duration-200">
-                    <div class="text-xs font-bold text-white">محسن رضایی</div>
-                    <div class="text-[10px] text-[#8a91ad] mt-0.5">مدیر کل</div>
-                </div>
-            </div>
-            <div class="w-2 h-2 rounded-full bg-[#0BBF53] shadow-[0_0_8px_rgba(11,191,83,0.5)] sidebar-text-element"></div>
-        </div>
+  <nav class="flex-1 py-2">
 
-        {{-- منوهای ناوبری کامل با تشخیص وضعیت فعال --}}
-        <nav class="flex-1 px-4 py-2 space-y-6" id="sidebarNav">
-
-            {{-- بخش مرکز فرماندهی --}}
-            <div class="space-y-1">
-                @php $dashboardActive = request()->is('admin/dashboard') || request()->routeIs('admin.dashboard'); @endphp
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center justify-between px-4 h-11 border rounded-xl font-bold text-xs transition-all relative group {{ $dashboardActive ? 'bg-[#0BBF53]/10 text-[#0BBF53] border-[#0BBF53]/20' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02] border-transparent' }}">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-bolt-lightning text-sm w-4 text-center min-w-[16px] {{ $dashboardActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                        <span class="sidebar-text-element">مرکز فرماندهی</span>
-                    </div>
-                    <span class="px-1.5 py-0.5 text-[10px] font-black rounded-md bg-red-500 text-white sidebar-text-element">۳</span>
-                    <span class="sidebar-tooltip">مرکز فرماندهی</span>
-                </a>
-            </div>
-
-            {{-- بخش نظارت --}}
-            <div class="space-y-1">
-                <div class="text-[10px] font-bold text-[#454c6c] px-4 uppercase tracking-wider mb-2 sidebar-text-element">نظارت</div>
-                
-                {{-- داشبورد --}}
-                @php $monitorActive = request()->is('admin/stats*') || request()->is('admin/dashboard/stats*'); @endphp
-                <div class="has-submenu">
-                    <button onclick="toggleSubmenu(this)" class="w-full flex items-center justify-between px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $monitorActive ? 'text-white bg-white/[0.04]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-chart-line text-sm w-4 text-center min-w-[16px] {{ $monitorActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                            <span class="font-bold sidebar-text-element">داشبورد</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-left text-[10px] transition-transform arrow-icon text-[#4a5170] sidebar-text-element {{ $monitorActive ? '-rotate-90 text-white' : '' }}"></i>
-                        <span class="sidebar-tooltip">داشبورد</span>
-                    </button>
-                    <div class="submenu-items {{ $monitorActive ? '' : 'hidden' }} mr-6 my-1 pr-4 border-r-2 border-[#0BBF53]/40 space-y-0.5">
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/stats/realtime') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">آمار لحظه‌ای</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/stats/monthly') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">آمار روزانه و ماهانه</a>
-                        <a href="#" class="flex items-center justify-between h-9 text-xs transition-colors {{ request()->is('admin/stats/alerts') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-                            <span class="sidebar-text-element">هشدارها</span>
-                            <span class="px-1.5 py-0.5 text-[8px] font-bold rounded bg-red-500 text-white">۳</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            {{-- بخش مدیریت --}}
-            <div class="space-y-1">
-                <div class="text-[10px] font-bold text-[#454c6c] px-4 uppercase tracking-wider mb-2 sidebar-text-element">مدیریت</div>
-                
-                {{-- کاربران --}}
-                @php $usersActive = request()->is('admin/users*'); @endphp
-                <div class="has-submenu">
-                    <button onclick="toggleSubmenu(this)" class="w-full flex items-center justify-between px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $usersActive ? 'text-white bg-white/[0.04]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-users text-sm w-4 text-center min-w-[16px] {{ $usersActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                            <span class="font-bold sidebar-text-element">کاربران</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-left text-[10px] transition-transform arrow-icon text-[#4a5170] sidebar-text-element {{ $usersActive ? '-rotate-90 text-white' : '' }}"></i>
-                        <span class="sidebar-tooltip">کاربران</span>
-                    </button>
-                 <div class="submenu-items {{ $usersActive ? '' : 'hidden' }} mr-6 my-1 pr-4 border-r-2 border-[#0BBF53]/40 space-y-0.5">
-    
-    {{-- لینک لیست کاربران --}}
-    <a href="{{ route('admin.users.index') }}" class="flex items-center h-9 text-xs transition-colors {{ request()->routeIs('admin.users.index') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-        لیست کاربران
-    </a>
-    
-    {{-- لینک لاگ‌های همگانی سیستم --}}
-    <a href="{{ route('admin.users.all_logs') }}" class="flex items-center h-9 text-xs transition-colors {{ request()->routeIs('admin.users.all_logs') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-        لاگ‌ها
-    </a>
-
-    <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/users/smart') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-        لیست‌های هوشمند
-    </a>
-    
-    <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/users/tokens') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-        مدیریت توکن
-    </a>
-</div>
-                </div>
-
-                {{-- بلاگرها --}}
-                @php $bloggersActive = request()->is('admin/bloggers*'); @endphp
-                <div class="has-submenu">
-                    <button onclick="toggleSubmenu(this)" class="w-full flex items-center justify-between px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $bloggersActive ? 'text-white bg-white/[0.04]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-bullhorn text-sm w-4 text-center min-w-[16px] {{ $bloggersActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                            <span class="font-bold sidebar-text-element">بلاگرها</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-left text-[10px] transition-transform arrow-icon text-[#4a5170] sidebar-text-element {{ $bloggersActive ? '-rotate-90 text-white' : '' }}"></i>
-                        <span class="sidebar-tooltip">بلاگرها</span>
-                    </button>
-                    <div class="submenu-items {{ $bloggersActive ? '' : 'hidden' }} mr-6 my-1 pr-4 border-r-2 border-[#0BBF53]/40 space-y-0.5">
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/bloggers/list') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">لیست بلاگرها</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/bloggers/links') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">ساخت لینک اختصاصی</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/bloggers/commission') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">مدیریت کمیسیون</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/bloggers/traffic') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">گزارش ترافیک</a>
-                    </div>
-                </div>
-
-                {{-- بخش محصولات (پرامپت‌های هوش مصنوعی) --}}
-                @php $promptsActive = request()->routeIs('admin.prompts.*') || request()->is('admin/prompts*'); @endphp
-                <div class="has-submenu">
-                    <button onclick="toggleSubmenu(this)" class="w-full flex items-center justify-between px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $promptsActive ? 'text-white bg-white/[0.04]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-palette text-sm w-4 text-center min-w-[16px] {{ $promptsActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                            <span class="font-bold sidebar-text-element">محصولات (AI)</span>
-                        </div>
-                        <i class="fa-solid fa-chevron-left text-[10px] transition-transform arrow-icon text-[#4a5170] sidebar-text-element {{ $promptsActive ? '-rotate-90 text-white' : '' }}"></i>
-                        <span class="sidebar-tooltip">محصولات (AI)</span>
-                    </button>
-                    <div class="submenu-items {{ $promptsActive ? '' : 'hidden' }} mr-6 my-1 pr-4 border-r-2 border-[#0BBF53] space-y-0.5">
-                        <a href="{{ route('admin.prompts.index') }}" class="flex items-center h-9 text-xs transition-colors {{ request()->routeIs('admin.prompts.index') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-                            <i class="fa-solid fa-minus text-[8px] ml-2 text-[#4a5170]"></i> <span class="sidebar-text-element">لیست پرامپت‌ها (سبک‌ها)</span>
-                        </a>
-                        <a href="{{ route('admin.prompts.create') }}" class="flex items-center justify-between h-9 text-xs transition-colors {{ request()->routeIs('admin.prompts.create') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-                            <div class="flex items-center">
-                                <i class="fa-solid fa-minus text-[8px] ml-2 text-[#4a5170]"></i>
-                                <span class="sidebar-text-element">افزودن پرامپت جدید</span>
-                            </div>
-                            <span class="px-1 py-0.5 text-[8px] font-black rounded bg-[#0BBF53]/10 text-[#0BBF53] border border-[#0BBF53]/20 sidebar-text-element">جدید</span>
-                        </a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/prompts/dynamic-fields') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">
-                            <i class="fa-solid fa-minus text-[8px] ml-2 text-[#4a5170]"></i> <span class="sidebar-text-element">فیلدهای داینامیک</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            {{-- بخش ارتباطات --}}
-            <div class="space-y-1">
-                <div class="text-[10px] font-bold text-[#454c6c] px-4 uppercase tracking-wider mb-2 sidebar-text-element">ارتباطات</div>
-                
-                {{-- تیکت‌ها --}}
-                @php $ticketsActive = request()->is('admin/tickets*'); @endphp
-                <div class="has-submenu">
-                    <button onclick="toggleSubmenu(this)" class="w-full flex items-center justify-between px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $ticketsActive ? 'text-white bg-white/[0.04]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                        <div class="flex items-center gap-3">
-                            <i class="fa-solid fa-ticket text-sm w-4 text-center min-w-[16px] {{ $ticketsActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                            <span class="font-bold sidebar-text-element">تیکت‌ها</span>
-                        </div>
-                        <div class="flex items-center gap-2 sidebar-text-element">
-                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-red-500/10 text-red-400">۷</span>
-                            <i class="fa-solid fa-chevron-left text-[10px] transition-transform arrow-icon text-[#4a5170] {{ $ticketsActive ? '-rotate-90 text-white' : '' }}"></i>
-                        </div>
-                        <span class="sidebar-tooltip">تیکت‌ها</span>
-                    </button>
-                    <div class="submenu-items {{ $ticketsActive ? '' : 'hidden' }} mr-6 my-1 pr-4 border-r-2 border-[#0BBF53]/40 space-y-0.5">
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/tickets/open') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">تیکت‌های باز</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/tickets/pending') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">در حال بررسی</a>
-                        <a href="#" class="flex items-center h-9 text-xs transition-colors {{ request()->is('admin/tickets/ai-reply') ? 'text-[#0BBF53] font-bold' : 'text-[#5a6184] hover:text-[#0BBF53]' }}">پاسخ هوش مصنوعی</a>
-                    </div>
-                </div>
-            </div>
-
-            {{-- بخش مالی و سیستم --}}
-            <div class="space-y-1">
-                <div class="text-[10px] font-bold text-[#454c6c] px-4 uppercase tracking-wider mb-2 sidebar-text-element">سیستم و مالی</div>
-                
-                @php $transactionsActive = request()->is('admin/transactions*'); @endphp
-                <a href="#" class="flex items-center gap-3 px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $transactionsActive ? 'bg-[#0BBF53]/10 text-[#0BBF53]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                    <i class="fa-solid fa-credit-card text-sm w-4 text-center min-w-[16px] {{ $transactionsActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                    <span class="font-bold sidebar-text-element">تراکنش‌های مالی</span>
-                    <span class="sidebar-tooltip">تراکنش‌های مالی</span>
-                </a>
-
-                @php $serverActive = request()->is('admin/server-status*'); @endphp
-                <a href="#" class="flex items-center gap-3 px-4 h-11 rounded-xl text-xs transition-colors group relative {{ $serverActive ? 'bg-[#0BBF53]/10 text-[#0BBF53]' : 'text-[#8a91ad] hover:text-white hover:bg-white/[0.02]' }}">
-                    <i class="fa-solid fa-server text-sm w-4 text-center min-w-[16px] {{ $serverActive ? 'text-[#0BBF53]' : 'text-[#4a5170] group-hover:text-white' }}"></i>
-                    <span class="font-bold sidebar-text-element">وضعیت زیرساخت سرور</span>
-                    <span class="sidebar-tooltip">وضعیت زیرساخت سرور</span>
-                </a>
-            </div>
-
-        </nav>
+    <div class="">
+      <div class="nav-item group active flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="setActive(this,'مرکز فرماندهی','','dashboard-page')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-bolt-lightning"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">مرکز فرماندهی</div>
+        <span class="nav-badge text-[9px] font-bold py-[2px] px-[6px] rounded-[10px] flex-shrink-0 bg-red/[0.1] text-red border border-red/[0.25]">۳</span>
+      </div>
     </div>
 
-    {{-- دکمه خروج در فوتر سایدبار --}}
-    <div class="p-4 border-t border-white/5 footer-wrapper">
-        <button class="w-full flex items-center justify-center gap-2 h-11 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-xl text-xs font-bold transition-all group relative">
-            <i class="fa-solid fa-right-from-bracket transition-transform group-hover:-translate-x-1 min-w-[16px]"></i>
-            <span class="sidebar-text-element">خروج از حساب</span>
-            <span class="sidebar-tooltip">خروج از حساب</span>
-        </button>
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">نظارت</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'داشبورد')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">داشبورد</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'داشبورد','آمار لحظه‌ای')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">آمار لحظه‌ای</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'داشبورد','آمار روزانه و ماهانه')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">آمار روزانه و ماهانه</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'داشبورد','هشدارها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">هشدارها</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-red/[0.1] text-red border border-red/[0.2]">۳</span></div>
+      </div>
     </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">مدیریت</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'کاربران')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-users"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">کاربران</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'کاربران','لیست کاربران')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست کاربران</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'کاربران','جستجو و فیلتر')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">جستجو و فیلتر</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'کاربران','لیست‌های هوشمند')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست‌های هوشمند</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'کاربران','مدیریت توکن')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مدیریت توکن</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'بلاگرها')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-bullhorn"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">بلاگرها</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بلاگرها','لیست بلاگرها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست بلاگرها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بلاگرها','ساخت لینک اختصاصی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ساخت لینک اختصاصی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بلاگرها','مدیریت کمیسیون')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مدیریت کمیسیون</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بلاگرها','گزارش ترافیک')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">گزارش ترافیک</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بلاگرها','نمایش داشبورد بلاگر')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">نمایش داشبورد بلاگر</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'محصولات')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-box-open"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">محصولات</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','داشبورد محصولات','products-dashboard-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">داشبورد محصولات</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','لیست محصولات','products-list-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست محصولات</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','ثبت محصول جدید','products-create-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ثبت محصول جدید</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">جدید</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','دسته‌بندی‌ها','products-categories-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">دسته‌بندی‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','قیمت‌گذاری','products-pricing-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیمت‌گذاری</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'سفارشات')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-cart-shopping"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">سفارشات</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'سفارشات','لیست سفارشات')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست سفارشات</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'سفارشات','آنالیتیکس محصولات')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">آنالیتیکس محصولات</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+      </div>
+    </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">هوش مصنوعی</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'هوش مصنوعی')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-microchip"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">هوش مصنوعی</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'هوش مصنوعی','مدیریت مدل‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مدیریت مدل‌ها</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'هوش مصنوعی','پرامپت‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پرامپت‌ها</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'هوش مصنوعی','لاگ‌های اجرا')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لاگ‌های اجرا</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
+      </div>
+    </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">ارتباطات</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'تیکت‌ها')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-ticket"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">تیکت‌ها</div>
+        <span class="nav-badge text-[9px] font-bold py-[2px] px-[6px] rounded-[10px] flex-shrink-0 bg-red/[0.1] text-red border border-red/[0.25]">۷</span>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تیکت‌ها','تیکت‌های باز')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">تیکت‌های باز</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-red/[0.1] text-red border border-red/[0.2]">۷</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تیکت‌ها','در حال بررسی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">در حال بررسی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تیکت‌ها','پاسخ هوش مصنوعی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پاسخ هوش مصنوعی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تیکت‌ها','گزارش تیکت‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">گزارش تیکت‌ها</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'پیام‌رسانی')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-comment-dots"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">پیام‌رسانی</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'پیام‌رسانی','ارسال به کاربر')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ارسال به کاربر خاص</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'پیام‌رسانی','ارسال گروهی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ارسال گروهی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'پیام‌رسانی','زمان‌بندی پیام')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">زمان‌بندی پیام</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'پیام‌رسانی','تاریخچه پیام‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">تاریخچه پیام‌ها</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'بنر و نمایش')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-image"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">بنر و نمایش</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بنر و نمایش','بنرهای صفحه اصلی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">بنرهای صفحه اصلی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بنر و نمایش','پاپ‌آپ عمومی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پاپ‌آپ عمومی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بنر و نمایش','پاپ‌آپ اختصاصی محصول')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پاپ‌آپ اختصاصی محصول</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'بنر و نمایش','کدهای تخفیف')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">کدهای تخفیف</div></div>
+      </div>
+    </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">مالی</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'مالی')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-credit-card"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">مالی</div>
+        <span class="nav-badge text-[9px] font-bold py-[2px] px-[6px] rounded-[10px] flex-shrink-0 bg-orange/[0.1] text-orange border border-orange/[0.25]">۲</span>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'مالی','تراکنش‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">تراکنش‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'مالی','پرداخت دستی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پرداخت دستی</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-red/[0.1] text-red border border-red/[0.2]">۲</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'مالی','کمیسیون بلاگرها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">کمیسیون بلاگرها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'مالی','گزارش درآمد و هزینه')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">گزارش درآمد و هزینه</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'مالی','پیش‌بینی درآمد')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پیش‌بینی درآمد</div></div>
+      </div>
+    </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">آنالیز و مارکتینگ</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'آنالیز')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-chart-bar"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">آنالیز</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','قیف فروش')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیف فروش</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','رفتار کاربر')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">رفتار کاربر</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','آنالیز بلاگرها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">آنالیز بلاگرها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','کمپین‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">کمپین‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','ریتارگت')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ریتارگت</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'آنالیز','گزارش وایرال')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">گزارش وایرال</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="setActive(this,'گزارش‌ساز','','placeholder-page')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-file-lines"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">گزارش‌ساز</div>
+      </div>
+    </div>
+
+    <div class="">
+      <div class="text-[9px] font-bold tracking-[2.5px] text-watan-text3 uppercase pt-3 px-4 pb-1">سیستم</div>
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'زیرساخت')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-server"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">زیرساخت</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','وضعیت سرور')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">وضعیت سرور</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">آنلاین</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','صف پردازش')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">صف پردازش</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','هزینه هوش مصنوعی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">هزینه هوش مصنوعی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','هزینه سرور و استوریج')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">هزینه سرور و استوریج</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','سود هر عکس')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">سود هر عکس</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'زیرساخت','لاگ خطاها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لاگ خطاها</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'محتوا')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-pen-nib"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">محتوا</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محتوا','مقالات')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مقالات</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محتوا','صفحات سایت')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">صفحات سایت</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محتوا','مدیریت رسانه‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مدیریت رسانه‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محتوا','اعلان‌های سیستمی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">اعلان‌های سیستمی</div></div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="setActive(this,'حضور و غیاب','','attendance-page')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">حضور و غیاب</div>
+      </div>
+
+      <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'تنظیمات')">
+        <div class="nav-icon w-[30px] h-[30px] flex items-center justify-center text-sm flex-shrink-0 text-watan-text transition-colors duration-150"><i class="fa-solid fa-gear"></i></div>
+        <div class="nav-label flex-1 text-[12.5px] font-semibold text-watan-text py-[9px] transition-colors duration-150">تنظیمات</div>
+        <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
+      </div>
+      <div class="sub-nav hidden pt-[2px] pb-1">
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','مدیریت ادمین‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">مدیریت ادمین‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','سطوح دسترسی')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">سطوح دسترسی</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','تنظیمات سیستم')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">تنظیمات سیستم</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','درگاه پرداخت')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">درگاه پرداخت</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','پشتیبان‌گیری')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">پشتیبان‌گیری</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','لاگ فعالیت ادمین‌ها')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لاگ فعالیت ادمین‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'تنظیمات','CRM','crm-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">CRM</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-accent/[0.1] text-accent border border-accent/[0.2]">جدید</span></div>
+      </div>
+    </div>
+
+  </nav>
+
+  <div class="p-[10px] border-t border-b1 flex-shrink-0">
+    <div class="group flex items-center gap-2 py-2 px-[10px] rounded-lg cursor-pointer transition-colors duration-150 w-full hover:bg-red/[0.1]">
+      <i class="fa-solid fa-right-from-bracket text-watan-text3 text-[13px] group-hover:text-red"></i>
+      <span class="text-xs font-semibold text-watan-text3 group-hover:text-red">خروج از حساب</span>
+    </div>
+  </div>
+
 </aside>
-
-<script>
-    function toggleSubmenu(button) {
-        if(document.getElementById('adminSidebar').classList.contains('w-[80px]')) return;
-        const submenu = button.nextElementSibling;
-        const arrow = button.querySelector('.arrow-icon');
-        if (submenu.classList.contains('hidden')) {
-            submenu.classList.remove('hidden');
-            if(arrow) arrow.classList.add('-rotate-90', 'text-white');
-        } else {
-            submenu.classList.add('hidden');
-            if(arrow) arrow.classList.remove('-rotate-90', 'text-white');
-        }
-    }
-
-    function toggleSidebarCollapse() {
-        const sidebar = document.getElementById('adminSidebar');
-        const mainContent = document.getElementById('adminMainContent'); 
-        const icon = document.getElementById('collapseIcon');
-
-        if (sidebar.classList.contains('w-72')) {
-            sidebar.classList.remove('w-72');
-            sidebar.classList.add('w-[80px]', 'sidebar-collapsed');
-            if(icon) icon.classList.add('rotate-180');
-            if(mainContent) { mainContent.classList.remove('lg:mr-72'); mainContent.classList.add('lg:mr-[80px]'); }
-            localStorage.setItem('sidebar-collapsed', 'true');
-        } else {
-            sidebar.classList.remove('w-[80px]', 'sidebar-collapsed');
-            sidebar.classList.add('w-72');
-            if(icon) icon.classList.remove('rotate-180');
-            if(mainContent) { mainContent.classList.remove('lg:mr-[80px]'); mainContent.classList.add('lg:mr-72'); }
-            localStorage.setItem('sidebar-collapsed', 'false');
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        if (localStorage.getItem('sidebar-collapsed') === 'true') {
-            const sidebar = document.getElementById('adminSidebar');
-            const mainContent = document.getElementById('adminMainContent');
-            const icon = document.getElementById('collapseIcon');
-            
-            if(sidebar) { sidebar.classList.remove('w-72'); sidebar.classList.add('w-[80px]', 'sidebar-collapsed'); }
-            if(icon) icon.classList.add('rotate-180');
-            if(mainContent) { mainContent.classList.remove('lg:mr-72'); mainContent.classList.add('lg:mr-[80px]'); }
-        }
-    });
-</script>
-
-<style>
-    .custom-hide-scrollbar::-webkit-scrollbar { display: none; }
-    .custom-hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .sidebar-collapsed .sidebar-text-element { display: none !important; }
-    .sidebar-collapsed .user-box { padding: 8px !important; justify-content: center; }
-    .sidebar-collapsed .submenu-items { display: none !important; }
-    .sidebar-collapsed .sidebar-header-wrapper { justify-content: center; padding: 20px 10px; }
-    .sidebar-tooltip {
-        position: absolute; right: 90px; background: #1c1c24; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.05); white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100;
-    }
-    .sidebar-collapsed .group:hover .sidebar-tooltip, .sidebar-collapsed a:hover .sidebar-tooltip { opacity: 1; visibility: visible; right: 85px; }
-
-    /* دکمه شناور باز/بسته کردن سایدبار */
-
-    /* انیمیشن جمع/باز شدن سایدبار - فقط روی property هایی که واقعا تغییر میکنن، نه transition-all */
-    .sidebar-transition {
-        transition: width 0.25s ease, transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
-    }
-</style>

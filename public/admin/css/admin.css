@@ -258,5 +258,8 @@ body.light .sidebar::-webkit-scrollbar-thumb { background: #c8c8da; }
 /* hide sidebar scrollbar — scroll still works, no scrollbar visible */
 .sidebar::-webkit-scrollbar { display: none !important; width: 0 !important; }
 
+/* prevent body-level scrollbar — only #content scrolls */
+html, body { overflow: hidden; }
+
 /* hide main content scrollbar (all browsers) */
 #content::-webkit-scrollbar { display: none !important; width: 0 !important; }

@@ -384,6 +384,7 @@ function renderPLGrid(items) {
         <div style="display:flex;gap:6px;">
           <a href="/admin/products/${p.id}" style="flex:1;height:30px;border-radius:7px;border:1px solid var(--b1);background:none;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;text-decoration:none;">مشاهده</a>
           <a href="/admin/products/${p.id}/edit" style="flex:1;height:30px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;text-decoration:none;">ویرایش</a>
+          <button onclick="duplicateProduct(${p.id})" title="تکثیر محصول" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:none;color:var(--text2);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-copy"></i></button>
         </div>
       </div>
     </div>
@@ -402,7 +403,7 @@ function renderPLTable(items) {
       <td style="padding:10px 16px;font-size:12.5px;font-weight:700;color:var(--text);">${p.orders||'—'}</td>
       <td style="padding:10px 16px;font-size:12px;font-weight:700;color:var(--green);">${p.rev}</td>
       <td style="padding:10px 16px;"><span style="font-size:11px;font-weight:700;color:${p.rate>=95?'var(--green)':p.rate>=88?'var(--orange)':'var(--red)'};">${p.rate?p.rate+'٪':'—'}</span></td>
-      <td style="padding:10px 16px;white-space:nowrap;"><a href="/admin/products/${p.id}" style="font-size:10.5px;color:var(--accent);text-decoration:none;margin-left:8px;">مشاهده</a><a href="/admin/products/${p.id}/edit" style="font-size:10.5px;color:var(--text3);text-decoration:none;">ویرایش</a></td>
+      <td style="padding:10px 16px;white-space:nowrap;"><a href="/admin/products/${p.id}" style="font-size:10.5px;color:var(--accent);text-decoration:none;margin-left:8px;">مشاهده</a><a href="/admin/products/${p.id}/edit" style="font-size:10.5px;color:var(--text3);text-decoration:none;margin-left:8px;">ویرایش</a><button onclick="duplicateProduct(${p.id})" title="تکثیر" style="font-size:10.5px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0;"><i class="fa-solid fa-copy"></i></button></td>
     </tr>
   `).join('');
 }
@@ -448,6 +449,32 @@ function pcAddField() {
     <button onclick="this.closest('.pc-field-row').remove()" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b1);background:none;color:var(--red);cursor:pointer;font-size:11px;"><i class="fa-solid fa-trash"></i></button>
   `;
   list.appendChild(div);
+}
+
+// ── Duplicate Product ────────────────────────────────────────────────────────
+function duplicateProduct(id) {
+  const orig = PL_PRODUCTS.find(p => p.id === id);
+  if(!orig) return;
+  const newId = Math.max(...PL_PRODUCTS.map(p=>p.id)) + 1;
+  const copy = Object.assign({}, orig, {
+    id: newId,
+    name: orig.name + ' (کپی)',
+    status: 'پیش‌نویس',
+    statusColor: 'var(--orange)',
+    orders: 0,
+    rev: '—',
+    rate: 0
+  });
+  PL_PRODUCTS.push(copy);
+  filterProducts();
+  // Show toast
+  const t = document.getElementById('pl-toast');
+  const m = document.getElementById('pl-toast-msg');
+  if(t && m) {
+    m.textContent = `"${copy.name}" با موفقیت تکثیر شد`;
+    t.style.display = 'flex';
+    setTimeout(()=>{ t.style.display='none'; }, 3000);
+  }
 }
 
 // ── Products Categories Modal ────────────────────────────────────────────────
