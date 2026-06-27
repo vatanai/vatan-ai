@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Vatan AI — Mockup Viewer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0c0c10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      font-family: sans-serif;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #0BBF53;
+      font-size: 16px;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+
+    .pages-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 28px;
+      max-width: 600px;
+    }
+
+    .pages-grid button {
+      background: #16161c;
+      color: #a8c4a8;
+      border: 1px solid #222230;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .pages-grid button:hover,
+    .pages-grid button.active {
+      background: #0BBF53;
+      color: #000;
+      border-color: #0BBF53;
+      font-weight: bold;
+    }
+
+    .phone-wrap {
+      position: relative;
+      width: 393px;
+      height: 852px;
+      flex-shrink: 0;
+    }
+
+    .phone-frame {
+      position: absolute;
+      inset: 0;
+      border: 12px solid #1c1c1e;
+      border-radius: 54px;
+      box-shadow:
+        0 0 0 2px #3a3a3c,
+        0 30px 80px rgba(0,0,0,0.8);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .phone-frame::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 34px;
+      background: #1c1c1e;
+      border-radius: 20px;
+      z-index: 20;
+    }
+
+    .btn-side { position: absolute; background: #2a2a2c; border-radius: 3px; }
+    .btn-power { right: -14px; top: 160px; width: 4px; height: 80px; }
+    .btn-vol-up { left: -14px; top: 140px; width: 4px; height: 60px; }
+    .btn-vol-down { left: -14px; top: 215px; width: 4px; height: 60px; }
+    .btn-mute { left: -14px; top: 100px; width: 4px; height: 30px; }
+
+    iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 42px;
+      background: #000;
+    }
+
+    .current-url {
+      color: #4d7a56;
+      font-size: 11px;
+      margin-top: 16px;
+      direction: ltr;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚡ Vatan AI — Mockup Viewer</h1>
+
+  <div class="pages-grid">
+    <button onclick="go('/', this)">صفحه اصلی سایت</button>
+    <button onclick="go('/app', this)" class="active">صفحه اپلیکیشن</button>
+    <button onclick="go('/app/files', this)">فایل‌ها</button>
+    <button onclick="go('/app/profile', this)">پروفایل</button>
+    <button onclick="go('/login', this)">لاگین</button>
+    <button onclick="go('/admin/dashboard', this)">داشبورد ادمین</button>
+    <button onclick="go('/admin/dashboard/crm', this)">سی آر ام</button>
+    <button onclick="go('/app/explore', this)">اکسپلور / ایده‌ها</button>
+    <button onclick="go('/admin/products', this)">محصولات</button>
+    <button onclick="go('/app/create', this)">بساز</button>
+    <button onclick="go('/admin/products/create', this)">درج محصول</button>
+    <button onclick="go('/app/bottom', this)">دکمه‌های پایین</button>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone-frame">
+      <div class="btn-side btn-power"></div>
+      <div class="btn-side btn-mute"></div>
+      <div class="btn-side btn-vol-up"></div>
+      <div class="btn-side btn-vol-down"></div>
+    </div>
+    <iframe id="screen" src="http://127.0.0.1:8001/app"></iframe>
+  </div>
+
+  <p class="current-url" id="currentUrl">http://127.0.0.1:8001/app</p>
+
+  <script>
+    const base = 'http://127.0.0.1:8001';
+
+    function go(path, btn) {
+      const url = base + path;
+      document.getElementById('screen').src = url;
+      document.getElementById('currentUrl').textContent = url;
+      document.querySelectorAll('.pages-grid button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+
+</body>
+</html>

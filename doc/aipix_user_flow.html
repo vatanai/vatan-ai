@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h2 {
+    text-align: center;
+    color: #a78bfa;
+    font-size: 18px;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+  }
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .lane-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    width: 100%;
+    min-height: 70px;
+    border-bottom: 1px solid #1e2030;
+  }
+  .lane-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 6px;
+    border-left: 3px solid;
+    text-align: center;
+    writing-mode: horizontal-tb;
+  }
+  .lane-content {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Lane colors */
+  .lane-user .lane-label { color: #60a5fa; border-color: #60a5fa; background: #1a1f35; }
+  .lane-platform .lane-label { color: #34d399; border-color: #34d399; background: #0f2220; }
+  .lane-ai .lane-label { color: #f472b6; border-color: #f472b6; background: #2a1028; }
+  .lane-storage .lane-label { color: #fbbf24; border-color: #fbbf24; background: #251c0a; }
+
+  /* Nodes */
+  .node {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    position: relative;
+  }
+  .node-start {
+    background: #a78bfa;
+    color: #fff;
+    border-radius: 24px;
+    padding: 8px 20px;
+  }
+  .node-end {
+    background: #10b981;
+    color: #fff;
+    border-radius: 24px;
+    padding: 8px 20px;
+  }
+  .node-action {
+    background: #1e3a5f;
+    color: #93c5fd;
+    border: 1px solid #3b82f6;
+  }
+  .node-system {
+    background: #1a3028;
+    color: #6ee7b7;
+    border: 1px solid #34d399;
+  }
+  .node-ai {
+    background: #2d1040;
+    color: #f0abfc;
+    border: 1px solid #c084fc;
+  }
+  .node-decision {
+    background: #2d2010;
+    color: #fcd34d;
+    border: 1px solid #f59e0b;
+    border-radius: 0;
+    transform: rotate(0);
+    padding: 8px 14px;
+    clip-path: polygon(12px 0%, calc(100% - 12px) 0%, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0% 50%);
+    padding: 8px 24px;
+  }
+  .node-storage {
+    background: #2d2005;
+    color: #fde68a;
+    border: 1px solid #fbbf24;
+  }
+  .node-error {
+    background: #3d1010;
+    color: #fca5a5;
+    border: 1px solid #ef4444;
+  }
+
+  .arrow {
+    color: #555;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    color: #555;
+    font-size: 20px;
+    padding: 2px 0;
+    width: 100%;
+  }
+  .badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #374151;
+    color: #9ca3af;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  .section-title {
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+    padding: 10px;
+    width: 100%;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-top: 1px dashed #2a2a3a;
+    margin-top: 4px;
+  }
+  .sub-flow {
+    background: #151820;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 10px 16px;
+    width: 100%;
+    margin: 4px 0;
+  }
+  .sub-flow-title {
+    font-size: 10px;
+    color: #6b7280;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sub-flow-nodes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .note {
+    font-size: 10px;
+    color: #6b7280;
+    background: #1a1a2e;
+    border-right: 3px solid #4b5563;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  /* Main vertical flow */
+  .main-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 0;
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    width: 100%;
+    align-items: stretch;
+    min-height: 56px;
+  }
+  .step-actor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    padding: 4px;
+    border-left: 3px solid;
+  }
+  .step-body {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #1a1a2a;
+  }
+  .connector-down {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 20px;
+    color: #4b5563;
+    font-size: 16px;
+  }
+  .connector-down-row {
+    grid-column: 2;
+    display: flex;
+    justify-content: flex-start;
+    padding-right: 30px;
+  }
+</style>
+</head>
+<body>
+
+<h2>🔄 فلوچارت تجربه کاربر — AIPIX</h2>
+
+<div style="max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:0;">
+
+  <!-- Phase 1: Discovery -->
+  <div class="section-title">① کشف محصول | Discovery</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#60a5fa;border-color:#60a5fa;background:#0d1425;">👤<br>کاربر</div>
+    <div class="step-body">
+      <div class="node node-start">ورود به پلتفرم</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">مرور دسته‌بندی‌ها</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">انتخاب دسته</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">دیدن گالری محصولات</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-system">نمایش کارت‌های محصول</div>
+      <div style="font-size:10px;color:#6b7280;margin-right:8px;">thumbnail + نام + قیمت + badge</div>
+    </div>
+  </div>
+
+  <!-- Phase 2: Product Page -->
+  <div class="section-title">② صفحه محصول | Product Page</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#60a5fa;border-color:#60a5fa;background:#0d1425;">👤<br>کاربر</div>
+    <div class="step-body">
+      <div class="node node-action">کلیک روی محصول</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">مشاهده نمونه‌ها</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">Before/After Slider</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">کلیک "شروع"</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-system">بارگذاری input_schema</div>
+      <div class="arrow">←</div>
+      <div class="node node-decision">کاربر لاگین است؟</div>
+      <div class="arrow">←</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div class="node node-system" style="font-size:11px;">✓ ادامه</div>
+        <div class="node node-error" style="font-size:11px;">✗ ریدایرکت لاگین</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3: Input Collection -->
+  <div class="section-title">③ جمع‌آوری ورودی | Input Collection</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-system">رندر دینامیک فرم</div>
+      <div style="font-size:10px;color:#6b7280;">بر اساس input_schema محصول</div>
+    </div>
+  </div>
+
+  <div class="sub-flow">
+    <div class="sub-flow-title">فیلدهای ممکن فرم (بسته به محصول):</div>
+    <div class="sub-flow-nodes">
+      <div class="node node-action" style="font-size:11px;">📷 آپلود عکس</div>
+      <div class="node node-action" style="font-size:11px;">🎬 آپلود ویدیو</div>
+      <div class="node node-action" style="font-size:11px;">✍️ متن / اسم</div>
+      <div class="node node-action" style="font-size:11px;">📅 تاریخ</div>
+      <div class="node node-action" style="font-size:11px;">🔗 لینک</div>
+      <div class="node node-action" style="font-size:11px;">🎨 انتخاب استایل</div>
+      <div class="node node-action" style="font-size:11px;">☑️ گزینه‌ها</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#60a5fa;border-color:#60a5fa;background:#0d1425;">👤<br>کاربر</div>
+    <div class="step-body">
+      <div class="node node-action">پر کردن فرم</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">کلیک "تأیید و پرداخت"</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-decision">اعتبارسنجی ورودی‌ها</div>
+      <div class="arrow">←</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div class="node node-system" style="font-size:11px;">✓ ادامه</div>
+        <div class="node node-error" style="font-size:11px;">✗ خطا به کاربر</div>
+      </div>
+      <div class="arrow">←</div>
+      <div class="node node-decision">بررسی کردیت</div>
+      <div class="arrow">←</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div class="node node-system" style="font-size:11px;">✓ کافیه</div>
+        <div class="node node-error" style="font-size:11px;">✗ شارژ کیف پول</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 4: Processing -->
+  <div class="section-title">④ پردازش AI | AI Processing</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-system">ساخت prompt از template</div>
+      <div class="arrow">←</div>
+      <div class="node node-system">ثبت Order در DB</div>
+      <div class="arrow">←</div>
+      <div class="node node-storage">ذخیره ورودی‌های کاربر</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#f472b6;border-color:#f472b6;background:#1a0820;">🤖<br>AI</div>
+    <div class="step-body">
+      <div class="node node-ai">ارسال به OpenRouter</div>
+      <div class="arrow">←</div>
+      <div class="node node-ai">مدل Primary</div>
+      <div class="arrow">←</div>
+      <div class="node node-decision">موفق؟</div>
+    </div>
+  </div>
+
+  <div class="sub-flow">
+    <div class="sub-flow-title">منطق Fallback:</div>
+    <div class="sub-flow-nodes">
+      <div class="node node-ai" style="font-size:11px;">Primary ✓ → خروجی</div>
+      <div class="arrow" style="color:#555;">←</div>
+      <div class="node node-ai" style="font-size:11px;">Primary ✗ → Fallback 1</div>
+      <div class="arrow" style="color:#555;">←</div>
+      <div class="node node-ai" style="font-size:11px;">Fallback 1 ✗ → Fallback 2</div>
+      <div class="arrow" style="color:#555;">←</div>
+      <div class="node node-error" style="font-size:11px;">همه ✗ → Error</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#60a5fa;border-color:#60a5fa;background:#0d1425;">👤<br>کاربر</div>
+    <div class="step-body">
+      <div class="node node-action">مشاهده صفحه انتظار</div>
+      <div style="font-size:10px;color:#6b7280;margin-right:8px;">loading + زمان تقریبی</div>
+    </div>
+  </div>
+
+  <!-- Phase 5: Post Processing -->
+  <div class="section-title">⑤ پس‌پردازش | Post Processing</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#34d399;border-color:#34d399;background:#081a14;">🖥️<br>پلتفرم</div>
+    <div class="step-body">
+      <div class="node node-system">resize / فرمت</div>
+      <div class="arrow">←</div>
+      <div class="node node-system">watermark (اگه فعال باشه)</div>
+      <div class="arrow">←</div>
+      <div class="node node-storage">ذخیره خروجی نهایی</div>
+      <div class="arrow">←</div>
+      <div class="node node-system">کسر کردیت</div>
+    </div>
+  </div>
+
+  <!-- Phase 6: Delivery -->
+  <div class="section-title">⑥ تحویل | Delivery</div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#60a5fa;border-color:#60a5fa;background:#0d1425;">👤<br>کاربر</div>
+    <div class="step-body">
+      <div class="node node-end">دریافت خروجی نهایی</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">دانلود مستقیم</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">ذخیره در پروفایل</div>
+      <div class="arrow">←</div>
+      <div class="node node-action">سفارش مجدد</div>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-actor" style="color:#fbbf24;border-color:#fbbf24;background:#1a1200;">💾<br>Storage</div>
+    <div class="step-body">
+      <div class="node node-storage">پروفایل کاربر</div>
+      <div style="font-size:10px;color:#6b7280;margin-right:8px;">ورودی‌ها + خروجی‌ها + تاریخچه سفارش</div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="margin-top:20px;padding:12px;background:#13151f;border-radius:8px;border:1px solid #1e2030;">
+    <div style="font-size:11px;color:#6b7280;margin-bottom:8px;text-align:center;letter-spacing:1px;">LEGEND</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-start" style="font-size:10px;padding:4px 10px;">شروع/پایان</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-action" style="font-size:10px;padding:4px 10px;">اکشن کاربر</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-system" style="font-size:10px;padding:4px 10px;">منطق سیستم</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-ai" style="font-size:10px;padding:4px 10px;">پردازش AI</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-decision" style="font-size:10px;padding:4px 14px;">تصمیم</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-storage" style="font-size:10px;padding:4px 10px;">ذخیره‌سازی</div></div>
+      <div style="display:flex;align-items:center;gap:6px;"><div class="node node-error" style="font-size:10px;padding:4px 10px;">خطا</div></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
