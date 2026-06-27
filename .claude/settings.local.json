@@ -49,7 +49,14 @@
       "Bash(composer update *)",
       "Bash(composer show *)",
       "Bash(composer install *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/site/home)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/site/home)",
+      "Skill(run)",
+      "Bash(chromium-cli *)",
+      "Bash(npx playwright *)",
+      "Bash(node -e \"require\\('playwright'\\)\")",
+      "Bash(/Applications/Google Chrome.app/Contents/MacOS/Google Chrome *)",
+      "Bash(PLAYWRIGHT_BROWSERS_PATH=0 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 node *)",
+      "Bash(node *)"
     ]
   }
 }

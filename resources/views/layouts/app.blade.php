@@ -26,8 +26,10 @@
       color: var(--text);
       min-height: 100vh;
       overflow-y: scroll;
+      font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
       transition: background-color 0.3s ease, color 0.3s ease;
     }
+    * { font-family: inherit; }
   </style>
 
   <script>

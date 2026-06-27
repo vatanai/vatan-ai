@@ -15,18 +15,19 @@
     display: flex;
     align-items: center;
     height: 70px;
-    background: var(--nav-bg);
+    background: rgba(17, 17, 22, 0.82);
     border-radius: 999px;
-    border: 1px solid var(--nav-border);
+    border: 1px solid rgba(255,255,255,0.13);
     padding: 0;
     position: relative;
     pointer-events: all;
     direction: ltr;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     width: 100%;
     box-sizing: border-box;
     transition: background 0.3s ease, border-color 0.3s ease;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35);
   }
 
   #vatan-nav-thumb {
@@ -71,13 +72,17 @@
     filter: brightness(0) invert(0);
   }
 
-  /* SVG اینلاین (دکمه +) */
+  /* SVG اینلاین — کنترل با color به جای filter */
   .vatan-nav-item svg.vatan-nav-icon {
-    width: 29px;
-    height: 29px;
     color: #ffffff;
     filter: none;
     transition: color 0.3s ease, transform 200ms ease;
+  }
+
+  /* دکمه + سایز بزرگ‌تر */
+  .vatan-nav-item svg.vatan-nav-icon--plus {
+    width: 29px;
+    height: 29px;
   }
 
   html.light .vatan-nav-item svg.vatan-nav-icon {
@@ -98,8 +103,9 @@
 
   /* nav bar در light mode */
   html.light #vatan-nav-bar {
-    background: rgba(255, 255, 255, 0.97);
-    border-color: #dddddd;
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(0,0,0,0.1);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
   }
 </style>
 
@@ -109,20 +115,22 @@
     <div id="vatan-nav-thumb" aria-hidden="true"></div>
 
     <a href="{{ route('app.home') }}" class="vatan-nav-item" data-key="home" aria-label="خانه">
-      <img src="{{ asset('assets/img/icons/nav-home.svg') }}" class="vatan-nav-icon" alt="">
+      <svg class="vatan-nav-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9.5L12 3L21 9.5V20C21 20.5523 20.5523 21 20 21H15V15H9V21H4C3.44772 21 3 20.5523 3 20V9.5Z"/>
+      </svg>
     </a>
 
-    <a href="{{ route('app.explore') }}" class="vatan-nav-item" data-key="explore" aria-label="ترندها">
+    <a href="{{ route('app.trends') }}" class="vatan-nav-item" data-key="trends" aria-label="ترندز">
       <img src="{{ asset('assets/img/icons/nav-trend.svg') }}" class="vatan-nav-icon" alt="">
     </a>
 
     <a href="{{ route('app.create') }}" class="vatan-nav-item" data-key="create" aria-label="بساز">
-      <svg class="vatan-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg class="vatan-nav-icon vatan-nav-icon--plus" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </a>
 
-    <a href="{{ route('app.ideas') }}" class="vatan-nav-item" data-key="ideas" aria-label="ایده‌ها">
+    <a href="{{ route('app.explore') }}" class="vatan-nav-item" data-key="explore" aria-label="اکسپلور">
       <img src="{{ asset('assets/img/icons/nav-explore.svg') }}" class="vatan-nav-icon" alt="">
     </a>
 
@@ -142,7 +150,7 @@
   function detectActiveKey() {
     var path = window.location.pathname;
     if (/\/profile/.test(path))  return 'profile';
-    if (/\/ideas/.test(path))    return 'ideas';
+    if (/\/trends/.test(path))   return 'trends';
     if (/\/create/.test(path))   return 'create';
     if (/\/explore/.test(path))  return 'explore';
     return 'home';

@@ -185,3 +185,78 @@
 .datepicker-plot-area .navigator .btn:hover {
   color: var(--text) !important;
 }
+
+/* ══════════════════════════════════════════
+   LIGHT MODE — body.light overrides
+   Tailwind uses hardcoded hex → must override each
+   ══════════════════════════════════════════ */
+body.light {
+  background-color: #f0f0f8 !important;
+  color: #12121e !important;
+  transition: background-color .25s, color .25s;
+}
+
+/* backgrounds */
+body.light .bg-s1, body.light .bg-\[var\(--s1\)\] { background-color: #ffffff !important; }
+body.light .bg-s2                                  { background-color: #f3f3f9 !important; }
+body.light .bg-b1                                  { background-color: #e2e2ee !important; }
+body.light .bg-b2                                  { background-color: #c8c8da !important; }
+
+/* sidebar */
+body.light .sidebar, body.light aside.sidebar { background-color: #ffffff !important; border-color: #e2e2ee !important; }
+
+/* borders */
+body.light .border-b1 { border-color: #e2e2ee !important; }
+body.light .border-b2 { border-color: #c8c8da !important; }
+
+/* text */
+body.light .text-watan-text  { color: #12121e !important; }
+body.light .text-watan-text2 { color: #3d5c42 !important; }
+body.light .text-watan-text3 { color: #7a9e7f !important; }
+
+/* nav/sidebar items */
+body.light .nav-item:hover   { background-color: #f0f0f8 !important; }
+body.light .nav-item.active  { background-color: rgba(124,93,224,.1) !important; }
+body.light .sub-item:hover   { background-color: #f0f0f8 !important; }
+body.light .sub-item.active  { background-color: rgba(124,93,224,.08) !important; }
+body.light .nav-icon         { color: #3d5c42 !important; }
+body.light .nav-item.active .nav-icon  { color: #7c5de0 !important; }
+body.light .nav-label        { color: #3d5c42 !important; }
+body.light .nav-item.active .nav-label { color: #12121e !important; }
+
+/* header */
+body.light .admin-header,
+body.light header { background-color: #ffffff !important; border-color: #e2e2ee !important; }
+
+/* cards and panels */
+body.light .bg-s1.border.border-b1 { background-color: #ffffff !important; }
+body.light [class*="rounded"][class*="bg-s1"] { background-color: #ffffff !important; }
+body.light [class*="rounded"][class*="bg-s2"] { background-color: #f3f3f9 !important; }
+
+/* CRM components */
+body.light .crm-stat-card  { background: #ffffff; border-color: #e2e2ee; }
+body.light .crm-project-item { background: #ffffff; border-color: #e2e2ee; }
+body.light .crm-task-item:hover { background: #f3f3f9; border-color: #e2e2ee; }
+body.light .crm-kanban-col  { background: #f3f3f9; border-color: #e2e2ee; }
+body.light .crm-kanban-card { background: #ffffff; border-color: #e2e2ee; }
+body.light .crm-modal       { background: #ffffff; border-color: #e2e2ee; }
+body.light .crm-form-input  { background: #f3f3f9; border-color: #e2e2ee; color: #12121e; }
+body.light .crm-badge-gray  { background: #e2e2ee; color: #3d5c42; }
+
+/* accent override for light mode */
+body.light .text-accent { color: #7c5de0 !important; }
+body.light .bg-accent\/\[0\.1\] { background-color: rgba(124,93,224,.1) !important; }
+body.light .border-accent\/\[0\.25\] { border-color: rgba(124,93,224,.25) !important; }
+
+/* theme button */
+body.light #theme-btn { background-color: #f3f3f9; border-color: #e2e2ee; color: #3d5c42; }
+body.light #theme-btn:hover { color: #12121e; }
+
+/* scrollbar in light mode */
+body.light .sidebar::-webkit-scrollbar-thumb { background: #c8c8da; }
+
+/* hide sidebar scrollbar — scroll still works, no scrollbar visible */
+.sidebar::-webkit-scrollbar { display: none !important; width: 0 !important; }
+
+/* hide main content scrollbar (all browsers) */
+#content::-webkit-scrollbar { display: none !important; width: 0 !important; }

@@ -1,8 +1,8 @@
 {
   "port": 80,
   "app": "aivatan",
-  "platform": "laravel",
+  "platform": "docker",
   "deploy": {
-    "command": "php artisan migrate --force && php artisan db:seed --force && php artisan storage:link"
+    "command": "php artisan migrate --force"
   }
 }

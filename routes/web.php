@@ -39,9 +39,10 @@ Route::middleware('auth')->group(function () {
 Route::prefix('app')->group(function () {
     Route::get('/',             fn() => redirect('/app/home'));
     Route::get('/home',         fn() => view('app.home'))->name('app.home');
-    Route::get('/explore',      fn() => view('app.explore'))->name('app.explore');
+    Route::get('/explore',      fn() => view('app.ideas'))->name('app.explore');
+    Route::get('/trends',       fn() => view('app.explore'))->name('app.trends');
     Route::get('/create',       fn() => view('app.create'))->name('app.create');
-    Route::get('/ideas',        fn() => view('app.ideas'))->name('app.ideas');
+    Route::get('/ideas',        fn() => redirect('/app/explore'));
     Route::get('/profile',      fn() => view('app.profile'))->name('app.profile');
     Route::get('/product/{id}', fn($id) => view('app.product', ['productId' => $id]))->name('app.product');
 });
@@ -80,8 +81,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/crm',             fn() => view('admin.crm'))->name('crm');
     Route::get('/products',            fn() => view('admin.products'))->name('products');
     Route::get('/products/create',     fn() => view('admin.products-create'))->name('products.create');
+    Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
+    Route::get('/products/{id}',       fn($id) => view('admin.products-show', ['productId' => $id]))->name('products.show');
+    Route::get('/products/{id}/edit',  fn($id) => view('admin.products-edit',  ['productId' => $id]))->name('products.edit');
     Route::get('/orders',              fn() => view('admin.orders'))->name('orders');
     Route::get('/analytics',           fn() => view('admin.analytics'))->name('analytics');
     Route::get('/jobs',            fn() => view('admin.jobs'))->name('jobs');

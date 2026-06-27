@@ -11,12 +11,23 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $stats = [
-            'users_count'       => User::count(),
-            'generations_count' => Generation::count(),
-            'products_count'    => Product::count(),
-        ];
+        try {
+            $stats = [
+                'users_count'       => User::count(),
+                'generations_count' => Generation::count(),
+                'products_count'    => Product::count(),
+            ];
+        } catch (\Throwable $e) {
+            $stats = ['users_count' => 0, 'generations_count' => 0, 'products_count' => 0];
+        }
 
-        return view('admin.dashboard', compact('stats'));
+        return view('admin.dashboard', [
+            'stats'    => $stats,
+            'topProds' => [],
+            'products' => [],
+            'cats'     => [],
+            'models'   => [],
+            'actions'  => [],
+        ]);
     }
 }

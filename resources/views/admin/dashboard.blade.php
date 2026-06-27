@@ -164,10 +164,12 @@
 @section('content')
 
 <!-- ══ SIDEBAR ══ -->
-<aside class="sidebar fixed top-0 bottom-0 right-0 z-[100] w-64 min-h-screen bg-s1 border-l border-b1 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-b2 [&::-webkit-scrollbar-thumb]:rounded max-[900px]:translate-x-full max-[900px]:transition-transform max-[900px]:duration-[250ms] max-[900px]:shadow-[-12px_0_32px_rgba(0,0,0,0.4)]">
+<aside class="sidebar fixed top-0 bottom-0 right-0 z-[100] w-64 min-h-screen bg-s1 border-l border-b1 flex flex-col overflow-y-auto max-[900px]:translate-x-full max-[900px]:transition-transform max-[900px]:duration-[250ms] max-[900px]:shadow-[-12px_0_32px_rgba(0,0,0,0.4)]" style="scrollbar-width:none;-ms-overflow-style:none;" onscroll="void(0)">
 
   <div class="flex items-center gap-[10px] py-[18px] px-4 border-b border-b1 flex-shrink-0">
-    <div class="w-9 h-9 rounded-[10px] bg-green flex items-center justify-center text-[17px] font-black text-white flex-shrink-0 shadow-[0_0_16px_rgba(11,191,83,0.3)]">و</div>
+    <div class="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 shadow-[0_0_16px_rgba(11,191,83,0.25)]" style="background:rgba(11,191,83,.08);border:1px solid rgba(11,191,83,.2);">
+      <img src="/assets/img/iconvatanai.svg" alt="Vatan AI" class="w-6 h-6" style="filter:drop-shadow(0 0 4px rgba(11,191,83,.4));">
+    </div>
     <div>
       <div class="text-sm font-extrabold text-watan-text tracking-[-0.3px]">وطن استودیو</div>
       <div class="text-[9px] text-watan-text3 tracking-[2.5px] uppercase mt-px">Admin Panel</div>
@@ -240,11 +242,11 @@
         <div class="nav-arrow text-[10px] text-watan-text3 transition-transform duration-200 group-hover:text-watan-text2 flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></div>
       </div>
       <div class="sub-nav hidden pt-[2px] pb-1">
-        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','داشبورد محصولات')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">داشبورد محصولات</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-orange/[0.08] text-orange border border-orange/[0.2]">در حال طراحی</span></div>
-        <a href="/admin/products" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست محصولات</div></a>
-        <a href="/admin/products/create" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ثبت محصول جدید</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">جدید</span></a>
-        <a href="/admin/products/categories" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">دسته‌بندی‌ها</div></a>
-        <a href="/admin/products/pricing" class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2 no-underline"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیمت‌گذاری</div></a>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','داشبورد محصولات','products-dashboard-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">داشبورد محصولات</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','لیست محصولات','products-list-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">لیست محصولات</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','ثبت محصول جدید','products-create-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">ثبت محصول جدید</div><span class="sub-badge text-[9px] font-bold py-px px-[5px] rounded-lg mr-auto bg-green/[0.08] text-green border border-green/[0.2]">جدید</span></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','دسته‌بندی‌ها','products-categories-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">دسته‌بندی‌ها</div></div>
+        <div class="sub-item group flex items-center gap-2 py-[6px] px-[10px] mt-px mr-[6px] mb-px ml-[30px] rounded-md cursor-pointer transition-colors duration-150 hover:bg-s2" onclick="setActiveSub(this,'محصولات','قیمت‌گذاری','products-pricing-page')"><div class="sub-dot w-1 h-1 rounded-full bg-b2 flex-shrink-0 transition-colors duration-150 group-hover:bg-watan-text3"></div><div class="sub-label flex-1 text-[11.5px] font-medium text-watan-text transition-colors duration-150">قیمت‌گذاری</div></div>
       </div>
 
       <div class="nav-item group flex items-center gap-[10px] px-2 mx-[6px] my-px rounded-lg cursor-pointer select-none transition-colors duration-150 hover:bg-s2" onclick="toggleSub(this,'سفارشات')">
@@ -453,7 +455,7 @@
     </div>
   </header>
 
-  <div class="flex-1 p-6 overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-b2 [&::-webkit-scrollbar-thumb]:rounded max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
+  <div class="flex-1 p-6 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content" style="scrollbar-width:none;-ms-overflow-style:none;">
 
     <!-- ══ DASHBOARD PAGE ══ -->
     <div id="dashboard-page">
@@ -1095,6 +1097,842 @@
 </div>
 
     <div id="attendance-page" style="display:none" class="p-0"></div>
+
+    <!-- ══ PRODUCTS DASHBOARD PAGE ══ -->
+    <div id="products-dashboard-page" class="hidden">
+
+      <!-- Header row -->
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">داشبورد محصولات</h1>
+          <div class="text-xs mt-[2px]" style="color:var(--text3);">نمای جامع عملکرد و سلامت محصولات AI</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Range toggle -->
+          <div class="flex p-[3px] gap-[2px] rounded-lg" style="background:var(--s1);border:1px solid var(--b1);">
+            <button onclick="setProdRange(7,this)" class="pd-range px-3 py-[5px] rounded-md text-[11.5px] font-semibold border-none cursor-pointer" style="background:none;color:var(--text2);font-family:inherit;">۷ روز</button>
+            <button onclick="setProdRange(30,this)" class="pd-range px-3 py-[5px] rounded-md text-[11.5px] font-semibold border-none cursor-pointer pd-range-active" style="background:var(--b2);color:var(--text);font-family:inherit;">۳۰ روز</button>
+            <button onclick="setProdRange(90,this)" class="pd-range px-3 py-[5px] rounded-md text-[11.5px] font-semibold border-none cursor-pointer" style="background:none;color:var(--text2);font-family:inherit;">۳ ماه</button>
+          </div>
+          <a href="/admin/products" style="display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;border-radius:8px;font-size:12px;font-weight:600;background:var(--s1);border:1px solid var(--b1);color:var(--text2);text-decoration:none;">
+            <i class="fa-solid fa-list text-[10px]"></i> لیست محصولات
+          </a>
+          <a href="/admin/products/create" style="display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;border-radius:8px;font-size:12px;font-weight:600;background:var(--accent);color:#fff;text-decoration:none;border:none;">
+            <i class="fa-solid fa-plus text-[10px]"></i> محصول جدید
+          </a>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid var(--green);">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">محصولات فعال</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۱۸</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۲ محصول جدید</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid var(--accent);">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">سفارشات ماه</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۲,۴۸۱</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۲۳٪ رشد</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid var(--green);">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">درآمد ماه</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۱.۴۴B</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۱۸٪</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid #14b8a6;">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">نرخ موفقیت AI</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۹۶.۵٪</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۰.۸٪</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid var(--orange);">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">میانگین پردازش</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۱۸.۶s</div>
+          <div style="font-size:10px;color:var(--orange);margin-top:3px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-arrow-down text-[8px]"></i> ۲s کندتر</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;border-right:3px solid var(--red);">
+          <div style="font-size:10.5px;color:var(--text2);margin-bottom:6px;">نرخ Fallback</div>
+          <div style="font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.5px;">۸٪</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">ثابت</div>
+        </div>
+      </div>
+
+      <!-- Trend chart + Top Products -->
+      <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:14px;">
+
+        <!-- Trend Chart -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> روند سفارشات و درآمد</div>
+            <div style="display:flex;gap:14px;font-size:11px;color:var(--text2);">
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:3px;background:var(--accent);border-radius:99px;display:inline-block;"></span>سفارشات</span>
+              <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:3px;background:var(--green);border-radius:99px;display:inline-block;"></span>درآمد</span>
+            </div>
+          </div>
+          <div style="height:200px;position:relative;">
+            <canvas id="prodTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top 5 Products -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-trophy" style="color:var(--accent);"></i> پرفروش‌ترین‌ها</div>
+            <a href="/admin/products" style="font-size:11px;color:var(--accent);text-decoration:none;">همه ←</a>
+          </div>
+          @php
+          $topProds = [
+            ['rank'=>1,'rankColor'=>'#eab308','emoji'=>'💼','name'=>'عکس لینکدین','cat'=>'افراد','pct'=>100,'barColor'=>'var(--accent)','orders'=>'۶۲۴','rev'=>'۳۱۲M'],
+            ['rank'=>2,'rankColor'=>'#94a3b8','emoji'=>'✨','name'=>'آواتار انیمه','cat'=>'سرگرمی','pct'=>76,'barColor'=>'#ec4899','orders'=>'۴۷۵','rev'=>'۲۳۸M'],
+            ['rank'=>3,'rankColor'=>'#b45309','emoji'=>'📸','name'=>'عکس پرتره','cat'=>'افراد','pct'=>58,'barColor'=>'var(--green)','orders'=>'۳۶۲','rev'=>'۱۸۱M'],
+            ['rank'=>4,'rankColor'=>'#475569','emoji'=>'🎪','name'=>'بنر رویداد','cat'=>'رویدادها','pct'=>42,'barColor'=>'#3b82f6','orders'=>'۲۶۱','rev'=>'۱۳۱M'],
+            ['rank'=>5,'rankColor'=>'#475569','emoji'=>'🐾','name'=>'عکس حیوانات','cat'=>'حیوانات','pct'=>29,'barColor'=>'var(--orange)','orders'=>'۱۸۳','rev'=>'۹۲M'],
+          ];
+          @endphp
+          @foreach($topProds as $p)
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }}">
+            <div style="width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:{{ $p['rankColor'] }}22;color:{{ $p['rankColor'] }};flex-shrink:0;">{{ $p['rank'] }}</div>
+            <div style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(160,122,245,.08);">{{ $p['emoji'] }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $p['name'] }}</div>
+              <div style="font-size:9.5px;color:var(--text3);">{{ $p['cat'] }}</div>
+            </div>
+            <div style="width:60px;height:4px;background:var(--b1);border-radius:99px;overflow:hidden;flex-shrink:0;">
+              <div style="height:100%;width:{{ $p['pct'] }}%;background:{{ $p['barColor'] }};border-radius:99px;"></div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);min-width:30px;text-align:left;">{{ $p['orders'] }}</div>
+          </div>
+          @endforeach
+        </div>
+      </div>
+
+      <!-- Product Health Table -->
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-heart-pulse" style="color:var(--accent);"></i> سلامت محصولات</div>
+          <select style="background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:5px 10px;font-size:11.5px;color:var(--text2);font-family:inherit;outline:none;cursor:pointer;">
+            <option>همه دسته‌ها</option><option>افراد</option><option>سرگرمی</option><option>کسب‌وکار</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--b1);">
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">محصول</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">وضعیت</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">سفارشات</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">درآمد</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">موفقیت AI</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">زمان</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">مدل</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;text-align:right;">ترند</th>
+                <th style="font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 12px;width:80px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @php
+              $products = [
+                ['emoji'=>'💼','name'=>'عکس لینکدین','cat'=>'افراد','status'=>'فعال','statusColor'=>'var(--green)','orders'=>'۶۲۴','rev'=>'۳۱۲M','rate'=>97.8,'rateColor'=>'var(--green)','time'=>'۱۸.۶s','model'=>'flux-1.1-pro','modelColor'=>'var(--accent)','spark'=>[40,55,50,75,65,85,100],'sparkColor'=>'var(--accent)','id'=>1],
+                ['emoji'=>'✨','name'=>'آواتار انیمه','cat'=>'سرگرمی','status'=>'فعال','statusColor'=>'var(--green)','orders'=>'۴۷۵','rev'=>'۲۳۸M','rate'=>95.0,'rateColor'=>'var(--green)','time'=>'۲۲.۴s','model'=>'flux-kontext','modelColor'=>'var(--accent)','spark'=>[60,70,65,80,75,90,100],'sparkColor'=>'#ec4899','id'=>2],
+                ['emoji'=>'📸','name'=>'عکس پرتره','cat'=>'افراد','status'=>'فعال','statusColor'=>'var(--green)','orders'=>'۳۶۲','rev'=>'۱۸۱M','rate'=>98.0,'rateColor'=>'var(--green)','time'=>'۱۵.۲s','model'=>'flux-1.1-pro','modelColor'=>'var(--accent)','spark'=>[50,60,55,70,80,75,90],'sparkColor'=>'var(--green)','id'=>3],
+                ['emoji'=>'🎪','name'=>'بنر رویداد','cat'=>'رویدادها','status'=>'فعال','statusColor'=>'var(--green)','orders'=>'۲۶۱','rev'=>'۱۳۱M','rate'=>93.0,'rateColor'=>'var(--orange)','time'=>'۲۸.۱s','model'=>'ideogram/v3','modelColor'=>'var(--orange)','spark'=>[80,70,65,60,50,55,45],'sparkColor'=>'var(--red)','id'=>4],
+                ['emoji'=>'🐾','name'=>'عکس حیوانات','cat'=>'حیوانات','status'=>'فعال','statusColor'=>'var(--green)','orders'=>'۱۸۳','rev'=>'۹۲M','rate'=>96.0,'rateColor'=>'var(--green)','time'=>'۱۹.۸s','model'=>'flux-1.1-pro','modelColor'=>'var(--accent)','spark'=>[30,45,60,55,70,80,100],'sparkColor'=>'var(--orange)','id'=>5],
+                ['emoji'=>'🏢','name'=>'لوگو کسب‌وکار','cat'=>'کسب‌وکار','status'=>'غیرفعال','statusColor'=>'var(--text3)','orders'=>'—','rev'=>'—','rate'=>0,'rateColor'=>'var(--text3)','time'=>'—','model'=>'sd-3.5','modelColor'=>'var(--text3)','spark'=>[],'sparkColor'=>'var(--b2)','id'=>6],
+              ];
+              @endphp
+              @foreach($products as $pr)
+              <tr style="border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }} {{ ($pr['status']??'')==='غیرفعال' ? 'opacity:.5;' : '' }}" onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''">
+                <td style="padding:10px 12px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:26px;height:26px;border-radius:7px;background:rgba(160,122,245,.1);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ $pr['emoji'] }}</div>
+                    <div>
+                      <div style="font-size:12.5px;font-weight:700;color:var(--text);">{{ $pr['name'] }}</div>
+                      <div style="font-size:9.5px;color:var(--text3);">{{ $pr['cat'] }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding:10px 12px;">
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:10.5px;font-weight:700;background:{{ $pr['statusColor'] }}18;color:{{ $pr['statusColor'] }};border:1px solid {{ $pr['statusColor'] }}30;">
+                    {{ ($pr['status']??'')==='فعال' ? '<i class="fa-solid fa-circle" style="font-size:5px;"></i>&nbsp;' : '' }}{{ $pr['status'] }}
+                  </span>
+                </td>
+                <td style="padding:10px 12px;font-size:12.5px;font-weight:700;color:var(--text);">{{ $pr['orders'] }}</td>
+                <td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--green);">{{ $pr['rev'] }}</td>
+                <td style="padding:10px 12px;">
+                  @if($pr['rate'] > 0)
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="width:52px;height:4px;background:var(--b1);border-radius:99px;overflow:hidden;">
+                      <div style="height:100%;width:{{ $pr['rate'] }}%;background:{{ $pr['rateColor'] }};border-radius:99px;"></div>
+                    </div>
+                    <span style="font-size:11px;font-weight:700;color:{{ $pr['rateColor'] }};">{{ $pr['rate'] }}٪</span>
+                  </div>
+                  @else
+                  <span style="color:var(--text3);font-size:11px;">—</span>
+                  @endif
+                </td>
+                <td style="padding:10px 12px;font-size:11.5px;color:var(--text2);">{{ $pr['time'] }}</td>
+                <td style="padding:10px 12px;font-size:10px;font-family:monospace;color:{{ $pr['modelColor'] }};">{{ $pr['model'] }}</td>
+                <td style="padding:10px 12px;">
+                  @if(count($pr['spark']))
+                  <div style="display:inline-flex;align-items:flex-end;gap:2px;height:22px;">
+                    @foreach($pr['spark'] as $sv)
+                    <div style="width:5px;height:{{ $sv }}%;border-radius:2px 2px 0 0;background:{{ $pr['sparkColor'] }};opacity:{{ $loop->last ? 1 : 0.6 }};"></div>
+                    @endforeach
+                  </div>
+                  @else
+                  <span style="color:var(--text3);">—</span>
+                  @endif
+                </td>
+                <td style="padding:10px 12px;">
+                  <a href="/admin/products/{{ $pr['id'] }}" style="font-size:10.5px;color:var(--accent);text-decoration:none;margin-left:8px;">مشاهده</a>
+                  <a href="/admin/products/{{ $pr['id'] }}/edit" style="font-size:10.5px;color:var(--text3);text-decoration:none;">ویرایش</a>
+                </td>
+              </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bottom row: Category + Model + Quick Actions -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+
+        <!-- Category breakdown -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:14px;"><i class="fa-solid fa-layer-group" style="color:var(--accent);"></i> دسته‌بندی‌ها</div>
+          @php
+          $cats = [
+            ['emoji'=>'👤','name'=>'افراد / پرتره','pct'=>100,'color'=>'var(--accent)','count'=>'۷','rev'=>'۴۹۳M'],
+            ['emoji'=>'✨','name'=>'سرگرمی','pct'=>57,'color'=>'#ec4899','count'=>'۴','rev'=>'۲۳۸M'],
+            ['emoji'=>'💼','name'=>'کسب‌وکار','pct'=>43,'color'=>'#3b82f6','count'=>'۳','rev'=>'۱۳۱M'],
+            ['emoji'=>'🎪','name'=>'رویدادها','pct'=>28,'color'=>'var(--green)','count'=>'۲','rev'=>'۹۲M'],
+            ['emoji'=>'🐾','name'=>'حیوانات','pct'=>19,'color'=>'var(--orange)','count'=>'۱','rev'=>'۹۲M'],
+          ];
+          @endphp
+          @foreach($cats as $c)
+          <div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }}">
+            <div style="width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;background:{{ $c['color'] }}18;">{{ $c['emoji'] }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $c['name'] }}</div>
+              <div style="width:100%;height:4px;background:var(--b1);border-radius:99px;overflow:hidden;">
+                <div style="height:100%;width:{{ $c['pct'] }}%;background:{{ $c['color'] }};border-radius:99px;"></div>
+              </div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;">{{ $c['count'] }}</div>
+            <div style="font-size:10.5px;color:var(--green);flex-shrink:0;min-width:38px;text-align:left;">{{ $c['rev'] }}</div>
+          </div>
+          @endforeach
+        </div>
+
+        <!-- AI Model performance -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:14px;"><i class="fa-solid fa-microchip" style="color:var(--accent);"></i> عملکرد مدل‌های AI</div>
+          @php
+          $models = [
+            ['name'=>'flux-1.1-pro','type'=>'primary','pct'=>67,'rate'=>98.2,'rateColor'=>'var(--green)'],
+            ['name'=>'flux-kontext','type'=>'primary','pct'=>18,'rate'=>95.0,'rateColor'=>'var(--green)'],
+            ['name'=>'sd-3.5-large','type'=>'fallback','pct'=>10,'rate'=>88.5,'rateColor'=>'var(--orange)'],
+            ['name'=>'ideogram/v3','type'=>'fallback','pct'=>5,'rate'=>82.0,'rateColor'=>'var(--red)'],
+          ];
+          @endphp
+          @foreach($models as $m)
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }}">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:10.5px;font-family:monospace;color:var(--text2);">{{ $m['name'] }}</div>
+              <div style="font-size:9px;color:{{ $m['type']==='primary' ? 'var(--green)' : 'var(--orange)' }};margin-top:1px;">{{ $m['type'] }}</div>
+            </div>
+            <div style="width:70px;height:4px;background:var(--b1);border-radius:99px;overflow:hidden;flex-shrink:0;">
+              <div style="height:100%;width:{{ $m['pct'] }}%;background:var(--accent);border-radius:99px;"></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--text);min-width:28px;flex-shrink:0;">{{ $m['pct'] }}٪</div>
+            <div style="font-size:10px;font-weight:700;color:{{ $m['rateColor'] }};min-width:38px;text-align:left;flex-shrink:0;">{{ $m['rate'] }}٪</div>
+          </div>
+          @endforeach
+          <!-- Alerts -->
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);">
+            <div style="font-size:9.5px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">هشدارها</div>
+            <div style="font-size:11px;color:var(--orange);display:flex;align-items:center;gap:6px;margin-bottom:5px;"><i class="fa-solid fa-triangle-exclamation text-[9px]"></i> ideogram/v3 — timeout rate ۱۸٪</div>
+            <div style="font-size:11px;color:var(--orange);display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-clock text-[9px]"></i> بنر رویداد — زمان بالا (۲۸s)</div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;margin-bottom:14px;"><i class="fa-solid fa-bolt" style="color:var(--accent);"></i> دسترسی سریع</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            @php
+            $actions = [
+              ['icon'=>'fa-plus','color'=>'var(--green)','label'=>'محصول جدید','href'=>'/admin/products/create'],
+              ['icon'=>'fa-list','color'=>'var(--accent)','label'=>'همه محصولات','href'=>'/admin/products'],
+              ['icon'=>'fa-layer-group','color'=>'#3b82f6','label'=>'دسته‌بندی','href'=>'/admin/products/categories'],
+              ['icon'=>'fa-tag','color'=>'var(--orange)','label'=>'قیمت‌گذاری','href'=>'/admin/products/pricing'],
+              ['icon'=>'fa-cart-shopping','color'=>'#14b8a6','label'=>'سفارشات','href'=>'/admin/orders'],
+              ['icon'=>'fa-chart-line','color'=>'var(--red)','label'=>'آنالیتیکس','href'=>'/admin/analytics'],
+              ['icon'=>'fa-microchip','color'=>'var(--accent)','label'=>'Job Queue','href'=>'/admin/jobs'],
+              ['icon'=>'fa-box-archive','color'=>'var(--text2)','label'=>'آرشیو','href'=>'/admin/products'],
+            ];
+            @endphp
+            @foreach($actions as $a)
+            <a href="{{ $a['href'] }}" style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 8px;border-radius:10px;text-decoration:none;background:var(--s1);border:1px solid var(--b1);cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--b2)';this.style.background='var(--s2)'" onmouseout="this.style.borderColor='var(--b1)';this.style.background='var(--s1)'">
+              <div style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;background:{{ $a['color'] }}18;color:{{ $a['color'] }};"><i class="fa-solid {{ $a['icon'] }}"></i></div>
+              <div style="font-size:11px;font-weight:600;color:var(--text2);text-align:center;">{{ $a['label'] }}</div>
+            </a>
+            @endforeach
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+    <!-- END PRODUCTS DASHBOARD PAGE -->
+
+    <!-- ══ PRODUCTS LIST PAGE ══ -->
+    <div id="products-list-page" class="hidden">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">لیست محصولات</h1>
+          <div class="text-xs mt-[2px]" style="color:var(--text3);">مدیریت و نظارت بر محصولات AI</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setPLView('grid')" id="pl-grid-btn" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fa-solid fa-grip"></i></button>
+          <button onclick="setPLView('table')" id="pl-table-btn" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fa-solid fa-list"></i></button>
+          <button onclick="setActiveSub(null,'محصولات','ثبت محصول جدید','products-create-page')" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;font-size:12px;font-weight:700;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:inherit;">
+            <i class="fa-solid fa-plus text-[10px]"></i> محصول جدید
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(11,191,83,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-circle-check" style="color:var(--green);font-size:14px;"></i></div>
+          <div><div style="font-size:10px;color:var(--text3);">فعال</div><div style="font-size:18px;font-weight:900;color:var(--green);">۱۸</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(160,122,245,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-box" style="color:var(--accent);font-size:14px;"></i></div>
+          <div><div style="font-size:10px;color:var(--text3);">کل محصولات</div><div style="font-size:18px;font-weight:900;color:var(--text);">۲۴</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(245,146,58,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-layer-group" style="color:var(--orange);font-size:14px;"></i></div>
+          <div><div style="font-size:10px;color:var(--text3);">دسته‌بندی</div><div style="font-size:18px;font-weight:900;color:var(--text);">۷</div></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(59,130,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-microchip" style="color:#3b82f6;font-size:14px;"></i></div>
+          <div><div style="font-size:10px;color:var(--text3);">مدل AI</div><div style="font-size:18px;font-weight:900;color:var(--text);">۴</div></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;height:36px;">
+          <i class="fa-solid fa-search" style="color:var(--text3);font-size:11px;"></i>
+          <input id="pl-search" oninput="filterProducts()" placeholder="جستجوی محصول..." style="flex:1;background:none;border:none;outline:none;font-size:12px;color:var(--text);font-family:inherit;" />
+        </div>
+        <select id="pl-cat" onchange="filterProducts()" style="height:36px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 10px;font-size:12px;color:var(--text2);font-family:inherit;outline:none;cursor:pointer;">
+          <option value="">همه دسته‌ها</option>
+          <option>افراد</option><option>سرگرمی</option><option>کسب‌وکار</option><option>رویدادها</option><option>حیوانات</option>
+        </select>
+        <select id="pl-status" onchange="filterProducts()" style="height:36px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 10px;font-size:12px;color:var(--text2);font-family:inherit;outline:none;cursor:pointer;">
+          <option value="">همه وضعیت‌ها</option>
+          <option>فعال</option><option>غیرفعال</option><option>پیش‌نویس</option>
+        </select>
+        <select id="pl-model" onchange="filterProducts()" style="height:36px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 10px;font-size:12px;color:var(--text2);font-family:inherit;outline:none;cursor:pointer;">
+          <option value="">همه مدل‌ها</option>
+          <option>flux-1.1-pro</option><option>flux-kontext</option><option>sd-3.5-large</option><option>ideogram/v3</option>
+        </select>
+        <button onclick="document.getElementById('pl-search').value='';document.getElementById('pl-cat').value='';document.getElementById('pl-status').value='';document.getElementById('pl-model').value='';filterProducts();" style="height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--b1);background:none;color:var(--text3);font-size:11px;cursor:pointer;font-family:inherit;">پاک‌کردن</button>
+      </div>
+
+      <!-- Grid View -->
+      <div id="pl-grid-view">
+        <div id="pl-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;"></div>
+      </div>
+
+      <!-- Table View -->
+      <div id="pl-table-view" style="display:none;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--b1);">
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">محصول</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">دسته</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">مدل AI</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">وضعیت</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">سفارشات</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">درآمد</th>
+                <th style="padding:12px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;text-align:right;">موفقیت AI</th>
+                <th style="padding:12px 16px;"></th>
+              </tr>
+            </thead>
+            <tbody id="pl-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding:0 2px;">
+        <div style="font-size:12px;color:var(--text3);" id="pl-count-label">نمایش ۱–۱۲ از ۲۴ محصول</div>
+        <div style="display:flex;gap:4px;">
+          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;"><i class="fa-solid fa-chevron-right"></i></button>
+          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px;font-weight:700;">۱</button>
+          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;">۲</button>
+          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;"><i class="fa-solid fa-chevron-left"></i></button>
+        </div>
+      </div>
+
+    </div>
+    <!-- END PRODUCTS LIST PAGE -->
+
+    <!-- ══ PRODUCTS CREATE PAGE ══ -->
+    <div id="products-create-page" class="hidden">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">ثبت محصول جدید</h1>
+          <div class="text-xs mt-[2px]" style="color:var(--text3);">تعریف و پیکربندی محصول AI جدید</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="setActiveSub(null,'محصولات','لیست محصولات','products-list-page')" style="height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+            <i class="fa-solid fa-arrow-right text-[10px]"></i> بازگشت
+          </button>
+          <button onclick="pcSaveDraft()" style="height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">ذخیره پیش‌نویس</button>
+          <button onclick="pcPublish()" style="height:32px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-check text-[10px]"></i> انتشار</button>
+        </div>
+      </div>
+
+      <!-- Step indicator -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:20px;background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 20px;">
+        @php $steps=[['n'=>1,'label'=>'اطلاعات پایه','icon'=>'fa-circle-info'],['n'=>2,'label'=>'تنظیمات AI','icon'=>'fa-microchip'],['n'=>3,'label'=>'ورودی‌ها','icon'=>'fa-sliders'],['n'=>4,'label'=>'قیمت‌گذاری','icon'=>'fa-tag'],['n'=>5,'label'=>'انتشار','icon'=>'fa-paper-plane']]; @endphp
+        @foreach($steps as $s)
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;@if(!$loop->last)&::after{content:'';position:absolute;top:16px;left:-50%;width:100%;height:1px;background:var(--b2);}@endif">
+          <div id="pc-step-circle-{{ $s['n'] }}" style="width:32px;height:32px;border-radius:50%;border:2px solid {{ $s['n']===1 ? 'var(--accent)' : 'var(--b2)' }};background:{{ $s['n']===1 ? 'var(--accent)' : 'var(--s1)' }};display:flex;align-items:center;justify-content:center;font-size:11px;color:{{ $s['n']===1 ? '#fff' : 'var(--text3)' }};z-index:1;position:relative;transition:all .2s;cursor:pointer;" onclick="pcGoStep({{ $s['n'] }})">
+            <i class="fa-solid {{ $s['icon'] }}"></i>
+          </div>
+          <div style="font-size:10px;font-weight:600;color:{{ $s['n']===1 ? 'var(--accent)' : 'var(--text3)' }};" id="pc-step-label-{{ $s['n'] }}">{{ $s['label'] }}</div>
+        </div>
+        @if(!$loop->last)<div style="flex:none;width:60px;height:1px;background:var(--b2);margin-top:-18px;"></div>@endif
+        @endforeach
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;align-items:start;">
+        <!-- Main Form -->
+        <div>
+
+          <!-- Step 1: اطلاعات پایه -->
+          <div id="pc-step-1" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:16px;"><i class="fa-solid fa-circle-info" style="color:var(--accent);"></i> اطلاعات پایه</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="grid-column:1/-1;">
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">نام محصول <span style="color:var(--red);">*</span></label>
+                <input id="pc-name" oninput="pcUpdatePreview()" placeholder="مثلاً: عکس لینکدین حرفه‌ای" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">Slug (URL) <span style="color:var(--red);">*</span></label>
+                <input id="pc-slug" placeholder="linkedin-professional-photo" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;box-sizing:border-box;" dir="ltr" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">دسته‌بندی</label>
+                <select style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;color:var(--text2);font-family:inherit;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'">
+                  <option>انتخاب دسته‌بندی</option>
+                  <option>افراد</option><option>سرگرمی</option><option>کسب‌وکار</option><option>رویدادها</option><option>حیوانات</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">آیکون / اموجی</label>
+                <input id="pc-emoji" oninput="pcUpdatePreview()" placeholder="💼" maxlength="2" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:18px;text-align:center;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">توضیحات</label>
+                <textarea placeholder="توضیح کوتاه درباره این محصول AI..." rows="3" style="width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);font-family:inherit;outline:none;resize:none;box-sizing:border-box;line-height:1.6;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: تنظیمات AI -->
+          <div id="pc-step-2" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:16px;"><i class="fa-solid fa-microchip" style="color:var(--accent);"></i> تنظیمات AI</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">مدل اصلی <span style="color:var(--red);">*</span></label>
+                <select style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'">
+                  <option>flux-1.1-pro</option><option>flux-kontext</option><option>ideogram/v3</option><option>sd-3.5-large</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">مدل Fallback</label>
+                <select style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'">
+                  <option>sd-3.5-large</option><option>flux-1.1-pro</option><option>ideogram/v3</option><option>ندارد</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">نسبت تصویر</label>
+                <div style="display:flex;gap:6px;">
+                  @foreach(['1:1','4:3','16:9','9:16'] as $r)
+                  <button onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.style.background='var(--s1)');this.parentElement.querySelectorAll('button').forEach(b=>b.style.color='var(--text2)');this.style.background='var(--accent)';this.style.color='#fff';" style="flex:1;height:34px;border-radius:7px;border:1px solid var(--b1);background:{{ $r==='1:1'?'var(--accent)':'var(--s1)' }};color:{{ $r==='1:1'?'#fff':'var(--text2)' }};font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;">{{ $r }}</button>
+                  @endforeach
+                </div>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">کیفیت خروجی</label>
+                <select style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;color:var(--text2);font-family:inherit;outline:none;box-sizing:border-box;">
+                  <option>Ultra (2048×2048)</option><option>High (1024×1024)</option><option>Standard (512×512)</option>
+                </select>
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">قالب پرامپت <span style="font-size:9.5px;color:var(--text3);font-weight:400;">— از @{{متغیر}} برای ورودی‌ها استفاده کنید</span></label>
+                <textarea id="pc-prompt" rows="4" placeholder="A professional @{{gender}} person with @{{hair_color}} hair, wearing @{{outfit}}, @{{background}} background, LinkedIn profile photo, ultra realistic..." style="width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:10px 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;resize:none;box-sizing:border-box;line-height:1.7;direction:ltr;" dir="ltr" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: ورودی‌ها -->
+          <div id="pc-step-3" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-sliders" style="color:var(--accent);"></i> تعریف ورودی‌ها</div>
+              <button onclick="pcAddField()" style="height:30px;padding:0 12px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-plus text-[9px]"></i> فیلد جدید</button>
+            </div>
+            <div id="pc-fields-list">
+              @php $fields=[['key'=>'gender','label'=>'جنسیت','type'=>'select','req'=>true],['key'=>'hair_color','label'=>'رنگ مو','type'=>'select','req'=>false],['key'=>'outfit','label'=>'لباس','type'=>'text','req'=>false]]; @endphp
+              @foreach($fields as $fi=>$f)
+              <div class="pc-field-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;">
+                <div style="width:22px;height:22px;border-radius:5px;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ $fi+1 }}</div>
+                <input value="{{ $f['key'] }}" placeholder="key" style="width:110px;height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:11px;font-family:monospace;color:var(--text);outline:none;" dir="ltr"/>
+                <input value="{{ $f['label'] }}" placeholder="برچسب فارسی" style="flex:1;height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:12px;color:var(--text);outline:none;font-family:inherit;"/>
+                <select style="height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:11px;color:var(--text2);font-family:inherit;outline:none;">
+                  <option {{ $f['type']==='text'?'selected':'' }}>text</option>
+                  <option {{ $f['type']==='select'?'selected':'' }}>select</option>
+                  <option>number</option><option>image</option>
+                </select>
+                <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;white-space:nowrap;"><input type="checkbox" {{ $f['req']?'checked':'' }} style="accent-color:var(--accent);"/>اجباری</label>
+                <button onclick="this.closest('.pc-field-row').remove()" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b1);background:none;color:var(--red);cursor:pointer;font-size:11px;"><i class="fa-solid fa-trash"></i></button>
+              </div>
+              @endforeach
+            </div>
+          </div>
+
+          <!-- Step 4: قیمت‌گذاری -->
+          <div id="pc-step-4" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:16px;"><i class="fa-solid fa-tag" style="color:var(--accent);"></i> قیمت‌گذاری</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">قیمت (تومان) <span style="color:var(--red);">*</span></label>
+                <input type="number" placeholder="500000" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:13px;font-weight:700;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">هزینه کردیت AI</label>
+                <input type="number" placeholder="10" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">حداکثر سفارش / کاربر</label>
+                <input type="number" placeholder="بدون محدودیت" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;color:var(--text);outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent);" checked/>
+                  <span style="font-size:12px;color:var(--text2);">فعال‌سازی تخفیف برای اشتراک‌های ویژه</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5: انتشار -->
+          <div id="pc-step-5" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;margin-bottom:16px;"><i class="fa-solid fa-paper-plane" style="color:var(--accent);"></i> تنظیمات انتشار</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">وضعیت انتشار</label>
+                <select style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;">
+                  <option>فعال — نمایش عمومی</option><option>پیش‌نویس — فقط ادمین</option><option>غیرفعال</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px;">ترتیب نمایش</label>
+                <input type="number" placeholder="0" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:13px;color:var(--text);outline:none;box-sizing:border-box;"/>
+              </div>
+              <div style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent);" checked/><span style="font-size:12px;color:var(--text2);">نمایش در صفحه اکتشاف (Explore)</span></label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent);"/><span style="font-size:12px;color:var(--text2);">محصول ویژه (Featured)</span></label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" style="width:16px;height:16px;accent-color:var(--accent);" checked/><span style="font-size:12px;color:var(--text2);">اجازه دسترسی بلاگرها</span></label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Live Preview Sidebar -->
+        <div style="position:sticky;top:0;">
+          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">پیش‌نمایش کارت</div>
+            <!-- Card Preview -->
+            <div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;margin-bottom:14px;">
+              <div style="width:100%;aspect-ratio:1;border-radius:8px;background:linear-gradient(135deg,var(--b1),var(--b2));display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:12px;" id="pc-prev-emoji">💼</div>
+              <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;" id="pc-prev-name">نام محصول</div>
+              <div style="font-size:10.5px;color:var(--text3);margin-bottom:10px;">افراد · flux-1.1-pro</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:13px;font-weight:800;color:var(--accent);" id="pc-prev-price">۵۰۰,۰۰۰ تومان</span>
+                <span style="font-size:10px;padding:3px 8px;border-radius:99px;background:rgba(11,191,83,.12);color:var(--green);font-weight:700;border:1px solid rgba(11,191,83,.2);">فعال</span>
+              </div>
+            </div>
+            <!-- Tips -->
+            <div style="border-top:1px solid var(--b1);padding-top:12px;">
+              <div style="font-size:10.5px;color:var(--text3);line-height:1.8;">
+                <div style="margin-bottom:4px;display:flex;align-items:flex-start;gap:5px;"><i class="fa-solid fa-lightbulb" style="color:var(--orange);margin-top:2px;font-size:9px;"></i><span>از متغیرهای <code style="background:var(--b1);padding:1px 5px;border-radius:4px;font-size:10px;">{{key}}</code> در پرامپت استفاده کن</span></div>
+                <div style="display:flex;align-items:flex-start;gap:5px;"><i class="fa-solid fa-lightbulb" style="color:var(--orange);margin-top:2px;font-size:9px;"></i><span>Fallback مدل رو برای پایداری تنظیم کن</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- END PRODUCTS CREATE PAGE -->
+
+    <!-- ══ PRODUCTS CATEGORIES PAGE ══ -->
+    <div id="products-categories-page" class="hidden">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">دسته‌بندی‌ها</h1>
+          <div class="text-xs mt-[2px]" style="color:var(--text3);">مدیریت دسته‌بندی محصولات AI</div>
+        </div>
+        <button onclick="pcatOpenModal()" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;"><i class="fa-solid fa-plus text-[10px]"></i> دسته جدید</button>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--accent);">۷</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">کل دسته‌ها</div></div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--green);">۶</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">فعال</div></div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--text);">۲۴</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">کل محصول</div></div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;text-align:center;"><div style="font-size:22px;font-weight:900;color:var(--orange);">۳.۴</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">میانگین محصول/دسته</div></div>
+      </div>
+
+      <!-- Categories Grid -->
+      @php
+      $cats2=[
+        ['emoji'=>'👤','name'=>'افراد / پرتره','slug'=>'people','count'=>7,'rev'=>'۴۹۳M','color'=>'var(--accent)','active'=>true,'top'=>'عکس لینکدین'],
+        ['emoji'=>'✨','name'=>'سرگرمی','slug'=>'entertainment','count'=>4,'rev'=>'۲۳۸M','color'=>'#ec4899','active'=>true,'top'=>'آواتار انیمه'],
+        ['emoji'=>'💼','name'=>'کسب‌وکار','slug'=>'business','count'=>3,'rev'=>'۱۳۱M','color'=>'#3b82f6','active'=>true,'top'=>'لوگو برند'],
+        ['emoji'=>'🎪','name'=>'رویدادها','slug'=>'events','count'=>2,'rev'=>'۹۲M','color'=>'var(--green)','active'=>true,'top'=>'بنر رویداد'],
+        ['emoji'=>'🐾','name'=>'حیوانات','slug'=>'animals','count'=>1,'rev'=>'۹۲M','color'=>'var(--orange)','active'=>true,'top'=>'عکس حیوانات'],
+        ['emoji'=>'🌿','name'=>'طبیعت','slug'=>'nature','count'=>0,'rev'=>'—','color'=>'#14b8a6','active'=>false,'top'=>'—'],
+        ['emoji'=>'🎨','name'=>'هنر و خلاقیت','slug'=>'art','count'=>0,'rev'=>'—','color'=>'var(--red)','active'=>false,'top'=>'—'],
+      ];
+      @endphp
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+        @foreach($cats2 as $c2)
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;overflow:hidden;@if(!$c2['active'])opacity:.6;@endif">
+          <!-- Color bar -->
+          <div style="height:4px;background:{{ $c2['color'] }};"></div>
+          <div style="padding:16px 18px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:42px;height:42px;border-radius:11px;background:{{ $c2['color'] }}18;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">{{ $c2['emoji'] }}</div>
+                <div>
+                  <div style="font-size:13px;font-weight:800;color:var(--text);">{{ $c2['name'] }}</div>
+                  <div style="font-size:10px;font-family:monospace;color:var(--text3);margin-top:1px;">/{{ $c2['slug'] }}</div>
+                </div>
+              </div>
+              <!-- Toggle -->
+              <div onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'var(--green)':'var(--b2)';" style="width:34px;height:18px;border-radius:99px;background:{{ $c2['active'] ? 'var(--green)' : 'var(--b2)' }};cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;" class="{{ $c2['active']?'on':'' }}">
+                <div style="width:13px;height:13px;border-radius:50%;background:#fff;position:absolute;top:2.5px;{{ $c2['active'] ? 'left:18px' : 'left:3px' }};transition:left .2s;"></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--b1);">
+              <div><div style="font-size:9.5px;color:var(--text3);">محصولات</div><div style="font-size:15px;font-weight:800;color:var(--text);">{{ $c2['count'] }}</div></div>
+              <div><div style="font-size:9.5px;color:var(--text3);">درآمد</div><div style="font-size:13px;font-weight:700;color:var(--green);">{{ $c2['rev'] }}</div></div>
+            </div>
+            @if($c2['top'] !== '—')
+            <div style="font-size:10px;color:var(--text3);padding-top:8px;border-top:1px solid var(--b1);">پرفروش: <span style="color:var(--text2);font-weight:600;">{{ $c2['top'] }}</span></div>
+            @endif
+            <div style="display:flex;gap:6px;margin-top:12px;">
+              <button onclick="pcatEdit('{{ $c2['name'] }}')" style="flex:1;height:30px;border-radius:7px;border:1px solid var(--b1);background:none;color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;">ویرایش</button>
+              <button style="width:30px;height:30px;border-radius:7px;border:1px solid rgba(240,92,92,.3);background:rgba(240,92,92,.06);color:var(--red);font-size:11px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        </div>
+        @endforeach
+      </div>
+
+      <!-- Add/Edit Modal -->
+      <div id="pcat-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:16px;padding:28px 28px 24px;width:420px;max-width:92vw;position:relative;">
+          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:20px;" id="pcat-modal-title">دسته‌بندی جدید</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:grid;grid-template-columns:64px 1fr;gap:10px;">
+              <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">اموجی</label><input id="pcat-emoji" placeholder="🎨" maxlength="2" style="width:100%;height:40px;text-align:center;font-size:20px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;outline:none;"/></div>
+              <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">نام دسته‌بندی <span style="color:var(--red);">*</span></label><input id="pcat-name" placeholder="مثلاً: هنر و خلاقیت" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/></div>
+            </div>
+            <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">Slug</label><input id="pcat-slug" placeholder="art-creativity" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;box-sizing:border-box;" dir="ltr" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/></div>
+            <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">رنگ نمایشی</label>
+              <div style="display:flex;gap:6px;">
+                @foreach(['#a07af5','#0BBF53','#ec4899','#3b82f6','#f5923a','#f05c5c','#14b8a6'] as $clr)
+                <div onclick="document.querySelectorAll('.pcat-clr').forEach(d=>d.style.transform='scale(1)');this.style.transform='scale(1.3)';document.getElementById('pcat-color-val').value='{{ $clr }}';" class="pcat-clr" style="width:24px;height:24px;border-radius:50%;background:{{ $clr }};cursor:pointer;transition:transform .15s;border:2px solid transparent;"></div>
+                @endforeach
+              </div>
+              <input id="pcat-color-val" type="hidden" value="#a07af5"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:20px;">
+            <button onclick="pcatCloseModal()" style="flex:1;height:38px;border-radius:8px;border:1px solid var(--b1);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">انصراف</button>
+            <button onclick="pcatSave()" style="flex:2;height:38px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">ذخیره دسته‌بندی</button>
+          </div>
+          <button onclick="pcatCloseModal()" style="position:absolute;top:14px;left:16px;width:26px;height:26px;border-radius:6px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer;font-size:12px;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+      </div>
+
+    </div>
+    <!-- END PRODUCTS CATEGORIES PAGE -->
+
+    <!-- ══ PRODUCTS PRICING PAGE ══ -->
+    <div id="products-pricing-page" class="hidden">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">قیمت‌گذاری</h1>
+          <div class="text-xs mt-[2px]" style="color:var(--text3);">مدیریت قیمت، کردیت و تخفیف محصولات</div>
+        </div>
+        <button style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;"><i class="fa-solid fa-floppy-disk text-[10px]"></i> ذخیره همه تغییرات</button>
+      </div>
+
+      <!-- Revenue Overview -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;border-right:3px solid var(--green);">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">درآمد ماه جاری</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text);">۱.۴۴B</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۱۸٪ رشد</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;border-right:3px solid var(--accent);">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">میانگین سفارش</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text);">۵۸۰K</div>
+          <div style="font-size:10px;color:var(--green);margin-top:3px;"><i class="fa-solid fa-arrow-up text-[8px]"></i> ۵٪</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;border-right:3px solid var(--orange);">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">تخفیف اعمال‌شده</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text);">۱۴۸M</div>
+          <div style="font-size:10px;color:var(--orange);margin-top:3px;">۱۰.۳٪ از کل</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;border-right:3px solid #3b82f6;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:5px;">کردیت مصرف‌شده</div>
+          <div style="font-size:20px;font-weight:900;color:var(--text);">۲۴,۸۱۰</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">این ماه</div>
+        </div>
+      </div>
+
+      <!-- Pricing Table -->
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;overflow:hidden;margin-bottom:14px;">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-tag" style="color:var(--accent);"></i> قیمت‌گذاری به‌ازای محصول</div>
+          <div style="font-size:11px;color:var(--text3);">تغییرات ذخیره‌نشده <span id="pp-unsaved" style="display:none;color:var(--orange);font-weight:700;">• ۱ آیتم</span></div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--s1);">
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;text-align:right;">محصول</th>
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;text-align:right;">قیمت پایه (تومان)</th>
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;text-align:right;">کردیت AI</th>
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;text-align:right;">تخفیف (%)</th>
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;text-align:right;">قیمت نهایی</th>
+              <th style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;">وضعیت</th>
+            </tr>
+          </thead>
+          <tbody>
+            @php
+            $pricingData=[
+              ['emoji'=>'💼','name'=>'عکس لینکدین','price'=>500000,'credit'=>10,'discount'=>0,'status'=>'فعال'],
+              ['emoji'=>'✨','name'=>'آواتار انیمه','price'=>500000,'credit'=>12,'discount'=>10,'status'=>'فعال'],
+              ['emoji'=>'📸','name'=>'عکس پرتره','price'=>450000,'credit'=>10,'discount'=>0,'status'=>'فعال'],
+              ['emoji'=>'🎪','name'=>'بنر رویداد','price'=>600000,'credit'=>15,'discount'=>15,'status'=>'فعال'],
+              ['emoji'=>'🐾','name'=>'عکس حیوانات','price'=>400000,'credit'=>8,'discount'=>0,'status'=>'فعال'],
+              ['emoji'=>'🏢','name'=>'لوگو کسب‌وکار','price'=>700000,'credit'=>18,'discount'=>0,'status'=>'غیرفعال'],
+            ];
+            @endphp
+            @foreach($pricingData as $pp)
+            @php $final = intval($pp['price'] * (1 - $pp['discount']/100)); @endphp
+            <tr style="border-top:1px solid var(--b1);@if($pp['status']==='غیرفعال')opacity:.5;@endif" onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''">
+              <td style="padding:10px 16px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:16px;">{{ $pp['emoji'] }}</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--text);">{{ $pp['name'] }}</span>
+                </div>
+              </td>
+              <td style="padding:10px 16px;">
+                <input type="number" value="{{ $pp['price'] }}" oninput="document.getElementById('pp-unsaved').style.display='inline'" style="width:110px;height:32px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:12px;font-weight:700;color:var(--text);outline:none;font-family:inherit;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </td>
+              <td style="padding:10px 16px;">
+                <input type="number" value="{{ $pp['credit'] }}" style="width:70px;height:32px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:12px;color:var(--text);outline:none;font-family:inherit;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+              </td>
+              <td style="padding:10px 16px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="number" value="{{ $pp['discount'] }}" min="0" max="100" style="width:55px;height:32px;background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:12px;color:var(--text);outline:none;font-family:inherit;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/>
+                  @if($pp['discount']>0)<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:rgba(245,146,58,.12);color:var(--orange);font-weight:700;border:1px solid rgba(245,146,58,.2);">{{ $pp['discount'] }}٪</span>@endif
+                </div>
+              </td>
+              <td style="padding:10px 16px;font-size:13px;font-weight:800;color:var(--green);">{{ number_format($final) }}</td>
+              <td style="padding:10px 16px;">
+                <span style="font-size:10.5px;padding:3px 8px;border-radius:99px;font-weight:700;background:{{ $pp['status']==='فعال' ? 'rgba(11,191,83,.12)' : 'rgba(168,196,168,.08)' }};color:{{ $pp['status']==='فعال' ? 'var(--green)' : 'var(--text3)' }};border:1px solid {{ $pp['status']==='فعال' ? 'rgba(11,191,83,.2)' : 'var(--b1)' }};">{{ $pp['status'] }}</span>
+              </td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Discount Codes + Credit Packages -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+
+        <!-- Discount Codes -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-percent" style="color:var(--accent);"></i> کدهای تخفیف</div>
+            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> کد جدید</button>
+          </div>
+          @php $discounts=[['code'=>'VATAN20','pct'=>20,'used'=>142,'max'=>500,'exp'=>'۱۴۰۴/۰۵/۰۱','active'=>true],['code'=>'SUMMER30','pct'=>30,'used'=>89,'max'=>200,'exp'=>'۱۴۰۴/۰۴/۳۱','active'=>true],['code'=>'NEWUSER10','pct'=>10,'used'=>500,'max'=>500,'exp'=>'—','active'=>false]]; @endphp
+          @foreach($discounts as $d)
+          <div style="padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px;@if(!$d['active'])opacity:.5;@endif">
+            <div style="flex:none;font-size:11px;font-family:monospace;font-weight:800;color:var(--accent);background:rgba(160,122,245,.1);padding:4px 8px;border-radius:6px;letter-spacing:1px;">{{ $d['code'] }}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;color:var(--text2);">{{ $d['pct'] }}٪ تخفیف · {{ $d['used'] }}/{{ $d['max'] }} استفاده</div>
+              <div style="font-size:10px;color:var(--text3);">انقضا: {{ $d['exp'] }}</div>
+            </div>
+            <div style="font-size:10px;height:20px;padding:0 7px;border-radius:99px;display:flex;align-items:center;background:{{ $d['active'] ? 'rgba(11,191,83,.12)' : 'rgba(168,196,168,.08)' }};color:{{ $d['active'] ? 'var(--green)' : 'var(--text3)' }};font-weight:700;border:1px solid {{ $d['active'] ? 'rgba(11,191,83,.2)' : 'var(--b1)' }};">{{ $d['active'] ? 'فعال' : 'تمام‌شده' }}</div>
+          </div>
+          @endforeach
+        </div>
+
+        <!-- Credit Packages -->
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-coins" style="color:var(--accent);"></i> پکیج‌های کردیت</div>
+            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> پکیج جدید</button>
+          </div>
+          @php $pkgs=[['credits'=>50,'price'=>'۱۵۰,۰۰۰','per'=>'۳,۰۰۰','badge'=>null,'popular'=>false],['credits'=>120,'price'=>'۳۰۰,۰۰۰','per'=>'۲,۵۰۰','badge'=>'پرفروش','popular'=>true],['credits'=>300,'price'=>'۶۵۰,۰۰۰','per'=>'۲,۱۶۶','badge'=>'صرفه‌جو','popular'=>false]]; @endphp
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            @foreach($pkgs as $pk)
+            <div style="padding:12px 14px;background:var(--s1);border:{{ $pk['popular'] ? '1px solid var(--accent)' : '1px solid var(--b1)' }};border-radius:9px;display:flex;align-items:center;gap:12px;">
+              <div style="text-align:center;flex:none;width:52px;">
+                <div style="font-size:18px;font-weight:900;color:{{ $pk['popular'] ? 'var(--accent)' : 'var(--text)' }};">{{ $pk['credits'] }}</div>
+                <div style="font-size:9px;color:var(--text3);">کردیت</div>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:800;color:var(--text);">{{ $pk['price'] }} تومان</div>
+                <div style="font-size:10px;color:var(--text3);">هر کردیت: {{ $pk['per'] }} تومان</div>
+              </div>
+              @if($pk['badge'])<span style="font-size:10px;padding:2px 8px;border-radius:99px;background:{{ $pk['popular'] ? 'var(--accent)' : 'rgba(11,191,83,.12)' }};color:{{ $pk['popular'] ? '#fff' : 'var(--green)' }};font-weight:700;flex-shrink:0;">{{ $pk['badge'] }}</span>@endif
+              <button style="width:26px;height:26px;border-radius:6px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer;font-size:10px;"><i class="fa-solid fa-pen"></i></button>
+            </div>
+            @endforeach
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+    <!-- END PRODUCTS PRICING PAGE -->
 
     <!-- placeholder برای بخش‌های دیگه -->
     <div id="placeholder-page" class="hidden">

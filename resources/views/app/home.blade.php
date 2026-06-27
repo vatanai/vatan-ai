@@ -55,25 +55,44 @@
             <img src="https://i.pravatar.cc/150?img=12" style="width:100%;height:100%;object-fit:cover;">
           </div>
           <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">محسن آقاجانی</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;font-family:'Yekan','IRANSansXFaNum',sans-serif;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;">محسن آقاجانی</p>
+            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
           </div>
         </div>
-        <button id="theme-toggle" type="button" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
-          <img src="{{ asset('assets/img/icons/fi-sr-opacity.svg') }}" width="20" height="20" id="theme-icon" class="floating-icon">
+        <button id="theme-toggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
+          <span class="theme-toggle-track">
+            <span class="theme-toggle-thumb">
+              {{-- ماه --}}
+              <svg class="theme-icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+              {{-- خورشید --}}
+              <svg class="theme-icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="4.5"/>
+                <line x1="12" y1="2" x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/>
+                <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
+                <line x1="2" y1="12" x2="5" y2="12"/>
+                <line x1="19" y1="12" x2="22" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
+                <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
+              </svg>
+            </span>
+          </span>
         </button>
       </div>
 
       {{-- تنظیمات --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #222230;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:#ffffff;font-family:'Yekan','IRANSansXFaNum',sans-serif;">تنظیمات</span>
+        <span style="font-size:13px;color:#ffffff;">تنظیمات</span>
       </div>
 
       {{-- خروج --}}
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
         <i class="fa-solid fa-right-from-bracket" style="font-size:14px;color:#f05c5c;width:16px;text-align:center;"></i>
-        <span style="font-size:13px;color:#f05c5c;font-family:'Yekan','IRANSansXFaNum',sans-serif;">خروج</span>
+        <span style="font-size:13px;color:#f05c5c;">خروج</span>
       </div>
 
     </div>
@@ -142,7 +161,7 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/ai-beach-girl-1.avif') }}');">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/prompt-for-gemini-ai-girl.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -187,14 +206,17 @@
       </div>
     </div>
 
-    {{-- ----- STYLE B: کسب و کار ----- --}}
+    {{-- ----- ردیف ۲: کسب و کار ----- --}}
     <div class="home-section-title home-section-title--sub home-section-title--biz">
-      <span class="home-section-title-right">کسب و کار</span>
+      <div>
+        <span class="home-section-title-right">کسب و کار</span>
+        <p class="home-section-title-caption">محتوا برای برندها</p>
+      </div>
       <button type="button" class="home-section-viewall">مشاهده همه</button>
     </div>
 
-    <div class="home-cards-stack">
-      <div class="home-card home-card--full" style="background-image: url('{{ asset('assets/img/promptbank145.webp') }}');">
+    <div class="home-cards-scroll">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/promptbank234.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -203,7 +225,7 @@
           <p class="home-card-tag">کسب و کار</p>
         </div>
       </div>
-      <div class="home-card home-card--full" style="background-image: url('{{ asset('assets/img/promptbank168.webp') }}');">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/hmxsjse1drg8xqmj0mda.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
@@ -211,13 +233,190 @@
           <p class="home-card-tag">کسب و کار</p>
         </div>
       </div>
-      <div class="home-card home-card--full" style="background-image: url('{{ asset('assets/img/promptbank176.webp') }}');">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/promptbank176.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
         <div class="home-card-info">
           <p class="home-card-name">پروفایل لینکدین</p>
           <p class="home-card-tag">کسب و کار</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/ai-photo-editor-prompt.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ادیت تبلیغاتی</p>
+          <p class="home-card-tag">کسب و کار</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/best-friends-ai-prompt-2.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">گروه تیمی</p>
+          <p class="home-card-tag">کسب و کار</p>
+        </div>
+      </div>
+    </div>
+
+    {{-- ----- ردیف ۳: پرتره سینمایی ----- --}}
+    <div class="home-section-title home-section-title--sub home-section-title--biz">
+      <div>
+        <span class="home-section-title-right">پرتره سینمایی</span>
+        <p class="home-section-title-caption">نورپردازی درام و اتمسفر</p>
+      </div>
+      <button type="button" class="home-section-viewall">مشاهده همه</button>
+    </div>
+
+    <div class="home-cards-scroll">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/A-man-in-a-white-t-shirt-and-jeans-sits-on-a-rooftop-at-dusk-gazing-contemplatively-at-a-bright-full-moon-above-him.-The-scene-conveys-serenity-and-wonder.jpg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">مهتاب</p>
+          <p class="home-card-tag">پرتره</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-boy-man-sitting-on-chair-ai-prompt-riuuaksek4.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">رترو چیر</p>
+          <p class="home-card-tag">پرتره</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/Realistic-emotional-hug-scene-with-cinematic-lighting-created-using-Gemini-AI-768x1365.jpg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">لحظه احساسی</p>
+          <p class="home-card-tag">پرتره</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <i class="fa-solid fa-crown home-card-badge-tier"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ادیت کامل</p>
+          <p class="home-card-tag">پرتره</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/Couple-bike-photo-edit-using-AI-Google-Gemini-with-stylish-effects-and-professional-finish-768x1365.jpg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">کوپل دوچرخه</p>
+          <p class="home-card-tag">کوپل</p>
+        </div>
+      </div>
+    </div>
+
+    {{-- ----- ردیف ۴: عکاسی فشن ----- --}}
+    <div class="home-section-title home-section-title--sub home-section-title--biz">
+      <div>
+        <span class="home-section-title-right">عکاسی فشن</span>
+        <p class="home-section-title-caption">استایل و مد روز</p>
+      </div>
+      <button type="button" class="home-section-viewall">مشاهده همه</button>
+    </div>
+
+    <div class="home-cards-scroll">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">رترو گل</p>
+          <p class="home-card-tag">فشن</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ادیت خاص</p>
+          <p class="home-card-tag">فشن</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-boy-standing-on-road-outoor-editing-prompt-tve6lh5nkd.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">اوتدور</p>
+          <p class="home-card-tag">فشن</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookaside.fbsbx.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">مدرن سیتی</p>
+          <p class="home-card-tag">فشن</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookasidwee.fbsbx.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-image home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">پورتریت گلدن</p>
+          <p class="home-card-tag">فشن</p>
+        </div>
+      </div>
+    </div>
+
+    {{-- ----- ردیف ۵: ریلز و ویدیو ----- --}}
+    <div class="home-section-title home-section-title--sub home-section-title--biz">
+      <div>
+        <span class="home-section-title-right">ریلز و ویدیو</span>
+        <p class="home-section-title-caption">محتوای ویدیویی هوشمند</p>
+      </div>
+      <button type="button" class="home-section-viewall">مشاهده همه</button>
+    </div>
+
+    <div class="home-cards-scroll">
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/images.jpg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <i class="fa-solid fa-crown home-card-badge-tier"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ریلز هنری</p>
+          <p class="home-card-tag">ویدیو</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookasjide.fbsbx.webp') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">کلیپ احساسی</p>
+          <p class="home-card-tag">ویدیو</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">سینماتیک</p>
+          <p class="home-card-tag">ویدیو</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ریلز فشن</p>
+          <p class="home-card-tag">ویدیو</p>
+        </div>
+      </div>
+      <div class="home-card" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
+        <div class="home-card-overlay"></div>
+        <i class="fa-solid fa-video home-card-badge-type"></i>
+        <div class="home-card-info">
+          <p class="home-card-name">ویدیو کافه</p>
+          <p class="home-card-tag">ویدیو</p>
         </div>
       </div>
     </div>
@@ -229,14 +428,8 @@
 
 @push('styles')
 <style>
-  @font-face { font-family:'IranSans'; src:url('/fonts/IRANSansXFaNum-Regular.woff2') format('woff2'); font-weight:400; }
-  @font-face { font-family:'IranSans'; src:url('/fonts/IRANSansXFaNum-Medium.woff2') format('woff2'); font-weight:500; }
-  @font-face { font-family:'IranSans'; src:url('/fonts/IRANSansXFaNum-Bold.woff2') format('woff2'); font-weight:700; }
-  @font-face { font-family:'IranSans'; src:url('/fonts/IRANSansXFaNum-Light.woff2') format('woff2'); font-weight:300; }
-
-  * { font-family: 'IranSans', sans-serif; }
-
-  html, body { background: #000000 !important; }
+  html, body { background: #000000; overflow-x: hidden; }
+  html.light, html.light body { background: #ffffff; }
   :root { --bg: #000000; }
 
   .floating-icon {
@@ -248,9 +441,60 @@
     filter: brightness(0) invert(0);
   }
 
-  html.light #theme-icon {
-    filter: brightness(0);
+  /* ===== دکمه روز/شب ===== */
+  .theme-toggle-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
+
+  .theme-toggle-track {
+    display: flex;
+    align-items: center;
+    width: 46px;
+    height: 26px;
+    border-radius: 99px;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 3px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    position: relative;
+  }
+
+  html.light .theme-toggle-track {
+    background: #e8f0fe;
+    border-color: rgba(0,0,0,0.1);
+  }
+
+  .theme-toggle-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease;
+    transform: translateX(0);
+    position: absolute;
+    left: 3px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  html.light .theme-toggle-thumb {
+    transform: translateX(20px);
+    background: #f59e0b;
+  }
+
+  .theme-icon-moon { color: #1a1a2e; display: block; }
+  .theme-icon-sun  { color: #ffffff; display: none; }
+  html.light .theme-icon-moon { display: none; }
+  html.light .theme-icon-sun  { display: block; }
 
   .home-page {
     width: 100%;
@@ -259,7 +503,7 @@
     min-height: 100vh;
     padding: calc(env(safe-area-inset-top) + 180px) 16px 120px 16px;
     direction: rtl;
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
   }
 
   .home-logo {
@@ -298,7 +542,7 @@
 
   .home-greeting-title {
     margin: 0;
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     font-weight: 800;
     font-size: 20px;
     color: #ffffff;
@@ -306,7 +550,7 @@
 
   .home-greeting-sub {
     margin: 2px 0 0 0;
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     font-weight: 400;
     font-size: 13px;
     color: #ffffff;
@@ -345,7 +589,7 @@
     padding: 0;
     font-size: 16px;
     color: #ffffff;
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     direction: rtl;
   }
 
@@ -452,7 +696,7 @@
     font-weight: 300;
     line-height: 1.2;
     color: #ffffff;
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
   }
@@ -488,12 +732,12 @@
   }
 
   .home-section-title:not(.home-section-title--sub) .home-section-title-right {
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     font-weight: 700;
   }
 
   .home-section-title--sub:not(.home-section-title--biz) .home-section-title-right {
-    font-family: 'IranSans', sans-serif;
+    font-family: inherit;
     font-weight: 700;
   }
 
