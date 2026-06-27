@@ -214,12 +214,36 @@ function goToOtp(fromMode) {
   }
   wrap.classList.remove('error');
   error.classList.remove('show');
-  currentPhone = phone;
-  document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
-  document.getElementById('otp-back').onclick = () => goToStep(fromMode === 'register' ? 'reg-step-1' : 'login-step-1');
-  goToStep('step-otp');
-  resetOtpBoxes();
-  startResendTimer();
+
+  fetch('/auth/send-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ phone, mode: fromMode }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.errors || (data.message && data.message.includes('یافت نشد')) || (data.message && data.message.includes('قبلاً'))) {
+      wrap.classList.add('error');
+      error.textContent = data.message || 'خطا';
+      error.classList.add('show');
+      return;
+    }
+    currentPhone = phone;
+    document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
+    document.getElementById('otp-back').onclick = () => goToStep(fromMode === 'register' ? 'reg-step-1' : 'login-step-1');
+    goToStep('step-otp');
+    resetOtpBoxes();
+    startResendTimer();
+  })
+  .catch(() => {
+    // fallback: نمایش OTP بدون تأیید سرور
+    currentPhone = phone;
+    document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
+    document.getElementById('otp-back').onclick = () => goToStep(fromMode === 'register' ? 'reg-step-1' : 'login-step-1');
+    goToStep('step-otp');
+    resetOtpBoxes();
+    startResendTimer();
+  });
 }
 
 function resetOtpBoxes() {
@@ -280,18 +304,30 @@ function confirmOtp() {
     showOtpError('کد منقضی شده، ارسال مجدد کن');
     return;
   }
-  if (code !== VALID_CODE) {
-    showOtpError('کد وارد شده اشتباهه، دوباره امتحان کن');
-    boxes.forEach(b => { b.value = ''; });
-    boxes[0].focus();
-    return;
-  }
-  if (resendTimerId) clearInterval(resendTimerId);
-  if (mode === 'login' && currentPhone === RETURNING_PHONE) {
-    window.location.href = '/admin/dashboard';
-  } else {
-    goToStep('step-3');
-  }
+
+  fetch('/auth/verify-otp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+    body: JSON.stringify({ phone: currentPhone, code }),
+  })
+  .then(r => r.json().then(data => ({ ok: r.ok, data })))
+  .then(({ ok, data }) => {
+    if (!ok) {
+      showOtpError(data.message || 'کد اشتباه است');
+      boxes.forEach(b => { b.value = ''; });
+      boxes[0].focus();
+      return;
+    }
+    if (resendTimerId) clearInterval(resendTimerId);
+    if (data.is_registered) {
+      window.location.href = '/admin/dashboard';
+    } else {
+      goToStep('step-3');
+    }
+  })
+  .catch(() => {
+    showOtpError('خطای شبکه، دوباره تلاش کن');
+  });
 }
 
 function completeProfile() {
