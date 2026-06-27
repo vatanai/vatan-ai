@@ -310,9 +310,11 @@ function confirmOtp() {
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
     body: JSON.stringify({ phone: currentPhone, code }),
   })
-  .then(r => r.json().then(data => ({ ok: r.ok, data })))
-  .then(({ ok, data }) => {
-    if (!ok) {
+  .then(async r => {
+    const text = await r.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { throw new Error('HTTP ' + r.status + ': ' + text.substring(0, 200)); }
+    if (!r.ok) {
       showOtpError(data.message || 'کد اشتباه است');
       boxes.forEach(b => { b.value = ''; });
       boxes[0].focus();
@@ -325,8 +327,8 @@ function confirmOtp() {
       goToStep('step-3');
     }
   })
-  .catch(() => {
-    showOtpError('خطای شبکه، دوباره تلاش کن');
+  .catch(err => {
+    showOtpError('خطا: ' + err.message);
   });
 }
 
