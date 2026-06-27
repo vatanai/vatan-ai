@@ -13,13 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-        // ریدایرکت هوشمند بر اساس آدرس — ادمین به لاگین ادمین، بقیه به لاگین عمومی
-        $middleware->redirectGuestsTo(function (Request $request) {
-            if ($request->is('admin') || $request->is('admin/*')) {
-                return route('admin.login');
-            }
-            return route('login');
-        });
+        $middleware->redirectGuestsTo(fn() => route('login'));
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

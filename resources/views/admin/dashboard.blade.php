@@ -566,6 +566,53 @@
         </div>
       </div>
 
+      <!-- ══ بخش محصولات ══ -->
+      <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;font-weight:700;color:var(--watan-text3,#4d7a56);letter-spacing:2px;text-transform:uppercase;">محصولات AI</div>
+        <a href="/admin/analytics" style="font-size:11px;color:var(--accent,#a07af5);text-decoration:none;opacity:.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">آنالیتیکس کامل ←</a>
+      </div>
+      <div class="grid grid-cols-4 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-2" style="background:rgba(160,122,245,.04);border:1px solid rgba(160,122,245,.1);border-radius:14px;padding:14px;">
+        <a href="/admin/products" style="text-decoration:none;" class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-pointer transition-colors duration-200 hover:border-b2 block">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-[10.5px] font-semibold" style="color:var(--watan-text3,#4d7a56);">محصولات فعال</div>
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(160,122,245,.1);color:var(--accent,#a07af5);"><i class="fa-solid fa-box-open"></i></div>
+          </div>
+          <div class="text-[22px] font-extrabold" style="color:var(--accent,#a07af5);">۱۸</div>
+          <div class="text-[10px] mt-1" style="color:var(--watan-text3,#4d7a56);">از ۲۰ محصول کل</div>
+        </a>
+        <a href="/admin/orders" style="text-decoration:none;" class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-pointer transition-colors duration-200 hover:border-b2 block">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-[10.5px] font-semibold" style="color:var(--watan-text3,#4d7a56);">سفارشات امروز</div>
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(11,191,83,.08);color:var(--green,#0BBF53);"><i class="fa-solid fa-cart-shopping"></i></div>
+          </div>
+          <div class="text-[22px] font-extrabold" style="color:var(--green,#0BBF53);">۸۷</div>
+          <div class="flex items-center gap-1 text-[10px] mt-1" style="color:var(--green,#0BBF53);"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i> ۱۱٪ نسبت به دیروز</div>
+        </a>
+        <div class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-default transition-colors duration-200 hover:border-b2">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-[10.5px] font-semibold" style="color:var(--watan-text3,#4d7a56);">محبوب‌ترین محصول</div>
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(234,179,8,.1);color:#eab308;"><i class="fa-solid fa-trophy"></i></div>
+          </div>
+          <div class="text-[13px] font-extrabold leading-tight" style="color:var(--watan-text,#fff);">عکس لینکدین</div>
+          <div class="text-[10px] mt-1" style="color:var(--watan-text3,#4d7a56);">۶۲۴ سفارش این ماه</div>
+        </div>
+        <a href="/admin/analytics" style="text-decoration:none;" class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-pointer transition-colors duration-200 hover:border-b2 block">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-[10.5px] font-semibold" style="color:var(--watan-text3,#4d7a56);">نرخ موفقیت AI</div>
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(11,191,83,.08);color:var(--green,#0BBF53);"><i class="fa-solid fa-microchip"></i></div>
+          </div>
+          <div class="text-[22px] font-extrabold" style="color:var(--green,#0BBF53);">۹۶.۵٪</div>
+          <div class="text-[10px] mt-1" style="color:var(--watan-text3,#4d7a56);">۳.۵٪ نرخ خطا</div>
+        </a>
+      </div>
+      <!-- quick product links -->
+      <div class="flex items-center gap-[8px] mb-5 flex-wrap">
+        <a href="/admin/products" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(160,122,245,.08);color:var(--accent,#a07af5);border:1px solid rgba(160,122,245,.15);text-decoration:none;" onmouseover="this.style.background='rgba(160,122,245,.14)'" onmouseout="this.style.background='rgba(160,122,245,.08)'"><i class="fa-solid fa-box-open" style="font-size:10px;"></i> لیست محصولات</a>
+        <a href="/admin/products/create" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(11,191,83,.06);color:var(--green,#0BBF53);border:1px solid rgba(11,191,83,.15);text-decoration:none;" onmouseover="this.style.background='rgba(11,191,83,.12)'" onmouseout="this.style.background='rgba(11,191,83,.06)'"><i class="fa-solid fa-plus" style="font-size:10px;"></i> ثبت محصول</a>
+        <a href="/admin/orders" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(59,130,246,.06);color:#3b82f6;border:1px solid rgba(59,130,246,.15);text-decoration:none;" onmouseover="this.style.background='rgba(59,130,246,.12)'" onmouseout="this.style.background='rgba(59,130,246,.06)'"><i class="fa-solid fa-cart-shopping" style="font-size:10px;"></i> سفارشات</a>
+        <a href="/admin/analytics" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(245,146,58,.06);color:var(--orange,#f5923a);border:1px solid rgba(245,146,58,.15);text-decoration:none;" onmouseover="this.style.background='rgba(245,146,58,.12)'" onmouseout="this.style.background='rgba(245,146,58,.06)'"><i class="fa-solid fa-chart-line" style="font-size:10px;"></i> آنالیتیکس</a>
+      </div>
+
       <!-- نمودار + آمار سریع -->
       <div class="grid grid-cols-[1fr_340px] gap-[14px] mb-5 max-[1100px]:grid-cols-1">
         <div class="bg-s1 border border-b1 rounded-[10px] p-5 max-[768px]:p-[18px] max-[480px]:p-[14px]">

@@ -60,7 +60,7 @@ Route::middleware('guest:admin')->group(function () {
 });
 
 // ─── Admin Panel ──────────────────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 

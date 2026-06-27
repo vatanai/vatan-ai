@@ -48,7 +48,8 @@
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); pkgs=data.get\\('packages',[]\\); bad=[p for p in pkgs if p.get\\('require',{}\\).get\\('php',''\\) not in \\('',''\\) and '8.4' in p.get\\('require',{}\\).get\\('php',''\\)]; print\\('\\\\n'.join\\(f\\\\\"{p['name']}:{p['version']} requires php:{p.get\\('require',{}\\).get\\('php',''\\)}\\\\\" for p in bad\\)\\)\")",
       "Bash(composer update *)",
       "Bash(composer show *)",
-      "Bash(composer install *)"
+      "Bash(composer install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/site/home)"
     ]
   }
 }

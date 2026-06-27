@@ -288,7 +288,7 @@ function confirmOtp() {
   }
   if (resendTimerId) clearInterval(resendTimerId);
   if (mode === 'login' && currentPhone === RETURNING_PHONE) {
-    window.location.href = '/app';
+    window.location.href = '/admin/dashboard';
   } else {
     goToStep('step-3');
   }
@@ -319,7 +319,20 @@ function completeProfile() {
     lastError.classList.remove('show');
   }
   if (!valid) return;
-  window.location.href = '/app';
+
+  fetch('/auth/complete-profile', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+    },
+    body: JSON.stringify({ first_name: nameInput.value.trim(), last_name: lastInput.value.trim() }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.message) window.location.href = '/admin/dashboard';
+  })
+  .catch(() => { window.location.href = '/admin/dashboard'; });
 }
 
 document.querySelectorAll('.otp-box').forEach((box, i, all) => {
