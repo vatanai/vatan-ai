@@ -73,20 +73,25 @@ class ActivityLog extends Model
         array $meta = [],
         ?int $generationId = null,
         ?int $promptId = null,
-    ): self {
-        $request = RequestFacade::instance();
+    ): ?self {
+        try {
+            $request = RequestFacade::instance();
 
-        return self::create([
-            'user_id'       => $userId,
-            'type'          => $type,
-            'message'       => $message,
-            'generation_id' => $generationId,
-            'prompt_id'     => $promptId,
-            'meta'          => $meta,
-            'level'         => $level,
-            'ip_address'    => $request?->ip(),
-            'user_agent'    => $request?->userAgent(),
-            'session_id'    => $request?->hasSession() ? $request->session()->getId() : null,
-        ]);
+            return self::create([
+                'user_id'       => $userId,
+                'type'          => $type,
+                'message'       => $message,
+                'generation_id' => $generationId,
+                'prompt_id'     => $promptId,
+                'meta'          => $meta,
+                'level'         => $level,
+                'ip_address'    => $request?->ip(),
+                'user_agent'    => $request?->userAgent(),
+                'session_id'    => $request?->hasSession() ? $request->session()->getId() : null,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('ActivityLog::record failed: ' . $e->getMessage());
+            return null;
+        }
     }
 }
