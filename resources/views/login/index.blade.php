@@ -217,7 +217,7 @@ function goToOtp(fromMode) {
 
   fetch('/auth/send-otp', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
     body: JSON.stringify({ phone, mode: fromMode }),
   })
   .then(r => r.json())
@@ -307,7 +307,7 @@ function confirmOtp() {
 
   fetch('/auth/verify-otp', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
     body: JSON.stringify({ phone: currentPhone, code }),
   })
   .then(r => r.json().then(data => ({ ok: r.ok, data })))
@@ -360,6 +360,7 @@ function completeProfile() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
     },
     body: JSON.stringify({ first_name: nameInput.value.trim(), last_name: lastInput.value.trim() }),
