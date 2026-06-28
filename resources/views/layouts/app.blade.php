@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   @stack('styles')
   <style>
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: inherit; }
     html {
       scrollbar-width: thin;
       scrollbar-color: #222230 transparent;
@@ -29,7 +29,10 @@
       font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
       transition: background-color 0.3s ease, color 0.3s ease;
     }
-    * { font-family: inherit; }
+    /* فضای top nav روی تبلت/دسکتاپ */
+    @media (min-width: 640px) {
+      body { padding-top: 64px; }
+    }
   </style>
 
   <script>

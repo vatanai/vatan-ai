@@ -3,9 +3,9 @@
 @section('content')
 <div class="profile-page" dir="rtl">
 
-  {{-- ===== HEADER (اسکرول می‌شه — نه fixed) ===== --}}
+  {{-- ===== HEADER (fixed — دقیقاً مثل home) ===== --}}
   <section class="profile-header">
-    <div class="profile-header-wrap">
+    <div class="profile-logo-wrap">
       <button id="menuOpenBtn" type="button" class="p-header-btn">
         <img src="{{ asset('assets/img/icons/hamburger.svg') }}" width="26" height="26" class="floating-icon">
       </button>
@@ -14,10 +14,14 @@
         <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="width:77px;height:auto;display:block;">
       </div>
     </div>
+    <div style="position:relative;display:inline-block;margin-top:10px;">
+      <div class="profile-header-buy-btn">خرید ویژه</div>
+      <div class="profile-header-discount-badge">۱۵٪ تخفیف</div>
+    </div>
   </section>
 
   {{-- ===== SECTION: آواتار + آمار ===== --}}
-  <section style="padding:20px 16px 8px 16px;">
+  <section class="profile-avatar-section">
     <div style="display:flex;flex-direction:row;align-items:center;gap:16px;direction:ltr;">
 
       {{-- Avatar + Name + Phone + Plan --}}
@@ -56,23 +60,30 @@
     </div>
   </section>
 
-  {{-- ===== SECTION: دکمه‌های اکشن (طراحی جدید) ===== --}}
+  {{-- ===== SECTION: دکمه‌های اکشن (۳تایی یک ردیف) ===== --}}
   <section style="padding:0 16px;margin-top:14px;">
 
-    {{-- ردیف اول: خرید اشتراک (برجسته) --}}
-    <button type="button" class="btn-subscribe">
-      <span>خرید اشتراک ویژه</span>
-      <span class="btn-subscribe-badge">۱۵٪ تخفیف</span>
-    </button>
-
-    {{-- ردیف دوم: پشتیبانی + تنظیمات --}}
-    <div style="display:flex;gap:8px;margin-top:8px;direction:rtl;">
-      <button type="button" class="btn-secondary" style="flex:1;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    {{-- یک ردیف: اشتراک | پشتیبانی | تنظیمات --}}
+    <div style="display:flex;gap:8px;direction:rtl;">
+      <button type="button" class="btn-subscribe" style="flex:2;">
+        <span>خرید اشتراک ویژه</span>
+        <span class="btn-subscribe-badge">۱۵٪ تخفیف</span>
+      </button>
+      <button type="button" class="btn-secondary" style="flex:1.3;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         پشتیبانی
       </button>
-      <button type="button" class="btn-secondary btn-icon" aria-label="تنظیمات" data-card="settings">
+      <button type="button" class="btn-secondary btn-icon" aria-label="تنظیمات">
         <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="17" height="17" class="floating-icon">
+      </button>
+    </div>
+
+    {{-- باکس پروموشن: برنامه ویژه کسب درآمد --}}
+    <div class="promo-banner">
+      <p class="promo-text">برنامه ویژه کسب درآمد مستمر</p>
+      <button type="button" class="promo-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v1H5v-1z"/></svg>
+        همکاری در فروش
       </button>
     </div>
 
@@ -222,7 +233,7 @@
 
   {{-- ===== HAMBURGER DROPDOWN ===== --}}
   <div id="menuOverlay" style="display:none;position:fixed;inset:0;z-index:160;" onclick="if(event.target===this){closeMenu();}">
-    <div id="menuSheet" style="position:absolute;top:74px;right:12px;width:296px;background:#111116;border:1px solid #222230;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
+    <div id="menuSheet" style="position:absolute;top:calc(env(safe-area-inset-top) + 136px);right:12px;width:296px;background:#111116;border:1px solid #222230;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid #222230;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -277,20 +288,60 @@
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
-    background: var(--bg, #000000);
+    background: #000000;
     min-height: 100vh;
     padding-bottom: 120px;
   }
+  html.light .profile-page { background: #ffffff; }
 
-  /* ===== HEADER — اسکرول می‌شه ===== */
+  /* ===== HEADER — fixed، دقیقاً مثل home ===== */
   .profile-header {
-    background: var(--bg, #000000);
-    padding: calc(env(safe-area-inset-top) + 12px) 16px 14px 16px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+    background: #000000;
+    z-index: 150;
+    padding: calc(env(safe-area-inset-top) + 100px) 16px 18px 16px;
     display: flex;
+    justify-content: space-between;
     align-items: center;
   }
+  html.light .profile-header { background: #ffffff; }
 
-  .profile-header-wrap { display: flex; align-items: center; gap: 12px; }
+  .profile-logo-wrap { display: flex; align-items: center; gap: 12px; }
+
+  .profile-header-buy-btn {
+    background: #1e1e1e;
+    border-radius: 9px;
+    padding: 6.84px 13.86px;
+    font-size: 11.7px;
+    font-weight: 400;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+  html.light .profile-header-buy-btn { background: #e5e5e5; color: #000000; }
+
+  .profile-header-discount-badge {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #E8326A;
+    border-radius: 6px;
+    padding: 1.9px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #ffffff;
+    white-space: nowrap;
+    width: fit-content;
+  }
+
+  /* ===== SECTION: آواتار — جبران ارتفاع هدر fixed ===== */
+  .profile-avatar-section {
+    padding: calc(env(safe-area-inset-top) + 180px) 16px 8px 16px;
+  }
 
   .p-header-btn {
     width: 36px; height: 36px; flex-shrink: 0;
@@ -305,8 +356,9 @@
   }
   .avatar-inner {
     width: 100%; height: 100%; border-radius: 50%;
-    padding: 2px; background: var(--bg, #000000);
+    padding: 2px; background: #000000;
   }
+  html.light .avatar-inner { background: #ffffff; }
   .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 
   /* ===== NAME / PHONE / PLAN ===== */
@@ -357,6 +409,40 @@
     border-radius: 12px; border: 1px solid rgba(11,191,83,0.35);
     background: transparent; color: #0BBF53;
     font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+
+  /* ===== PROMO BANNER (برنامه ویژه کسب درآمد + همکاری در فروش) ===== */
+  .promo-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    direction: rtl;
+    background: var(--affiliate-bg, #0d2818);
+    border: 1px solid var(--affiliate-border, #1a5c32);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-top: 10px;
+  }
+  .promo-text {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0BBF53;
+    margin: 0;
+  }
+  .promo-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #0BBF53;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* ===== TABS ===== */
@@ -431,8 +517,8 @@
     color: #0BBF53; font-weight: 700;
   }
 
-  .files-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
-  .files-cell { aspect-ratio: 4/5; border-radius: 4px; overflow: hidden; background: #111116; }
+  .files-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; margin: 0 -16px; width: calc(100% + 32px); }
+  .files-cell { aspect-ratio: 4/5; border-radius: 4px; overflow: hidden; background: #111116; position: relative; }
 
   /* ===== REFERRAL ===== */
   .referral-icon-wrap {
@@ -489,6 +575,63 @@
   .profile-page i[class*="fa-"] {
     font-family: "Font Awesome 6 Free" !important;
     font-weight: 900 !important; display: inline-block;
+  }
+
+  /* ══════════════════════════════════
+     TABLET — 640px+
+  ══════════════════════════════════ */
+  @media (min-width: 640px) {
+    /* هدر موبایل حذف میشه */
+    .profile-header { display: none !important; }
+
+    .profile-page {
+      max-width: 680px;
+      padding-bottom: 60px;
+    }
+
+    .profile-avatar-section {
+      padding: 28px 28px 8px 28px;
+    }
+
+    .avatar-ring { width: 110px; height: 110px; }
+
+    .profile-stat-number { font-size: 24px; }
+
+    /* grid گالری */
+    .files-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  }
+
+  /* ══════════════════════════════════
+     DESKTOP — 1024px+
+  ══════════════════════════════════ */
+  @media (min-width: 1024px) {
+    .profile-page {
+      max-width: 1080px;
+      padding: 0 40px 60px;
+    }
+
+    .profile-avatar-section {
+      padding: 36px 0 16px 0;
+    }
+
+    .avatar-ring { width: 120px; height: 120px; }
+
+    .profile-name  { font-size: 20px; }
+    .profile-phone { font-size: 15px; }
+    .profile-stat-number { font-size: 26px; }
+
+    /* grid گالری روی دسکتاپ */
+    .files-grid { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .files-cell { border-radius: 10px; }
+    .grid-cell  { border-radius: 10px; }
+  }
+
+  /* ══════════════════════════════════
+     LARGE DESKTOP — 1280px+
+  ══════════════════════════════════ */
+  @media (min-width: 1280px) {
+    .profile-page { max-width: 1200px; padding: 0 56px 60px; }
+    .files-grid { grid-template-columns: repeat(6, 1fr); }
   }
 
 </style>

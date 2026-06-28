@@ -161,7 +161,7 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/prompt-for-gemini-ai-girl.webp') }}');">
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/prompt-for-gemini-ai-girl.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -169,16 +169,16 @@
           <p class="home-card-name">پرتره سینمایی</p>
           <p class="home-card-tag">عکس</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">کافه گرل</p>
           <p class="home-card-tag">عکس</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -186,16 +186,16 @@
           <p class="home-card-name">فشن استودیو</p>
           <p class="home-card-tag">عکس</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/moody-portrait-of-a-young-man-with-a-black-horse-on-a-ranch-ai-photo-editing-prompt.avif') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/moody-portrait-of-a-young-man-with-a-black-horse-on-a-ranch-ai-photo-editing-prompt.avif') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">اسب و طبیعت</p>
           <p class="home-card-tag">عکس</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -203,7 +203,7 @@
           <p class="home-card-name">سینماتیک مرد</p>
           <p class="home-card-tag">عکس</p>
         </div>
-      </div>
+      </a>
     </div>
 
     {{-- ----- ردیف ۲: کسب و کار ----- --}}
@@ -216,7 +216,7 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/promptbank234.webp') }}');">
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/promptbank234.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -224,16 +224,16 @@
           <p class="home-card-name">برندینگ حرفه‌ای</p>
           <p class="home-card-tag">کسب و کار</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/hmxsjse1drg8xqmj0mda.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/hmxsjse1drg8xqmj0mda.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">عکس محصول</p>
           <p class="home-card-tag">کسب و کار</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/promptbank176.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/promptbank176.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -241,23 +241,23 @@
           <p class="home-card-name">پروفایل لینکدین</p>
           <p class="home-card-tag">کسب و کار</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/ai-photo-editor-prompt.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/ai-photo-editor-prompt.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">ادیت تبلیغاتی</p>
           <p class="home-card-tag">کسب و کار</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/best-friends-ai-prompt-2.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-friends-ai-prompt-2.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">گروه تیمی</p>
           <p class="home-card-tag">کسب و کار</p>
         </div>
-      </div>
+      </a>
     </div>
 
     {{-- ----- ردیف ۳: پرتره سینمایی ----- --}}
@@ -270,15 +270,15 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/A-man-in-a-white-t-shirt-and-jeans-sits-on-a-rooftop-at-dusk-gazing-contemplatively-at-a-bright-full-moon-above-him.-The-scene-conveys-serenity-and-wonder.jpg') }}');">
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/A-man-in-a-white-t-shirt-and-jeans-sits-on-a-rooftop-at-dusk-gazing-contemplatively-at-a-bright-full-moon-above-him.-The-scene-conveys-serenity-and-wonder.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">مهتاب</p>
           <p class="home-card-tag">پرتره</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-boy-man-sitting-on-chair-ai-prompt-riuuaksek4.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-boy-man-sitting-on-chair-ai-prompt-riuuaksek4.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -286,16 +286,16 @@
           <p class="home-card-name">رترو چیر</p>
           <p class="home-card-tag">پرتره</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/Realistic-emotional-hug-scene-with-cinematic-lighting-created-using-Gemini-AI-768x1365.jpg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Realistic-emotional-hug-scene-with-cinematic-lighting-created-using-Gemini-AI-768x1365.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">لحظه احساسی</p>
           <p class="home-card-tag">پرتره</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -303,15 +303,15 @@
           <p class="home-card-name">ادیت کامل</p>
           <p class="home-card-tag">پرتره</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/Couple-bike-photo-edit-using-AI-Google-Gemini-with-stylish-effects-and-professional-finish-768x1365.jpg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Couple-bike-photo-edit-using-AI-Google-Gemini-with-stylish-effects-and-professional-finish-768x1365.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">کوپل دوچرخه</p>
           <p class="home-card-tag">کوپل</p>
         </div>
-      </div>
+      </a>
     </div>
 
     {{-- ----- ردیف ۴: عکاسی فشن ----- --}}
@@ -324,15 +324,15 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp') }}');">
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">رترو گل</p>
           <p class="home-card-tag">فشن</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -340,31 +340,31 @@
           <p class="home-card-name">ادیت خاص</p>
           <p class="home-card-tag">فشن</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/gemini-boy-standing-on-road-outoor-editing-prompt-tve6lh5nkd.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-boy-standing-on-road-outoor-editing-prompt-tve6lh5nkd.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">اوتدور</p>
           <p class="home-card-tag">فشن</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookaside.fbsbx.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookaside.fbsbx.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">مدرن سیتی</p>
           <p class="home-card-tag">فشن</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookasidwee.fbsbx.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookasidwee.fbsbx.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-image home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">پورتریت گلدن</p>
           <p class="home-card-tag">فشن</p>
         </div>
-      </div>
+      </a>
     </div>
 
     {{-- ----- ردیف ۵: ریلز و ویدیو ----- --}}
@@ -377,7 +377,7 @@
     </div>
 
     <div class="home-cards-scroll">
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/images.jpg') }}');">
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/images.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <i class="fa-solid fa-crown home-card-badge-tier"></i>
@@ -385,16 +385,16 @@
           <p class="home-card-name">ریلز هنری</p>
           <p class="home-card-tag">ویدیو</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/lookasjide.fbsbx.webp') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookasjide.fbsbx.webp') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">کلیپ احساسی</p>
           <p class="home-card-tag">ویدیو</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <i class="fa-solid fa-bolt home-card-badge-tier"></i>
@@ -402,23 +402,23 @@
           <p class="home-card-name">سینماتیک</p>
           <p class="home-card-tag">ویدیو</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">ریلز فشن</p>
           <p class="home-card-tag">ویدیو</p>
         </div>
-      </div>
-      <div class="home-card" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
+      </a>
+      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
         <div class="home-card-overlay"></div>
         <i class="fa-solid fa-video home-card-badge-type"></i>
         <div class="home-card-info">
           <p class="home-card-name">ویدیو کافه</p>
           <p class="home-card-tag">ویدیو</p>
         </div>
-      </div>
+      </a>
     </div>
 
   </section>
@@ -670,6 +670,57 @@
     color: rgba(255, 255, 255, 0.5);
   }
 
+  /* ===== LIGHT MODE — باکس سرچ ===== */
+  html.light .home-search-card {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  html.light .home-search-inner {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  html.light .home-search-input {
+    color: #000000;
+  }
+  html.light .home-search-input::placeholder,
+  html.light .search-input::placeholder {
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 14px;
+  }
+  html.light .home-search-hint {
+    color: rgba(0, 0, 0, 0.4);
+  }
+  html.light .home-chip {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+  html.light .home-chip-line1 {
+    color: #000000;
+  }
+  html.light .home-chip-line2 {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  html.light .home-section-title-right {
+    color: #000000;
+  }
+  html.light .home-section-title-caption {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  html.light .home-greeting-title {
+    color: #000000;
+  }
+  html.light .home-greeting-sub {
+    color: #000000;
+  }
+  html.light .home-section-viewall {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #000000;
+  }
+  html.light .home-products-subtitle {
+    color: #555555;
+  }
+
   .home-products {
     padding-bottom: 120px;
   }
@@ -771,6 +822,7 @@
     position: relative;
     background-size: cover;
     background-position: center;
+    cursor: pointer;
   }
 
   .home-cards-scroll .home-card {
@@ -826,6 +878,77 @@
     font-size: 10px;
     color: rgba(255, 255, 255, 0.6);
   }
+
+  /* ══════════════════════════════════
+     TABLET — 640px+
+  ══════════════════════════════════ */
+  @media (min-width: 640px) {
+    /* هدر موبایل حذف میشه — top nav جایگزینه */
+    .home-logo { display: none !important; }
+
+    .home-page {
+      max-width: 680px;
+      padding: 24px 28px 80px;
+    }
+
+    .home-greeting-title { font-size: 24px; }
+
+    .home-search-card { border-radius: 18px; }
+
+    /* اسلایدر بدون negative margin */
+    .home-cards-scroll {
+      margin-left: 0;
+      margin-right: 0;
+      width: 100%;
+    }
+    .home-cards-scroll .home-card {
+      width: 180px;
+      max-width: 180px;
+    }
+
+    .home-section-title-right { font-size: 16px; }
+  }
+
+  /* ══════════════════════════════════
+     DESKTOP — 1024px+
+  ══════════════════════════════════ */
+  @media (min-width: 1024px) {
+    .home-page {
+      max-width: 1080px;
+      padding: 32px 40px 60px;
+    }
+
+    /* هدینگ و سرچ — سانتر و محدود */
+    .home-greeting { margin-top: 16px; }
+    .home-greeting-title { font-size: clamp(22px, 2vw, 28px); }
+
+    .home-search { max-width: 680px; margin-left: auto; margin-right: auto; }
+
+    /* کارت‌های اسلایدر */
+    .home-cards-scroll {
+      gap: 8px;
+      padding-bottom: 8px;
+    }
+    .home-cards-scroll .home-card {
+      width: 200px;
+      max-width: 210px;
+      border-radius: 10px;
+    }
+
+    .home-section-title-right { font-size: 17px; }
+    .home-products { padding-bottom: 40px; }
+
+    /* کارت فول‌ویدث */
+    .home-card--full { max-height: 420px; }
+  }
+
+  /* ══════════════════════════════════
+     LARGE DESKTOP — 1280px+
+  ══════════════════════════════════ */
+  @media (min-width: 1280px) {
+    .home-page { max-width: 1200px; padding: 36px 56px 60px; }
+    .home-cards-scroll .home-card { width: 220px; max-width: 230px; }
+  }
 </style>
 @endpush
 
@@ -869,6 +992,13 @@
     if (menuOpen && !menuSheet.contains(e.target)) {
       closeMenu();
     }
+  });
+
+  /* ── کلیک روی کارت محصول ── */
+  document.querySelectorAll('.home-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      window.location.href = '/app/product/demo';
+    });
   });
 
 })();

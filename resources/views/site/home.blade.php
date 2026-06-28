@@ -1226,6 +1226,25 @@
       color: var(--text2);
     }
 
+    .footer-admin-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--s1);
+      border: 1px solid var(--b1);
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      color: var(--text2);
+      transition: border-color .2s ease, color .2s ease;
+      text-decoration: none;
+    }
+    .footer-admin-box:hover {
+      border-color: rgba(11,191,83,0.4);
+      color: var(--green);
+    }
+    .footer-admin-box i { font-size: 12px; }
+
     @media (max-width: 600px) {
       .footer-inner { flex-direction: column; text-align: center; }
       .footer-links { flex-wrap: wrap; justify-content: center; }
@@ -1982,7 +2001,13 @@
         <a href="{{ route('app.home') }}">ورود به اپ</a>
       </div>
 
-      <p class="footer-copy">© ۱۴۰۴ وطن استودیو — تمام حقوق محفوظ است</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <p class="footer-copy">© ۱۴۰۴ وطن استودیو — تمام حقوق محفوظ است</p>
+        <a href="{{ route('admin.dashboard') }}" class="footer-admin-box">
+          <i class="fa-solid fa-gauge-high"></i>
+          ورود به داشبورد
+        </a>
+      </div>
     </div>
   </div>
 </footer>

@@ -27,7 +27,8 @@ WORKDIR /var/www/html
 COPY . .
 
 # Fix permissions
-RUN chown -R www-data:www-data storage bootstrap/cache \
+RUN chown -R www-data:www-data . \
+    && chmod -R 755 . \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 80

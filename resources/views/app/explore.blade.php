@@ -163,6 +163,7 @@
     aspect-ratio: 3/4; border-radius: 12px;
     overflow: hidden; position: relative;
     background-size: cover; background-position: center;
+    cursor: pointer;
   }
   .trends-card-overlay {
     position: absolute; inset: 0;
@@ -190,6 +191,62 @@
     position: absolute; bottom: 10px; right: 10px; text-align: right;
   }
   .trends-card-name { margin: 0; font-size: 13px; font-weight: 700; color: #ffffff; }
+
+  /* ══════════════════════════════════
+     TABLET — 640px+  |  ۳ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 640px) {
+    .trends-page {
+      max-width: 720px;
+    }
+    .trends-header {
+      padding: calc(env(safe-area-inset-top) + 24px) 28px 20px 28px;
+    }
+    .trends-title { font-size: 22px; }
+    .trends-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 8px 28px;
+    }
+    .trends-chips {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+
+  /* ══════════════════════════════════
+     DESKTOP — 1024px+  |  ۴ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 1024px) {
+    .trends-page {
+      max-width: 1080px;
+      padding-bottom: 60px;
+    }
+    .trends-header {
+      padding: 40px 40px 24px 40px;
+    }
+    .trends-title { font-size: clamp(20px, 1.8vw, 26px); }
+    .trends-search-box { max-width: 560px; }
+    .trends-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 8px 40px;
+    }
+    .trends-card { border-radius: 14px; }
+    .trends-card-name { font-size: 14px; }
+  }
+
+  /* ══════════════════════════════════
+     LARGE DESKTOP — 1280px+  |  ۵ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 1280px) {
+    .trends-page { max-width: 1280px; }
+    .trends-grid {
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 56px;
+    }
+    .trends-header { padding: 44px 56px 24px 56px; }
+  }
 </style>
 @endpush
 
@@ -200,6 +257,13 @@
     chip.addEventListener('click', function () {
       document.querySelectorAll('.trends-chip').forEach(function (c) { c.classList.remove('active'); });
       chip.classList.add('active');
+    });
+  });
+
+  /* ── کلیک روی کارت محصول ── */
+  document.querySelectorAll('.trends-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      window.location.href = '/app/product/demo';
     });
   });
 }());

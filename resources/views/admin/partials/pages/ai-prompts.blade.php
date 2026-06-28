@@ -212,10 +212,10 @@
     <div>
       <label class="text-[11px] font-bold text-watan-text3 block mb-[6px]">متغیرهای پویا</label>
       <div class="bg-s2 border border-b1 rounded-lg p-3 flex flex-wrap gap-2">
-        <span onclick="insertPromptVar('{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}product_name{{'}}'}}</span>
-        <span onclick="insertPromptVar('{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}cuisine_type{{'}}'}}</span>
-        <span onclick="insertPromptVar('{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}style{{'}}'}}</span>
-        <span onclick="insertPromptVar('{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}aspect_ratio{{'}}'}}</span>
+        <span onclick="insertPromptVar('@{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}product_name{{'}}'}}</span>
+        <span onclick="insertPromptVar('@{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}cuisine_type{{'}}'}}</span>
+        <span onclick="insertPromptVar('@{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}style{{'}}'}}</span>
+        <span onclick="insertPromptVar('@{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">{{'{{'}}aspect_ratio{{'}}'}}</span>
       </div>
     </div>
     <div>

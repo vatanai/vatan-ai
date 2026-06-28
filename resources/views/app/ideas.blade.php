@@ -142,6 +142,7 @@
     aspect-ratio: 3/4; border-radius: 12px;
     overflow: hidden; position: relative;
     background-size: cover; background-position: center;
+    cursor: pointer;
   }
   .explore-card-overlay {
     position: absolute; inset: 0;
@@ -162,7 +163,62 @@
     font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; display: inline-block;
   }
 
-  /* CHIPS active toggle */
+  /* ══════════════════════════════════
+     TABLET — 640px+  |  ۳ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 640px) {
+    .explore-page {
+      max-width: 720px;
+    }
+    .explore-header {
+      padding: calc(env(safe-area-inset-top) + 24px) 28px 20px 28px;
+    }
+    .explore-title { font-size: 22px; }
+    .explore-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 8px 28px;
+    }
+    .explore-chips {
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+  }
+
+  /* ══════════════════════════════════
+     DESKTOP — 1024px+  |  ۴ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 1024px) {
+    .explore-page {
+      max-width: 1080px;
+      padding-bottom: 60px;
+    }
+    .explore-header {
+      padding: 40px 40px 24px 40px;
+    }
+    .explore-title { font-size: clamp(20px, 1.8vw, 26px); }
+    .explore-search-box { max-width: 560px; }
+    .explore-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 8px 40px;
+    }
+    .explore-card { border-radius: 14px; }
+    .explore-card-name { font-size: 14px; }
+    .explore-card-tag  { font-size: 12px; }
+  }
+
+  /* ══════════════════════════════════
+     LARGE DESKTOP — 1280px+  |  ۵ ستون
+  ══════════════════════════════════ */
+  @media (min-width: 1280px) {
+    .explore-page { max-width: 1280px; }
+    .explore-grid {
+      grid-template-columns: repeat(5, 1fr);
+      padding: 8px 56px;
+    }
+    .explore-header { padding: 44px 56px 24px 56px; }
+  }
 </style>
 @endpush
 
@@ -173,6 +229,13 @@
     chip.addEventListener('click', function () {
       document.querySelectorAll('.explore-chip').forEach(function (c) { c.classList.remove('active'); });
       chip.classList.add('active');
+    });
+  });
+
+  /* ── کلیک روی کارت محصول ── */
+  document.querySelectorAll('.explore-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      window.location.href = '/app/product/demo';
     });
   });
 }());

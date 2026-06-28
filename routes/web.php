@@ -10,8 +10,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\DashboardController;
 
 // ─── Root ────────────────────────────────────────────────
-Route::get('/', fn() => redirect('/site/home'));
-Route::get('/site', fn() => redirect('/site/home'));
+Route::get('/', fn() => view('site.home'))->name('site.home.root');
+Route::get('/site', fn() => redirect('/'));
 
 // ─── Site (Landing) ──────────────────────────────────────
 Route::prefix('site')->group(function () {
