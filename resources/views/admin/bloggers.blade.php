@@ -3,36 +3,6 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
-*{box-sizing:border-box;}
-body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
-.admin-wrap{display:flex;min-height:100vh;}
-.admin-sidebar{position:fixed;top:0;right:0;bottom:0;width:256px;background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;z-index:100;scrollbar-width:none;}
-.admin-sidebar::-webkit-scrollbar{display:none;}
-.admin-main{margin-right:256px;flex:1;display:flex;flex-direction:column;}
-.admin-header{position:sticky;top:0;z-index:50;background:var(--s1);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;}
-.admin-content{padding:24px;flex:1;}
-.snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
-.snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
-.snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
-.snav-item.active .snav-icon{color:var(--accent);}
-.snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
-.snav-item.active .snav-label{color:var(--text);}
-.snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;text-decoration:none;transition:background .15s;}
-.snav-sub-item:hover{background:var(--s2);}
-.snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
-.snav-sub-item:hover .snav-dot{background:var(--accent);}
-.snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
-.breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);}
-.breadcrumb a{color:var(--text2);text-decoration:none;}.breadcrumb a:hover{color:var(--text);}
-.breadcrumb .current{color:var(--text);font-weight:600;}
-.hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
-.hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
-.hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;border:none;}
-.hdr-btn-primary:hover{opacity:.9;}
-
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:16px 18px;}
 .stat-label{font-size:11px;color:var(--text2);margin-bottom:5px;}
@@ -101,51 +71,16 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 @endpush
 
 @section('content')
-<div class="admin-wrap">
+<div class="flex min-h-screen" dir="rtl" style="background:var(--bg);">
 
-  <!-- SIDEBAR -->
-  <aside class="admin-sidebar">
-    <div style="display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;">
-      <div style="width:36px;height:36px;border-radius:10px;background:rgba(11,191,83,.08);border:1px solid rgba(11,191,83,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <img src="/assets/img/iconvatanai.svg" alt="Vatan AI" style="width:22px;height:22px;">
-      </div>
-      <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
-    </div>
-    <nav style="flex:1;padding:8px 0;">
-      <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
-      <div class="snav-section">مدیریت محصولات</div>
-      <a href="/admin/products" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-box-open"></i></div><div class="snav-label">محصولات</div></a>
-      <a href="/admin/products/dashboard" class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">داشبورد محصولات</div></a>
-      <a href="/admin/products/create" class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">ثبت محصول جدید</div></a>
-      <a href="/admin/products/categories" class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">دسته‌بندی‌ها</div></a>
-      <a href="/admin/products/pricing" class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">قیمت‌گذاری</div></a>
-      <a href="/admin/orders" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div><div class="snav-label">سفارشات</div></a>
-      <div class="snav-section">بازاریابی</div>
-      <a href="/admin/bloggers" class="snav-item active"><div class="snav-icon"><i class="fa-solid fa-bullhorn"></i></div><div class="snav-label">بلاگرها</div><span style="font-size:9px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);padding:1px 6px;border-radius:6px;">۳ درخواست</span></a>
-      <div class="snav-section">آنالیز</div>
-      <a href="/admin/analytics" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-chart-line"></i></div><div class="snav-label">آنالیتیکس</div></a>
-    </nav>
-  </aside>
+  @include('admin.partials.sidebar')
+  <div class="sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-  <!-- MAIN -->
-  <div class="admin-main">
-    <header class="admin-header">
-      <div class="breadcrumb">
-        <a href="/admin/dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i></a>
-        <span style="color:var(--text3);font-size:10px;"><i class="fa-solid fa-chevron-left"></i></span>
-        <span class="current">بلاگرها</span>
-      </div>
-      <div style="flex:1;"></div>
-      <button class="hdr-btn hdr-btn-outline"><i class="fa-solid fa-arrow-down-to-line" style="font-size:11px;"></i> خروجی CSV</button>
-      <button class="hdr-btn hdr-btn-primary" onclick="openAddModal()"><i class="fa-solid fa-plus" style="font-size:11px;"></i> افزودن بلاگر</button>
-    </header>
+  <main class="mr-64 flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+    @include('admin.partials.header')
+    <div class="flex-1 p-6 max-[768px]:p-[18px] max-[480px]:p-[14px]">
 
-    <main class="admin-content">
-      <div style="margin-bottom:20px;">
+<div style="margin-bottom:20px;">
         <div style="font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;">مدیریت بلاگرها</div>
         <div style="font-size:13px;color:var(--text3);">سیستم رفرال، لینک‌های اختصاصی، کارمزد و تسویه</div>
       </div>
@@ -368,24 +303,9 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
       <button class="hdr-btn hdr-btn-outline" onclick="closeAddModal()">انصراف</button>
       <button class="hdr-btn hdr-btn-primary" onclick="saveNewBlogger()">ثبت بلاگر</button>
-    </div>
-  </div>
-</div>
 
+    </div>
+  </main>
+</div>
 @endsection
-@section('scripts')
-<script>
-function switchTab(btn, id) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById(id).classList.add('active');
-}
-function openAddModal(){document.getElementById('add-modal').classList.add('open');}
-function closeAddModal(){document.getElementById('add-modal').classList.remove('open');}
-function saveNewBlogger(){closeAddModal();alert('بلاگر با موفقیت اضافه شد');}
-function copyLink(url){navigator.clipboard.writeText('https://'+url).then(()=>alert('لینک کپی شد: '+url));}
-function acceptRequest(btn){btn.closest('.request-card').style.opacity='.5';btn.textContent='✓ تأیید شد';}
-function rejectRequest(btn){btn.closest('.request-card').style.opacity='.5';btn.textContent='✗ رد شد';}
-</script>
 @endsection

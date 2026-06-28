@@ -65,8 +65,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
-    // داشبورد
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // داشبورد (SPA — section از URL تشخیص داده میشه توسط JS)
+    Route::get('/dashboard/{section?}', [DashboardController::class, 'index'])
+        ->name('dashboard')
+        ->where('section', '[a-z0-9]+');
 
     // مدیریت پرامپت‌ها (CRUD)
     Route::resource('prompts', AdminPromptController::class)->except(['show']);
@@ -87,8 +89,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/products/{id}',       fn($id) => view('admin.products-show', ['productId' => $id]))->name('products.show');
     Route::get('/products/{id}/edit',  fn($id) => view('admin.products-edit',  ['productId' => $id]))->name('products.edit');
     Route::get('/orders',              fn() => view('admin.orders'))->name('orders');
+    Route::get('/orders/analytics',    fn() => view('admin.orders.analytics'))->name('orders.analytics');
     Route::get('/analytics',           fn() => view('admin.analytics'))->name('analytics');
     Route::get('/jobs',            fn() => view('admin.jobs'))->name('jobs');
     Route::get('/payments',        fn() => view('admin.payments'))->name('payments');
     Route::get('/bloggers',        fn() => view('admin.bloggers'))->name('bloggers');
+    Route::get('/bloggers/commission', fn() => view('admin.bloggers.commission'))->name('bloggers.commission');
+    Route::get('/bloggers/traffic',    fn() => view('admin.bloggers.traffic'))->name('bloggers.traffic');
+    Route::get('/bloggers/{id}',       fn($id) => view('admin.bloggers.show', ['bloggerId' => $id]))->name('bloggers.show');
+    // کاربران - صفحات جدید
+    Route::get('/users/smart-lists',   fn() => view('admin.users.smart-lists'))->name('users.smart_lists');
+    Route::get('/users/tokens',        fn() => view('admin.users.tokens'))->name('users.tokens');
 });

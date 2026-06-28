@@ -3,34 +3,6 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
-*{box-sizing:border-box;}
-body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
-.admin-wrap{display:flex;min-height:100vh;}
-.admin-sidebar{position:fixed;top:0;right:0;bottom:0;width:256px;background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;z-index:100;scrollbar-width:thin;scrollbar-color:var(--b2) transparent;}
-.admin-main{margin-right:256px;flex:1;display:flex;flex-direction:column;}
-.admin-header{position:sticky;top:0;z-index:50;background:var(--s1);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;}
-.admin-content{padding:24px;flex:1;}
-.snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
-.snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);} .snav-item.active{background:rgba(160,122,245,.12);}
-.snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
-.snav-item.active .snav-icon{color:var(--accent);}
-.snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
-.snav-item.active .snav-label{color:var(--text);}
-.snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
-.snav-sub-item:hover{background:var(--s2);} .snav-sub-item.active{background:rgba(160,122,245,.1);}
-.snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
-.snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
-.snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
-.snav-sub-item.active .snav-sub-label{color:var(--text);font-weight:600;}
-.breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);}
-.breadcrumb a{color:var(--text2);text-decoration:none;} .breadcrumb a:hover{color:var(--text);}
-.breadcrumb .current{color:var(--text);font-weight:600;}
-.hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;text-decoration:none;}
-.hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
-.hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-
 /* stats */
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
 .stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:15px 16px;}
@@ -102,59 +74,16 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 @endpush
 
 @section('content')
-<div class="admin-wrap">
+<div class="flex min-h-screen" dir="rtl" style="background:var(--bg);">
 
-  <!-- SIDEBAR -->
-  <aside class="admin-sidebar">
-    <div style="display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;">
-      <div style="width:36px;height:36px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;box-shadow:0 0 16px rgba(11,191,83,.3);">و</div>
-      <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
-    </div>
-    <nav style="flex:1;padding:8px 0;">
-      <a href="/admin/dashboard" class="snav-item" style="margin-bottom:4px;">
-        <div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div>
-        <div class="snav-label">مرکز فرماندهی</div>
-      </a>
-      <div class="snav-section">مدیریت محصولات</div>
-      <div class="snav-item">
-        <div class="snav-icon"><i class="fa-solid fa-box-open"></i></div>
-        <div class="snav-label">محصولات</div>
-        <i class="fa-solid fa-chevron-left" style="font-size:9px;color:var(--text3);"></i>
-      </div>
-      <div class="snav-item active">
-        <div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-        <div class="snav-label">سفارشات</div>
-      </div>
-      <div class="snav-section">هوش مصنوعی</div>
-      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-microchip"></i></div><div class="snav-label">مدیریت مدل‌ها</div><span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);">در حال طراحی</span></div>
-      <div class="snav-section">آنالیز</div>
-      <a href="/admin/analytics" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-chart-line"></i></div><div class="snav-label">آنالیتیکس</div></a>
-      <div style="height:1px;background:var(--b1);margin:8px 12px;"></div>
-      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-gear"></i></div><div class="snav-label">تنظیمات</div></div>
-    </nav>
-  </aside>
+  @include('admin.partials.sidebar')
+  <div class="sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-  <!-- MAIN -->
-  <div class="admin-main">
-    <header class="admin-header">
-      <div class="breadcrumb">
-        <a href="/admin/dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i></a>
-        <span style="color:var(--text3);font-size:10px;"><i class="fa-solid fa-chevron-left"></i></span>
-        <span class="current">سفارشات</span>
-      </div>
-      <div style="flex:1;"></div>
-      <button class="hdr-btn hdr-btn-outline">
-        <i class="fa-solid fa-arrow-down-to-line" style="font-size:11px;"></i> خروجی CSV
-      </button>
-    </header>
+  <main class="mr-64 flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+    @include('admin.partials.header')
+    <div class="flex-1 p-6 max-[768px]:p-[18px] max-[480px]:p-[14px]">
 
-    <main class="admin-content">
-      <div style="margin-bottom:20px;">
+<div style="margin-bottom:20px;">
         <div style="font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;">مدیریت سفارشات</div>
         <div style="font-size:13px;color:var(--text3);">تمام سفارشات AI — وضعیت پردازش، رفرال بلاگرها، و جزئیات خروجی</div>
       </div>
@@ -384,42 +313,9 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
     <div style="margin-top:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:6px;">ورودی کاربر (inputs)</div>
       <div class="json-block" id="modal-inputs">—</div>
+
     </div>
-  </div>
+  </main>
 </div>
-
 @endsection
-
-@section('scripts')
-<script>
-const orderData = {
-  1:{id:'#ORD-۲۴۸۱',product:'عکس حرفه‌ای لینکدین',user:'سارا احمدی — sara@email.com',status:'completed',model:'black-forest-labs/flux-1.1-pro',time:'۱۸,۲۴۰ms',credits:'۵',fallback:'خیر',referral:'@tech_ali',date:'۱۴۰۵/۰۳/۲۷ — ۱۴:۲۳',inputs:'{\n  "user_photo": ["https://cdn.../photo1.jpg"],\n  "name": "سارا احمدی",\n  "clothing_style": "formal",\n  "background": "office"\n}'},
-  2:{id:'#ORD-۲۴۸۰',product:'کارت تبریک تولد',user:'محمد رضوی — m.razavi@mail.ir',status:'completed',model:'black-forest-labs/flux-1.1-pro',time:'۱۲,۱۰۵ms',credits:'۳',fallback:'خیر',referral:'مستقیم',date:'۱۴۰۵/۰۳/۲۷ — ۱۴:۱۸',inputs:'{\n  "user_photo": ["https://cdn.../photo.jpg"],\n  "name": "محمد",\n  "birth_date": "1370/05/15"\n}'},
-  3:{id:'#ORD-۲۴۷۹',product:'آواتار دیجیتال',user:'نیلوفر کریمی — niloo.k@gmail.com',status:'processing',model:'در حال پردازش...',time:'—',credits:'۱۰',fallback:'—',referral:'@design_mina',date:'۱۴۰۵/۰۳/۲۷ — ۱۴:۱۵',inputs:'{\n  "user_photo": ["https://cdn.../img.png"],\n  "style": "realistic_3d"\n}'},
-  4:{id:'#ORD-۲۴۷۸',product:'بنر کسب‌وکار',user:'علیرضا موسوی — alireza.m@co.ir',status:'failed',model:'timeout — هیچ مدلی پاسخ نداد',time:'۶۰,۰۰۰ms',credits:'۸',fallback:'بله (SD 3.5 هم timeout شد)',referral:'مستقیم',date:'۱۴۰۵/۰۳/۲۷ — ۱۴:۰۵',inputs:'{\n  "business_name": "آروین دیجیتال",\n  "slogan": "نوآوری در دیجیتال",\n  "color_theme": "#1e40af"\n}'},
-  5:{id:'#ORD-۲۴۷۷',product:'عکس حرفه‌ای لینکدین',user:'زهرا حسینی — zahra.h@email.com',status:'completed',model:'black-forest-labs/flux-1.1-pro',time:'۲۲,۸۱۰ms',credits:'۵',fallback:'خیر',referral:'@tech_ali',date:'۱۴۰۵/۰۳/۲۷ — ۱۳:۵۵',inputs:'{\n  "user_photo": ["https://cdn.../zahra.jpg"],\n  "name": "زهرا حسینی",\n  "clothing_style": "business_casual"\n}'},
-  6:{id:'#ORD-۲۴۷۶',product:'عکس خانوادگی',user:'رضا تهرانی — r.tehrani@co.com',status:'completed',model:'stability-ai/stable-diffusion-3.5 (fallback)',time:'۳۵,۴۱۲ms',credits:'۶',fallback:'بله — primary timeout شد',referral:'مستقیم',date:'۱۴۰۵/۰۳/۲۷ — ۱۳:۴۰',inputs:'{\n  "family_photo": ["https://cdn.../fam.jpg"],\n  "members": 4\n}'},
-  7:{id:'#ORD-۲۴۷۵',product:'کارت نوروز',user:'فاطمه نوری — f.nouri@mail.ir',status:'completed',model:'black-forest-labs/flux-1.1-pro',time:'۹,۳۴۰ms',credits:'رایگان',fallback:'خیر',referral:'@art_roya',date:'۱۴۰۵/۰۳/۲۷ — ۱۳:۲۲',inputs:'{\n  "user_photo": ["https://cdn.../fatemeh.jpg"],\n  "name": "فاطمه"\n}'},
-  8:{id:'#ORD-۲۴۷۴',product:'آواتار دیجیتال',user:'امیر شریفی — a.sharifi@biz.ir',status:'completed',model:'black-forest-labs/flux-kontext-pro',time:'۲۸,۰۵۵ms',credits:'۱۰',fallback:'خیر',referral:'مستقیم',date:'۱۴۰۵/۰۳/۲۷ — ۱۳:۱۰',inputs:'{\n  "user_photo": ["https://cdn.../amir.jpg"],\n  "style": "anime"\n}'},
-};
-
-function openDetail(n){
-  const d=orderData[n];
-  document.getElementById('modal-order-id').textContent=d.id;
-  document.getElementById('modal-product').textContent=d.product;
-  document.getElementById('modal-user').textContent=d.user;
-  const statusMap={completed:'<span class="badge badge-green"><i class="fa-solid fa-check"></i>&nbsp;موفق</span>',processing:'<span class="badge badge-orange">در پردازش</span>',failed:'<span class="badge badge-red">ناموفق</span>'};
-  document.getElementById('modal-status-badge').innerHTML=statusMap[d.status]||'';
-  document.getElementById('modal-model').textContent=d.model;
-  document.getElementById('modal-time').textContent=d.time;
-  document.getElementById('modal-credits').textContent=d.credits+' کردیت';
-  document.getElementById('modal-fallback').textContent=d.fallback;
-  document.getElementById('modal-referral').innerHTML=d.referral.startsWith('@')?'<span class="referral-pill"><i class="fa-solid fa-link" style="font-size:9px;"></i> '+d.referral+'</span>':d.referral;
-  document.getElementById('modal-date').textContent=d.date;
-  document.getElementById('modal-inputs').textContent=d.inputs;
-  document.getElementById('detail-modal').classList.add('open');
-}
-function closeDetail(){document.getElementById('detail-modal').classList.remove('open');}
-function filterOrders(){}
-</script>
 @endsection

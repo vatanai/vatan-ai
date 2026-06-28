@@ -36,6 +36,12 @@
       @include('admin.partials.pages.products-categories')
       @include('admin.partials.pages.products-pricing')
 
+      {{-- ══ AI PAGES ══ --}}
+      @include('admin.partials.pages.ai-hub')
+      @include('admin.partials.pages.ai-models')
+      @include('admin.partials.pages.ai-prompts')
+      @include('admin.partials.pages.ai-logs')
+
     </div>{{-- #content --}}
 
   </main>

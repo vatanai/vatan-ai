@@ -9,7 +9,7 @@ use App\Models\Product;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index($section = null)
     {
         try {
             $stats = [
