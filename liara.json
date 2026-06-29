@@ -1,7 +1,10 @@
 {
   "port": 80,
-  "platform": "docker",
+  "platform": "laravel",
   "app": "aivatan",
+  "laravel": {
+    "phpVersion": "8.4"
+  },
   "disks": [
     {
       "name": "my-disk",

@@ -82,6 +82,7 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
+        "use-github-api": false,
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
