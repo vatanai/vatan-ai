@@ -9,6 +9,7 @@
 
 <div class="flex min-h-screen" dir="rtl" style="background:var(--bg);">
 
+  {{-- ══ SIDEBAR ══ --}}
 
   {{-- ══ SIDEBAR OVERLAY (mobile) ══ --}}
   <div class="sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]"

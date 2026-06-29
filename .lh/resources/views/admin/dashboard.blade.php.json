@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 1,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1782636652681,
@@ -12,6 +12,10 @@
                 {
                     "date": 1782636658068,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -12,9 +12,9 @@\n   {{-- ══ SIDEBAR ══ --}}\n   @include('admin.partials.sidebar')\n \n   {{-- ══ SIDEBAR OVERLAY (mobile) ══ --}}\n-  <div class=\"sidebar-overlay hidden ma x-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]\"\n+  <div class=\"sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]\"\n        id=\"sidebar-overlay\" onclick=\"toggleSidebar()\"></div>\n \n   {{-- ══ MAIN ══ --}}\n   <main class=\"mr-64 flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0\">\n"
+                },
+                {
+                    "date": 1782729444857,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,8 @@\n \n <div class=\"flex min-h-screen\" dir=\"rtl\" style=\"background:var(--bg);\">\n \n   {{-- ══ SIDEBAR ══ --}}\n-  @include('admin.partials.sidebar')\n \n   {{-- ══ SIDEBAR OVERLAY (mobile) ══ --}}\n   <div class=\"sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]\"\n        id=\"sidebar-overlay\" onclick=\"toggleSidebar()\"></div>\n"
                 }
             ],
             "date": 1782636652681,
