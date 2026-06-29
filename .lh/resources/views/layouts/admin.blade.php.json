@@ -1,0 +1,62 @@
+{
+    "sourceFile": "resources/views/layouts/admin.blade.php",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 11,
+            "patches": [
+                {
+                    "date": 1782635897407,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1782635954443,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -17,5 +17,5 @@\n \n     @yield('scripts')\n \n </body>\n-</html>\n\\ No newline at end of file\n+</html> \n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782636109304,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -17,5 +17,5 @@\n \n     @yield('scripts')\n \n </body>\n-</html> \n\\ No newline at end of file\n+</html>\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782636278934,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,18 +4,44 @@\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n-    <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n+    {{-- تعریف متغیرهای CSS روت --}}\n+    <style>\n+        :root {\n+            --bg: #0c0c10;\n+            --s1: #111116;\n+            --s2: #16161c;\n+            --b1: #222230;\n+            --text: #ffffff;\n+            --text2: #a8c4a8;\n+            --text3: #4d7a56;\n+            --green: #0BBF53;\n+            --accent: #a07af5;\n+            --red: #f05c5c;\n+            --orange: #f5923a;\n+        }\n \n+        * {\n+            box-sizing: border-box;\n+        }\n+\n+        body {\n+            font-family: 'IRANSansXFaNum', sans-serif;\n+            background-color: var(--bg);\n+            color: var(--text);\n+        }\n+    </style>\n+\n+    {{-- لود همزمان استایل‌ها و آیکون‌ها از طریق لاراول ویت --}}\n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n </head>\n-<body class=\"font-sans bg-bg text-white\">\n+<body>\n \n     @yield('content')\n \n-    @yield('scripts')\n+    @stack('scripts')\n \n </body>\n </html>\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782636450938,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -42,6 +42,6 @@\n     @yield('content')\n \n     @stack('scripts')\n \n-</body>\n+</body> \n </html>\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782636586434,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,9 +4,12 @@\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n-    {{-- تعریف متغیرهای CSS روت --}}\n+<link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n+\n+    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css\">\n+\n     <style>\n         :root {\n             --bg: #0c0c10;\n             --s1: #111116;\n@@ -31,17 +34,22 @@\n             color: var(--text);\n         }\n     </style>\n \n-    {{-- لود همزمان استایل‌ها و آیکون‌ها از طریق لاراول ویت --}}\n-    @vite(['resources/css/app.css', 'resources/js/app.js'])\n+    <link rel=\"stylesheet\" href=\"{{ asset('src/output.css') }}\">\n \n+    <link rel=\"stylesheet\" href=\"/admin/css/admin.css\">\n+\n     @stack('styles')\n+\n+    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js\" defer></script>\n </head>\n <body>\n \n     @yield('content')\n\\ No newline at end of file\n \n-    @stack('scripts')\n+    <script src=\"{{ asset('admin/js/admin.js') }}\" defer></script>\n \n-</body> \n-</html>\n+    @yield('scripts')\n+\n+</body>\n+</html>\n"
+                },
+                {
+                    "date": 1782636600233,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,52 +4,18 @@\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n-<link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n+    <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n \n-    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css\">\n+    @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n-    <style>\n-        :root {\n-            --bg: #0c0c10;\n-            --s1: #111116;\n-            --s2: #16161c;\n-            --b1: #222230;\n-            --text: #ffffff;\n-            --text2: #a8c4a8;\n-            --text3: #4d7a56;\n-            --green: #0BBF53;\n-            --accent: #a07af5;\n-            --red: #f05c5c;\n-            --orange: #f5923a;\n-        }\n-\n-        * {\n-            box-sizing: border-box;\n-        }\n-\n-        body {\n-            font-family: 'IRANSansXFaNum', sans-serif;\n-            background-color: var(--bg);\n-            color: var(--text);\n-        }\n-    </style>\n-\n-    <link rel=\"stylesheet\" href=\"{{ asset('src/output.css') }}\">\n-\n-    <link rel=\"stylesheet\" href=\"/admin/css/admin.css\">\n-\n     @stack('styles')\n-\n-    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js\" defer></script>\n </head>\n-<body>\n+<body class=\"font-sans bg-bg text-white\">\n \n     @yield('content')\n \n-    <script src=\"{{ asset('admin/js/admin.js') }}\" defer></script>\n-\n     @yield('scripts')\n \n </body>\n </html>\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782636618514,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,9 +4,9 @@\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n-    <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n+    <link href=\"{{ asset('css/fonts.css') }}\"  =\"stylesheet\">\n \n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n"
+                },
+                {
+                    "date": 1782718305965,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,18 +4,27 @@\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n-    <link href=\"{{ asset('css/fonts.css') }}\"  =\"stylesheet\">\n+    <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n+    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">\n \n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n </head>\n <body class=\"font-sans bg-bg text-white\">\n \n-    @yield('content')\n+    <div class=\"admin-wrap\">\n+        <!-- صدا زدن سایدبار از مسیر لوکال سیستم -->\n+        @include('admin.partials.sidebar')\n \n+        <!-- محتوای اصلی بخش مدیریت -->\n+        <div class=\"admin-main\">\n+            @yield('content')\n+        </div>\n+    </div>\n+\n     @yield('scripts')\n \n </body>\n </html>\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1782718488017,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,6 @@\n <!DOCTYPE html>\n-<html dir=\"rtl\" lang=\"fa\">\n+<html dir=\"rtl\" lang=\"fa\" class=\"dark\">\n <head>\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n@@ -11,16 +11,14 @@\n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n </head>\n-<body class=\"font-sans bg-bg text-white\">\n+<body class=\"font-sans bg-[#0c0c10] text-white antialiased antialiased-none\">\n \n-    <div class=\"admin-wrap\">\n-        <!-- صدا زدن سایدبار از مسیر لوکال سیستم -->\n+    <div class=\"flex min-height-screen\">\n         @include('admin.partials.sidebar')\n \n-        <!-- محتوای اصلی بخش مدیریت -->\n-        <div class=\"admin-main\">\n+        <div class=\"flex-1 flex flex-col min-h-screen\">\n             @yield('content')\n         </div>\n     </div>\n \n"
+                },
+                {
+                    "date": 1782719590051,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,6 +1,6 @@\n <!DOCTYPE html>\n-<html dir=\"rtl\" lang=\"fa\" class=\"dark\">\n+<html dir=\"rtl\" lang=\"fa\">\n <head>\n     <meta charset=\"UTF-8\">\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n@@ -11,14 +11,16 @@\n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n </head>\n-<body class=\"font-sans bg-[#0c0c10] text-white antialiased antialiased-none\">\n+<body class=\"font-sans bg-bg text-white\">\n \n-    <div class=\"flex min-height-screen\">\n+    <div class=\"admin-wrap\">\n+        <!-- صدا زدن سایدبار از مسیر لوکال سیستم -->\n         @include('admin.partials.sidebar')\n \n-        <div class=\"flex-1 flex flex-col min-h-screen\">\n+        <!-- محتوای اصلی بخش مدیریت -->\n+        <div class=\"admin-main\">\n             @yield('content')\n         </div>\n     </div>\n \n"
+                },
+                {
+                    "date": 1782719601283,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -5,9 +5,8 @@\n     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n \n     <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n-    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">\n \n     @vite(['resources/css/app.css', 'resources/js/app.js'])\n \n     @stack('styles')\n"
+                }
+            ],
+            "date": 1782635897407,
+            "name": "Commit-0",
+            "content": "<!DOCTYPE html>\n<html dir=\"rtl\" lang=\"fa\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>\n\n    <link href=\"{{ asset('css/fonts.css') }}\" rel=\"stylesheet\">\n\n    @vite(['resources/css/app.css', 'resources/js/app.js'])\n\n    @stack('styles')\n</head>\n<body class=\"font-sans bg-bg text-white\">\n\n    @yield('content')\n\n    @yield('scripts')\n\n</body>\n</html>"
+        }
+    ]
+}
