@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
@@ -29,8 +29,9 @@ COPY . .
 # Fix permissions
 RUN chown -R www-data:www-data . \
     && chmod -R 755 . \
-    && chmod -R 775 storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache \
+    && chmod +x entrypoint.sh
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+ENTRYPOINT ["/var/www/html/entrypoint.sh"]
