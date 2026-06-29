@@ -8,9 +8,16 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminAuthController extends Controller
 {
+    /** GET /admin/login — فرم ورود ادمین */
+    public function showLogin()
+    {
+        return view('admin.auth.login');
+    }
+
+    /** alias — سازگاری با نام قدیمی */
     public function showLoginForm()
     {
-        return view('admin.auth.login'); // اصلاح مسیر
+        return $this->showLogin();
     }
 
     public function login(Request $request)

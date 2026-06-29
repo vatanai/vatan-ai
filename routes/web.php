@@ -104,6 +104,66 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users/smart-lists',   fn() => view('admin.users.smart-lists'))->name('users.smart_lists');
     Route::get('/users/tokens',        fn() => view('admin.users.tokens'))->name('users.tokens');
 
+    // ─── آپدیت در آینده: داشبورد نظارتی ───
+    Route::get('/dashboard/stats',  fn() => view('admin.dashboard.stats'))->name('dashboard.stats');
+    Route::get('/dashboard/daily',  fn() => view('admin.dashboard.daily'))->name('dashboard.daily');
+    Route::get('/dashboard/alerts', fn() => view('admin.dashboard.alerts'))->name('dashboard.alerts');
+
+    // ─── آپدیت در آینده: تیکت‌ها ───
+    Route::get('/tickets',             fn() => view('admin.tickets.index'))->name('tickets.index');
+    Route::get('/tickets/processing',  fn() => view('admin.tickets.index'))->name('tickets.processing');
+    Route::get('/tickets/ai-response', fn() => view('admin.tickets.index'))->name('tickets.ai_response');
+    Route::get('/tickets/report',      fn() => view('admin.tickets.index'))->name('tickets.report');
+
+    // ─── آپدیت در آینده: پیام‌رسانی ───
+    Route::get('/messages',           fn() => view('admin.messages.index'))->name('messages.index');
+    Route::get('/messages/bulk',      fn() => view('admin.messages.index'))->name('messages.bulk');
+    Route::get('/messages/scheduled', fn() => view('admin.messages.index'))->name('messages.scheduled');
+    Route::get('/messages/history',   fn() => view('admin.messages.index'))->name('messages.history');
+
+    // ─── آپدیت در آینده: بنر و نمایش ───
+    Route::get('/banners',           fn() => view('admin.banners.index'))->name('banners.index');
+    Route::get('/banners/popups',    fn() => view('admin.banners.index'))->name('banners.popups');
+    Route::get('/banners/discounts', fn() => view('admin.banners.index'))->name('banners.discounts');
+
+    // ─── آپدیت در آینده: مالی (sub-items) ───
+    Route::get('/payments/manual',         fn() => view('admin.payments'))->name('payments.manual');
+    Route::get('/payments/commission',     fn() => view('admin.payments'))->name('payments.commission');
+    Route::get('/payments/revenue-report', fn() => view('admin.payments'))->name('payments.revenue_report');
+    Route::get('/payments/forecast',       fn() => view('admin.payments'))->name('payments.forecast');
+
+    // ─── آپدیت در آینده: آنالیز (sub-items) ───
+    Route::get('/analytics/behavior',  fn() => view('admin.analytics'))->name('analytics.behavior');
+    Route::get('/analytics/bloggers',  fn() => view('admin.analytics'))->name('analytics.bloggers');
+    Route::get('/analytics/campaigns', fn() => view('admin.analytics'))->name('analytics.campaigns');
+    Route::get('/analytics/retarget',  fn() => view('admin.analytics'))->name('analytics.retarget');
+    Route::get('/analytics/viral',     fn() => view('admin.analytics'))->name('analytics.viral');
+
+    // ─── آپدیت در آینده: گزارش‌ساز ───
+    Route::get('/reports', fn() => view('admin.reports'))->name('reports');
+
+    // ─── آپدیت در آینده: زیرساخت ───
+    Route::get('/infrastructure',          fn() => view('admin.infrastructure.index'))->name('infrastructure.index');
+    Route::get('/infrastructure/queue',    fn() => view('admin.infrastructure.index'))->name('infrastructure.queue');
+    Route::get('/infrastructure/ai-cost',  fn() => view('admin.infrastructure.index'))->name('infrastructure.ai_cost');
+    Route::get('/infrastructure/logs',     fn() => view('admin.infrastructure.index'))->name('infrastructure.logs');
+
+    // ─── آپدیت در آینده: محتوا ───
+    Route::get('/content',                fn() => view('admin.content.index'))->name('content.index');
+    Route::get('/content/pages',          fn() => view('admin.content.index'))->name('content.pages');
+    Route::get('/content/media',          fn() => view('admin.content.index'))->name('content.media');
+    Route::get('/content/notifications',  fn() => view('admin.content.index'))->name('content.notifications');
+
+    // ─── آپدیت در آینده: حضور و غیاب ───
+    Route::get('/crm/attendance', fn() => view('admin.attendance'))->name('crm.attendance');
+
+    // ─── آپدیت در آینده: تنظیمات (sub-pages) ───
+    Route::get('/settings/admins',           fn() => view('admin.settings.admins'))->name('settings.admins');
+    Route::get('/settings/access',           fn() => view('admin.settings.access'))->name('settings.access');
+    Route::get('/settings/system',           fn() => view('admin.settings.system'))->name('settings.system');
+    Route::get('/settings/payment-gateway',  fn() => view('admin.settings.payment-gateway'))->name('settings.payment_gateway');
+    Route::get('/settings/backup',           fn() => view('admin.settings.backup'))->name('settings.backup');
+    Route::get('/settings/logs',             fn() => view('admin.settings.logs'))->name('settings.logs');
 
    Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');

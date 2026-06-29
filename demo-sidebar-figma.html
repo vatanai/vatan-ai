@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نمونه سایدبار — طرح فیگما</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+/* ══════════════════════════════
+   THEME TOKENS
+══════════════════════════════ */
+[data-theme="dark"] {
+  --sb-bg:        #080f09;
+  --sb-border:    #102810;
+  --sb-hover:     linear-gradient(270deg,#0d1f0d,#080f09);
+  --sb-active:    linear-gradient(270deg,#0d2818,#081408);
+  --sb-shadow:    inset 0 1px 0 rgba(11,191,83,.08),inset 0 -1px 0 rgba(0,0,0,.2),0 4px 16px rgba(0,0,0,.3);
+  --icon-bg:      #0d1a0d;
+  --icon-hover:   linear-gradient(145deg,#142814,#0d1a0d);
+  --icon-active:  linear-gradient(145deg,#0d3520,#081808);
+  --icon-shadow:  0 0 14px rgba(11,191,83,.3),inset 0 1px 0 rgba(100,255,160,.1);
+  --icon-color:   #2e5c2e;
+  --icon-active-c:#b8f0cc;
+  --text-main:    #c0e8c8;
+  --text-nav:     #2e5c2e;
+  --text-nav-act: #e0f5e8;
+  --text-nav-hov: #5ab87a;
+  --label-color:  #1e4a1e;
+  --chevron:      #183018;
+  --chevron-act:  #2e7a3e;
+  --bracket:      #143a14;
+  --bracket-bg:   linear-gradient(to bottom,#143a14,#0d2810);
+  --sub-bg:       linear-gradient(270deg,#0d2818,#081408);
+  --sub-dot:      #143a14;
+  --sub-dot-act:  #0bbf53;
+  --sub-text:     #245424;
+  --sub-text-act: #e0f5e8;
+  --sub-text-hov: #4ab870;
+  --divider:      #102010;
+  --msg-name:     #3a8a4a;
+  --msg-pre:      #1e4020;
+  --page-bg:      #060d06;
+  --card-bg:      #080f08;
+  --card-border:  #102010;
+  --card-text:    #c0e8c8;
+  --card-text2:   #3a7a4a;
+  --card-text3:   #1e4a1e;
+  --green:        #0bbf53;
+  --accent:       #a07af5;
+  --orange:       #f5923a;
+  --red:          #ef4444;
+  --cyan:         #14b8a6;
+}
+
+[data-theme="light"] {
+  --sb-bg:        #e8c4a8;
+  --sb-border:    #d4a888;
+  --sb-hover:     linear-gradient(270deg,#ddb898,#e8c4a8);
+  --sb-active:    linear-gradient(270deg,#cea880,#ddb898);
+  --sb-shadow:    inset 0 1px 0 rgba(255,255,255,.2),0 2px 10px rgba(0,0,0,.08);
+  --icon-bg:      #d8b090;
+  --icon-hover:   linear-gradient(145deg,#cca070,#d8b090);
+  --icon-active:  linear-gradient(145deg,#b88060,#a87050);
+  --icon-shadow:  0 0 12px rgba(120,60,20,.2);
+  --icon-color:   #6a3820;
+  --icon-active-c:#fff8f0;
+  --text-main:    #2a1408;
+  --text-nav:     #7a5030;
+  --text-nav-act: #180a00;
+  --text-nav-hov: #4a2810;
+  --label-color:  #a07850;
+  --chevron:      #b89070;
+  --chevron-act:  #5a3018;
+  --bracket:      #c09870;
+  --bracket-bg:   linear-gradient(to bottom,#b88860,#c89870);
+  --sub-bg:       linear-gradient(270deg,#cfa880,#ddb898);
+  --sub-dot:      #c0906a;
+  --sub-dot-act:  #5a3018;
+  --sub-text:     #8a6040;
+  --sub-text-act: #180a00;
+  --sub-text-hov: #4a2810;
+  --divider:      #d0a880;
+  --msg-name:     #5a3820;
+  --msg-pre:      #a07850;
+  --page-bg:      #ddb090;
+  --card-bg:      #e8c4a8;
+  --card-border:  #d0a880;
+  --card-text:    #2a1408;
+  --card-text2:   #5a3820;
+  --card-text3:   #8a6040;
+  --green:        #16a34a;
+  --accent:       #7c3aed;
+  --orange:       #d97706;
+  --red:          #dc2626;
+  --cyan:         #0d9488;
+}
+
+body {
+  font-family: 'Vazirmatn', sans-serif;
+  background: var(--page-bg);
+  display: flex;
+  min-height: 100vh;
+  direction: rtl;
+  transition: background .3s;
+}
+
+/* ══════════════════════════════
+   SIDEBAR
+══════════════════════════════ */
+.sidebar {
+  width: 218px;  /* 256 × 0.85 ≈ 218 */
+  min-height: 100vh;
+  background: var(--sb-bg);
+  border-left: 1px solid var(--sb-border);
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 24px;
+  position: fixed;
+  right: 0; top: 0; bottom: 0; z-index: 100;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: none;
+  transition: width .3s cubic-bezier(.4,0,.2,1), background .3s, border-color .3s;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+/* ── Collapsed State ── */
+.sidebar.collapsed { width: 68px; }
+
+.sidebar.collapsed .avatar-info,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-chevron,
+.sidebar.collapsed .section-label,
+.sidebar.collapsed .msg-name,
+.sidebar.collapsed .msg-preview,
+.sidebar.collapsed .add-label {
+  opacity: 0; width: 0; overflow: hidden; white-space: nowrap;
+  transition: opacity .15s, width .3s;
+}
+.sidebar.collapsed .nav-header  { justify-content: center; padding: 0; gap: 0; }
+.sidebar.collapsed .nav-item    { margin: 3px 8px; }
+.sidebar.collapsed .msg-item    { justify-content: center; padding: 6px; }
+.sidebar.collapsed .submenu     { max-height: 0 !important; }
+.sidebar.collapsed .add-btn     { justify-content: center; }
+.sidebar.collapsed .add-btn-row { padding: 14px 10px 0; }
+.sidebar.collapsed .avatar-row  { justify-content: center; padding: 22px 6px 18px; }
+.sidebar.collapsed .messages-section { padding: 0 6px; }
+.sidebar.collapsed .avatar-chevron { display: none; }
+
+/* ── Always-visible toggle tab ── */
+.sb-toggle {
+  position: fixed;
+  right: 218px;
+  top: 20px;
+  width: 20px; height: 38px;
+  background: var(--sb-bg);
+  border: 1px solid var(--sb-border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  color: var(--chevron-act);
+  font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 102;
+  transition: right .3s cubic-bezier(.4,0,.2,1), background .3s;
+}
+.sb-toggle:hover { color: var(--text-nav-act); }
+
+/* ── Avatar ── */
+.avatar-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 22px 16px 18px;
+}
+.avatar-circle {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(145deg,#c89060,#8a5020);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #fff; flex-shrink: 0;
+  border: 2px solid var(--sb-border);
+  box-shadow: 0 0 12px rgba(120,60,20,.2);
+}
+.avatar-info { flex: 1; }
+.avatar-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+.avatar-role { font-size: 10px; color: var(--label-color); margin-top: 2px; }
+.avatar-chevron { font-size: 11px; color: var(--chevron); cursor: pointer; }
+
+/* ── Section Label ── */
+.section-label {
+  font-size: 9px; font-weight: 800;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--label-color); padding: 14px 18px 6px;
+}
+
+/* ── Nav Item ── */
+.nav-item { margin: 2px 10px; border-radius: 14px; }
+
+.nav-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 10px; height: 52px;
+  cursor: pointer; border-radius: 14px;
+  transition: all .2s; user-select: none; position: relative;
+}
+.nav-header:hover   { background: var(--sb-hover); }
+.nav-header.active  { background: var(--sb-active); box-shadow: var(--sb-shadow); }
+
+.nav-icon {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: var(--icon-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--icon-color);
+  flex-shrink: 0; transition: all .2s;
+  line-height: 1; text-align: center;
+}
+.nav-header:hover .nav-icon  { background: var(--icon-hover); color: var(--text-nav-hov); }
+.nav-header.active .nav-icon { background: var(--icon-active); color: var(--icon-active-c); box-shadow: var(--icon-shadow); }
+
+.nav-text {
+  flex: 1; font-size: 13.5px; font-weight: 600;
+  color: var(--text-nav); transition: color .2s;
+}
+.nav-header:hover .nav-text  { color: var(--text-nav-hov); }
+.nav-header.active .nav-text { color: var(--text-nav-act); }
+
+.nav-chevron {
+  font-size: 10px; color: var(--chevron);
+  transition: transform .28s cubic-bezier(.4,0,.2,1), color .2s;
+}
+.nav-header.active .nav-chevron { color: var(--chevron-act); }
+.nav-chevron.open { transform: rotate(180deg); }
+
+/* ══════════════════════════════
+   SUBMENU + BRACKET (RTL)
+
+   Figma (LTR): vertical on LEFT, arm curves RIGHT  ╰
+   Our RTL:    vertical on RIGHT, arm curves LEFT   ╯
+
+   sub-track::before  = continuous vertical line (right: 0)
+   sub-item::before   = individual arm (right: 0, border-right + border-bottom
+                        + border-bottom-right-radius)
+   Key: sub-item margin-right: 0 so its right edge = sub-track right edge
+        → arm right border aligns exactly with the vertical line ✓
+══════════════════════════════ */
+.submenu {
+  max-height: 0; overflow: hidden;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1);
+}
+.submenu.open { max-height: 400px; }
+
+.sub-track {
+  position: relative;
+  padding: 4px 0 8px 0;
+  margin-right: 26px;
+}
+
+.sub-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 20px 8px 8px;
+  margin: 2px 0 2px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s;
+  position: relative;
+}
+
+/* ── Bracket arm ╯ (RTL): top→center vertical + curve + horizontal left ── */
+.sub-item::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 50%;
+  width: 16px;
+  border-right: 1.5px solid var(--bracket);
+  border-bottom: 1.5px solid var(--bracket);
+  border-bottom-right-radius: 9px;
+  pointer-events: none;
+}
+
+/* ── Vertical continuation: center→bottom (all except last item) ── */
+/* bottom: -4px bridges the margin gap to next item's ::before top:0  */
+.sub-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  bottom: -4px;
+  width: 1.5px;
+  background: var(--bracket);
+  pointer-events: none;
+}
+
+.sub-item:hover { background: var(--sb-hover); }
+.sub-item.active {
+  background: var(--sub-bg);
+  box-shadow: inset 0 1px 0 rgba(200,80,60,.07), 0 2px 8px rgba(0,0,0,.15);
+  margin-left: 20px;
+}
+
+.sub-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sub-dot); flex-shrink: 0; transition: all .15s;
+}
+.sub-item.active .sub-dot { background: var(--sub-dot-act); box-shadow: 0 0 6px rgba(196,149,122,.5); }
+.sub-item:hover .sub-dot  { background: var(--label-color); }
+
+.sub-text {
+  flex: 1; font-size: 12.5px; font-weight: 500;
+  color: var(--sub-text); transition: color .15s;
+}
+.sub-item.active .sub-text { color: var(--sub-text-act); font-weight: 600; }
+.sub-item:hover .sub-text  { color: var(--sub-text-hov); }
+
+/* ── Divider ── */
+.sidebar-divider { height: 1px; background: var(--divider); margin: 12px 14px; }
+
+/* ── Messages ── */
+.messages-section { padding: 0 10px; }
+.msg-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; border-radius: 12px;
+  cursor: pointer; transition: background .15s;
+}
+.msg-item:hover { background: var(--sb-hover); }
+.msg-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg,#c97b4b,#7a3e10);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #fff;
+  position: relative; flex-shrink: 0;
+  border: 2px solid var(--sb-border);
+}
+.msg-dot {
+  position: absolute; bottom: 0; left: 0;
+  width: 9px; height: 9px; border-radius: 50%;
+  border: 2px solid var(--sb-bg);
+}
+.dot-green  { background: var(--green); }
+.dot-orange { background: var(--orange); }
+.dot-red    { background: var(--red); }
+.msg-name    { font-size: 12px; font-weight: 600; color: var(--msg-name); }
+.msg-preview { font-size: 10.5px; color: var(--msg-pre); margin-top: 1px; }
+
+/* ── Add Button ── */
+.add-btn-row { padding: 14px 12px 0; margin-top: auto; }
+.add-btn {
+  width: 100%; height: 46px; border-radius: 14px;
+  background: linear-gradient(135deg,#f5923a,#d06820);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: 'Vazirmatn', sans-serif;
+  font-size: 14px; font-weight: 700; color: #fff;
+  transition: all .18s;
+  box-shadow: 0 4px 20px rgba(245,146,58,.35),inset 0 1px 0 rgba(255,200,150,.2);
+}
+.add-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+/* ══════════════════════════════
+   THEME TOGGLE BUTTON
+══════════════════════════════ */
+.theme-btn {
+  position: fixed; top: 16px; left: 16px; z-index: 999;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  color: var(--card-text); font-size: 16px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.theme-btn:hover { transform: scale(1.08); }
+
+/* ══════════════════════════════
+   MAIN CONTENT
+══════════════════════════════ */
+.main-content {
+  margin-right: 218px; flex: 1;
+  padding: 28px 28px 40px;
+  min-height: 100vh;
+  transition: margin-right .3s cubic-bezier(.4,0,.2,1);
+}
+
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px;
+}
+.page-title { font-size: 19px; font-weight: 800; color: var(--card-text); letter-spacing: -.4px; }
+.page-sub   { font-size: 11px; color: var(--card-text3); margin-top: 2px; }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.2);
+  color: var(--green); font-size: 11px; font-weight: 700;
+  padding: 6px 12px; border-radius: 8px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Stat Cards ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px; padding: 18px 16px;
+  position: relative; overflow: hidden;
+  cursor: default; transition: border-color .2s;
+}
+.stat-card:hover { border-color: var(--card-text3); }
+.stat-accent {
+  position: absolute; top: 0; right: 0;
+  width: 3px; height: 100%;
+  border-radius: 0 12px 12px 0;
+}
+.stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stat-label  { font-size: 11px; font-weight: 600; color: var(--card-text3); }
+.stat-icon   { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.stat-value  { font-size: 24px; font-weight: 900; color: var(--card-text); letter-spacing: -.5px; line-height: 1.1; margin-bottom: 6px; }
+.stat-change { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+
+/* ── Chart Card ── */
+.chart-row { display: grid; grid-template-columns: 1fr 280px; gap: 14px; margin-bottom: 16px; }
+.card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 18px 20px;
+}
+.card-title {
+  font-size: 13px; font-weight: 700; color: var(--card-text);
+  display: flex; align-items: center; gap: 7px; margin-bottom: 14px;
+}
+
+/* CSS Bar Chart */
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
+.bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.bar-wrap { display: flex; gap: 2px; align-items: flex-end; height: 120px; }
+.bar {
+  width: 10px; border-radius: 4px 4px 0 0;
+  transition: opacity .2s;
+}
+.bar:hover { opacity: .75; }
+.bar-label { font-size: 9px; color: var(--card-text3); }
+
+/* Table */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: right; font-size: 10.5px; font-weight: 700;
+  color: var(--card-text3); padding: 8px 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+.data-table td {
+  padding: 10px 10px; font-size: 12px; color: var(--card-text2);
+  border-bottom: 1px solid var(--card-border);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--sb-bg); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+}
+</style>
+</head>
+<body>
+
+<!-- Theme Toggle -->
+<button class="theme-btn" onclick="toggleTheme()" title="تغییر تم">
+  <i class="fa-solid fa-circle-half-stroke"></i>
+</button>
+
+<!-- Sidebar Toggle Tab -->
+<button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()">
+  <i class="fa-solid fa-chevron-left" id="sb-toggle-icon"></i>
+</button>
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside class="sidebar">
+
+  <div class="avatar-row">
+    <div class="avatar-circle"><i class="fa-solid fa-user"></i></div>
+    <div class="avatar-info">
+      <div class="avatar-name">محسن رضایی</div>
+      <div class="avatar-role">مدیر کل</div>
+    </div>
+    <i class="fa-solid fa-chevron-left avatar-chevron" onclick="toggleSidebar()" title="بستن/باز کردن"></i>
+  </div>
+
+  <div class="section-label">MAIN</div>
+
+  <!-- مرکز فرماندهی -->
+  <div class="nav-item">
+    <div class="nav-header active" onclick="setActive(this,'dashboard-page')">
+      <div class="nav-icon"><i class="fa-solid fa-border-all"></i></div>
+      <div class="nav-text">مرکز فرماندهی</div>
+    </div>
+  </div>
+
+  <!-- محصولات -->
+  <div class="nav-item">
+    <div class="nav-header" onclick="toggleSubmenu('sub-products',this)">
+      <div class="nav-icon"><i class="fa-solid fa-box-open"></i></div>
+      <div class="nav-text">محصولات</div>
+      <i class="fa-solid fa-chevron-down nav-chevron"></i>
+    </div>
+    <div class="submenu" id="sub-products">
+      <div class="sub-track">
+        <div class="sub-item" onclick="setSubActive(this,'products-dashboard-page')">
+          <div class="sub-dot"></div><div class="sub-text">داشبورد محصولات</div>
+        </div>
+        <div class="sub-item active" onclick="setSubActive(this,'products-list-page')">
+          <div class="sub-dot"></div><div class="sub-text">لیست محصولات</div>
+        </div>
+        <div class="sub-item" onclick="setSubActive(this,'')">
+          <div class="sub-dot"></div><div class="sub-text">ثبت محصول جدید</div>
+        </div>
+        <div class="sub-item" onclick="setSubActive(this,'')">
+          <div class="sub-dot"></div><div class="sub-text">دسته‌بندی‌ها</div>
+        </div>
+        <div class="sub-item" onclick="setSubActive(this,'')">
+          <div class="sub-dot"></div><div class="sub-text">قیمت‌گذاری</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- سفارشات -->
+  <div class="nav-item">
+    <div class="nav-header" onclick="setActive(this,'')">
+      <div class="nav-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+      <div class="nav-text">سفارشات</div>
+    </div>
+  </div>
+
+  <!-- AI -->
+  <div class="nav-item">
+    <div class="nav-header" onclick="setActive(this,'')">
+      <div class="nav-icon"><i class="fa-solid fa-microchip"></i></div>
+      <div class="nav-text">مدیریت مدل‌های AI</div>
+    </div>
+  </div>
+
+  <!-- تنظیمات -->
+  <div class="nav-item">
+    <div class="nav-header" onclick="setActive(this,'')">
+      <div class="nav-icon"><i class="fa-solid fa-gear"></i></div>
+      <div class="nav-text">تنظیمات</div>
+    </div>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <div class="section-label">MESSAGES</div>
+  <div class="messages-section">
+    <div class="msg-item">
+      <div class="msg-avatar"><i class="fa-solid fa-user"></i><span class="msg-dot dot-green"></span></div>
+      <div><div class="msg-name">کاربر ۱</div><div class="msg-preview">آنلاین</div></div>
+    </div>
+    <div class="msg-item">
+      <div class="msg-avatar" style="background:linear-gradient(135deg,#b57a3a,#7a3e10)">
+        <i class="fa-solid fa-user"></i><span class="msg-dot dot-orange"></span>
+      </div>
+      <div><div class="msg-name">کاربر ۲</div><div class="msg-preview">غایب</div></div>
+    </div>
+    <div class="msg-item">
+      <div class="msg-avatar" style="background:linear-gradient(135deg,#a06030,#6b3010)">
+        <i class="fa-solid fa-user"></i><span class="msg-dot dot-red"></span>
+      </div>
+      <div><div class="msg-name">کاربر ۳</div><div class="msg-preview">آفلاین</div></div>
+    </div>
+  </div>
+
+  <div class="add-btn-row">
+    <button class="add-btn"><i class="fa-solid fa-plus"></i><span>جدید</span></button>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN CONTENT ══════════ -->
+<div class="main-content">
+
+  <!-- ═══ DASHBOARD PAGE ═══ -->
+  <div id="dashboard-page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">مرکز فرماندهی</div>
+        <div class="page-sub">آخرین به‌روزرسانی: چند ثانیه پیش</div>
+      </div>
+      <div class="live-badge"><div class="live-dot"></div> لایو</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--green)"></div>
+        <div class="stat-header">
+          <div class="stat-label">درآمد امروز</div>
+          <div class="stat-icon" style="background:rgba(34,197,94,.1);color:var(--green)"><i class="fa-solid fa-money-bill-wave"></i></div>
+        </div>
+        <div class="stat-value">۴۸.۲M</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-trend-up"></i> ۱۲٪</span><span style="color:var(--card-text3);font-size:11px;">نسبت به دیروز</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--accent)"></div>
+        <div class="stat-header">
+          <div class="stat-label">تصاویر پردازش‌شده</div>
+          <div class="stat-icon" style="background:rgba(160,122,245,.1);color:var(--accent)"><i class="fa-solid fa-image"></i></div>
+        </div>
+        <div class="stat-value">۱٬۲۴۷</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-trend-up"></i> ۸٪</span><span style="color:var(--card-text3);font-size:11px;">امروز</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--cyan)"></div>
+        <div class="stat-header">
+          <div class="stat-label">کاربران فعال</div>
+          <div class="stat-icon" style="background:rgba(20,184,166,.1);color:var(--cyan)"><i class="fa-solid fa-users"></i></div>
+        </div>
+        <div class="stat-value">۳۸۴</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-trend-up"></i> ۵٪</span><span style="color:var(--card-text3);font-size:11px;">آنلاین الان</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-accent" style="background:var(--orange)"></div>
+        <div class="stat-header">
+          <div class="stat-label">ثبت‌نام امروز</div>
+          <div class="stat-icon" style="background:rgba(245,146,58,.1);color:var(--orange)"><i class="fa-solid fa-user-plus"></i></div>
+        </div>
+        <div class="stat-value">۶۳</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-trend-up"></i> ۲۱٪</span><span style="color:var(--card-text3);font-size:11px;">نسبت به دیروز</span></div>
+      </div>
+    </div>
+
+    <!-- Chart + Mini Table -->
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--accent)"></i> سفارشات هفتگی</div>
+        <div class="bar-chart">
+          <!-- bars: [شن, ی, د, س, چ, پ, ج] -->
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:60%;background:var(--accent)"></div>
+            <div class="bar" style="height:45%;background:var(--green)"></div>
+          </div><div class="bar-label">شن</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:80%;background:var(--accent)"></div>
+            <div class="bar" style="height:65%;background:var(--green)"></div>
+          </div><div class="bar-label">ی</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:55%;background:var(--accent)"></div>
+            <div class="bar" style="height:40%;background:var(--green)"></div>
+          </div><div class="bar-label">د</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:95%;background:var(--accent)"></div>
+            <div class="bar" style="height:78%;background:var(--green)"></div>
+          </div><div class="bar-label">س</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:70%;background:var(--accent)"></div>
+            <div class="bar" style="height:55%;background:var(--green)"></div>
+          </div><div class="bar-label">چ</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:85%;background:var(--accent)"></div>
+            <div class="bar" style="height:70%;background:var(--green)"></div>
+          </div><div class="bar-label">پ</div></div>
+          <div class="bar-group"><div class="bar-wrap">
+            <div class="bar" style="height:100%;background:var(--accent)"></div>
+            <div class="bar" style="height:82%;background:var(--green)"></div>
+          </div><div class="bar-label">ج</div></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--card-text3)">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:var(--accent);border-radius:99px;display:inline-block"></span>سفارشات</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:3px;background:var(--green);border-radius:99px;display:inline-block"></span>درآمد</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-trophy" style="color:var(--orange)"></i> پرفروش‌ترین‌ها</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(160,122,245,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);font-weight:800">۱</div>
+            <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--card-text)">پرتره هنری</div>
+            <div style="height:4px;background:var(--card-border);border-radius:99px;margin-top:4px;overflow:hidden"><div style="width:85%;height:100%;background:var(--accent);border-radius:99px"></div></div></div>
+            <div style="font-size:11px;color:var(--card-text3)">۸۵٪</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(34,197,94,.1);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--green);font-weight:800">۲</div>
+            <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--card-text)">سبک کارتونی</div>
+            <div style="height:4px;background:var(--card-border);border-radius:99px;margin-top:4px;overflow:hidden"><div style="width:65%;height:100%;background:var(--green);border-radius:99px"></div></div></div>
+            <div style="font-size:11px;color:var(--card-text3)">۶۵٪</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(245,146,58,.1);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--orange);font-weight:800">۳</div>
+            <div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--card-text)">روغنی کلاسیک</div>
+            <div style="height:4px;background:var(--card-border);border-radius:99px;margin-top:4px;overflow:hidden"><div style="width:48%;height:100%;background:var(--orange);border-radius:99px"></div></div></div>
+            <div style="font-size:11px;color:var(--card-text3)">۴۸٪</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-list-ul" style="color:var(--cyan)"></i> آخرین سفارشات</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>کاربر</th><th>محصول</th><th>تاریخ</th><th>مبلغ</th><th>وضعیت</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>علی رضوی</td><td>پرتره هنری</td><td>۱۴۰۳/۰۴/۰۸</td><td>۲۵۰,۰۰۰</td><td><span class="badge" style="background:rgba(34,197,94,.1);color:var(--green)">موفق</span></td></tr>
+          <tr><td>مریم حسنی</td><td>سبک کارتونی</td><td>۱۴۰۳/۰۴/۰۸</td><td>۱۸۰,۰۰۰</td><td><span class="badge" style="background:rgba(34,197,94,.1);color:var(--green)">موفق</span></td></tr>
+          <tr><td>رضا کریمی</td><td>روغنی کلاسیک</td><td>۱۴۰۳/۰۴/۰۷</td><td>۳۲۰,۰۰۰</td><td><span class="badge" style="background:rgba(245,146,58,.1);color:var(--orange)">در حال پردازش</span></td></tr>
+          <tr><td>سارا نجفی</td><td>پرتره هنری</td><td>۱۴۰۳/۰۴/۰۷</td><td>۲۵۰,۰۰۰</td><td><span class="badge" style="background:rgba(239,68,68,.1);color:var(--red)">ناموفق</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ PRODUCTS DASHBOARD PAGE ═══ -->
+  <div id="products-dashboard-page" style="display:none">
+    <div class="page-header">
+      <div>
+        <div class="page-title">داشبورد محصولات</div>
+        <div class="page-sub">نمای جامع عملکرد محصولات AI</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-accent" style="background:var(--green)"></div>
+        <div class="stat-header"><div class="stat-label">محصولات فعال</div><div class="stat-icon" style="background:rgba(34,197,94,.1);color:var(--green)"><i class="fa-solid fa-box"></i></div></div>
+        <div class="stat-value">۱۸</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;">۲ محصول جدید</span></div>
+      </div>
+      <div class="stat-card"><div class="stat-accent" style="background:var(--accent)"></div>
+        <div class="stat-header"><div class="stat-label">سفارشات ماه</div><div class="stat-icon" style="background:rgba(160,122,245,.1);color:var(--accent)"><i class="fa-solid fa-cart-shopping"></i></div></div>
+        <div class="stat-value">۲,۴۸۱</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-up"></i> ۲۳٪ رشد</span></div>
+      </div>
+      <div class="stat-card"><div class="stat-accent" style="background:var(--cyan)"></div>
+        <div class="stat-header"><div class="stat-label">نرخ موفقیت AI</div><div class="stat-icon" style="background:rgba(20,184,166,.1);color:var(--cyan)"><i class="fa-solid fa-microchip"></i></div></div>
+        <div class="stat-value">۹۶.۵٪</div>
+        <div class="stat-change"><span style="color:var(--green);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-up"></i> ۰.۸٪</span></div>
+      </div>
+      <div class="stat-card"><div class="stat-accent" style="background:var(--orange)"></div>
+        <div class="stat-header"><div class="stat-label">میانگین پردازش</div><div class="stat-icon" style="background:rgba(245,146,58,.1);color:var(--orange)"><i class="fa-solid fa-clock"></i></div></div>
+        <div class="stat-value">۱۸.۶s</div>
+        <div class="stat-change"><span style="color:var(--orange);font-weight:700;font-size:11px;"><i class="fa-solid fa-arrow-down"></i> ۲s کندتر</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-list" style="color:var(--accent)"></i> لیست محصولات</div>
+      <table class="data-table">
+        <thead><tr><th>نام محصول</th><th>سفارشات</th><th>درآمد</th><th>موفقیت</th><th>وضعیت</th></tr></thead>
+        <tbody>
+          <tr><td>پرتره هنری</td><td>۸۵۲</td><td>۲۱۳M</td><td>۹۸٪</td><td><span class="badge" style="background:rgba(34,197,94,.1);color:var(--green)">فعال</span></td></tr>
+          <tr><td>سبک کارتونی</td><td>۶۴۱</td><td>۱۱۵M</td><td>۹۵٪</td><td><span class="badge" style="background:rgba(34,197,94,.1);color:var(--green)">فعال</span></td></tr>
+          <tr><td>روغنی کلاسیک</td><td>۴۱۸</td><td>۱۳۴M</td><td>۹۷٪</td><td><span class="badge" style="background:rgba(34,197,94,.1);color:var(--green)">فعال</span></td></tr>
+          <tr><td>آبرنگ</td><td>۲۹۷</td><td>۸۹M</td><td>۹۱٪</td><td><span class="badge" style="background:rgba(245,146,58,.1);color:var(--orange)">بتا</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- main-content -->
+
+<script>
+function setActive(el, pageId) {
+  document.querySelectorAll('.nav-header').forEach(h => h.classList.remove('active'));
+  el.classList.add('active');
+  if (pageId) showPage(pageId);
+}
+
+function toggleSubmenu(id, headerEl) {
+  const sub  = document.getElementById(id);
+  const chev = headerEl.querySelector('.nav-chevron');
+  const isOpen = sub.classList.contains('open');
+  document.querySelectorAll('.submenu').forEach(s => s.classList.remove('open'));
+  document.querySelectorAll('.nav-chevron').forEach(c => c.classList.remove('open'));
+  if (!isOpen) { sub.classList.add('open'); chev.classList.add('open'); }
+  setActive(headerEl, '');
+}
+
+function setSubActive(el, pageId) {
+  el.closest('.submenu').querySelectorAll('.sub-item').forEach(s => {
+    s.classList.remove('active');
+    s.style.marginLeft = '12px';
+  });
+  el.classList.add('active');
+  el.style.marginLeft = '20px';
+  if (pageId) showPage(pageId);
+}
+
+function showPage(id) {
+  document.querySelectorAll('.main-content > div').forEach(d => d.style.display = 'none');
+  const p = document.getElementById(id);
+  if (p) p.style.display = 'block';
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+}
+
+function toggleSidebar() {
+  const sb     = document.querySelector('.sidebar');
+  const mc     = document.querySelector('.main-content');
+  const toggle = document.getElementById('sb-toggle');
+  const icon   = document.getElementById('sb-toggle-icon');
+  sb.classList.toggle('collapsed');
+  const isCollapsed = sb.classList.contains('collapsed');
+  mc.style.marginRight    = isCollapsed ? '68px'  : '218px';
+  toggle.style.right      = isCollapsed ? '68px'  : '218px';
+  icon.className = isCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
+}
+</script>
+
+</body>
+</html>
