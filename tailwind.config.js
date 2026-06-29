@@ -1,11 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
   content: [
-    './resources/**/*.blade.php',
-    './resources/**/*.js',
-    './resources/**/*.vue',
-    './public/**/*.html',
+    './resources/views/**/*.blade.php',
+    './resources/js/**/*.js',
   ],
   theme: {
     extend: {
@@ -14,18 +11,18 @@ export default {
         s1: '#111116',
         s2: '#16161c',
         b1: '#222230',
-        'watan-text': '#ffffff',
-        'watan-text2': '#a8c4a8',
-        'watan-text3': '#4d7a56',
-        green: '#0BBF53',
+        b2: '#2e2e3e',
+        text2: '#a8c4a8',
+        text3: '#4d7a56',
         accent: '#a07af5',
+        green: '#0BBF53',
         red: '#f05c5c',
         orange: '#f5923a',
       },
       fontFamily: {
-        vazir: ['Vazirmatn', 'sans-serif'],
+        sans: ['IRANSansXFaNum', 'sans-serif'],
       },
     },
   },
   plugins: [],
-}
+};

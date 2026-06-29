@@ -7,7 +7,10 @@ use App\Http\Controllers\GenerationController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\PromptController as AdminPromptController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\DashboardController;
+
+
 
 // ─── Root ────────────────────────────────────────────────
 Route::get('/', fn() => view('site.home'))->name('site.home.root');
@@ -100,4 +103,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
     // کاربران - صفحات جدید
     Route::get('/users/smart-lists',   fn() => view('admin.users.smart-lists'))->name('users.smart_lists');
     Route::get('/users/tokens',        fn() => view('admin.users.tokens'))->name('users.tokens');
+
+
+   Route::get('/products', [ProductController::class, 'index'])->name('products');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 });
