@@ -22,7 +22,8 @@
 - RTL
 - Dark mode (--bg: #0c0c10)
 - Tailwind v3
-- Font: Vazirmatn
+- Font: yekan bakh
+آدرس فونت در فایل پروژه ///ai-vatan-mac/public/fonts
 - هدر padding-top: 48px
 
 ---

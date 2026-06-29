@@ -15,6 +15,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: inherit; }
     html {
+      font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
       scrollbar-width: thin;
       scrollbar-color: #222230 transparent;
     }

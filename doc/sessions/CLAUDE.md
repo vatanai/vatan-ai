@@ -59,7 +59,8 @@
 --orange: #f5923a
 ```
 
-- Font: Vazirmatn
+- Font: yekan bakh آدرس این فونت توی فایل پروژه به این آدرس هست/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/ai-vatan-mac/public/fonts
+‫-‬ به هیچ عنوان از فونت دیگه ای استفاده نشه
 - Direction: RTL mandatory
 - Border-radius: 14px standard | circles: 50% | badges: 6-8px
 - UI style: Instagram-like
