@@ -5,7 +5,7 @@
   <div class="flex items-center justify-between mb-6 max-[600px]:flex-wrap max-[600px]:gap-3">
     <div>
       <h1 class="text-xl font-extrabold text-watan-text tracking-[-0.4px] max-[480px]:text-[17px]">مدیریت پرامپت‌ها</h1>
-      <div class="text-xs text-watan-text3 mt-[2px]">پرامپت‌های ذخیره‌شده در دیتابیس — نسخه‌بندی و تست</div>
+      <div class="text-xs text-watan-text3 mt-[2px]">پرامپت‌های ذخیره‌شده در دیتابیس — نسخه‌ب بندی و تست</div>
     </div>
     <button onclick="openAiPromptEditor()"
       class="flex items-center gap-2 bg-[#0BBF53] text-white text-[12px] font-bold py-[8px] px-4 rounded-lg hover:opacity-90 transition-opacity duration-150">
@@ -210,27 +210,12 @@
       </div>
     </div>
     <div>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      <label class="text-[11px] font-bold text-watan-text3 block mb-[6px]">متغیرهای پویا</label>
-      <div class="bg-s2 border border-b1 rounded-lg p-3 flex flex-wrap gap-2">
-        <span onclick="insertPromptVar('&#123;&#123;product_name&#125;&#125;')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">&#123;&#123;product_name&#125;&#125;</span>
-        <span onclick="insertPromptVar('&#123;&#123;cuisine_type&#125;&#125;')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">&#123;&#123;cuisine_type&#125;&#125;</span>
-        <span onclick="insertPromptVar('&#123;&#123;style&#125;&#125;')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">&#123;&#123;style&#125;&#125;</span>
-        <span onclick="insertPromptVar('&#123;&#123;aspect_ratio&#125;&#125;')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-accent/[0.08] text-accent border border-accent/[0.2] cursor-pointer hover:bg-accent/[0.15] transition-colors duration-150">&#123;&#123;aspect_ratio&#125;&#125;</span>
-=======
-=======
->>>>>>> Stashed changes
       <label class="text-[11px] font-bold text-[#4d7a56] block mb-[6px]">متغیرهای پویا</label>
       <div class="bg-[#16161c] border border-[#222230] rounded-lg p-3 flex flex-wrap gap-2" dir="ltr">
-        <span onclick="insertPromptVar('{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">{{product_name}}</span>
-        <span onclick="insertPromptVar('{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">{{cuisine_type}}</span>
-        <span onclick="insertPromptVar('{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">{{style}}</span>
-        <span onclick="insertPromptVar('{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">{{aspect_ratio}}</span>
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+        <span onclick="insertPromptVar('@{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{product_name}}</span>
+        <span onclick="insertPromptVar('@{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{cuisine_type}}</span>
+        <span onclick="insertPromptVar('@{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{style}}</span>
+        <span onclick="insertPromptVar('@{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{aspect_ratio}}</span>
       </div>
     </div>
     <div>
@@ -290,7 +275,7 @@ function editAiPrompt(btn, name, content) {
   document.getElementById('prompt-editor-title').textContent = 'ویرایش پرامپت';
   document.getElementById('prompt-editor-subtitle').textContent = name;
   document.getElementById('prompt-editor-name').value = name;
-  document.getElementById('prompt-editor-name').disabled = true; // در حالت ویرایش نام قفل شود
+  document.getElementById('prompt-editor-name').disabled = true;
   document.getElementById('prompt-editor-content').value = content;
   
   document.getElementById('prompt-editor-type').value = type;
@@ -328,8 +313,10 @@ function insertPromptVar(v) {
   if (!ta) return;
   const start = ta.selectionStart;
   const end = ta.selectionEnd;
-  ta.value = ta.value.substring(0, start) + v + ta.value.substring(end);
-  ta.selectionStart = ta.selectionEnd = start + v.length;
+  // حذف علامت @ قبل از تزریق به تماشاگه متن
+  const cleanVar = v.startsWith('@') ? v.substring(1) : v;
+  ta.value = ta.value.substring(0, start) + cleanVar + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + cleanVar.length;
   ta.focus();
   updatePromptCounts();
 }
