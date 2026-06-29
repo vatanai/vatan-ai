@@ -1,8 +1,21 @@
 {
   "port": 80,
+  "platform": "laravel",
   "app": "aivatan",
-  "platform": "docker",
-  "deploy": {
-    "command": "php artisan migrate --force"
-  }
+  "build": {
+    "location": "iran",
+    "command": "composer dump-autoload --optimize --classmap-authoritative --no-interaction"
+  },
+  "cron": [
+    "no"
+  ],
+  "laravel": {
+    "phpVersion": "8.4"
+  },
+  "disks": [
+    {
+      "name": "my-disk",
+      "mountTo": "/storage"
+    }
+  ]
 }
