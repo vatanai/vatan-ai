@@ -2,6 +2,9 @@
   "port": 80,
   "platform": "laravel",
   "app": "aivatan",
+  "build": {
+    "location": "germany"
+  },
   "laravel": {
     "phpVersion": "8.4"
   },
