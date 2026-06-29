@@ -3,59 +3,237 @@
 @section('content')
 <div class="cp-page" dir="rtl">
 
-  {{-- padding بالا برای notch موبایل --}}
-  <div style="padding-top: calc(env(safe-area-inset-top, 0px) + 16px);"></div>
+  <div class="cp-page__top-pad"></div>
 
-  {{-- فرم اصلی --}}
   <form id="create-form" novalidate>
     @csrf
 
-    {{-- بخش ۱: هدر محصول --}}
-    @include('app.partials.create.header')
+    <div class="cp-layout">
 
-    {{-- بخش ۲: دستورالعمل --}}
-    @include('app.partials.create.instructions')
+      {{-- ۱: هدر محصول — موبایل: اول / دسکتاپ: ستون راست ردیف ۱ --}}
+      <div class="cpl-header">
+        @include('app.partials.create.header')
+      </div>
 
-    {{-- بخش ۳: آپلود --}}
-    @include('app.partials.create.upload')
+      {{-- ۲: دستورالعمل — موبایل: دوم / دسکتاپ: ستون راست ردیف ۲ --}}
+      <div class="cpl-instr">
+        @include('app.partials.create.instructions')
+      </div>
 
-    {{-- بخش ۴: فیلدهای داینامیک --}}
-    @include('app.partials.create.options')
+      {{-- ۳: آپلود — موبایل: سوم / دسکتاپ: ستون چپ ردیف ۱ --}}
+      <div class="cpl-upload">
+        @include('app.partials.create.upload')
+      </div>
 
-    {{-- بخش ۵: تنظیمات خروجی --}}
-    @include('app.partials.create.output-settings')
+      {{-- ۴: فیلدهای داینامیک — موبایل: چهارم / دسکتاپ: ستون چپ ردیف ۲ --}}
+      <div class="cpl-options">
+        @include('app.partials.create.options')
+      </div>
 
-    {{-- بخش ۶: خلاصه + CTA --}}
-    @include('app.partials.create.summary')
+      {{-- ۵: تنظیمات خروجی — موبایل: پنجم / دسکتاپ: ستون چپ ردیف ۳ --}}
+      <div class="cpl-output">
+        @include('app.partials.create.output-settings')
+      </div>
+
+      {{-- ۶: خلاصه + CTA — موبایل: آخر / دسکتاپ: ستون راست sticky --}}
+      <div class="cpl-summary">
+        @include('app.partials.create.summary')
+      </div>
+
+    </div>
 
   </form>
 
-  {{-- فاصله پایین برای bottom nav --}}
-  <div style="height: calc(env(safe-area-inset-bottom, 0px) + 120px);"></div>
+  <div class="cp-page__bottom-pad"></div>
 
-  {{-- بخش ۷: مودال نتیجه --}}
   @include('app.partials.create.result-modal')
 
 </div>
 
 <style>
-/* متغیرهای رنگ صفحه */
+/* ════════════════════════════════════════════
+   CSS VARIABLES
+════════════════════════════════════════════ */
 :root {
-  --bg: #000000;
-  --text: #ffffff;
+  --bg:      #000000;
+  --text:    #ffffff;
   --bg-card: #1e1e2a;
+  --cp-sidebar-w: 360px;
+  --cp-gap:       28px;
+  --cp-outer-pad: 40px;
 }
 html.light {
-  --bg: #f0f0f5;
-  --text: #000000;
+  --bg:      #f0f0f5;
+  --text:    #000000;
   --bg-card: #f5f5f7;
 }
 
+/* ════════════════════════════════════════════
+   PAGE SHELL
+════════════════════════════════════════════ */
 .cp-page {
   font-family: 'YekanBakh', sans-serif;
   min-height: 100dvh;
   background: var(--bg);
   direction: rtl;
+}
+
+.cp-page__top-pad {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+}
+
+.cp-page__bottom-pad {
+  height: calc(env(safe-area-inset-bottom, 0px) + 120px);
+}
+
+/* ════════════════════════════════════════════
+   MOBILE LAYOUT — تک ستون، ترتیب طبیعی HTML
+════════════════════════════════════════════ */
+.cp-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ════════════════════════════════════════════
+   TABLET (640–1023px) — تک ستون، عریض‌تر
+════════════════════════════════════════════ */
+@media (min-width: 640px) {
+  .cp-page__top-pad { padding-top: 24px; }
+  .cp-page__bottom-pad { height: 80px; }
+
+  .cp-header,
+  .cp-instructions,
+  .cp-upload,
+  .cp-options,
+  .cp-output,
+  .cp-summary {
+    padding-left: 24px;
+    padding-right: 24px;
+    max-width: 680px;
+  }
+}
+
+/* ════════════════════════════════════════════
+   DESKTOP (1024px+) — دو ستون CSS Grid
+   ستون چپ:  upload / options / output
+   ستون راست (sticky): header / instructions / summary
+════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+
+  /* ── Page top/bottom ── */
+  .cp-page__top-pad    { padding-top: 32px; }
+  .cp-page__bottom-pad { height: 60px; }
+
+  /* ── Grid container ── */
+  .cp-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cp-sidebar-w);
+    grid-template-rows: auto auto auto;
+    column-gap: var(--cp-gap);
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 var(--cp-outer-pad) 48px;
+  }
+
+  /* ── ستون چپ: محتوای اصلی ── */
+  .cpl-upload  { grid-column: 1; grid-row: 1; }
+  .cpl-options { grid-column: 1; grid-row: 2; }
+  .cpl-output  { grid-column: 1; grid-row: 3; }
+
+  /* ── ستون راست: sidebar ── */
+  .cpl-header  { grid-column: 2; grid-row: 1; align-self: start; }
+  .cpl-instr   { grid-column: 2; grid-row: 2; align-self: start; }
+  .cpl-summary {
+    grid-column: 2;
+    grid-row: 3;
+    position: sticky;
+    top: 88px;        /* زیر top nav (64px) + فاصله */
+    align-self: start;
+  }
+
+  /* ── حذف max-width/margin درونی partial‌ها ── */
+  .cp-header,
+  .cp-instructions,
+  .cp-upload,
+  .cp-options,
+  .cp-output,
+  .cp-summary {
+    max-width: none;
+    margin-left:  0;
+    margin-right: 0;
+    padding-left:  0;
+    padding-right: 0;
+    padding-top:   0;
+    padding-bottom: 20px;
+  }
+
+  /* ── ارتقای کارت‌ها روی دسکتاپ ── */
+  .cp-header__inner {
+    padding: 20px;
+  }
+
+  .cp-header__thumb {
+    width: 88px;
+    height: 88px;
+  }
+
+  .cp-header__title { font-size: 18px; }
+  .cp-header__desc  { font-size: 13px; }
+
+  .cp-instructions__inner { padding: 18px; }
+
+  .cp-upload__inner   { padding: 18px; }
+  .cp-options__inner  { padding: 18px; }
+  .cp-output__inner   { padding: 18px; }
+  .cp-summary__inner  { padding: 18px; }
+
+  /* ── آپلود: grid سه‌ستونه روی دسکتاپ ── */
+  .cp-upload__grid--2 { grid-template-columns: 1fr 1fr; }
+  .cp-upload__grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cp-upload__grid--4 { grid-template-columns: 1fr 1fr; }
+
+  .cp-upload-card {
+    aspect-ratio: 3 / 4;
+    max-width: 220px;
+  }
+
+  /* ── فیلدها: دوستونه روی دسکتاپ ── */
+  .cp-options__fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+  }
+
+  /* فیلدهای عریض */
+  .cp-field:has(.cp-input--textarea),
+  .cp-field:has(.cp-radio-group),
+  .cp-field:has(.cp-slider-wrap) {
+    grid-column: 1 / -1;
+  }
+
+  /* ── CTA بزرگ‌تر ── */
+  .cp-cta { height: 56px; font-size: 15px; border-radius: 14px; }
+
+  /* ── خط جداکننده بصری بین دو ستون ── */
+  .cp-layout::before {
+    content: '';
+    grid-column: 1 / 2;
+    grid-row: 1 / 4;
+    display: none; /* اگر خواستی separator اضافه کنی فعال کن */
+  }
+}
+
+/* ════════════════════════════════════════════
+   LARGE DESKTOP (1440px+)
+════════════════════════════════════════════ */
+@media (min-width: 1440px) {
+  :root {
+    --cp-sidebar-w: 380px;
+    --cp-outer-pad: 60px;
+    --cp-gap:       32px;
+  }
+
+  .cp-upload-card { aspect-ratio: 3 / 4; max-width: 240px; }
 }
 </style>
 

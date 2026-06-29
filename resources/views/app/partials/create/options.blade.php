@@ -489,4 +489,38 @@ html.light .cp-toggle-text { color: rgba(0,0,0,0.6); }
     grid-column: 1 / -1;
   }
 }
+
+@media (min-width: 1024px) {
+  .cp-options__inner {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  /* در main col فیلدها دوستونه هستند */
+  .cp-options__fields {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 20px;
+  }
+
+  .cp-input {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .cp-select {
+    padding: 10px 14px;
+    padding-left: 34px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  .cp-radio-box {
+    padding: 7px 14px;
+    font-size: 12.5px;
+    border-radius: 9px;
+  }
+
+  .cp-field__label { font-size: 12.5px; }
+}
 </style>

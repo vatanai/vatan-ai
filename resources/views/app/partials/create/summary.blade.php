@@ -237,4 +237,25 @@ html.light .cp-summary__divider { background: rgba(0,0,0,0.06); }
   .cp-summary { padding: 14px 24px 0; }
   .cp-cta { height: 58px; font-size: 16px; }
 }
+
+@media (min-width: 1024px) {
+  .cp-summary__inner {
+    padding: 18px;
+    border-radius: 14px;
+    border-color: rgba(11,191,83,0.18);
+  }
+
+  .cp-summary__items  { gap: 9px; }
+  .cp-summary__item-key { font-size: 11.5px; }
+  .cp-summary__item-val { font-size: 11.5px; }
+
+  .cp-cta {
+    height: 52px;
+    font-size: 14px;
+    border-radius: 12px;
+    margin-top: 4px;
+  }
+
+  .cp-summary__form-error { font-size: 11.5px; }
+}
 </style>

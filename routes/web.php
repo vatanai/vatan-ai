@@ -18,7 +18,6 @@ Route::get('/site', fn() => redirect('/'));
 
 // ─── Site (Landing) ──────────────────────────────────────
 Route::prefix('site')->group(function () {
-    Route::get('/home',    fn() => view('site.home'))->name('site.home');
     Route::get('/pricing', fn() => view('site.pricing'))->name('site.pricing');
     Route::get('/about',   fn() => view('site.about'))->name('site.about');
 });

@@ -143,6 +143,40 @@
   }
 }
 
+/* دسکتاپ — مودال دو ستونه */
+@media (min-width: 1024px) {
+  .cp-modal__sheet {
+    max-width: 820px;
+    padding: 28px;
+    border-radius: 20px;
+  }
+
+  /* progress در بالا، تمام عرض */
+  .cp-modal__progress { padding: 0 0 20px; }
+
+  /* نتیجه دوستونه: تصویر چپ، اکشن‌ها راست */
+  .cp-modal__result {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    grid-template-rows: auto auto;
+    gap: 0 24px;
+  }
+
+  .cp-modal__img-wrap {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    aspect-ratio: auto;
+    max-height: 500px;
+  }
+
+  .cp-modal__info    { grid-column: 2; grid-row: 1; }
+  .cp-modal__actions { grid-column: 2; grid-row: 2; align-self: end; }
+
+  .cp-modal__drag-handle { display: none; }
+
+  .cp-modal__btn { height: 46px; font-size: 13px; }
+}
+
 @keyframes cpSlideUp {
   from { transform: translateY(60px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }

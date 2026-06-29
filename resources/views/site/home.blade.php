@@ -422,9 +422,9 @@
     }
 
     .hero-trust {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
     .hero-trust-item {
       display: flex;
@@ -535,21 +535,24 @@
 
     .styles-scroll-wrap {
       overflow-x: auto;
-      padding-bottom: 12px;
+      padding-bottom: 16px;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      margin: 0 -24px;
+      padding-left: 24px;
+      padding-right: 24px;
     }
     .styles-scroll-wrap::-webkit-scrollbar { display: none; }
 
     .styles-track {
       display: flex;
-      gap: 14px;
+      gap: 16px;
       width: max-content;
       padding: 4px 2px;
     }
 
     .style-card {
-      width: 160px;
+      width: 220px;
       flex-shrink: 0;
       border-radius: var(--radius-lg);
       overflow: hidden;
@@ -571,7 +574,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 42px;
+      font-size: 52px;
       position: relative;
       overflow: hidden;
     }
@@ -581,24 +584,26 @@
       object-fit: cover;
       position: absolute;
       inset: 0;
+      transition: transform .35s ease;
     }
+    .style-card:hover .style-card-img img { transform: scale(1.05); }
 
     .style-card-body {
-      padding: 12px;
+      padding: 14px;
       text-align: center;
     }
     .style-card-name {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       margin-bottom: 4px;
     }
     .style-card-sub {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text2);
     }
 
     @media (max-width: 480px) {
-      .style-card { width: 140px; }
+      .style-card { width: 180px; }
     }
 
     /* ════════════════════════════════════════
@@ -1369,7 +1374,7 @@
           </div>
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
-            مستقیم در تلگرام
+            خروجی باکیفیت
           </div>
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
@@ -1536,7 +1541,7 @@
         <i class="fa-solid fa-star"></i>
         چرا وطن؟
       </div>
-      <h2 class="section-title">ساخت عکس حرفه‌ای هیچ‌وقت اینقدر ساده نبوده</h2>
+      <h2 class="section-title">از یک عکس ساده تا یک تصویر حرفه‌ای؛ سریع، آسان و بدون دردسر</h2>
     </div>
 
     <div class="why-steps">
@@ -1571,7 +1576,7 @@
         نمونه کارها
       </div>
       <h2 class="section-title">ببین کاربران چه ساخته‌اند</h2>
-      <p class="section-sub">تبدیل واقعی از عکس معمولی به تصویر حرفه‌ای — همه با یک کلیک</p>
+      <p class="section-sub">از یک عکس معمولی تا یک تصویر حرفه‌ای؛ نتیجه‌ای که در کمتر از ۲ دقیقه آماده می‌شود</p>
     </div>
 
     <div class="samples-grid">

@@ -383,14 +383,49 @@ html.light .cp-upload-card__hint {
   font-family: 'YekanBakh', sans-serif;
 }
 
-/* تبلت+ */
+/* تبلت */
 @media (min-width: 640px) {
-  .cp-upload {
-    padding: 14px 24px 0;
-  }
-
+  .cp-upload { padding: 14px 24px 0; }
   .cp-upload-card__label { font-size: 13px; }
   .cp-upload-card__hint  { font-size: 11px; }
+}
+
+/* دسکتاپ */
+@media (min-width: 1024px) {
+  .cp-upload__inner {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  /* grid آپلود: حداکثر سه‌ستون در main col */
+  .cp-upload__grid       { gap: 14px; }
+  .cp-upload__grid--2    { grid-template-columns: 1fr 1fr; }
+  .cp-upload__grid--3,
+  .cp-upload__grid--5,
+  .cp-upload__grid--6    { grid-template-columns: 1fr 1fr 1fr; }
+  .cp-upload__grid--4    { grid-template-columns: 1fr 1fr; }
+
+  .cp-upload-card {
+    aspect-ratio: 3 / 4;
+    border-radius: 12px;
+    border-width: 1.5px;
+  }
+
+  .cp-upload-card__label { font-size: 12px; }
+  .cp-upload-card__hint  { font-size: 10.5px; }
+
+  .cp-upload-card__btn {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+
+  /* overlay همیشه نیمه‌نمایان روی دسکتاپ */
+  .cp-upload-card.is-filled .cp-upload-card__preview-overlay {
+    opacity: 0;
+  }
+  .cp-upload-card.is-filled:hover .cp-upload-card__preview-overlay {
+    opacity: 1;
+  }
 }
 </style>
 

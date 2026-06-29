@@ -224,14 +224,23 @@ html.light .cp-ins-item__text {
   color: rgba(0,0,0,0.6);
 }
 
-/* تبلت+ */
+/* تبلت */
 @media (min-width: 640px) {
-  .cp-instructions {
-    padding: 14px 24px 0;
-  }
+  .cp-instructions { padding: 14px 24px 0; }
+  .cp-ins-item__text { font-size: 13px; }
+}
 
-  .cp-ins-item__text {
-    font-size: 13px;
+/* دسکتاپ */
+@media (min-width: 1024px) {
+  .cp-instructions__inner {
+    padding: 16px;
+    border-radius: 14px;
   }
+  .cp-instructions__header { margin-bottom: 12px; }
+  .cp-instructions__col:first-child { padding-left: 12px; }
+  .cp-instructions__col:last-child  { padding-right: 12px; }
+  .cp-ins-item__text { font-size: 11.5px; }
+  .cp-ins-item__icon { width: 28px; height: 28px; border-radius: 8px; }
+  .cp-instructions__col { gap: 8px; }
 }
 </style>

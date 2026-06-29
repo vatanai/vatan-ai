@@ -3,82 +3,125 @@
 @section('content')
 <div class="profile-page" dir="rtl">
 
-  {{-- ===== HEADER (fixed — دقیقاً مثل home) ===== --}}
-  <section class="profile-header">
-    <div class="profile-logo-wrap">
-      <button id="menuOpenBtn" type="button" class="p-header-btn">
-        <img src="{{ asset('assets/img/icons/hamburger.svg') }}" width="26" height="26" class="floating-icon">
-      </button>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="وطن AI" style="width:31px;height:31px;display:block;">
-        <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="width:77px;height:auto;display:block;">
+  {{-- ===== COVER BANNER — desktop/tablet only ===== --}}
+  <div class="cover-banner" aria-hidden="true">
+    <div class="cover-blob cover-blob--1"></div>
+    <div class="cover-blob cover-blob--2"></div>
+  </div>
+
+  {{-- ===== HERO: آواتار + اطلاعات ===== --}}
+  <section class="profile-hero">
+
+    {{-- آواتار --}}
+    <div class="avatar-wrap">
+      <div class="avatar-ring">
+        <div class="avatar-inner">
+          <img src="https://i.pravatar.cc/150?img=12" alt="avatar" class="avatar-img">
+        </div>
       </div>
     </div>
-    <div style="position:relative;display:inline-block;margin-top:10px;">
-      <div class="profile-header-buy-btn">خرید ویژه</div>
-      <div class="profile-header-discount-badge">۱۵٪ تخفیف</div>
+
+    {{-- اطلاعات --}}
+    <div class="profile-info">
+
+      {{-- نام + بج پلن --}}
+      <div class="name-row">
+        <h1 class="profile-name">محسن آقاجانی</h1>
+        <div class="plan-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="#0BBF53"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+          <span>پلن رایگان</span>
+        </div>
+      </div>
+
+      {{-- شماره موبایل --}}
+      <p class="profile-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+
+      {{-- آمار ۴ تایی --}}
+      <div class="stats-row">
+        <div class="stat-col">
+          <span class="stat-number">۳۵</span>
+          <span class="stat-label">پست</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number">۱۸۱۰</span>
+          <span class="stat-label">ساخته‌شده</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number">۱۴</span>
+          <span class="stat-label">روز عضویت</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number stat-number--plan">رایگان</span>
+          <span class="stat-label">پلن</span>
+        </div>
+      </div>
+
+      {{-- دکمه‌های اکشن — راست به چپ: تنظیمات | پشتیبانی | خرید اشتراک --}}
+      <div class="action-row">
+
+        {{-- تنظیمات + dropdown --}}
+        <div class="settings-wrap">
+          <button type="button" class="btn-card btn-icon" id="settingsBtn" aria-label="تنظیمات" aria-expanded="false">
+            <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="17" height="17" class="icon-filter" alt="">
+          </button>
+          <div id="settingsMenu" class="settings-menu" style="display:none;">
+            {{-- هدر: آواتار + نام + تم تاگل --}}
+            <div class="sm-header">
+              <div class="sm-user">
+                <div class="sm-avatar-wrap">
+                  <img src="https://i.pravatar.cc/150?img=12" alt="" class="sm-avatar-img">
+                </div>
+                <div>
+                  <p class="sm-name">محسن آقاجانی</p>
+                  <p class="sm-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+                </div>
+              </div>
+              <button id="themeToggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
+                <span class="theme-toggle-track">
+                  <span class="theme-toggle-thumb">
+                    <svg class="theme-icon-moon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg class="theme-icon-sun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+                  </span>
+                </span>
+              </button>
+            </div>
+            {{-- گزینه‌ها --}}
+            <button type="button" class="sm-item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              <span>عکس پروفایل</span>
+            </button>
+            <button type="button" class="sm-item">
+              <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="15" height="15" class="icon-filter" alt="">
+              <span>تنظیمات</span>
+            </button>
+            <button type="button" class="sm-item sm-item--danger">
+              <i class="fa-solid fa-right-from-bracket" style="font-size:13px;width:15px;text-align:center;"></i>
+              <span>خروج</span>
+            </button>
+          </div>
+        </div>
+
+        {{-- پشتیبانی --}}
+        <button type="button" class="btn-card btn-support">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>پشتیبانی</span>
+        </button>
+
+        {{-- خرید اشتراک --}}
+        <button type="button" class="btn-subscribe">
+          <span>خرید اشتراک ویژه</span>
+          <span class="subscribe-badge">۱۵٪ تخفیف</span>
+        </button>
+
+      </div>
     </div>
   </section>
 
-  {{-- ===== SECTION: آواتار + آمار ===== --}}
-  <section class="profile-avatar-section">
-    <div style="display:flex;flex-direction:row;align-items:center;gap:16px;direction:ltr;">
-
-      {{-- Avatar + Name + Phone + Plan --}}
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
-        <div class="avatar-ring">
-          <div class="avatar-inner">
-            <img src="https://i.pravatar.cc/150?img=12" alt="avatar" class="avatar-img">
-          </div>
-        </div>
-        <div style="text-align:center;">
-          <p class="profile-name">محسن آقاجانی</p>
-          <p class="profile-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
-          <div class="plan-badge">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="#0BBF53"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-            <span>پلن رایگان</span>
-          </div>
-        </div>
-      </div>
-
-      {{-- Stats --}}
-      <div style="display:flex;flex:1;justify-content:space-around;align-items:center;direction:rtl;">
-        <div class="stat-col">
-          <span class="profile-stat-number">۳۵</span>
-          <span class="profile-stat-label">پست</span>
-        </div>
-        <div class="stat-col">
-          <span class="profile-stat-number">۱۸۱۰</span>
-          <span class="profile-stat-label">ساخته‌شده</span>
-        </div>
-        <div class="stat-col">
-          <span class="profile-stat-number">۱۴</span>
-          <span class="profile-stat-label">روز عضویت</span>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  {{-- ===== SECTION: دکمه‌های اکشن (۳تایی یک ردیف) ===== --}}
-  <section style="padding:0 16px;margin-top:14px;">
-
-    {{-- یک ردیف: اشتراک | پشتیبانی | تنظیمات --}}
-    <div style="display:flex;gap:8px;direction:rtl;">
-      <button type="button" class="btn-subscribe" style="flex:2;">
-        <span>خرید اشتراک ویژه</span>
-        <span class="btn-subscribe-badge">۱۵٪ تخفیف</span>
-      </button>
-      <button type="button" class="btn-secondary" style="flex:1.3;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        پشتیبانی
-      </button>
-      <button type="button" class="btn-secondary btn-icon" aria-label="تنظیمات">
-        <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="17" height="17" class="floating-icon">
-      </button>
-    </div>
-
-    {{-- باکس پروموشن: برنامه ویژه کسب درآمد --}}
+  {{-- ===== بنر همکاری در فروش ===== --}}
+  <section class="promo-section">
     <div class="promo-banner">
       <p class="promo-text">برنامه ویژه کسب درآمد مستمر</p>
       <button type="button" class="promo-btn">
@@ -86,30 +129,34 @@
         همکاری در فروش
       </button>
     </div>
-
   </section>
 
-  {{-- ===== SECTION: تب‌های ۴ گانه ===== --}}
-  <section style="margin-top:20px;">
+  {{-- ===== تب‌ها + پنل‌ها ===== --}}
+  <section class="tabs-section">
 
-    <div class="profile-tabs" dir="ltr">
-      <button type="button" class="profile-tab active" data-tab="grid" aria-label="گرید">
+    {{-- تب‌ها — از راست به چپ: محتوا | فایلهای تو | همکاری در فروش | ذخیره شده‌ها --}}
+    <div class="profile-tabs" dir="rtl">
+      <button type="button" class="profile-tab active" data-tab="grid">
         <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">محتوا</span>
       </button>
-      <button type="button" class="profile-tab" data-tab="files" aria-label="فایل‌ها">
+      <button type="button" class="profile-tab" data-tab="files">
         <img src="{{ asset('assets/img/icons/fi-sr-file.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">فایلهای تو</span>
       </button>
-      <button type="button" class="profile-tab" data-tab="referral" aria-label="همکاری در فروش">
+      <button type="button" class="profile-tab" data-tab="referral">
         <svg class="tab-icon tab-icon--svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
           <path d="M16 11C17.66 11 18.99 9.66 18.99 8S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05C16.19 13.89 17 15.02 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
         </svg>
+        <span class="tab-label">همکاری در فروش</span>
       </button>
-      <button type="button" class="profile-tab" data-tab="saved" aria-label="ذخیره‌شده‌ها">
+      <button type="button" class="profile-tab" data-tab="saved">
         <img src="{{ asset('assets/img/icons/fi-sr-bookmark.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">ذخیره شده‌ها</span>
       </button>
     </div>
 
-    {{-- ===== PANEL: گرید ===== --}}
+    {{-- ===== PANEL: گرید (محتوا) ===== --}}
     @php
       $gridImages = [
         ['url' => asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif'), 'video' => false],
@@ -126,8 +173,7 @@
         ['url' => asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp'), 'video' => false],
       ];
     @endphp
-
-    <div class="profile-panel" data-panel="grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;">
+    <div class="profile-panel panel-grid" data-panel="grid">
       @foreach ($gridImages as $item)
         <div class="grid-cell">
           <img src="{{ $item['url'] }}" alt="" class="grid-img">
@@ -155,7 +201,7 @@
         </div>
       </div>
 
-      <div id="filesSubTabs" style="display:flex;gap:6px;margin-bottom:14px;direction:rtl;">
+      <div class="files-sub-tabs" dir="rtl">
         <button type="button" class="files-sub-tab active" data-sub="created">خلق شده</button>
         <button type="button" class="files-sub-tab" data-sub="personal">عکس‌های شخصی</button>
       </div>
@@ -185,7 +231,7 @@
     {{-- ===== PANEL: همکاری در فروش ===== --}}
     <div class="profile-panel" data-panel="referral" style="display:none;padding:20px 16px;">
 
-      <div style="text-align:center;margin-bottom:20px;">
+      <div class="referral-hero">
         <div class="referral-icon-wrap">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="#0BBF53">
             <path d="M16 11C17.66 11 18.99 9.66 18.99 8S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05C16.19 13.89 17 15.02 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
@@ -205,15 +251,15 @@
         <div class="referral-stat"><p class="rs-number">۲ سطح</p><p class="rs-label">درآمد مستمر</p></div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="referral-actions">
         <button type="button" class="btn-subscribe" style="margin:0;">شروع همکاری</button>
         <button type="button" class="btn-referral-outline">دریافت مشاوره رایگان</button>
       </div>
 
     </div>
 
-    {{-- ===== PANEL: سیو ===== --}}
-    <div class="profile-panel" data-panel="saved" style="display:none;gap:2px;grid-template-columns:repeat(2,1fr);">
+    {{-- ===== PANEL: ذخیره شده‌ها ===== --}}
+    <div class="profile-panel panel-saved" data-panel="saved" style="display:none;">
       @foreach ([
         asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif'),
         asset('assets/img/Realistic-emotional-hug-scene-with-cinematic-lighting-created-using-Gemini-AI-768x1365.jpg'),
@@ -231,408 +277,816 @@
 
   </section>
 
-  {{-- ===== HAMBURGER DROPDOWN ===== --}}
-  <div id="menuOverlay" style="display:none;position:fixed;inset:0;z-index:160;" onclick="if(event.target===this){closeMenu();}">
-    <div id="menuSheet" style="position:absolute;top:calc(env(safe-area-inset-top) + 136px);right:12px;width:296px;background:#111116;border:1px solid #222230;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
-
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid #222230;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;">
-            <img src="https://i.pravatar.cc/150?img=12" style="width:100%;height:100%;object-fit:cover;">
-          </div>
-          <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;">محسن آقاجانی</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
-          </div>
-        </div>
-        <button id="theme-toggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
-          <span class="theme-toggle-track">
-            <span class="theme-toggle-thumb">
-              <svg class="theme-icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-              <svg class="theme-icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="4.5"/>
-                <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
-                <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
-                <line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
-              </svg>
-            </span>
-          </span>
-        </button>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #222230;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
-        <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:#ffffff;">تنظیمات</span>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
-        <i class="fa-solid fa-right-from-bracket" style="font-size:14px;color:#f05c5c;width:16px;text-align:center;"></i>
-        <span style="font-size:13px;color:#f05c5c;">خروج</span>
-      </div>
-
-    </div>
-  </div>
-
 </div>
 @endsection
 
 @push('styles')
 <style>
 
-  /* ===== BASE ===== */
-  html, body { overflow-x: hidden; background: #000000; }
-  html.light, html.light body { background: #ffffff; }
+/* ═══════════════════════════════════════
+   CSS VARIABLES — DESIGN SYSTEM
+═══════════════════════════════════════ */
+:root {
+  --bg-page:           #000000;
+  --text-primary:      #ffffff;
+  --text-secondary:    #ffffff;
+  --icon:              #ffffff;
+  --bg-card:           #3F3F3F;
+  --bg-affiliate:      #0d2818;
+  --border-affiliate:  #1a5c32;
+  --green:             #0BBF53;
+  --accent:            #a07af5;
+  --red:               #f05c5c;
+  --border-subtle:     #222230;
+  --bg-surface:        #111116;
+}
+html.light {
+  --bg-page:           #ffffff;
+  --text-primary:      #000000;
+  --text-secondary:    #000000;
+  --icon:              #000000;
+  --bg-card:           #E5E5E5;
+  --bg-affiliate:      #e8f8ee;
+  --border-affiliate:  #a8e6be;
+  --green:             #0BBF53;
+  --border-subtle:     #e0e0e0;
+  --bg-surface:        #f5f5f5;
+}
+
+/* ═══════════════════════════════════════
+   FONT — YekanBakh کل صفحه
+═══════════════════════════════════════ */
+.profile-page,
+.profile-page * {
+  font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif !important;
+}
+
+/* ═══════════════════════════════════════
+   BASE
+═══════════════════════════════════════ */
+html, body { overflow-x: hidden; background: var(--bg-page); }
+
+.profile-page {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg-page);
+  min-height: 100vh;
+  padding-bottom: 120px;
+}
+
+/* ═══════════════════════════════════════
+   COVER BANNER — فقط desktop/tablet
+═══════════════════════════════════════ */
+.cover-banner {
+  display: none;
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  background: linear-gradient(135deg,
+    rgba(11,191,83,0.18) 0%,
+    rgba(160,122,245,0.28) 45%,
+    rgba(240,92,92,0.16) 100%
+  );
+}
+html.light .cover-banner {
+  background: linear-gradient(135deg,
+    rgba(11,191,83,0.12) 0%,
+    rgba(160,122,245,0.18) 45%,
+    rgba(240,92,92,0.10) 100%
+  );
+}
+.cover-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+.cover-blob--1 {
+  width: 300px; height: 300px;
+  top: -80px; right: 10%;
+  background: rgba(160,122,245,0.35);
+}
+.cover-blob--2 {
+  width: 250px; height: 250px;
+  bottom: -100px; left: 15%;
+  background: rgba(11,191,83,0.25);
+}
+
+/* ═══════════════════════════════════════
+   HERO SECTION — mobile: stack centered
+═══════════════════════════════════════ */
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 36px) 16px 16px;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════
+   AVATAR
+═══════════════════════════════════════ */
+.avatar-wrap { flex-shrink: 0; }
+
+.avatar-ring {
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  padding: 3px;
+  background: var(--green);
+}
+.avatar-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  padding: 2px;
+  background: var(--bg-page);
+}
+.avatar-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* ═══════════════════════════════════════
+   PROFILE INFO — موبایل: وسط‌چین
+═══════════════════════════════════════ */
+.profile-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.profile-phone {
+  font-size: 13px;
+  color: rgba(168,196,168,1);
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+html.light .profile-phone { color: #5a7a5a; }
+
+/* بج پلن */
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(11,191,83,0.12);
+  border: 1px solid rgba(11,191,83,0.3);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+.plan-badge span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* ═══════════════════════════════════════
+   آمار ۴ تایی
+═══════════════════════════════════════ */
+.stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 360px;
+}
+
+.stat-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 0 4px;
+}
+
+.stat-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.stat-number {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.stat-number--plan {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(168,196,168,1);
+  white-space: nowrap;
+}
+html.light .stat-label { color: #5a7a5a; }
+
+/* ═══════════════════════════════════════
+   دکمه‌های اکشن — راست به چپ: تنظیمات | پشتیبانی | خرید اشتراک
+═══════════════════════════════════════ */
+.action-row {
+  display: flex;
+  gap: 8px;
+  direction: rtl;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* کارت‌ دکمه (پشتیبانی + تنظیمات) */
+.btn-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 12px;
+  border: none;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 11px 14px;
+  transition: opacity 0.15s;
+}
+.btn-card:active { opacity: 0.8; }
+
+/* دکمه آیکون مربع (تنظیمات) */
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* دکمه پشتیبانی */
+.btn-support {
+  flex: 1.2;
+}
+
+/* دکمه خرید اشتراک */
+.btn-subscribe {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-subscribe:active { opacity: 0.85; }
+
+.subscribe-badge {
+  background: #e91e8c;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════
+   SETTINGS DROPDOWN
+═══════════════════════════════════════ */
+.settings-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 270px;
+  background: #111116;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+  z-index: 300;
+  overflow: hidden;
+  transform-origin: top right;
+  animation: menuIn 0.18s ease forwards;
+}
+html.light .settings-menu {
+  background: #ffffff;
+  border-color: #e0e0e0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+@keyframes menuIn {
+  from { transform: scale(0.9) translateY(-6px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);      opacity: 1; }
+}
+
+.sm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.sm-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sm-avatar-wrap {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sm-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+
+.sm-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sm-phone {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: rgba(168,196,168,1);
+}
+html.light .sm-phone { color: #5a7a5a; }
+
+.sm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  direction: rtl;
+  text-align: right;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+.sm-item:last-child { border-bottom: none; }
+.sm-item:hover { background: rgba(255,255,255,0.05); }
+html.light .sm-item:hover { background: rgba(0,0,0,0.04); }
+
+.sm-item--danger {
+  color: var(--red);
+}
+
+/* theme toggle داخل منو */
+.theme-toggle-btn {
+  background: transparent; border: none; cursor: pointer;
+  padding: 0; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.theme-toggle-track {
+  display: flex; align-items: center;
+  width: 46px; height: 26px; border-radius: 99px;
+  background: #1a1a2e; border: 1px solid rgba(255,255,255,0.12);
+  position: relative; transition: background 0.3s, border-color 0.3s;
+}
+html.light .theme-toggle-track { background: #e8f0fe; border-color: rgba(0,0,0,0.1); }
+.theme-toggle-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  position: absolute; left: 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s;
+}
+html.light .theme-toggle-thumb { transform: translateX(20px); background: #f59e0b; }
+.theme-icon-moon { color: #1a1a2e; display: block; }
+.theme-icon-sun  { color: #ffffff; display: none; }
+html.light .theme-icon-moon { display: none !important; }
+html.light .theme-icon-sun  { display: block !important; }
+
+/* ═══════════════════════════════════════
+   PROMO SECTION (همکاری در فروش بنر)
+═══════════════════════════════════════ */
+.promo-section { padding: 0 16px; margin-top: 14px; }
+
+.promo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  direction: rtl;
+  background: var(--bg-affiliate);
+  border: 1px solid var(--border-affiliate);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.promo-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  margin: 0;
+}
+.promo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════
+   TABS SECTION
+═══════════════════════════════════════ */
+.tabs-section { margin-top: 20px; }
+
+.profile-tabs {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.profile-tab {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  color: rgba(255,255,255,0.4);
+  transition: color 0.2s;
+}
+html.light .profile-tab { color: rgba(0,0,0,0.35); }
+
+.profile-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--green);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.profile-tab.active::after { opacity: 1; }
+.profile-tab.active { color: var(--text-primary); }
+
+.tab-icon {
+  filter: brightness(0) invert(0.4);
+  transition: filter 0.2s, transform 0.15s;
+}
+.profile-tab.active .tab-icon {
+  filter: brightness(0) invert(1);
+  transform: scale(1.05);
+}
+html.light .tab-icon { filter: brightness(0) invert(0.6); }
+html.light .profile-tab.active .tab-icon { filter: brightness(0) invert(0); }
+
+.tab-icon--svg {
+  filter: none !important;
+  color: rgba(255,255,255,0.4);
+  transition: color 0.2s, transform 0.15s;
+}
+.profile-tab.active .tab-icon--svg {
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+html.light .tab-icon--svg { color: rgba(0,0,0,0.35); }
+html.light .profile-tab.active .tab-icon--svg { color: var(--text-primary); }
+
+/* متن تب — موبایل پنهان، دسکتاپ نمایش */
+.tab-label {
+  display: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════
+   PANELS
+═══════════════════════════════════════ */
+.profile-panel { width: 100%; }
+
+/* گرید ۳ ستونه */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+/* سیو ۲ ستونه */
+.panel-saved {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+}
+
+.grid-cell {
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: 3px;
+}
+.grid-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.cell-badge {
+  position: absolute; top: 6px; right: 6px;
+  color: #ffffff; font-size: 11px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.65);
+}
+.saved-badge {
+  position: absolute; top: 7px; left: 7px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+/* ═══════════════════════════════════════
+   PANEL: فایل‌ها
+═══════════════════════════════════════ */
+.storage-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.storage-header {
+  display: flex; justify-content: space-between; margin-bottom: 8px; direction: rtl;
+}
+.storage-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.storage-used  { font-size: 11px; color: rgba(168,196,168,1); }
+html.light .storage-used { color: #5a7a5a; }
+.storage-bar {
+  width: 100%; height: 6px;
+  background: var(--border-subtle);
+  border-radius: 99px; overflow: hidden;
+}
+.storage-fill {
+  height: 100%;
+  background: linear-gradient(to left, var(--green), #08a045);
+  border-radius: 99px;
+}
+.storage-footer {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; direction: rtl;
+  font-size: 10px; color: rgba(168,196,168,1);
+}
+html.light .storage-footer { color: #5a7a5a; }
+.storage-free { color: rgba(255,255,255,0.3); }
+html.light .storage-free { color: rgba(0,0,0,0.25); }
+
+.files-sub-tabs {
+  display: flex; gap: 6px; margin-bottom: 14px;
+}
+.files-sub-tab {
+  flex: 1; padding: 9px 8px; border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: rgba(255,255,255,0.4);
+  font-size: 13px; font-weight: 400; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
+.files-sub-tab.active {
+  border-color: var(--green);
+  background: rgba(11,191,83,0.1);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin: 0 -16px;
+  width: calc(100% + 32px);
+}
+.files-cell {
+  aspect-ratio: 4/5;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  position: relative;
+}
+
+/* ═══════════════════════════════════════
+   PANEL: همکاری در فروش
+═══════════════════════════════════════ */
+.referral-hero { text-align: center; margin-bottom: 20px; }
+.referral-icon-wrap {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(11,191,83,0.12);
+  border: 1px solid rgba(11,191,83,0.25);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.referral-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
+.referral-sub   { font-size: 12px; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.7; }
+html.light .referral-sub { color: rgba(0,0,0,0.45); }
+
+.referral-desc {
+  background: var(--bg-affiliate);
+  border: 1px solid var(--border-affiliate);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; direction: rtl;
+}
+.referral-desc p { font-size: 13px; color: #a8e6be; line-height: 1.9; margin: 0; }
+html.light .referral-desc p { color: #1a6e3a; }
+
+.referral-stats { display: flex; gap: 8px; margin-bottom: 20px; direction: rtl; }
+.referral-stat {
+  flex: 1; background: var(--bg-surface); border: 1px solid var(--border-subtle);
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.rs-number { font-size: 20px; font-weight: 700; color: var(--green); margin: 0; }
+.rs-label  { font-size: 11px; color: rgba(168,196,168,1); margin: 4px 0 0; }
+html.light .rs-label { color: #5a7a5a; }
+
+.referral-actions { display: flex; flex-direction: column; gap: 10px; }
+.btn-referral-outline {
+  width: 100%; padding: 13px;
+  border-radius: 12px; border: 1px solid rgba(11,191,83,0.35);
+  background: transparent; color: var(--green);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+
+/* ═══════════════════════════════════════
+   ICON FILTER (شب/روز)
+═══════════════════════════════════════ */
+.icon-filter { filter: brightness(0) invert(1); transition: filter 0.2s; }
+html.light .icon-filter { filter: brightness(0) invert(0); }
+
+.profile-page i[class*="fa-"] {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════
+   TABLET — 640px+
+═══════════════════════════════════════ */
+@media (min-width: 640px) {
+  .cover-banner { display: block; }
 
   .profile-page {
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    background: #000000;
-    min-height: 100vh;
-    padding-bottom: 120px;
-  }
-  html.light .profile-page { background: #ffffff; }
-
-  /* ===== HEADER — fixed، دقیقاً مثل home ===== */
-  .profile-header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    max-width: 480px;
-    margin: 0 auto;
-    width: 100%;
-    background: #000000;
-    z-index: 150;
-    padding: calc(env(safe-area-inset-top) + 100px) 16px 18px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  html.light .profile-header { background: #ffffff; }
-
-  .profile-logo-wrap { display: flex; align-items: center; gap: 12px; }
-
-  .profile-header-buy-btn {
-    background: #1e1e1e;
-    border-radius: 9px;
-    padding: 6.84px 13.86px;
-    font-size: 11.7px;
-    font-weight: 400;
-    color: #ffffff;
-    white-space: nowrap;
-  }
-  html.light .profile-header-buy-btn { background: #e5e5e5; color: #000000; }
-
-  .profile-header-discount-badge {
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #E8326A;
-    border-radius: 6px;
-    padding: 1.9px 8px;
-    font-size: 10px;
-    font-weight: 800;
-    color: #ffffff;
-    white-space: nowrap;
-    width: fit-content;
+    max-width: 760px;
+    padding-bottom: 40px;
   }
 
-  /* ===== SECTION: آواتار — جبران ارتفاع هدر fixed ===== */
-  .profile-avatar-section {
-    padding: calc(env(safe-area-inset-top) + 180px) 16px 8px 16px;
+  .profile-hero {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 0 28px 24px;
+    margin-top: -60px;
+    position: relative;
+    z-index: 10;
+    gap: 28px;
   }
 
-  .p-header-btn {
-    width: 36px; height: 36px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: transparent; border: none; cursor: pointer;
-  }
-
-  /* ===== AVATAR ===== */
+  /* آواتار سمت راست (RTL: first = right) */
   .avatar-ring {
-    width: 99px; height: 99px; border-radius: 50%;
-    padding: 3px; background: #0BBF53;
-  }
-  .avatar-inner {
-    width: 100%; height: 100%; border-radius: 50%;
-    padding: 2px; background: #000000;
-  }
-  html.light .avatar-inner { background: #ffffff; }
-  .avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
-
-  /* ===== NAME / PHONE / PLAN ===== */
-  .profile-name  { margin: 0; font-size: 16px; font-weight: 700; color: var(--text, #ffffff); }
-  .profile-phone { margin: 3px 0 0; font-size: 14px; color: #a8c4a8; }
-
-  .plan-badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    margin-top: 6px;
-    background: rgba(11,191,83,0.12);
-    border: 1px solid rgba(11,191,83,0.3);
-    border-radius: 8px;
-    padding: 4px 10px;
-  }
-  .plan-badge span { font-size: 11px; font-weight: 700; color: #0BBF53; }
-
-  /* ===== STATS ===== */
-  .stat-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .profile-stat-number { font-size: 22px; font-weight: 700; color: var(--text, #ffffff); }
-  .profile-stat-label  { font-size: 12px; color: #a8c4a8; }
-
-  /* ===== BUTTONS ===== */
-  .btn-subscribe {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 13px 16px;
-    border-radius: 12px; border: none;
-    background: #0BBF53; color: #ffffff;
-    font-size: 15px; font-weight: 700; cursor: pointer;
-  }
-  .btn-subscribe-badge {
-    background: #e91e8c; color: #ffffff;
-    font-size: 10px; font-weight: 700;
-    padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+    width: 120px; height: 120px;
   }
 
-  .btn-secondary {
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-    padding: 11px 16px; border-radius: 12px;
-    border: 1px solid var(--b1, #222230);
-    background: var(--s1, #111116);
-    color: var(--text, #ffffff);
-    font-size: 14px; font-weight: 500; cursor: pointer;
-  }
-  .btn-icon { width: 44px; height: 44px; padding: 0; flex-shrink: 0; }
-
-  .btn-referral-outline {
-    width: 100%; padding: 13px;
-    border-radius: 12px; border: 1px solid rgba(11,191,83,0.35);
-    background: transparent; color: #0BBF53;
-    font-size: 14px; font-weight: 500; cursor: pointer;
+  /* اطلاعات سمت چپ */
+  .profile-info {
+    flex: 1;
+    align-items: flex-start;
+    text-align: right;
+    padding-top: 72px;
   }
 
-  /* ===== PROMO BANNER (برنامه ویژه کسب درآمد + همکاری در فروش) ===== */
-  .promo-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    direction: rtl;
-    background: var(--affiliate-bg, #0d2818);
-    border: 1px solid var(--affiliate-border, #1a5c32);
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-top: 10px;
-  }
-  .promo-text {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0BBF53;
-    margin: 0;
-  }
-  .promo-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #0BBF53;
-    color: #ffffff;
-    border: none;
-    border-radius: 10px;
-    padding: 9px 14px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
+  .name-row {
+    justify-content: flex-start;
   }
 
-  /* ===== TABS ===== */
-  .profile-tabs {
-    display: flex; align-items: center;
-    border-bottom: 1px solid var(--b1, #222230);
+  .profile-name { font-size: 22px; }
+
+  .stats-row {
+    justify-content: flex-start;
+    max-width: none;
   }
+
+  .action-row {
+    max-width: none;
+  }
+
+  /* تب‌ها — متن نمایش داده شود */
+  .tab-label { display: inline; }
+
   .profile-tab {
-    flex: 1; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-    border: none; background: transparent; cursor: pointer; position: relative;
-  }
-  .profile-tab::after {
-    content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
-    height: 2px; background: #0BBF53; opacity: 0; transition: opacity 0.2s;
-  }
-  .profile-tab.active::after { opacity: 1; }
-
-  .tab-icon { filter: brightness(0) invert(1); transition: filter 0.2s, transform 0.15s; }
-  .profile-tab.active .tab-icon { filter: brightness(0) invert(1); transform: scale(1.08); }
-
-  .tab-icon--svg { filter: none; color: #ffffff; }
-  .profile-tab.active .tab-icon--svg { color: #ffffff; transform: scale(1.08); }
-
-  html.light .tab-icon { filter: brightness(0) invert(0); }
-  html.light .profile-tab.active .tab-icon { filter: brightness(0) invert(0); }
-  html.light .tab-icon--svg { color: #000000; }
-
-  /* ===== IMAGE CELLS — border-radius مثل home ===== */
-  .profile-panel { width: 100%; }
-
-  .grid-cell {
-    aspect-ratio: 4/5; overflow: hidden; position: relative;
-    background: #111116; border-radius: 4px;
-  }
-  .grid-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .cell-badge {
-    position: absolute; top: 6px; right: 6px;
-    color: #ffffff; font-size: 11px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.65);
-  }
-  .saved-badge {
-    position: absolute; top: 7px; left: 7px;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    height: 48px;
+    gap: 7px;
+    flex: none;
+    padding: 0 18px;
   }
 
-  /* ===== FILES ===== */
-  .storage-card {
-    background: var(--s1, #111116);
-    border: 1px solid var(--b1, #222230);
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
-  }
-  .storage-header { display: flex; justify-content: space-between; margin-bottom: 8px; direction: rtl; }
-  .storage-title  { font-size: 13px; font-weight: 700; color: var(--text, #ffffff); }
-  .storage-used   { font-size: 11px; color: #a8c4a8; }
-  .storage-bar { width: 100%; height: 6px; background: var(--b1, #222230); border-radius: 99px; overflow: hidden; }
-  .storage-fill { height: 100%; background: linear-gradient(to left, #0BBF53, #08a045); border-radius: 99px; }
-  .storage-footer { display: flex; justify-content: space-between; margin-top: 6px; direction: rtl; font-size: 10px; color: #a8c4a8; }
-  .storage-free { color: rgba(255,255,255,0.35); }
+  .promo-section { padding: 0 28px; }
+  .tabs-section  { margin-top: 24px; }
+  .profile-tabs  { padding: 0 28px; }
 
-  .files-sub-tab {
-    flex: 1; padding: 9px 8px; border-radius: 8px;
-    border: 1px solid var(--b1, #222230);
-    background: var(--s1, #111116);
-    color: rgba(255,255,255,0.4);
-    font-size: 13px; font-weight: 400; cursor: pointer;
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
-  }
-  .files-sub-tab.active {
-    border-color: #0BBF53;
-    background: rgba(11,191,83,0.12);
-    color: #0BBF53; font-weight: 700;
+  /* گرید ۴ ستونه روی تبلت */
+  .panel-grid  { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .panel-saved { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .files-grid  { grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0; width: 100%; }
+  .grid-cell, .files-cell { border-radius: 8px; }
+}
+
+/* ═══════════════════════════════════════
+   DESKTOP — 1024px+
+═══════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .cover-banner { height: 220px; }
+
+  .profile-page {
+    max-width: 1080px;
+    padding: 0 0 60px;
   }
 
-  .files-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; margin: 0 -16px; width: calc(100% + 32px); }
-  .files-cell { aspect-ratio: 4/5; border-radius: 4px; overflow: hidden; background: #111116; position: relative; }
-
-  /* ===== REFERRAL ===== */
-  .referral-icon-wrap {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: rgba(11,191,83,0.12); border: 1px solid rgba(11,191,83,0.25);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 12px;
-  }
-  .referral-title { font-size: 17px; font-weight: 700; color: var(--text, #ffffff); margin: 0 0 6px; }
-  .referral-sub   { font-size: 12px; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.7; }
-  .referral-desc  {
-    background: var(--affiliate-bg, #0d2818); border: 1px solid var(--affiliate-border, #1a5c32);
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; direction: rtl;
-  }
-  .referral-desc p { font-size: 13px; color: #a8e6be; line-height: 1.9; margin: 0; }
-
-  .referral-stats { display: flex; gap: 8px; margin-bottom: 20px; direction: rtl; }
-  .referral-stat {
-    flex: 1; background: var(--s1, #111116); border: 1px solid var(--b1, #222230);
-    border-radius: 10px; padding: 12px; text-align: center;
-  }
-  .rs-number { font-size: 20px; font-weight: 700; color: #0BBF53; margin: 0; }
-  .rs-label  { font-size: 11px; color: #a8c4a8; margin: 4px 0 0; }
-
-  /* ===== THEME TOGGLE ===== */
-  .theme-toggle-btn { background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .theme-toggle-track {
-    display: flex; align-items: center;
-    width: 46px; height: 26px; border-radius: 99px;
-    background: #1a1a2e; border: 1px solid rgba(255,255,255,0.12);
-    position: relative; transition: background 0.3s, border-color 0.3s;
-  }
-  html.light .theme-toggle-track { background: #e8f0fe; border-color: rgba(0,0,0,0.1); }
-
-  .theme-toggle-thumb {
-    width: 20px; height: 20px; border-radius: 50%; background: #ffffff;
-    display: flex; align-items: center; justify-content: center;
-    position: absolute; left: 3px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s;
-  }
-  html.light .theme-toggle-thumb { transform: translateX(20px); background: #f59e0b; }
-
-  .theme-icon-moon { color: #1a1a2e; display: block; }
-  .theme-icon-sun  { color: #ffffff; display: none; }
-  html.light .theme-icon-moon { display: none !important; }
-  html.light .theme-icon-sun  { display: block !important; }
-
-  /* ===== MISC ===== */
-  .floating-icon { filter: brightness(0) invert(1); transition: filter 0.2s; }
-  html.light .floating-icon { filter: brightness(0) invert(0); }
-  html.light .btn-secondary { background: var(--s1, #eeeeee) !important; border-color: var(--b1, #dddddd) !important; }
-
-  .profile-page i[class*="fa-"] {
-    font-family: "Font Awesome 6 Free" !important;
-    font-weight: 900 !important; display: inline-block;
+  .profile-hero {
+    padding: 0 40px 32px;
+    margin-top: -72px;
+    gap: 36px;
   }
 
-  /* ══════════════════════════════════
-     TABLET — 640px+
-  ══════════════════════════════════ */
-  @media (min-width: 640px) {
-    /* هدر موبایل حذف میشه */
-    .profile-header { display: none !important; }
+  .avatar-ring { width: 140px; height: 140px; }
 
-    .profile-page {
-      max-width: 680px;
-      padding-bottom: 60px;
-    }
+  .profile-info { padding-top: 88px; }
 
-    .profile-avatar-section {
-      padding: 28px 28px 8px 28px;
-    }
+  .profile-name { font-size: 26px; }
+  .stat-number  { font-size: 22px; }
+  .stat-number--plan { font-size: 15px; }
 
-    .avatar-ring { width: 110px; height: 110px; }
+  .tabs-section  { margin-top: 28px; }
+  .promo-section { padding: 0 40px; }
+  .profile-tabs  { padding: 0 40px; }
 
-    .profile-stat-number { font-size: 24px; }
+  .panel-grid  { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .panel-saved { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .files-grid  { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .grid-cell, .files-cell { border-radius: 10px; }
+}
 
-    /* grid گالری */
-    .files-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  }
-
-  /* ══════════════════════════════════
-     DESKTOP — 1024px+
-  ══════════════════════════════════ */
-  @media (min-width: 1024px) {
-    .profile-page {
-      max-width: 1080px;
-      padding: 0 40px 60px;
-    }
-
-    .profile-avatar-section {
-      padding: 36px 0 16px 0;
-    }
-
-    .avatar-ring { width: 120px; height: 120px; }
-
-    .profile-name  { font-size: 20px; }
-    .profile-phone { font-size: 15px; }
-    .profile-stat-number { font-size: 26px; }
-
-    /* grid گالری روی دسکتاپ */
-    .files-grid { grid-template-columns: repeat(5, 1fr); gap: 10px; }
-    .files-cell { border-radius: 10px; }
-    .grid-cell  { border-radius: 10px; }
-  }
-
-  /* ══════════════════════════════════
-     LARGE DESKTOP — 1280px+
-  ══════════════════════════════════ */
-  @media (min-width: 1280px) {
-    .profile-page { max-width: 1200px; padding: 0 56px 60px; }
-    .files-grid { grid-template-columns: repeat(6, 1fr); }
-  }
+/* ═══════════════════════════════════════
+   LARGE DESKTOP — 1280px+
+═══════════════════════════════════════ */
+@media (min-width: 1280px) {
+  .profile-page  { max-width: 1200px; padding: 0 0 60px; }
+  .profile-hero  { padding: 0 56px 36px; }
+  .promo-section { padding: 0 56px; }
+  .profile-tabs  { padding: 0 56px; }
+  .panel-grid    { grid-template-columns: repeat(6, 1fr); }
+  .files-grid    { grid-template-columns: repeat(6, 1fr); }
+}
 
 </style>
 @endpush
@@ -641,51 +1095,64 @@
 <script>
 (function () {
 
-  document.getElementById('theme-toggle').addEventListener('click', function () { vatanToggleTheme(); });
+  /* ───── Theme Toggle ───── */
+  var themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function () {
+      window.vatanToggleTheme && window.vatanToggleTheme();
+    });
+  }
 
-  var menuOpenBtn = document.getElementById('menuOpenBtn');
-  var menuOverlay = document.getElementById('menuOverlay');
-  var menuSheet   = document.getElementById('menuSheet');
-  var menuOpen    = false;
+  /* ───── Settings Dropdown ───── */
+  var settingsBtn  = document.getElementById('settingsBtn');
+  var settingsMenu = document.getElementById('settingsMenu');
+  var menuOpen     = false;
 
-  function openMenu() {
-    menuOverlay.style.display = 'block';
-    setTimeout(function () {
-      menuSheet.style.transform = 'scale(1) translateY(0)';
-      menuSheet.style.opacity   = '1';
-    }, 10);
+  function openSettings() {
+    settingsMenu.style.display = 'block';
+    settingsBtn.setAttribute('aria-expanded', 'true');
     menuOpen = true;
   }
 
-  function closeMenu() {
-    menuSheet.style.transform = 'scale(0.9) translateY(-10px)';
-    menuSheet.style.opacity   = '0';
-    setTimeout(function () { menuOverlay.style.display = 'none'; }, 200);
+  function closeSettings() {
+    settingsMenu.style.display = 'none';
+    settingsBtn.setAttribute('aria-expanded', 'false');
     menuOpen = false;
   }
 
-  menuOpenBtn.addEventListener('click', function (e) {
+  settingsBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    menuOpen ? closeMenu() : openMenu();
+    menuOpen ? closeSettings() : openSettings();
   });
 
   document.addEventListener('click', function (e) {
-    if (menuOpen && !menuSheet.contains(e.target)) closeMenu();
+    if (menuOpen && !settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+      closeSettings();
+    }
   });
 
-  /* ---- Main Tabs ---- */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && menuOpen) closeSettings();
+  });
+
+  /* ───── Main Tabs ───── */
   var tabs   = document.querySelectorAll('.profile-tab');
   var panels = document.querySelectorAll('.profile-panel');
 
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var target = tab.getAttribute('data-tab');
+
       tabs.forEach(function (t) { t.classList.remove('active'); });
       tab.classList.add('active');
+
       panels.forEach(function (panel) {
-        var key = panel.getAttribute('data-panel');
+        var key  = panel.getAttribute('data-panel');
         var show = key === target;
-        if (key === 'grid' || key === 'saved') {
+
+        if (key === 'grid') {
+          panel.style.display = show ? 'grid' : 'none';
+        } else if (key === 'saved') {
           panel.style.display = show ? 'grid' : 'none';
         } else {
           panel.style.display = show ? 'block' : 'none';
@@ -694,10 +1161,12 @@
     });
   });
 
-  /* ---- Files Sub Tabs ---- */
+  /* ───── Files Sub-Tabs ───── */
   document.querySelectorAll('.files-sub-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.files-sub-tab').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.files-sub-tab').forEach(function (b) {
+        b.classList.remove('active');
+      });
       btn.classList.add('active');
       var sub = btn.getAttribute('data-sub');
       document.getElementById('files-created').style.display  = sub === 'created'  ? 'grid' : 'none';

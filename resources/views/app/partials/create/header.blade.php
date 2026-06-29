@@ -209,23 +209,41 @@ html.light .cp-badge--green {
   color: #09a446;
 }
 
-/* تبلت+ */
+/* تبلت */
 @media (min-width: 640px) {
   .cp-header {
     padding: 28px 24px 0;
   }
-
   .cp-header__thumb {
     width: 96px;
     height: 96px;
   }
+  .cp-header__title { font-size: 19px; }
+  .cp-header__desc  { font-size: 13px; }
+}
 
+/* دسکتاپ — overrides از create.blade.php کنترل می‌کنه padding/max-width رو */
+@media (min-width: 1024px) {
+  .cp-header__inner {
+    padding: 20px;
+    border-radius: 14px;
+    gap: 14px;
+  }
+  /* تصویر بزرگتر در sidebar */
+  .cp-header__thumb {
+    width: 76px;
+    height: 76px;
+    border-radius: 12px;
+  }
   .cp-header__title {
-    font-size: 19px;
+    font-size: 16px;
+    font-weight: 800;
   }
-
   .cp-header__desc {
-    font-size: 13px;
+    font-size: 12px;
+    line-height: 1.65;
   }
+  .cp-header__badges { gap: 5px; }
+  .cp-badge { font-size: 10.5px; padding: 3px 8px; }
 }
 </style>

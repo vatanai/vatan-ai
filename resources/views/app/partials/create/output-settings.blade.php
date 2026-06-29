@@ -268,4 +268,28 @@ html.light .cp-quality-input:checked + .cp-quality-box {
 @media (min-width: 640px) {
   .cp-output { padding: 14px 24px 0; }
 }
+
+@media (min-width: 1024px) {
+  .cp-output__inner {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  /* نسبت‌ها و کیفیت کنار هم در یک ردیف */
+  .cp-output__rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+  }
+
+  .cp-output__row-label { font-size: 11.5px; }
+
+  .cp-ratio-box {
+    padding: 8px 10px;
+    min-width: 52px;
+    border-radius: 10px;
+  }
+
+  .cp-quality-box { padding: 9px 4px; font-size: 12px; }
+}
 </style>
