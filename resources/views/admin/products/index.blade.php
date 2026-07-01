@@ -2,27 +2,7 @@
 @section('title', 'لیست محصولات — AIPIX Admin')
 
 @section('content')
-<div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
-
-
-  <div class="mr-64 flex-1 flex flex-col min-h-screen">
-
-    <!-- Header -->
-    <header class="sticky top-0 z-50 bg-[#111116] border-b border-[#222230] px-6 h-14 flex items-center gap-3">
-      <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
-        <a href="{{ route('admin.dashboard') }}" class="hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
-        <i class="fa-solid fa-chevron-left text-[10px] text-[#4d7a56]"></i>
-        <span class="text-white font-semibold">محصولات</span>
-      </div>
-      <div class="flex-1"></div>
-      <a href="{{ route('admin.products.create') }}"
-         class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#a07af5] text-white hover:bg-[#8f68e0] transition-colors no-underline">
-        <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول جدید
-      </a>
-    </header>
-
-    <!-- Content -->
-    <main class="p-6 flex-1">
+<div style="padding:20px 24px;">
 
       <div class="mb-5">
         <div class="text-xl font-extrabold tracking-tight mb-1">لیست محصولات</div>
@@ -291,9 +271,7 @@
       </div>
 
     </div>
-  </div>
-
-</div>
+</div>{{-- /padding wrapper --}}
 
 <script>
 const productsData = {

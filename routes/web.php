@@ -81,15 +81,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users/all-activities', [UserController::class, 'allActivities'])->name('users.all_activities');
     Route::get('/users/{id}/logs',      [UserController::class, 'logs'])->name('users.logs');
 
-    // صفحات UI ادمین (موحسن)
-    Route::get('/crm',             fn() => view('admin.crm'))->name('crm');
-    Route::get('/products',            fn() => view('admin.products'))->name('products');
-    Route::get('/products/create',     fn() => view('admin.products-create'))->name('products.create');
-    Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
-    Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
-    Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
-    Route::get('/products/{id}',       fn($id) => view('admin.products-show', ['productId' => $id]))->name('products.show');
-    Route::get('/products/{id}/edit',  fn($id) => view('admin.products-edit',  ['productId' => $id]))->name('products.edit');
+    // صفحات UI ادمین
+    Route::get('/crm',                 fn() => view('admin.crm'))->name('crm');
+    Route::get('/products',            fn() => view('admin.products.index'))->name('products');
+    Route::get('/products/create',     fn() => view('admin.products.create'))->name('products.create');
+    Route::get('/products/dashboard',  fn() => view('admin.products.products-dashboard'))->name('products.dashboard');
+    Route::get('/products/categories', fn() => view('admin.products.products-categories'))->name('products.categories');
+    Route::get('/products/pricing',    fn() => view('admin.products.products-pricing'))->name('products.pricing');
+    Route::get('/products/{id}',       fn($id) => view('admin.products.products-show', ['productId' => $id]))->name('products.show');
+    Route::get('/products/{id}/edit',  fn($id) => view('admin.products.products-edit',  ['productId' => $id]))->name('products.edit');
     Route::get('/orders',              fn() => view('admin.orders'))->name('orders');
     Route::get('/orders/analytics',    fn() => view('admin.orders.analytics'))->name('orders.analytics');
     Route::get('/analytics',           fn() => view('admin.analytics'))->name('analytics');

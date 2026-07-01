@@ -39,7 +39,7 @@ function initChart() {
   if (typeof Chart === 'undefined') return;
   const ctx = document.getElementById('revenueChart');
   if (!ctx) return;
-  const isDark = !document.body.classList.contains('light');
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   const gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
   const textColor = isDark ? '#3d4260' : '#9ba3bf';
 
@@ -143,32 +143,35 @@ function showPage(pageId, sectionName) {
   }
 }
 
+// ── Sidebar toggle (new layout-compatible) ───────────────────────────────────
 function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebar-overlay').classList.toggle('show');
+  const sb   = document.getElementById('sidebar');
+  const mc   = document.getElementById('adminContent');
+  const tb   = document.getElementById('topbar');
+  const icon = document.getElementById('menuToggleIcon');
+  if (!sb) return;
+  const collapsed = sb.classList.toggle('sb-collapsed');
+  if (mc) mc.classList.toggle('sb-collapsed-mc', collapsed);
+  if (tb) tb.classList.toggle('sb-collapsed-tb', collapsed);
+  if (icon) icon.className = collapsed ? 'fa-solid fa-angles-left' : 'fa-solid fa-angles-right';
 }
 
 function closeSidebar() {
-  document.querySelector('.sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('show');
+  // on mobile: just call toggleSidebar if open — currently no mobile overlay
 }
 
-function toggleSub(el, name) {
-  const sub = el.nextElementSibling;
-  const isOpen = sub.classList.contains('open');
-  document.querySelectorAll('.sub-nav.open').forEach(s => {
-    s.classList.remove('open');
-    s.classList.add('hidden');
-  });
-  document.querySelectorAll('.nav-item.open').forEach(i => i.classList.remove('open'));
-  if (!isOpen) {
-    sub.classList.remove('hidden');
-    sub.classList.add('open');
-    el.classList.add('open');
-  }
-  document.querySelectorAll('.nav-item.active').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('breadcrumb').textContent = name;
+// ── CRM topbar button ────────────────────────────────────────────────────────
+function crmBtnClick() {
+  showPage('crm-page', 'CRM');
+  const bc = document.getElementById('breadcrumb');
+  if (bc) bc.textContent = 'CRM';
+  // Navigate to crm URL
+  history.pushState({ pageId: 'crm-page', breadcrumb: 'CRM' }, '', '/admin/dashboard/crm');
+}
+
+// _oldSpaToggleSub: kept for legacy SPA sidebar calls (no longer used)
+function _oldSpaToggleSub(el, name) {
+  document.getElementById('breadcrumb') && (document.getElementById('breadcrumb').textContent = name);
 }
 
 function setActive(el, name, sub, pageId) {
@@ -238,32 +241,21 @@ function applyThemeVars(vars) {
   Object.entries(vars).forEach(([k,v]) => root.style.setProperty(k, v));
 }
 
+// toggleMode: delegate to layout's toggleTheme (which uses data-theme + localStorage)
 function toggleMode() {
-  const isLight = document.body.classList.toggle('light');
-  const btn = document.getElementById('theme-btn');
-  const icon = btn ? btn.querySelector('i') : null;
-  if (isLight) {
-    applyThemeVars(LIGHT_VARS);
-    if (icon) icon.className = 'fa-solid fa-sun';
-    localStorage.setItem('admin-theme','light');
-  } else {
-    applyThemeVars(DARK_VARS);
-    if (icon) icon.className = 'fa-solid fa-moon';
-    localStorage.setItem('admin-theme','dark');
+  if (typeof toggleTheme === 'function') {
+    toggleTheme();
   }
-  setTimeout(initChart, 50);
-  setTimeout(function(){ if (typeof initAiHubChart === 'function') initAiHubChart(); }, 50);
+  setTimeout(initChart, 60);
+  setTimeout(function(){ if (typeof initAiHubChart === 'function') initAiHubChart(); }, 60);
 }
 
-// restore theme on load
-(function() {
-  if (localStorage.getItem('admin-theme') === 'light') {
-    document.body.classList.add('light');
-    applyThemeVars(LIGHT_VARS);
-    const btn = document.getElementById('theme-btn');
-    if (btn) { const i = btn.querySelector('i'); if(i) i.className='fa-solid fa-sun'; }
-  }
-})();
+// updateCharts: called by layout's toggleTheme after theme change
+function updateCharts() {
+  setTimeout(initChart, 60);
+  setTimeout(initProductsDashChart, 60);
+  setTimeout(function(){ if (typeof initAiHubChart === 'function') initAiHubChart(); }, 60);
+}
 
 window.addEventListener('load', () => setTimeout(initChart, 100));
 
@@ -293,7 +285,7 @@ function initProductsDashChart() {
   if (!canvas || typeof Chart === 'undefined') return;
   if (_prodChart) { _prodChart.destroy(); _prodChart = null; }
 
-  const isDark = !document.body.classList.contains('light');
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
   const textColor = isDark ? 'rgba(168,196,168,.65)' : 'rgba(61,92,66,.65)';
   const gridColor = isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.07)';
   const d = PROD_RANGE_DATA[_prodRange];

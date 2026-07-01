@@ -18,13 +18,31 @@
       <a href="{{ route('app.profile') }}" class="topnav-link" data-key="profile">پروفایل</a>
     </div>
 
-    {{-- دکمه بساز — سمت چپ --}}
-    <a href="{{ route('app.create') }}" class="topnav-create" data-key="create">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
-      </svg>
-      بساز
-    </a>
+    {{-- گروه چپ: بساز + تم + تنظیمات --}}
+    <div class="topnav-left-group">
+
+      {{-- دکمه بساز --}}
+      <a href="{{ route('app.create') }}" class="topnav-create" data-key="create">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+        </svg>
+        بساز
+      </a>
+
+      {{-- theme toggle --}}
+      <button id="nav-theme-toggle" type="button" class="topnav-theme-btn" aria-label="تغییر تم">
+        <svg class="nav-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="nav-icon-sun"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+      </button>
+
+      {{-- تنظیمات --}}
+      <button id="nav-settings-btn" type="button" class="topnav-settings-btn" aria-label="تنظیمات">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7zm7.43-2.92c.04-.34.07-.67.07-1.08s-.03-.75-.07-1.08l2.25-1.77c.21-.16.27-.44.14-.67l-2.12-3.68c-.13-.23-.42-.3-.65-.21l-2.65 1.07c-.56-.42-1.16-.77-1.82-1.03L14.5 2.42c-.04-.25-.25-.42-.5-.42h-4c-.25 0-.46.17-.5.42l-.41 2.75c-.66.26-1.26.61-1.82 1.03L4.72 5.13c-.23-.09-.52-.02-.65.21L1.95 8.98c-.14.23-.08.51.14.67l2.25 1.77c-.04.33-.07.67-.07 1.08s.03.75.07 1.08L2.09 15.35c-.21.16-.27.44-.14.67l2.12 3.68c.13.23.42.3.65.21l2.65-1.07c.56.42 1.16.77 1.82 1.03l.41 2.75c.04.25.25.42.5.42h4c.25 0 .46-.17.5-.42l.41-2.75c.66-.26 1.26-.61 1.82-1.03l2.65 1.07c.23.09.52.02.65-.21l2.12-3.68c.13-.23.07-.51-.14-.67l-2.25-1.77z"/>
+        </svg>
+      </button>
+
+    </div>
 
   </div>
 </nav>
@@ -164,6 +182,61 @@
   .topnav-create.is-active {
     box-shadow: 0 0 0 2px rgba(11,191,83,0.4);
   }
+
+  /* گروه چپ: بساز + تم + تنظیمات */
+  .topnav-left-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    direction: ltr;
+    flex-shrink: 0;
+  }
+
+  /* دکمه theme toggle */
+  .topnav-theme-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.07);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: #ffffff;
+    transition: background 0.2s;
+  }
+  .topnav-theme-btn:hover { background: rgba(255,255,255,0.13); }
+  html.light .topnav-theme-btn {
+    border-color: rgba(0,0,0,0.12);
+    background: rgba(0,0,0,0.05);
+    color: #000000;
+  }
+  html.light .topnav-theme-btn:hover { background: rgba(0,0,0,0.09); }
+
+  /* دکمه تنظیمات در هدر */
+  .topnav-settings-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.07);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: #ffffff;
+    transition: background 0.2s;
+  }
+  .topnav-settings-btn:hover { background: rgba(255,255,255,0.13); }
+  html.light .topnav-settings-btn {
+    border-color: rgba(0,0,0,0.12);
+    background: rgba(0,0,0,0.05);
+    color: #000000;
+  }
+  html.light .topnav-settings-btn:hover { background: rgba(0,0,0,0.09); }
+
+  /* آیکون‌های شب/روز */
+  .nav-icon-moon { display: block; }
+  .nav-icon-sun  { display: none; }
+  html.light .nav-icon-moon { display: none; }
+  html.light .nav-icon-sun  { display: block; }
 }
 
 /* ══════════════════════════════════════════
@@ -289,6 +362,14 @@ html.light #vatan-nav-bar {
     if (/\/explore/.test(path))  return 'explore';
     if (/\/product/.test(path))  return '';
     return 'home';
+  }
+
+  /* ── theme toggle در هدر ── */
+  var navThemeBtn = document.getElementById('nav-theme-toggle');
+  if (navThemeBtn) {
+    navThemeBtn.addEventListener('click', function () {
+      window.vatanToggleTheme && window.vatanToggleTheme();
+    });
   }
 
   var activeKey = detectActiveKey();
