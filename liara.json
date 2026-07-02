@@ -13,5 +13,9 @@
       "name": "my-disk",
       "mountTo": "/var/www/html/storage"
     }
-  ]
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false"
+  }
 }
