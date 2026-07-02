@@ -193,10 +193,6 @@ Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])
     Route::get('/settings/backup',           fn() => view('admin.settings.backup'))->name('settings.backup');
     Route::get('/settings/logs',             fn() => view('admin.settings.logs'))->name('settings.logs');
 
-   Route::get('/products', [ProductController::class, 'index'])->name('products');
-    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
-    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
-=======
     // مدیریت محصولات (بدون تداخل با روت‌های کلوزر قدیمی)
     Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
@@ -204,7 +200,6 @@ Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])
     Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
->>>>>>> bc98e98 (...)
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');

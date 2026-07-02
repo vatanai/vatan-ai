@@ -3,8 +3,13 @@ FROM php:8.4-apache
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Install Node.js 20
+RUN apt-get update && apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
 # Install dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get install -y \
     libzip-dev zip unzip \
     libpng-dev libjpeg-dev libwebp-dev \
     libxml2-dev libonig-dev \
@@ -25,6 +30,9 @@ RUN echo '<VirtualHost *:80>\n\
 WORKDIR /var/www/html
 
 COPY . .
+
+# Build frontend assets
+RUN npm install && npm run build && rm -rf node_modules
 
 # Fix permissions
 RUN chown -R www-data:www-data . \
