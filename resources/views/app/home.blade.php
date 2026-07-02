@@ -143,7 +143,7 @@
     </div>
   </section>
 
-  {{-- ===== SECTION 4: محصولات پرطرفدار ===== --}}
+  {{-- ===== SECTION 4: محصولات پرطرفدار (داینامیک از دیتابیس) ===== --}}
   <section class="home-products">
 
     <div class="home-section-title">
@@ -151,7 +151,8 @@
     </div>
     <p class="home-products-subtitle">عکس‌ها و ویدیوهای خیره‌کننده خلق کنید...</p>
 
-    {{-- ----- STYLE A: ترند امروز ----- --}}
+    {{-- ----- ردیف ۱: ترندهای امروز ----- --}}
+    @if ($trending->isNotEmpty())
     <div class="home-section-title home-section-title--sub">
       <div>
         <span class="home-section-title-right">ترندهای امروز</span>
@@ -161,52 +162,26 @@
     </div>
 
     <div class="home-cards-scroll">
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/prompt-for-gemini-ai-girl.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-crown home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">پرتره سینمایی</p>
-          <p class="home-card-tag">عکس</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">کافه گرل</p>
-          <p class="home-card-tag">عکس</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">فشن استودیو</p>
-          <p class="home-card-tag">عکس</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/moody-portrait-of-a-young-man-with-a-black-horse-on-a-ranch-ai-photo-editing-prompt.avif') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">اسب و طبیعت</p>
-          <p class="home-card-tag">عکس</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">سینماتیک مرد</p>
-          <p class="home-card-tag">عکس</p>
-        </div>
-      </a>
+      @foreach ($trending as $product)
+        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+          <div class="home-card-overlay"></div>
+          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
+          @if ($product->is_featured)
+            <i class="fa-solid fa-crown home-card-badge-tier"></i>
+          @elseif ($product->is_new)
+            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+          @endif
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+          </div>
+        </a>
+      @endforeach
     </div>
+    @endif
 
     {{-- ----- ردیف ۲: کسب و کار ----- --}}
+    @if ($business->isNotEmpty())
     <div class="home-section-title home-section-title--sub home-section-title--biz">
       <div>
         <span class="home-section-title-right">کسب و کار</span>
@@ -216,51 +191,26 @@
     </div>
 
     <div class="home-cards-scroll">
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/promptbank234.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-crown home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">برندینگ حرفه‌ای</p>
-          <p class="home-card-tag">کسب و کار</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/hmxsjse1drg8xqmj0mda.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">عکس محصول</p>
-          <p class="home-card-tag">کسب و کار</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/promptbank176.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">پروفایل لینکدین</p>
-          <p class="home-card-tag">کسب و کار</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/ai-photo-editor-prompt.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ادیت تبلیغاتی</p>
-          <p class="home-card-tag">کسب و کار</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-friends-ai-prompt-2.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">گروه تیمی</p>
-          <p class="home-card-tag">کسب و کار</p>
-        </div>
-      </a>
+      @foreach ($business as $product)
+        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+          <div class="home-card-overlay"></div>
+          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
+          @if ($product->is_featured)
+            <i class="fa-solid fa-crown home-card-badge-tier"></i>
+          @elseif ($product->is_new)
+            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+          @endif
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+          </div>
+        </a>
+      @endforeach
     </div>
+    @endif
 
     {{-- ----- ردیف ۳: پرتره سینمایی ----- --}}
+    @if ($portrait->isNotEmpty())
     <div class="home-section-title home-section-title--sub home-section-title--biz">
       <div>
         <span class="home-section-title-right">پرتره سینمایی</span>
@@ -270,51 +220,26 @@
     </div>
 
     <div class="home-cards-scroll">
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/A-man-in-a-white-t-shirt-and-jeans-sits-on-a-rooftop-at-dusk-gazing-contemplatively-at-a-bright-full-moon-above-him.-The-scene-conveys-serenity-and-wonder.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">مهتاب</p>
-          <p class="home-card-tag">پرتره</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-boy-man-sitting-on-chair-ai-prompt-riuuaksek4.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">رترو چیر</p>
-          <p class="home-card-tag">پرتره</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Realistic-emotional-hug-scene-with-cinematic-lighting-created-using-Gemini-AI-768x1365.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">لحظه احساسی</p>
-          <p class="home-card-tag">پرتره</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <i class="fa-solid fa-crown home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ادیت کامل</p>
-          <p class="home-card-tag">پرتره</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Couple-bike-photo-edit-using-AI-Google-Gemini-with-stylish-effects-and-professional-finish-768x1365.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">کوپل دوچرخه</p>
-          <p class="home-card-tag">کوپل</p>
-        </div>
-      </a>
+      @foreach ($portrait as $product)
+        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+          <div class="home-card-overlay"></div>
+          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
+          @if ($product->is_featured)
+            <i class="fa-solid fa-crown home-card-badge-tier"></i>
+          @elseif ($product->is_new)
+            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+          @endif
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+          </div>
+        </a>
+      @endforeach
     </div>
+    @endif
 
     {{-- ----- ردیف ۴: عکاسی فشن ----- --}}
+    @if ($fashion->isNotEmpty())
     <div class="home-section-title home-section-title--sub home-section-title--biz">
       <div>
         <span class="home-section-title-right">عکاسی فشن</span>
@@ -324,50 +249,26 @@
     </div>
 
     <div class="home-cards-scroll">
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">رترو گل</p>
-          <p class="home-card-tag">فشن</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ادیت خاص</p>
-          <p class="home-card-tag">فشن</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/gemini-boy-standing-on-road-outoor-editing-prompt-tve6lh5nkd.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">اوتدور</p>
-          <p class="home-card-tag">فشن</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookaside.fbsbx.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">مدرن سیتی</p>
-          <p class="home-card-tag">فشن</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookasidwee.fbsbx.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-image home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">پورتریت گلدن</p>
-          <p class="home-card-tag">فشن</p>
-        </div>
-      </a>
+      @foreach ($fashion as $product)
+        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+          <div class="home-card-overlay"></div>
+          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
+          @if ($product->is_featured)
+            <i class="fa-solid fa-crown home-card-badge-tier"></i>
+          @elseif ($product->is_new)
+            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+          @endif
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+          </div>
+        </a>
+      @endforeach
     </div>
+    @endif
 
     {{-- ----- ردیف ۵: ریلز و ویدیو ----- --}}
+    @if ($videos->isNotEmpty())
     <div class="home-section-title home-section-title--sub home-section-title--biz">
       <div>
         <span class="home-section-title-right">ریلز و ویدیو</span>
@@ -377,49 +278,23 @@
     </div>
 
     <div class="home-cards-scroll">
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/images.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <i class="fa-solid fa-crown home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ریلز هنری</p>
-          <p class="home-card-tag">ویدیو</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/lookasjide.fbsbx.webp') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">کلیپ احساسی</p>
-          <p class="home-card-tag">ویدیو</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">سینماتیک</p>
-          <p class="home-card-tag">ویدیو</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ریلز فشن</p>
-          <p class="home-card-tag">ویدیو</p>
-        </div>
-      </a>
-      <a class="home-card" href="{{ route('app.product', 'demo') }}" style="background-image: url('{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}');">
-        <div class="home-card-overlay"></div>
-        <i class="fa-solid fa-video home-card-badge-type"></i>
-        <div class="home-card-info">
-          <p class="home-card-name">ویدیو کافه</p>
-          <p class="home-card-tag">ویدیو</p>
-        </div>
-      </a>
+      @foreach ($videos as $product)
+        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+          <div class="home-card-overlay"></div>
+          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
+          @if ($product->is_featured)
+            <i class="fa-solid fa-crown home-card-badge-tier"></i>
+          @elseif ($product->is_new)
+            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
+          @endif
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+          </div>
+        </a>
+      @endforeach
     </div>
+    @endif
 
   </section>
 
@@ -795,13 +670,15 @@
   .home-cards-scroll {
     display: flex;
     flex-direction: row;
-    gap: 2px;
+    gap: 10px;
     overflow-x: auto;
+    overflow-y: visible;
     scrollbar-width: none;
-    padding-bottom: 4px;
+    padding: 10px 0 14px 0;
     direction: rtl;
-    margin: 12px -16px 0 -16px;
+    margin: 2px -16px 0 -16px;
     width: calc(100% + 32px);
+    isolation: isolate;
   }
 
   .home-cards-scroll::-webkit-scrollbar {
@@ -823,22 +700,28 @@
     background-size: cover;
     background-position: center;
     cursor: pointer;
+    /* ===== افکت هاور: انیمیشن نرم بزرگ‌نمایی + سایه ===== */
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+    will-change: transform;
+    transform-origin: center center;
+    z-index: 0;
   }
 
-  .home-cards-scroll .home-card {
-    width: calc(52.8vw);
-    max-width: 211px;
-    flex-shrink: 0;
+  .home-card:hover {
+    transform: scale(1.035) translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+    z-index: 20;
   }
 
-  .home-card--full {
-    width: 100%;
+  .home-card:hover .home-card-overlay {
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, transparent 65%);
   }
 
   .home-card-overlay {
     position: absolute;
     inset: 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 60%);
+    transition: background 0.35s ease;
   }
 
   .home-card-info {
@@ -926,8 +809,8 @@
 
     /* کارت‌های اسلایدر */
     .home-cards-scroll {
-      gap: 8px;
-      padding-bottom: 8px;
+      gap: 14px;
+      padding: 10px 0 14px 0;
     }
     .home-cards-scroll .home-card {
       width: 200px;
@@ -992,13 +875,6 @@
     if (menuOpen && !menuSheet.contains(e.target)) {
       closeMenu();
     }
-  });
-
-  /* ── کلیک روی کارت محصول ── */
-  document.querySelectorAll('.home-card').forEach(function (card) {
-    card.addEventListener('click', function () {
-      window.location.href = '/app/product/demo';
-    });
   });
 
 })();

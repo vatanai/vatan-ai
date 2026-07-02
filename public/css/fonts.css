@@ -1,15 +1,87 @@
 /* YekanBakh — فونت اصلی سایت */
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Hairline.ttf') format('truetype'); font-weight: 100; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Light.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Medium.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Heavy.ttf') format('truetype'); font-weight: 800; font-style: normal; font-display: swap; }
-@font-face { font-family: 'YekanBakh'; src: url('/fonts/YekanBakh-Fat.ttf') format('truetype'); font-weight: 900; font-style: normal; font-display: swap; }
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Hairline.ttf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Heavy.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'YekanBakh';
+    src: url('/fonts/YekanBakh-Fat.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
 
-/* IRANSansXFaNum - fallback */
-@font-face { font-family: 'IRANSansXFaNum'; src: url('/fonts/IRANSansXFaNum-LightD4.ttf') format('truetype'); font-weight: 300; font-style: normal; font-display: swap; }
-@font-face { font-family: 'IRANSansXFaNum'; src: url('/fonts/IRANSansXFaNum-RegularD4.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: 'IRANSansXFaNum'; src: url('/fonts/IRANSansXFaNum-MediumD4.ttf') format('truetype'); font-weight: 500; font-style: normal; font-display: swap; }
-@font-face { font-family: 'IRANSansXFaNum'; src: url('/fonts/IRANSansXFaNum-BoldD4.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
-@font-face { font-family: 'IRANSansXFaNum'; src: url('/fonts/IRANSansXFaNum-ExtraBoldD4.ttf') format('truetype'); font-weight: 800; font-style: normal; font-display: swap; }
+/* IRANSansXFaNum - Fallback */
+@font-face {
+    font-family: 'IRANSansXFaNum';
+    src: url('/fonts/IRANSansXFaNum-LightD4.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'IRANSansXFaNum';
+    src: url('/fonts/IRANSansXFaNum-RegularD4.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'IRANSansXFaNum';
+    src: url('/fonts/IRANSansXFaNum-MediumD4.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'IRANSansXFaNum';
+    src: url('/fonts/IRANSansXFaNum-BoldD4.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'IRANSansXFaNum';
+    src: url('/fonts/IRANSansXFaNum-ExtraBoldD4.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}

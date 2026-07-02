@@ -114,6 +114,15 @@
         <span class="nav-label">مدیریت مدل‌ها</span>
       </a>
     </div>
+<div onclick="toggleSubmenu('ai-models-submenu', this)"
+     class="flex items-center gap-2.5 px-2 mx-1.5 rounded-lg h-[38px] cursor-pointer transition-colors {{ request()->is('admin/ai-models*') ? 'bg-[#a07af5]/[0.12]' : 'hover:bg-[#16161c]' }}">
+  <div class="w-[30px] h-[30px] flex items-center justify-center text-[13px] flex-shrink-0 {{ request()->is('admin/ai-models*') ? 'text-[#a07af5]' : 'text-[#a8c4a8]' }}">
+    <i class="fa-solid fa-brain"></i>
+  </div>
+  <div class="flex-1 text-[12.5px] font-semibold {{ request()->is('admin/ai-models*') ? 'text-white' : 'text-[#a8c4a8]' }}">مدل‌های هوشمند</div>
+  <i class="fa-solid fa-chevron-down text-[9px] text-[#4d7a56] transition-transform duration-200 chevron-icon" 
+     style="{{ request()->is('admin/ai-models*') ? 'transform: rotate(180deg);' : '' }}"></i>
+</div>
 
     {{-- لاگ جاب‌ها --}}
     <div class="nav-item">
@@ -122,6 +131,32 @@
         <div class="nav-icon"><i class="fa-solid fa-list-check"></i></div>
         <span class="nav-label">لاگ جاب‌ها</span>
       </a>
+<div id="ai-models-submenu" class="py-0.5 pb-1" style="{{ request()->is('admin/ai-models*') ? '' : 'display: none;' }}">
+
+  <a href="{{ route('admin.ai-models.index') }}" class="flex items-center gap-2 px-2.5 py-1.5 mx-1.5 ml-[30px] rounded-md cursor-pointer hover:bg-[#16161c] transition-colors no-underline">
+    <div class="w-1 h-1 rounded-full {{ request()->is('admin/ai-models') ? 'bg-[#a07af5]' : 'bg-[#2e2e3e]' }} flex-shrink-0"></div>
+    <div class="flex-1 text-[11.5px] font-medium {{ request()->is('admin/ai-models') ? 'text-white' : 'text-[#a8c4a8]' }}">مدیریت مدل‌ها</div>
+  </a>
+
+  <a href="{{ route('admin.ai-models.create') }}" class="flex items-center gap-2 px-2.5 py-1.5 mx-1.5 ml-[30px] rounded-md cursor-pointer hover:bg-[#16161c] transition-colors no-underline">
+    <div class="w-1 h-1 rounded-full {{ request()->is('admin/ai-models/create') ? 'bg-[#a07af5]' : 'bg-[#2e2e3e]' }} flex-shrink-0"></div>
+    <div class="flex-1 text-[11.5px] font-medium {{ request()->is('admin/ai-models/create') ? 'text-white' : 'text-[#a8c4a8]' }}">افزودن مدل جدید</div>
+    <span class="text-[9px] px-1.5 py-px rounded bg-[#0BBF53]/[0.08] text-[#0BBF53] border border-[#0BBF53]/20 font-mono">OpenRouter</span>
+  </a>
+
+</div>
+    <div class="h-px bg-[#222230] mx-3 my-2"></div>
+    
+
+    {{-- تنظیمات - با زیرمنو --}}
+    <div onclick="toggleSubmenu('settings-submenu', this)"
+         class="flex items-center gap-2.5 px-2 mx-1.5 rounded-lg h-[38px] cursor-pointer transition-colors {{ request()->is('admin/settings*') ? 'bg-[#a07af5]/[0.12]' : 'hover:bg-[#16161c]' }}">
+      <div class="w-[30px] h-[30px] flex items-center justify-center text-[13px] flex-shrink-0 {{ request()->is('admin/settings*') ? 'text-[#a07af5]' : 'text-[#a8c4a8]' }}">
+        <i class="fa-solid fa-gear"></i>
+      </div>
+      <div class="flex-1 text-[12.5px] font-semibold {{ request()->is('admin/settings*') ? 'text-white' : 'text-[#a8c4a8]' }}">تنظیمات</div>
+      <i class="fa-solid fa-chevron-down text-[9px] text-[#4d7a56] transition-transform duration-200 chevron-icon"
+         style="{{ request()->is('admin/settings*') || request()->is('admin/crm*') ? 'transform: rotate(180deg);' : '' }}"></i>
     </div>
 
     <div class="sb-divider"></div>

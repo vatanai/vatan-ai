@@ -8,16 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminAuthController extends Controller
 {
-    /** GET /admin/login — فرم ورود ادمین */
     public function showLogin()
     {
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
+        }
         return view('admin.auth.login');
-    }
-
-    /** alias — سازگاری با نام قدیمی */
-    public function showLoginForm()
-    {
-        return $this->showLogin();
     }
 
     public function login(Request $request)
@@ -25,16 +21,20 @@ class AdminAuthController extends Controller
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required|min:6',
+        ], [
+            'email.required' => 'وارد کردن ایمیل الزامی است.',
+            'password.required' => 'وارد کردن کلمه عبور الزامی است.',
         ]);
 
         $credentials = $request->only('email', 'password');
 
-        if (Auth::guard('admin')->attempt($credentials)) {
+        if (Auth::guard('admin')->attempt($credentials, $request->has('remember'))) {
+            $request->session()->regenerate();
             return redirect()->intended(route('admin.dashboard'));
         }
 
         return back()->withErrors([
-            'email' => 'ایمیل یا رمز عبور اشتباه است.',
+            'email' => 'اطلاعات وارد شده با رکوردهای مدیریت مطابقت ندارد.',
         ])->withInput($request->only('email'));
     }
 

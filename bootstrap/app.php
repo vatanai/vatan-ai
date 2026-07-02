@@ -13,7 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
-        $middleware->redirectGuestsTo(fn() => route('login'));
+        // مدیریت هوشمند هدایت کاربران مهمان (احراز هویت نشده) بر اساس آدرس درخواست
+        $middleware->redirectGuestsTo(function (Request $request) {
+            // اگر آدرس درخواست مربوط به بخش ادمین بود
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return route('admin.login');
+            }
+            
+            // ریدایرکت پیش‌فرض برای سایر کاربران سایت
+            return route('login');
+        });
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

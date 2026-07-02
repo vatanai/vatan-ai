@@ -9,25 +9,20 @@ class GeneratedImage extends Model
 {
     protected $fillable = [
         'user_id',
-        'prompt_id',
+        'product_id',
         'image_path',
         'user_prompt',
-        'cost'
+        'cost',
+        'size',
     ];
 
-    /**
-     * رابطه معکوس با کاربر
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * رابطه معکوس با پرامپت/سبک اولیه
-     */
-    public function prompt(): BelongsTo
+    public function product(): BelongsTo
     {
-        return $this->belongsTo(Prompt::class);
+        return $this->belongsTo(Product::class);
     }
 }

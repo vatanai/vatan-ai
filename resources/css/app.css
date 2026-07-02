@@ -1,5 +1,18 @@
-@import '@fortawesome/fontawesome-free/css/all.min.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import '../../node_modules/@fortawesome/fontawesome-free/css/all.min.css';
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../storage/framework/views/*.php";
+@source "../**/*.blade.php";
+@source "../**/*.js";
 
+@theme {
+    /* تنظیم فونت و رنگ‌های رسمی پروژه طبق داک داخلی شما */
+    --font-vazir: "Vazirmatn", "YekanBakh", sans-serif;
+    --font-sans: "Vazirmatn", "YekanBakh", ui-sans-serif, system-ui, sans-serif;
+    
+    --bg: #0c0c10;
+    --s1: #111116;
+    --s2: #16161c;
+    --b1: #222230;
+    --color-primary: #0BBF53;
+}
