@@ -6,10 +6,9 @@
 @source "../**/*.js";
 
 @theme {
-    /* تنظیم فونت و رنگ‌های رسمی پروژه طبق داک داخلی شما */
     --font-vazir: "Vazirmatn", "YekanBakh", sans-serif;
     --font-sans: "Vazirmatn", "YekanBakh", ui-sans-serif, system-ui, sans-serif;
-    
+
     --bg: #0c0c10;
     --s1: #111116;
     --s2: #16161c;

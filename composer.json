@@ -58,7 +58,8 @@
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",
-            "chmod -R a+rX app/ config/ routes/ bootstrap/ database/ resources/ 2>/dev/null || true"
+            "chmod -R a+rX app/ config/ routes/ bootstrap/ database/ resources/ 2>/dev/null || true",
+            "rm -f public/hot 2>/dev/null || true"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
