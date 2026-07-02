@@ -1,0 +1,2 @@
+جمع‌بندی کامل رنگ‌ها:
+| عنوان | شب | روز | |---|---|---| | bg-page | `#000000` | `#ffffff` | | text-primary | `#ffffff` | `#000000` | | text-secondary | `#ffffff` | `#000000` | | icon | `#ffffff` | `#000000` | | bg-card (پشتیبانی/تنظیمات) | `#3F3F3F` | `#E5E5E5` | | bg-affiliate | `#0d2818` | `#e8f8ee` | | border-affiliate | `#1a5c32` | `#a8e6be` | | سبز اصلی | `#0BBF53` | `#0BBF53` |
