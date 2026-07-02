@@ -20,7 +20,7 @@ class AdminAuthController extends Controller
     {
         $request->validate([
             'email'    => 'required|email',
-            'password' => 'required|min:6',
+            'password' => 'required|min:1',
         ], [
             'email.required' => 'وارد کردن ایمیل الزامی است.',
             'password.required' => 'وارد کردن کلمه عبور الزامی است.',

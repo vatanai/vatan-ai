@@ -17,5 +17,9 @@ fi
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
+# migrate و seed
+php artisan migrate --force
+php artisan db:seed --force
+
 # اجرای Apache
 exec apache2-foreground

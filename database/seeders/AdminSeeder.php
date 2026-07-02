@@ -10,10 +10,18 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         Admin::updateOrCreate(
-            ['email' => 'amirtojar86@gmail.com'], // بررسی برای عدم ایجاد رکورد تکراری
+            ['email' => 'amirtojar86@gmail.com'],
             [
                 'name' => 'Amir Admin',
-                'password' => Hash::make('amir25191mk') // هش کردن امن پسورد شما
+                'password' => Hash::make('amir25191mk'),
+            ]
+        );
+
+        Admin::updateOrCreate(
+            ['email' => 'admiinn@aivatan.com'],
+            [
+                'name' => 'Mohsen Admin',
+                'password' => Hash::make('11'),
             ]
         );
     }
