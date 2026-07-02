@@ -6,16 +6,13 @@
     "location": "germany"
   },
   "laravel": {
-    "phpVersion": "8.4"
+    "phpVersion": "8.4",
+    "buildAssets": false
   },
   "disks": [
     {
       "name": "my-disk",
       "mountTo": "/var/www/html/storage"
     }
-  ],
-  "env": {
-    "APP_ENV": "production",
-    "APP_DEBUG": "false"
-  }
+  ]
 }
