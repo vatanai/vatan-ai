@@ -3,14 +3,11 @@
 @section('content')
 <div class="profile-page" dir="rtl">
 
-  {{-- ===== COVER BANNER — desktop/tablet only ===== --}}
-  <div class="cover-banner" aria-hidden="true">
-    <div class="cover-blob cover-blob--1"></div>
-    <div class="cover-blob cover-blob--2"></div>
-  </div>
-
-  {{-- ===== HERO: آواتار + اطلاعات ===== --}}
+  {{-- ===== HERO: آواتار + اطلاعات + آمار ===== --}}
   <section class="profile-hero">
+
+    {{-- گروه راست: آواتار + اطلاعات (روی desktop کنار هم، روی mobile روی هم) --}}
+    <div class="hero-right-group">
 
     {{-- آواتار --}}
     <div class="avatar-wrap">
@@ -24,20 +21,22 @@
     {{-- اطلاعات --}}
     <div class="profile-info">
 
-      {{-- نام + بج پلن --}}
+      {{-- نام --}}
       <div class="name-row">
         <h1 class="profile-name">محسن آقاجانی</h1>
-        <div class="plan-badge">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="#0BBF53"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-          <span>پلن رایگان</span>
-        </div>
       </div>
 
       {{-- شماره موبایل --}}
       <p class="profile-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
 
-      {{-- آمار ۴ تایی --}}
-      <div class="stats-row">
+      {{-- بج پلن — فقط desktop --}}
+      <div class="plan-badge show-desktop">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="#0BBF53"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+        <span>پلن رایگان</span>
+      </div>
+
+      {{-- آمار ۴ تایی — فقط mobile --}}
+      <div class="stats-row hide-desktop">
         <div class="stat-col">
           <span class="stat-number">۳۵</span>
           <span class="stat-label">پست</span>
@@ -118,6 +117,46 @@
 
       </div>
     </div>
+
+    </div>{{-- /hero-right-group --}}
+
+    {{-- ستون چپ — فقط desktop/tablet: آمار + بنر همکاری --}}
+    <div class="hero-left-group">
+
+      {{-- آمار ۴ تایی --}}
+      <div class="stats-desktop">
+        <div class="stat-col">
+          <span class="stat-number">۳۵</span>
+          <span class="stat-label">پست</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number">۱۸۱۰</span>
+          <span class="stat-label">ساخته‌شده</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number">۱۴</span>
+          <span class="stat-label">روز عضویت</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-col">
+          <span class="stat-number stat-number--plan">رایگان</span>
+          <span class="stat-label">پلن</span>
+        </div>
+      </div>
+
+      {{-- بنر همکاری در فروش (desktop) --}}
+      <div class="promo-banner">
+        <p class="promo-text">برنامه ویژه کسب درآمد مستمر</p>
+        <button type="button" class="promo-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v1H5v-1z"/></svg>
+          همکاری در فروش
+        </button>
+      </div>
+
+    </div>
+
   </section>
 
   {{-- ===== بنر همکاری در فروش ===== --}}
@@ -134,15 +173,11 @@
   {{-- ===== تب‌ها + پنل‌ها ===== --}}
   <section class="tabs-section">
 
-    {{-- تب‌ها — از راست به چپ: محتوا | فایلهای تو | همکاری در فروش | ذخیره شده‌ها --}}
+    {{-- تب‌ها — RTL راست به چپ: ذخیره | همکاری در فروش | فایلها | محتوا --}}
     <div class="profile-tabs" dir="rtl">
-      <button type="button" class="profile-tab active" data-tab="grid">
-        <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" class="tab-icon" width="19" height="19" alt="">
-        <span class="tab-label">محتوا</span>
-      </button>
-      <button type="button" class="profile-tab" data-tab="files">
-        <img src="{{ asset('assets/img/icons/fi-sr-file.svg') }}" class="tab-icon" width="19" height="19" alt="">
-        <span class="tab-label">فایلهای تو</span>
+      <button type="button" class="profile-tab" data-tab="saved">
+        <img src="{{ asset('assets/img/icons/fi-sr-bookmark.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">ذخیره شده‌ها</span>
       </button>
       <button type="button" class="profile-tab" data-tab="referral">
         <svg class="tab-icon tab-icon--svg" width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
@@ -150,9 +185,13 @@
         </svg>
         <span class="tab-label">همکاری در فروش</span>
       </button>
-      <button type="button" class="profile-tab" data-tab="saved">
-        <img src="{{ asset('assets/img/icons/fi-sr-bookmark.svg') }}" class="tab-icon" width="19" height="19" alt="">
-        <span class="tab-label">ذخیره شده‌ها</span>
+      <button type="button" class="profile-tab" data-tab="files">
+        <img src="{{ asset('assets/img/icons/fi-sr-file.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">فایلهای تو</span>
+      </button>
+      <button type="button" class="profile-tab active" data-tab="grid">
+        <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" class="tab-icon" width="19" height="19" alt="">
+        <span class="tab-label">محتوا</span>
       </button>
     </div>
 
@@ -312,9 +351,9 @@ html.light {
 }
 
 /* ═══════════════════════════════════════
-   BASE
+   BASE — بک‌گراند شب/روز کامل
 ═══════════════════════════════════════ */
-html, body { overflow-x: hidden; background: var(--bg-page); }
+html, body { overflow-x: hidden; background: var(--bg-page) !important; color: var(--text-primary) !important; }
 
 .profile-page {
   width: 100%;
@@ -326,41 +365,22 @@ html, body { overflow-x: hidden; background: var(--bg-page); }
 }
 
 /* ═══════════════════════════════════════
-   COVER BANNER — فقط desktop/tablet
+   UTILITY: show/hide by breakpoint
 ═══════════════════════════════════════ */
-.cover-banner {
-  display: none;
-  position: relative;
-  overflow: hidden;
-  height: 200px;
-  background: linear-gradient(135deg,
-    rgba(11,191,83,0.18) 0%,
-    rgba(160,122,245,0.28) 45%,
-    rgba(240,92,92,0.16) 100%
-  );
-}
-html.light .cover-banner {
-  background: linear-gradient(135deg,
-    rgba(11,191,83,0.12) 0%,
-    rgba(160,122,245,0.18) 45%,
-    rgba(240,92,92,0.10) 100%
-  );
-}
-.cover-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(50px);
-  pointer-events: none;
-}
-.cover-blob--1 {
-  width: 300px; height: 300px;
-  top: -80px; right: 10%;
-  background: rgba(160,122,245,0.35);
-}
-.cover-blob--2 {
-  width: 250px; height: 250px;
-  bottom: -100px; left: 15%;
-  background: rgba(11,191,83,0.25);
+.show-desktop { display: none !important; }
+.hide-desktop { display: flex; }
+
+/* hero-left-group — موبایل پنهان */
+.hero-left-group { display: none; }
+
+/* stats-desktop — داخل hero-left-group */
+.stats-desktop {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  direction: rtl;
+  width: 100%;
 }
 
 /* ═══════════════════════════════════════
@@ -399,6 +419,18 @@ html.light .cover-banner {
 }
 
 /* ═══════════════════════════════════════
+   HERO RIGHT GROUP
+═══════════════════════════════════════ */
+/* موبایل: ستون (آواتار بالا، اطلاعات پایین) */
+.hero-right-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+/* ═══════════════════════════════════════
    PROFILE INFO — موبایل: وسط‌چین
 ═══════════════════════════════════════ */
 .profile-info {
@@ -426,7 +458,7 @@ html.light .cover-banner {
 }
 
 .profile-phone {
-  font-size: 13px;
+  font-size: 15.7px;
   color: rgba(168,196,168,1);
   margin: 0;
   letter-spacing: 0.5px;
@@ -502,10 +534,11 @@ html.light .stat-label { color: #5a7a5a; }
 ═══════════════════════════════════════ */
 .action-row {
   display: flex;
-  gap: 8px;
+  gap: 5px;
   direction: rtl;
   width: 100%;
   max-width: 400px;
+  margin-top: 6px;
 }
 
 /* کارت‌ دکمه (پشتیبانی + تنظیمات) */
@@ -514,7 +547,7 @@ html.light .stat-label { color: #5a7a5a; }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: none;
   background: var(--bg-card);
   color: var(--text-primary);
@@ -548,7 +581,7 @@ html.light .stat-label { color: #5a7a5a; }
   justify-content: center;
   gap: 8px;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   border: none;
   background: var(--green);
   color: #ffffff;
@@ -585,7 +618,7 @@ html.light .stat-label { color: #5a7a5a; }
   width: 270px;
   background: #111116;
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.55);
   z-index: 300;
   overflow: hidden;
@@ -707,7 +740,7 @@ html.light .theme-icon-sun  { display: block !important; }
   direction: rtl;
   background: var(--bg-affiliate);
   border: 1px solid var(--border-affiliate);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 12px 14px;
 }
 .promo-text {
@@ -754,10 +787,10 @@ html.light .theme-icon-sun  { display: block !important; }
   background: transparent;
   cursor: pointer;
   position: relative;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-primary);
   transition: color 0.2s;
 }
-html.light .profile-tab { color: rgba(0,0,0,0.35); }
+html.light .profile-tab { color: var(--text-primary); }
 
 .profile-tab::after {
   content: '';
@@ -769,30 +802,30 @@ html.light .profile-tab { color: rgba(0,0,0,0.35); }
   transition: opacity 0.2s;
 }
 .profile-tab.active::after { opacity: 1; }
-.profile-tab.active { color: var(--text-primary); }
 
+/* آیکون تصویری — همیشه سفید */
 .tab-icon {
-  filter: brightness(0) invert(0.4);
+  filter: brightness(0) invert(1);
   transition: filter 0.2s, transform 0.15s;
 }
 .profile-tab.active .tab-icon {
   filter: brightness(0) invert(1);
   transform: scale(1.05);
 }
-html.light .tab-icon { filter: brightness(0) invert(0.6); }
+html.light .tab-icon { filter: brightness(0) invert(0); }
 html.light .profile-tab.active .tab-icon { filter: brightness(0) invert(0); }
 
+/* آیکون SVG inline — همیشه سفید */
 .tab-icon--svg {
   filter: none !important;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-primary);
   transition: color 0.2s, transform 0.15s;
 }
 .profile-tab.active .tab-icon--svg {
   color: var(--text-primary);
   transform: scale(1.05);
 }
-html.light .tab-icon--svg { color: rgba(0,0,0,0.35); }
-html.light .profile-tab.active .tab-icon--svg { color: var(--text-primary); }
+html.light .tab-icon--svg { color: var(--text-primary); }
 
 /* متن تب — موبایل پنهان، دسکتاپ نمایش */
 .tab-label {
@@ -869,7 +902,7 @@ html.light .profile-tab.active .tab-icon--svg { color: var(--text-primary); }
 .storage-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 14px 16px;
   margin-bottom: 16px;
 }
@@ -902,7 +935,7 @@ html.light .storage-free { color: rgba(0,0,0,0.25); }
   display: flex; gap: 6px; margin-bottom: 14px;
 }
 .files-sub-tab {
-  flex: 1; padding: 9px 8px; border-radius: 8px;
+  flex: 1; padding: 9px 8px; border-radius: 7px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   color: rgba(255,255,255,0.4);
@@ -950,7 +983,7 @@ html.light .referral-sub { color: rgba(0,0,0,0.45); }
 .referral-desc {
   background: var(--bg-affiliate);
   border: 1px solid var(--border-affiliate);
-  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; direction: rtl;
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; direction: rtl;
 }
 .referral-desc p { font-size: 13px; color: #a8e6be; line-height: 1.9; margin: 0; }
 html.light .referral-desc p { color: #1a6e3a; }
@@ -958,7 +991,7 @@ html.light .referral-desc p { color: #1a6e3a; }
 .referral-stats { display: flex; gap: 8px; margin-bottom: 20px; direction: rtl; }
 .referral-stat {
   flex: 1; background: var(--bg-surface); border: 1px solid var(--border-subtle);
-  border-radius: 10px; padding: 12px; text-align: center;
+  border-radius: 9px; padding: 12px; text-align: center;
 }
 .rs-number { font-size: 20px; font-weight: 700; color: var(--green); margin: 0; }
 .rs-label  { font-size: 11px; color: rgba(168,196,168,1); margin: 4px 0 0; }
@@ -985,118 +1018,178 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 }
 
 /* ═══════════════════════════════════════
-   TABLET — 640px+
+   SMALL TABLET — 640px+
+   لایوت دو ستونه فعال میشه
 ═══════════════════════════════════════ */
 @media (min-width: 640px) {
-  .cover-banner { display: block; }
+
+  /* utility */
+  .show-desktop { display: inline-flex !important; }
+  .hide-desktop { display: none !important; }
 
   .profile-page {
-    max-width: 760px;
+    max-width: 1100px;
     padding-bottom: 40px;
   }
 
+  /* hero: flex-row RTL
+     - اول در DOM = راست = hero-right-group (آواتار + اطلاعات)
+     - دوم در DOM = چپ = hero-left-group (آمار + بنر)
+  */
   .profile-hero {
     flex-direction: row;
     align-items: flex-start;
-    padding: 0 28px 24px;
-    margin-top: -60px;
-    position: relative;
-    z-index: 10;
-    gap: 28px;
+    justify-content: flex-start;
+    padding: 28px 36px 22px 0;
+    margin-top: 0;
+    position: static;
+    z-index: auto;
+    gap: 20px;
   }
 
-  /* آواتار سمت راست (RTL: first = right) */
-  .avatar-ring {
-    width: 120px; height: 120px;
+  /* گروه راست: آواتار + اطلاعات کنار هم */
+  .hero-right-group {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
   }
 
-  /* اطلاعات سمت چپ */
+  /* آواتار کوچک‌تبلت */
+  .avatar-ring { width: 106px; height: 106px; }
+
+  /* اطلاعات: راست‌چین (RTL start) */
   .profile-info {
     flex: 1;
+    min-width: 0;
     align-items: flex-start;
     text-align: right;
-    padding-top: 72px;
+    padding-top: 0;
   }
 
-  .name-row {
-    justify-content: flex-start;
-  }
+  .name-row { justify-content: flex-start; }
+  .profile-name { font-size: 17px; }
+  .profile-phone { padding-right: 10px; font-size: 13px; }
 
-  .profile-name { font-size: 22px; }
+  /* پلن رایگان در tablet/desktop حذف */
+  .plan-badge { display: none !important; }
 
-  .stats-row {
-    justify-content: flex-start;
-    max-width: none;
-  }
-
+  /* دکمه‌های اکشن */
   .action-row {
-    max-width: none;
+    max-width: 340px;
+    width: 100%;
+    margin-top: 4px;
   }
 
-  /* تب‌ها — متن نمایش داده شود */
+  /* تنظیمات — پنهان (رفت به هدر) */
+  .settings-wrap { display: none !important; }
+
+  /* بنر موبایل — پنهان (داخل hero-left-group هست) */
+  .promo-section { display: none; }
+
+  /* ستون چپ: آمار + بنر */
+  .hero-left-group {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    width: 248px;
+    gap: 12px;
+    align-items: stretch;
+    padding-top: 0;
+  }
+
+  /* آمار: هم‌عرض بنر */
+  .stats-desktop { width: 100% !important; box-sizing: border-box; }
+  .hero-left-group .promo-banner { width: 100%; box-sizing: border-box; }
+  .stats-desktop .stat-col { flex: 1; padding: 0 1px; }
+  .stats-desktop .stat-sep { height: 20px; }
+
+  /* ستون آمار موبایل — پنهان */
+  .stats-row { display: none !important; }
+
+  /* تب‌ها */
   .tab-label { display: inline; }
+  .tabs-section  { margin-top: 20px; }
+  .profile-tabs  { padding: 0 36px; justify-content: flex-start; }
+  .profile-tab   { flex: none; height: 44px; gap: 6px; padding: 0 14px; }
 
-  .profile-tab {
-    height: 48px;
-    gap: 7px;
-    flex: none;
-    padding: 0 18px;
-  }
+  .panel-grid  { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .panel-saved { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .files-grid  { grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 0; width: 100%; }
+}
 
-  .promo-section { padding: 0 28px; }
-  .tabs-section  { margin-top: 24px; }
-  .profile-tabs  { padding: 0 28px; }
+/* ═══════════════════════════════════════
+   LARGE TABLET — 768px+
+   نزدیک به desktop، فاصله‌ها استاندارد
+═══════════════════════════════════════ */
+@media (min-width: 768px) {
+  .profile-page  { max-width: 1100px; }
 
-  /* گرید ۴ ستونه روی تبلت */
+  .profile-hero  { padding: 36px 44px 26px 0; gap: 26px; }
+
+  .hero-right-group { gap: 18px; }
+  .avatar-ring  { width: 118px; height: 118px; }
+  .profile-info { flex: 0 0 auto; min-width: 200px; }
+  .profile-name { font-size: 19px; }
+  .profile-phone { font-size: 14.5px; padding-right: 12px; }
+
+  .hero-left-group { width: 276px; gap: 13px; }
+
+  .stats-desktop .stat-col { padding: 0 2px; }
+  .stats-desktop .stat-sep { height: 22px; }
+
+  .action-row { max-width: 360px; }
+
+  .tabs-section  { margin-top: 22px; }
+  .profile-tabs  { padding: 0 44px; }
+  .profile-tab   { height: 46px; padding: 0 16px; }
+
   .panel-grid  { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .panel-saved { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .files-grid  { grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0; width: 100%; }
-  .grid-cell, .files-cell { border-radius: 8px; }
+  .files-grid  { grid-template-columns: repeat(4, 1fr); gap: 6px; }
 }
 
 /* ═══════════════════════════════════════
    DESKTOP — 1024px+
 ═══════════════════════════════════════ */
 @media (min-width: 1024px) {
-  .cover-banner { height: 220px; }
+  .profile-page { max-width: 1200px; padding: 0 0 60px; }
+  .profile-hero { padding: 44px 56px 32px 0; gap: 40px; }
 
-  .profile-page {
-    max-width: 1080px;
-    padding: 0 0 60px;
-  }
+  .avatar-ring  { width: 136px; height: 136px; }
+  .hero-right-group { gap: 24px; }
+  .profile-info { min-width: 260px; }
+  .profile-name { font-size: 24px; }
+  .profile-phone { font-size: 15.7px; }
 
-  .profile-hero {
-    padding: 0 40px 32px;
-    margin-top: -72px;
-    gap: 36px;
-  }
+  /* آمار +۱سانت عریض‌تر (هر طرف +۰.۵سانت ≈ ۱۹px → جمع ۳۸px) */
+  .hero-left-group { width: 358px; padding-top: 0; }
 
-  .avatar-ring { width: 140px; height: 140px; }
+  /* بنر همکاری ۱mm پایین‌تر — هم‌تراز لبه پایین دکمه خرید اشتراک */
+  .hero-left-group .promo-banner { margin-top: 4px; }
 
-  .profile-info { padding-top: 88px; }
-
-  .profile-name { font-size: 26px; }
-  .stat-number  { font-size: 22px; }
-  .stat-number--plan { font-size: 15px; }
+  .action-row { max-width: 380px; }
 
   .tabs-section  { margin-top: 28px; }
-  .promo-section { padding: 0 40px; }
-  .profile-tabs  { padding: 0 40px; }
+  .promo-section { padding: 0 56px; }
+  .profile-tabs  { padding: 0 56px; }
+  .profile-tab   { height: 48px; padding: 0 18px; }
 
   .panel-grid  { grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .panel-saved { grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .files-grid  { grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .grid-cell, .files-cell { border-radius: 10px; }
 }
 
 /* ═══════════════════════════════════════
    LARGE DESKTOP — 1280px+
 ═══════════════════════════════════════ */
 @media (min-width: 1280px) {
-  .profile-page  { max-width: 1200px; padding: 0 0 60px; }
-  .profile-hero  { padding: 0 56px 36px; }
-  .promo-section { padding: 0 56px; }
-  .profile-tabs  { padding: 0 56px; }
+  .profile-page  { max-width: 1320px; padding: 0 0 60px; }
+  .profile-hero  { padding: 48px 72px 36px 0; }
+  .hero-left-group { width: 378px; }
+  .promo-section { padding: 0 64px; }
+  .profile-tabs  { padding: 0 72px; }
   .panel-grid    { grid-template-columns: repeat(6, 1fr); }
   .files-grid    { grid-template-columns: repeat(6, 1fr); }
 }
