@@ -6,19 +6,7 @@
 :root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
-.admin-wrap{display:flex;min-height:100vh;}
-.admin-sidebar{position:fixed;top:0;right:0;bottom:0;width:256px;background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;z-index:100;scrollbar-width:none;}
-.admin-sidebar::-webkit-scrollbar{display:none;}
-.admin-main{margin-right:256px;flex:1;display:flex;flex-direction:column;}
-.admin-header{position:sticky;top:0;z-index:50;background:var(--s1);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;}
 .admin-content{padding:24px;flex:1;}
-.snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
-.snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
-.snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
-.snav-item.active .snav-icon{color:var(--accent);}
-.snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
-.snav-item.active .snav-label{color:var(--text);}
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
@@ -84,39 +72,11 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 @endpush
 
 @section('content')
-<div class="admin-wrap">
+<main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+  @include('admin.partials.header')
+  <div class="admin-content flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
 
-  <!-- SIDEBAR -->
-  <aside class="admin-sidebar">
-    <div style="display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;">
-      <div style="width:36px;height:36px;border-radius:10px;background:rgba(11,191,83,.08);border:1px solid rgba(11,191,83,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <img src="/assets/img/iconvatanai.svg" alt="Vatan AI" style="width:22px;height:22px;">
-      </div>
-      <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
-    </div>
-    <nav style="flex:1;padding:8px 0;">
-      <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
-      <div class="snav-section">مدیریت محصولات</div>
-      <a href="/admin/products" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-box-open"></i></div><div class="snav-label">محصولات</div></a>
-      <a href="/admin/orders" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div><div class="snav-label">سفارشات</div></a>
-      <div class="snav-section">کاربران</div>
-      <a href="/admin/users" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-users"></i></div><div class="snav-label">کاربران</div></a>
-      <a href="/admin/payments" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-credit-card"></i></div><div class="snav-label">پرداخت‌ها</div></a>
-      <div class="snav-section">بازاریابی</div>
-      <a href="/admin/bloggers" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bullhorn"></i></div><div class="snav-label">بلاگرها</div></a>
-      <div class="snav-section">سیستم</div>
-      <a href="/admin/jobs" class="snav-item active"><div class="snav-icon"><i class="fa-solid fa-microchip"></i></div><div class="snav-label">AI Job Queue</div></a>
-      <a href="/admin/analytics" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-chart-line"></i></div><div class="snav-label">آنالیتیکس</div></a>
-    </nav>
-  </aside>
-
-  <!-- MAIN -->
-  <div class="admin-main">
-    <header class="admin-header">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
       <div style="font-size:14px;font-weight:700;">AI Job Queue</div>
       <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(11,191,83,.06);border:1px solid rgba(11,191,83,.15);border-radius:8px;">
         <div style="width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;"></div>
@@ -125,9 +85,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div style="flex:1;"></div>
       <button class="hdr-btn hdr-btn-danger" onclick="if(confirm('همه جاب‌های در انتظار پاک شود؟'))alert('صف پاک شد')"><i class="fa-solid fa-trash" style="font-size:11px;"></i> پاک کردن صف</button>
       <button class="hdr-btn hdr-btn-outline" onclick="location.reload()"><i class="fa-solid fa-arrows-rotate" style="font-size:11px;"></i> رفرش</button>
-    </header>
-
-    <main class="admin-content">
+    </div>
 
       <!-- Stats -->
       <div class="stats-grid">
@@ -360,9 +318,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           </div>
         </div>
       </div>
-    </main>
   </div>
-</div>
+</main>
 @endsection
 @section('scripts')
 <script>

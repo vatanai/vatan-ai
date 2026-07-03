@@ -122,6 +122,11 @@ Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
+    // قابلیت‌های حرفه‌ای لیست محصولات (کپی/تغییر سریع وضعیت/عملیات گروهی)
+    Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate'])->name('products.duplicate');
+    Route::patch('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle_status');
+    Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk_action');
+
     // مدیریت مدل‌های هوش مصنوعی (OpenRouter)
    Route::resource('ai-models', AiModelController::class)->names('ai-models');
 
@@ -138,4 +143,11 @@ Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])
     // تنظیمات زیرسیستم‌ها
     Route::get('/settings/admins',           fn() => view('admin.settings.admins'))->name('settings.admins');
     Route::get('/settings/system',           fn() => view('admin.settings.system'))->name('settings.system');
+
+    // صفحه‌ی جایگزین برای بخش‌هایی که هنوز فایل بک‌اند/روت ندارند —
+    // به‌جای خطای ۴۰۴، یک پیام ساده «این بخش هنوز آماده نمایش نیست» نشان می‌دهد.
+    // این روت باید همیشه آخرین روت گروه ادمین بماند تا روت‌های واقعی بالاتر اولویت داشته باشند.
+    Route::get('/{any}', fn ($any = null) => view('admin.coming-soon'))
+        ->where('any', '.*')
+        ->name('coming-soon');
 });

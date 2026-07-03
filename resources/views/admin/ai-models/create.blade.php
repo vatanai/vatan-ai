@@ -4,23 +4,10 @@
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
 
-  <div class="flex-1 flex flex-col min-h-screen mr-0 md:mr-64">
+  <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
+    @include('admin.partials.header')
 
-    <header class="sticky top-0 z-50 bg-[#111116] border-b border-[#222230] px-6 h-14 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
-        <a href="{{ route('admin.dashboard') }}" class="text-[#a8c4a8] hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
-        <i class="fa-solid fa-chevron-left text-[10px] text-[#4d7a56]"></i>
-        <a href="{{ route('admin.ai-models.index') }}" class="text-[#a8c4a8] hover:text-white transition-colors">مدل‌های هوش مصنوعی</a>
-        <i class="fa-solid fa-chevron-left text-[10px] text-[#4d7a56]"></i>
-        <span class="text-white font-semibold">ثبت مدل جدید</span>
-      </div>
-      <a href="{{ route('admin.ai-models.index') }}" class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#16161c] text-[#a8c4a8] border border-[#222230] transition-all hover:border-[#2e2e3e] hover:text-white no-underline">
-        <i class="fa-solid fa-arrow-right text-[11px]"></i>
-        بازگشت به لیست
-      </a>
-    </header>
-
-    <main class="p-6 flex-1 pb-24">
+    <div class="admin-content p-6 flex-1 pb-24 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
 
       @if ($errors->any())
         <div class="bg-[#f05c5c]/10 border border-[#f05c5c] rounded-xl p-4 mb-6 text-right">
@@ -35,9 +22,15 @@
         </div>
       @endif
 
-      <div class="mb-6">
-        <div class="text-xl font-extrabold tracking-tight mb-1">ثبت مدل هوش مصنوعی جدید</div>
-        <div class="text-xs text-[#4d7a56]">تنظیم و متصل‌سازی مدل‌های ارائه‌دهنده سرویس OpenRouter به پلتفرم</div>
+      <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div class="text-xl font-extrabold tracking-tight mb-1">ثبت مدل هوش مصنوعی جدید</div>
+          <div class="text-xs text-[#4d7a56]">تنظیم و متصل‌سازی مدل‌های ارائه‌دهنده سرویس OpenRouter به پلتفرم</div>
+        </div>
+        <a href="{{ route('admin.ai-models.index') }}" class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#16161c] text-[#a8c4a8] border border-[#222230] transition-all hover:border-[#2e2e3e] hover:text-white no-underline">
+          <i class="fa-solid fa-arrow-right text-[11px]"></i>
+          بازگشت به لیست
+        </a>
       </div>
 
       <form id="real-model-form" action="{{ route('admin.ai-models.store') }}" method="POST">
@@ -116,7 +109,7 @@
 
         </div>
 
-        <div class="fixed bottom-0 right-0 left-0 bg-[#111116]/80 backdrop-blur border-t border-[#222230] px-6 h-16 flex items-center justify-end gap-3 z-40 md:mr-64">
+        <div class="fixed bottom-0 right-0 left-0 bg-[#111116]/80 backdrop-blur border-t border-[#222230] px-6 h-16 flex items-center justify-end gap-3 z-40 md:mr-[294px]">
           <button type="submit" class="px-5 h-[38px] rounded-lg text-xs font-bold bg-[#a07af5] text-[#0c0c10] shadow-lg shadow-[#a07af5]/10 hover:bg-[#8f68e0] transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-floppy-disk text-[13px]"></i>
             ذخیره و ثبت مدل
@@ -124,8 +117,8 @@
         </div>
 
       </form>
-    </main>
-  </div>
+    </div>
+  </main>
 </div>
 
 <script>

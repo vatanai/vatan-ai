@@ -4,23 +4,24 @@
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
 
-  <div class="flex-1 flex flex-col min-h-screen mr-0 md:mr-64">
+  <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
+    @include('admin.partials.header')
 
-    <header class="sticky top-0 z-50 bg-[#111116] border-b border-[#222230] px-6 h-14 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
-        <a href="/admin/dashboard" class="text-[#a8c4a8] hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
-        <span class="text-[#4d7a56] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-        <a href="{{ route('admin.products') }}" class="text-[#a8c4a8] hover:text-white transition-colors">محصولات</a>
-        <span class="text-[#4d7a56] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-        <span class="text-white font-semibold">ویرایش محصول: {{ $product->name_fa }}</span>
+    <div class="admin-content p-6 flex-1 pb-24 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
+
+      <div class="mb-5 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
+          <a href="/admin/dashboard" class="text-[#a8c4a8] hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
+          <span class="text-[#4d7a56] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
+          <a href="{{ route('admin.products') }}" class="text-[#a8c4a8] hover:text-white transition-colors">محصولات</a>
+          <span class="text-[#4d7a56] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
+          <span class="text-white font-semibold">ویرایش محصول: {{ $product->name_fa }}</span>
+        </div>
+        <a href="{{ route('admin.products') }}" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[#16161c] text-[#a8c4a8] border border-[#222230] transition-all hover:border-[#2e2e3e] hover:text-white no-underline">
+          <i class="fa-solid fa-arrow-right text-[11px]"></i>
+          بازگشت به لیست
+        </a>
       </div>
-      <a href="{{ route('admin.products') }}" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[#16161c] text-[#a8c4a8] border border-[#222230] transition-all hover:border-[#2e2e3e] hover:text-white no-underline">
-        <i class="fa-solid fa-arrow-right text-[11px]"></i>
-        بازگشت به لیست
-      </a>
-    </header>
-
-    <main class="p-6 flex-1 pb-24">
 
       @if ($errors->any())
         <div class="bg-[#f05c5c]/10 border border-[#f05c5c] rounded-xl p-4 mb-6 text-right">
@@ -385,7 +386,7 @@
           </div>
         </div>
       </form>
-    </main>
+    </div>
 
     <div class="sticky bottom-0 bg-[#111116] border-t border-[#222230] p-4 flex items-center justify-between z-40">
       <button type="button" class="inline-flex items-center gap-2 px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[#16161c] text-[#a8c4a8] border border-[#222230] hover:text-white transition-all" id="btn-prev" onclick="prevStep()" style="display:none;">
@@ -405,7 +406,7 @@
       </div>
     </div>
 
-  </div>
+  </main>
 </div>
 @endsection
 

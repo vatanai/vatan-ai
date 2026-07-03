@@ -4,19 +4,11 @@
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
 
-  <div class="flex-1 flex flex-col min-h-screen mr-0 md:mr-64">
-
-    {{-- هدر صفحه --}}
-    <header class="sticky top-0 z-50 bg-[#111116] border-b border-[#222230] px-6 h-14 flex items-center justify-between gap-3">
-      <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
-        <a href="#" class="text-[#a8c4a8] hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
-        <i class="fa-solid fa-chevron-left text-[10px] text-[#4d7a56]"></i>
-        <span class="text-white font-semibold">افزودن پلن فروشگاهی جدید</span>
-      </div>
-    </header>
+  <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
+    @include('admin.partials.header')
 
     {{-- بدنه فرم --}}
-    <main class="flex-1 p-6 max-w-3xl w-full mx-auto">
+    <div class="admin-content flex-1 p-6 max-w-3xl w-full mx-auto overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
       <div class="bg-[#111116] border border-[#222230] rounded-xl p-6 shadow-xl">
         <h2 class="text-base font-bold text-white mb-6 flex items-center gap-2 border-b border-[#222230] pb-3">
           <i class="fa-solid fa-gem text-[#a07af5]"></i>
@@ -95,9 +87,9 @@
 
         </form>
       </div>
-    </main>
+    </div>
 
-  </div>
+  </main>
 </div>
 @endsection
 

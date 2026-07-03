@@ -6,10 +6,6 @@
           <h1 class="text-xl font-extrabold text-watan-text tracking-[-0.4px] max-[480px]:text-[17px]">مرکز فرماندهی</h1>
           <div class="text-xs text-watan-text3 mt-[2px]">آخرین به‌روزرسانی: چند ثانیه پیش</div>
         </div>
-        <div class="flex items-center gap-[6px] bg-green/[0.08] border border-green/[0.2] text-green text-[11px] font-bold py-[6px] px-3 rounded-lg">
-          <div class="w-[6px] h-[6px] rounded-full bg-green shadow-[0_0_8px_rgb(var(--green))] animate-pulse"></div>
-          لایو
-        </div>
       </div>
 
       <!-- کارت‌های آمار -->

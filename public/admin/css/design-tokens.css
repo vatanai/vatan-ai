@@ -1,0 +1,823 @@
+/* ══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — پنل مدیریت وطن
+   منبع: «یوآی داشبورد محسن» (dashboard.html)
+   این فایل، منبع اصلی رنگ‌ها و کامپوننت‌های پایه‌ی UI پنل است.
+   هر بخش جدیدی که بعدا اضافه می‌شود باید از همین توکن‌ها استفاده کند
+   (به‌جای رنگ‌های ثابت/hex مستقیم در بلید فایل‌ها).
+   مستندات کامل: doc/design-system.md
+════════════════════════════════════════════════════════════════ */
+
+/* جلوگیری از تغییر عرض صفحه هنگام رفتن بین صفحاتی که اسکرول دارند
+   و ندارند. اسکرول‌بار خود مرورگر (html/body) کاملاً مخفی می‌شود —
+   اسکرول همچنان با ماوس/تاچ/کیبورد کار می‌کند، فقط نواری دیده نمی‌شود
+   و در نتیجه هیچ‌وقت عرض صفحه/اسلایدبار عوض نمی‌شود. */
+html, body {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* Edge/IE قدیمی */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;               /* Chrome/Safari/Edge جدید */
+  width: 0;
+  height: 0;
+}
+
+:root {
+  /* رنگ‌های ثابت برند — در هر دو حالت روز/شب یکسان می‌مانند */
+  --primary:     #16594f;
+  --primary-l:   rgba(22,89,79,.10);
+  --primary-m:   rgba(22,89,79,.18);
+  --accent:      #C2FD75;
+  --logo-green:  #0bbf53;
+
+  /* رنگ‌های معنایی (Semantic) — برای بج وضعیت، کارت‌های آماری و جدول‌ها
+     در هر دو حالت روز/شب یکسان می‌مانند (هماهنگ با .nav-status-badge.warn
+     و .tb-notif که از قبل در همین فایل با همین مقادیر استفاده شده‌اند).
+     افزوده‌شده برای صفحه‌ی لیست محصولات — سند: doc/design-system.md */
+  --success:     #16a34a;
+  --success-l:   rgba(22,163,74,.08);
+  --success-m:   rgba(22,163,74,.22);
+  --warning:     #f5923a;
+  --warning-l:   rgba(245,146,58,.08);
+  --warning-m:   rgba(245,146,58,.25);
+  --danger:      #ef4444;
+  --danger-l:    rgba(239,68,68,.08);
+  --danger-m:    rgba(239,68,68,.22);
+  --info:        #3ab7f5;
+  --info-l:      rgba(58,183,245,.08);
+  --info-m:      rgba(58,183,245,.22);
+
+  /* حالت پیش‌فرض = تیره (هماهنگ با رفتار فعلی پنل) */
+  --page-bg:     #141a18;
+  --sb-bg:       #030f09;
+  --topbar-bg:   #030f09;
+  --card-bg:     #030f09;
+  --border:      #0e1e14;
+  --divider:     #0e1e14; /* ادغام‌شده با border طبق سند رنگی — دیگر تُن جدا ندارد */
+  --text-h:      #e3e8f0;
+  --text-main:   #a9b4c7;
+  --text-soft:   #60748a;
+  --input-bg:    #0d1a10;
+  --shadow-card: 0 4px 24px rgba(0,0,0,.35);
+  --shadow-sb:   -4px 0 30px rgba(0,0,0,.3);
+  --nav-hover:   rgba(255,255,255,.05);
+  --nav-active:  rgba(22,89,79,.25);
+  --nav-active-t:#C2FD75;
+  --nav-text:    #8a99ad;
+  --sub-line:    #1e2d3d;
+  --sub-dot:     #263545;
+  --sub-dot-active:  #C2FD75;
+  --sub-text:    #60748a;
+  --sub-text-active: #C2FD75;
+}
+
+/* حالت روشن — با کلاس body.light فعال می‌شود (هماهنگ با کانوانسیون فعلی پنل) */
+body.light {
+  --page-bg:     #f5f5f5;
+  --sb-bg:       #ffffff;
+  --topbar-bg:   #ffffff;
+  --card-bg:     #ffffff;
+  --border:      #E5E6E6;
+  --divider:     #E5E6E6; /* ادغام‌شده با border طبق سند رنگی — دیگر تُن جدا ندارد */
+  --text-h:      #000000;
+  --text-main:   #000000;
+  --text-soft:   #686E6B;
+  --input-bg:    #f5f5f5;
+  --shadow-card: rgba(145,158,171,.20) 0 0 2px, rgba(145,158,171,.12) 0 12px 24px -4px;
+  --shadow-sb:   -4px 0 20px rgba(0,0,0,.05);
+  --nav-hover:   rgba(22,89,79,.06);
+  --nav-active:  rgba(22,89,79,.10);
+  --nav-active-t:#16594f;
+  --nav-text:    #2a2a2a;
+  --sub-line:    #dadcdb;
+  --sub-dot:     #C8CBCA;
+  --sub-dot-active:  #17584f;
+  --sub-text:    #686E6B;
+  --sub-text-active: #17584f;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOPBAR (هدر) — کپی دقیق استایل یوآی داشبورد محسن
+════════════════════════════════════════════════════════════════ */
+.topbar {
+  height: 68px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 10px rgba(0,0,0,.05);
+  transition: background .3s, border-color .3s;
+}
+
+.tb-menu-btn,
+.tb-btn {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-soft);
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .2s;
+  flex-shrink: 0;
+  position: relative;
+}
+.tb-menu-btn:hover,
+.tb-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.tb-breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-soft);
+}
+.tb-breadcrumb .active-crumb { color: var(--text-h); font-weight: 700; }
+.tb-breadcrumb i { font-size: 9px; }
+
+.tb-search { position: relative; }
+.tb-search input {
+  width: 100%; height: 38px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 38px 0 14px;
+  font-family: 'Vazirmatn', sans-serif;
+  font-size: 12.5px; color: var(--text-main);
+  outline: none; transition: all .2s;
+}
+.tb-search input:focus { border-color: var(--primary); background: var(--card-bg); }
+.tb-search input::placeholder { color: var(--text-soft); }
+.tb-search .si {
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-soft); font-size: 13px; pointer-events: none;
+}
+
+/* دکمه‌ی میانبر شبیه به چیپ (مثل دکمه CRM) */
+.tb-chip-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 12px; font-weight: 700;
+  padding: 0 14px; height: 38px;
+  color: var(--text-soft); cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+}
+.tb-chip-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.tb-notif {
+  position: absolute; top: 7px; right: 7px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--danger); border: 2px solid var(--topbar-bg);
+}
+
+.tb-divider-v { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+.tb-user {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 10px 5px 8px; border-radius: 10px; cursor: pointer;
+  transition: background .2s; border: 1px solid transparent;
+}
+.tb-user:hover { background: var(--primary-l); border-color: var(--border); }
+.tb-av {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #16594f, #0bbf53);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 10px rgba(11,191,83,.2);
+  flex-shrink: 0;
+}
+.tb-uname { font-size: 13px; font-weight: 700; color: var(--text-h); }
+.tb-urole { font-size: 10px; color: var(--text-soft); }
+
+/* ══════════════════════════════════════════════════════════════
+   MINI SIDEBAR (mini-rail) — کپی دقیق استایل یوآی داشبورد محسن
+   (بدون آیکون سبز لوگو، طبق درخواست)
+════════════════════════════════════════════════════════════════ */
+.mini-rail {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 64px;
+  background: var(--sb-bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 310;
+  padding: 14px 0 20px;
+  gap: 4px;
+  box-shadow: -4px 0 20px rgba(0,0,0,.05);
+  transition: background .3s, border-color .3s;
+}
+
+.mini-rail-divider {
+  width: 32px; height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+  flex-shrink: 0;
+}
+
+.mini-btn {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  border: 1px solid transparent;
+  background: transparent;
+  flex-shrink: 0;
+}
+.mini-btn:hover {
+  background: var(--nav-hover);
+  color: var(--primary);
+  border-color: var(--border);
+}
+/* حالت active — پیش‌فرض پنل (تیره) */
+.mini-btn.active {
+  color: var(--accent);
+  background: rgba(22,89,79,.25);
+  border-color: rgba(22,89,79,.35);
+}
+/* حالت active — تم روشن */
+body.light .mini-btn.active {
+  background: var(--primary-l);
+  color: var(--primary);
+  border-color: var(--primary-m);
+}
+
+.mini-btn-tooltip {
+  position: absolute;
+  left: calc(100% + 10px);
+  background: var(--text-h);
+  color: var(--sb-bg);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 7px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: all .18s;
+  z-index: 999;
+}
+.mini-btn:hover .mini-btn-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.mini-rail-spacer { flex: 1; }
+
+/* ══════════════════════════════════════════════════════════════
+   دکمه همبرگری هدر (toggleSidebar در layouts/admin.blade.php)
+   یک کلاس واحد (.sidebar-toggled روی #admin-wrap) دارد، ولی رفتارش
+   بسته به عرض صفحه فرق می‌کند:
+   - دسکتاپ (≥901px): اسلایدبار به حالت آیکون‌تنها (۶۸px) جمع می‌شود
+   - موبایل/تبلت (≤900px): اسلایدبار به‌صورت پنل کشویی از راست باز می‌شود
+════════════════════════════════════════════════════════════════ */
+
+/* --- دسکتاپ: جمع‌شدن به حالت آیکون‌تنها --- */
+@media (min-width: 901px) {
+  .sidebar {
+    transition: width .28s cubic-bezier(.4,0,.2,1);
+  }
+  .admin-wrap.sidebar-toggled .sidebar {
+    width: 68px;
+    overflow: hidden;
+  }
+  .admin-wrap.sidebar-toggled .sidebar .sb-logo-name,
+  .admin-wrap.sidebar-toggled .sidebar .sb-logo-sub,
+  .admin-wrap.sidebar-toggled .sidebar .sb-uname,
+  .admin-wrap.sidebar-toggled .sidebar .sb-urole,
+  .admin-wrap.sidebar-toggled .sidebar .sb-status-dot,
+  .admin-wrap.sidebar-toggled .sidebar .sb-section,
+  .admin-wrap.sidebar-toggled .sidebar .nav-label,
+  .admin-wrap.sidebar-toggled .sidebar .nav-badge,
+  .admin-wrap.sidebar-toggled .sidebar .nav-chev,
+  .admin-wrap.sidebar-toggled .sidebar .nav-status-badge,
+  .admin-wrap.sidebar-toggled .sidebar .submenu {
+    display: none !important;
+  }
+  .admin-wrap.sidebar-toggled .sidebar .nav-link {
+    justify-content: center;
+    padding: 9px 6px;
+    gap: 0;
+  }
+  .admin-wrap.sidebar-toggled .sidebar .nav-item { padding: 2px 6px; }
+  .admin-wrap.sidebar-toggled .sidebar .sb-user-top { justify-content: center; padding: 10px 6px; }
+  .admin-wrap.sidebar-toggled .sidebar .sb-logo { justify-content: center; padding: 18px 6px 16px; }
+
+  /* عرض کل ستون (مینی‌سایدبار ۶۴ + سایدبار جمع‌شده ۶۸) با مارجین محتوای اصلی هماهنگ می‌شود */
+  .admin-wrap.sidebar-toggled .admin-main main {
+    margin-right: 132px !important;
+  }
+}
+
+/* --- موبایل/تبلت: پنل کشویی --- */
+@media (max-width: 900px) {
+  .mini-rail,
+  .sidebar {
+    transform: translateX(100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    z-index: 400;
+  }
+  .admin-wrap.sidebar-toggled .mini-rail,
+  .admin-wrap.sidebar-toggled .sidebar {
+    transform: translateX(0);
+  }
+  .sidebar { box-shadow: -8px 0 30px rgba(0,0,0,.25); }
+}
+
+.mobile-sidebar-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 390;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+.admin-wrap.sidebar-toggled .mobile-sidebar-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (min-width: 901px) {
+  .mobile-sidebar-overlay { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   فونت یکسان کل پنل — یکان بخ (فایل فونت از قبل در public/fonts موجود است)
+════════════════════════════════════════════════════════════════ */
+html, body,
+.sidebar, .mini-rail, .topbar, .tb-search input,
+.nav-label, .sub-label, .sub-sub-label, .sb-logo-name, .sb-uname {
+  font-family: 'YekanBakh', 'Vazirmatn', sans-serif !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   اسلایدبار منوها (Sidebar) — کپی دقیق استایل یوآی داشبورد محسن
+   محتوا/لینک‌ها/route ها دقیقا مطابق پروژه امیر باقی مانده،
+   فقط رنگ، فاصله‌گذاری و رفتار باز/بسته‌شدن از محسن گرفته شده.
+════════════════════════════════════════════════════════════════ */
+.sidebar {
+  background: var(--sb-bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-sb);
+  transition: background .3s, border-color .3s;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+/* --- لوگو --- */
+.sb-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 16px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-logo-mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #0bbf53 0%, #16594f 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 900; color: #fff;
+  box-shadow: 0 0 16px rgba(11,191,83,.3);
+  flex-shrink: 0;
+}
+.sb-logo-name { font-size: 14px; font-weight: 800; color: var(--text-h); line-height: 1.3; }
+.sb-logo-sub {
+  font-size: 9px; font-weight: 600; letter-spacing: 2.5px;
+  color: var(--text-soft); text-transform: uppercase; margin-top: 2px;
+}
+
+/* --- کاربر (بالای سایدبار، جای فعلی‌اش در پروژه امیر) --- */
+.sb-user-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-user-top .sb-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #16594f, #0bbf53);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+  border: 2px solid var(--accent);
+}
+.sb-uname { font-size: 12px; font-weight: 700; color: var(--text-h); }
+.sb-urole {
+  display: inline-block; margin-top: 2px;
+  font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 5px;
+  background: var(--primary-l); color: var(--primary); border: 1px solid var(--primary-m);
+}
+.sb-status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--logo-green); box-shadow: 0 0 6px var(--logo-green);
+  flex-shrink: 0;
+}
+
+/* --- برچسب بخش --- */
+.sb-section {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-soft); padding: 14px 16px 6px;
+}
+.sb-divider { height: 1px; background: var(--divider); margin: 8px 12px; }
+
+/* --- آیتم منو (سطح ۱) — دقیقا مطابق یوآی داشبورد محسن --- */
+.nav-item { padding: 2px 10px; }
+.nav-link {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px; border-radius: 12px;
+  cursor: pointer; transition: all .2s; user-select: none; text-decoration: none;
+}
+.nav-link:hover { background: var(--nav-hover); }
+.nav-link.active { background: var(--nav-active); }
+.nav-icon {
+  width: 37px; height: 37px; border-radius: 10px;
+  background: var(--input-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--text-soft); flex-shrink: 0; transition: all .2s;
+  border: 1px solid var(--border);
+}
+.nav-link:hover .nav-icon { color: var(--primary); }
+.nav-link.active .nav-icon {
+  background: var(--primary); color: var(--accent);
+  border-color: var(--primary);
+}
+.nav-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--nav-text); transition: color .2s; }
+.nav-link:hover .nav-label { color: var(--text-h); }
+.nav-link.active .nav-label { color: var(--nav-active-t); font-weight: 700; }
+.nav-chev { font-size: 10px; color: var(--text-soft); transition: transform .28s cubic-bezier(.4,0,.2,1); margin-right: auto; flex-shrink: 0; }
+.nav-chev.open { transform: rotate(180deg); }
+.nav-badge { font-size: 9.5px; font-weight: 800; background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 20px; }
+
+/* --- زیرمنو (سطح ۲) --- */
+.submenu { max-height: 0; overflow: hidden; transition: max-height .35s cubic-bezier(.4,0,.2,1); }
+.submenu.open { max-height: 3000px; }
+
+.sub-track { position: relative; padding: 4px 0 10px; margin-right: 30px; }
+.sub-track::before {
+  content: ''; position: absolute; right: 0; top: 4px; bottom: 22px; width: 1.5px;
+  background: linear-gradient(to bottom, var(--sub-dot-active) 0%, var(--sub-dot-active) var(--line-pct, 0%), var(--sub-line) var(--line-pct, 0%), transparent 100%);
+  border-radius: 1px; transition: background .3s;
+}
+.sub-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; margin: 2px 20px 2px 14px;
+  border-radius: 9px; cursor: pointer; transition: all .18s;
+  position: relative; overflow: visible; text-decoration: none;
+}
+.sub-item::before {
+  content: ''; position: absolute; right: -20px; top: 0; bottom: 50%; width: 20px;
+  border-right: 1.5px solid var(--sub-line); border-bottom: 1.5px solid var(--sub-line);
+  border-bottom-right-radius: 10px; pointer-events: none; transition: border-color .2s;
+}
+.sub-item:hover { background: var(--nav-hover); }
+.sub-item:hover::before { border-color: var(--primary); }
+.sub-item.active { background: var(--nav-active); }
+.sub-item.active::before, .sub-item.above-active::before { border-color: var(--sub-dot-active); }
+.sub-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sub-dot); flex-shrink: 0; transition: all .2s; }
+.sub-item:hover .sub-dot { background: var(--primary); }
+.sub-item.active .sub-dot { background: var(--sub-dot-active); box-shadow: 0 0 8px rgba(194,253,117,.5); width: 8px; height: 8px; }
+body.light .sub-item.active .sub-dot { box-shadow: 0 0 8px rgba(22,89,79,.45); }
+.sub-label { flex: 1; font-size: 12.5px; font-weight: 500; color: var(--sub-text); transition: color .18s; }
+.sub-item:hover .sub-label { color: var(--text-h); }
+.sub-item.active .sub-label { color: var(--sub-text-active); font-weight: 700; }
+
+/* --- زیرمنوی سطح ۳ --- */
+.sub-item-parent { user-select: none; }
+.sub-chev { font-size: 9px; color: var(--text-soft); transition: transform .25s cubic-bezier(.4,0,.2,1); margin-right: auto; flex-shrink: 0; }
+.sub-chev.open { transform: rotate(180deg); }
+.sub-sub-wrap { max-height: 0; overflow: hidden; transition: max-height .3s cubic-bezier(.4,0,.2,1); }
+.sub-sub-wrap.open { max-height: 800px; }
+.sub-sub-track { position: relative; padding: 2px 0 6px; margin-right: 18px; }
+.sub-sub-track::before {
+  content: ''; position: absolute; right: 0; top: 4px; bottom: 14px; width: 1px;
+  background: linear-gradient(to bottom, var(--sub-dot-active) 0%, var(--sub-dot-active) var(--line-pct, 0%), var(--sub-line) var(--line-pct, 0%), transparent 100%);
+  border-radius: 1px; transition: background .3s;
+}
+.sub-sub-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; margin: 1px 14px 1px 16px;
+  border-radius: 7px; cursor: pointer; position: relative; overflow: visible;
+  transition: all .15s; text-decoration: none;
+}
+.sub-sub-item::before {
+  content: ''; position: absolute; right: -14px; top: 0; bottom: 50%; width: 14px;
+  border-right: 1px solid var(--sub-line); border-bottom: 1px solid var(--sub-line);
+  border-bottom-right-radius: 8px; pointer-events: none; transition: border-color .18s;
+}
+.sub-sub-item:hover { background: var(--nav-hover); }
+.sub-sub-item:hover::before { border-color: var(--primary); }
+.sub-sub-item.active { background: var(--nav-active); }
+.sub-sub-item.active::before, .sub-sub-item.above-active::before { border-color: var(--sub-dot-active); }
+.sub-sub-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--sub-dot); flex-shrink: 0; transition: all .15s; }
+.sub-sub-item:hover .sub-sub-dot { background: var(--primary); }
+.sub-sub-item.active .sub-sub-dot { background: var(--sub-dot-active); width: 6px; height: 6px; }
+.sub-sub-label { flex: 1; font-size: 11.5px; font-weight: 500; color: var(--sub-text); transition: color .15s; }
+.sub-sub-item:hover .sub-sub-label { color: var(--text-h); }
+.sub-sub-item.active .sub-sub-label { color: var(--sub-text-active); font-weight: 600; }
+
+/* --- بج‌های وضعیت ("در حال طراحی"، "آینده"، "OpenRouter") --- */
+.nav-status-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid; flex-shrink: 0; white-space: nowrap; }
+.nav-status-badge.warn { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
+.nav-status-badge.info { background: var(--primary-l); color: var(--primary); border-color: var(--primary-m); }
+.nav-status-badge.mono { font-family: monospace; background: rgba(11,191,83,.08); color: var(--logo-green); border-color: rgba(11,191,83,.2); }
+
+/* --- چیپ لایو (منتقل‌شده به هدر) --- */
+.live-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.22);
+  color: #22c55e; font-size: 11px; font-weight: 800;
+  padding: 6px 13px; border-radius: 8px; flex-shrink: 0;
+}
+body.light .live-chip { color: #16a34a; }
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #22c55e; box-shadow: 0 0 8px #22c55e;
+  animation: live-pulse 1.8s infinite;
+}
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* ══════════════════════════════════════════════════════════════
+   محتوای صفحات (کارت‌ها/جدول‌ها/بج‌ها/دراپ‌داون/درایور) — فاز اول:
+   فقط صفحه‌ی «لیست محصولات» (resources/views/admin/products/*)
+   طبق doc/design-system.md بخش ۱۳: تغییرات ابتدا در یک بخش محدود
+   تست/تایید می‌شود، سپس به بقیه‌ی پنل تعمیم می‌یابد.
+════════════════════════════════════════════════════════════════ */
+
+/* --- کارت محتوا (پایه‌ی مشترک کارت آماری / جدول / پنل فیلتر) --- */
+.content-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  transition: background .3s, border-color .3s;
+}
+
+/* --- دکمه‌های اصلی صفحه (افزودن/رفرش/Export/اعمال فیلتر) --- */
+.btn-pro {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 36px; padding: 0 15px; border-radius: 10px;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  border: 1px solid transparent; white-space: nowrap;
+  transition: all .18s; text-decoration: none;
+}
+.btn-pro-primary { background: var(--primary); color: #fff; }
+.btn-pro-primary:hover { background: #124239; }
+.btn-pro-ghost { background: var(--card-bg); color: var(--text-main); border-color: var(--border); }
+.btn-pro-ghost:hover { border-color: var(--primary); color: var(--primary); }
+.btn-pro-danger { background: var(--danger-l); color: var(--danger); border-color: var(--danger-m); }
+.btn-pro-danger:hover { background: var(--danger-m); }
+.btn-pro[disabled], .btn-pro.is-disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+
+/* --- کارت آماری --- */
+.stat-card {
+  position: relative; overflow: visible;
+  display: flex; align-items: center; gap: 13px;
+  padding: 15px; border-radius: 16px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  transition: transform .18s, border-color .18s, box-shadow .18s;
+}
+.stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+.stat-card-icon {
+  width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; transition: transform .2s;
+}
+.stat-card:hover .stat-card-icon { transform: scale(1.08); }
+.stat-card-value { font-size: 20px; font-weight: 800; line-height: 1.2; color: var(--text-h); }
+.stat-card-value.is-pending { color: var(--text-soft); }
+.stat-card-label { font-size: 11.5px; color: var(--text-soft); margin-top: 2px; white-space: nowrap; }
+
+/* --- بج «نیاز به بررسی برنامه» — برای هر آیتم جدیدی که قبلاً در گزینه‌ها نبوده
+       و باید توسط برنامه‌نویس بک‌اند بررسی/متصل شود --- */
+.pending-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 8.5px; font-weight: 800; line-height: 1;
+  padding: 3px 6px; border-radius: 6px; white-space: nowrap;
+  background: var(--warning-l); color: var(--warning); border: 1px solid var(--warning-m);
+}
+.pending-badge i { font-size: 8px; }
+.stat-card .pending-badge { position: absolute; top: 10px; left: 10px; }
+
+/* --- تولتیپ عمومی (روی کارت‌ها/آیکون‌ها) --- */
+.pro-tooltip-wrap { position: relative; }
+.pro-tooltip {
+  position: absolute; bottom: calc(100% + 9px); right: 50%; transform: translateX(50%) translateY(4px);
+  background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main);
+  font-size: 10.5px; line-height: 1.6; padding: 8px 11px; border-radius: 9px;
+  width: 205px; text-align: center; opacity: 0; pointer-events: none; z-index: 30;
+  transition: opacity .15s, transform .15s; box-shadow: var(--shadow-card);
+}
+.pro-tooltip::after {
+  content: ''; position: absolute; top: 100%; right: 50%; transform: translateX(50%);
+  border: 5px solid transparent; border-top-color: var(--border);
+}
+.pro-tooltip-wrap:hover .pro-tooltip { opacity: 1; transform: translateX(50%) translateY(0); }
+
+/* --- بج‌های عمومی (وضعیت/نوع/برچسب) --- */
+.badge-pro {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 7px;
+  border: 1px solid; white-space: nowrap; line-height: 1;
+}
+.badge-pro i { font-size: 6px; }
+.badge-success { background: var(--success-l); color: var(--success); border-color: var(--success-m); }
+.badge-warning { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
+.badge-danger  { background: var(--danger-l);  color: var(--danger);  border-color: var(--danger-m); }
+.badge-info    { background: var(--info-l);    color: var(--info);    border-color: var(--info-m); }
+.badge-primary { background: var(--primary-l); color: var(--primary); border-color: var(--primary-m); }
+.badge-neutral { background: var(--input-bg); color: var(--text-soft); border-color: var(--border); }
+.badge-pro.is-clickable { cursor: pointer; }
+.badge-pro.is-clickable:hover { filter: brightness(1.15); }
+
+/* --- چیپ فیلتر سریع --- */
+.chip-filter {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 13px; border-radius: 8px;
+  font-size: 11.5px; font-weight: 600; color: var(--text-soft);
+  background: var(--input-bg); border: 1px solid var(--border);
+  cursor: pointer; white-space: nowrap; transition: all .16s; user-select: none;
+}
+.chip-filter:hover { border-color: var(--primary); color: var(--text-h); }
+.chip-filter.active { background: var(--primary-l); border-color: var(--primary); color: var(--primary); font-weight: 700; }
+.chip-filter .chip-count { font-size: 9.5px; opacity: .75; }
+
+/* --- جعبه ورودی/سلکت (سازگار با تم) --- */
+.input-pro, select.input-pro {
+  height: 38px; background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0 12px; font-size: 12.5px; color: var(--text-h);
+  outline: none; transition: border-color .18s, background .18s;
+}
+.input-pro:focus { border-color: var(--primary); background: var(--card-bg); }
+.input-pro::placeholder { color: var(--text-soft); }
+.input-pro.is-lg { height: 44px; padding-right: 38px; }
+
+/* --- جدول حرفه‌ای --- */
+.table-pro { width: 100%; border-collapse: collapse; }
+.table-pro thead th {
+  text-align: right; font-size: 11px; font-weight: 700; color: var(--text-soft);
+  letter-spacing: .2px; padding: 13px 14px; white-space: nowrap;
+  background: var(--input-bg); border-bottom: 1px solid var(--border);
+}
+.table-pro thead th:last-child, .table-pro tbody td:last-child { text-align: left; }
+.table-pro tbody tr { border-bottom: 1px solid var(--divider); transition: background .15s; }
+.table-pro tbody tr:last-child { border-bottom: none; }
+.table-pro tbody tr:hover { background: var(--nav-hover); }
+.table-pro tbody tr.is-selected { background: var(--primary-l); }
+.table-pro tbody td { padding: 14px; font-size: 12.5px; color: var(--text-main); vertical-align: middle; }
+
+.row-checkbox {
+  width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--border);
+  background: var(--input-bg); cursor: pointer; accent-color: var(--primary);
+}
+
+.table-thumb {
+  width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; overflow: hidden;
+  background: var(--input-bg); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; color: var(--text-soft);
+}
+.table-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.icon-action-btn {
+  width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--input-bg); color: var(--text-main); font-size: 11.5px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: all .16s; text-decoration: none;
+}
+.icon-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+.icon-action-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-l); }
+.icon-action-btn.favorite.is-active { color: #f5c542; border-color: rgba(245,197,66,.4); background: rgba(245,197,66,.08); }
+
+/* --- دراپ‌داون اکشن‌ها ---
+   position:fixed عمداً به‌جای absolute استفاده شده و مختصات آن با جاوااسکریپت
+   (توسط toggleRowDropdown در drawer.blade.php) موقع باز شدن محاسبه می‌شود؛
+   چون جدول داخل یک والد overflow-x-auto قرار دارد و absolute در آنجا کلیپ می‌شد. */
+.dropdown-pro { position: relative; }
+.dropdown-pro-menu {
+  position: fixed; min-width: 165px; z-index: 210;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow-card); padding: 6px; display: none;
+}
+.dropdown-pro-menu.open { display: block; }
+.dropdown-pro-item {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  color: var(--text-main); background: none; border: none; cursor: pointer;
+  text-align: right; text-decoration: none; transition: background .14s;
+}
+.dropdown-pro-item:hover { background: var(--nav-hover); color: var(--text-h); }
+.dropdown-pro-item.danger { color: var(--danger); }
+.dropdown-pro-item.danger:hover { background: var(--danger-l); }
+.dropdown-pro-item i { width: 14px; text-align: center; font-size: 11px; color: var(--text-soft); }
+.dropdown-pro-item.danger i { color: var(--danger); }
+
+/* --- نوار عملیات گروهی (Bulk Action) --- */
+.bulk-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--primary-l); border: 1px solid var(--primary-m);
+  border-radius: 14px; padding: 10px 14px; margin-bottom: 14px;
+}
+
+/* --- نوار پیشرفت محبوبیت (Placeholder، NEW) --- */
+.progress-track { width: 64px; height: 6px; border-radius: 4px; background: var(--input-bg); overflow: hidden; flex-shrink: 0; }
+.progress-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--primary), var(--accent)); }
+
+/* --- درایور پیش‌نمایش محصول (سمت راست) --- */
+.drawer-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+  z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.drawer-overlay.open { opacity: 1; pointer-events: auto; }
+.drawer-panel {
+  position: fixed; top: 0; bottom: 0; right: 0; width: 420px; max-width: 92vw;
+  background: var(--card-bg); border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-sb); z-index: 201; overflow-y: auto;
+  transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.drawer-panel.open { transform: translateX(0); }
+.drawer-section { padding: 16px 20px; border-bottom: 1px solid var(--divider); }
+.drawer-label { font-size: 10.5px; font-weight: 700; color: var(--text-soft); letter-spacing: .2px; margin-bottom: 6px; }
+.drawer-value { font-size: 13px; color: var(--text-h); font-weight: 600; }
+
+/* --- حالت خالی (Empty State) --- */
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-state-icon {
+  width: 74px; height: 74px; border-radius: 20px; margin: 0 auto 16px;
+  background: var(--input-bg); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text-soft);
+}
+.empty-state-title { font-size: 14px; font-weight: 800; color: var(--text-h); margin-bottom: 5px; }
+.empty-state-desc { font-size: 12px; color: var(--text-soft); max-width: 340px; margin: 0 auto 18px; line-height: 1.8; }
+
+/* --- نوار صفحه‌بندی --- */
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+.page-btn {
+  min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700; color: var(--text-soft);
+  background: var(--input-bg); border: 1px solid var(--border); cursor: pointer;
+  text-decoration: none; transition: all .15s;
+}
+.page-btn:hover { border-color: var(--primary); color: var(--primary); }
+.page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.page-btn.is-disabled { opacity: .4; pointer-events: none; }
+
+/* ══════════════════════════════════════════════════════════════
+   ریسپانسیو موبایل — تبدیل جدول محصولات به Card List (زیر ۷۶۸px)
+   فقط CSS؛ ساختار Blade/HTML و منطق بک‌اند بدون تغییر باقی می‌ماند.
+   هر <tr> به یک کارت مستقل و هر <td> به یک ردیف «برچسب: مقدار» تبدیل
+   می‌شود. سه ستون اول (چک‌باکس/تصویر/محصول) با کلاس‌های td-select،
+   td-thumb، td-product سرِ کارت را می‌سازند (بدون برچسب).
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  .table-pro thead { display: none; }
+  .table-pro, .table-pro tbody, .table-pro tr { display: block; width: 100%; }
+
+  .table-pro tbody tr {
+    display: flex; flex-wrap: wrap; align-items: center;
+    padding: 12px; margin: 0 0 12px; border: 1px solid var(--border);
+    border-radius: 14px; background: var(--card-bg);
+  }
+  .table-pro tbody tr:last-child { margin-bottom: 0; }
+  .table-pro tbody tr:hover { background: var(--card-bg); }
+
+  .table-pro tbody td {
+    padding: 6px 2px; border: none; font-size: 12px;
+  }
+
+  /* سرِ کارت: چک‌باکس + تصویر + نام محصول در یک ردیف */
+  .table-pro tbody td.td-select { order: 1; width: auto; flex: 0 0 auto; padding-left: 8px; }
+  .table-pro tbody td.td-thumb  { order: 2; width: auto; flex: 0 0 auto; }
+  .table-pro tbody td.td-product{ order: 3; flex: 1 1 auto; min-width: 0; }
+
+  /* بقیه‌ی ستون‌ها: هر کدام یک ردیف کامل برچسب:مقدار زیر سرِ کارت */
+  .table-pro tbody td:not(.td-select):not(.td-thumb):not(.td-product):not(.td-empty) {
+    order: 10; width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 2px; border-top: 1px dashed var(--divider);
+  }
+  .table-pro tbody td[data-label]::before {
+    content: attr(data-label);
+    font-size: 10.5px; font-weight: 700; color: var(--text-soft);
+    flex-shrink: 0;
+  }
+  .table-pro tbody td[data-label="عملیات"] { justify-content: flex-start; }
+
+  /* حالت خالی جدول: بدون تبدیل به فلکس، تمام عرض کارت */
+  .table-pro tbody td.td-empty { order: 0; width: 100%; flex: 1 1 100%; padding: 0; }
+
+  .pagination-bar { flex-direction: column; align-items: stretch; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Skeleton Loading — کارت‌های آماری / فیلترها / جدول
+   (فقط جلوه‌ی بصری سمت کاربر، بدون هیچ داده یا اتصال بک‌اند)
+   ══════════════════════════════════════════════════════════════ */
+@keyframes sk-shimmer {
+  0%   { background-position: -450px 0; }
+  100% { background-position: 450px 0; }
+}
+.sk-block {
+  background-image: linear-gradient(90deg, var(--input-bg) 25%, var(--divider) 37%, var(--input-bg) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}

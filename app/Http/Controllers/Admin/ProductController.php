@@ -12,12 +12,96 @@ use Illuminate\Support\Facades\Storage;
 class ProductController extends Controller
 {
     /**
-     * نمایش لیست محصولات با صفحه‌بندی
+     * نمایش لیست محصولات با جستجو، فیلترهای پیشرفته، مرتب‌سازی و صفحه‌بندی
+     * تمام فیلترها روی فیلدهای واقعاً موجود در دیتابیس اعمال می‌شوند (بدون افزودن ستون جدید)
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::latest()->paginate(15);
-        return view('admin.products.index', compact('products'));
+        $query = Product::query();
+
+        // ─── جستجوی چندفیلده: نام فارسی، نام انگلیسی، Slug، تگ، شناسه محصول ───
+        if ($search = trim((string) $request->get('search'))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name_fa', 'like', "%{$search}%")
+                  ->orWhere('name_en', 'like', "%{$search}%")
+                  ->orWhere('slug', 'like', "%{$search}%")
+                  ->orWhereJsonContains('tags', $search);
+                if (is_numeric($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        // ─── فیلترهای پایه (چیپ‌های سریع + فیلتر پیشرفته) ───
+        if ($category = $request->get('category')) {
+            $query->where('category', $category);
+        }
+        if ($subcategory = $request->get('subcategory')) {
+            $query->where('subcategory', $subcategory);
+        }
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+        if ($mediaType = $request->get('media_type')) {
+            $query->where('media_type', $mediaType);
+        }
+        if ($aiModel = $request->get('ai_model')) {
+            $query->where('primary_model', $aiModel);
+        }
+        if ($pricingModel = $request->get('pricing_model')) {
+            if ($pricingModel === 'paid') {
+                $query->where('pricing_model', '!=', 'free');
+            } else {
+                $query->where('pricing_model', $pricingModel);
+            }
+        }
+        if ($request->filled('featured'))  $query->where('is_featured', true);
+        if ($request->filled('is_new'))    $query->where('is_new', true);
+        if ($request->filled('trending'))  $query->where('is_trending', true);
+
+        // ─── بازه‌ی تاریخ ایجاد/ویرایش ───
+        if ($createdFrom = $request->get('created_from')) $query->whereDate('created_at', '>=', $createdFrom);
+        if ($createdTo   = $request->get('created_to'))   $query->whereDate('created_at', '<=', $createdTo);
+        if ($updatedFrom = $request->get('updated_from')) $query->whereDate('updated_at', '>=', $updatedFrom);
+        if ($updatedTo   = $request->get('updated_to'))   $query->whereDate('updated_at', '<=', $updatedTo);
+
+        // ─── مرتب‌سازی ───
+        // «بیشترین/کمترین استفاده» و «بیشترین درآمد» فعلاً داده‌ی بک‌اند ندارند
+        // (در UI به‌صورت غیرفعال + برچسب «نیاز به بررسی برنامه» نمایش داده می‌شوند)
+        switch ($request->get('sort')) {
+            case 'oldest': $query->oldest(); break;
+            case 'az':     $query->orderBy('name_fa'); break;
+            case 'newest':
+            default:       $query->latest(); break;
+        }
+
+        // ─── تعداد آیتم در هر صفحه ───
+        $perPage = (int) $request->get('per_page', 15);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 15;
+        }
+
+        $products = $query->paginate($perPage)->withQueryString();
+
+        // شمارش وضعیت‌ها برای کارت‌های آماری بالای صفحه (مستقل از فیلترهای فعلی)
+        $activeCount   = Product::where('status', 'active')->count();
+        $draftCount    = Product::where('status', 'draft')->count();
+        $inactiveCount = Product::where('status', 'inactive')->count();
+
+        // برای پر کردن سلکت «مدل هوش مصنوعی» در فیلتر پیشرفته
+        $aiModels = AiModel::orderBy('name')->get();
+
+        // برای پر کردن سلکت «دسته‌بندی» و «زیردسته» بر اساس داده‌های واقعی موجود
+        $categories = Product::whereNotNull('category')->distinct()->pluck('category')->filter()->values();
+        $subcategories = Product::whereNotNull('subcategory')->distinct()->pluck('subcategory')->filter()->values();
+
+        // آخرین محصولات ویرایش‌شده (ویجت «Recently Edited» — بر اساس updated_at واقعی)
+        $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
+
+        return view('admin.products.index', compact(
+            'products', 'activeCount', 'draftCount', 'inactiveCount',
+            'aiModels', 'categories', 'subcategories', 'recentlyEdited'
+        ));
     }
 
     /**
@@ -286,5 +370,104 @@ class ProductController extends Controller
         return redirect()
             ->route('admin.products')
             ->with('success', 'محصول با موفقیت حذف شد.');
+    }
+
+    /**
+     * کپی کامل یک محصول (بدون فایل‌های رسانه‌ای که به دیسک آپلود شده‌اند تا
+     * فایل فیزیکی بین دو محصول به اشتراک گذاشته نشود؛ فقط thumbnail کپی می‌شود)
+     */
+    public function duplicate(Product $product)
+    {
+        $clone = $product->replicate();
+
+        $clone->name_fa = $product->name_fa . ' (کپی)';
+        $clone->name_en = $product->name_en . '-copy';
+
+        // اسلاگ یکتا برای نسخه‌ی کپی‌شده
+        $baseSlug = Str::slug($product->slug . '-copy');
+        $slug = $baseSlug;
+        $i = 1;
+        while (Product::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . (++$i);
+        }
+        $clone->slug = $slug;
+
+        // کپی همیشه به‌صورت پیش‌نویس ذخیره می‌شود تا مستقیم منتشر نشود
+        $clone->status = 'draft';
+        $clone->is_featured = false;
+        $clone->is_trending = false;
+
+        $clone->save();
+
+        return redirect()
+            ->route('admin.products')
+            ->with('success', 'کپی محصول با موفقیت ساخته شد.');
+    }
+
+    /**
+     * تغییر سریع وضعیت محصول (فعال ⇄ غیرفعال) بدون ورود به صفحه ویرایش
+     */
+    public function toggleStatus(Product $product)
+    {
+        $product->status = $product->status === 'active' ? 'inactive' : 'active';
+        $product->save();
+
+        if (request()->wantsJson()) {
+            return response()->json(['status' => $product->status]);
+        }
+
+        return redirect()
+            ->route('admin.products')
+            ->with('success', 'وضعیت محصول با موفقیت تغییر کرد.');
+    }
+
+    /**
+     * عملیات گروهی روی چند محصول انتخاب‌شده (فعال/غیرفعال/حذف/تغییر دسته)
+     */
+    public function bulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action'     => 'required|in:activate,deactivate,delete,change_category',
+            'ids'        => 'required|array|min:1',
+            'ids.*'      => 'integer|exists:products,id',
+            'category'   => 'nullable|string|required_if:action,change_category',
+        ]);
+
+        $products = Product::whereIn('id', $validated['ids']);
+
+        switch ($validated['action']) {
+            case 'activate':
+                $products->update(['status' => 'active']);
+                $message = 'محصولات انتخاب‌شده فعال شدند.';
+                break;
+
+            case 'deactivate':
+                $products->update(['status' => 'inactive']);
+                $message = 'محصولات انتخاب‌شده غیرفعال شدند.';
+                break;
+
+            case 'change_category':
+                $products->update(['category' => $validated['category']]);
+                $message = 'دسته‌بندی محصولات انتخاب‌شده تغییر کرد.';
+                break;
+
+            case 'delete':
+                foreach ($products->get() as $product) {
+                    if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
+                    if ($product->cover) Storage::disk('public')->delete($product->cover);
+                    if (is_array($product->sample_outputs)) {
+                        foreach ($product->sample_outputs as $path) {
+                            Storage::disk('public')->delete($path);
+                        }
+                    }
+                }
+                $products->delete();
+                $message = 'محصولات انتخاب‌شده حذف شدند.';
+                break;
+        }
+
+        return redirect()
+            ->route('admin.products')
+            ->with('success', $message);
     }
 }

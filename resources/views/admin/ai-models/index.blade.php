@@ -4,22 +4,10 @@
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
 
-  <div class="flex-1 flex flex-col min-h-screen mr-0 md:mr-64">
+  <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
+    @include('admin.partials.header')
 
-    <header class="sticky top-0 z-50 bg-[#111116] border-b border-[#222230] px-6 h-14 flex items-center gap-3">
-      <div class="flex items-center gap-1.5 text-xs text-[#a8c4a8]">
-        <a href="{{ route('admin.dashboard') }}" class="hover:text-white transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
-        <i class="fa-solid fa-chevron-left text-[10px] text-[#4d7a56]"></i>
-        <span class="text-white font-semibold">مدل‌های هوش مصنوعی</span>
-      </div>
-      <div class="flex-1"></div>
-      <a href="{{ route('admin.ai-models.create') }}"
-         class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#a07af5] text-[#0c0c10] hover:bg-[#8f68e0] transition-colors no-underline">
-        <i class="fa-solid fa-plus text-[11px]"></i> ثبت مدل جدید
-      </a>
-    </header>
-
-    <main class="p-6 flex-1">
+    <div class="admin-content p-6 flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
 
       @if(session('success'))
         <div class="bg-[#4d7a56]/10 border border-[#4d7a56]/30 rounded-xl p-3.5 mb-6 text-xs text-[#a8c4a8] flex items-center gap-2">
@@ -33,6 +21,10 @@
           <div class="text-xl font-extrabold tracking-tight mb-1">مدل‌های هوش مصنوعی (OpenRouter)</div>
           <div class="text-xs text-[#4d7a56]">مدیریت، فعال‌سازی و مانیتورینگ کور-مدل‌های متصل به سیستم</div>
         </div>
+        <a href="{{ route('admin.ai-models.create') }}"
+           class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#a07af5] text-[#0c0c10] hover:bg-[#8f68e0] transition-colors no-underline">
+          <i class="fa-solid fa-plus text-[11px]"></i> ثبت مدل جدید
+        </a>
       </div>
 
       <div class="bg-[#111116] border border-[#222230] rounded-xl overflow-hidden shadow-2xl">
@@ -123,8 +115,8 @@
         </div>
       </div>
 
-    </main>
-  </div>
+    </div>
+  </main>
 </div>
 
 <div id="details-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all animate-fade-in" dir="rtl">

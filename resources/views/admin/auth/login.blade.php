@@ -1,88 +1,133 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="fa" class="h-full">
+<html lang="fa" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود ادمین — وطن استودیو</title>
-
-    <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ورود ادمین — وطن استودیو</title>
+<link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+@vite(['resources/css/app.css', 'resources/js/app.js'])
+<style>
+  /* ═══ لایوت دو ستونه صفحه ورود ادمین — CSS خام، مستقل از کامپایل Tailwind ═══ */
+  .auth-shell {
+    width: 100%;
+    max-width: 420px;
+  }
+  .auth-form-col {
+    width: 100%;
+  }
+  .auth-brand-col {
+    display: none;
+  }
+  @media (min-width: 768px) {
+    .auth-shell {
+      width: 840px;
+      max-width: 840px;
+      display: grid;
+      grid-template-columns: 420px 420px;
+      align-items: stretch;
+    }
+    .auth-form-col {
+      width: 420px;
+      height: 684px;
+      min-width: 0;
+    }
+    .auth-brand-col {
+      display: flex;
+      width: 420px;
+      height: 684px;
+    }
+  }
+</style>
 </head>
-<body class="bg-[#0c0c10] text-white min-h-screen flex items-center justify-center relative overflow-hidden font-sans antialiased selection:bg-[#a07af5]/30">
+<body class="m-0 min-h-screen min-h-[100dvh] flex items-center justify-center p-6 max-[480px]:p-4 bg-[#0c0c10] text-white font-[IRANSansXFaNum,_sans-serif] overflow-x-hidden">
 
-    <div class="absolute top-[-10%] left-[-10%] w-[450px] h-[450px] bg-[#a07af5]/5 rounded-full blur-[120px] pointer-events-none"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[450px] h-[450px] bg-[#0BBF53]/5 rounded-full blur-[120px] pointer-events-none"></div>
+{{-- هاله درخشان سبز پس‌زمینه --}}
+<div class="fixed inset-0 -z-10 bg-[#0c0c10] overflow-hidden before:content-[''] before:absolute before:rounded-full before:blur-[90px] before:opacity-[0.14] before:w-[420px] before:h-[420px] before:bg-[#0BBF53] before:-top-[120px] before:-right-[100px] after:content-[''] after:absolute after:rounded-full after:blur-[90px] after:opacity-[0.14] after:w-[380px] after:h-[380px] after:bg-[#0BBF53] after:-bottom-[140px] after:-left-[100px]"></div>
 
-    <div class="w-full max-w-[400px] p-5 relative z-10">
-        
-        <div class="text-center mb-6 select-none">
-            <div class="w-14 h-14 rounded-2xl bg-[#0BBF53] flex items-center justify-center text-2xl font-black text-white mx-auto shadow-lg shadow-[#0BBF53]/20 transition-transform duration-300 hover:scale-105">
-                و
-            </div>
-            <h2 class="mt-4 text-center text-lg font-extrabold tracking-tight text-white">
-                پنل مدیریت
-            </h2>
-            <p class="mt-1 text-center text-[10px] font-mono text-[#4d7a56] uppercase tracking-wider">
-                AIPIX Admin Panel
-            </p>
-        </div>
+{{-- باکس اصلی فرم --}}
+<div class="auth-shell bg-[#111116] border border-[#222230] rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
 
-        <div class="bg-[#111116] border border-[#222230]/80 p-6 sm:p-8 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-md">
-            
-            @if($errors->any())
-                <div class="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 mb-4 flex items-start gap-2">
-                    <svg class="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div class="text-[11px] text-rose-400 font-medium leading-relaxed">
-                        {{ $errors->first() }}
-                    </div>
-                </div>
-            @endif
+  {{-- ستون فرم (سمت راست) --}}
+  <div class="auth-form-col overflow-y-auto py-8 px-7 max-[480px]:py-[18px] max-[480px]:px-4">
 
-            <form class="space-y-4" action="{{ route('admin.login.submit') }}" method="POST">
-                @csrf
-
-                <div>
-                    <label for="email" class="block text-xs font-semibold text-[#a8c4a8] mb-1.5 pr-0.5">
-                        ایمیل
-                    </label>
-                    <input id="email" name="email" type="email" autocomplete="email" required autofocus
-                        value="{{ old('email') }}"
-                        class="block w-full px-4 py-2.5 bg-[#0c0c10] border border-[#222230] rounded-xl text-xs text-white placeholder-gray-600 outline-none transition-all duration-200 focus:border-[#a07af5] focus:ring-4 focus:ring-[#a07af5]/5 ltr text-left font-mono"
-                        placeholder="admin@example.com">
-                </div>
-
-                <div>
-                    <label for="password" class="block text-xs font-semibold text-[#a8c4a8] mb-1.5 pr-0.5">
-                        رمز عبور
-                    </label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required
-                        class="block w-full px-4 py-2.5 bg-[#0c0c10] border border-[#222230] rounded-xl text-xs text-white placeholder-gray-600 outline-none transition-all duration-200 focus:border-[#a07af5] focus:ring-4 focus:ring-[#a07af5]/5 ltr text-left tracking-widest placeholder:tracking-normal"
-                        placeholder="••••••••">
-                </div>
-
-                <div class="flex items-center justify-between pt-0.5">
-                    <div class="flex items-center gap-2">
-                        <input id="remember" name="remember" type="checkbox" 
-                            class="h-4 w-4 bg-[#0c0c10] border-[#222230] rounded text-[#a07af5] focus:ring-offset-0 focus:ring-[#a07af5]/30 cursor-pointer">
-                        <label for="remember" class="text-[11px] text-[#a8c4a8]/70 select-none cursor-pointer transition-colors hover:text-white">
-                            مرا به خاطر بسپار
-                        </label>
-                    </div>
-                </div>
-
-                <div class="pt-2">
-                    <button type="submit" 
-                        class="w-full h-10 flex justify-center items-center gap-2 px-4 rounded-xl text-xs font-bold bg-[#a07af5] text-black shadow-lg shadow-[#a07af5]/10 hover:bg-[#8f68e0] active:scale-[0.98] transition-all duration-150 cursor-pointer">
-                        ورود به پنل
-                    </button>
-                </div>
-            </form>
-
-        </div>
+    <div class="flex flex-col items-center gap-2 mb-6 max-[480px]:mb-[14px] max-[480px]:gap-[6px]">
+      <img src="{{ asset('assets/img/icon vatan.svg') }}" alt="وطن استودیو" class="h-14 w-auto max-[480px]:h-11">
+      <div class="text-base font-extrabold text-white tracking-[-0.3px]">وطن استودیو</div>
     </div>
+
+    <div class="text-[17px] font-extrabold text-white mb-1 text-center">ورود به پنل مدیریت</div>
+    <div class="text-xs text-[#4d7a56] text-center mb-[22px]">اطلاعات ادمین خود را وارد کنید</div>
+
+    @if($errors->any())
+      <div class="flex items-start gap-2 rounded-[10px] p-3 mb-4" style="background-color: rgba(240,92,92,0.1); border: 1px solid rgba(240,92,92,0.25);">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#f05c5c; font-size:13px; margin-top:2px;"></i>
+        <div class="text-[11px] text-[#f05c5c] leading-relaxed">{{ $errors->first() }}</div>
+      </div>
+    @endif
+
+    <form action="{{ route('admin.login.submit') }}" method="POST">
+      @csrf
+
+      <div class="flex flex-col gap-[6px] mb-4 max-[480px]:mb-[10px]">
+        <label for="email" class="text-[11px] font-semibold text-[#a8c4a8]">ایمیل</label>
+        <div class="relative flex items-center bg-[#16161c] border border-[#222230] rounded-[10px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#0BBF53]">
+          <i class="fa-solid fa-envelope" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#4d7a56; font-size:13px; pointer-events:none;"></i>
+          <input id="email" name="email" type="email" autocomplete="email" required autofocus
+            value="{{ old('email') }}"
+            class="w-full min-w-0 bg-transparent border-0 outline-none text-base text-white placeholder:text-[#4d7a56]"
+            style="padding-right:40px; padding-left:14px; text-align:left; direction:ltr;"
+            placeholder="admin@example.com">
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-[6px] mb-3 max-[480px]:mb-[10px]">
+        <label for="password" class="text-[11px] font-semibold text-[#a8c4a8]">رمز عبور</label>
+        <div class="relative flex items-center bg-[#16161c] border border-[#222230] rounded-[10px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#0BBF53]">
+          <i class="fa-solid fa-lock" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#4d7a56; font-size:13px; pointer-events:none;"></i>
+          <input id="password" name="password" type="password" autocomplete="current-password" required
+            class="w-full bg-transparent border-0 outline-none text-base text-white placeholder:text-[#4d7a56]"
+            style="padding-right:40px; padding-left:40px;"
+            placeholder="••••••••">
+          <i class="fa-solid fa-eye-slash cursor-pointer transition-colors hover:text-white" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#4d7a56; font-size:13px;" id="toggle-admin-password" onclick="toggleAdminPasswordVisibility()"></i>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 mb-[22px] max-[480px]:mb-4">
+        <input id="remember" name="remember" type="checkbox" class="cursor-pointer" style="width:16px; height:16px; accent-color:#0BBF53;">
+        <label for="remember" class="text-[11px] text-[#a8c4a8] select-none cursor-pointer">مرا به خاطر بسپار</label>
+      </div>
+
+      <button type="submit" class="flex w-full py-3 border-0 rounded-[10px] bg-[#0BBF53] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#09a447] active:scale-[0.99]">
+        <span>ورود به پنل</span><i class="fa-solid fa-arrow-left"></i>
+      </button>
+    </form>
+
+  </div>
+
+  {{-- ستون برندینگ / لوگو (سمت چپ، فقط دسکتاپ) --}}
+  <div class="auth-brand-col relative flex-col items-center justify-center bg-[#0a0a0c] p-10 overflow-hidden border-r border-[#222230]">
+    <div class="absolute w-[280px] h-[280px] rounded-full bg-[#0BBF53] opacity-10 blur-[80px]"></div>
+    <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="وطن استودیو" class="relative z-[1] w-20 h-20 object-contain mb-5">
+    <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن استودیو" class="relative z-[1] w-[140px] object-contain mb-4">
+    <div class="relative z-[1] text-xs text-[#4d7a56] text-center max-w-[220px] leading-[1.8]">پنل مدیریت وطن استودیو</div>
+  </div>
+
+</div>
+
+<script>
+function toggleAdminPasswordVisibility() {
+  const input = document.getElementById('password');
+  const icon = document.getElementById('toggle-admin-password');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  }
+}
+</script>
 
 </body>
 </html>

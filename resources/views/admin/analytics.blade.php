@@ -6,24 +6,7 @@
 :root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
-.admin-wrap{display:flex;min-height:100vh;}
-.admin-sidebar{position:fixed;top:0;right:0;bottom:0;width:256px;background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow-y:auto;z-index:100;scrollbar-width:thin;scrollbar-color:var(--b2) transparent;}
-.admin-main{margin-right:256px;flex:1;display:flex;flex-direction:column;}
-.admin-header{position:sticky;top:0;z-index:50;background:var(--s1);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;}
 .admin-content{padding:24px;flex:1;}
-.snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
-.snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
-.snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
-.snav-item.active .snav-icon{color:var(--accent);}
-.snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
-.snav-item.active .snav-label{color:var(--text);}
-.snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
-.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:rgba(160,122,245,.1);}
-.snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
-.snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
-.snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
-.snav-sub-item.active .snav-sub-label{color:var(--text);font-weight:600;}
 .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);}
 .breadcrumb a{color:var(--text2);text-decoration:none;}.breadcrumb a:hover{color:var(--text);}
 .breadcrumb .current{color:var(--text);font-weight:600;}
@@ -106,82 +89,26 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 @endpush
 
 @section('content')
-<div class="admin-wrap">
+<main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+  @include('admin.partials.header')
+  <div class="admin-content flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
 
-  <!-- SIDEBAR -->
-  <aside class="admin-sidebar">
-    <div style="display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--b1);flex-shrink:0;">
-      <div style="width:36px;height:36px;border-radius:10px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;box-shadow:0 0 16px rgba(11,191,83,.3);">و</div>
-      <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
-    </div>
-    <nav style="flex:1;padding:8px 0;">
-      <a href="/admin/dashboard" class="snav-item">
-        <div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div>
-        <div class="snav-label">مرکز فرماندهی</div>
-      </a>
-      <div class="snav-section">مدیریت محصولات</div>
-      <a href="/admin/products" class="snav-item">
-        <div class="snav-icon"><i class="fa-solid fa-box-open"></i></div>
-        <div class="snav-label">محصولات</div>
-        <i class="fa-solid fa-chevron-left" style="font-size:9px;color:var(--text3);"></i>
-      </a>
-      <a href="/admin/products/create" class="snav-sub-item">
-        <div class="snav-dot"></div><div class="snav-sub-label">ثبت محصول جدید</div>
-      </a>
-      <a href="/admin/products/categories" class="snav-sub-item">
-        <div class="snav-dot"></div><div class="snav-sub-label">دسته‌بندی‌ها</div>
-      </a>
-      <a href="/admin/products/pricing" class="snav-sub-item">
-        <div class="snav-dot"></div><div class="snav-sub-label">قیمت‌گذاری</div>
-      </a>
-      <a href="/admin/orders" class="snav-item">
-        <div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-        <div class="snav-label">سفارشات</div>
-      </a>
-      <div class="snav-section">آنالیز</div>
-      <a href="/admin/analytics" class="snav-item active">
-        <div class="snav-icon"><i class="fa-solid fa-chart-line"></i></div>
-        <div class="snav-label">آنالیتیکس</div>
-      </a>
-      <div style="height:1px;background:var(--b1);margin:8px 12px;"></div>
-      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-gear"></i></div><div class="snav-label">تنظیمات</div></div>
-    </nav>
-  </aside>
-
-  <!-- MAIN -->
-  <div class="admin-main">
-    <header class="admin-header">
-      <div class="breadcrumb">
-        <a href="/admin/dashboard"><i class="fa-solid fa-house" style="font-size:11px;"></i></a>
-        <span style="color:var(--text3);font-size:10px;"><i class="fa-solid fa-chevron-left"></i></span>
-        <span class="current">آنالیتیکس</span>
-      </div>
-      <div style="flex:1;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
       <div class="time-toggle">
         <button class="time-btn" onclick="setRange(this,'7')">۷ روز</button>
         <button class="time-btn active" onclick="setRange(this,'30')">۳۰ روز</button>
         <button class="time-btn" onclick="setRange(this,'90')">۳ ماه</button>
         <button class="time-btn" onclick="setRange(this,'365')">۱ سال</button>
       </div>
-      <button class="hdr-btn hdr-btn-outline" style="margin-right:8px;">
+      <button class="hdr-btn hdr-btn-outline">
         <i class="fa-solid fa-arrow-down-to-line" style="font-size:11px;"></i> گزارش PDF
       </button>
-    </header>
+    </div>
 
-    <main class="admin-content">
       <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <div style="font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px;">آنالیتیکس محصولات</div>
           <div style="font-size:13px;color:var(--text3);">گزارش عملکرد — ۳۰ روز اخیر</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;background:rgba(11,191,83,.06);border:1px solid rgba(11,191,83,.2);border-radius:9px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--green);">
-          <div style="width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;"></div>
-          لایو
         </div>
       </div>
 
@@ -502,9 +429,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
         </div>
       </div>
 
-    </main>
   </div>
-</div>
+</main>
 
 <style>
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}

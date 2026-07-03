@@ -36,7 +36,7 @@
   @include('admin.partials.sidebar')
   <div class="sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/[0.55] opacity-0 pointer-events-none transition-opacity duration-[250ms]" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-  <main class="mr-64 flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+  <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
     @include('admin.partials.header')
     <div class="flex-1 p-6 max-[768px]:p-[18px] max-[480px]:p-[14px]">
 
