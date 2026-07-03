@@ -71,7 +71,7 @@ Route::prefix('app')->group(function () {
 Route::get('/home', [HomeController::class, 'index'])->name('app.home');    Route::get('/explore',      fn() => view('app.ideas'))->name('app.explore');
     Route::get('/trends',       fn() => view('app.explore'))->name('app.trends');
     Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
-    Route::get('/profile',      fn() => view('app.profile'))->name('app.profile');
+    Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
     Route::get('/product/{product:slug}', [ProductGenerateController::class, 'show'])->name('app.product');
     Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])->name('app.product.generate');
 });

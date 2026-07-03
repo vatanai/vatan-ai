@@ -2,7 +2,31 @@
 
 ---
 
-## مشخصات پروژه
+## ⚠️ دو اپ فعال روی لیارا (۱۴۰۵/۰۴/۱۲ آپدیت شد)
+
+الان دو تا اپ جدا روی لیارا داریم که هر دو فعالن:
+
+| اپ | پلتفرم | فایل کانفیگ | آدرس |
+|----|--------|-------------|------|
+| `demovatan` | Laravel (native) | `liara.json` (پیش‌فرض) | https://demovatan.liara.run |
+| `aivatan` | Docker | `liara.aivatan.json` | https://aivatan.com |
+
+> نکته: هشدار قبلی این فایل («platform: laravel هرگز استفاده نشه») دیگه معتبر نیست — `demovatan` با موفقیت روی پلتفرم Laravel لیارا بالا اومده و فعاله.
+
+### دستور دیپلوی به هرکدوم:
+```bash
+# دیپلوی به demovatan (پیش‌فرض، از liara.json خودش می‌خونه)
+liara deploy
+
+# دیپلوی به aivatan (با کانفیگ جدا)
+liara deploy --liara-json liara.aivatan.json
+```
+
+> قبل از هر دیپلوی حتماً مطمئن شو داری با فایل کانفیگ درست کار می‌کنی — این دو اپ زیرساخت متفاوت دارن (یکی Docker یکی Laravel native) و قاطی کردنشون می‌تونه دیپلوی رو خراب کنه.
+
+---
+
+## مشخصات پروژه (اپ aivatan)
 
 | آیتم | مقدار |
 |------|-------|
@@ -167,6 +191,7 @@ php artisan migrate
 | composer timeout | نرمال نیست — لیارا به GitHub دسترسی نداره، باید Docker platform بمونه |
 | `{{variable}}` در Blade خطا میده | بنویس `@{{variable}}` تا Blade اون رو PHP تفسیر نکنه |
 | تغییرات CSS/JS اعمال نشده | `npm run build` بزن، بعد دیپلوی کن |
+| خطای CORS رو `localhost:5173` یا `[::1]:5173` توی پروداکشن | فایل `public/hot` (باقی‌مونده از `npm run dev`) رفته بالا. اون رو حذف کن و مطمئن شو `public/hot` توی `.liaraignore` هست |
 
 ---
 
