@@ -166,15 +166,15 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
         <i class="fa-solid fa-chevron-down" style="font-size:9px;color:var(--text3);"></i>
       </div>
       <div style="padding:2px 0 4px;">
-        <div class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">داشبورد محصولات</div><span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(245,146,58,.08);color:var(--orange);border:1px solid rgba(245,146,58,.2);">در حال طراحی</span></div>
+        <div class="snav-sub-item"><div class="snav-dot"></div><div class="snav-sub-label">داشبورد محصولات</div><span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(245,146,58,.08);color:var(--orange);border:1px solid rgba(245,146,58,.2);">بزودی</span></div>
         <a href="/admin/products" class="snav-sub-item" style="text-decoration:none;"><div class="snav-dot"></div><div class="snav-sub-label">لیست محصولات</div></a>
         <a href="/admin/products/create" class="snav-sub-item" style="text-decoration:none;"><div class="snav-dot"></div><div class="snav-sub-label">ثبت محصول جدید</div></a>
         <a href="/admin/products/categories" class="snav-sub-item" style="text-decoration:none;"><div class="snav-dot"></div><div class="snav-sub-label">دسته‌بندی‌ها</div></a>
         <a href="/admin/products/pricing" class="snav-sub-item active" style="text-decoration:none;"><div class="snav-dot"></div><div class="snav-sub-label">قیمت‌گذاری</div></a>
       </div>
-      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div><div class="snav-label">سفارشات</div><span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);">در حال طراحی</span></div>
+      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-cart-shopping"></i></div><div class="snav-label">سفارشات</div><span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);">بزودی</span></div>
       <div class="snav-section">هوش مصنوعی</div>
-      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-microchip"></i></div><div class="snav-label">مدیریت مدل‌ها</div><span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);">در حال طراحی</span></div>
+      <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-microchip"></i></div><div class="snav-label">مدیریت مدل‌ها</div><span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.25);">بزودی</span></div>
       <div style="height:1px;background:var(--b1);margin:8px 12px;"></div>
       <div class="snav-item"><div class="snav-icon"><i class="fa-solid fa-gear"></i></div><div class="snav-label">تنظیمات</div></div>
     </nav>

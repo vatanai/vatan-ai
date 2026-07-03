@@ -37,7 +37,7 @@
     html::-webkit-scrollbar { width: 4px; }
     html::-webkit-scrollbar-track { background: transparent; }
     html::-webkit-scrollbar-thumb { background: #222230; border-radius: 99px; }
-    
+
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
@@ -45,6 +45,22 @@
       overflow-y: scroll;
       font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
       transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* موبایل: اسکرول‌بار کاملاً مخفی بشه (فقط ظاهرش، اسکرول‌شدن صفحه دست نمی‌خوره)
+       تا نه ترک اسکرول‌بار دیده بشه و نه با تغییر عرضش، نوار پایین (باتوم‌نویگیشن) جابجا بشه */
+    @media (max-width: 639px) {
+      html {
+        scrollbar-width: none;
+      }
+      html::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+      }
+      body {
+        overflow-y: auto;
+      }
     }
     
     /* ایجاد فضای خالی حیاتی برای هدر فیکس شده */

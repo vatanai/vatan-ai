@@ -514,7 +514,7 @@ body.light .sub-item.active .sub-dot { box-shadow: 0 0 8px rgba(22,89,79,.45); }
 .sub-sub-item:hover .sub-sub-label { color: var(--text-h); }
 .sub-sub-item.active .sub-sub-label { color: var(--sub-text-active); font-weight: 600; }
 
-/* --- بج‌های وضعیت ("در حال طراحی"، "آینده"، "OpenRouter") --- */
+/* --- بج‌های وضعیت ("بزودی"، "آینده"، "OpenRouter") --- */
 .nav-status-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid; flex-shrink: 0; white-space: nowrap; }
 .nav-status-badge.warn { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
 .nav-status-badge.info { background: var(--primary-l); color: var(--primary); border-color: var(--primary-m); }

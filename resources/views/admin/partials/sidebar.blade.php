@@ -48,15 +48,15 @@
           </a>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">دسته‌بندی‌ها</div>
-            <span class="nav-status-badge warn">در حال طراحی</span>
+            <span class="nav-status-badge warn">بزودی</span>
           </div>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">گزارش محصولات</div>
-            <span class="nav-status-badge warn">در حال طراحی</span>
+            <span class="nav-status-badge warn">بزودی</span>
           </div>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">تنظیمات نمایش</div>
-            <span class="nav-status-badge warn">در حال طراحی</span>
+            <span class="nav-status-badge warn">بزودی</span>
           </div>
         </div>
       </div>
@@ -67,7 +67,7 @@
       <a href="/admin/orders" class="nav-link {{ request()->is('admin/orders*') ? 'active' : '' }}">
         <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
         <div class="nav-label">سفارشات</div>
-        <span class="nav-status-badge warn">در حال طراحی</span>
+        <span class="nav-status-badge warn">بزودی</span>
       </a>
     </div>
 
@@ -78,7 +78,7 @@
       <a href="/admin/models-management" class="nav-link {{ request()->is('admin/models-management') ? 'active' : '' }}">
         <div class="nav-icon"><i class="fa-solid fa-microchip"></i></div>
         <div class="nav-label">مدیریت مدل‌ها</div>
-        <span class="nav-status-badge warn">در حال طراحی</span>
+        <span class="nav-status-badge warn">بزودی</span>
       </a>
     </div>
 

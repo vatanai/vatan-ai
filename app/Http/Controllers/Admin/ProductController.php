@@ -106,14 +106,26 @@ class ProductController extends Controller
 
     /**
      * نمایش فرم ساخت محصول جدید
+     *
+     * پشتیبانی از «تکثیر محصول»: اگر در URL پارامتر ?duplicate={id} وجود داشته
+     * باشد (از دکمه‌ی «کپی محصول» در لیست محصولات)، اطلاعات همان محصول واکشی
+     * و به ویو پاس داده می‌شود تا فرم با مقادیر آن از قبل پر شود. هدف کوتاه‌تر
+     * کردن مسیر ثبت محصولات مشابه است — هیچ رکوردی در این مرحله ذخیره نمی‌شود؛
+     * ذخیره‌ی نهایی همچنان فقط با ارسال فرم توسط ادمین در متد store() انجام
+     * می‌شود. رفتار این متد وقتی ?duplicate در URL نباشد، دقیقاً مثل قبل است.
      */
-    public function create()
+    public function create(Request $request)
     {
         // واکشی مدل‌های فعالی که در پنل "مدل‌های هوش مصنوعی" ساخته شده‌اند
         // تا در فرم محصول، برای انتخاب Primary و اولویت‌بندی Fallback استفاده شوند
         $aiModels = AiModel::where('is_active', true)->latest()->get();
 
-        return view('admin.products.create', compact('aiModels'));
+        $duplicateFrom = null;
+        if ($request->filled('duplicate')) {
+            $duplicateFrom = Product::find($request->get('duplicate'));
+        }
+
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom'));
     }
 
     /**
@@ -137,7 +149,10 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
             'is_trending' => 'nullable|boolean',
-            'thumbnail' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            // duplicate_from: شناسه‌ی محصول مبدا در حالت «تکثیر محصول» (از فرم ثبت با پیش‌پرشدن خودکار).
+            // وقتی این مقدار ارسال شود، آپلود Thumbnail دیگر اجباری نیست چون تصویر محصول مبدا کپی می‌شود.
+            'duplicate_from' => 'nullable|integer|exists:products,id',
+            'thumbnail' => 'required_without:duplicate_from|nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'cover' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:8192',
             'sample_outputs' => 'nullable|array',
             'sample_outputs.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
@@ -177,17 +192,43 @@ class ProductController extends Controller
         ]);
 
         // ۲. آپلود تصاویر در دیسک public
-        $thumbnailPath = $request->file('thumbnail')->store('products/thumbnails', 'public');
+        // در حالت «تکثیر محصول» (duplicate_from) اگر ادمین فایل جدیدی انتخاب نکرده باشد،
+        // تصویر محصول مبدا به‌صورت فیزیکی کپی می‌شود (نه اشتراک مسیر) تا حذف یکی از
+        // محصولات، فایل محصول دیگر را از بین نبرد.
+        $duplicateSource = $request->filled('duplicate_from')
+            ? Product::find($request->get('duplicate_from'))
+            : null;
+
+        if ($request->hasFile('thumbnail')) {
+            $thumbnailPath = $request->file('thumbnail')->store('products/thumbnails', 'public');
+        } elseif ($duplicateSource && $duplicateSource->thumbnail && Storage::disk('public')->exists($duplicateSource->thumbnail)) {
+            $thumbnailPath = $this->copyDuplicateFile($duplicateSource->thumbnail, 'products/thumbnails');
+        } else {
+            $thumbnailPath = null;
+        }
+
+        // حالت غیرمنتظره (مثلاً فایل محصول مبدا از دیسک پاک شده باشد): بدون تصویر ذخیره نکن
+        if (!$thumbnailPath) {
+            return back()->withErrors(['thumbnail' => 'تصویر کارت (Thumbnail) الزامی است.'])->withInput();
+        }
 
         $coverPath = null;
         if ($request->hasFile('cover')) {
             $coverPath = $request->file('cover')->store('products/covers', 'public');
+        } elseif ($duplicateSource && $duplicateSource->cover && Storage::disk('public')->exists($duplicateSource->cover)) {
+            $coverPath = $this->copyDuplicateFile($duplicateSource->cover, 'products/covers');
         }
 
         $samplePaths = [];
         if ($request->hasFile('sample_outputs')) {
             foreach ($request->file('sample_outputs') as $file) {
                 $samplePaths[] = $file->store('products/samples', 'public');
+            }
+        } elseif ($duplicateSource && is_array($duplicateSource->sample_outputs)) {
+            foreach ($duplicateSource->sample_outputs as $samplePath) {
+                if (Storage::disk('public')->exists($samplePath)) {
+                    $samplePaths[] = $this->copyDuplicateFile($samplePath, 'products/samples');
+                }
             }
         }
 
@@ -469,5 +510,19 @@ class ProductController extends Controller
         return redirect()
             ->route('admin.products')
             ->with('success', $message);
+    }
+
+    /**
+     * کپی فیزیکی یک فایل موجود در دیسک public به مسیر جدید با نام یکتا.
+     * برای «تکثیر محصول» استفاده می‌شود تا محصول جدید فایل مستقل خودش را
+     * داشته باشد و حذف بعدیِ محصول مبدا یا کپی، روی دیگری اثر نگذارد.
+     */
+    private function copyDuplicateFile(string $sourcePath, string $targetDir): string
+    {
+        $extension = pathinfo($sourcePath, PATHINFO_EXTENSION) ?: 'jpg';
+        $newPath = $targetDir . '/' . (string) Str::uuid() . '.' . $extension;
+        Storage::disk('public')->copy($sourcePath, $newPath);
+
+        return $newPath;
     }
 }

@@ -170,10 +170,9 @@
                 <div class="dropdown-pro-menu" id="row-dropdown-{{ $product->id }}">
                   <button type="button" class="dropdown-pro-item" onclick="openDrawer({{ $product->id }})"><i class="fa-solid fa-eye"></i> مشاهده</button>
                   <a href="{{ route('admin.products.edit', $product->id) }}" class="dropdown-pro-item"><i class="fa-solid fa-pen"></i> ویرایش</a>
-                  <form action="{{ route('admin.products.duplicate', $product->id) }}" method="POST">
-                    @csrf
-                    <button type="submit" class="dropdown-pro-item"><i class="fa-solid fa-copy"></i> کپی محصول</button>
-                  </form>
+                  {{-- کپی محصول: به‌جای ذخیره‌ی مستقیم، وارد فرم «ثبت محصول» با تمام فیلدهای پرشده می‌شود
+                       تا ادمین قبل از ثبت نهایی بتواند مقادیر را بازبینی/ویرایش کند (مسیر کوتاه‌تر). --}}
+                  <a href="{{ route('admin.products.create') }}?duplicate={{ $product->id }}" class="dropdown-pro-item"><i class="fa-solid fa-copy"></i> کپی محصول</a>
                   <button type="button" class="dropdown-pro-item" onclick="quickToggleStatus({{ $product->id }}, null)">
                     <i class="fa-solid fa-toggle-on"></i> تغییر وضعیت سریع
                   </button>

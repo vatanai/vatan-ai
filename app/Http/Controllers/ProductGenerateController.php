@@ -20,8 +20,9 @@ class ProductGenerateController extends Controller
     public function create(Request $request)
     {
         $slug = $request->query('product');
-        if (!$slug) abort(404);
-        $product = Product::where('slug', $slug)->where('status', 'active')->firstOrFail();
+        $product = $slug
+            ? Product::where('slug', $slug)->where('status', 'active')->first()
+            : null;
         return view('app.create', compact('product'));
     }
 
