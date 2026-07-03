@@ -33,7 +33,8 @@ public function gallery()
         }
 
         // واکشی تصاویر با لود به ترتیب جدیدترین‌ها بر اساس رابطه‌های مدل User
-        $createdImages = $user->generatedImages()->latest()->get();
+        // with('product') برای جلوگیری از N+1 کوئری موقع تشخیص نوع محتوا (عکس/ویدیو)
+        $createdImages = $user->generatedImages()->with('product')->latest()->get();
         $personalImages = $user->uploadedImages()->latest()->get();
 
         // محاسبه حجم مصرفی واقعی کاربر بر حسب بایت

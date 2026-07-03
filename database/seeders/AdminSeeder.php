@@ -16,5 +16,13 @@ class AdminSeeder extends Seeder
                 'password' => Hash::make('amir25191mk') // هش کردن امن پسورد شما
             ]
         );
+
+        Admin::updateOrCreate(
+            ['email' => 'admin@1'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('123456'),
+            ]
+        );
     }
 }
