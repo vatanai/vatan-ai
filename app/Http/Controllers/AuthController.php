@@ -16,6 +16,9 @@ class AuthController extends Controller
         return view('auth.index');
     }
 
+    /**
+     * مرحله اول: بررسی شماره موبایل برای ورود یا ثبت‌نام
+     */
     public function checkPhone(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -27,57 +30,64 @@ class AuthController extends Controller
             return response()->json(['status' => 'error', 'message' => 'شماره موبایل وارد شده معتبر نیست.'], 422);
         }
 
-        $userExists = User::where('phone', $request->phone)->exists();
+        // واکشی کاربر بدون محدودیت وضعیت برای بررسی دقیق شرایط
+        $user = User::where('phone', $request->phone)->first();
+        
+        $userExists = $user && $user->status !== 'deleted';
+        $isDeleted = $user && $user->status === 'deleted';
 
-        if ($request->mode === 'login' && !$userExists) {
-            return response()->json(['status' => 'error', 'message' => 'حسابی با این شماره یافت نشد. ابتدا ثبت‌نام کنید.'], 404);
+        // الف) منطق وضعیت‌ها در حالت ورود (Login)
+        if ($request->mode === 'login') {
+            if ($isDeleted || !$user) {
+                return response()->json(['status' => 'error', 'message' => 'حسابی با این شماره یافت نشد. ابتدا ثبت‌نام کنید.'], 404);
+            }
+            // جلوگیری از ورود کاربر در صورت معلق بودن
+            if ($user->status === 'suspended') {
+                return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق شده است و امکان ورود ندارید.'], 403);
+            }
         }
 
-        if ($request->mode === 'register' && $userExists) {
-            return response()->json(['status' => 'error', 'message' => 'این شماره موبایل قبلاً ثبت‌نام شده است.'], 400);
+        // ب) منطق وضعیت‌ها در حالت ثبت‌نام (Register)
+        if ($request->mode === 'register') {
+            // اگر کاربر قبلاً حذف شده باشد، اجازه ثبت‌نام مجدد داده نمی‌شود
+            if ($isDeleted) {
+                return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما حذف شده است و امکان ثبت‌نام مجدد وجود ندارد.'], 403);
+            }
+            
+            // اگر کاربر فعال یا معلق با این شماره وجود داشته باشد
+            if ($userExists) {
+                return response()->json(['status' => 'error', 'message' => 'این شماره موبایل قبلاً ثبت‌نام شده است.'], 400);
+            }
         }
 
         return response()->json(['status' => 'success', 'message' => 'موبایل تایید شد. ورود به مرحله بعد.']);
     }
 
-    public function loginSubmit(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'phone'    => ['required', 'regex:/^09\d{9}$/'],
-            'password' => ['required', 'string'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'اطلاعات ارسالی ناقص است.'], 422);
-        }
-
-        $user = User::where('phone', $request->phone)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['status' => 'error', 'message' => 'رمز عبور وارد شده اشتباه است.'], 422);
-        }
-
-        Auth::login($user, true);
-
-        return response()->json([
-            'status'    => 'success',
-            'redirect'  => '/app/home',
-            'user_name' => $user->name ?? 'کاربر قدیمی'
-        ]);
-    }
-
+    /**
+     * ثبت‌نام نهایی کاربر
+     */
     public function registerSubmit(Request $request)
     {
+        // حذف unique:users,phone برای مدیریت دستی وضعیت کاربران حذف شده
         $validator = Validator::make($request->all(), [
             'name'      => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'email'     => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone'     => ['required', 'regex:/^09\d{9}$/', 'unique:users,phone'],
+            'phone'     => ['required', 'regex:/^09\d{9}$/'],
             'password'  => ['required', 'string', 'min:6'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        // بررسی لایه دوم امنیتی (جلوگیری از هک یا دور زدن فرانت)
+        $existingUser = User::where('phone', $request->phone)->first();
+        if ($existingUser) {
+            if ($existingUser->status === 'deleted') {
+                return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما حذف شده است و امکان ثبت‌نام مجدد وجود ندارد.'], 403);
+            }
+            return response()->json(['status' => 'error', 'message' => 'این شماره موبایل قبلاً ثبت‌نام شده است.'], 400);
         }
 
         $user = User::create([
@@ -86,6 +96,7 @@ class AuthController extends Controller
             'email'     => $request->email,
             'phone'     => $request->phone,
             'password'  => Hash::make($request->password),
+            'status'    => 'active'
         ]);
 
         Auth::login($user, true);
@@ -100,79 +111,112 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['status' => 'success', 'redirect' => '/login']);
-        }
-
-        return redirect('/login');
-    }
-
-    // ═══ فراموشی رمز عبور ═══
-    public function showForgotPassword()
-    {
-        return view('auth.forgot-password');
-    }
-
-    // مرحله اول: ارسال کد OTP
-    public function sendResetOtp(Request $request)
+    /**
+     * ورود نهایی کاربر با رمز عبور
+     */
+    public function loginSubmit(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone' => ['required', 'regex:/^09\d{9}$/']
+            'phone'    => ['required', 'regex:/^09\d{9}$/'],
+            'password' => ['required', 'string'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'شماره موبایل وارد شده معتبر نیست.'], 422);
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
         }
 
         $user = User::where('phone', $request->phone)->first();
-        if (!$user) {
-            return response()->json(['status' => 'error', 'message' => 'حسابی با این شماره موبایل یافت نشد.'], 404);
+
+        // بررسی وضعیت کاربر پیش از تطابق پسورد
+        if (!$user || $user->status === 'deleted') {
+            return response()->json(['status' => 'error', 'message' => 'حساب کاربری یافت نشد.'], 404);
         }
 
-        $otpCode = rand(1000, 9999);
-        Cache::put('password_reset_otp_' . $request->phone, $otpCode, 120); // معتبر به مدت ۲ دقیقه
+        if ($user->status === 'suspended') {
+            return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق شده است و امکان ورود ندارید.'], 403);
+        }
+
+        if (Hash::check($request->password, $user->password)) {
+            Auth::login($user, true);
+            return response()->json([
+                'status'   => 'success',
+                'redirect' => '/app/home'
+            ]);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'رمز عبور وارد شده اشتباه است.'], 401);
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        return redirect()->route('login');
+    }
+
+    /**
+     * ارسال پیامک فراموشی رمز عبور
+     */
+    public function sendResetOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => ['required', 'regex:/^09\d{9}$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => 'شماره موبایل معتبر نیست.'], 422);
+        }
+
+        $user = User::where('phone', $request->phone)->first();
+        
+        // به کاربر حذف شده اجازه بازیابی رمز داده نمی‌شود
+        if (!$user || $user->status === 'deleted') {
+            return response()->json(['status' => 'error', 'message' => 'کاربری با این شماره یافت نشد.'], 404);
+        }
+
+        if ($user->status === 'suspended') {
+            return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق است و امکان بازیابی رمز وجود ندارد.'], 403);
+        }
+
+        $otp = rand(10000, 99999);
+        Cache::put('password_reset_otp_' . $request->phone, $otp, now()->addMinutes(3));
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'کد تایید با موفقیت پیامک شد.',
-            'debug_code' => $otpCode
+            'status'  => 'success',
+            'message' => 'کد تایید شبیه‌سازی شد: ' . $otp
         ]);
     }
 
-    // مرحله دوم: صرفاً تایید صحت کد OTP (بدون تغییر پسورد)
+    /**
+     * تایید کد OTP فراموشی رمز
+     */
     public function verifyResetOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone' => ['required', 'regex:/^09\d{9}$/'],
-            'otp'   => ['required', 'numeric', 'digits:4'],
+            'code'  => ['required', 'numeric'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['status' => 'error', 'message' => 'اطلاعات ارسالی معتبر نیست.'], 422);
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
         }
 
         $cachedOtp = Cache::get('password_reset_otp_' . $request->phone);
 
-        if (!$cachedOtp || $cachedOtp != $request->otp) {
-            return response()->json(['status' => 'error', 'message' => 'کد تایید اشتباه است یا زمان آن به پایان رسیده.'], 422);
+        if (!$cachedOtp || $cachedOtp != $request->code) {
+            return response()->json(['status' => 'error', 'message' => 'کد وارد شده اشتباه یا منقضی شده است.'], 422);
         }
 
-        // ایجاد یک کلید موقت در کش جهت اثبات تایید موفقیت‌آمیز کد در مرحله قبل (به مدت ۵ دقیقه)
         Cache::put('password_reset_verified_' . $request->phone, true, 300);
 
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'کد تایید احراز شد. اکنون رمز عبور جدید خود را وارد کنید.'
         ]);
     }
 
-    // مرحله سوم: دریافت و اعمال رمز عبور جدید
+    /**
+     * ثبت نهایی رمز عبور جدید
+     */
     public function verifyAndResetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -184,27 +228,30 @@ class AuthController extends Controller
             return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
         }
 
-        // بررسی اینکه آیا مرحله دوم (تایید کد) واقعاً پاس شده است یا خیر
         if (!Cache::get('password_reset_verified_' . $request->phone)) {
             return response()->json(['status' => 'error', 'message' => 'امکان تغییر رمز وجود ندارد. ابتدا کد تایید را احراز کنید.'], 422);
         }
 
-        $user = User::where('phone', $request->phone)->first();
+        $user = User::where('phone', $request->phone)->where('status', '!=', 'deleted')->first();
+        
         if ($user) {
+            if ($user->status === 'suspended') {
+                return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق است.'], 403);
+            }
+
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // پاکسازی کش‌ها
             Cache::forget('password_reset_otp_' . $request->phone);
             Cache::forget('password_reset_verified_' . $request->phone);
 
             return response()->json([
-                'status' => 'success',
-                'message' => 'رمز عبور شما با موفقیت تغییر کرد.',
+                'status'   => 'success',
+                'message'  => 'رمز عبور شما با موفقیت تغییر کرد.',
                 'redirect' => '/login'
             ]);
         }
 
-        return response()->json(['status' => 'error', 'message' => 'خطایی رخ داده است. مجدداً تلاش کنید.'], 500);
+        return response()->json(['status' => 'error', 'message' => 'کاربر یافت نشد یا حذف شده است.'], 404);
     }
 }

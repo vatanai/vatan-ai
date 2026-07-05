@@ -29,11 +29,16 @@ class PlanSubscriptionController extends Controller
         // پیدا کردن پلن بر اساس ID
         $plan = Plan::findOrFail($id);
 
-        // 🟢 اصلاح اصلی: استفاده از ستون واقعی tokens دیتابیس شما
+        // ۱. افزایش موجودی فعلی توکن کاربر
         $user->tokens = ($user->tokens ?? 0) + $plan->tokens;
+        
+        // ۲. 🔴 اضافه شدن به تاریخچه کل توکن‌های خریداری شده از اول تا الان
+        $user->tokens_purchased = ($user->tokens_purchased ?? 0) + $plan->tokens;
+        
+        // ذخیره نهایی تغییرات در دیتابیس روی جدول users
         $user->save();
 
-        // 🟢 ارسال تعداد توکن واقعی به کمکت سشن موفقیت
+        // ارسال تعداد توکن واقعی به کمکت سشن موفقیت
         return redirect()->route('pricing.index')->with(
             'success', 
             "پرداخت آزمایشی برای پلن «" . $plan->name . "» موفقیت‌آمیز بود! تعداد " . number_format($plan->tokens) . " توکن به حساب شما اضافه شد."

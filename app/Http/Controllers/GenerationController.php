@@ -4,9 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Generation;
-use App\Models\Wallet;
-use App\Jobs\ProcessImageJob;
-use App\Services\LogService; // 🟢 اضافه شد: اتصال به سرویس مرکزی لاگ
+use App\Services\LogService; 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -26,42 +24,51 @@ class GenerationController extends Controller
             'image' => 'required|image|max:10240',
         ]);
 
+        // فرضی: هزینه تولید هر تصویر ۱۰ توکن است
+        $tokenCost = 10; 
+
+        // 🔴 بررسی و کسر توکن مستقیماً از جدول کاربران (User) برای محاسبه مصرف شده
         if (Auth::check()) {
-            $wallet = Wallet::where('user_id', Auth::id())->first();
-            if (!$wallet || $wallet->tokens_balance < 10) {
-                return response()->json(['error' => 'توکن شما کافی نیست.'], 403);
+            $user = Auth::user();
+            
+            // بررسی موجودی فعلی کاربر در جدول users
+            if (($user->tokens ?? 0) < $tokenCost) {
+                return response()->json(['error' => 'توکن شما کافی نیست. لطفا حساب خود را شارژ کنید.'], 403);
             }
+
+            // الف) کسر هزینه از موجودی فعلی
+            $user->tokens = $user->tokens - $tokenCost;
+
+            // ب) اضافه کردن دقیق به کل توکن‌های مصرف شده از اول تا الان
+            $user->tokens_used = ($user->tokens_used ?? 0) + $tokenCost;
+
+            // ذخیره تغییرات توکن‌ها در دیتابیس
+            $user->save();
         }
 
         // ذخیره‌سازی تصویر ورودی کاربر در هاست
         $inputPath = $request->file('image')->store('inputs', 'public');
 
-        // 🟢 اصلاح شد: استفاده از سرویس مرکزی لاگ برای ثبت درخواست با وضعیت اولیه pending
-        // این کار باعث میشه رکورد بلافاصله در پنل ادمین کاربر قابل مشاهده باشه (حتی در حین پردازش)
+        // استفاده از سرویس مرکزی لاگ برای ثبت درخواست با وضعیت اولیه pending
         $generation = LogService::log(
-            prompt: "پردازش پیشرفته محصول با شناسه: " . $request->product_id,
+            prompt: "تولید تصویر خودکار", 
             inputImage: $inputPath,
-            outputImage: null, // چون هنوز پردازش شروع نشده خروجی نداریم
-            status: 'pending'  // وضعیت اولیه در صف انتظار
+            productId: $request->product_id
         );
 
-        // 🟢 گرفتن آیدی رکورد لاگ ساخته شده
-        $generationId = $generation?->id ?? Generation::latest()->first()?->id;
+        $generationId = $generation->id;
 
-        // ذخیره شناسه در سشن (برای زمانی که کاربر مهمان است و بعداً می‌خواهد ثبت‌نام کند)
-        session(['latest_generation_id' => $generationId]);
-
-        // ارسال به جاب پردازش تصویر در پس‌زمینه
-        ProcessImageJob::dispatch($generationId);
+        // ارسال کار به صف پردازش بک‌گراند پس‌زمینه
+        dispatch(new \App\Jobs\ProcessImageJob($generationId));
 
         return response()->json([
-            'message' => 'تصویر با موفقیت در صف پردازش قرار گرفت.',
+            'message' => 'تصویر با موفقیت در صف پردازش قرار گرفت و توکن کسر شد.',
             'generation_id' => $generationId
         ]);
     }
 
     /**
-     * متد چک کردن وضعیت هوشمند فاز اول (بند ۳.۳)
+     * متد چک کردن وضعیت هوشمند فاز اول
      */
     public function checkStatus(string $id): JsonResponse
     {
@@ -72,12 +79,10 @@ class GenerationController extends Controller
 
         if ($generation->status === 'completed') {
             
-            // بررسی اینکه آدرس از قبل یک لینک وب (مانند کدهای فال/اوپن‌روتر) است یا فایل لوکال استوریج
             $imageUrl = filter_var($generation->output_image, FILTER_VALIDATE_URL) 
                 ? $generation->output_image 
                 : asset('storage/' . $generation->output_image);
             
-            // اگه کاربر ثبت نام نکرده، فلگ بلور رو بفرست تا فرانت تار نشانش بده
             if (!Auth::check()) {
                 return response()->json([
                     'status' => 'completed',

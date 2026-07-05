@@ -1,113 +1,113 @@
 @extends('layouts.admin')
-@section('title', 'لیست مدل‌های هوش مصنوعی — AIPIX Admin')
+@section('title', 'مدیریت مدل‌های هوش مصنوعی — AIPIX Admin')
 
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
-
   <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
     @include('admin.partials.header')
 
-    <div class="admin-content p-6 flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
-
+    <div class="admin-content p-6 flex-1 pb-24 overflow-y-auto max-[768px]:p-[18px]" id="content">
+      
+      {{-- مودال اختصاصی و هوشمند نمایش پیام موفقیت عملیات --}}
       @if(session('success'))
-        <div class="bg-[#4d7a56]/10 border border-[#4d7a56]/30 rounded-xl p-3.5 mb-6 text-xs text-[#a8c4a8] flex items-center gap-2">
-          <i class="fa-regular fa-circle-check text-emerald-400"></i>
-          {{ session('success') }}
+        <div id="success-modal" class="fixed inset-0 flex items-center justify-center z-50 px-4 animate-fade-in">
+          {{-- پس‌زمینه تاریک و شیشه‌ای بلورین --}}
+          <div class="absolute inset-0 bg-[#000000]/60 backdrop-blur-sm"></div>
+          
+          {{-- باکس اصلی مودال پاپ‌آپ --}}
+          <div class="bg-[#16161c] border border-emerald-500/30 rounded-2xl p-6 max-w-sm w-full relative z-10 shadow-2xl shadow-emerald-500/5 text-center transform scale-95 animate-scale-up">
+            <div class="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-400 text-2xl shadow-lg shadow-emerald-500/10">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="text-sm font-extrabold text-white mb-2">عملیات موفقیت‌آمیز</h3>
+            <p class="text-xs text-gray-400 leading-relaxed mb-5">{{ session('success') }}</p>
+            
+            <button onclick="closeSuccessModal()" class="w-full h-9 rounded-xl text-xs font-bold bg-emerald-500 text-[#0c0c10] shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all cursor-pointer">
+              متوجه شدم
+            </button>
+          </div>
         </div>
       @endif
 
-      <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div class="text-xl font-extrabold tracking-tight mb-1">مدل‌های هوش مصنوعی (OpenRouter)</div>
-          <div class="text-xs text-[#4d7a56]">مدیریت، فعال‌سازی و مانیتورینگ کور-مدل‌های متصل به سیستم</div>
+          <div class="text-xl font-extrabold tracking-tight mb-1">مدیریت گیت‌وی مدل‌های هوش مصنوعی</div>
+          <div class="text-xs text-gray-500">لیست و تنظیمات زنده مدل‌های فعال پلتفرم متصل به OpenRouter</div>
         </div>
-        <a href="{{ route('admin.ai-models.create') }}"
-           class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#a07af5] text-[#0c0c10] hover:bg-[#8f68e0] transition-colors no-underline">
-          <i class="fa-solid fa-plus text-[11px]"></i> ثبت مدل جدید
+        <a href="{{ route('admin.ai-models.create') }}" class="inline-flex items-center gap-1.5 px-4 h-[38px] rounded-lg text-xs font-bold bg-[#a07af5] text-[#0c0c10] shadow-lg shadow-[#a07af5]/10 hover:bg-[#8f68e0] transition-all no-underline">
+          <i class="fa-solid fa-plus text-[11px]"></i>
+          ثبت مدل جدید
         </a>
       </div>
 
-      <div class="bg-[#111116] border border-[#222230] rounded-xl overflow-hidden shadow-2xl">
+      <div class="bg-[#16161c] border border-[#222230] rounded-xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-right text-xs">
             <thead>
-              <tr class="bg-[#16161c] border-b border-[#222230] text-[#a8c4a8] font-bold h-11 select-none">
-                <th class="p-4 w-12 text-center">#</th>
-                <th class="p-4">نام مدل</th>
-                <th class="p-4">شناسه API (Model ID)</th>
-                <th class="p-4">ارائه‌دهنده (Provider)</th>
-                <th class="p-4 text-center">قابلیت Vision</th>
-                <th class="p-4 text-center">وضعیت</th>
-                <th class="p-4 w-36 text-center">عملیات</th>
+              <tr class="border-b border-[#222230] bg-[#111116] text-[#a8c4a8] font-bold">
+                <th class="p-3.5">تصویر و نام مدل</th>
+                <th class="p-3.5">کمپانی سازنده</th>
+                <th class="p-3.5">نوع خروجی</th>
+                <th class="p-3.5">ورودی تصویر</th>
+                <th class="p-3.5">هزینه هر جنریت (توکن)</th>
+                <th class="p-3.5">ابعاد پیش‌فرض</th>
+                <th class="p-3.5">وضعیت</th>
+                <th class="p-3.5 text-center">عملیات</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#222230]/50 text-[#a8c4a8]">
-              @forelse($models as $index => $model)
-                <tr class="hover:bg-[#16161c]/40 transition-colors h-14">
-                  <td class="p-4 text-center text-gray-600 font-mono">{{ $index + 1 }}</td>
-                  <td class="p-4 font-bold text-white text-sm">{{ $model->name }}</td>
-                  <td class="p-4 font-mono text-[11px] text-gray-400 ltr text-left" dir="ltr">{{ $model->model_id }}</td>
-                  <td class="p-4">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-[#222230] text-gray-300 font-medium text-[10px]">
-                      {{ $model->provider }}
-                    </span>
-                  </td>
-                  
-                  <td class="p-4 text-center">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] {{ $model->supports_vision ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-gray-500 bg-gray-500/5' }}">
-                      {{ $model->supports_vision ? 'دارد' : 'خیر' }}
-                    </span>
-                  </td>
-
-                  <td class="p-4 text-center">
-                    <div class="flex items-center justify-center">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full font-bold text-[10px] {{ $model->is_active ? 'bg-[#4d7a56]/10 text-emerald-400 border border-[#4d7a56]/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20' }}">
-                        {{ $model->is_active ? 'فعال' : 'غیرفعال' }}
-                      </span>
+            <tbody class="divide-y divide-[#222230]/50">
+              @forelse($models as $model)
+                <tr class="hover:bg-[#1a1a24] transition-colors">
+                  <td class="p-3.5 flex items-center gap-3">
+                    <img src="{{ $model->image_url }}" class="w-9 h-9 rounded-lg object-cover border border-[#222230] bg-[#0c0c10]">
+                    <div>
+                      <div class="font-bold text-white mb-0.5">{{ $model->name }}</div>
+                      <div class="text-[10px] text-gray-500 font-mono ltr text-right">{{ $model->openrouter_model_id }}</div>
                     </div>
                   </td>
-
-                  <td class="p-4">
+                  <td class="p-3.5 text-gray-300 font-medium">{{ $model->provider_name }}</td>
+                  <td class="p-3.5">
+                    @if($model->output_modality == 'text')
+                      <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px] font-medium border border-blue-500/20">متن (text)</span>
+                    @elseif($model->output_modality == 'image')
+                      <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[10px] font-medium border border-purple-500/20">عکس (image)</span>
+                    @elseif($model->output_modality == 'video')
+                      <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-medium border border-amber-500/20">ویدیو (video)</span>
+                    @else
+                      <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 text-[10px] font-medium border border-rose-500/20">صدا (audio)</span>
+                    @endif
+                  </td>
+                  <td class="p-3.5">
+                    {!! $model->supports_image_input 
+                      ? '<span class="text-emerald-400 font-medium"><i class="fa-solid fa-circle-check ml-1"></i>دارد</span>' 
+                      : '<span class="text-gray-500"><i class="fa-solid fa-circle-xmark ml-1"></i>خیر</span>' !!}
+                  </td>
+                  <td class="p-3.5 font-mono text-emerald-400 font-bold">{{ number_format($model->cost_per_generation) }}</td>
+                  <td class="p-3.5 font-mono text-gray-400">{{ $model->default_width }} × {{ $model->default_height }}</td>
+                  <td class="p-3.5">
+                    @if($model->is_active)
+                      <span class="inline-flex items-center gap-1 text-emerald-400 text-[11px] font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>فعال</span>
+                    @else
+                      <span class="inline-flex items-center gap-1 text-gray-500 text-[11px] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>غیرفعال</span>
+                    @endif
+                  </td>
+                  <td class="p-3.5 text-center">
                     <div class="flex items-center justify-center gap-1.5">
-                      
-                      <button type="button" 
-                              onclick="openDetailsModal({{ json_encode([
-                                'name' => $model->name,
-                                'model_id' => $model->model_id,
-                                'provider' => $model->provider,
-                                'supports_vision' => $model->supports_vision ? 'دارد' : 'خیر',
-                                'is_active' => $model->is_active ? 'فعال' : 'غیرفعال',
-                                'fallbacks' => is_array($model->fallback_models) ? $model->fallback_models : (json_decode($model->fallback_models, true) ?? []),
-                                'created_at' => $model->created_at ? $model->created_at->format('Y-m-d') : '—'
-                              ]) }})"
-                              class="w-7 h-7 bg-[#16161c] hover:bg-[#222230] border border-[#222230] hover:border-[#2e2e3e] rounded-md text-gray-400 hover:text-white transition-all flex items-center justify-center" title="مشاهده جزئیات">
-                        <i class="fa-regular fa-eye text-[11px]"></i>
-                      </button>
-
-                      <a href="{{ route('admin.ai-models.edit', $model->id) }}" 
-                         class="w-7 h-7 bg-[#16161c] hover:bg-amber-500/10 border border-[#222230] hover:border-amber-500/30 rounded-md text-gray-400 hover:text-amber-400 transition-all flex items-center justify-center" title="ویرایش مدل">
+                      <a href="{{ route('admin.ai-models.edit', $model->id) }}" class="w-7 h-7 rounded bg-[#222230] hover:bg-[#2e2e42] border border-[#2d2d3d] text-[#a8c4a8] hover:text-white transition-colors flex items-center justify-center no-underline">
                         <i class="fa-regular fa-pen-to-square text-[11px]"></i>
                       </a>
-
-                      <form action="{{ route('admin.ai-models.destroy', $model->id) }}" method="POST" onsubmit="return confirm('آیا از حذف این مدل هوش مصنوعی اطمینان دارید؟');" class="inline m-0">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="w-7 h-7 bg-[#16161c] hover:bg-rose-500/10 border border-[#222230] hover:border-rose-500/30 rounded-md text-gray-400 hover:text-rose-400 transition-all flex items-center justify-center" title="حذف مدل">
+                      <form action="{{ route('admin.ai-models.destroy', $model->id) }}" method="POST" onsubmit="return confirm('آیا از حذف این مدل هوش مصنوعی اطمینان دارید؟')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="w-7 h-7 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 transition-colors flex items-center justify-center cursor-pointer">
                           <i class="fa-regular fa-trash-can text-[11px]"></i>
                         </button>
                       </form>
-
                     </div>
                   </td>
                 </tr>
               @empty
                 <tr>
-                  <td colspan="7" class="p-12 text-center text-gray-500 font-medium">
-                    <div class="flex flex-col items-center gap-2">
-                      <i class="fa-solid fa-cloud-bounce text-xl text-gray-600"></i>
-                      <span>هیچ مدل هوش مصنوعی تاکنون در سیستم تعریف نشده است.</span>
-                    </div>
-                  </td>
+                  <td colspan="8" class="p-10 text-center text-gray-500 font-medium">هیچ مدل هوش مصنوعی در پایگاه داده ثبت نشده است.</td>
                 </tr>
               @endforelse
             </tbody>
@@ -119,97 +119,30 @@
   </main>
 </div>
 
-<div id="details-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all animate-fade-in" dir="rtl">
-  <div class="bg-[#111116] border border-[#222230] rounded-xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-    
-    <div class="bg-[#16161c] border-b border-[#222230] px-5 h-12 flex items-center justify-between shrink-0">
-      <div class="text-xs font-bold text-white flex items-center gap-2">
-        <i class="fa-solid fa-circle-nodes text-[#a07af5]"></i>
-        <span id="m-name">نام مدل</span>
-      </div>
-      <button onclick="closeDetailsModal()" class="text-gray-500 hover:text-white transition-colors text-sm">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
+{{-- استایل‌های انیمیشن پاپ‌آپ مودال --}}
+<style>
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scaleUp { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+  .animate-scale-up { animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+</style>
 
-    <div class="p-5 flex-1 overflow-y-auto space-y-4 text-xs">
-      <div class="grid grid-cols-2 gap-3 bg-[#16161c]/40 border border-[#222230]/50 rounded-lg p-3">
-        <div>
-          <span class="text-gray-500 block mb-1">کمپانی ارائه‌دهنده:</span>
-          <span id="m-provider" class="font-bold text-white"></span>
-        </div>
-        <div>
-          <span class="text-gray-500 block mb-1">تاریخ ثبت:</span>
-          <span id="m-date" class="font-mono text-gray-300"></span>
-        </div>
-      </div>
-
-      <div>
-        <span class="text-gray-500 block mb-1">شناسه مدل (Model ID):</span>
-        <div id="m-model-id" class="bg-[#0c0c10] border border-[#222230] rounded-lg p-2.5 font-mono text-[11px] text-emerald-400 ltr text-left tracking-wide"></div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-[#16161c]/40 border border-[#222230]/50 rounded-lg p-3 flex justify-between items-center">
-          <span class="text-gray-500">پشتیبانی از Vision:</span>
-          <span id="m-vision" class="font-bold text-white"></span>
-        </div>
-        <div class="bg-[#16161c]/40 border border-[#222230]/50 rounded-lg p-3 flex justify-between items-center">
-          <span class="text-gray-500">وضعیت سیستم:</span>
-          <span id="m-status" class="font-bold text-white"></span>
-        </div>
-      </div>
-
-      <div class="border-t border-[#222230] pt-3">
-        <span class="text-gray-500 block mb-2 font-semibold"><i class="fa-solid fa-sliders text-[#a07af5] ml-1"></i> مدل‌های جایگزین (Fallback):</span>
-        <div id="m-fallbacks-box" class="space-y-1.5 max-h-32 overflow-y-auto pr-1"></div>
-      </div>
-    </div>
-
-    <div class="bg-[#16161c] border-t border-[#222230] px-4 h-12 flex items-center justify-end shrink-0">
-      <button onclick="closeDetailsModal()" class="px-4 h-8 rounded-lg text-xs font-semibold bg-[#222230] text-gray-400 hover:text-white transition-colors">
-        بستن پنجره
-      </button>
-    </div>
-  </div>
-</div>
-
+{{-- اسکریپت کنترلر مودال موفقیت --}}
 <script>
-function openDetailsModal(data) {
-  document.getElementById('m-name').textContent = data.name;
-  document.getElementById('m-provider').textContent = data.provider;
-  document.getElementById('m-date').textContent = data.created_at;
-  document.getElementById('m-model-id').textContent = data.model_id;
-  document.getElementById('m-vision').textContent = data.supports_vision;
-  document.getElementById('m-status').textContent = data.is_active;
-
-  const fallbackBox = document.getElementById('m-fallbacks-box');
-  fallbackBox.innerHTML = '';
-  
-  if (data.fallbacks && data.fallbacks.length > 0) {
-    data.fallbacks.forEach((fb, idx) => {
-      if(fb) {
-        const item = document.createElement('div');
-        item.className = 'bg-[#0c0c10] border border-[#222230] rounded p-2 font-mono text-[10px] text-gray-400 flex items-center gap-2 ltr text-left';
-        item.innerHTML = `<span class="text-gray-600">${idx + 1}.</span> <span class="flex-1">${fb}</span>`;
-        fallbackBox.appendChild(item);
-      }
-    });
-  } else {
-    fallbackBox.innerHTML = `<div class="text-gray-600 italic text-[11px]">هیچ مدل جایگزینی ثبت نشده است.</div>`;
+  function closeSuccessModal() {
+    const modal = document.getElementById('success-modal');
+    if (modal) {
+      modal.style.opacity = '0';
+      modal.style.transition = 'opacity 0.2s ease-out';
+      setTimeout(() => modal.remove(), 200);
+    }
   }
 
-  const modal = document.getElementById('details-modal');
-  modal.classList.remove('hidden');
-  modal.classList.add('flex');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeDetailsModal() {
-  const modal = document.getElementById('details-modal');
-  modal.classList.remove('flex');
-  modal.classList.add('hidden');
-  document.body.style.overflow = '';
-}
+  // بستن اتوماتیک مودال پس از ۴ ثانیه برای راحتی کار ادمین
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      closeSuccessModal();
+    }, 4000);
+  });
 </script>
 @endsection

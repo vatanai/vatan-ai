@@ -21,7 +21,10 @@ class User extends Authenticatable
         'phone',
         'password',
         'avatar',
-        'tokens',
+        'status',
+        'tokens',            // موجودی فعلی توکن
+        'tokens_purchased',  // کل توکن‌های خریداری شده از اول تا الان
+        'tokens_used',       // کل توکن‌های مصرف شده
     ];
 
     /**
@@ -41,6 +44,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'tokens' => 'integer',
+            'tokens_purchased' => 'integer',
+            'tokens_used' => 'integer',
         ];
     }
 

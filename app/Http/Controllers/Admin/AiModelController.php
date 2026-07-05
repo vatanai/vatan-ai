@@ -3,109 +3,154 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AiModel;
+use App\Models\AIModel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 
 class AiModelController extends Controller
 {
-    /**
-     * نمایش لیست تمام مدل‌های هوش مصنوعی
-     */
     public function index()
     {
-        $models = AiModel::latest()->get();
+        $models = AIModel::latest()->get();
         return view('admin.ai-models.index', compact('models'));
     }
 
-    /**
-     * نمایش فرم افزودن مدل جدید
-     */
     public function create()
     {
         return view('admin.ai-models.create');
     }
 
-    /**
-     * ذخیره‌سازی مدل جدید در دیتابیس
-     */
     public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'model_id' => 'required|string|max:255|unique:ai_models,model_id',
-            'provider' => 'required|string|max:255',
-            'fallback_models' => 'nullable|array',
-        ], [
-            'name.required' => 'وارد کردن نام مدل الزامی است.',
-            'model_id.required' => 'شناسه مدل از OpenRouter الزامی است.',
-            'model_id.unique' => 'این شناسه مدل قبلاً ثبت شده است.',
-            'provider.required' => 'نام ارائه‌دهنده الزامی است.',
-        ]);
+{
+    // 💡 نکته تستی: اگر می‌خواهید ببینید دقیقاً چه داده‌هایی از فرم ارسال می‌شود، 
+    // خط زیر را از کامنت خارج کنید تا ارسال فرم متوقف و داده‌ها چاپ شوند:
+    // dd($request->all());
 
-        AiModel::create([
-            'name' => $request->name,
-            'model_id' => $request->model_id,
-            'provider' => $request->provider,
-            'supports_vision' => $request->has('supports_vision'), // حل مشکل دکمه ویژن
-            'is_active' => $request->has('is_active'),
-            'fallback_models' => $request->fallback_models ?? [], // ذخیره مدل‌های جایگزین
-        ]);
+    $validatedData = $request->validate([
+        'name'                 => 'required|string|max:255',
+        'openrouter_model_id'  => 'required|string|max:255',
+        'provider_name'        => 'required|string|max:255',
+        'output_modality'      => 'required|string|in:text,image,video,audio',
+        'supports_image_input' => 'nullable', 
+        'cost_per_generation'  => 'required|numeric|min:0',
+        'default_width'        => 'nullable|numeric|min:1',
+        'default_height'       => 'nullable|numeric|min:1',
+        'default_parameters'   => 'nullable|string',
+        'is_active'            => 'nullable',
+        'description'          => 'nullable|string',
+        'model_image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096', // افزایش حجم تا ۴ مگابایت برای امنیت بیشتر
+    ]);
 
-        return redirect()
-            ->route('admin.ai-models.index')
-            ->with('success', 'مدل هوش مصنوعی جدید با موفقیت به سیستم اضافه شد.');
+    // ذخیره‌سازی هوشمند با مقادیر پیش‌فرض مپ شده
+    $model = AIModel::create([
+        'name'                 => $validatedData['name'],
+        'openrouter_model_id'  => $validatedData['openrouter_model_id'],
+        'provider_name'        => $validatedData['provider_name'],
+        'output_modality'      => $validatedData['output_modality'],
+        'supports_image_input' => $request->input('supports_image_input', '0') == '1',
+        'cost_per_generation'  => $validatedData['cost_per_generation'],
+        'default_width'        => $validatedData['default_width'] ?: 1024,
+        'default_height'       => $validatedData['default_height'] ?: 1024,
+        'default_parameters'   => $validatedData['default_parameters'],
+        'description'          => $validatedData['description'],
+        'is_active'            => $request->input('is_active', '1') == '1',
+    ]);
+
+    // آپلود تصویر مدل در صورت وجود
+    if ($request->hasFile('model_image')) {
+        $image = $request->file('model_image');
+        $safeName = str_replace(['/', '\\', ':', '*'], '-', $model->openrouter_model_id);
+        $filename = $safeName . '.' . $image->getClientOriginalExtension();
+        
+        $destinationPath = public_path('uploads/models');
+        if (!File::isDirectory($destinationPath)) {
+            File::makeDirectory($destinationPath, 0755, true, true);
+        }
+        $image->move($destinationPath, $filename);
     }
 
-    /**
-     * نمایش فرم ویرایش مدل هوش مصنوعی
-     */
-    public function edit(AiModel $aiModel)
+    return redirect()->route('admin.ai-models.index')
+        ->with('success', 'مدل هوش مصنوعی جدید با موفقیت به همراه تصویر اختصاصی ثبت و در پایگاه داده ذخیره شد.');
+}
+
+    public function edit($id)
     {
-        // اگر روت شما به صورت {ai_model} است، لاراول به طور خودکار Model Binding را انجام می‌دهد.
-        // در غیر این صورت اگر به مشکل خوردید، ورودی را تبدیل به ($id) کنید و با AiModel::findOrFail($id) بگیرید.
-        return view('admin.ai-models.edit', ['model' => $aiModel]);
+        $model = AIModel::findOrFail($id);
+        return view('admin.ai-models.edit', compact('model'));
     }
 
-    /**
-     * به‌روزرسانی اطلاعات مدل در دیتابیس
-     */
-    public function update(Request $request, AiModel $aiModel)
+    public function update(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'model_id' => 'required|string|max:255|unique:ai_models,model_id,' . $aiModel->id,
-            'provider' => 'required|string|max:255',
-            'fallback_models' => 'nullable|array',
-        ], [
-            'name.required' => 'وارد کردن نام مدل الزامی است.',
-            'model_id.required' => 'شناسه مدل از OpenRouter الزامی است.',
-            'model_id.unique' => 'این شناسه مدل قبلاً ثبت شده است.',
-            'provider.required' => 'نام ارائه‌دهنده الزامی است.',
+        $model = AIModel::findOrFail($id);
+
+        $validatedData = $request->validate([
+            'name'                 => 'required|string|max:200',
+            'openrouter_model_id'  => 'required|string|max:300',
+            'provider_name'        => 'required|string|max:100',
+            'output_modality'      => 'required|string|in:image,text,video,audio',
+            'supports_image_input' => 'required|in:0,1',
+            'cost_per_generation'  => 'required|integer|min:0',
+            'default_width'        => 'nullable|integer|min:1',
+            'default_height'       => 'nullable|integer|min:1',
+            'default_parameters'   => 'nullable|string',
+            'is_active'            => 'required|in:0,1',
+            'description'          => 'nullable|string',
+            'model_image'          => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        $aiModel->update([
-            'name' => $request->name,
-            'model_id' => $request->model_id,
-            'provider' => $request->provider,
-            'supports_vision' => $request->has('supports_vision'), // آپدیت وضعیت ویژن
-            'is_active' => $request->has('is_active'),
-            'fallback_models' => $request->fallback_models ?? [],
+        // آپلود تصویر جدید و جایگزینی آن در صورت انتخاب توسط کاربر
+        if ($request->hasFile('model_image')) {
+            $image = $request->file('model_image');
+            $safeName = str_replace(['/', '\\', ':', '*'], '-', $validatedData['openrouter_model_id']);
+            
+            $destinationPath = public_path('uploads/models');
+            
+            // حذف فایل‌های با فرمت قبلی برای جلوگیری از تداخل نام همسان
+            foreach (['png', 'jpg', 'jpeg', 'webp'] as $ext) {
+                $oldFile = $destinationPath . '/' . $safeName . '.' . $ext;
+                if (File::exists($oldFile)) {
+                    File::delete($oldFile);
+                }
+            }
+
+            $filename = $safeName . '.' . $image->getClientOriginalExtension();
+            $image->move($destinationPath, $filename);
+        }
+
+        $model->update([
+            'name'                 => $validatedData['name'],
+            'openrouter_model_id'  => $validatedData['openrouter_model_id'],
+            'provider_name'        => $validatedData['provider_name'],
+            'output_modality'      => $validatedData['output_modality'],
+            'supports_image_input' => $validatedData['supports_image_input'],
+            'cost_per_generation'  => $validatedData['cost_per_generation'],
+            'default_width'        => $validatedData['default_width'] ?? 1024,
+            'default_height'       => $validatedData['default_height'] ?? 1024,
+            'default_parameters'   => $validatedData['default_parameters'],
+            'description'          => $validatedData['description'],
+            'is_active'            => $validatedData['is_active'],
         ]);
 
-        return redirect()
-            ->route('admin.ai-models.index')
-            ->with('success', 'تغییرات مدل هوش مصنوعی با موفقیت اعمال شد.');
+        return redirect()->route('admin.ai-models.index')
+            ->with('success', 'اطلاعات مدل هوش مصنوعی با موفقیت به‌روزرسانی شد.');
     }
 
-    /**
-     * حذف فیزیکی مدل هوش مصنوعی از سیستم
-     */
-    public function destroy(AiModel $aiModel)
+    public function destroy($id)
     {
-        $aiModel->delete();
+        $model = AIModel::findOrFail($id);
+        
+        // حذف فیزیکی عکس مدل از سرور هنگام حذف از دیتابیس
+        $safeName = str_replace(['/', '\\', ':', '*'], '-', $model->openrouter_model_id);
+        foreach (['png', 'jpg', 'jpeg', 'webp'] as $ext) {
+            $file = public_path('uploads/models/' . $safeName . '.' . $ext);
+            if (File::exists($file)) {
+                File::delete($file);
+            }
+        }
 
-        return redirect()
-            ->route('admin.ai-models.index')
-            ->with('success', 'مدل هوش مصنوعی مورد نظر با موفقیت از سیستم حذف شد.');
+        $model->delete();
+
+        return redirect()->route('admin.ai-models.index')
+            ->with('success', 'مدل هوش مصنوعی با موفقیت از پایگاه داده حذف شد.');
     }
 }
