@@ -83,8 +83,9 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
 // مسیرهای کامل CRUD دسته‌بندی
     Route::resource('categories', CategoryController::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
-    Route::resource('plans', PlanController::class);
-    Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testImage'])->name('ai-models.test-image');
+Route::resource('plans', PlanController::class);
+
+Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testImage'])->name('ai-models.test-image');
     Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])->name('ai-models.test-prompt');
 
     // داشبورد مرکزی

@@ -2,46 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Plan; // اگر نام مدل پلن شما متفاوت است (مثلاً Product)، آن را اصلاح کنید
+use App\Models\Plan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PlanSubscriptionController extends Controller
 {
     /**
-     * نمایش صفحه پلن‌ها به کاربر
+     * نمایش صفحه پلن‌ها و قیمت‌ها به کاربر
      */
     public function index()
     {
-        // واکشی پلن‌های فعال بر اساس دیتابیس شما
-        $plans = Plan::where('is_active', 1)->get(); 
+        // واکشی تمامی پلن‌ها بدون ستون ناموجود is_active برای جلوگیری از خطا
+        $plans = Plan::latest()->get(); 
         
         return view('site.pricing', compact('plans'));
     }
 
     /**
-     * عملیات پرداخت الکی و شارژ دقیق توکن‌ها
+     * عملیات پرداخت شبیه‌ساز و شارژ دقیق توکن‌ها
      */
-    public function fakePayment(Request $request, $id)
+    public function fakePayment(Request $request, $plan)
     {
+        // جستجو بر اساس اسلاگ؛ اگر پیدا نشد بر اساس ID (جهت بالا بردن پایداری سیستم)
+        $planModel = Plan::where('slug', $plan)->first();
+        
+        if (!$planModel && is_numeric($plan)) {
+            $planModel = Plan::find($plan);
+        }
+
+        if (!$planModel) {
+            abort(404, 'پلن مورد نظر یافت نشد.');
+        }
+        
+        // دریافت کاربر فعلی لاگین شده
         $user = Auth::user();
         
-        // پیدا کردن پلن بر اساس ID
-        $plan = Plan::findOrFail($id);
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'لطفاً ابتدا وارد حساب کاربری خود شوید.');
+        }
 
-        // ۱. افزایش موجودی فعلی توکن کاربر
-        $user->tokens = ($user->tokens ?? 0) + $plan->tokens;
-        
-        // ۲. 🔴 اضافه شدن به تاریخچه کل توکن‌های خریداری شده از اول تا الان
-        $user->tokens_purchased = ($user->tokens_purchased ?? 0) + $plan->tokens;
-        
-        // ذخیره نهایی تغییرات در دیتابیس روی جدول users
+        // اضافه کردن توکن‌های واقعی پلن به موجودی کاربر
+        $user->tokens = ($user->tokens ?? 0) + (int) $planModel->tokens;
         $user->save();
 
-        // ارسال تعداد توکن واقعی به کمکت سشن موفقیت
+        // بازگشت به صفحه قیمت‌ها همراه با پیام موفقیت داینامیک
         return redirect()->route('pricing.index')->with(
             'success', 
-            "پرداخت آزمایشی برای پلن «" . $plan->name . "» موفقیت‌آمیز بود! تعداد " . number_format($plan->tokens) . " توکن به حساب شما اضافه شد."
+            "حساب شما با موفقیت ارتقا یافت! پکیج «{$planModel->name}» فعال شد و تعداد " . number_format($planModel->tokens) . " توکن به حساب شما اضافه گردید."
         );
     }
 }
