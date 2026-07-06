@@ -313,9 +313,14 @@
     <div style="margin-top:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:6px;">ورودی کاربر (inputs)</div>
       <div class="json-block" id="modal-inputs">—</div>
-
     </div>
-  </main>
-</div>
+  </div> {{-- Closes .modal --}}
+</div> {{-- Closes .modal-bg --}}
+
+    </div> {{-- Closes .flex-1 (Main content padding wrapper) --}}
+  </main> {{-- Closes main --}}
+</div> {{-- Closes .flex (Main page wrapper) --}}
+
+@endsection
 @endsection
 @endsection
