@@ -54,24 +54,18 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی <span class="text-[var(--red)] mr-0.5">*</span></label>
-      @php $curCategory = old('category', optional($duplicateFrom)->category); @endphp
-      <select name="category" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" onchange="updateSubcat()">
-        <option value="">انتخاب کنید</option>
-        <option value="PEOPLE" {{ $curCategory == 'PEOPLE' ? 'selected' : '' }}>PEOPLE — شخصی</option>
-        <option value="BUSINESS" {{ $curCategory == 'BUSINESS' ? 'selected' : '' }}>BUSINESS — کسب‌وکار</option>
-        <option value="EVENTS" {{ $curCategory == 'EVENTS' ? 'selected' : '' }}>EVENTS — مناسبت‌ها</option>
-        <option value="FAMILY" {{ $curCategory == 'FAMILY' ? 'selected' : '' }}>FAMILY — خانواده</option>
-        <option value="AVATARS" {{ $curCategory == 'AVATARS' ? 'selected' : '' }}>AVATARS — آواتار</option>
+    <div class="flex flex-col gap-1.5 md:col-span-2">
+      <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
+      <select name="category_id" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
+        <option value="">انتخاب کنید...</option>
+        @foreach(\App\Models\Category::all() as $cat)
+            <option value="{{ $cat->id }}" {{ old('category_id', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
+                {{ $cat->name }} — {{ $cat->slug }}
+            </option>
+        @endforeach
       </select>
     </div>
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">زیردسته</label>
-      <select name="subcategory" data-searchable disabled class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-sub">
-        <option value="">ابتدا دسته را انتخاب کنید</option>
-      </select>
-    </div>
+</div>
   </div>
 
   <div class="grid grid-cols-1 gap-3.5 mb-5">

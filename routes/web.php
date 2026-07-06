@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\PlanController;  
 use App\Http\Controllers\PlanSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController; // استفاده از کنترلر ادمین در پوشه Admin
+use App\Http\Controllers\Admin\CategoryController;
 
 // ─── Root & Landing ──────────────────────────────────────
 Route::get('/', fn() => view('site.home'))->name('site.home.root');
@@ -79,7 +80,8 @@ Route::middleware('guest:admin')->group(function () {
 
 // ─── Admin Panel Area (Protected) ────────────────────────
 Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
-
+// مسیرهای کامل CRUD دسته‌بندی
+    Route::resource('categories', CategoryController::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     Route::resource('plans', PlanController::class);
     Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testImage'])->name('ai-models.test-image');

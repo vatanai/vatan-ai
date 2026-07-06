@@ -38,4 +38,9 @@ class Product extends Model
         'is_free' => 'boolean',
         'show_before_after' => 'boolean',
     ];
+    
+    public function category(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+{
+    return $this->belongsTo(Category::class, 'category_id');
+}
 }
