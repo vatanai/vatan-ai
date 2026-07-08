@@ -25,7 +25,7 @@
 
       @foreach($navItemsBefore as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-[#cffe00] [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -41,7 +41,7 @@
 
       @foreach($navItemsAfter as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-[#cffe00] [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -61,7 +61,7 @@
             <path d="M18.5,2 C18.72,3.6 19.08,3.96 20.7,4.18 C19.08,4.4 18.72,4.76 18.5,6.36 C18.28,4.76 17.92,4.4 16.3,4.18 C17.92,3.96 18.28,3.6 18.5,2 Z"/>
             <path d="M5.2,16.2 C5.38,17.55 5.68,17.85 7.05,18.03 C5.68,18.21 5.38,18.51 5.2,19.86 C5.02,18.51 4.72,18.21 3.35,18.03 C4.72,17.85 5.02,17.55 5.2,16.2 Z"/>
           </svg>
-          <span class="topnav-token-number">9</span>
+          <span class="topnav-token-number">{{ number_format(auth()->user()->tokens ?? 10) }}</span>
         </div>
       @endauth
 
@@ -315,7 +315,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 31.2px;              /* + حالت عادی ۲۰٪ بزرگ‌تر (۲۶px → ۳۱٫۲px) */
+    font-size: 26px;
     line-height: 1;
     font-weight: 400;
     color: #000000;
@@ -330,7 +330,7 @@
     white-space: nowrap;
     color: #000000;
     font-size: 15px;
-    font-weight: 900;              /* YekanBakh کلفت (Fat) هنگام هاور */
+    font-weight: 800;
     font-family: "YekanBakh", var(--font-sans, sans-serif);
     transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
   }
@@ -368,25 +368,23 @@
     transition: opacity 0.15s, border-color 0.15s;
   }
   html.light .topnav-token-box {
-    background: #1a1a1a;
+    background: var(--bg-card);
   }
 
   .topnav-token-box:hover {
     opacity: 0.85;
   }
   .topnav-token-icon {
-    width: 19.2px; /* ۲۰٪ بزرگتر از ۱۶px */
-    height: 19.2px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
     display: block;
-    order: 1; /* آیکون سمت چپ */
   }
   .topnav-token-number {
     font-size: 15.6px; /* ۲۰٪ بزرگتر نسبت به سایز پایه ۱۳px */
     font-weight: 800;
-    color: #ffffff; /* سفید در هر دو حالت (باکس تیره #1a1a1a) */
+    color: var(--text-primary); /* در حالت شب سفید، در حالت روز مشکی */
     font-feature-settings: "tnum";
-    order: 0; /* عدد سمت راست */
   }
 
 

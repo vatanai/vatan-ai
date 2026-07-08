@@ -14,7 +14,7 @@
   --bg-card:           #3F3F3F;
   --bg-affiliate:      #0d2818;
   --border-affiliate:  #1a5c32;
-  --green:             #0BBF53;
+  --green:             #cffd00;
   --accent:            #a07af5;
   --red:               #f05c5c;
   --border-subtle:     #222230;
@@ -28,10 +28,11 @@ html.light {
   --bg-card:           #E5E5E5;
   --bg-affiliate:      #e8f8ee;
   --border-affiliate:  #a8e6be;
-  --green:             #0BBF53;
+  --green:             #cffd00;
   --border-subtle:     #e0e0e0;
   --bg-surface:        #f5f5f5;
 }
+
 
 /* ═══════════════════════════════════════
    FONT — YekanBakh کل صفحه
@@ -170,8 +171,8 @@ html.light .profile-phone { color: #5a7a5a; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(11,191,83,0.12);
-  border: 1px solid rgba(11,191,83,0.3);
+  background: rgba(207,253,0,0.12);
+  border: 1px solid rgba(207,253,0,0.3);
   border-radius: 8px;
   padding: 4px 10px;
 }
@@ -628,7 +629,7 @@ html.light .tab-icon--svg { color: var(--text-primary); }
   margin-top: 4px;
   padding: 8px 18px;
   border-radius: 8px;
-  background: var(--green, #0BBF53);
+  background: var(--green, #cffd00);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -696,7 +697,7 @@ html.light .storage-free { color: rgba(0,0,0,0.25); }
 html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
 .files-sub-tab.active {
   border-color: var(--green);
-  background: rgba(11,191,83,0.1);
+  background: rgba(207,253,0,0.1);
   color: var(--green);
   font-weight: 700;
 }
@@ -722,8 +723,8 @@ html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
 .referral-hero { text-align: center; margin-bottom: 20px; }
 .referral-icon-wrap {
   width: 64px; height: 64px; border-radius: 50%;
-  background: rgba(11,191,83,0.12);
-  border: 1px solid rgba(11,191,83,0.25);
+  background: rgba(207,253,0,0.12);
+  border: 1px solid rgba(207,253,0,0.25);
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 12px;
 }
@@ -751,7 +752,7 @@ html.light .rs-label { color: #5a7a5a; }
 .referral-actions { display: flex; flex-direction: column; gap: 10px; }
 .btn-referral-outline {
   width: 100%; padding: 13px;
-  border-radius: 12px; border: 1px solid rgba(11,191,83,0.35);
+  border-radius: 12px; border: 1px solid rgba(207,253,0,0.35);
   background: transparent; color: var(--green);
   font-size: 14px; font-weight: 500; cursor: pointer;
 }
@@ -1071,7 +1072,7 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 }
 .grid-preview-product-link:hover {
   border-color: var(--green);
-  background: rgba(11,191,83,0.08);
+  background: rgba(207,253,0,0.08);
 }
 .grid-preview-product-link i:first-child { color: var(--green); font-size: 13px; }
 .grid-preview-product-link span { flex: 1; color: var(--text-secondary); }
