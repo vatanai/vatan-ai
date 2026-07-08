@@ -42,8 +42,9 @@ class PlanSubscriptionController extends Controller
             return redirect()->route('login')->with('error', 'لطفاً ابتدا وارد حساب کاربری خود شوید.');
         }
 
-        // اضافه کردن توکن‌های واقعی پلن به موجودی کاربر
+        // اضافه کردن توکن‌های واقعی پلن به موجودی کاربر و ثبت پلن فعلی او
         $user->tokens = ($user->tokens ?? 0) + (int) $planModel->tokens;
+        $user->plan_id = $planModel->id;
         $user->save();
 
         // بازگشت به صفحه قیمت‌ها همراه با پیام موفقیت داینامیک

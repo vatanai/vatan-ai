@@ -306,8 +306,6 @@ body.light .nav-item:hover   { background-color: #f0f0f8 !important; }
 body.light .nav-item.active  { background-color: rgba(124,93,224,.1) !important; }
 body.light .sub-item:hover   { background-color: #f0f0f8 !important; }
 body.light .sub-item.active  { background-color: rgba(124,93,224,.08) !important; }
-body.light .nav-icon         { color: #3d5c42 !important; }
-body.light .nav-item.active .nav-icon  { color: #7c5de0 !important; }
 body.light .nav-label        { color: #3d5c42 !important; }
 body.light .nav-item.active .nav-label { color: #12121e !important; }
 

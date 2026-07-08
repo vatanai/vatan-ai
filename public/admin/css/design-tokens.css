@@ -440,6 +440,9 @@ html, body,
   background: var(--primary); color: var(--accent);
   border-color: var(--primary);
 }
+/* حالت روز: accent فقط مخصوص تم تیره است (طبق design-system.md) —
+   در روز آیکون فعال باید همون سبز روشن لوگو (--logo-green) باشه */
+body.light .nav-link.active .nav-icon { color: var(--logo-green); }
 .nav-label { flex: 1; font-size: 13.5px; font-weight: 600; color: var(--nav-text); transition: color .2s; }
 .nav-link:hover .nav-label { color: var(--text-h); }
 .nav-link.active .nav-label { color: var(--nav-active-t); font-weight: 700; }

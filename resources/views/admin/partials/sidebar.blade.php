@@ -73,30 +73,46 @@
 
     <div class="sb-section">هوش مصنوعی</div>
 
-    {{-- مدیریت مدل‌ها --}}
-    <div class="nav-item">
-      <a href="/admin/models-management" class="nav-link {{ request()->is('admin/models-management') ? 'active' : '' }}">
-        <div class="nav-icon"><i class="fa-solid fa-microchip"></i></div>
-        <div class="nav-label">مدیریت مدل‌ها</div>
-        <span class="nav-status-badge warn">بزودی</span>
-      </a>
-    </div>
-
     {{-- مدل‌های هوشمند --}}
     <div class="nav-item">
       <div class="nav-link {{ request()->is('admin/ai-models*') ? 'active' : '' }}" onclick="toggleSub('ai-models-submenu', this)">
-        <div class="nav-icon"><i class="fa-solid fa-brain"></i></div>
+        <div class="nav-icon"><i class="fa-solid fa-microchip"></i></div>
         <div class="nav-label">مدل‌های هوشمند</div>
         <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/ai-models*') ? 'open' : '' }}"></i>
       </div>
       <div class="submenu {{ request()->is('admin/ai-models*') ? 'open' : '' }}" id="ai-models-submenu">
         <div class="sub-track">
           <a href="{{ route('admin.ai-models.index') }}" class="sub-item {{ request()->is('admin/ai-models') ? 'active' : '' }}">
-            <div class="sub-dot"></div><div class="sub-label">مدیریت مدل‌ها</div>
+            <div class="sub-dot"></div><div class="sub-label">لیست مدل‌ها</div>
           </a>
           <a href="{{ route('admin.ai-models.create') }}" class="sub-item {{ request()->is('admin/ai-models/create') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">افزودن مدل جدید</div>
-            <span class="nav-status-badge mono">OpenRouter</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-divider"></div>
+
+    <div class="sb-section">کاربران</div>
+
+    {{-- کاربران --}}
+    <div class="nav-item">
+      <div class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}" onclick="toggleSub('users-submenu', this)">
+        <div class="nav-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="nav-label">کاربران</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/users*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/users*') ? 'open' : '' }}" id="users-submenu">
+        <div class="sub-track">
+          <a href="/admin/users" class="sub-item {{ request()->is('admin/users') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">لیست کاربران</div>
+          </a>
+          <a href="/admin/users/smart-lists" class="sub-item {{ request()->is('admin/users/smart-lists') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">لیست‌های هوشمند</div>
+          </a>
+          <a href="/admin/users/tokens" class="sub-item {{ request()->is('admin/users/tokens') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت توکن</div>
           </a>
         </div>
       </div>
@@ -171,18 +187,6 @@
           </div>
 
           <div class="sb-section">مدیریت</div>
-
-          <div class="sub-item sub-item-parent" onclick="toggleSubSub('future-users-submenu', this)">
-            <div class="sub-dot"></div><div class="sub-label">کاربران</div>
-            <i class="fa-solid fa-chevron-down sub-chev"></i>
-          </div>
-          <div class="sub-sub-wrap" id="future-users-submenu">
-            <div class="sub-sub-track">
-              <a href="/admin/users" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست کاربران</div></a>
-              <a href="/admin/users/smart-lists" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست‌های هوشمند</div></a>
-              <a href="/admin/users/tokens" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">مدیریت توکن</div></a>
-            </div>
-          </div>
 
           <div class="sub-item sub-item-parent" onclick="toggleSubSub('future-bloggers-submenu', this)">
             <div class="sub-dot"></div><div class="sub-label">بلاگرها</div>

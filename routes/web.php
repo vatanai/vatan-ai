@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/pricing/fake-payment/{plan}', [PlanSubscriptionController::class, 'fakePayment'])->name('pricing.fakePayment');
 });

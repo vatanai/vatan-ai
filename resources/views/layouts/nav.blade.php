@@ -38,11 +38,38 @@
         بساز
       </a>
 
-      {{-- دکمه تغییر تم (روز/شب) --}}
-      <button type="button" id="nav-theme-toggle" class="topnav-theme-btn w-9 h-9 flex items-center justify-center shrink-0 rounded-[10px] border border-white/15 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/5 text-white [.light_&]:text-black transition-all duration-200 hover:bg-white/10 [.light_&]:hover:bg-black/10 cursor-pointer" aria-label="تغییر تم">
-        <svg class="nav-icon-moon block [.light_&]:hidden" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <svg class="nav-icon-sun hidden [.light_&]:block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
-      </button>
+      {{-- دکمه تغییر تم (روز / شب / سیستم) --}}
+      <div class="topnav-theme-wrap relative">
+        <button type="button" id="nav-theme-toggle" class="topnav-theme-btn w-9 h-9 flex items-center justify-center shrink-0 rounded-[10px] border border-white/15 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/5 text-white [.light_&]:text-black transition-all duration-200 hover:bg-white/10 [.light_&]:hover:bg-black/10 cursor-pointer" aria-label="تغییر تم" aria-expanded="false">
+          <svg data-icon="moon" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg data-icon="sun" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+          <svg data-icon="system" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </button>
+
+        <div id="theme-menu" class="theme-menu" role="menu" aria-label="انتخاب حالت نمایش">
+          <button type="button" class="theme-menu-item" data-theme-choice="light" role="menuitemradio">
+            <span class="theme-menu-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+            </span>
+            <span>روز</span>
+            <svg class="theme-menu-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button type="button" class="theme-menu-item" data-theme-choice="dark" role="menuitemradio">
+            <span class="theme-menu-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </span>
+            <span>شب</span>
+            <svg class="theme-menu-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button type="button" class="theme-menu-item" data-theme-choice="system" role="menuitemradio">
+            <span class="theme-menu-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </span>
+            <span>سیستم</span>
+            <svg class="theme-menu-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      </div>
 
       {{-- نمایش آواتار کاربری به همراه دراپ‌داون --}}
       @auth
@@ -237,16 +264,159 @@
     border-style: solid;
     transition: transform 0.2s ease;
   }
+
+  /* ── دکمه/منوی تغییر تم (روز/شب/سیستم) ── */
+  .theme-trigger-icon {
+    display: none;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+  .theme-trigger-icon.is-shown {
+    display: block;
+  }
+
+  .theme-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 148px;
+    padding: 6px;
+    border-radius: 12px;
+    background: #16161c;
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    z-index: 320;
+  }
+  html.light .theme-menu {
+    background: #ffffff;
+    border-color: rgba(0,0,0,.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,.12);
+  }
+
+  .theme-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: rgba(255,255,255,.75);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+    text-align: right;
+  }
+  html.light .theme-menu-item { color: rgba(0,0,0,.65); }
+
+  .theme-menu-item:hover {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+  }
+  html.light .theme-menu-item:hover {
+    background: rgba(0,0,0,.05);
+    color: #000;
+  }
+
+  .theme-menu-item.is-active {
+    background: rgba(11,191,83,.15);
+    color: #0BBF53;
+    font-weight: 700;
+  }
+  html.light .theme-menu-item.is-active {
+    background: rgba(11,191,83,.12);
+    color: #0a9c44;
+  }
+
+  .theme-menu-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+  }
+
+  .theme-menu-item span:nth-child(2) {
+    flex: 1;
+  }
+
+  .theme-menu-check {
+    flex-shrink: 0;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .theme-menu-item.is-active .theme-menu-check {
+    opacity: 1;
+    transform: scale(1);
+  }
 </style>
 
 <script>
 (function () {
-  /* ───── دکمه تغییر تم در هدر ───── */
-  var navThemeBtn = document.getElementById('nav-theme-toggle');
-  if (navThemeBtn) {
-    navThemeBtn.addEventListener('click', function () {
-      window.vatanToggleTheme && window.vatanToggleTheme();
+  /* ───── دکمه/منوی تغییر تم در هدر (روز/شب/سیستم) ───── */
+  var navThemeBtn  = document.getElementById('nav-theme-toggle');
+  var themeMenu    = document.getElementById('theme-menu');
+  var themeMenuOpen = false;
+
+  function syncThemeUI() {
+    var mode = window.vatanGetThemeMode ? window.vatanGetThemeMode() : 'dark';
+    if (navThemeBtn) {
+      navThemeBtn.querySelectorAll('.theme-trigger-icon').forEach(function (icon) {
+        icon.classList.toggle('is-shown', icon.dataset.icon === mode);
+      });
+    }
+    if (themeMenu) {
+      themeMenu.querySelectorAll('.theme-menu-item').forEach(function (item) {
+        item.classList.toggle('is-active', item.dataset.themeChoice === mode);
+      });
+    }
+  }
+
+  function openThemeMenu() {
+    if (!themeMenu) return;
+    themeMenu.style.display = 'block';
+    navThemeBtn.setAttribute('aria-expanded', 'true');
+    themeMenuOpen = true;
+  }
+
+  function closeThemeMenu() {
+    if (!themeMenu) return;
+    themeMenu.style.display = 'none';
+    navThemeBtn.setAttribute('aria-expanded', 'false');
+    themeMenuOpen = false;
+  }
+
+  if (navThemeBtn && themeMenu) {
+    syncThemeUI();
+
+    navThemeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      themeMenuOpen ? closeThemeMenu() : openThemeMenu();
     });
+
+    themeMenu.querySelectorAll('.theme-menu-item').forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        e.stopPropagation();
+        window.vatanSetTheme && window.vatanSetTheme(item.dataset.themeChoice);
+        closeThemeMenu();
+      });
+    });
+
+    document.addEventListener('click', function () {
+      if (themeMenuOpen) closeThemeMenu();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && themeMenuOpen) closeThemeMenu();
+    });
+
+    document.addEventListener('vatan-theme-changed', syncThemeUI);
   }
 
   function detectActiveKey() {

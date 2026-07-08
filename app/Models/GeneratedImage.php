@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Jalali;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -24,5 +25,25 @@ class GeneratedImage extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * تاریخ و ساعت ساخت به شمسی — برای نمایش در مودال پیش‌نمایش عکس پروفایل
+     */
+    public function getJalaliCreatedAtAttribute(): string
+    {
+        return Jalali::format($this->created_at);
+    }
+
+    /**
+     * لینک مستقیم به صفحه محصول اصلی که این عکس با اون ساخته شده (در صورت وجود محصول)
+     */
+    public function getProductUrlAttribute(): ?string
+    {
+        if (!$this->product || empty($this->product->slug)) {
+            return null;
+        }
+
+        return route('app.product', $this->product->slug);
     }
 }

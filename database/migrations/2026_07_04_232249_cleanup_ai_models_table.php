@@ -13,13 +13,20 @@ return new class extends Migration
     {
         Schema::table('ai_models', function (Blueprint $blueprint) {
             // حذف کامل ستون‌های اضافی و تکراری از دیتابیس
-            $blueprint->dropColumn([
+            // نکته: چون در برخی محیط‌ها این ستون‌ها اصلاً ساخته نشده بودند
+            // (و همین باعث خطای «Column not found» و توقف کل زنجیره migrate می‌شد)،
+            // هر ستون فقط در صورت وجود واقعی حذف می‌شود.
+            $columnsToDrop = array_filter([
                 'landscape_width',
                 'landscape_height',
                 'total_generations',
                 'total_tokens_consumed',
-                'output_type'
-            ]);
+                'output_type',
+            ], fn ($column) => Schema::hasColumn('ai_models', $column));
+
+            if (!empty($columnsToDrop)) {
+                $blueprint->dropColumn($columnsToDrop);
+            }
         });
     }
 

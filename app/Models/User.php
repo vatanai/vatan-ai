@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -25,6 +26,8 @@ class User extends Authenticatable
         'tokens',            // موجودی فعلی توکن
         'tokens_purchased',  // کل توکن‌های خریداری شده از اول تا الان
         'tokens_used',       // کل توکن‌های مصرف شده
+        'plan_id',           // پلن فعلی کاربر (ارتباط با جدول plans)
+        'referral_earnings', // موجودی درآمد رفرال به تومان
     ];
 
     /**
@@ -46,6 +49,7 @@ class User extends Authenticatable
             'tokens' => 'integer',
             'tokens_purchased' => 'integer',
             'tokens_used' => 'integer',
+            'referral_earnings' => 'integer',
         ];
     }
 
@@ -63,5 +67,13 @@ class User extends Authenticatable
     public function uploadedImages(): HasMany
     {
         return $this->hasMany(UserUpload::class, 'user_id');
+    }
+
+    /**
+     * پلن فعلی کاربر (در صورت null، کاربر پلن رایگان محسوب می‌شود)
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
     }
 }

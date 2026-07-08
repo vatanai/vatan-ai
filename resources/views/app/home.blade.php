@@ -46,17 +46,21 @@
 
   {{-- ===== HAMBURGER DROPDOWN MENU ===== --}}
   <div id="menuOverlay" style="display:none;position:fixed;inset:0;z-index:160;" onclick="if(event.target===this){closeMenu();}">
-    <div id="menuSheet" style="position:absolute;top:calc(env(safe-area-inset-top) + 136px);right:12px;width:296px;background:#111116;border:1px solid #222230;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
+    <div id="menuSheet" style="position:absolute;top:calc(env(safe-area-inset-top) + 136px);right:12px;width:296px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
 
       {{-- عکس + اسم + تغییر تم --}}
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid #222230;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border-subtle);">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;">
-            <img src="https://i.pravatar.cc/150?img=12" style="width:100%;height:100%;object-fit:cover;">
+          <div style="width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-page);">
+            @if(auth()->user() && auth()->user()->avatar)
+              <img src="{{ asset('storage/' . auth()->user()->avatar) }}" style="width:100%;height:100%;object-fit:cover;">
+            @else
+              <img src="{{ asset('assets/img/icons/nav-profile.svg') }}" class="floating-icon" style="width:100%;height:100%;object-fit:contain;padding:22%;box-sizing:border-box;opacity:.55;">
+            @endif
           </div>
           <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:#ffffff;">محسن آقاجانی</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:#a8c4a8;" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+            <p style="margin:0;font-size:13px;font-weight:700;color:var(--text-primary);">{{ auth()->user()->name ?? '' }} {{ auth()->user()->last_name ?? '' }}</p>
+            <p style="margin:2px 0 0 0;font-size:11px;color:var(--text-secondary);" dir="ltr">{{ auth()->user()->phone ?? '' }}</p>
           </div>
         </div>
         <button id="theme-toggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
@@ -84,9 +88,9 @@
       </div>
 
       {{-- تنظیمات --}}
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid #222230;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-subtle);" onmouseover="this.style.background='var(--bg-surface)'" onmouseout="this.style.background='transparent'">
         <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:#ffffff;">تنظیمات</span>
+        <span style="font-size:13px;color:var(--text-primary);">تنظیمات</span>
       </div>
 
       {{-- خروج --}}

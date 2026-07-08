@@ -1,0 +1,53 @@
+/* ══════════════════════════════════════════════════════════════
+   استایل صفحه «ثبت محصول جدید» (admin/products/create.blade.php)
+   توکن‌های رنگی — پشتیبانی حالت شب/روز
+   همان اسم متغیرهایی که در resources/views/admin/products/products-dashboard.blade.php
+   استفاده شده (bg/s1/s2/b1/b2/text/text2/text3/accent/green/red/orange) تا با بقیه
+   بخش «داشبورد محصولات» هماهنگ بماند؛ فقط اینجا override حالت روشن هم اضافه شده.
+   رنگ‌های برند/معنایی (accent, green, red, orange) طبق قرارداد design-tokens.css
+   در هر دو حالت ثابت می‌مانند — فقط بک‌گراند/بوردر/متن بین شب و روز تغییر می‌کند.
+   ══════════════════════════════════════════════════════════════ */
+#product-create-page {
+  --bg:     #0c0c10;
+  --s1:     #111116;
+  --s2:     #16161c;
+  --b1:     #222230;
+  --b2:     #2e2e3e;
+  --text:   #ffffff;
+  --text2:  #a8c4a8;
+  --text3:  #4d7a56;
+  --text4:  #3a3a48;
+  --accent:       #a07af5;
+  --accent-hover: #8f68e0;
+  --accent-soft:  #c9b8f5;
+  --green:        #0BBF53;
+  --green-hover:  #08a443;
+  --red:          #f05c5c;
+  --red-soft:     #ff9191;
+  --orange:       #f0a05c;
+}
+body.light #product-create-page {
+  --bg:     #f5f5f5;
+  --s1:     #f5f5f5;
+  --s2:     #ffffff;
+  --b1:     #E5E6E6;
+  --b2:     #d5d6d6;
+  --text:   #111111;
+  --text2:  #3a3a3a;
+  --text3:  #686E6B;
+  --text4:  #9a9a9a;
+  --accent-soft:  #6d4fc4;
+  /* accent/green/red/orange عمداً override نمی‌شوند — طبق قرارداد design-tokens.css در هر دو حالت ثابت‌اند */
+}
+
+/* Skeleton System Unified — یک کلاس مشترک shimmer برای همه حالت‌های Loading صفحه */
+.skeleton { position: relative; overflow: hidden; background: var(--s1); }
+.skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(160,122,245,0.12), transparent);
+  animation: skeleton-shimmer 1.4s infinite;
+}
+@keyframes skeleton-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* A11Y: مشخص بودن واضح Focus روی عناصر تعاملی */
+#real-product-form :focus-visible, .admin-content :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

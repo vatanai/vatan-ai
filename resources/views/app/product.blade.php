@@ -2,17 +2,17 @@
 
 @section('content')
 {{-- تنظیم ارتفاع دقیق برای دسکتاپ منهای ۶۴ پیکسلِ هدر لایوت وطن AI --}}
-<div class="h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] text-white flex flex-col overflow-hidden relative" dir="rtl">
+<div class="h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] [.light_&]:bg-white text-white [.light_&]:text-black flex flex-col overflow-hidden relative" dir="rtl">
 
   {{-- بدنه اصلی صفحه --}}
   <div class="flex-1 flex overflow-hidden">
 
     {{-- بخش تصویر اصلی پیش‌فرض صفحه --}}
-    <div class="flex-1 p-4 md:p-8 flex items-center justify-center relative bg-[#0a0a0c]">
+    <div class="flex-1 p-4 md:p-8 flex items-center justify-center relative bg-[#0a0a0c] [.light_&]:bg-white">
       <button onclick="history.length>1?history.back():location.href='/app/home'"
         class="absolute top-5 left-5 z-20 w-8 h-8 flex items-center justify-center
-               rounded-full bg-white/[0.04] hover:bg-white/10 border border-white/[0.06]
-               text-gray-400 hover:text-white text-xs transition-colors">
+               rounded-full bg-white/[0.04] [.light_&]:bg-black/[0.04] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.06] [.light_&]:border-black/10
+               text-gray-400 hover:text-white [.light_&]:hover:text-black text-xs transition-colors">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
 
@@ -28,25 +28,25 @@
     </div>
 
     {{-- سایدبار اطلاعات محصول --}}
-    <div class="w-[380px] shrink-0 bg-[#121214] border-r border-white/[0.04] flex flex-col h-full overflow-hidden">
+    <div class="w-[380px] shrink-0 bg-[#121214] [.light_&]:bg-[#f5f5f5] border-r border-white/[0.04] [.light_&]:border-black/[0.06] flex flex-col h-full overflow-hidden">
       <div class="flex-1 overflow-y-auto p-6 pb-32 sm:pb-6 flex flex-col gap-6"
            style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
 
         {{-- هدر سایدبار --}}
         <div class="flex items-start justify-between">
-          <h1 class="text-[13px] font-bold text-gray-200 uppercase tracking-widest leading-relaxed max-w-[250px]">
+          <h1 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed max-w-[250px]">
             {{ $product->name_fa }}
           </h1>
           <button onclick="history.length>1?history.back():location.href='/app/home'"
-            class="text-gray-500 hover:text-white transition-colors">
+            class="text-gray-500 hover:text-white [.light_&]:hover:text-black transition-colors">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
 
         {{-- دسته‌بندی و قیمت توکنی ابزار --}}
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] border border-white/[0.05] rounded-full">
-            <span class="text-[11px] font-bold text-gray-300">
+          <div class="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-full">
+            <span class="text-[11px] font-bold text-gray-300 [.light_&]:text-gray-700">
               {{ $product->subcategory ?: $product->category }}
             </span>
             @if($product->pricing_model === 'per_credit')
@@ -59,10 +59,10 @@
           </div>
           
           <div class="flex items-center gap-1.5">
-            <button id="btnShare" class="w-8 h-8 bg-white/[0.03] hover:bg-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+            <button id="btnShare" class="w-8 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
               <i class="fa-solid fa-share text-[11px]"></i>
             </button>
-            <button id="btnBookmark" class="px-3 h-8 bg-white/[0.03] hover:bg-white/10 border border-white/[0.05] rounded-full flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors">
+            <button id="btnBookmark" class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-full flex items-center gap-1.5 text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
               <i id="iconBkm" class="fa-regular fa-bookmark text-[11px]"></i>
               <span class="text-[11px] font-bold">ذخیره</span>
             </button>
@@ -71,8 +71,8 @@
 
         {{-- توضیحات محصول --}}
         @if($product->description_fa)
-        <div class="flex items-start gap-2.5 bg-white/[0.01] p-3 rounded-xl border border-white/[0.03]">
-          <p class="text-[11px] font-medium text-gray-400 leading-relaxed m-0">
+        <div class="flex items-start gap-2.5 bg-white/[0.01] [.light_&]:bg-black/[0.02] p-3 rounded-xl border border-white/[0.03] [.light_&]:border-black/[0.06]">
+          <p class="text-[11px] font-medium text-gray-400 [.light_&]:text-gray-600 leading-relaxed m-0">
             {{ $product->description_fa }}
           </p>
         </div>
@@ -92,10 +92,10 @@
         {{-- نمونه خروجی‌ها --}}
         @if(is_array($product->sample_outputs) && count($product->sample_outputs))
         <div class="space-y-3 mt-2">
-          <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">نمونه خروجی‌ها</h3>
+          <h3 class="text-[10px] font-black text-gray-500 [.light_&]:text-gray-600 uppercase tracking-widest">نمونه خروجی‌ها</h3>
           <div class="grid grid-cols-3 gap-2">
             @foreach(array_slice($product->sample_outputs,0,3) as $s)
-            <div class="aspect-square rounded-lg bg-[#1a1a1d] border border-white/5 overflow-hidden">
+            <div class="aspect-square rounded-lg bg-[#1a1a1d] [.light_&]:bg-black/[0.04] border border-white/5 [.light_&]:border-black/10 overflow-hidden">
               <img src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90">
             </div>
             @endforeach

@@ -23,7 +23,7 @@ class AiTestController extends Controller
     {
         $request->validate([
             'prompt'   => 'required|string|max:2000',
-            'model_id' => 'required|string|exists:ai_models,model_id',
+            'model_id' => 'required|string|exists:ai_models,openrouter_model_id',
         ]);
 
         try {
@@ -77,7 +77,7 @@ class AiTestController extends Controller
 
             return response()->json([
                 'success'    => true,
-                'used_model' => $result['model'] ?? $aiModel->model_id,
+                'used_model' => $result['model'] ?? $aiModel->openrouter_model_id,
                 'output'     => $result['data'] ?? $result,
             ]);
 

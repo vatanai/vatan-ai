@@ -3,95 +3,170 @@
 
 @section('content')
 <div class="flex min-h-screen bg-[#0c0c10] text-white" dir="rtl">
-
   <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
     @include('admin.partials.header')
 
-    <div class="admin-content p-6 flex-1 flex justify-center items-start overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content">
+    <div class="admin-content p-6 flex-1 pb-24 overflow-y-auto max-[768px]:p-[18px]" id="content">
 
-      <div class="w-full max-w-2xl bg-[#111116] border border-[#222230] rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-8 relative">
-        
-        <div class="absolute top-[-20%] left-[-20%] w-72 h-72 bg-[#a07af5]/5 rounded-full blur-[80px] pointer-events-none"></div>
+      @if ($errors->any())
+        <div class="bg-[#f05c5c]/10 border border-[#f05c5c] rounded-xl p-4 mb-6 text-right">
+            <div class="text-[#f05c5c] font-bold text-sm mb-2">اصلاح خطاهای زیر الزامی است:</div>
+            <ul class="text-[#ff9191] text-xs pr-5 list-disc space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+      @endif
 
-        <div class="mb-6 select-none relative z-10">
-          <h2 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
-            <i class="fa-regular fa-pen-to-square text-[#a07af5] text-base"></i>
-            ویرایش تنظیمات مدل: <span class="text-[#a07af5]">{{ $model->name }}</span>
-          </h2>
-          <p class="mt-1 text-[11px] text-[#4d7a56]">تغییر کانفیگ، شناسه موتور و دسترسی‌های فریم‌ورک OpenRouter</p>
+      <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div class="text-xl font-extrabold tracking-tight mb-1">ویرایش مدل: <span class="text-[#a07af5]">{{ $model->name }}</span></div>
+          <div class="text-xs text-gray-500">تغییر کانفیگ، شناسه موتور و دسترسی‌های فریم‌ورک OpenRouter</div>
+        </div>
+        <a href="{{ route('admin.ai-models.index') }}" class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[#16161c] text-[#a8c4a8] border border-[#222230] transition-all hover:text-white no-underline">
+          <i class="fa-solid fa-arrow-right text-[11px]"></i> بازگشت به لیست
+        </a>
+      </div>
+
+      <form action="{{ route('admin.ai-models.update', $model->id) }}" method="POST" enctype="multipart/form-data">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="is_active" id="model-status" value="{{ old('is_active', $model->is_active ? '1' : '0') }}">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div class="lg:col-span-2 space-y-4">
+            <div class="bg-[#16161c] border border-[#222230] rounded-xl p-5">
+              <div class="text-xs font-bold text-white mb-4 flex items-center gap-2 pb-3 border-b border-[#222230]">
+                <i class="fa-solid fa-circle-nodes text-[#a07af5]"></i> اطلاعات هویتی و فنی مدل
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[#a8c4a8]">نام نمایشی مدل <span class="text-[#f05c5c] mr-0.5">*</span></label>
+                  <input type="text" name="name" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full" value="{{ old('name', $model->name) }}" placeholder="مثلا: GPT-4o Omni" required>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[#a8c4a8]">شناسه مدل در OpenRouter <span class="text-[#f05c5c] mr-0.5">*</span></label>
+                  <input type="text" name="openrouter_model_id" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full ltr text-left font-mono" value="{{ old('openrouter_model_id', $model->openrouter_model_id) }}" placeholder="openai/gpt-4o" required>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[#a8c4a8]">شرکت سازنده (Provider Name) <span class="text-[#f05c5c] mr-0.5">*</span></label>
+                  <input type="text" name="provider_name" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full" value="{{ old('provider_name', $model->provider_name) }}" placeholder="مثلا: OpenAI یا Google" required>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[#a8c4a8]">نوع خروجی (Output Modality) <span class="text-[#f05c5c] mr-0.5">*</span></label>
+                  @php $curModality = old('output_modality', $model->output_modality); @endphp
+                  <select name="output_modality" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full cursor-pointer" required>
+                    <option value="text" {{ $curModality == 'text' ? 'selected' : '' }}>متن (text)</option>
+                    <option value="image" {{ $curModality == 'image' ? 'selected' : '' }}>عکس (image)</option>
+                    <option value="video" {{ $curModality == 'video' ? 'selected' : '' }}>ویدیو (video)</option>
+                    <option value="audio" {{ $curModality == 'audio' ? 'selected' : '' }}>صدا (audio)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1.5 mb-4">
+                <label class="text-xs font-semibold text-[#a8c4a8]">توضیحات مدل</label>
+                <textarea name="description" rows="3" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full resize-none leading-relaxed" placeholder="یادداشت یا توضیحات کوتاه مدل...">{{ old('description', $model->description) }}</textarea>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-[#a8c4a8]">پارامترهای پیش‌فرض (JSON Configuration)</label>
+                <textarea name="default_parameters" rows="4" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] w-full font-mono text-left ltr resize-none" placeholder='{ "temperature": 0.7 }'>{{ old('default_parameters', $model->default_parameters) }}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div class="bg-[#16161c] border border-[#222230] rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <div class="text-xs font-bold text-white mb-0.5">وضعیت فعال بودن</div>
+                <div class="text-[10px] text-gray-500">امکان فراخوانی گیت‌وی در سایت</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" id="status-toggle" {{ old('is_active', $model->is_active) ? 'checked' : '' }} class="sr-only peer" onchange="document.getElementById('model-status').value = this.checked ? '1' : '0'">
+                <div class="w-9 h-5 bg-[#222230] rounded-full peer peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-0.5 after:right-[2px] after:bg-gray-500 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#a07af5] peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+
+            <div class="bg-[#16161c] border border-[#222230] rounded-xl p-5 space-y-4">
+              <div class="text-xs font-bold text-white pb-2 border-b border-[#222230]"><i class="fa-solid fa-wand-magic-sparkles text-[#a07af5] ml-1"></i> ویژگی‌ها و هزینه‌ها</div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[11px] text-[#a8c4a8]">پشتیبانی از ورودی عکس (Vision)</label>
+                @php $curVision = old('supports_image_input', $model->supports_image_input ? '1' : '0'); @endphp
+                <select name="supports_image_input" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] cursor-pointer">
+                  <option value="0" {{ $curVision == '0' ? 'selected' : '' }}>خیر (فقط ورودی متنی)</option>
+                  <option value="1" {{ $curVision == '1' ? 'selected' : '' }}>بله (دارای قابلیت خواندن تصویر)</option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[11px] text-[#a8c4a8]">هزینه به توکن AIPix (هر جنریت) <span class="text-[#f05c5c] mr-0.5">*</span></label>
+                <input type="number" name="cost_per_generation" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] font-mono text-left ltr" value="{{ old('cost_per_generation', $model->cost_per_generation) }}" required>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-[11px] text-[#a8c4a8]">عرض پیش‌فرض (پیکسل)</label>
+                  <input type="number" name="default_width" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] font-mono text-left ltr" value="{{ old('default_width', $model->default_width) }}">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-[11px] text-[#a8c4a8]">ارتفاع پیش‌فرض (پیکسل)</label>
+                  <input type="number" name="default_height" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none focus:border-[#a07af5] font-mono text-left ltr" value="{{ old('default_height', $model->default_height) }}">
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-[#16161c] border border-[#222230] rounded-xl p-5">
+              <div class="text-xs font-bold text-white mb-3 flex items-center gap-2 pb-2 border-b border-[#222230]">
+                <i class="fa-regular fa-image text-[#a07af5]"></i> لوگو یا عکس مدل هوش مصنوعی
+              </div>
+              <div class="flex flex-col items-center justify-center border border-dashed border-[#333345] bg-[#111116] rounded-xl p-4 transition hover:border-[#a07af5] relative group min-h-[140px]">
+                <img id="image-preview" class="{{ $model->image_url ? '' : 'hidden' }} w-16 h-16 object-contain rounded-lg mb-2 shadow" src="{{ $model->image_url }}" alt="Preview">
+                <div id="upload-placeholder" class="flex flex-col items-center justify-center text-center cursor-pointer">
+                  <i class="fa-solid fa-cloud-arrow-up text-lg text-gray-500 mb-1.5 group-hover:text-[#a07af5] transition-colors"></i>
+                  <span class="text-[11px] text-[#a8c4a8] font-medium">تغییر تصویر مدل</span>
+                  <span class="text-[9px] text-gray-600 mt-0.5">در صورت انتخاب، تصویر قبلی جایگزین می‌شود</span>
+                </div>
+                <input type="file" name="model_image" id="model_image" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onchange="previewImage(this)">
+              </div>
+            </div>
+          </div>
         </div>
 
-        @if($errors->any())
-          <div class="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3.5 mb-5 flex items-start gap-2.5 relative z-10">
-            <i class="fa-solid fa-triangle-exclamation text-rose-500 mt-0.5 shrink-0 text-xs"></i>
-            <div class="text-[11px] text-rose-400 font-medium leading-relaxed">
-              {{ $errors->first() }}
-            </div>
-          </div>
-        @endif
-
-        <form class="space-y-5 relative z-10" action="{{ route('admin.ai-models.update', $model->id) }}" method="POST">
-          @csrf
-          @method('PUT') <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label for="name" class="block text-xs font-semibold text-[#a8c4a8] mb-1.5 pr-0.5">نام مدل (فارسی)</label>
-              <input id="name" name="name" type="text" required value="{{ old('name', $model->name) }}"
-                     class="block w-full px-4 py-2.5 bg-[#0c0c10] border border-[#222230] rounded-xl text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-[#a07af5] focus:ring-4 focus:ring-[#a07af5]/5"
-                     placeholder="مثال: جی‌پی‌تی 4 او">
-            </div>
-
-            <div>
-              <label for="provider" class="block text-xs font-semibold text-[#a8c4a8] mb-1.5 pr-0.5">کمپانی ارائه‌دهنده (Provider)</label>
-              <input id="provider" name="provider" type="text" required value="{{ old('provider', $model->provider) }}"
-                     class="block w-full px-4 py-2.5 bg-[#0c0c10] border border-[#222230] rounded-xl text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-[#a07af5] focus:ring-4 focus:ring-[#a07af5]/5"
-                     placeholder="مثال: OpenAI یا Google">
-            </div>
-          </div>
-
-          <div>
-            <label for="model_id" class="block text-xs font-semibold text-[#a8c4a8] mb-1.5 pr-0.5">شناسه اِی‌پی‌آی (Model ID)</label>
-            <input id="model_id" name="model_id" type="text" required value="{{ old('model_id', $model->model_id) }}"
-                   class="block w-full px-4 py-2.5 bg-[#0c0c10] border border-[#222230] rounded-xl text-xs text-white placeholder-gray-600 outline-none transition-all focus:border-[#a07af5] focus:ring-4 focus:ring-[#a07af5]/5 ltr text-left font-mono tracking-wide"
-                   placeholder="openai/gpt-4o-mini">
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            
-            <div class="bg-[#0c0c10] border border-[#222230] rounded-xl p-3.5 flex items-center justify-between select-none">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs font-bold text-white">وضعیت فعالیت مدل</span>
-                <span class="text-[10px] text-[#4d7a56]">در دسترس بودن مدل برای کاربران سیستم</span>
-              </div>
-              <input id="is_active" name="is_active" type="checkbox" value="1" {{ old('is_active', $model->is_active) ? 'checked' : '' }}
-                     class="h-4 w-4 bg-[#0c0c10] border-[#222230] rounded text-[#a07af5] focus:ring-offset-0 focus:ring-[#a07af5]/30 cursor-pointer">
-            </div>
-
-            <div class="bg-[#0c0c10] border border-[#222230] rounded-xl p-3.5 flex items-center justify-between select-none">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs font-bold text-white">پشتیبانی از Vision</span>
-                <span class="text-[10px] text-[#4d7a56]">توانایی آنالیز تصاویر و ورودی‌های مولتی‌مدیا</span>
-              </div>
-              <input id="supports_vision" name="supports_vision" type="checkbox" value="1" {{ old('supports_vision', $model->supports_vision) ? 'checked' : '' }}
-                     class="h-4 w-4 bg-[#0c0c10] border-[#222230] rounded text-[#a07af5] focus:ring-offset-0 focus:ring-[#a07af5]/30 cursor-pointer">
-            </div>
-
-          </div>
-
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-[#222230]/70">
-            <a href="{{ route('admin.ai-models.index') }}" 
-               class="px-4 h-10 rounded-xl text-xs font-semibold bg-[#222230] text-gray-400 hover:text-white flex items-center justify-center transition-colors no-underline">
-              انصراف
-            </a>
-            <button type="submit" 
-                    class="px-5 h-10 flex justify-center items-center gap-1.5 rounded-xl text-xs font-bold bg-[#a07af5] text-black shadow-lg shadow-[#a07af5]/10 hover:bg-[#8f68e0] active:scale-[0.98] transition-all cursor-pointer">
-              <i class="fa-regular fa-circle-check text-[13px]"></i> ذخیره تغییرات نهایی
-            </button>
-          </div>
-        </form>
-
-      </div>
+        <div class="fixed bottom-0 right-0 left-0 bg-[#111116]/80 backdrop-blur border-t border-[#222230] px-6 h-16 flex items-center justify-end gap-3 z-40 md:mr-[294px]">
+          <a href="{{ route('admin.ai-models.index') }}" class="px-5 h-[38px] rounded-lg text-xs font-bold bg-[#222230] text-gray-400 hover:text-white flex items-center justify-center transition-colors no-underline">
+            انصراف
+          </a>
+          <button type="submit" class="px-5 h-[38px] rounded-lg text-xs font-bold bg-[#a07af5] text-[#0c0c10] shadow-lg shadow-[#a07af5]/10 hover:bg-[#8f68e0] transition-all flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-[13px]"></i>
+            ذخیره تغییرات نهایی
+          </button>
+        </div>
+      </form>
 
     </div>
   </main>
 </div>
+
+<script>
+  function previewImage(input) {
+    const preview = document.getElementById('image-preview');
+    const placeholder = document.getElementById('upload-placeholder');
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+        placeholder.classList.add('opacity-40');
+      }
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+</script>
 @endsection

@@ -87,7 +87,7 @@ class OpenRouterService
     public function generateImage(AiModel $aiModel, string $prompt, array $extraPayload = [], ?int $timeoutOverride = null): array
     {
         return $this->generateImageFromPrompt(
-            $aiModel->model_id,
+            $aiModel->openrouter_model_id,
             $prompt,
             $extraPayload['resolution']   ?? '1K',
             $extraPayload['aspect_ratio'] ?? '1:1',

@@ -8,48 +8,58 @@
   <div class="avatar-wrap">
     <div class="avatar-ring">
       <div class="avatar-inner">
-        <img src="https://i.pravatar.cc/150?img=12" alt="avatar" class="avatar-img">
+        @if(auth()->user()->avatar)
+          <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="عکس پروفایل" class="avatar-img" id="profileAvatarImg">
+        @else
+          <img src="{{ asset('assets/img/icons/nav-profile.svg') }}" alt="عکس پروفایل" class="avatar-img avatar-img--placeholder icon-filter" id="profileAvatarImg">
+        @endif
       </div>
     </div>
   </div>
+
+  {{-- فرم مخفی آپلود عکس پروفایل --}}
+  <form id="avatarUploadForm" action="{{ route('profile.avatar.update') }}" method="POST" enctype="multipart/form-data" class="hidden">
+    @csrf
+    <input type="file" name="avatar" id="avatarInput" accept="image/png,image/jpeg,image/webp">
+  </form>
 
   {{-- اطلاعات --}}
   <div class="profile-info">
 
     {{-- نام --}}
     <div class="name-row">
-      <h1 class="profile-name">محسن آقاجانی</h1>
+      <h1 class="profile-name">{{ auth()->user()->name }} {{ auth()->user()->last_name }}</h1>
     </div>
 
     {{-- شماره موبایل --}}
-    <p class="profile-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+    <p class="profile-phone" dir="ltr">{{ auth()->user()->phone }}</p>
 
     {{-- بج پلن — فقط desktop --}}
     <div class="plan-badge show-desktop">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="#0BBF53"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
-      <span>پلن رایگان</span>
+      <span>پلن {{ $planName }}</span>
     </div>
 
     {{-- آمار ۴ تایی — فقط mobile --}}
     <div class="stats-row hide-desktop">
       <div class="stat-col">
-        <span class="stat-number">۳۵</span>
-        <span class="stat-label">پست</span>
+        <span class="stat-number">{{ number_format($tokenBalance) }}</span>
+        <span class="stat-label">توکن</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">۱۸۱۰</span>
+        <span class="stat-number">{{ number_format($createdCount) }}</span>
         <span class="stat-label">ساخته‌شده</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">۱۴</span>
-        <span class="stat-label">روز عضویت</span>
+        <span class="stat-number stat-number--plan">{{ $planName }}</span>
+        <span class="stat-label">پلن</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number stat-number--plan">رایگان</span>
-        <span class="stat-label">پلن</span>
+        <span class="stat-number">{{ number_format($earnings) }}</span>
+        <span class="stat-label">تومان درآمد</span>
       </div>
     </div>
 
@@ -66,11 +76,15 @@
           <div class="sm-header">
             <div class="sm-user">
               <div class="sm-avatar-wrap">
-                <img src="https://i.pravatar.cc/150?img=12" alt="" class="sm-avatar-img">
+                @if(auth()->user()->avatar)
+                  <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="" class="sm-avatar-img" id="profileAvatarImgSm">
+                @else
+                  <img src="{{ asset('assets/img/icons/nav-profile.svg') }}" alt="" class="sm-avatar-img avatar-img--placeholder icon-filter" id="profileAvatarImgSm">
+                @endif
               </div>
               <div>
-                <p class="sm-name">محسن آقاجانی</p>
-                <p class="sm-phone" dir="ltr">۰۹۱۲۰۰۰۰۰۰۰</p>
+                <p class="sm-name">{{ auth()->user()->name }} {{ auth()->user()->last_name }}</p>
+                <p class="sm-phone" dir="ltr">{{ auth()->user()->phone }}</p>
               </div>
             </div>
             <button id="themeToggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
@@ -83,7 +97,7 @@
             </button>
           </div>
           {{-- گزینه‌ها --}}
-          <button type="button" class="sm-item">
+          <button type="button" class="sm-item" id="changeAvatarBtn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             <span>عکس پروفایل</span>
           </button>
@@ -100,9 +114,15 @@
 
       {{-- پشتیبانی --}}
       <button type="button" class="btn-card btn-support">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>پشتیبانی</span>
       </button>
+
+
+      {{-- باکس نمایش توکن — فقط desktop --}}
+      <div class="btn-token-box show-desktop" title="موجودی توکن شما">
+        <span class="btn-token-number">{{ number_format($tokenBalance) }}</span>
+        <img src="{{ asset('assets/img/icons/token.svg') }}" width="18" height="18" alt="توکن" class="btn-token-icon">
+      </div>
 
       {{-- خرید اشتراک --}}
       <button type="button" class="btn-subscribe">
@@ -121,23 +141,23 @@
     {{-- آمار ۴ تایی --}}
     <div class="stats-desktop">
       <div class="stat-col">
-        <span class="stat-number">۳۵</span>
-        <span class="stat-label">پست</span>
+        <span class="stat-number">{{ number_format($tokenBalance) }}</span>
+        <span class="stat-label">توکن</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">۱۸۱۰</span>
+        <span class="stat-number">{{ number_format($createdCount) }}</span>
         <span class="stat-label">ساخته‌شده</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">۱۴</span>
-        <span class="stat-label">روز عضویت</span>
+        <span class="stat-number stat-number--plan">{{ $planName }}</span>
+        <span class="stat-label">پلن</span>
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number stat-number--plan">رایگان</span>
-        <span class="stat-label">پلن</span>
+        <span class="stat-number">{{ number_format($earnings) }}</span>
+        <span class="stat-label">تومان درآمد</span>
       </div>
     </div>
 

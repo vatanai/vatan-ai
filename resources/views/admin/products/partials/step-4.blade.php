@@ -2,7 +2,7 @@
 {{-- بازطراحی UI طبق «سند شماره ۱ - ثبت محصول»، بخش سوم. تمام name های واقعی و مقادیر مجاز آن‌ها
      دقیقاً با Validation کنترلر (watermark_position: corner/center/none،
      gallery_layout: grid/masonry/slider) هماهنگ نگه داشته شده‌اند.
-     Card «خلاصه نهایی» به step-summary.blade.php منتقل شد (گام پنجم جدید، هنگام تبدیل ویزارد به ۵ مرحله). --}}
+     Card «خلاصه نهایی» به step-5.blade.php منتقل شد (گام پنجم جدید، هنگام تبدیل ویزارد به ۵ مرحله). --}}
 
 @php
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
@@ -374,7 +374,7 @@ document.querySelectorAll('.pricing-card, .preview-card-option, .shape-card-opti
   });
 });
 
-/* توجه: تابع refreshFinalSummary و کارت «خلاصه نهایی» به step-summary.blade.php منتقل شدند (گام پنجم).
+/* توجه: تابع refreshFinalSummary و کارت «خلاصه نهایی» به step-5.blade.php منتقل شدند (گام پنجم).
    توابع بالا (toggleWatermarkSettings/onWatermarkPosChange) و رادیوکارت‌های این صفحه در صورت وجود
    refreshFinalSummary در Scope سراسری آن را صدا می‌زنند تا خلاصه گام پنجم زنده به‌روزرسانی شود. */
 document.addEventListener('DOMContentLoaded', () => {

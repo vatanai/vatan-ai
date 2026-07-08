@@ -256,8 +256,8 @@
                   <option value="">— انتخاب مدل اصلی —</option>
                   @php $primaryModel = old('primary_model', $product->primary_model); @endphp
                   @foreach ($aiModels as $model)
-                    <option value="{{ $model->model_id }}" {{ $primaryModel == $model->model_id ? 'selected' : '' }}>
-                      {{ $model->name }} ({{ $model->provider }})
+                    <option value="{{ $model->openrouter_model_id }}" {{ $primaryModel == $model->openrouter_model_id ? 'selected' : '' }}>
+                      {{ $model->name }} ({{ $model->provider_name }})
                     </option>
                   @endforeach
                 </select>
@@ -415,9 +415,9 @@
     // لیست مدل‌های فعال — از کنترلر گرفته شده، برای ساخت داینامیک ردیف‌های fallback استفاده می‌شود
     $aiModelsForJs = $aiModels->map(function ($m) {
         return [
-            'id' => $m->model_id,
+            'id' => $m->openrouter_model_id,
             'name' => $m->name,
-            'provider' => $m->provider,
+            'provider' => $m->provider_name,
         ];
     });
 

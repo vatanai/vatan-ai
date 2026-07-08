@@ -161,11 +161,11 @@ class ProductController extends Controller
 
             // گام دوم: تنظیمات هوش مصنوعی
             // primary_model و fallback_models باید واقعاً در جدول ai_models موجود باشند
-            'primary_model' => 'required|string|exists:ai_models,model_id',
+            'primary_model' => 'required|string|exists:ai_models,openrouter_model_id',
             'timeout' => 'required|integer|min:1',
             'pipeline_type' => 'required|in:image_generation,image_editing,text_generation',
             'fallback_models' => 'nullable|array',
-            'fallback_models.*' => 'string|exists:ai_models,model_id',
+            'fallback_models.*' => 'string|exists:ai_models,openrouter_model_id',
             'prompt_template' => 'required|string',
             'input_schema' => 'nullable|array',
             'input_schema.*.field_id' => 'required|string',
@@ -318,11 +318,11 @@ class ProductController extends Controller
             'media_type' => 'required|in:photo,video,both',
             'preview_video_url' => 'nullable|url',
 
-            'primary_model' => 'required|string|exists:ai_models,model_id',
+            'primary_model' => 'required|string|exists:ai_models,openrouter_model_id',
             'timeout' => 'required|integer|min:1',
             'pipeline_type' => 'required|in:image_generation,image_editing,text_generation',
             'fallback_models' => 'nullable|array',
-            'fallback_models.*' => 'string|exists:ai_models,model_id',
+            'fallback_models.*' => 'string|exists:ai_models,openrouter_model_id',
             'prompt_template' => 'required|string',
             'input_schema' => 'nullable|array',
             'input_schema.*.field_id' => 'required|string',

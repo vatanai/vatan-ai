@@ -70,31 +70,61 @@
   </style>
 
   <script>
-    /* ── مدیریت تم بدون Flash تصویر ── */
+    /* ── مدیریت تم بدون Flash تصویر ──
+       سه حالت پشتیبانی می‌شه: light / dark / system
+       در حالت system، تم بر اساس prefers-color-scheme سیستم‌عامل کاربر تعیین و به‌صورت زنده هم‌گام می‌شه. */
     (function () {
       var html = document.documentElement;
-      function applyTheme(theme) {
-        if (theme === 'light') {
+      var mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+      function resolve(mode) {
+        if (mode === 'system') return mql.matches ? 'dark' : 'light';
+        return mode === 'light' ? 'light' : 'dark';
+      }
+
+      function applyResolved(resolved) {
+        if (resolved === 'light') {
           html.classList.add('light');
           html.classList.remove('dark');
         } else {
           html.classList.add('dark');
           html.classList.remove('light');
         }
-        localStorage.setItem('vatan-theme', theme);
       }
 
-      window.vatanToggleTheme = function () {
-        var current = html.classList.contains('light') ? 'light' : 'dark';
-        applyTheme(current === 'light' ? 'dark' : 'light');
+      function broadcast(mode) {
+        document.dispatchEvent(new CustomEvent('vatan-theme-changed', {
+          detail: { mode: mode, resolved: resolve(mode) }
+        }));
+      }
+
+      window.vatanGetThemeMode = function () {
+        return localStorage.getItem('vatan-theme') || 'dark';
       };
 
-      var saved = localStorage.getItem('vatan-theme');
-      if (saved) {
-        applyTheme(saved);
-      } else {
-        applyTheme('dark'); /* تم پیش‌فرض وطن استودیو */
-      }
+      window.vatanSetTheme = function (mode) {
+        if (['light', 'dark', 'system'].indexOf(mode) === -1) return;
+        localStorage.setItem('vatan-theme', mode);
+        applyResolved(resolve(mode));
+        broadcast(mode);
+      };
+
+      /* برای سازگاری با کدهای قدیمی که فقط بین روز/شب سوییچ می‌کردند (مثل تاگل تنظیمات پروفایل) */
+      window.vatanToggleTheme = function () {
+        var current = resolve(window.vatanGetThemeMode());
+        window.vatanSetTheme(current === 'light' ? 'dark' : 'light');
+      };
+
+      /* اعمال اولیه بدون Flash */
+      applyResolved(resolve(window.vatanGetThemeMode()));
+
+      /* اگر حالت روی «سیستم» باشه، با تغییر لحظه‌ای ترجیح سیستم‌عامل هم‌گام بمون */
+      mql.addEventListener('change', function () {
+        if (window.vatanGetThemeMode() === 'system') {
+          applyResolved(resolve('system'));
+          broadcast('system');
+        }
+      });
     }());
   </script>
 </head>

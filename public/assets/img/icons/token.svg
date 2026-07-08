@@ -1,0 +1,14 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tokenGrad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="0.55" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#tokenGrad)">
+    <path d="M12,3 C12.7,8.3 13.7,9.3 19,10 C13.7,10.7 12.7,11.7 12,17 C11.3,11.7 10.3,10.7 5,10 C10.3,9.3 11.3,8.3 12,3 Z"/>
+    <path d="M18.5,2 C18.72,3.6 19.08,3.96 20.7,4.18 C19.08,4.4 18.72,4.76 18.5,6.36 C18.28,4.76 17.92,4.4 16.3,4.18 C17.92,3.96 18.28,3.6 18.5,2 Z"/>
+    <path d="M5.2,16.2 C5.38,17.55 5.68,17.85 7.05,18.03 C5.68,18.21 5.38,18.51 5.2,19.86 C5.02,18.51 4.72,18.21 3.35,18.03 C4.72,17.85 5.02,17.55 5.2,16.2 Z"/>
+  </g>
+</svg>

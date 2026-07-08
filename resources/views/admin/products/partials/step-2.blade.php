@@ -1,6 +1,6 @@
 {{-- پارشیال: گام دوم — هوش مصنوعی (پایپ‌لاین + پرامپت) --}}
 {{-- بعد از تبدیل ویزارد به ۵ مرحله، این پارشیال فقط Card ۱ و ۲ (پایپ‌لاین و تنظیمات پرامپت/تست) را دارد؛
-     Card متغیرها و فیلدهای ورودی به step-ai-inputs.blade.php منتقل شد (گام سوم جدید).
+     Card متغیرها و فیلدهای ورودی به step-3.blade.php منتقل شد (گام سوم جدید).
      این بخش نیاز به متغیر $aiModels دارد که از کنترلر پاس داده می‌شود.
      تمام name های ورودی و منطق موجود (از جمله فراخوانی واقعی تست پرامپت به Backend) دقیقاً حفظ شده‌اند. --}}
 
@@ -21,8 +21,8 @@
     <select name="primary_model" id="primary-model-select" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full focus:border-[var(--accent)] mb-2" onchange="onPrimaryModelChange()">
       <option value="">— انتخاب مدل اصلی —</option>
       @foreach ($aiModels as $model)
-        <option value="{{ $model->model_id }}" {{ $curPrimaryModel == $model->model_id ? 'selected' : '' }}>
-          {{ $model->name }} ({{ $model->provider }})
+        <option value="{{ $model->openrouter_model_id }}" {{ $curPrimaryModel == $model->openrouter_model_id ? 'selected' : '' }}>
+          {{ $model->name }} ({{ $model->provider_name }})
         </option>
       @endforeach
     </select>
@@ -68,7 +68,7 @@
         <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت {{ $i + 2 }}</span>
         <select class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item" data-searchable>
           @foreach ($aiModels as $model)
-            <option value="{{ $model->model_id }}" {{ $model->model_id === $fbModelId ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider }})</option>
+            <option value="{{ $model->openrouter_model_id }}" {{ $model->openrouter_model_id === $fbModelId ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider_name }})</option>
           @endforeach
         </select>
         <label class="relative w-8 h-[18px] shrink-0 block cursor-pointer" title="NEW Enable/Disable — فقط UI، برنامه‌نویسی شود">

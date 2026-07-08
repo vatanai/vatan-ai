@@ -42,4 +42,12 @@ class AdminUserController extends Controller
 
     return response()->json(['status' => 'success', 'message' => 'وضعیت کاربر با موفقیت بروزرسانی شد.']);
 }
+
+    /**
+     * صفحه‌ی مدیریت توکن کاربران (افزودن/کسر/تنظیم موجودی توکن)
+     */
+    public function tokens()
+    {
+        return view('admin.users.tokens');
+    }
 }

@@ -102,6 +102,15 @@ html, body { overflow-x: hidden; background: var(--bg-page) !important; color: v
   padding: 2px;
   background: var(--bg-page);
 }
+.avatar-img--placeholder {
+  object-fit: contain !important;
+  padding: 22%;
+  box-sizing: border-box;
+  background: var(--bg-page);
+  opacity: .55;
+}
+.sm-avatar-wrap .avatar-img--placeholder { padding: 20%; }
+
 .avatar-img {
   width: 100%; height: 100%;
   object-fit: cover;
@@ -262,7 +271,9 @@ html.light .stat-label { color: #5a7a5a; }
 /* دکمه پشتیبانی */
 .btn-support {
   flex: 1.2;
+  font-size: 13.65px;
 }
+
 
 /* دکمه خرید اشتراک */
 .btn-subscribe {
@@ -293,6 +304,36 @@ html.light .stat-label { color: #5a7a5a; }
   border-radius: 6px;
   white-space: nowrap;
 }
+
+/* باکس نمایش توکن — همان خمیدگی و ارتفاع دکمه خرید اشتراک،
+   عدد سمت چپ و آیکون سمت راست. فقط نسخه دسکتاپ. */
+.btn-token-box {
+  flex-shrink: 0;
+  display: none;            /* پیش‌فرض مخفی — فقط دسکتاپ نمایش داده می‌شود */
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;      /* همانند .btn-subscribe */
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  white-space: nowrap;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.btn-token-box .btn-token-number {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-feature-settings: "tnum";
+}
+.btn-token-box .btn-token-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: block;
+}
+.btn-token-box:hover { opacity: 0.85; }
 
 /* ═══════════════════════════════════════
    SETTINGS DROPDOWN
@@ -554,6 +595,23 @@ html.light .tab-icon--svg { color: var(--text-primary); }
 }
 .grid-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+.grid-cell--clickable {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  transition: opacity .15s ease;
+}
+.grid-cell--clickable:hover,
+.grid-cell--clickable:focus-visible { opacity: .9; }
+.grid-cell--clickable:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+
 .grid-empty {
   grid-column: 1 / -1;
   display: flex;
@@ -570,12 +628,14 @@ html.light .tab-icon--svg { color: var(--text-primary); }
   margin-top: 4px;
   padding: 8px 18px;
   border-radius: 8px;
-  background: var(--accent, #a07af5);
+  background: var(--green, #0BBF53);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
+  transition: opacity .15s ease;
 }
+.btn-empty-cta:hover { opacity: .9; }
 
 .cell-badge {
   position: absolute; top: 6px; right: 6px;
@@ -883,4 +943,142 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   .profile-tabs  { padding: 0 72px; }
   .panel-grid    { grid-template-columns: repeat(6, 1fr); }
   .files-grid    { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ═══════════════════════════════════════
+   مودال پیش‌نمایش عکس گرید پروفایل
+═══════════════════════════════════════ */
+.grid-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.grid-preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+}
+
+.grid-preview-box {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: gridPreviewIn 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+
+@keyframes gridPreviewIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.grid-preview-close {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color .15s ease;
+}
+.grid-preview-close:hover { background: rgba(0,0,0,0.7); }
+
+.grid-preview-img-wrap {
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 55vh;
+}
+.grid-preview-img-wrap img {
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  display: block;
+}
+
+.grid-preview-actions {
+  display: flex;
+  gap: 10px;
+}
+.grid-preview-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.grid-preview-btn:hover {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.grid-preview-date {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.grid-preview-product-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 13px;
+  transition: border-color .15s ease, background-color .15s ease;
+}
+.grid-preview-product-link:hover {
+  border-color: var(--green);
+  background: rgba(11,191,83,0.08);
+}
+.grid-preview-product-link i:first-child { color: var(--green); font-size: 13px; }
+.grid-preview-product-link span { flex: 1; color: var(--text-secondary); }
+.grid-preview-product-link span b { color: var(--text-primary); font-weight: 700; }
+.grid-preview-product-arrow { font-size: 11px; color: var(--text-secondary); }
+
+.grid-preview-product-link.is-disabled {
+  opacity: .5;
+  pointer-events: none;
 }
