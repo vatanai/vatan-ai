@@ -4,12 +4,12 @@
      فیلدهای دارای پیشوند NEW فقط UI هستند و به Backend وصل نیستند (نگاه کنید به بادج «برنامه‌نویسی شود»). --}}
 
 @php
-  // بادج کوچک کنار فیلدهای جدید تا امیر (توسعه‌دهنده Backend) دقیقاً بفهمد این مورد هنوز به دیتابیس/API وصل نیست
+  // بادج کوچک کنار فیلدهای جدید تا توسعه‌دهنده Backend دقیقاً بفهمد این مورد هنوز به دیتابیس/API وصل نیست
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
 @endphp
 
 {{-- ═══════════════════ Card ۱ — اطلاعات اصلی ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
     <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-fingerprint text-[var(--accent)]"></i> اطلاعات اصلی</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">نام، آدرس، توضیح و دسته‌بندی محصول را وارد کنید</div>
@@ -23,7 +23,7 @@
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">نام انگلیسی <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="text" name="name_en" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('name_en', $duplicateFrom ? $duplicateFrom->name_en.'-copy' : '') }}" placeholder="LinkedIn Professional Headshot" oninput="autoSlug(this)">
+      <input type="text" name="name_en" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('name_en', $duplicateFrom ? $duplicateFrom->name_en.'-copy' : '') }}" placeholder="LinkedIn Professional Headshot" oninput="if(typeof autoSlug === 'function') autoSlug(this)">
       <div class="text-[10px] text-[var(--text3)]">همچنین برای ساخت خودکار Slug استفاده می‌شود</div>
     </div>
   </div>
@@ -31,7 +31,7 @@
   <div class="grid grid-cols-1 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">آدرس URL (Slug) <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="text" name="slug" id="slug-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('slug', $duplicateFrom ? $duplicateFrom->slug.'-copy' : '') }}" placeholder="linkedin-professional-headshot" oninput="lockSlugManual()">
+      <input type="text" name="slug" id="slug-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('slug', $duplicateFrom ? $duplicateFrom->slug.'-copy' : '') }}" placeholder="linkedin-professional-headshot" oninput="if(typeof lockSlugManual === 'function') lockSlugManual()">
       <div class="text-[10px] text-[var(--text3)]">به‌صورت خودکار از نام انگلیسی ساخته می‌شود؛ اگر دستی ویرایش کنید دیگر خودکار به‌روزرسانی نمی‌شود @if($duplicateFrom)— این آدرس باید یکتا باشد، در صورت تکراری بودن هنگام ثبت خطا نمایش داده می‌شود@endif.</div>
     </div>
   </div>
@@ -53,19 +53,20 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-    <div class="flex flex-col gap-1.5 md:col-span-2">
+  <div class="grid grid-cols-1 gap-3.5 mb-3.5">
+    <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <select name="category_id" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
-        <option value="">انتخاب کنید...</option>
-        @foreach(\App\Models\Category::all() as $cat)
-            <option value="{{ $cat->id }}" {{ old('category_id', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
-                {{ $cat->name }} — {{ $cat->slug }}
-            </option>
-        @endforeach
-      </select>
+    {{-- تگ select اصلاح شده با نام category --}}
+<select name="category" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
+  <option value="">انتخاب کنید...</option>
+  @foreach(\App\Models\Category::all() as $cat)
+      {{-- حواستان باشد که تابع old هم باید به category تغییر کند --}}
+      <option value="{{ $cat->id }}" {{ old('category', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
+          {{ $cat->name }} — {{ $cat->slug }}
+      </option>
+  @endforeach
+</select>
     </div>
-</div>
   </div>
 
   <div class="grid grid-cols-1 gap-3.5 mb-5">
@@ -75,7 +76,7 @@
         @foreach ((old('tags', optional($duplicateFrom)->tags ?? [])) as $tag)
           <span class="inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]">{{ $tag }}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()">×</button></span>
         @endforeach
-        <input type="text" id="tags-raw" class="bg-transparent border-none outline-none text-xs text-[var(--text)] flex-1 min-w-[80px] text-right" placeholder="تگ بنویسید..." onkeydown="addTag(event)">
+        <input type="text" id="tags-raw" class="bg-transparent border-none outline-none text-xs text-[var(--text)] flex-1 min-w-[80px] text-right" placeholder="تگ بنویسید..." onkeydown="if(typeof addTag === 'function') addTag(event)">
       </div>
     </div>
   </div>
@@ -114,7 +115,7 @@
 </div>
 
 {{-- ═══════════════════ Card ۲ — برچسب‌ها ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
     <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-tags text-[var(--accent)]"></i> برچسب‌ها</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">محصول در کدام بخش‌های سایت به‌صورت ویژه نمایش داده شود</div>
@@ -193,7 +194,7 @@
 </div>
 
 {{-- ═══════════════════ Card ۳ — رسانه نمایشی ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
     <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-images text-[var(--accent)]"></i> رسانه نمایشی</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">تصاویر و ویدیوهایی که محصول را به کاربر نمایش می‌دهند</div>
@@ -326,6 +327,15 @@
 </div>
 
 <script>
+/* ── ابزارهای کمکی عمومی مربوط به فایلهای آپلود ── */
+function updateFileLabel(input, labelId, isMultiple = false) {
+  const label = document.getElementById(labelId);
+  if (!label) return;
+  if (input.files && input.files.length > 0) {
+    label.textContent = isMultiple ? input.files.length + ' فایل انتخاب شد' : input.files[0].name;
+  }
+}
+
 /* ── کامپوننت مستقل: Preview / Replace / Remove برای Uploadهای تک‌فایلی ── */
 function previewUpload(input, imgId, emptyStateId, removeBtnId) {
   if (!input.files || !input.files[0]) return;
@@ -344,18 +354,24 @@ function previewUpload(input, imgId, emptyStateId, removeBtnId) {
 
 function removeUpload(inputId, imgId, emptyStateId, removeBtnId, titleId, defaultTitle) {
   const input = document.getElementById(inputId);
-  input.value = '';
-  document.getElementById(imgId).classList.add('hidden');
-  document.getElementById(emptyStateId).classList.remove('hidden');
+  if(input) input.value = '';
+  const img = document.getElementById(imgId);
+  if(img) img.classList.add('hidden');
+  const empty = document.getElementById(emptyStateId);
+  if(empty) empty.classList.remove('hidden');
   const btn = document.getElementById(removeBtnId);
-  btn.classList.add('hidden');
-  btn.classList.remove('flex');
-  document.getElementById(titleId).textContent = defaultTitle;
+  if(btn) {
+    btn.classList.add('hidden');
+    btn.classList.remove('flex');
+  }
+  const title = document.getElementById(titleId);
+  if(title) title.textContent = defaultTitle;
 }
 
 /* پیش‌نمایش چندفایلی برای گالری نمونه خروجی‌ها */
 function previewMultiUpload(input, stripId) {
   const strip = document.getElementById(stripId);
+  if(!strip) return;
   strip.innerHTML = '';
   if (!input.files) return;
   Array.from(input.files).forEach(file => {
@@ -370,7 +386,7 @@ function previewMultiUpload(input, stripId) {
   });
 }
 
-/* NEW: Upload Queue System — نمایش صف فایل‌های در حال آپلود برای Uploadهای چندگانه (فقط نمایشی) */
+/* NEW: Upload Queue System — نمایش صف فایل‌های در حال آپلود برای Uploadهای چندگانه */
 function renderUploadQueue(input, queueId) {
   const queue = document.getElementById(queueId);
   if (!queue) return;
@@ -378,7 +394,7 @@ function renderUploadQueue(input, queueId) {
   if (!input.files || !input.files.length) return;
   Array.from(input.files).forEach(file => {
     const row = document.createElement('div');
-    row.className = 'flex items-center gap-2 bg-[var(--bg)] border border-[var(--b1)] rounded-lg px-2 py-1.5';
+    row.className = 'flex items-center gap-2 bg-[var(--bg)] border border-[var(--b1)] rounded-lg px-2 py-1.5 mt-1';
     row.innerHTML = `
       <i class="fa-solid fa-file-image text-[10px] text-[var(--text3)] shrink-0"></i>
       <span class="text-[10px] text-[var(--text2)] flex-1 truncate">${file.name}</span>
@@ -389,7 +405,7 @@ function renderUploadQueue(input, queueId) {
   });
 }
 
-/* ── Drag & Drop عمومی برای Uploadها (کامپوننت مستقل و قابل استفاده مجدد) ── */
+/* ── Drag & Drop عمومی برای Uploadها ── */
 function wireUploadZone(zoneId, inputId) {
   const zone = document.getElementById(zoneId);
   const input = document.getElementById(inputId);
@@ -409,7 +425,10 @@ function wireUploadZone(zoneId, inputId) {
     }
   });
 }
-['thumb-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
+
+document.addEventListener('DOMContentLoaded', () => {
+  ['thumb-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
+});
 
 /* ── Radio Card نوع رسانه: هایلایت کردن کارت انتخاب‌شده ── */
 document.querySelectorAll('.media-type-card input[type="radio"]').forEach(radio => {

@@ -3,44 +3,96 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    use HasFactory;
-
+    // ۱. اضافه کردن تمام فیلدهای اصلی و جدید به fillable جهت پشتیبانی از متدهای دیتابیس
     protected $fillable = [
-        'name_fa', 'name_en', 'slug', 'description_fa', 'description_en', 'category', 'subcategory',
-        'status', 'tags', 'is_featured', 'is_new', 'is_trending', 'thumbnail', 'cover',
-        'sample_outputs', 'media_type', 'preview_video_url', 'primary_model', 'timeout',
-        'pipeline_type', 'fallback_models', 'prompt_template', 'negative_prompt',
-        'show_prompt_to_user', 'face_swap_enabled', 'multi_step_pipeline', 'input_schema',
-        'output_type', 'output_format', 'output_count', 'resolution', 'aspect_ratio',
-        'delivery_method', 'estimated_time', 'watermark_enabled', 'watermark_position',
-        'pricing_model', 'credit_cost', 'price_tier', 'discount_percentage', 'is_free',
-        'display_mode', 'card_shape', 'gallery_layout', 'card_label', 'platform',
-        'accent_color', 'show_before_after'
+        'name_fa',
+        'name_en',
+        'slug',
+        'description_fa',
+        'description_en',
+        'category_id',
+        'category',
+        'subcategory',
+        'status',
+        'thumbnail',
+        'cover',
+        'sample_outputs',
+        'media_type',
+        'preview_video_url',
+        'primary_model',
+        'fallback_models',
+        'prompt_template',
+        'input_schema',
+        'timeout',
+        'pipeline_type',
+        'watermark_enabled',
+        'watermark_position',
+        'pricing_model',
+        'credit_cost',
+        'display_mode',
+        'card_shape',
+        'gallery_layout',
+        'card_label',
+        'output_type',
+        'output_format',
+        'output_count',
+        'resolution',
+        'aspect_ratio',
+        'delivery_method',
+        'estimated_time',
+        'price_tier',
+        'discount_percentage',
+        'platform',
+        'accent_color',
+        'tags',
+
+        // فیلدهای فاز جدید توسعه
+        'new_status', 
+        'new_display_order', 
+        'new_internal_code', 
+        'new_admin_note',
+        'new_is_premium', 
+        'new_is_recommended', 
+        'new_is_beta',
+        'new_product_icon', 
+        'new_card_color', 
+        'new_gallery_preview_mode',
+        'new_watermark_corner_precise', 
+        'new_watermark_opacity', 
+        'new_watermark_size',
+        'new_watermark_type', 
+        'new_watermark_text_color',
+        'new_min_credit_required', 
+        'new_max_run_per_user', 
+        'new_show_free_badge', 
+        'new_price_custom_label'
     ];
 
-    // کست کردن فیلدهای متنی ساختاریافته به آرایه PHP و فیلدهای صفر و یک به Boolean
+    // ۲. تعریف کست‌ها برای تبدیل خودکار آرایه‌ها به JSON موقع ذخیره در دیتابیس
     protected $casts = [
-        'tags' => 'array',
-        'sample_outputs' => 'array',
-        'fallback_models' => 'array',
-        'input_schema' => 'array',
-        'is_featured' => 'boolean',
-        'is_new' => 'boolean',
-        'is_trending' => 'boolean',
-        'show_prompt_to_user' => 'boolean',
-        'face_swap_enabled' => 'boolean',
-        'multi_step_pipeline' => 'boolean',
+        'sample_outputs'    => 'array',
+        'fallback_models'   => 'array',
+        'input_schema'      => 'array',
+        'tags'              => 'array',
+        'is_featured'       => 'boolean',
+        'is_new'            => 'boolean',
+        'is_trending'       => 'boolean',
         'watermark_enabled' => 'boolean',
-        'is_free' => 'boolean',
-        'show_before_after' => 'boolean',
+        'new_is_premium'    => 'boolean',
+        'new_is_recommended'=> 'boolean',
+        'new_is_beta'       => 'boolean',
+        'new_show_free_badge'=> 'boolean',
     ];
-    
-    public function category(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(Category::class, 'category_id');
-}
+
+    /**
+     * ارتباط با تاریخچه تغییرات پرامپت محصول
+     */
+    public function promptHistories(): HasMany
+    {
+        return $this->hasMany(ProductPromptHistory::class)->orderBy('version_number', 'desc');
+    }
 }

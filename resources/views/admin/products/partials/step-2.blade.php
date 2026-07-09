@@ -9,7 +9,7 @@
 @endphp
 
 {{-- ═══════════════════ Card ۱ — پایپ‌لاین هوش مصنوعی ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
     <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-microchip text-[var(--accent)]"></i> پایپ‌لاین هوش مصنوعی</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">مدل اصلی و مدل‌های جایگزین در زمان اجرای محصول</div>
@@ -21,13 +21,13 @@
     <select name="primary_model" id="primary-model-select" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full focus:border-[var(--accent)] mb-2" onchange="onPrimaryModelChange()">
       <option value="">— انتخاب مدل اصلی —</option>
       @foreach ($aiModels as $model)
-        <option value="{{ $model->openrouter_model_id }}" {{ $curPrimaryModel == $model->openrouter_model_id ? 'selected' : '' }}>
+        <option value="{{ $model->openrouter_model_id }}" data-name="{{ $model->name }}" data-provider="{{ $model->provider_name }}" {{ $curPrimaryModel == $model->openrouter_model_id ? 'selected' : '' }}>
           {{ $model->name }} ({{ $model->provider_name }})
         </option>
       @endforeach
     </select>
 
-    {{-- کارت اطلاعات مدل — بعد از انتخاب نمایش داده می‌شود (نام/Provider واقعی هستند، نوع مدل فعلاً UI-only) --}}
+    {{-- کارت اطلاعات مدل — بعد از انتخاب نمایش داده می‌شود (نام/Provider واقعی هستند) --}}
     <div id="model-info-card" class="hidden bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-3 mb-3">
       <div class="flex items-center justify-between mb-2">
         <div class="text-xs font-bold text-[var(--text)]" id="model-info-name">—</div>
@@ -66,7 +66,7 @@
           <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'down')" aria-label="جابه‌جایی به پایین"><i class="fa-solid fa-caret-down"></i></button>
         </div>
         <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت {{ $i + 2 }}</span>
-        <select class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item" data-searchable>
+        <select name="fallback_models[]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item" data-searchable>
           @foreach ($aiModels as $model)
             <option value="{{ $model->openrouter_model_id }}" {{ $model->openrouter_model_id === $fbModelId ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider_name }})</option>
           @endforeach
@@ -136,10 +136,10 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between flex-wrap gap-2 mt-1.5">
+    <div class="flex flex-col gap-1.5 mt-2">
       <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW Search Variable {!! $newBadge !!}</label>
+      <input type="text" id="var-search-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] outline-none focus:border-[var(--accent)] w-full" placeholder="جستجوی متغیر..." oninput="filterVarChips(this.value)">
     </div>
-    <input type="text" id="var-search-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] outline-none focus:border-[var(--accent)]" placeholder="جستجوی متغیر..." oninput="filterVarChips(this.value)">
 
     <div class="flex flex-wrap gap-1.5 mt-1" id="var-category-tabs">
       <button type="button" class="var-cat-btn text-[10.5px] px-2 py-1 rounded-md border border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" data-cat="all" onclick="filterVarCategory('all')">همه</button>
@@ -214,23 +214,97 @@
 </div>
 
 <script>
-/* ══════ Card ۱ — کارت اطلاعات مدل اصلی (نام/Provider واقعی از AI_MODELS) ══════ */
+/* ══════ Card ۱ — کارت اطلاعات مدل اصلی ══════ */
 function onPrimaryModelChange() {
   const sel = document.getElementById('primary-model-select');
   const card = document.getElementById('model-info-card');
-  const model = AI_MODELS.find(m => m.id === sel.value);
-  if (!model) { card.classList.add('hidden'); return; }
-  document.getElementById('model-info-name').textContent = model.name;
-  document.getElementById('model-info-provider').textContent = model.provider;
+  if (!sel || !card) return;
+  
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !sel.value) { card.classList.add('hidden'); return; }
+  
+  document.getElementById('model-info-name').textContent = opt.getAttribute('data-name') || '—';
+  document.getElementById('model-info-provider').textContent = opt.getAttribute('data-provider') || '—';
   card.classList.remove('hidden');
 }
-document.addEventListener('DOMContentLoaded', () => {
-  onPrimaryModelChange();
-  // فعال‌سازی Drag برای ردیف‌های از قبل رندرشده (حالت تکثیر محصول)
-  document.querySelectorAll('#fallback-list .fallback-row').forEach(row => wireFallbackDrag(row));
-});
 
-/* ══════ تست پرامپت — فراخوانی واقعی Backend (دقیقاً همان منطق قبلی، بدون تغییر) ══════ */
+/* ══════ مدیریت و چینش مدل‌های جایگزین (Fallback Models) ══════ */
+function renumberFallbacks() {
+  document.querySelectorAll('#fallback-list .fb-priority').forEach((el, index) => {
+    el.textContent = 'اولویت ' + (index + 2);
+  });
+}
+
+function wireFallbackDrag(row) {
+  row.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', '');
+    row.classList.add('opacity-50');
+    window.draggedRow = row;
+  });
+  row.addEventListener('dragend', () => {
+    row.classList.remove('opacity-50');
+  });
+  row.addEventListener('dragover', (e) => { e.preventDefault(); });
+  row.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (window.draggedRow && window.draggedRow !== row) {
+      const list = document.getElementById('fallback-list');
+      const all = Array.from(list.children);
+      if (all.indexOf(window.draggedRow) < all.indexOf(row)) {
+        row.after(window.draggedRow);
+      } else {
+        row.before(window.draggedRow);
+      }
+      renumberFallbacks();
+    }
+  });
+}
+
+function moveFallbackRow(btn, dir) {
+  const row = btn.closest('.fallback-row');
+  if (!row) return;
+  if (dir === 'up' && row.previousElementSibling) {
+    row.previousElementSibling.before(row);
+  } else if (dir === 'down' && row.nextElementSibling) {
+    row.nextElementSibling.after(row);
+  }
+  renumberFallbacks();
+}
+
+function addFallback() {
+  const list = document.getElementById('fallback-list');
+  const selectHtml = document.getElementById('primary-model-select')?.innerHTML || '';
+  const count = list.children.length;
+  
+  const div = document.createElement('div');
+  div.className = 'fallback-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3 flex items-center gap-3';
+  div.draggable = true;
+  div.innerHTML = `
+    <i class="fa-solid fa-grip-vertical text-[var(--text3)] cursor-grab shrink-0 fb-drag-handle hidden md:block" title="برای تغییر اولویت بکشید"></i>
+    <div class="flex md:hidden flex-col gap-0.5 shrink-0">
+      <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'up')" aria-label="جابه‌جایی به بالا"><i class="fa-solid fa-caret-up"></i></button>
+      <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'down')" aria-label="جابه‌جایی به پایین"><i class="fa-solid fa-caret-down"></i></button>
+    </div>
+    <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت ${count + 2}</span>
+    <select name="fallback_models[]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item">
+      ${selectHtml}
+    </select>
+    <label class="relative w-8 h-[18px] shrink-0 block cursor-pointer">
+      <input type="checkbox" class="sr-only peer" checked>
+      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3 before:h-3 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[14px] peer-checked:before:bg-white"></span>
+    </label>
+    <button type="button" class="text-xs text-[var(--red)] bg-[var(--red)]/10 px-2.5 py-1.5 rounded-lg shrink-0" onclick="this.closest('.fallback-row').remove(); renumberFallbacks();">حذف</button>
+  `;
+  
+  // پاک کردن آپشن پیشفرض شبیه‌سازی شده از سلکتور کپی شده
+  const firstOpt = div.querySelector('select option[value=""]');
+  if (firstOpt) firstOpt.remove();
+
+  list.appendChild(div);
+  wireFallbackDrag(div);
+}
+
+/* ══════ تست پرامپت — فراخوانی واقعی Backend ══════ */
 function testPromptNow() {
   var prompt  = document.getElementById('prompt-template').value.trim();
   var modelId = document.getElementById('primary-model-select').value;
@@ -238,7 +312,6 @@ function testPromptNow() {
   if (!prompt)   { alert('ابتدا پرامپت را بنویسید.'); return; }
   if (!modelId)  { alert('ابتدا مدل اصلی را انتخاب کنید.'); return; }
 
-  // reset
   document.getElementById('test-result-box').classList.add('hidden');
   document.getElementById('test-error-box').classList.add('hidden');
 
@@ -247,7 +320,7 @@ function testPromptNow() {
   btn.disabled = true;
   text.textContent = 'در حال تولید...';
 
-  var csrfToken = document.querySelector('input[name="_token"]').value;
+  var csrfToken = document.querySelector('input[name="_token"]')?.value || '';
   var startedAt = Date.now();
 
   fetch('{{ route('admin.ai-models.test-prompt') }}', {
@@ -287,41 +360,48 @@ function testPromptNow() {
   });
 }
 
-/* ══════ Card ۲ — Prompt Editor: شماره خط، Auto Resize، شمارنده، تخمین توکن، تشخیص متغیر ══════ */
+/* ══════ Prompt Editor قابلیت‌های پیشرفته ══════ */
 function updatePromptLineNumbers() {
   const ta = document.getElementById('prompt-template');
   const gutter = document.getElementById('prompt-line-numbers');
+  if(!ta || !gutter) return;
   const lines = ta.value.split('\n').length;
   let out = '';
   for (let i = 1; i <= lines; i++) out += i + '\n';
   gutter.textContent = out;
 }
 function syncPromptScroll() {
-  document.getElementById('prompt-line-numbers').scrollTop = document.getElementById('prompt-template').scrollTop;
+  const ta = document.getElementById('prompt-template');
+  const gutter = document.getElementById('prompt-line-numbers');
+  if(ta && gutter) gutter.scrollTop = ta.scrollTop;
 }
 function autoResizePrompt() {
   const ta = document.getElementById('prompt-template');
+  if(!ta) return;
   ta.style.height = 'auto';
   ta.style.height = Math.max(150, ta.scrollHeight) + 'px';
 }
 function onPromptInput() {
   const ta = document.getElementById('prompt-template');
+  if(!ta) return;
   updatePromptLineNumbers();
   autoResizePrompt();
   syncPromptScroll();
   document.getElementById('prompt-char-count').textContent = ta.value.length + ' کاراکتر';
-  document.getElementById('prompt-token-estimate').innerHTML = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی) {!! $newBadge !!}';
+  document.getElementById('prompt-token-estimate').innerHTML = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی) <span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
   const matches = ta.value.match(/\{[a-zA-Z0-9_]+\}/g) || [];
   document.getElementById('prompt-vars-detected').textContent = matches.length + ' متغیر شناسایی شد';
 }
 function copyPromptText() {
   const ta = document.getElementById('prompt-template');
+  if(!ta) return;
   ta.select();
   navigator.clipboard?.writeText(ta.value).catch(() => document.execCommand('copy'));
 }
 function clearPromptText() {
   if (!confirm('متن پرامپت پاک شود؟')) return;
   const ta = document.getElementById('prompt-template');
+  if(!ta) return;
   ta.value = '';
   onPromptInput();
   ta.focus();
@@ -329,6 +409,7 @@ function clearPromptText() {
 function toggleExpandEditor() {
   const wrap = document.getElementById('prompt-editor-card');
   const btn = document.getElementById('expand-editor-btn');
+  if(!wrap || !btn) return;
   const expanded = wrap.classList.toggle('prompt-fullscreen');
   if (expanded) {
     wrap.classList.add('fixed','inset-4','z-50','bg-[var(--s2)]','p-4','rounded-xl','border','border-[var(--accent)]','shadow-2xl','overflow-y-auto');
@@ -338,14 +419,19 @@ function toggleExpandEditor() {
     btn.innerHTML = '<i class="fa-solid fa-expand ml-1"></i>Expand Editor';
   }
 }
-/* NEW Prompt Versioning/History — فقط نمایشی */
 function togglePromptHistory() {
-  document.getElementById('prompt-history-panel').classList.toggle('hidden');
+  document.getElementById('prompt-history-panel')?.classList.toggle('hidden');
 }
-document.addEventListener('click', e => {
-  const panel = document.getElementById('prompt-history-panel');
-  if (panel && !panel.classList.contains('hidden') && !panel.parentElement.contains(e.target)) panel.classList.add('hidden');
-});
+function insertVar(v) {
+  const ta = document.getElementById('prompt-template');
+  if(!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  ta.value = ta.value.substring(0, start) + v + ta.value.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + v.length;
+  onPromptInput();
+  ta.focus();
+}
 
 function filterVarChips(term) {
   term = term.toLowerCase();
@@ -366,6 +452,15 @@ function filterVarCategory(cat) {
     chip.classList.toggle('hidden', cat !== 'all' && chip.dataset.cat !== cat);
   });
 }
-// مقداردهی اولیه شمارنده‌ها بر اساس متن از قبل موجود (مثلاً در حالت تکثیر محصول)
-onPromptInput();
+
+document.addEventListener('DOMContentLoaded', () => {
+  onPrimaryModelChange();
+  document.querySelectorAll('#fallback-list .fallback-row').forEach(row => wireFallbackDrag(row));
+  onPromptInput();
+  
+  document.addEventListener('click', e => {
+    const panel = document.getElementById('prompt-history-panel');
+    if (panel && !panel.classList.contains('hidden') && !panel.parentElement.contains(e.target)) panel.classList.add('hidden');
+  });
+});
 </script>
