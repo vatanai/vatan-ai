@@ -500,7 +500,7 @@
     flex-shrink: 0;
     width: 36px;
     height: 36px;
-    background: #cffe00;
+    background: #0BBF53;
     border-radius: 10px;
     border: none;
     display: flex;
@@ -650,7 +650,7 @@
 
   .home-section-title-left {
     font-size: 13px;
-    color: #cffe00;
+    color: #0BBF53;
   }
 
   .home-products-subtitle {

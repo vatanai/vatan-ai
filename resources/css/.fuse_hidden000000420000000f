@@ -15,7 +15,7 @@
     --s1: #111116;
     --s2: #16161c;
     --b1: #222230;
-    --color-primary: #cffe00;
+    --color-primary: #0BBF53;
 }
 
 /* ═══════════════════════════════════════
@@ -32,7 +32,7 @@
   --text-secondary:   rgba(255,255,255,.6);
   --icon:             #ffffff;
   --border-subtle:    #222230;
-  --green:            #cffe00;
+  --green:            #0BBF53;
   --accent:           #a07af5;
   --red:              #f05c5c;
   --orange:           #f5923a;
@@ -45,7 +45,7 @@ html.light {
   --text-secondary:   rgba(12,12,16,.6);
   --icon:             #0c0c10;
   --border-subtle:    #e5e6e6;
-  --green:            #cffe00;
+  --green:            #0BBF53;
   --accent:            #a07af5;
   --red:              #f05c5c;
   --orange:           #f5923a;

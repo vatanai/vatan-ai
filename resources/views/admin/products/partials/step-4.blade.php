@@ -50,7 +50,7 @@
       </div>
 
       <div id="wm-precise-corner-wrap" class="{{ $curWmPos == 'corner' ? '' : 'hidden' }} mt-1.5">
-        <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW دقت موقعیت گوشه {!! $newBadge !!}</label>
+        <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">دقت موقعیت گوشه</label>
         <div class="grid grid-cols-4 gap-2 mt-1.5">
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text3)]" data-corner="tl" onclick="setPreciseCorner('tl')"><i class="fa-solid fa-arrow-up-right-from-square rotate-180 block mb-1"></i>بالا چپ</button>
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text)]" data-corner="tr" onclick="setPreciseCorner('tr')"><i class="fa-solid fa-arrow-up-right-from-square block mb-1"></i>بالا راست</button>
@@ -64,14 +64,14 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between flex-wrap gap-1.5">
-          <span class="flex items-center gap-1.5 flex-wrap">NEW شفافیت واترمارک {!! $newBadge !!}</span>
+          <span class="flex items-center gap-1.5 flex-wrap">شفافیت واترمارک</span>
           <span class="text-[var(--accent)] font-mono text-[11px]" id="wm-opacity-val">70%</span>
         </label>
         <input type="range" name="new_watermark_opacity" min="0" max="100" value="70" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between flex-wrap gap-1.5">
-          <span class="flex items-center gap-1.5 flex-wrap">NEW اندازه واترمارک {!! $newBadge !!}</span>
+          <span class="flex items-center gap-1.5 flex-wrap">اندازه واترمارک</span>
           <span class="text-[var(--accent)] font-mono text-[11px]" id="wm-size-val">30%</span>
         </label>
         <input type="range" name="new_watermark_size" min="10" max="100" value="30" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-size-val').textContent = this.value + '%'">
@@ -80,7 +80,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW نوع واترمارک {!! $newBadge !!}</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">نوع واترمارک</label>
         <div class="grid grid-cols-2 gap-2">
           <label class="flex items-center justify-center gap-1.5 p-2.5 bg-[var(--s1)] border border-[var(--accent)] bg-[var(--accent)]/8 rounded-lg cursor-pointer text-xs text-[var(--text)]">
             <input type="radio" name="new_watermark_type" value="logo" checked class="accent-[var(--accent)]"> Logo
@@ -91,7 +91,7 @@
         </div>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW رنگ متن واترمارک {!! $newBadge !!}</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">رنگ متن واترمارک</label>
         <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
           <input type="color" name="new_watermark_text_color" value="#ffffff" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('wm-text-color-hex').value = this.value.toUpperCase()">
           <input type="text" id="wm-text-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#FFFFFF" readonly>
@@ -133,19 +133,19 @@
       <input type="number" name="credit_cost" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثال: 5" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost ?? 0) }}">
     </div>
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW حداقل کردیت لازم {!! $newBadge !!}</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداقل کردیت لازم</label>
       <input type="number" name="new_min_credit_required" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1">
     </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW حداکثر تعداد اجرا برای هر کاربر {!! $newBadge !!}</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداکثر تعداد اجرا برای هر کاربر</label>
       <input type="number" name="new_max_run_per_user" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="بدون محدودیت">
     </div>
     <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mt-auto">
       <div>
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW نمایش برچسب رایگان {!! $newBadge !!}</div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">نمایش برچسب رایگان</div>
       </div>
       <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
         <input type="checkbox" name="new_show_free_badge" value="1" class="sr-only peer">
@@ -155,7 +155,7 @@
   </div>
 
   <div class="flex flex-col gap-1.5">
-    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW برچسب اختصاصی قیمت {!! $newBadge !!}</label>
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">برچسب اختصاصی قیمت</label>
     <input type="text" name="new_price_custom_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: ویژه، اقتصادی، هدیه">
     <div class="flex gap-1.5 flex-wrap">
       @foreach (['ویژه','اقتصادی','هدیه'] as $preset)
@@ -230,103 +230,7 @@
     <input type="text" name="card_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: هدیه، پیشنهاد ویژه" value="{{ old('card_label', optional($duplicateFrom)->card_label) }}">
   </div>
 
-  <div class="border-t border-dashed border-[var(--b2)] pt-4">
-    <div class="text-[10.5px] font-bold text-[var(--orange)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-flask text-[10px]"></i> تنظیمات آینده کارت (فاز بعد توسعه)</div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW رنگ Badge {!! $newBadge !!}</label>
-        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
-          <input type="color" name="new_badge_color" value="#0BBF53" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0">
-          <span class="text-[11px] text-[var(--text3)]">پیش‌نمایش رنگ روی نشان کارت</span>
-        </div>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW رنگ پس‌زمینه کارت {!! $newBadge !!}</label>
-        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
-          <input type="color" name="new_card_bg_color" value="#16161c" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0">
-          <span class="text-[11px] text-[var(--text3)]">پس‌زمینه کارت محصول در سایت/اپ</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-      <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW نمایش آیکون روی کارت {!! $newBadge !!}</div>
-        <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-          <input type="checkbox" name="new_show_icon_on_card" value="1" class="sr-only peer">
-          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-        </label>
-      </div>
-      <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW نمایش Badge روی کارت {!! $newBadge !!}</div>
-        <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-          <input type="checkbox" name="new_show_badge_on_card" value="1" class="sr-only peer">
-          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-        </label>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="text-[10.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW اولویت نمایش در صفحه اصلی {!! $newBadge !!}</label>
-        <input type="number" name="new_homepage_priority" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)]" placeholder="مثلاً: 1">
-      </div>
-    </div>
-    <div class="text-[10px] text-[var(--text3)] mt-2">آیکون محصول از «رسانه نمایشی» در گام اول آپلود می‌شود؛ اینجا فقط نحوه نمایش آن روی کارت تنظیم می‌شود.</div>
-  </div>
-</div>
-
-{{-- ═══════════════════ Card ۴ (جدید) — انتشار محصول ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
-  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap">
-      <i class="fa-solid fa-rocket text-[var(--accent)]"></i> انتشار محصول
-      <span class="inline-flex items-center gap-1 bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold">Card جدید</span>
-    </div>
-    <div class="text-[10.5px] text-[var(--text3)] mt-1">این Card در نسخه فعلی وجود نداشت و به‌صورت ماژولار اضافه شده — همه فیلدهای زیر NEW و فقط UI هستند</div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW وضعیت انتشار {!! $newBadge !!}</label>
-      <select name="new_publish_status" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full">
-        <option value="draft">پیش‌نویس</option>
-        <option value="published">منتشر شده</option>
-        <option value="inactive">غیرفعال</option>
-      </select>
-    </div>
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW تاریخ انتشار {!! $newBadge !!}</label>
-      <input type="date" name="new_publish_date" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full">
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-3.5">
-    <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-      <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در صفحه اصلی</div>
-      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-        <input type="checkbox" name="new_show_homepage" value="1" class="sr-only peer">
-        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-      </label>
-    </div>
-    <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-      <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در پیشنهادات</div>
-      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-        <input type="checkbox" name="new_show_suggestions" value="1" class="sr-only peer">
-        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-      </label>
-    </div>
-    <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-      <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در بخش محبوب‌ها</div>
-      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-        <input type="checkbox" name="new_show_popular" value="1" class="sr-only peer">
-        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-      </label>
-    </div>
-  </div>
-
-  <div class="flex flex-col gap-1.5 max-w-xs">
-    <label class="text-xs font-semibold text-[var(--text2)]">اولویت نمایش</label>
-    <input type="number" name="new_publish_priority" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1">
-  </div>
 </div>
 
 <script>

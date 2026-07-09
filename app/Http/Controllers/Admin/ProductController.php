@@ -185,9 +185,24 @@ class ProductController extends Controller
         $product->timeout = $request->input('timeout') ?? 60;
         $product->pipeline_type = $request->input('pipeline_type') ?? 'image_generation';
 
+        // ۶.۱ پارامترهای واقعی کیفیت + پرامپت‌های تکمیلی
+        $product->system_prompt    = $request->input('system_prompt');
+        $product->negative_prompt  = $request->input('negative_prompt');
+        $product->seed             = $request->filled('seed') ? (int) $request->input('seed') : null;
+        $providerOptionsRaw        = $request->input('provider_options');
+        $product->provider_options = $providerOptionsRaw ? (json_decode($providerOptionsRaw, true) ?: null) : null;
+
+        // ۶.۲ نوع سوژه و حفظ هویت (چهره/هیکل)
+        $product->subject_type          = $request->input('subject_type') ?? 'generic';
+        $product->identity_preservation = $request->has('identity_preservation');
+        $product->identity_strength     = $request->input('identity_strength') ?? 80;
+        $product->preserve_body         = $request->has('preserve_body');
+        $product->identity_instructions = $request->input('identity_instructions');
+        $product->min_reference_images  = $request->input('min_reference_images') ?? 0;
+        $product->max_reference_images  = $request->input('max_reference_images') ?? 1;
+
         // ۷. وضعیت‌ها و چک‌باکس‌ها
         $product->status = $request->input('status') ?? 'draft';
-        $product->new_status = $request->input('new_status') ?? 'draft';
         $product->new_display_order = $request->input('new_display_order') ?? 1;
         $product->new_internal_code = $request->input('new_internal_code');
         $product->new_admin_note = $request->input('new_admin_note');
@@ -225,8 +240,6 @@ class ProductController extends Controller
         $product->tags = $request->input('tags', []);
 
         // ۹. فیلدهای فاز جدید توسعه
-        $product->new_card_color = $request->input('new_card_color') ?? '#A07AF5';
-        $product->new_gallery_preview_mode = $request->input('new_gallery_preview_mode') ?? 'grid';
         $product->new_watermark_corner_precise = $request->input('new_watermark_corner_precise') ?? 'tr';
         $product->new_watermark_opacity = $request->input('new_watermark_opacity') ?? 70;
         $product->new_watermark_size = $request->input('new_watermark_size') ?? 30;
@@ -263,6 +276,15 @@ class ProductController extends Controller
             'category_id' => 'nullable|integer',
             'primary_model' => 'nullable|string',
             'prompt_template' => 'nullable|string',
+            'system_prompt' => 'nullable|string',
+            'negative_prompt' => 'nullable|string',
+            'seed' => 'nullable|integer',
+            'provider_options' => 'nullable|string',
+            'subject_type' => 'nullable|in:generic,face,body,product,scene',
+            'identity_strength' => 'nullable|integer|min:0|max:100',
+            'identity_instructions' => 'nullable|string',
+            'min_reference_images' => 'nullable|integer|min:0|max:20',
+            'max_reference_images' => 'nullable|integer|min:0|max:20',
             'description_fa' => 'nullable|string',
             'description_en' => 'nullable|string',
             'status' => 'nullable|in:active,draft,inactive',
@@ -280,7 +302,6 @@ class ProductController extends Controller
             'card_shape' => 'nullable|string',
             'gallery_layout' => 'nullable|string',
             'card_label' => 'nullable|string|max:100',
-            'new_status' => 'nullable|in:draft,active,inactive',
             'new_display_order' => 'nullable|integer',
             'new_internal_code' => 'nullable|string|max:100',
             'new_admin_note' => 'nullable|string',
@@ -333,6 +354,13 @@ class ProductController extends Controller
         $validated['new_is_recommended'] = $request->has('new_is_recommended');
         $validated['new_is_beta'] = $request->has('new_is_beta');
         $validated['new_show_free_badge'] = $request->has('new_show_free_badge');
+
+        // حفظ هویت — چک‌باکس‌ها و provider_options
+        $validated['identity_preservation'] = $request->has('identity_preservation');
+        $validated['preserve_body'] = $request->has('preserve_body');
+        $providerOptionsRaw = $request->input('provider_options');
+        $validated['provider_options'] = $providerOptionsRaw ? (json_decode($providerOptionsRaw, true) ?: null) : null;
+        $validated['seed'] = $request->filled('seed') ? (int) $request->input('seed') : null;
 
         $validated['slug'] = Str::slug($validated['slug']);
 

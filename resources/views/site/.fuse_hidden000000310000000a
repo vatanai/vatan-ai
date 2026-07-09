@@ -45,7 +45,7 @@
             width: 100%;
             max-width: 320px;
             height: 54px;
-            background: #cffe00;
+            background: #0BBF53;
             color: #ffffff;
             font-family: 'IRANSansXFaNum', sans-serif;
             font-size: 16px;

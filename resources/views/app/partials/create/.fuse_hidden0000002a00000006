@@ -46,7 +46,7 @@
         </div>
 
         {{-- Done checkmark --}}
-        <div id="done-{{ $fieldId }}" style="display:none;position:absolute;top:8px;right:8px;width:24px;height:24px;background:#cffe00;border-radius:50%;display:none;align-items:center;justify-content:center;">
+        <div id="done-{{ $fieldId }}" style="display:none;position:absolute;top:8px;right:8px;width:24px;height:24px;background:#0BBF53;border-radius:50%;display:none;align-items:center;justify-content:center;">
           <i class="fa-solid fa-check" style="color:#fff;font-size:11px;"></i>
         </div>
 
@@ -81,7 +81,7 @@ function handleUpload(fieldId, input) {
     placeholder.style.display = 'none';
     done.style.display = 'flex';
     slot.classList.add('is-filled');
-    slot.style.borderColor = 'rgba(207,254,0,0.4)';
+    slot.style.borderColor = 'rgba(11,191,83,0.4)';
     document.dispatchEvent(new CustomEvent('cp:upload-changed'));
   };
   reader.readAsDataURL(file);

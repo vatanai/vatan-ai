@@ -30,7 +30,7 @@
     </div>
 
     <button type="submit" id="cp-submit-btn" class="cp-cta"
-      style="width:100%;height:52px;background:#cffe00;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#12160a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;transition:opacity 0.18s,transform 0.14s;">
+      style="width:100%;height:52px;background:#0BBF53;border:none;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;font-family:inherit;transition:opacity 0.18s,transform 0.14s;">
       <span id="cp-cta-text" style="display:flex;align-items:center;gap:8px;">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
         ساخت تصویر
@@ -50,7 +50,7 @@
 
 <style>
 .cp-summary__badge--warn { color:#f5923a; font-size:12px; }
-.cp-summary__badge--ok   { color:#cffe00; font-size:12px; }
+.cp-summary__badge--ok   { color:#0BBF53; font-size:12px; }
 #cp-submit-btn:active { transform:scale(0.97); opacity:0.9; }
 #cp-submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
 </style>

@@ -8,6 +8,121 @@
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
 @endphp
 
+{{-- ═══════════════════ Card ۰ — نوع سوژه و حفظ هویت ═══════════════════ --}}
+@php
+  $curSubjectType   = old('subject_type', optional($duplicateFrom)->subject_type ?? 'generic');
+  $curIdentityOn    = old('identity_preservation', optional($duplicateFrom)->identity_preservation ?? false);
+  $curIdentityStr   = old('identity_strength', optional($duplicateFrom)->identity_strength ?? 80);
+  $curPreserveBody  = old('preserve_body', optional($duplicateFrom)->preserve_body ?? false);
+  $curMinRef        = old('min_reference_images', optional($duplicateFrom)->min_reference_images ?? 0);
+  $curMaxRef        = old('max_reference_images', optional($duplicateFrom)->max_reference_images ?? 1);
+@endphp
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-user-check text-[var(--accent)]"></i> نوع سوژه و حفظ هویت</div>
+    <div class="text-[10.5px] text-[var(--text3)] mt-1">تعیین می‌کند خروجی چقدر باید به کاربر (چهره/هیکل) شبیه باشد — مهم‌ترین عامل دقت</div>
+  </div>
+
+  {{-- نوع سوژه محصول --}}
+  <div class="flex flex-col gap-1.5 mb-4">
+    <label class="text-xs font-semibold text-[var(--text2)]">نوع سوژهٔ محصول</label>
+    @php
+      $subjectOptions = [
+        'generic' => ['عمومی', 'fa-shapes'],
+        'face'    => ['چهره‌محور', 'fa-face-smile'],
+        'body'    => ['چهره و هیکل', 'fa-person'],
+        'product' => ['محصول/شیء', 'fa-box'],
+        'scene'   => ['صحنه/منظره', 'fa-image'],
+      ];
+    @endphp
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+      @foreach($subjectOptions as $val => $meta)
+        <label class="subject-type-card flex flex-col items-center gap-1.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curSubjectType == $val ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+          <input type="radio" name="subject_type" value="{{ $val }}" {{ $curSubjectType == $val ? 'checked' : '' }} class="hidden" onchange="onSubjectTypeChange(this)">
+          <i class="fa-solid {{ $meta[1] }} text-sm text-[var(--text2)]"></i>
+          <span class="text-[11px] text-[var(--text2)] text-center">{{ $meta[0] }}</span>
+        </label>
+      @endforeach
+    </div>
+    <div class="text-[10px] text-[var(--text3)]">با انتخاب «چهره‌محور» یا «چهره و هیکل»، حفظ هویت به‌صورت خودکار روشن می‌شود.</div>
+  </div>
+
+  {{-- کلید اصلی حفظ هویت --}}
+  <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mb-3.5">
+    <div>
+      <div class="text-[12.5px] font-semibold text-[var(--text2)]">فعال‌سازی حفظ هویت (Identity Preservation)</div>
+      <div class="text-[11px] text-[var(--text3)] mt-0.5">خروجی باید همان شخصِ تصویر ورودی باشد — چهره و ویژگی‌ها حفظ شود</div>
+    </div>
+    <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+      <input type="checkbox" name="identity_preservation" value="1" id="identity-preservation-input" {{ $curIdentityOn ? 'checked' : '' }} class="sr-only peer" onchange="toggleIdentitySettings()">
+      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+    </label>
+  </div>
+
+  {{-- تنظیمات حفظ هویت — با روشن شدن کلید بالا نمایش داده می‌شوند --}}
+  <div id="identity-settings-wrap" class="{{ $curIdentityOn ? '' : 'hidden' }} space-y-3.5">
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between">
+        <span>شدت شباهت به کاربر</span>
+        <span class="text-[var(--accent)] font-mono text-[11px]" id="identity-strength-val">{{ $curIdentityStr }}%</span>
+      </label>
+      <input type="range" name="identity_strength" min="0" max="100" value="{{ $curIdentityStr }}" class="w-full accent-[var(--accent)]" oninput="document.getElementById('identity-strength-val').textContent = this.value + '%'">
+      <div class="text-[10px] text-[var(--text3)]">هرچه بالاتر، خروجی به تصویر ورودی نزدیک‌تر و خلاقیت مدل کمتر می‌شود.</div>
+    </div>
+
+    <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
+      <div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)]">حفظ هیکل و تناسب بدن</div>
+        <div class="text-[11px] text-[var(--text3)] mt-0.5">علاوه بر چهره، فرم بدن هم مشابه کاربر بماند</div>
+      </div>
+      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+        <input type="checkbox" name="preserve_body" value="1" {{ $curPreserveBody ? 'checked' : '' }} class="sr-only peer">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)]">حداقل تصویر ورودی لازم</label>
+        <input type="number" name="min_reference_images" min="0" max="20" value="{{ $curMinRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="0">
+        <div class="text-[10px] text-[var(--text3)]">اگر بیشتر از ۰ باشد، کاربر بدون آپلود عکس نمی‌تواند اجرا کند.</div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)]">حداکثر تصویر ورودی مجاز</label>
+        <input type="number" name="max_reference_images" min="0" max="20" value="{{ $curMaxRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="1">
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)]">دستور اختصاصی حفظ هویت (انگلیسی — اختیاری)</label>
+      <textarea name="identity_instructions" rows="3" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="Keep the exact same face and identity of the person in the uploaded photo...">{{ old('identity_instructions', optional($duplicateFrom)->identity_instructions) }}</textarea>
+      <div class="text-[10px] text-[var(--text3)]">خالی بگذارید تا دستور پیش‌فرض حرفه‌ای حفظ چهره (و هیکل در صورت فعال بودن) خودکار به پرامپت افزوده شود.</div>
+    </div>
+  </div>
+
+  <script>
+    function toggleIdentitySettings() {
+      var on = document.getElementById('identity-preservation-input').checked;
+      document.getElementById('identity-settings-wrap').classList.toggle('hidden', !on);
+    }
+    function onSubjectTypeChange(radio) {
+      document.querySelectorAll('.subject-type-card').forEach(function (c) {
+        c.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8');
+      });
+      if (radio.checked) radio.closest('.subject-type-card').classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
+
+      var idInput = document.getElementById('identity-preservation-input');
+      var bodyInput = document.querySelector('input[name="preserve_body"]');
+      if (radio.value === 'face' || radio.value === 'body') {
+        idInput.checked = true;
+        if (radio.value === 'body' && bodyInput) bodyInput.checked = true;
+      }
+      toggleIdentitySettings();
+    }
+  </script>
+</div>
+
 {{-- ═══════════════════ Card ۱ — پایپ‌لاین هوش مصنوعی ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
@@ -38,7 +153,6 @@
         <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-image ml-1"></i>Image</span>
         <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-eye ml-1"></i>Vision</span>
         <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-font ml-1"></i>Text</span>
-        {!! $newBadge !!}
       </div>
     </div>
 
@@ -99,6 +213,13 @@
     </div>
   </div>
 
+  {{-- System Prompt — دستور پایه‌ای که همیشه ابتدای پرامپت نهایی قرار می‌گیرد --}}
+  <div class="flex flex-col gap-1.5 mb-3.5">
+    <label class="text-xs font-semibold text-[var(--text2)]">System Prompt — دستور سیستمی (انگلیسی، اختیاری)</label>
+    <textarea name="system_prompt" rows="3" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="You are a world-class professional photo generator...">{{ old('system_prompt', optional($duplicateFrom)->system_prompt) }}</textarea>
+    <div class="text-[10px] text-[var(--text3)]">نقش/سبک کلی مدل را تعیین می‌کند و همیشه پیش از متن پرامپت اصلی ارسال می‌شود.</div>
+  </div>
+
   <div class="flex flex-col gap-1.5 mb-3.5" id="prompt-editor-card">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <label class="text-xs font-semibold text-[var(--text2)]">متن پرامپت (انگلیسی) <span class="text-[var(--red)] mr-0.5">*</span></label>
@@ -106,16 +227,6 @@
         <button type="button" class="text-[10.5px] px-2 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors" onclick="copyPromptText()"><i class="fa-solid fa-copy ml-1"></i>Copy Prompt</button>
         <button type="button" class="text-[10.5px] px-2 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors" onclick="clearPromptText()"><i class="fa-solid fa-eraser ml-1"></i>Clear</button>
         <button type="button" class="text-[10.5px] px-2 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors" onclick="toggleExpandEditor()" id="expand-editor-btn"><i class="fa-solid fa-expand ml-1"></i>Expand Editor</button>
-        <div class="relative">
-          <button type="button" class="text-[10.5px] px-2 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors flex items-center gap-1" onclick="togglePromptHistory()" title="NEW Prompt Versioning / History — برنامه‌نویسی شود">
-            <i class="fa-solid fa-clock-rotate-left"></i>نسخه‌ها {!! $newBadge !!}
-          </button>
-          <div id="prompt-history-panel" class="hidden absolute left-0 mt-1 w-56 bg-[var(--s2)] border border-[var(--b1)] rounded-lg shadow-xl z-20 p-2 text-[11px]">
-            <div class="text-[var(--text3)] px-1.5 py-1">تاریخچه نسخه‌های پرامپت (نمایشی)</div>
-            <div class="px-1.5 py-1.5 rounded-md bg-[var(--text)]/5 text-[var(--text)] flex items-center justify-between"><span>نسخه فعلی</span><span class="text-[9px] text-[var(--green)]">فعال</span></div>
-            <div class="px-1.5 py-3 text-center text-[var(--text3)]">نسخه قبلی ثبت نشده است</div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -131,13 +242,13 @@
     <div class="flex items-center justify-between flex-wrap gap-2 text-[10px] text-[var(--text3)]">
       <div class="flex items-center gap-3 flex-wrap">
         <span id="prompt-char-count">0 کاراکتر</span>
-        <span id="prompt-token-estimate">~0 توکن (تخمینی) {!! $newBadge !!}</span>
+        <span id="prompt-token-estimate">~0 توکن (تخمینی)</span>
         <span id="prompt-vars-detected">۰ متغیر شناسایی شد</span>
       </div>
     </div>
 
     <div class="flex flex-col gap-1.5 mt-2">
-      <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW Search Variable {!! $newBadge !!}</label>
+      <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">جستجوی متغیر</label>
       <input type="text" id="var-search-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] outline-none focus:border-[var(--accent)] w-full" placeholder="جستجوی متغیر..." oninput="filterVarChips(this.value)">
     </div>
 
@@ -156,6 +267,24 @@
       <span class="var-chip text-[11px] bg-[var(--b1)] border border-[var(--b2)] rounded px-2 py-0.5 cursor-pointer text-[var(--text2)] hover:border-[var(--accent)]" data-cat="product" onclick="insertVar('{product_name}')">{product_name} <span class="text-[8px] text-[var(--orange)]">NEW</span></span>
       <span class="var-chip text-[11px] bg-[var(--b1)] border border-[var(--b2)] rounded px-2 py-0.5 cursor-pointer text-[var(--text2)] hover:border-[var(--accent)]" data-cat="media" onclick="insertVar('{image}')">{image} <span class="text-[8px] text-[var(--orange)]">NEW</span></span>
       <span class="var-chip text-[11px] bg-[var(--b1)] border border-[var(--b2)] rounded px-2 py-0.5 cursor-pointer text-[var(--text2)] hover:border-[var(--accent)]" data-cat="system" onclick="insertVar('{today}')">{today} <span class="text-[8px] text-[var(--orange)]">NEW</span></span>
+    </div>
+  </div>
+
+  {{-- ── پارامترهای واقعی کیفیت (به Backend وصل هستند) ── --}}
+  <div class="border-t border-[var(--b1)] pt-3.5 mt-3 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+    <div class="flex flex-col gap-1.5 md:col-span-2">
+      <label class="text-xs font-semibold text-[var(--text2)]">Negative Prompt — چیزهایی که نباید در خروجی باشد (انگلیسی)</label>
+      <textarea name="negative_prompt" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="blurry, deformed face, extra fingers, low quality, watermark...">{{ old('negative_prompt', optional($duplicateFrom)->negative_prompt) }}</textarea>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)]">Seed (بازتولیدپذیری خروجی)</label>
+      <input type="number" name="seed" value="{{ old('seed', optional($duplicateFrom)->seed) }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left" placeholder="خالی = تصادفی">
+      <div class="text-[10px] text-[var(--text3)]">مقدار ثابت = خروجی تکرارپذیر برای پرامپت یکسان.</div>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)]">Provider Options (JSON پیشرفته — اختیاری)</label>
+      <textarea name="provider_options" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-[11px] text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder='{"google": {"...": "..."}}'>{{ old('provider_options', is_array(optional($duplicateFrom)->provider_options) ? json_encode($duplicateFrom->provider_options, JSON_UNESCAPED_UNICODE) : '') }}</textarea>
+      <div class="text-[10px] text-[var(--text3)]">مستقیماً به provider.options اوپن‌روتر ارسال می‌شود. اگر JSON نامعتبر باشد نادیده گرفته می‌شود.</div>
     </div>
   </div>
 
@@ -184,23 +313,9 @@
           <a id="test-result-download" href="#" target="_blank" class="text-[11px] text-[var(--accent)] underline">مشاهده تصویر کامل</a>
         </div>
       </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5">
-          <div class="text-[9.5px] text-[var(--text3)] mb-1 flex items-center gap-1 flex-wrap">آخرین اجرای تست {!! $newBadge !!}</div>
-          <div class="text-[11px] text-[var(--text)]" id="stat-last-run">همین الان</div>
-        </div>
-        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5">
-          <div class="text-[9.5px] text-[var(--text3)] mb-1 flex items-center gap-1 flex-wrap">مدت زمان پاسخ {!! $newBadge !!}</div>
-          <div class="text-[11px] text-[var(--text)]">—</div>
-        </div>
-        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5">
-          <div class="text-[9.5px] text-[var(--text3)] mb-1 flex items-center gap-1 flex-wrap">Token Usage {!! $newBadge !!}</div>
-          <div class="text-[11px] text-[var(--text)]">—</div>
-        </div>
-        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5">
-          <div class="text-[9.5px] text-[var(--text3)] mb-1 flex items-center gap-1 flex-wrap">Estimated Cost {!! $newBadge !!}</div>
-          <div class="text-[11px] text-[var(--text)]">—</div>
-        </div>
+      <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 flex items-center gap-2">
+        <span class="text-[9.5px] text-[var(--text3)]">آخرین اجرای تست:</span>
+        <span class="text-[11px] text-[var(--text)]" id="stat-last-run">همین الان</span>
       </div>
     </div>
 
@@ -388,7 +503,7 @@ function onPromptInput() {
   autoResizePrompt();
   syncPromptScroll();
   document.getElementById('prompt-char-count').textContent = ta.value.length + ' کاراکتر';
-  document.getElementById('prompt-token-estimate').innerHTML = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی) <span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
+  document.getElementById('prompt-token-estimate').textContent = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی)';
   const matches = ta.value.match(/\{[a-zA-Z0-9_]+\}/g) || [];
   document.getElementById('prompt-vars-detected').textContent = matches.length + ' متغیر شناسایی شد';
 }
@@ -418,9 +533,6 @@ function toggleExpandEditor() {
     wrap.classList.remove('fixed','inset-4','z-50','bg-[var(--s2)]','p-4','rounded-xl','border','border-[var(--accent)]','shadow-2xl','overflow-y-auto');
     btn.innerHTML = '<i class="fa-solid fa-expand ml-1"></i>Expand Editor';
   }
-}
-function togglePromptHistory() {
-  document.getElementById('prompt-history-panel')?.classList.toggle('hidden');
 }
 function insertVar(v) {
   const ta = document.getElementById('prompt-template');
@@ -457,10 +569,5 @@ document.addEventListener('DOMContentLoaded', () => {
   onPrimaryModelChange();
   document.querySelectorAll('#fallback-list .fallback-row').forEach(row => wireFallbackDrag(row));
   onPromptInput();
-  
-  document.addEventListener('click', e => {
-    const panel = document.getElementById('prompt-history-panel');
-    if (panel && !panel.classList.contains('hidden') && !panel.parentElement.contains(e.target)) panel.classList.add('hidden');
-  });
 });
 </script>

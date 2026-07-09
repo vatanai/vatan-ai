@@ -199,13 +199,13 @@
   }
   .xp-filter-btn span { display: none; }
   .xp-filter-btn:hover, .xp-filter-btn[aria-expanded="true"] {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #cffe00; border-color: #cffe00; color: #ffffff;
   }
   html.light .xp-filter-btn {
     background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: rgba(0,0,0,0.7);
   }
   html.light .xp-filter-btn:hover, html.light .xp-filter-btn[aria-expanded="true"] {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #cffe00; border-color: #cffe00; color: #ffffff;
   }
 
   .xp-filter-panel {
@@ -248,7 +248,7 @@
     transition: all 0.2s;
   }
   .xp-filter-chip.active {
-    background: #cffe00; border-color: #cffe00; color: #12160a; font-weight: 700;
+    background: #cffe00; border-color: #cffe00; color: #ffffff; font-weight: 700;
   }
   html.light .xp-filter-chip {
     background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6);
@@ -306,7 +306,7 @@
     transition: all 0.2s;
   }
   .xp-cat-box:hover, .xp-cat-box.active {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #cffe00; border-color: #cffe00; color: #ffffff;
   }
   html.light .xp-cat-box {
     background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6);

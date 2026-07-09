@@ -82,15 +82,37 @@ class ProductGenerateController extends Controller
             }
         }
 
-        // ۳. جایگذاری فیلدها در قالب پرامپت
-        $finalPrompt = $product->prompt_template ?? 'تولید تصویر خلاقانه محصول';
+        // ۳. ساخت پرامپت نهایی: system_prompt + قالب (با جایگذاری متغیرها) + دستور حفظ هویت
+        $templatePrompt = $product->prompt_template ?? 'Create a high quality image.';
         foreach ($request->input('fields', []) as $key => $value) {
-            $finalPrompt = str_replace('{' . $key . '}', $value, $finalPrompt);
+            $replacement = is_array($value) ? implode(', ', $value) : (string) $value;
+            $templatePrompt = str_replace('{' . $key . '}', $replacement, $templatePrompt);
         }
+
+        $promptParts = [];
+        if (!empty($product->system_prompt)) {
+            $promptParts[] = trim($product->system_prompt);
+        }
+        $promptParts[] = trim($templatePrompt);
+
+        // اگر محصول هویت‌محور است، دستور حفظ چهره/هیکل به پرامپت افزوده می‌شود
+        if ($product->identity_preservation) {
+            if (!empty($product->identity_instructions)) {
+                $promptParts[] = trim($product->identity_instructions);
+            } else {
+                $idText = 'Preserve the exact facial identity, features, and likeness of the person in the reference image(s). The generated face must clearly and accurately resemble the same person.';
+                if ($product->preserve_body) {
+                    $idText .= ' Also keep the same body shape, physique, and proportions.';
+                }
+                $promptParts[] = $idText;
+            }
+        }
+
+        $finalPrompt = implode("\n\n", array_filter($promptParts));
 
         // ۴. پردازش و ذخیره‌سازی عکس‌های آپلودی کاربر
         $base64Images  = [];
-        $uploadedPaths = []; 
+        $uploadedPaths = [];
 
         foreach ($allFiles as $file) {
             if (!$file) continue;
@@ -107,8 +129,20 @@ class ProductGenerateController extends Controller
             $base64Images[] = "data:{$mime};base64,{$b64}";
         }
 
+        // ۴.۱ الزام تصویر مرجع برای محصولات هویت‌محور/ویرایشی
+        $minRefs = (int) ($product->min_reference_images ?? 0);
+        if ($minRefs > 0 && count($base64Images) < $minRefs) {
+            foreach ($uploadedPaths as $up) {
+                Storage::disk('public')->delete($up['path']);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => "این محصول برای نتیجهٔ دقیق به حداقل {$minRefs} تصویر ورودی نیاز دارد.",
+            ], 422);
+        }
+
         // ۵. مشخصات خروجی تصویر هوش مصنوعی
-        $aspectRatio = $request->input('output.aspect_ratio', '1:1');
+        $aspectRatio = $request->input('output.aspect_ratio', $product->aspect_ratio ?? '1:1');
         $quality     = $request->input('output.quality', '1K');
 
         try {
@@ -120,13 +154,29 @@ class ProductGenerateController extends Controller
                 ], $base64Images);
             }
 
+            // پارامترهای واقعی مؤثر بر کیفیت — فقط در صورت مقداردهی ارسال می‌شوند
+            if (!empty($product->negative_prompt)) {
+                $extraPayload['negative_prompt'] = $product->negative_prompt;
+            }
+            if (!is_null($product->seed)) {
+                $extraPayload['seed'] = (int) $product->seed;
+            }
+            if (!empty($product->output_format)) {
+                $extraPayload['output_format'] = $product->output_format;
+            }
+            if (is_array($product->provider_options) && !empty($product->provider_options)) {
+                $extraPayload['provider'] = $product->provider_options;
+            }
+
+            $outputCount = max(1, (int) ($product->output_count ?? 1));
+
             // درخواست خروجی از OpenRouter
             $result = $this->openRouter->generateImageFromPrompt(
                 $product->primary_model ?? 'stabilityai/stable-diffusion-xl',
                 $finalPrompt,
                 $quality,
                 $aspectRatio,
-                1,
+                $outputCount,
                 $extraPayload
             );
 

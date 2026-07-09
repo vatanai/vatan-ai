@@ -33,12 +33,12 @@
 
     {{-- محصولات --}}
     <div class="nav-item">
-      <div class="nav-link {{ request()->is('admin/products*') ? 'active' : '' }}" onclick="toggleSub('products-submenu', this)">
+      <div class="nav-link {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'active' : '' }}" onclick="toggleSub('products-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-box-open"></i></div>
         <div class="nav-label">محصولات</div>
-        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/products*') ? 'open' : '' }}"></i>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ request()->is('admin/products*') ? 'open' : '' }}" id="products-submenu">
+      <div class="submenu {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'open' : '' }}" id="products-submenu">
         <div class="sub-track">
           <a href="/admin/products" class="sub-item {{ request()->is('admin/products') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">لیست محصولات</div>
@@ -46,10 +46,12 @@
           <a href="/admin/products/create" class="sub-item {{ request()->is('admin/products/create') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">ثبت محصول جدید</div>
           </a>
-          <div class="sub-item">
+          <a href="{{ route('admin.categories.index') }}" class="sub-item {{ request()->is('admin/categories') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">دسته‌بندی‌ها</div>
-            <span class="nav-status-badge warn">بزودی</span>
-          </div>
+          </a>
+          <a href="{{ route('admin.categories.create') }}" class="sub-item {{ request()->is('admin/categories/create') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی جدید</div>
+          </a>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">گزارش محصولات</div>
             <span class="nav-status-badge warn">بزودی</span>
@@ -58,6 +60,22 @@
             <div class="sub-dot"></div><div class="sub-label">تنظیمات نمایش</div>
             <span class="nav-status-badge warn">بزودی</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    {{-- اکسپلور --}}
+    <div class="nav-item">
+      <div class="nav-link {{ request()->is('admin/explore*') ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
+        <div class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="nav-label">اکسپلور</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/explore*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/explore*') ? 'open' : '' }}" id="explore-submenu">
+        <div class="sub-track">
+          <a href="{{ route('admin.explore.index') }}" class="sub-item {{ request()->is('admin/explore') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت اکسپلور</div>
+          </a>
         </div>
       </div>
     </div>

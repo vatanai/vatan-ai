@@ -40,8 +40,8 @@
       --b2:           #2e2e3e;
       --text:         #ffffff;
       --text2:        #a8a8c0;
-      --green:        #cffe00;
-      --green-dim:    rgba(207,254,0,0.12);
+      --green:        #0BBF53;
+      --green-dim:    rgba(11,191,83,0.12);
       --accent:       #a07af5;
       --accent-dim:   rgba(160,122,245,0.12);
       --card-bg:      #111116;
@@ -63,8 +63,8 @@
       --b2:           #cccccc;
       --text:         #000000;
       --text2:        #555566;
-      --green:        #cffe00;
-      --green-dim:    rgba(207,254,0,0.10);
+      --green:        #0BBF53;
+      --green-dim:    rgba(11,191,83,0.10);
       --accent:       #a07af5;
       --accent-dim:   rgba(160,122,245,0.10);
       --card-bg:      #f5f5f5;
@@ -120,7 +120,7 @@
       font-weight: 600;
       color: var(--green);
       background: var(--green-dim);
-      border: 1px solid rgba(207,254,0,0.25);
+      border: 1px solid rgba(11,191,83,0.25);
       border-radius: 99px;
       padding: 5px 14px;
       margin-bottom: 20px;
@@ -166,9 +166,9 @@
     .btn-primary {
       background: var(--green);
       color: #ffffff;
-      box-shadow: 0 4px 24px rgba(207,254,0,0.3);
+      box-shadow: 0 4px 24px rgba(11,191,83,0.3);
     }
-    .btn-primary:hover { box-shadow: 0 6px 32px rgba(207,254,0,0.45); }
+    .btn-primary:hover { box-shadow: 0 6px 32px rgba(11,191,83,0.45); }
 
     .btn-ghost {
       background: transparent;
@@ -350,7 +350,7 @@
       position: absolute;
       top: -200px; right: -200px;
       width: 700px; height: 700px;
-      background: radial-gradient(circle, rgba(207,254,0,0.07) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(11,191,83,0.07) 0%, transparent 70%);
       pointer-events: none;
     }
     #hero::after {
@@ -377,7 +377,7 @@
       font-weight: 600;
       color: var(--green);
       background: var(--green-dim);
-      border: 1px solid rgba(207,254,0,0.25);
+      border: 1px solid rgba(11,191,83,0.25);
       border-radius: 99px;
       padding: 6px 16px;
       margin-bottom: 28px;
@@ -437,7 +437,7 @@
     .hero-trust-item .check {
       width: 20px; height: 20px;
       background: var(--green-dim);
-      border: 1px solid rgba(207,254,0,0.3);
+      border: 1px solid rgba(11,191,83,0.3);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -638,12 +638,12 @@
       transition: opacity .3s ease;
     }
     .why-step:hover::before { opacity: 1; }
-    .why-step:hover { border-color: rgba(207,254,0,0.3); transform: translateY(-3px); }
+    .why-step:hover { border-color: rgba(11,191,83,0.3); transform: translateY(-3px); }
 
     .why-step-num {
       width: 56px; height: 56px;
       background: var(--green-dim);
-      border: 1px solid rgba(207,254,0,0.25);
+      border: 1px solid rgba(11,191,83,0.25);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -806,7 +806,7 @@
       transition: border-color .25s ease, transform .25s ease;
     }
     .feature-card:hover {
-      border-color: rgba(207,254,0,0.3);
+      border-color: rgba(11,191,83,0.3);
       transform: translateY(-3px);
     }
 
@@ -887,7 +887,7 @@
     }
     .how-step:hover .how-step-icon {
       background: var(--green-dim);
-      border-color: rgba(207,254,0,0.4);
+      border-color: rgba(11,191,83,0.4);
     }
 
     .how-step-num {
@@ -951,7 +951,7 @@
     }
     .audience-tag:hover {
       background: var(--green-dim);
-      border-color: rgba(207,254,0,0.35);
+      border-color: rgba(11,191,83,0.35);
       transform: translateY(-2px);
     }
     .audience-tag .tag-icon { font-size: 22px; }
@@ -986,7 +986,7 @@
     .pricing-card.featured {
       border-color: var(--green);
       background: linear-gradient(145deg, var(--s2) 0%, var(--s1) 100%);
-      box-shadow: 0 0 0 1px var(--green), 0 20px 60px rgba(207,254,0,0.15);
+      box-shadow: 0 0 0 1px var(--green), 0 20px 60px rgba(11,191,83,0.15);
     }
 
     .pricing-badge {
@@ -1089,7 +1089,7 @@
       overflow: hidden;
       transition: border-color .2s ease;
     }
-    .faq-item.open { border-color: rgba(207,254,0,0.3); }
+    .faq-item.open { border-color: rgba(11,191,83,0.3); }
 
     .faq-q {
       display: flex;
@@ -1159,7 +1159,7 @@
       top: 50%; left: 50%;
       transform: translate(-50%,-50%);
       width: 800px; height: 500px;
-      background: radial-gradient(ellipse, rgba(207,254,0,0.08) 0%, transparent 65%);
+      background: radial-gradient(ellipse, rgba(11,191,83,0.08) 0%, transparent 65%);
       pointer-events: none;
     }
 
@@ -1245,7 +1245,7 @@
       text-decoration: none;
     }
     .footer-admin-box:hover {
-      border-color: rgba(207,254,0,0.4);
+      border-color: rgba(11,191,83,0.4);
       color: var(--green);
     }
     .footer-admin-box i { font-size: 12px; }

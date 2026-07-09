@@ -26,7 +26,9 @@ class ExploreServiceProvider extends ServiceProvider
         }
 
         // ── Morph Map: نگاشت نام کوتاه به مدل واقعی برای feed_content_items.content_type ──
-        Relation::enforceMorphMap([
+        // عمداً از morphMap (نه enforceMorphMap) استفاده شده تا هیچ رفتار سراسری روی
+        // بقیه‌ی روابط چندریختی احتمالی پروژه (خارج از موتور فید) تحمیل نشود.
+        Relation::morphMap([
             'product'  => Product::class,
             'category' => Category::class,
             'campaign' => FeedCampaign::class,

@@ -13,15 +13,18 @@
 
     @stack('styles')
 </head>
-<body class="font-sans bg-bg text-white">
+<body class="font-sans" style="background:var(--page-bg);color:var(--text-main);">
     <script>
-      /* جلوگیری از چشمک‌زدن تم هنگام بارگذاری صفحه — باید اولین چیز داخل body باشد */
+      /* جلوگیری از چشمک‌زدن تم هنگام بارگذاری صفحه — باید اولین چیز داخل body باشد.
+         پیش‌فرض کل داشبورد «روز/روشن» است؛ فقط اگر کاربر صراحتاً شب را انتخاب کرده باشد تیره می‌شود. */
       (function () {
         try {
-          if (localStorage.getItem('admin-theme') === 'light') {
+          if (localStorage.getItem('admin-theme') !== 'dark') {
             document.body.classList.add('light');
           }
-        } catch (e) {}
+        } catch (e) {
+          document.body.classList.add('light');
+        }
       })();
     </script>
 

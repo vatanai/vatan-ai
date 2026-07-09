@@ -117,14 +117,13 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-semibold text-[#a8c4a8]">دسته‌بندی <span class="text-[#f05c5c] mr-0.5">*</span></label>
-                <select name="category" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none transition-colors w-full focus:border-[#a07af5]" id="cat-main" onchange="updateSubcat()">
+                {{-- اصلاح باگ: استفاده از category_id واقعی و مدل Category (به‌جای تاکسونومی رشته‌ای قدیمی) --}}
+                <select name="category_id" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none transition-colors w-full focus:border-[#a07af5]" id="cat-main">
                   <option value="">انتخاب کنید</option>
-                  @php $cat = old('category', $product->category); @endphp
-                  <option value="PEOPLE" {{ $cat == 'PEOPLE' ? 'selected' : '' }}>PEOPLE — شخصی</option>
-                  <option value="BUSINESS" {{ $cat == 'BUSINESS' ? 'selected' : '' }}>BUSINESS — کسب‌وکار</option>
-                  <option value="EVENTS" {{ $cat == 'EVENTS' ? 'selected' : '' }}>EVENTS — مناسبت‌ها</option>
-                  <option value="FAMILY" {{ $cat == 'FAMILY' ? 'selected' : '' }}>FAMILY — خانواده</option>
-                  <option value="AVATARS" {{ $cat == 'AVATARS' ? 'selected' : '' }}>AVATARS — آواتار</option>
+                  @php $curCat = old('category_id', $product->category_id); @endphp
+                  @foreach(\App\Models\Category::orderBy('name')->get() as $catItem)
+                    <option value="{{ $catItem->id }}" {{ (string) $curCat === (string) $catItem->id ? 'selected' : '' }}>{{ $catItem->name }} — {{ $catItem->slug }}</option>
+                  @endforeach
                 </select>
               </div>
               <div class="flex flex-col gap-1.5">
@@ -291,6 +290,110 @@
               <div class="flex flex-wrap gap-1.5 mt-1.5" id="var-chips">
                 <span class="text-[11px] bg-[#222230] border border-[#2e2e3e] rounded px-2 py-0.5 cursor-pointer text-[#a8c4a8]" onclick="insertVar('{name}')">{name}</span>
                 <span class="text-[11px] bg-[#222230] border border-[#2e2e3e] rounded px-2 py-0.5 cursor-pointer text-[#a8c4a8]" onclick="insertVar('{gender}')">{gender}</span>
+              </div>
+            </div>
+          </div>
+
+          {{-- ═══ نوع سوژه و حفظ هویت (توکن‌های رنگی داشبورد) ═══ --}}
+          @php
+            $eSubjectType  = old('subject_type', $product->subject_type ?? 'generic');
+            $eIdentityOn   = old('identity_preservation', $product->identity_preservation ?? false);
+            $eIdentityStr  = old('identity_strength', $product->identity_strength ?? 80);
+            $ePreserveBody = old('preserve_body', $product->preserve_body ?? false);
+            $eMinRef       = old('min_reference_images', $product->min_reference_images ?? 0);
+            $eMaxRef       = old('max_reference_images', $product->max_reference_images ?? 1);
+          @endphp
+          <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+            <div class="text-xs font-bold text-[var(--text)] mb-4 flex items-center gap-2 pb-3 border-b border-[var(--b1)]"><i class="fa-solid fa-user-check text-[var(--accent)]"></i> نوع سوژه و حفظ هویت</div>
+
+            <div class="flex flex-col gap-1.5 mb-4">
+              <label class="text-xs font-semibold text-[var(--text2)]">نوع سوژهٔ محصول</label>
+              @php
+                $eSubjectOptions = [
+                  'generic' => ['عمومی', 'fa-shapes'],
+                  'face'    => ['چهره‌محور', 'fa-face-smile'],
+                  'body'    => ['چهره و هیکل', 'fa-person'],
+                  'product' => ['محصول/شیء', 'fa-box'],
+                  'scene'   => ['صحنه/منظره', 'fa-image'],
+                ];
+              @endphp
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                @foreach($eSubjectOptions as $val => $meta)
+                  <label class="subject-type-card flex flex-col items-center gap-1.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $eSubjectType == $val ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+                    <input type="radio" name="subject_type" value="{{ $val }}" {{ $eSubjectType == $val ? 'checked' : '' }} class="hidden" onchange="onSubjectTypeChange(this)">
+                    <i class="fa-solid {{ $meta[1] }} text-sm text-[var(--text2)]"></i>
+                    <span class="text-[11px] text-[var(--text2)] text-center">{{ $meta[0] }}</span>
+                  </label>
+                @endforeach
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mb-3.5">
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text2)]">فعال‌سازی حفظ هویت (Identity Preservation)</div>
+                <div class="text-[11px] text-[var(--text3)] mt-0.5">خروجی باید همان شخصِ تصویر ورودی باشد</div>
+              </div>
+              <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+                <input type="checkbox" name="identity_preservation" value="1" id="identity-preservation-input" {{ $eIdentityOn ? 'checked' : '' }} class="sr-only peer" onchange="toggleIdentitySettings()">
+                <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+              </label>
+            </div>
+
+            <div id="identity-settings-wrap" class="{{ $eIdentityOn ? '' : 'hidden' }} space-y-3.5">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between">
+                  <span>شدت شباهت به کاربر</span>
+                  <span class="text-[var(--accent)] font-mono text-[11px]" id="identity-strength-val">{{ $eIdentityStr }}%</span>
+                </label>
+                <input type="range" name="identity_strength" min="0" max="100" value="{{ $eIdentityStr }}" class="w-full accent-[var(--accent)]" oninput="document.getElementById('identity-strength-val').textContent = this.value + '%'">
+              </div>
+              <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
+                <div class="text-[12.5px] font-semibold text-[var(--text2)]">حفظ هیکل و تناسب بدن</div>
+                <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+                  <input type="checkbox" name="preserve_body" value="1" {{ $ePreserveBody ? 'checked' : '' }} class="sr-only peer">
+                  <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+                </label>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[var(--text2)]">حداقل تصویر ورودی لازم</label>
+                  <input type="number" name="min_reference_images" min="0" max="20" value="{{ $eMinRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]">
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[var(--text2)]">حداکثر تصویر ورودی مجاز</label>
+                  <input type="number" name="max_reference_images" min="0" max="20" value="{{ $eMaxRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]">
+                </div>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-[var(--text2)]">دستور اختصاصی حفظ هویت (انگلیسی — اختیاری)</label>
+                <textarea name="identity_instructions" rows="3" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="Keep the exact same face and identity...">{{ old('identity_instructions', $product->identity_instructions) }}</textarea>
+              </div>
+            </div>
+            <script>
+              function toggleIdentitySettings(){var o=document.getElementById('identity-preservation-input').checked;document.getElementById('identity-settings-wrap').classList.toggle('hidden',!o);}
+              function onSubjectTypeChange(r){document.querySelectorAll('.subject-type-card').forEach(function(c){c.classList.remove('border-[var(--accent)]','bg-[var(--accent)]/8');});if(r.checked)r.closest('.subject-type-card').classList.add('border-[var(--accent)]','bg-[var(--accent)]/8');var i=document.getElementById('identity-preservation-input'),b=document.querySelector('input[name="preserve_body"]');if(r.value==='face'||r.value==='body'){i.checked=true;if(r.value==='body'&&b)b.checked=true;}toggleIdentitySettings();}
+            </script>
+          </div>
+
+          {{-- ═══ پارامترهای واقعی کیفیت ═══ --}}
+          <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+            <div class="text-xs font-bold text-[var(--text)] mb-4 flex items-center gap-2 pb-3 border-b border-[var(--b1)]"><i class="fa-solid fa-sliders text-[var(--accent)]"></i> پارامترهای کیفیت مدل</div>
+            <div class="flex flex-col gap-1.5 mb-3.5">
+              <label class="text-xs font-semibold text-[var(--text2)]">System Prompt (انگلیسی، اختیاری)</label>
+              <textarea name="system_prompt" rows="3" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="You are a world-class professional photo generator...">{{ old('system_prompt', $product->system_prompt) }}</textarea>
+            </div>
+            <div class="flex flex-col gap-1.5 mb-3.5">
+              <label class="text-xs font-semibold text-[var(--text2)]">Negative Prompt (انگلیسی)</label>
+              <textarea name="negative_prompt" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="blurry, deformed face, extra fingers, low quality...">{{ old('negative_prompt', $product->negative_prompt) }}</textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-[var(--text2)]">Seed</label>
+                <input type="number" name="seed" value="{{ old('seed', $product->seed) }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left" placeholder="خالی = تصادفی">
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-[var(--text2)]">Provider Options (JSON)</label>
+                <textarea name="provider_options" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-[11px] text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder='{"google": {"...": "..."}}'>{{ old('provider_options', is_array($product->provider_options) ? json_encode($product->provider_options, JSON_UNESCAPED_UNICODE) : '') }}</textarea>
               </div>
             </div>
           </div>

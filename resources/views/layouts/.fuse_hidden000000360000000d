@@ -153,7 +153,7 @@
 <nav id="vatan-nav" role="navigation" aria-label="منوی اصلی" class="sm:hidden fixed bottom-0 left-0 right-0 z-[200] pb-[calc(env(safe-area-inset-bottom,0px)+28px)] px-4 pointer-events-none max-w-[480px] mx-auto">
   <div id="vatan-nav-bar" class="flex items-center h-[70px] bg-[#111116]/82 [.light_&]:bg-white/88 rounded-full border border-white/15 [.light_&]:border-black/10 p-0 relative pointer-events-auto backdrop-blur-[20px] backdrop-saturate-[180%] w-full box-border shadow-2xl transition-all duration-300">
 
-    <div id="vatan-nav-thumb" aria-hidden="true" class="absolute top-1.5 bottom-1.5 left-0 w-0 rounded-full bg-[#cffe00] z-0 pointer-events-none invisible"></div>
+    <div id="vatan-nav-thumb" aria-hidden="true" class="absolute top-1.5 bottom-1.5 left-0 w-0 rounded-full bg-[#0BBF53] z-0 pointer-events-none invisible"></div>
 
     @auth
       <a href="{{ route('app.profile') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="profile" aria-label="پروفایل">
@@ -448,12 +448,12 @@
   }
 
   .theme-menu-item.is-active {
-    background: rgba(207,254,0,.15);
-    color: #cffe00;
+    background: rgba(11,191,83,.15);
+    color: #0BBF53;
     font-weight: 700;
   }
   html.light .theme-menu-item.is-active {
-    background: rgba(207,254,0,.12);
+    background: rgba(11,191,83,.12);
     color: #0a9c44;
   }
 
@@ -526,7 +526,7 @@
 
   /* ── آیکون پروفایل + منوی کشویی (Popup) ── */
   .topnav-popup {
-    --tp-green: #cffe00; --tp-diameter: 40px; --tp-radius: 15.6px; /* خمیدگی ۲۰٪ بیشتر (۱۳px → ۱۵٫۶px) */
+    --tp-green: #0BBF53; --tp-diameter: 40px; --tp-radius: 15.6px; /* خمیدگی ۲۰٪ بیشتر (۱۳px → ۱۵٫۶px) */
     --tp-nav-bg: #121218; --tp-nav-border: rgba(255,255,255,0.1);
     --tp-nav-shadow: rgba(0,0,0,0.45); --tp-item-color: rgba(255,255,255,0.72);
     --tp-hr-color: rgba(255,255,255,0.08); --tp-danger: #ff4a4a;
@@ -548,7 +548,7 @@
   .topnav-burger-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
   .topnav-burger:hover { transform: scale(1.08); }
   .topnav-burger:active { transform: scale(0.95); }
-  .topnav-popup input:focus-visible + .topnav-burger { box-shadow: 0 0 0 3px rgba(207,254,0,0.35); }
+  .topnav-popup input:focus-visible + .topnav-burger { box-shadow: 0 0 0 3px rgba(11,191,83,0.35); }
   .topnav-popup-window {
     position: absolute; top: calc(var(--tp-diameter) + 12px); left: 0; right: unset;
     min-width: 212px; padding: 6px;

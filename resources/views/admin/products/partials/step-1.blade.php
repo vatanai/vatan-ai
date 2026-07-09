@@ -56,12 +56,11 @@
   <div class="grid grid-cols-1 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
-    {{-- تگ select اصلاح شده با نام category --}}
-<select name="category" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
+    {{-- سلکت دسته‌بندی: name باید category_id باشد چون کنترلر همین را می‌خواند (رفع باگ گرفتن همیشگی دسته اول) --}}
+<select name="category_id" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
   <option value="">انتخاب کنید...</option>
   @foreach(\App\Models\Category::all() as $cat)
-      {{-- حواستان باشد که تابع old هم باید به category تغییر کند --}}
-      <option value="{{ $cat->id }}" {{ old('category', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
+      <option value="{{ $cat->id }}" {{ old('category_id', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
           {{ $cat->name }} — {{ $cat->slug }}
       </option>
   @endforeach
@@ -81,34 +80,18 @@
     </div>
   </div>
 
-  {{-- ── فیلدهای NEW — فقط UI، هنوز به Backend وصل نیستند ── --}}
+  {{-- ── اطلاعات داخلی مدیر (فعال و ذخیره‌شونده) ── --}}
   <div class="border-t border-dashed border-[var(--b2)] pt-4">
-    <div class="text-[10.5px] font-bold text-[var(--orange)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-flask text-[10px]"></i> فیلدهای آینده (فاز بعد توسعه)</div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
+    <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-lock text-[10px]"></i> اطلاعات داخلی مدیر</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW وضعیت محصول {!! $newBadge !!}</label>
-        <select name="new_status" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full">
-          <option value="draft">پیش‌نویس</option>
-          <option value="active">فعال</option>
-          <option value="inactive">غیرفعال</option>
-        </select>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW ترتیب نمایش {!! $newBadge !!}</label>
-        <input type="number" name="new_display_order" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: 1">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW کد داخلی محصول {!! $newBadge !!}</label>
-        <input type="text" name="new_internal_code" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left w-full" placeholder="فقط برای مدیر — مثلاً PRD-0231">
+        <label class="text-xs font-semibold text-[var(--text2)]">کد داخلی محصول</label>
+        <input type="text" name="new_internal_code" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left w-full" placeholder="فقط برای مدیر — مثلاً PRD-0231" value="{{ old('new_internal_code', optional($duplicateFrom)->new_internal_code) }}">
         <div class="text-[10px] text-[var(--text3)]">فقط مدیر این کد را می‌بیند</div>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW یادداشت مدیر {!! $newBadge !!}</label>
-        <textarea name="new_admin_note" rows="2" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full resize-y" placeholder="یادداشت داخلی — به کاربران نمایش داده نمی‌شود"></textarea>
+        <label class="text-xs font-semibold text-[var(--text2)]">یادداشت مدیر</label>
+        <textarea name="new_admin_note" rows="2" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full resize-y" placeholder="یادداشت داخلی — به کاربران نمایش داده نمی‌شود">{{ old('new_admin_note', optional($duplicateFrom)->new_admin_note) }}</textarea>
       </div>
     </div>
   </div>
@@ -156,7 +139,7 @@
     </label>
   </div>
 
-  <div class="text-[10.5px] font-bold text-[var(--orange)] mt-4 mb-3 tracking-wide uppercase flex items-center gap-1.5 pt-4 border-t border-dashed border-[var(--b2)]"><i class="fa-solid fa-flask text-[10px]"></i> برچسب‌های آینده (فاز بعد توسعه)</div>
+  <div class="text-[10.5px] font-bold text-[var(--text3)] mt-4 mb-3 tracking-wide uppercase flex items-center gap-1.5 pt-4 border-t border-dashed border-[var(--b2)]"><i class="fa-solid fa-award text-[10px]"></i> برچسب‌های ویژه</div>
   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
     <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]" title="نمایش نشان Premium روی کارت محصول">
       <div class="min-w-0">
@@ -292,41 +275,41 @@
     </div>
   </div>
 
-  {{-- ── فیلدهای NEW — فقط UI، هنوز به Backend وصل نیستند ── --}}
+  {{-- ── آیکون محصول (فعال و ذخیره‌شونده) ── --}}
   <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-4">
-    <div class="text-[10.5px] font-bold text-[var(--orange)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-flask text-[10px]"></i> رسانه‌های آینده (فاز بعد توسعه)</div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW آیکون محصول (Product Icon) {!! $newBadge !!}</label>
-        <div class="border-2 border-dashed border-[var(--b2)] rounded-xl p-4 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--orange)] transition-colors w-full" onclick="document.getElementById('new-product-icon-file').click()">
-          <i class="fa-solid fa-icons text-lg text-[var(--text3)] mb-1 block"></i>
-          <div class="text-[11px] text-[var(--text2)]" id="new-icon-title">آپلود SVG یا PNG</div>
-          <input type="file" id="new-product-icon-file" name="new_product_icon" accept=".svg,.png" class="hidden" onchange="updateFileLabel(this,'new-icon-title')">
-        </div>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW رنگ کارت محصول {!! $newBadge !!}</label>
-        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
-          <input type="color" name="new_card_color" value="#a07af5" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('new-card-color-hex').value = this.value.toUpperCase()">
-          <input type="text" id="new-card-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#A07AF5" readonly>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW پیش‌نمایش حالت نمایش گالری {!! $newBadge !!}</label>
-      <input type="hidden" name="new_gallery_preview_mode" id="new-gallery-preview-mode" value="grid">
-      <div class="grid grid-cols-3 gap-2.5" id="gallery-preview-toggle">
-        <button type="button" class="gallery-mode-btn p-2.5 rounded-lg border text-xs font-semibold transition-all border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text)]" data-mode="grid" onclick="setGalleryPreviewMode('grid')"><i class="fa-solid fa-table-cells-large block mb-1"></i> Grid</button>
-        <button type="button" class="gallery-mode-btn p-2.5 rounded-lg border text-xs font-semibold transition-all border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="slider" onclick="setGalleryPreviewMode('slider')"><i class="fa-solid fa-images block mb-1"></i> Slider</button>
-        <button type="button" class="gallery-mode-btn p-2.5 rounded-lg border text-xs font-semibold transition-all border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="carousel" onclick="setGalleryPreviewMode('carousel')"><i class="fa-solid fa-swatchbook block mb-1"></i> Carousel</button>
+    <div class="flex flex-col gap-1.5 md:max-w-sm">
+      <label class="text-xs font-semibold text-[var(--text2)]">آیکون محصول (Product Icon)</label>
+      <div class="border-2 border-dashed border-[var(--b2)] rounded-xl p-4 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors w-full" onclick="document.getElementById('new-product-icon-file').click()">
+        <i class="fa-solid fa-icons text-lg text-[var(--text3)] mb-1 block"></i>
+        <div class="text-[11px] text-[var(--text2)]" id="new-icon-title">آپلود SVG یا PNG</div>
+        <input type="file" id="new-product-icon-file" name="new_product_icon" accept=".svg,.png" class="hidden" onchange="updateFileLabel(this,'new-icon-title')">
       </div>
     </div>
   </div>
 </div>
 
+{{-- ── بخش فازهای بعدی: خاموش تا وقتی نیاز شود ── --}}
+<div class="future-block bg-[var(--s2)] border border-dashed border-[var(--b2)] rounded-xl p-5 mb-5">
+  <label class="flex items-center justify-between gap-2 cursor-pointer">
+    <div class="text-xs font-bold text-[var(--text2)] flex items-center gap-2"><i class="fa-solid fa-flask text-[var(--text3)]"></i> تنظیمات فاز بعد <span class="text-[10px] font-normal text-[var(--text3)]">(فعلاً نیازی نیست)</span></div>
+    <span class="relative w-9 h-5 shrink-0 block">
+      <input type="checkbox" class="sr-only peer" onchange="toggleFutureSection(this)">
+      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+    </span>
+  </label>
+  <div class="future-section hidden mt-4">
+    <div class="flex flex-col gap-1.5 md:max-w-xs">
+      <label class="text-xs font-semibold text-[var(--text2)]">ترتیب نمایش</label>
+      <input type="number" name="new_display_order" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: 1" value="{{ old('new_display_order', optional($duplicateFrom)->new_display_order) }}">
+      <div class="text-[10px] text-[var(--text3)]">ترتیب دلخواه نمایش محصول در لیست‌ها (برای فاز مرتب‌سازی دستی).</div>
+    </div>
+  </div>
+</div>
+
 <script>
+/* تابع مشترک باز/بستن بخش‌های فاز بعد */
+function toggleFutureSection(cb){ var b = cb.closest('.future-block'); if(b){ var s = b.querySelector('.future-section'); if(s) s.classList.toggle('hidden', !cb.checked); } }
+
 /* ── ابزارهای کمکی عمومی مربوط به فایلهای آپلود ── */
 function updateFileLabel(input, labelId, isMultiple = false) {
   const label = document.getElementById(labelId);

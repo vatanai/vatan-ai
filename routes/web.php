@@ -61,7 +61,7 @@ Route::middleware('auth')->group(function () {
 Route::prefix('app')->group(function () {
     Route::get('/',             fn() => redirect('/app/home'));
     Route::get('/home', [HomeController::class, 'index'])->name('app.home');    
-    Route::get('/explore',      fn() => view('app.ideas'))->name('app.explore');
+    Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
     Route::get('/trends',       fn() => view('app.explore'))->name('app.trends');
     Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');

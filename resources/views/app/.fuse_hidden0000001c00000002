@@ -144,8 +144,8 @@
     width: 34px; height: 34px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     border-radius: 11px;
-    background: linear-gradient(135deg, #cffe00 0%, #0a8f3f 100%);
-    box-shadow: 0 4px 14px rgba(207,254,0,0.35);
+    background: linear-gradient(135deg, #0BBF53 0%, #0a8f3f 100%);
+    box-shadow: 0 4px 14px rgba(11,191,83,0.35);
     color: #ffffff; font-size: 14px;
   }
   .xp-title {
@@ -199,13 +199,13 @@
   }
   .xp-filter-btn span { display: none; }
   .xp-filter-btn:hover, .xp-filter-btn[aria-expanded="true"] {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #0BBF53; border-color: #0BBF53; color: #ffffff;
   }
   html.light .xp-filter-btn {
     background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); color: rgba(0,0,0,0.7);
   }
   html.light .xp-filter-btn:hover, html.light .xp-filter-btn[aria-expanded="true"] {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #0BBF53; border-color: #0BBF53; color: #ffffff;
   }
 
   .xp-filter-panel {
@@ -248,7 +248,7 @@
     transition: all 0.2s;
   }
   .xp-filter-chip.active {
-    background: #cffe00; border-color: #cffe00; color: #12160a; font-weight: 700;
+    background: #0BBF53; border-color: #0BBF53; color: #ffffff; font-weight: 700;
   }
   html.light .xp-filter-chip {
     background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6);
@@ -281,7 +281,7 @@
   html.light .xp-filter-clear { border-color: rgba(0,0,0,0.12); color: rgba(0,0,0,0.55); }
   .xp-filter-apply {
     flex: 1; padding: 9px 16px; border-radius: 10px;
-    background: #cffe00; border: none;
+    background: #0BBF53; border: none;
     color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer;
   }
 
@@ -306,7 +306,7 @@
     transition: all 0.2s;
   }
   .xp-cat-box:hover, .xp-cat-box.active {
-    background: #cffe00; border-color: #cffe00; color: #12160a;
+    background: #0BBF53; border-color: #0BBF53; color: #ffffff;
   }
   html.light .xp-cat-box {
     background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.08); color: rgba(0,0,0,0.6);

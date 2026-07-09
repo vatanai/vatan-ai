@@ -11,7 +11,7 @@
 
     {{-- بخش اول: تصاویر خلق شده هوش مصنوعی --}}
     <div class="section-title" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #cffe00; font-size: 18px;">✦</span>
+        <span style="color: #0BBF53; font-size: 18px;">✦</span>
         <h2 style="font-size: 16px; font-weight: 700; margin: 0;">تصاویر خلق شده (هوش مصنوعی)</h2>
     </div>
     

@@ -22,7 +22,7 @@
     <div id="cp-result-view" style="display:none;">
       <div style="position:relative;">
         <img id="cp-result-img" src="" alt="نتیجه" style="width:100%;display:block;max-height:400px;object-fit:cover;">
-        <div style="position:absolute;top:10px;right:10px;background:rgba(207,254,0,0.9);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;gap:4px;">
+        <div style="position:absolute;top:10px;right:10px;background:rgba(11,191,83,0.9);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;gap:4px;">
           <i class="fa-solid fa-check"></i> تصویر آماده شد
         </div>
       </div>

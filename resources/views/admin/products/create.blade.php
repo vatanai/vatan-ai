@@ -22,15 +22,6 @@
           <span class="text-[var(--text)] font-semibold">{{ $duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید' }}</span>
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
-          {{-- NEW: Role-Based UI Locking — نمایشی برای نقش‌بندی آینده؛ در حالت پیش‌فرض (Admin) هیچ محدودیتی اعمال نمی‌شود --}}
-          <div class="flex items-center gap-1.5" title="NEW Role-Based UI Locking — برنامه‌نویسی شود">
-            <label class="text-[10px] text-[var(--text3)]">نقش نمایشی:</label>
-            <select id="role-preview-select" class="bg-[var(--s2)] border border-[var(--b1)] rounded-lg px-2 py-1.5 text-[10.5px] text-[var(--text2)]" onchange="applyRolePreview(this.value)" aria-label="NEW نقش نمایشی — فقط UI">
-              <option value="admin">Admin</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
-          </div>
           <a href="/admin/products" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] transition-all hover:border-[var(--b2)] hover:text-[var(--text)] no-underline">
             <i class="fa-solid fa-arrow-right text-[11px]"></i>
             بازگشت به لیست
