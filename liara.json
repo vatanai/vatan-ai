@@ -11,7 +11,7 @@
   "disks": [
     {
       "name": "data",
-      "mountTo": "storage"
+      "mountTo": "/var/www/html/storage"
     }
   ]
 }
