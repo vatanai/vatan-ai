@@ -1,12 +1,12 @@
 {
-  "port": 3000,
-  "platform": "laravel",
+  "port": 80,
+  "platform": "docker",
   "app": "demovatan",
   "build": {
     "location": "germany"
   },
-  "laravel": {
-    "phpVersion": "8.4"
+  "deploy": {
+    "command": "php artisan migrate --force"
   },
   "disks": [
     {
