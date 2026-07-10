@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AIModel;
+use App\Models\AiModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
@@ -11,7 +11,7 @@ class AiModelController extends Controller
 {
     public function index()
     {
-        $models = AIModel::latest()->get();
+        $models = AiModel::latest()->get();
         return view('admin.ai-models.index', compact('models'));
     }
 
@@ -42,7 +42,7 @@ class AiModelController extends Controller
     ]);
 
     // ذخیره‌سازی هوشمند با مقادیر پیش‌فرض مپ شده
-    $model = AIModel::create([
+    $model = AiModel::create([
         'name'                 => $validatedData['name'],
         'openrouter_model_id'  => $validatedData['openrouter_model_id'],
         'provider_name'        => $validatedData['provider_name'],
@@ -75,13 +75,13 @@ class AiModelController extends Controller
 
     public function edit($id)
     {
-        $model = AIModel::findOrFail($id);
+        $model = AiModel::findOrFail($id);
         return view('admin.ai-models.edit', compact('model'));
     }
 
     public function update(Request $request, $id)
     {
-        $model = AIModel::findOrFail($id);
+        $model = AiModel::findOrFail($id);
 
         $validatedData = $request->validate([
             'name'                 => 'required|string|max:200',
@@ -137,7 +137,7 @@ class AiModelController extends Controller
 
     public function destroy($id)
     {
-        $model = AIModel::findOrFail($id);
+        $model = AiModel::findOrFail($id);
         
         // حذف فیزیکی عکس مدل از سرور هنگام حذف از دیتابیس
         $safeName = str_replace(['/', '\\', ':', '*'], '-', $model->openrouter_model_id);
