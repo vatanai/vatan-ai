@@ -59,8 +59,12 @@
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
+        "post-install-cmd": [
+            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0"
+        ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
