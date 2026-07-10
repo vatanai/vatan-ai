@@ -133,17 +133,14 @@ class ProductController extends Controller
         }
         $product->slug = $slug;
 
-        // ۴. دسته‌بندی و ریلیشن‌ها
-        $categoryId = $request->input('category_id');
-        if (!$categoryId) {
-            $firstCategory = Category::first();
-            $categoryId = $firstCategory ? $firstCategory->id : 1;
-            $categoryName = $firstCategory ? $firstCategory->name : 'عمومی';
-        } else {
-            $categoryName = Category::where('id', $categoryId)->value('name') ?? 'عمومی';
+        // ۴. دسته‌بندی چندگانه (سرشاخه + زیرشاخه‌ها)
+        $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
+        if (empty($categoryIds) && $request->filled('category_id')) {
+            $categoryIds = [(int) $request->input('category_id')];
         }
-        $product->category_id = $categoryId;
-        $product->category = $categoryName;
+        $primaryId = $categoryIds[0] ?? (Category::first()->id ?? null);
+        $product->category_id = $primaryId;
+        $product->category = $primaryId ? (Category::where('id', $primaryId)->value('name') ?? 'عمومی') : 'عمومی';
         $product->subcategory = $request->input('subcategory');
 
         // ۵. مدیریت فایل‌ها و تصاویر با جایگزین امن
@@ -201,6 +198,16 @@ class ProductController extends Controller
         $product->min_reference_images  = $request->input('min_reference_images') ?? 0;
         $product->max_reference_images  = $request->input('max_reference_images') ?? 1;
 
+        // ۶.۳ سئو
+        $product->meta_title       = $request->input('meta_title');
+        $product->meta_description = $request->input('meta_description');
+        $product->meta_keywords    = $request->input('meta_keywords');
+        if ($request->hasFile('og_image')) {
+            $product->og_image = $request->file('og_image')->store('products/seo', 'public');
+        } elseif ($duplicateSource && $duplicateSource->og_image && Storage::disk('public')->exists($duplicateSource->og_image)) {
+            $product->og_image = $this->copyDuplicateFile($duplicateSource->og_image, 'products/seo');
+        }
+
         // ۷. وضعیت‌ها و چک‌باکس‌ها
         $product->status = $request->input('status') ?? 'draft';
         $product->new_display_order = $request->input('new_display_order') ?? 1;
@@ -239,6 +246,10 @@ class ProductController extends Controller
         $product->accent_color = $request->input('accent_color') ?? '#a07af5';
         $product->tags = $request->input('tags', []);
 
+        // حالت‌های نمایش کاشی در اکسپلور — حداقل یکی، در غیر این صورت همه
+        $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
+        $product->explore_tiles = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
+
         // ۹. فیلدهای فاز جدید توسعه
         $product->new_watermark_corner_precise = $request->input('new_watermark_corner_precise') ?? 'tr';
         $product->new_watermark_opacity = $request->input('new_watermark_opacity') ?? 70;
@@ -251,6 +262,10 @@ class ProductController extends Controller
 
         // ۱۰. ذخیره نهایی در دیتابیس
         $product->save();
+
+        if (!empty($categoryIds)) {
+            $product->categories()->sync($categoryIds);
+        }
 
         return redirect()->route('admin.products')->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
     }
@@ -274,6 +289,8 @@ class ProductController extends Controller
             'name_en' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug,' . $product->id,
             'category_id' => 'nullable|integer',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
             'primary_model' => 'nullable|string',
             'prompt_template' => 'nullable|string',
             'system_prompt' => 'nullable|string',
@@ -287,6 +304,12 @@ class ProductController extends Controller
             'max_reference_images' => 'nullable|integer|min:0|max:20',
             'description_fa' => 'nullable|string',
             'description_en' => 'nullable|string',
+            'meta_title' => 'nullable|string|max:255',
+            'meta_description' => 'nullable|string|max:300',
+            'meta_keywords' => 'nullable|string|max:255',
+            'og_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'explore_tiles' => 'nullable|array',
+            'explore_tiles.*' => 'in:1x1,2x2,1x2,2x1',
             'status' => 'nullable|in:active,draft,inactive',
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'cover' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:8192',
@@ -318,6 +341,10 @@ class ProductController extends Controller
             'new_price_custom_label' => 'nullable|string|max:100',
         ]);
 
+        $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
+        if (!empty($categoryIds)) {
+            $validated['category_id'] = $categoryIds[0];
+        }
         if (isset($validated['category_id'])) {
             $validated['category'] = Category::where('id', $validated['category_id'])->value('name') ?? 'عمومی';
         }
@@ -335,6 +362,11 @@ class ProductController extends Controller
         if ($request->hasFile('new_product_icon')) {
             if ($product->new_product_icon) Storage::disk('public')->delete($product->new_product_icon);
             $validated['new_product_icon'] = $request->file('new_product_icon')->store('product_icons', 'public');
+        }
+
+        if ($request->hasFile('og_image')) {
+            if ($product->og_image) Storage::disk('public')->delete($product->og_image);
+            $validated['og_image'] = $request->file('og_image')->store('products/seo', 'public');
         }
 
         if ($request->hasFile('sample_outputs')) {
@@ -362,6 +394,9 @@ class ProductController extends Controller
         $validated['provider_options'] = $providerOptionsRaw ? (json_decode($providerOptionsRaw, true) ?: null) : null;
         $validated['seed'] = $request->filled('seed') ? (int) $request->input('seed') : null;
 
+        $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
+        $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
+
         $validated['slug'] = Str::slug($validated['slug']);
 
         if ($request->filled('prompt_template') && $product->prompt_template !== $request->input('prompt_template')) {
@@ -376,6 +411,10 @@ class ProductController extends Controller
 
         $product->update($validated);
 
+        if (!empty($categoryIds)) {
+            $product->categories()->sync($categoryIds);
+        }
+
         return redirect()->route('admin.products')->with('success', 'تغییرات با موفقیت ثبت شد.');
     }
 
@@ -387,6 +426,7 @@ class ProductController extends Controller
         if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
         if ($product->cover) Storage::disk('public')->delete($product->cover);
         if ($product->new_product_icon) Storage::disk('public')->delete($product->new_product_icon);
+        if ($product->og_image) Storage::disk('public')->delete($product->og_image);
 
         if (is_array($product->sample_outputs)) {
             foreach ($product->sample_outputs as $path) {

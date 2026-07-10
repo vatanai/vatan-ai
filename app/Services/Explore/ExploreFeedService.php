@@ -245,6 +245,7 @@ class ExploreFeedService
                 'name' => $model->name_fa,
                 'tag' => $model->category?->name ?? $model->category ?? 'وطن AI',
                 'link' => route('app.product', $model->slug),
+                '_allowed_sizes' => $this->productAllowedSizes($model),
             ];
         }
 
@@ -283,14 +284,44 @@ class ExploreFeedService
         $prominentPool = ['size-big', 'size-wide', 'size-tall'];
 
         return array_map(function ($tile) use ($pool, $prominentPool) {
+            $allowed = $tile['_allowed_sizes'] ?? null; // NULL = بدون محدودیت (مثلاً کمپین‌ها)
+
             if (! empty($tile['_pinned']) || ! empty($tile['_campaign'])) {
-                $tile['size'] = $prominentPool[array_rand($prominentPool)];
+                $choices = $prominentPool;
+                if (is_array($allowed) && $allowed) {
+                    $inter = array_values(array_intersect($prominentPool, $allowed));
+                    $choices = $inter ?: $allowed;
+                }
             } else {
-                $tile['size'] = $pool[array_rand($pool)];
+                $choices = $pool;
+                if (is_array($allowed) && $allowed) {
+                    $inter = array_values(array_intersect($pool, $allowed));
+                    $choices = $inter ?: $allowed;
+                }
             }
-            unset($tile['_pinned'], $tile['_campaign'], $tile['_product_id']);
+
+            $tile['size'] = $choices[array_rand($choices)];
+            unset($tile['_pinned'], $tile['_campaign'], $tile['_product_id'], $tile['_allowed_sizes']);
             return $tile;
         }, $tiles);
+    }
+
+    /**
+     * حالت‌های کاشیِ مجازِ یک محصول را به کلیدهای اندازه‌ی گرید نگاشت می‌کند.
+     * NULL یعنی محدودیتی ندارد (همه اندازه‌ها مجاز).
+     */
+    protected function productAllowedSizes(Product $product): ?array
+    {
+        $map = ['1x1' => 'size-1x1', '2x2' => 'size-big', '1x2' => 'size-tall', '2x1' => 'size-wide'];
+        $tiles = $product->explore_tiles;
+        if (! is_array($tiles) || empty($tiles)) {
+            return null;
+        }
+        $out = [];
+        foreach ($tiles as $t) {
+            if (isset($map[$t])) { $out[] = $map[$t]; }
+        }
+        return $out ?: null;
     }
 
     /**

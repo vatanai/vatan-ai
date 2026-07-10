@@ -14,6 +14,10 @@ class Product extends Model
         'slug',
         'description_fa',
         'description_en',
+        'meta_title',
+        'meta_description',
+        'meta_keywords',
+        'og_image',
         'category_id',
         'category',
         'subcategory',
@@ -63,6 +67,7 @@ class Product extends Model
         'platform',
         'accent_color',
         'tags',
+        'explore_tiles',
 
         // فیلدهای فاز جدید توسعه
         'new_display_order',
@@ -88,6 +93,7 @@ class Product extends Model
         'sample_outputs'    => 'array',
         'fallback_models'   => 'array',
         'input_schema'      => 'array',
+        'explore_tiles'     => 'array',
         'provider_options'  => 'array',
         'tags'              => 'array',
         'is_featured'       => 'boolean',
@@ -112,5 +118,11 @@ class Product extends Model
     public function promptHistories(): HasMany
     {
         return $this->hasMany(ProductPromptHistory::class)->orderBy('version_number', 'desc');
+    }
+
+    /** دسته‌بندی‌های چندگانه (سرشاخه + زیرشاخه‌ها) */
+    public function categories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_product');
     }
 }

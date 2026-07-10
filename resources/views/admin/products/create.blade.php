@@ -6,7 +6,7 @@
 @endpush
 
 @section('content')
-<div class="flex min-h-screen bg-[var(--bg)] text-[var(--text)]" dir="rtl">
+<div class="flex min-h-screen" dir="rtl" style="background:var(--page-bg);color:var(--text-h);">
 
   <main id="product-create-page" class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
     @include('admin.partials.header')
@@ -22,6 +22,15 @@
           <span class="text-[var(--text)] font-semibold">{{ $duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید' }}</span>
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
+          {{-- بند ۳۳: انتخاب نقش نمایشی (Role Preview) — فقط UI، پیش‌نمایش قفل فیلدها --}}
+          <div class="inline-flex items-center gap-1.5">
+            <span class="text-[10.5px] text-[var(--text3)]">نمای نقش:</span>
+            <select id="role-preview-select" class="bg-[var(--s2)] border border-[var(--b1)] rounded-lg px-2 h-8 text-[11px] text-[var(--text2)]" title="پیش‌نمایش UI بر اساس نقش — فقط نمایشی">
+              <option value="admin">Admin</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
           <a href="/admin/products" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] transition-all hover:border-[var(--b2)] hover:text-[var(--text)] no-underline">
             <i class="fa-solid fa-arrow-right text-[11px]"></i>
             بازگشت به لیست
@@ -30,7 +39,7 @@
       </div>
 
       {{-- NEW: Global Error Handler UI — Toast غیرمسدودکننده برای خطاهای عمومی سمت کلاینت --}}
-      <div id="global-error-toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] bg-[var(--red)] text-[var(--text)] text-xs font-semibold rounded-xl px-4 py-3 shadow-2xl flex items-center gap-2.5" role="alert">
+      <div id="global-error-toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[92%] bg-[var(--red)] text-white text-xs font-semibold rounded-xl px-4 py-3 shadow-2xl flex items-center gap-2.5" role="alert">
         <i class="fa-solid fa-circle-exclamation shrink-0"></i>
         <span id="global-error-text" class="flex-1"></span>
         <button type="button" class="shrink-0 opacity-80 hover:opacity-100" onclick="hideGlobalError()" aria-label="بستن پیام خطا"><i class="fa-solid fa-xmark"></i></button>
@@ -72,72 +81,113 @@
 
       {{-- NEW: Validation Summary Panel — خلاصه خطاهای همان Step فعلی (سمت کلاینت، مکمل Validation واقعی سرور) --}}
       <div id="validation-summary" class="hidden bg-[var(--red)]/8 border border-[var(--red)]/30 rounded-xl p-3.5 mb-5 text-xs">
-        <div class="text-[var(--red)] font-bold mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> برای رفتن به مرحله بعد، این موارد را تکمیل کنید:</div>
+        <div class="text-[var(--red)] font-bold mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> برای ثبت نهایی محصول، این موارد را باید تکمیل کنید:</div>
         <ul class="text-[var(--red-soft)] pr-5 list-disc space-y-1" id="validation-summary-list"></ul>
+      </div>
+
+      {{-- بند ۲۶: بنر بازیابی پیش‌نویس محلی (فقط UI/localStorage) --}}
+      <div id="draft-recovery-banner" class="hidden bg-[var(--accent)]/8 border border-[var(--accent)]/25 rounded-xl p-3.5 mb-5 flex items-center justify-between gap-3 flex-wrap text-xs">
+        <div class="flex items-center gap-2.5 text-[var(--accent-soft)]">
+          <i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i>
+          یک پیش‌نویس ذخیره‌شده‌ی محلی از قبل موجود است. می‌خواهید بازیابی شود؟
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="px-3 h-8 rounded-lg text-[11px] font-bold bg-[var(--accent)] text-white" onclick="restoreAutosaveDraft()">بازیابی</button>
+          <button type="button" class="px-3 h-8 rounded-lg text-[11px] font-bold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)]" onclick="dismissDraftRecovery()">نادیده بگیر</button>
+        </div>
       </div>
 
       {{-- ═══ Stepper بازطراحی‌شده — یک ساختار واحد و ریسپانسیو (دسکتاپ افقی / موبایل عمودی) ═══ --}}
       <div class="mb-7 bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-2 md:p-1.5">
         <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-1" onclick="attemptGoStep(1)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-1" onclick="goStep(1)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 transition-all duration-200" id="step-num-1" data-num="۱">۱</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] mb-0.5 transition-colors">گام اول</div>
               <div class="step-title text-xs font-bold transition-colors">هویت محصول</div>
               <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">اطلاعات پایه، برچسب و رسانه</div>
             </div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1">
+              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-1"></span>
+              <span class="step-check hidden text-[var(--green)]" id="step-check-1" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
+            </div>
           </div>
 
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-1"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-1-m"></div>
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-2" onclick="attemptGoStep(2)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-2" onclick="goStep(2)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-2" data-num="۲">۲</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام دوم</div>
               <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">هوش مصنوعی</div>
               <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مدل و پرامپت</div>
             </div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1">
+              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-2"></span>
+              <span class="step-check hidden text-[var(--green)]" id="step-check-2" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
+            </div>
           </div>
 
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-2"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-2-m"></div>
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-3" onclick="attemptGoStep(3)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-3" onclick="goStep(3)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-3" data-num="۳">۳</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام سوم</div>
               <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">ورودی و متغیرها</div>
               <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">فیلدهای فرم کاربر</div>
             </div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1">
+              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-3"></span>
+              <span class="step-check hidden text-[var(--green)]" id="step-check-3" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
+            </div>
           </div>
 
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-3"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-3-m"></div>
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-4" onclick="attemptGoStep(4)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-4" onclick="goStep(4)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-4" data-num="۴">۴</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام چهارم</div>
               <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
               <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
             </div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1">
+              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-4"></span>
+              <span class="step-check hidden text-[var(--green)]" id="step-check-4" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
+            </div>
           </div>
 
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-4"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-4-m"></div>
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-5" onclick="attemptGoStep(5)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-5" onclick="goStep(5)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-5" data-num="۵">۵</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام پنجم</div>
               <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">بازبینی نهایی</div>
               <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مرور و ثبت محصول</div>
             </div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1">
+              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-5"></span>
+              <span class="step-check hidden text-[var(--green)]" id="step-check-5" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
+            </div>
           </div>
 
         </div>
+      </div>
+
+      {{-- نوار پیشرفت کلی فرم (بند ۴۳ و ۴۷) — توپر و ضخیم، از راست به چپ، بر اساس مجموع فیلدهای اجباری کل فرم --}}
+      <div class="mb-7 bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-3.5">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold text-[var(--text2)] flex items-center gap-1.5"><i class="fa-solid fa-gauge-high text-[var(--accent)] text-[11px]"></i> پیشرفت تکمیل فرم</span>
+          <span class="text-[11px] font-bold font-mono text-[var(--text)]" id="wizard-progress-pct">۰٪</span>
+        </div>
+        <div id="wizard-progress-track"><div id="wizard-progress-fill"></div></div>
       </div>
 
       <form id="real-product-form" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
@@ -179,15 +229,16 @@
       </button>
       <div class="flex flex-col items-center gap-0.5 order-3 sm:order-2 w-full sm:w-auto text-center">
         <div class="text-xs text-[var(--text3)]"> مرحله <strong class="text-[var(--text)]" id="step-label-num">۱</strong> از ۵ </div>
+        <div class="text-[10px] text-[var(--text3)]" id="autosave-status"></div>
       </div>
       <div class="flex gap-2 order-2 sm:order-3">
         <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] hover:text-[var(--text)] transition-all" id="btn-draft" onclick="submitForm('draft')">
           <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">ذخیره پیش‌نویس</span>
         </button>
-        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--accent)] text-[var(--text)] hover:bg-[var(--accent-hover)] transition-all" id="btn-next" onclick="nextStep()">
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all" id="btn-next" onclick="nextStep()">
           <span class="hidden sm:inline">مرحله بعد</span> <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--green)] text-[var(--text)] hover:bg-[var(--green-hover)] transition-all" id="btn-submit" onclick="submitForm('active')" style="display:none;">
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--green)] text-white hover:bg-[var(--green-hover)] transition-all" id="btn-submit" onclick="submitForm('active')" style="display:none;">
           <i class="fa-solid fa-check"></i> <span class="hidden sm:inline">ثبت نهایی محصول</span>
         </button>
       </div>

@@ -39,6 +39,17 @@
                   <label class="text-xs font-semibold text-[var(--text2)]">اسلاگ (Slug - اختیاری)</label>
                   <input type="text" name="slug" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)] w-full text-right" value="{{ old('slug') }}" placeholder="در صورت خالی بودن خودکار تولید می‌شود">
                 </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-[var(--text2)]">سرشاخه (والد)</label>
+                  <select name="parent_id" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)] w-full">
+                    <option value="">— بدون والد (این خودش سرشاخه است) —</option>
+                    @foreach(\App\Models\Category::orderBy('name')->get() as $pc)
+                      <option value="{{ $pc->id }}" {{ (string) old('parent_id') === (string) $pc->id ? 'selected' : '' }}>{{ $pc->name_fa ?: $pc->name }}</option>
+                    @endforeach
+                  </select>
+                  <div class="text-[10px] text-[var(--text3)]">اگر این دسته زیرشاخه است، سرشاخه‌اش را انتخاب کنید.</div>
+                </div>
+
               </div>
             </div>
           </div>

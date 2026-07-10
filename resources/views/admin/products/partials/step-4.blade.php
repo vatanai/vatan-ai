@@ -29,7 +29,7 @@
 
   <div id="watermark-settings-wrap" class="{{ $wmEnabled ? '' : 'hidden' }}">
     <div class="flex flex-col gap-1.5 mb-3.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">موقعیت واترمارک</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">موقعیت واترمارک <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:220px;">تعیین می‌کند لوگو یا متن واترمارک روی کدام قسمت تصویر خروجی قرار بگیرد.</span></span></label>
       @php $curWmPos = old('watermark_position', optional($duplicateFrom)->watermark_position ?? 'corner'); @endphp
       <div class="grid grid-cols-3 gap-2.5">
         <label class="wm-pos-card flex flex-col items-center gap-1.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curWmPos == 'corner' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
@@ -51,7 +51,7 @@
 
       <div id="wm-precise-corner-wrap" class="{{ $curWmPos == 'corner' ? '' : 'hidden' }} mt-1.5">
         <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">دقت موقعیت گوشه</label>
-        <div class="grid grid-cols-4 gap-2 mt-1.5">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text3)]" data-corner="tl" onclick="setPreciseCorner('tl')"><i class="fa-solid fa-arrow-up-right-from-square rotate-180 block mb-1"></i>بالا چپ</button>
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text)]" data-corner="tr" onclick="setPreciseCorner('tr')"><i class="fa-solid fa-arrow-up-right-from-square block mb-1"></i>بالا راست</button>
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text3)]" data-corner="bl" onclick="setPreciseCorner('bl')"><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center block mb-1"></i>پایین چپ</button>
@@ -110,7 +110,7 @@
 
   @php $curPricing = old('pricing_model', optional($duplicateFrom)->pricing_model ?? 'per_credit'); @endphp
   <div class="flex flex-col gap-1.5 mb-3.5">
-    <label class="text-xs font-semibold text-[var(--text2)]">مدل قیمت‌گذاری <span class="text-[var(--red)] mr-0.5">*</span></label>
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">مدل قیمت‌گذاری <span class="text-[var(--red)] mr-0.5">*</span> <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:230px;">رایگان: بدون هزینه — کردیتی: به‌ازای هر اجرا کردیت کم می‌شود — اشتراکی: نیازمند اشتراک فعال کاربر.</span></span></label>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
       <label class="pricing-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curPricing == 'free' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
         <input type="radio" name="pricing_model" value="free" {{ $curPricing == 'free' ? 'checked' : '' }} class="accent-[var(--accent)]" onchange="toggleCreditCost(this)">
@@ -211,7 +211,7 @@
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">چیدمان گالری</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">چیدمان گالری <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:220px;">نحوه‌ی چیده‌شدن نمونه‌خروجی‌ها در صفحه محصول: شبکه‌ای منظم، آبشاری یا اسلایدر.</span></span></label>
       @php $curGalleryLayout = old('gallery_layout', optional($duplicateFrom)->gallery_layout ?? 'grid'); @endphp
       <div class="flex flex-col gap-2">
         @foreach(['grid' => ['شبکه','fa-table-cells'], 'masonry' => ['آبشاری','fa-grip'], 'slider' => ['اسلایدر','fa-images']] as $val => $meta)
@@ -231,6 +231,112 @@
   </div>
 
 
+</div>
+
+{{-- ═══════════════════ Card — انتشار محصول (NEW / فقط UI — بند ۲۱) ═══════════════════ --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-rocket text-[var(--accent)]"></i> انتشار محصول {!! $newBadge !!}</div>
+      <div class="text-[10.5px] text-[var(--text3)] mt-1">زمان‌بندی و محل نمایش محصول پس از انتشار</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)]">وضعیت انتشار</label>
+      <select name="new_publish_status" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]">
+        <option value="draft">پیش‌نویس</option>
+        <option value="published">منتشر شده</option>
+        <option value="inactive">غیرفعال</option>
+      </select>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)]">تاریخ انتشار</label>
+      <input type="date" name="new_publish_date" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3.5">
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
+      <div class="min-w-0">
+        <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در صفحه اول</div>
+        <div class="text-[11px] text-[var(--text3)] mt-0.5">در بخش اصلی سایت دیده شود</div>
+      </div>
+      <span class="relative w-9 h-5 shrink-0 block">
+        <input type="checkbox" name="new_publish_on_home" value="1" class="sr-only peer">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </span>
+    </label>
+
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
+      <div class="min-w-0">
+        <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در پیشنهادات</div>
+        <div class="text-[11px] text-[var(--text3)] mt-0.5">در بخش پیشنهادها فهرست شود</div>
+      </div>
+      <span class="relative w-9 h-5 shrink-0 block">
+        <input type="checkbox" name="new_publish_in_suggestions" value="1" class="sr-only peer">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </span>
+    </label>
+
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
+      <div class="min-w-0">
+        <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش در محبوب‌ها</div>
+        <div class="text-[11px] text-[var(--text3)] mt-0.5">در بخش پرطرفدارها دیده شود</div>
+      </div>
+      <span class="relative w-9 h-5 shrink-0 block">
+        <input type="checkbox" name="new_publish_in_popular" value="1" class="sr-only peer">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </span>
+    </label>
+  </div>
+
+  <div class="flex flex-col gap-1.5 md:max-w-xs">
+    <label class="text-xs font-semibold text-[var(--text2)]">اولویت نمایش</label>
+    <input type="number" name="new_publish_priority" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1 (عدد کوچک‌تر = بالاتر)">
+  </div>
+</div>
+
+{{-- ═══════════════════ Card — سئو (SEO) ═══════════════════ --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-magnifying-glass-chart text-[var(--accent)]"></i> سئو (بهینه‌سازی موتور جستجو)</div>
+    <div class="text-[10.5px] text-[var(--text3)] mt-1">اگر خالی بماند، سیستم از نام و توضیح و کاور محصول به‌صورت خودکار می‌سازد</div>
+  </div>
+
+  <div class="flex flex-col gap-1.5 mb-3.5">
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between">
+      <span>عنوان متا (Meta Title)</span>
+      <span class="text-[10px] text-[var(--text3)]"><span id="meta-title-count">0</span>/60</span>
+    </label>
+    <input type="text" name="meta_title" maxlength="70" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: عکس حرفه‌ای لینکدین با هوش مصنوعی | وطن AI" value="{{ old('meta_title', optional($duplicateFrom)->meta_title) }}" oninput="document.getElementById('meta-title-count').textContent=this.value.length">
+    <div class="text-[10px] text-[var(--text3)]">بهترین طول: تا حدود ۶۰ کاراکتر.</div>
+  </div>
+
+  <div class="flex flex-col gap-1.5 mb-3.5">
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between">
+      <span>توضیحات متا (Meta Description)</span>
+      <span class="text-[10px] text-[var(--text3)]"><span id="meta-desc-count">0</span>/160</span>
+    </label>
+    <textarea name="meta_description" rows="3" maxlength="300" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full resize-y" placeholder="توضیح کوتاه و جذاب محصول برای نتایج جستجوی گوگل..." oninput="document.getElementById('meta-desc-count').textContent=this.value.length">{{ old('meta_description', optional($duplicateFrom)->meta_description) }}</textarea>
+    <div class="text-[10px] text-[var(--text3)]">بهترین طول: تا حدود ۱۶۰ کاراکتر.</div>
+  </div>
+
+  <div class="flex flex-col gap-1.5 mb-3.5">
+    <label class="text-xs font-semibold text-[var(--text2)]">کلمات کلیدی (با ویرگول جدا کنید)</label>
+    <input type="text" name="meta_keywords" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="عکس لینکدین, پرتره هوش مصنوعی, عکس پروفایل" value="{{ old('meta_keywords', optional($duplicateFrom)->meta_keywords) }}">
+  </div>
+
+  <div class="flex flex-col gap-1.5 md:max-w-md">
+    <label class="text-xs font-semibold text-[var(--text2)]">تصویر اشتراک‌گذاری شبکه‌های اجتماعی (OG Image)</label>
+    <div class="border-2 border-dashed border-[var(--b2)] rounded-xl p-4 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors w-full" onclick="document.getElementById('og-image-file').click()">
+      <i class="fa-solid fa-share-nodes text-lg text-[var(--text3)] mb-1 block"></i>
+      <div class="text-[11px] text-[var(--text2)]" id="og-image-title">آپلود تصویر (پیشنهادی ۱۲۰۰×۶۳۰)</div>
+      <input type="file" id="og-image-file" name="og_image" accept="image/*" class="hidden" onchange="updateFileLabel(this,'og-image-title')">
+    </div>
+    <div class="text-[10px] text-[var(--text3)]">اگر خالی بماند، از کاور محصول استفاده می‌شود.</div>
+  </div>
 </div>
 
 <script>

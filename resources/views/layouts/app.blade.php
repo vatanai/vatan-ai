@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>{{ $title ?? 'وطن AI' }}</title>
+  <title>@yield('page_title', $title ?? 'وطن AI')</title>
+
+  {{-- متاتگ‌های سئوی هر صفحه (description، Open Graph، Twitter، JSON-LD) از این استک تزریق می‌شوند --}}
+  @stack('meta')
+
   <link class="apple-touch-icon" href="{{ asset('assets/img/icon_vatan.svg') }}">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">

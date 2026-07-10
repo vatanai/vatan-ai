@@ -1,53 +1,76 @@
 /* ══════════════════════════════════════════════════════════════
    استایل صفحه «ثبت محصول جدید» (admin/products/create.blade.php)
-   توکن‌های رنگی — پشتیبانی حالت شب/روز
-   همان اسم متغیرهایی که در resources/views/admin/products/products-dashboard.blade.php
-   استفاده شده (bg/s1/s2/b1/b2/text/text2/text3/accent/green/red/orange) تا با بقیه
-   بخش «داشبورد محصولات» هماهنگ بماند؛ فقط اینجا override حالت روشن هم اضافه شده.
-   رنگ‌های برند/معنایی (accent, green, red, orange) طبق قرارداد design-tokens.css
-   در هر دو حالت ثابت می‌مانند — فقط بک‌گراند/بوردر/متن بین شب و روز تغییر می‌کند.
+   ──────────────────────────────────────────────────────────────
+   رنگ‌ها کاملاً از پالت رسمی پنل (public/admin/css/design-tokens.css)
+   گرفته می‌شوند تا صفحه ثبت محصول دقیقاً مثل بقیه داشبورد دیده شود و
+   حالت شب/روز مثل بقیه صفحات ادمین (کلاس body.light) خودکار کار کند.
+
+   توکن‌های محلی قدیمی (bg/s1/s2/b1/b2/text.../accent/green/red/orange) فقط
+   به توکن‌های رسمی «نگاشت» شده‌اند؛ هیچ رنگ اختراعی یا بنفشی باقی نمانده.
+   چون این متغیرها به توکن‌های تم‌محور رسمی اشاره می‌کنند، دیگر نیازی به
+   override جداگانه‌ی body.light نیست — با تغییر تم، همه خودکار عوض می‌شوند.
    ══════════════════════════════════════════════════════════════ */
 #product-create-page {
-  --bg:     #0c0c10;
-  --s1:     #111116;
-  --s2:     #16161c;
-  --b1:     #222230;
-  --b2:     #2e2e3e;
-  --text:   #ffffff;
-  --text2:  #a8c4a8;
-  --text3:  #4d7a56;
-  --text4:  #3a3a48;
-  --accent:       #a07af5;
-  --accent-hover: #8f68e0;
-  --accent-soft:  #c9b8f5;
-  --green:        #0BBF53;
-  --green-hover:  #08a443;
-  --red:          #f05c5c;
-  --red-soft:     #ff9191;
-  --orange:       #f0a05c;
-}
-body.light #product-create-page {
-  --bg:     #f5f5f5;
-  --s1:     #f5f5f5;
-  --s2:     #ffffff;
-  --b1:     #E5E6E6;
-  --b2:     #d5d6d6;
-  --text:   #111111;
-  --text2:  #3a3a3a;
-  --text3:  #686E6B;
-  --text4:  #9a9a9a;
-  --accent-soft:  #6d4fc4;
-  /* accent/green/red/orange عمداً override نمی‌شوند — طبق قرارداد design-tokens.css در هر دو حالت ثابت‌اند */
+  /* سطوح و بوردر — از پالت رسمی، تم‌محور */
+  --bg:     var(--input-bg);   /* سطح اینست/گاتر (هم‌سطح ورودی — در حالت روز روی کارت سفید محو نشود) */
+  --s1:     var(--input-bg);   /* سطح ورودی/داخل کارت */
+  --s2:     var(--card-bg);    /* سطح کارت */
+  --b1:     var(--border);
+  /* --b2 کمی روشن‌تر/محسوس‌تر از بوردر معمول است (مثل نسخه اصلی که b2>b1 بود):
+     هم برای بوردرهای شاخص‌تر و هم برای رنگ «خاموش» دکمه‌های تاگل (بند ۴۶) استفاده می‌شود. */
+  --b2:     color-mix(in srgb, var(--text-soft) 42%, transparent);
+
+  /* متن — از پالت رسمی */
+  --text:   var(--text-h);
+  --text2:  var(--text-main);
+  --text3:  var(--text-soft);
+  --text4:  var(--text-soft);
+
+  /* رنگ‌های برند/معنایی — دقیقاً پالت رسمی داشبورد (بدون هیچ بنفشی) */
+  --accent:       var(--primary);
+  --accent-hover: color-mix(in srgb, var(--primary) 82%, #ffffff);
+  --accent-soft:  var(--text-h);
+  --green:        var(--success);
+  --green-hover:  color-mix(in srgb, var(--success) 85%, #000000);
+  --red:          var(--danger);
+  --red-soft:     var(--danger);
+  --orange:       var(--warning);
 }
 
 /* Skeleton System Unified — یک کلاس مشترک shimmer برای همه حالت‌های Loading صفحه */
 .skeleton { position: relative; overflow: hidden; background: var(--s1); }
 .skeleton::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(160,122,245,0.12), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 14%, transparent), transparent);
   animation: skeleton-shimmer 1.4s infinite;
 }
 @keyframes skeleton-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
+/* درخشش ملایم روی کارت مرحله‌ی فعال Stepper (به‌جای کلاس arbitrary تِیل‌ویند تا به بیلد وابسته نباشد) */
+#product-create-page .step-item.step-tab-active {
+  box-shadow: 0 0 12px -2px color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
 /* A11Y: مشخص بودن واضح Focus روی عناصر تعاملی */
-#real-product-form :focus-visible, .admin-content :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#real-product-form :focus-visible, .admin-content :focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* ── نوار پیشرفت کلی زیر Stepper (بند ۴۳ و ۴۷) — توپر، گرد و ضخیم، پرشونده از راست به چپ ── */
+#wizard-progress-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--input-bg);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+#wizard-progress-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;               /* لنگر سمت راست تا پرشدن از راست به چپ باشد (RTL) */
+  border-radius: 999px;
+  /* گرادیان سبز از پالت رسمی */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--success) 55%, var(--primary)), var(--success));
+  width: 0%;
+  transition: width .45s cubic-bezier(.4,0,.2,1);
+}

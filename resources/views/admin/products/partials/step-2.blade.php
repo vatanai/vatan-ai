@@ -126,7 +126,7 @@
 {{-- ═══════════════════ Card ۱ — پایپ‌لاین هوش مصنوعی ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-microchip text-[var(--accent)]"></i> پایپ‌لاین هوش مصنوعی</div>
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-microchip text-[var(--accent)]"></i> پایپ‌لاین هوش مصنوعی <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">«زمان انتظار (Timeout)» حداکثر ثانیه‌ای است که سیستم منتظر پاسخ مدل می‌ماند. «نوع پایپ‌لاین» مشخص می‌کند خروجی از صفر تولید شود، عکس کاربر ویرایش شود یا متن تولید شود.</span></span></div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">مدل اصلی و مدل‌های جایگزین در زمان اجرای محصول</div>
   </div>
 
@@ -270,6 +270,16 @@
     </div>
   </div>
 
+  {{-- نسخه‌بندی و تاریخچه پرامپت (NEW / فقط UI — بند ۳۰) --}}
+  <div class="border-t border-dashed border-[var(--b2)] pt-3.5 mt-3">
+    <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+      <div class="text-[11px] font-bold text-[var(--text2)] flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i> نسخه‌ها و تاریخچه پرامپت {!! $newBadge !!}</div>
+      <button type="button" class="text-[10.5px] px-2.5 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors" onclick="savePromptVersion()"><i class="fa-solid fa-floppy-disk ml-1"></i>ذخیره نسخه فعلی</button>
+    </div>
+    <div id="prompt-versions-list" class="space-y-1.5"></div>
+    <div id="prompt-versions-empty" class="text-[10.5px] text-[var(--text3)] text-center py-2">هنوز نسخه‌ای ذخیره نشده است.</div>
+  </div>
+
   {{-- ── پارامترهای واقعی کیفیت (به Backend وصل هستند) ── --}}
   <div class="border-t border-[var(--b1)] pt-3.5 mt-3 grid grid-cols-1 md:grid-cols-2 gap-3.5">
     <div class="flex flex-col gap-1.5 md:col-span-2">
@@ -297,7 +307,7 @@
       </div>
       <button type="button" id="btn-test-prompt"
         onclick="testPromptNow()"
-        class="inline-flex items-center gap-2 px-6 h-11 rounded-xl text-sm font-bold bg-[var(--accent)] text-[var(--text)] hover:bg-[var(--accent-hover)] transition-all shadow-[0_0_16px_-4px_rgba(160,122,245,0.5)]">
+        class="inline-flex items-center gap-2 px-6 h-11 rounded-xl text-sm font-bold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all shadow-lg">
         <i class="fa-solid fa-play text-xs"></i>
         <span id="btn-test-text">اجرای تست</span>
       </button>
@@ -564,6 +574,43 @@ function filterVarCategory(cat) {
     chip.classList.toggle('hidden', cat !== 'all' && chip.dataset.cat !== cat);
   });
 }
+
+/* ══════ نسخه‌بندی و تاریخچه پرامپت (بند ۳۰) — فقط UI، درون‌حافظه‌ای ══════ */
+var __promptVersions = [];
+function __escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function savePromptVersion() {
+  var ta = document.getElementById('prompt-template');
+  if (!ta || !ta.value.trim()) { alert('ابتدا پرامپت را بنویسید.'); return; }
+  var now = new Date();
+  var stamp = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ':' + ('0' + now.getSeconds()).slice(-2);
+  __promptVersions.unshift({ time: stamp, text: ta.value });
+  renderPromptVersions();
+}
+function renderPromptVersions() {
+  var list = document.getElementById('prompt-versions-list');
+  var empty = document.getElementById('prompt-versions-empty');
+  if (!list) return;
+  list.innerHTML = '';
+  if (empty) empty.classList.toggle('hidden', __promptVersions.length > 0);
+  __promptVersions.forEach(function (v, i) {
+    var row = document.createElement('div');
+    row.className = 'flex items-center gap-2 bg-[var(--s1)] border border-[var(--b1)] rounded-lg px-2.5 py-1.5';
+    var preview = __escHtml(v.text.replace(/\s+/g, ' ').slice(0, 40));
+    row.innerHTML =
+      '<i class="fa-solid fa-code-branch text-[10px] text-[var(--text3)] shrink-0"></i>' +
+      '<span class="text-[10px] text-[var(--text3)] font-mono shrink-0">' + v.time + '</span>' +
+      '<span class="text-[11px] text-[var(--text2)] flex-1 truncate ltr text-left">' + preview + '</span>' +
+      '<button type="button" class="text-[10.5px] text-[var(--accent)] shrink-0" onclick="restorePromptVersion(' + i + ')">بازگردانی</button>' +
+      '<button type="button" class="text-[10.5px] text-[var(--red)] shrink-0" onclick="deletePromptVersion(' + i + ')"><i class="fa-solid fa-xmark"></i></button>';
+    list.appendChild(row);
+  });
+}
+function restorePromptVersion(i) {
+  var v = __promptVersions[i]; if (!v) return;
+  var ta = document.getElementById('prompt-template');
+  if (ta) { ta.value = v.text; if (typeof onPromptInput === 'function') onPromptInput(); }
+}
+function deletePromptVersion(i) { __promptVersions.splice(i, 1); renderPromptVersions(); }
 
 document.addEventListener('DOMContentLoaded', () => {
   onPrimaryModelChange();

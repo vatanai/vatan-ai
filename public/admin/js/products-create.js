@@ -9,67 +9,127 @@ const AI_MODELS = CFG.aiModels || [];
 
 let cur = 1;
 
-/* ── Stepper: هر Step یکی از سه حالت Active / Completed / Pending دارد ── */
-function goStep(n) {
-  if(n < 1 || n > 5) return;
-  cur = n;
+/* تبدیل ارقام لاتین به فارسی برای نمایش کسری/درصد */
+function toFa(v) { return String(v).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
 
-  for(let i=1; i<=5; i++) {
-    const p = document.getElementById('panel-'+i);
-    const tab = document.getElementById('step-tab-'+i);
-    const num = document.getElementById('step-num-'+i);
+/* ── وضعیت تکمیل هر مرحله بر اساس فیلدهای اجباری واقعی ──
+   خروجی: { total, filled, complete, dynamic }
+   مرحله ۳ پویاست: بر اساس ردیف‌های واقعاً اضافه‌شده‌ی «فیلدهای ورودی کاربر» (بند ۴۵). */
+function computeStepStatus(n) {
+  if (n === 3) {
+    const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
+    let filled = 0;
+    rows.forEach(function (r) {
+      const idEl  = r.querySelector('.schema-id');
+      const lblEl = r.querySelector('.schema-label');
+      const id  = idEl  ? (idEl.value  || '').trim() : '';
+      const lbl = lblEl ? (lblEl.value || '').trim() : '';
+      if (id && lbl) filled++;
+    });
+    return { total: rows.length, filled: filled, complete: rows.length > 0 && filled === rows.length, dynamic: true };
+  }
+  const req = STEP_REQUIRED_FIELDS[n] || [];
+  let filled = 0;
+  req.forEach(function (pair) { if (fieldValue(pair[0])) filled++; });
+  return { total: req.length, filled: filled, complete: req.length === 0 ? true : filled === req.length, dynamic: false };
+}
+
+/* ── رندر کامل Stepper (بندهای ۴۲، ۴۳، ۴۵، ۴۷) ──
+   حالت دایره‌ها بر اساس «تکمیل واقعی» (نه صرفاً عبور از مرحله)، کسری فیلدها،
+   تیک سبز تکمیل، خط اتصال و نوار پیشرفت کلی. با هر تغییر ورودی و هر ناوبری اجرا می‌شود. */
+function renderStepper() {
+  let overallTotal = 0, overallFilled = 0;
+
+  for (let i = 1; i <= 5; i++) {
+    const tab = document.getElementById('step-tab-' + i);
+    const num = document.getElementById('step-num-' + i);
+    if (!tab || !num) continue;
     const label = tab.querySelector('.step-label');
     const title = tab.querySelector('.step-title');
+    const fracEl = document.getElementById('step-frac-' + i);
+    const checkEl = document.getElementById('step-check-' + i);
+    const st = computeStepStatus(i);
 
-    // ریست همه کلاس‌های حالت قبل از اعمال حالت جدید
-    tab.classList.remove('bg-[var(--accent)]/10','border-[var(--accent)]/25','shadow-[0_0_12px_-2px_rgba(160,122,245,0.35)]','bg-[var(--green)]/5','border-[var(--green)]/20');
+    // ریست کلاس‌های حالت
+    tab.classList.remove('bg-[var(--accent)]/10','border-[var(--accent)]/25','step-tab-active','bg-[var(--green)]/5','border-[var(--green)]/20');
     num.classList.remove('border-[var(--accent)]','bg-[var(--accent)]/15','text-[var(--accent)]','border-[var(--green)]','bg-[var(--green)]/15','text-[var(--green)]','border-[var(--b2)]','text-[var(--text3)]','scale-105');
-    label.classList.remove('text-[var(--accent)]','text-[var(--green)]','text-[var(--text3)]');
-    title.classList.remove('text-[var(--text)]','text-[var(--text2)]');
+    if (label) label.classList.remove('text-[var(--accent)]','text-[var(--green)]','text-[var(--text3)]');
+    if (title) title.classList.remove('text-[var(--text)]','text-[var(--text2)]');
 
-    if (i === n) {
-      // Active
-      p.classList.remove('hidden'); p.classList.add('block');
-      tab.classList.add('bg-[var(--accent)]/10','border-[var(--accent)]/25','shadow-[0_0_12px_-2px_rgba(160,122,245,0.35)]');
+    if (i === cur) {
+      // Active — همیشه شماره‌ی هایلایت‌شده (حتی اگر کامل باشد)
+      tab.classList.add('bg-[var(--accent)]/10','border-[var(--accent)]/25','step-tab-active');
       num.classList.add('border-[var(--accent)]','bg-[var(--accent)]/15','text-[var(--accent)]','scale-105');
       num.innerHTML = num.dataset.num;
-      label.classList.add('text-[var(--accent)]');
-      title.classList.add('text-[var(--text)]');
+      if (label) label.classList.add('text-[var(--accent)]');
+      if (title) title.classList.add('text-[var(--text)]');
+    } else if (st.complete && st.total > 0) {
+      // Completed — تیک سبز روی دایره (بر اساس تکمیل واقعی، نه عبور)
+      tab.classList.add('bg-[var(--green)]/5','border-[var(--green)]/20');
+      num.classList.add('border-[var(--green)]','bg-[var(--green)]/15','text-[var(--green)]');
+      num.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+      if (label) label.classList.add('text-[var(--green)]');
+      if (title) title.classList.add('text-[var(--text2)]');
     } else {
-      p.classList.remove('block'); p.classList.add('hidden');
-      if (i < n) {
-        // Completed
-        tab.classList.add('bg-[var(--green)]/5','border-[var(--green)]/20');
-        num.classList.add('border-[var(--green)]','bg-[var(--green)]/15','text-[var(--green)]');
-        num.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
-        label.classList.add('text-[var(--green)]');
-        title.classList.add('text-[var(--text2)]');
+      // Pending
+      num.classList.add('border-[var(--b2)]','text-[var(--text3)]');
+      num.innerHTML = num.dataset.num;
+      if (label) label.classList.add('text-[var(--text3)]');
+      if (title) title.classList.add('text-[var(--text2)]');
+    }
+
+    // کسری فیلدهای پرشده (بند ۴۵) — فقط وقتی مرحله فیلد اجباری دارد و هنوز کامل نشده
+    if (fracEl) {
+      if (st.total > 0 && !st.complete) {
+        fracEl.textContent = toFa(st.filled) + '/' + toFa(st.total);
+        fracEl.classList.remove('hidden');
       } else {
-        // Pending
-        num.classList.add('border-[var(--b2)]','text-[var(--text3)]');
-        num.innerHTML = num.dataset.num;
-        label.classList.add('text-[var(--text3)]');
-        title.classList.add('text-[var(--text2)]');
+        fracEl.classList.add('hidden');
       }
     }
+    // تیک سبز تکمیل گوشه‌ی کارت (بند ۴۲)
+    if (checkEl) checkEl.classList.toggle('hidden', !(st.total > 0 && st.complete));
+
+    if (st.total > 0) { overallTotal += st.total; overallFilled += st.filled; }
   }
 
-  // رنگ خط اتصال بین Stepها (دسکتاپ و موبایل) بر اساس عبور از آن مرحله
-  [1,2,3,4].forEach(idx => {
-    ['conn-'+idx, 'conn-'+idx+'-m'].forEach(id => {
+  // رنگ خط اتصال بین Stepها بر اساس مرحله‌ی فعلی
+  [1,2,3,4].forEach(function (idx) {
+    ['conn-'+idx, 'conn-'+idx+'-m'].forEach(function (id) {
       const el = document.getElementById(id);
       if (!el) return;
       el.classList.remove('bg-[var(--b1)]','bg-[var(--green)]/40');
-      el.classList.add(n > idx ? 'bg-[var(--green)]/40' : 'bg-[var(--b1)]');
+      el.classList.add(cur > idx ? 'bg-[var(--green)]/40' : 'bg-[var(--b1)]');
     });
   });
+
+  // نوار پیشرفت کلی فرم (بند ۴۳/۴۷)
+  const pct = overallTotal ? Math.round(overallFilled / overallTotal * 100) : 0;
+  const fill = document.getElementById('wizard-progress-fill');
+  const pctEl = document.getElementById('wizard-progress-pct');
+  if (fill) fill.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = toFa(pct) + '٪';
+}
+
+/* ── Stepper: جابه‌جایی بین مراحل (پیمایش همیشه آزاد — بند ۴۴) ── */
+function goStep(n) {
+  if (n < 1 || n > 5) return;
+  cur = n;
+
+  for (let i = 1; i <= 5; i++) {
+    const p = document.getElementById('panel-' + i);
+    if (!p) continue;
+    if (i === n) { p.classList.remove('hidden'); p.classList.add('block'); }
+    else { p.classList.remove('block'); p.classList.add('hidden'); }
+  }
 
   document.getElementById('btn-prev').style.display = n === 1 ? 'none' : 'inline-flex';
   document.getElementById('btn-next').style.display = n === 5 ? 'none' : 'inline-flex';
   document.getElementById('btn-submit').style.display = n === 5 ? 'inline-flex' : 'none';
-  document.getElementById('step-label-num').textContent = n;
-  window.scrollTo({top: 0, behavior: 'smooth'});
+  document.getElementById('step-label-num').textContent = toFa(n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  renderStepper();
   lazyInitStep(n); // Step Lazy Loading — مقداردهی سنگین هر Step فقط در اولین بازدید آن
   ProductCreateState.ui.currentStep = n;
 }
@@ -94,7 +154,7 @@ const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: t
    توجه: الزامی‌بودن فایل‌ها (مثل Thumbnail) اینجا چک نمی‌شود چون در حالت تکثیر محصول ممکن است
    از قبل موجود باشد؛ تصمیم نهایی همیشه با Validation واقعی سمت سرور است. */
 const STEP_REQUIRED_FIELDS = {
-  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category', 'دسته‌بندی'] ],
+  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_id', 'دسته‌بندی'] ],
   2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
   3: [], // ورودی و متغیرها: فیلد الزامی خاصی ندارد
   4: [], // خروجی و قیمت: همه مقادیر پیش‌فرض دارند
@@ -120,51 +180,48 @@ function validateStep(n) {
   return missing;
 }
 
+/* خلاصه موارد ناقص — هر آیتم شامل {name, label, step} است تا لینک پرش مستقیم به همان مرحله/فیلد بسازد */
 function showValidationSummary(missing) {
   const box = document.getElementById('validation-summary');
   const list = document.getElementById('validation-summary-list');
+  if (!box || !list) return;
   if (!missing.length) { box.classList.add('hidden'); list.innerHTML = ''; return; }
-  list.innerHTML = missing.map(m => `<li><a href="#" class="underline" onclick="focusField('${m.name}'); return false;">${m.label}</a></li>`).join('');
+  list.innerHTML = missing.map(function (m) {
+    return '<li><a href="#" class="underline" onclick="jumpToField(\'' + m.name + '\',' + (m.step || cur) + '); return false;">' + m.label + '</a></li>';
+  }).join('');
   box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function focusField(name) {
   const el = document.getElementsByName(name)[0];
-  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); el.classList.add('border-[var(--red)]'); setTimeout(() => el.classList.remove('border-[var(--red)]'), 2000); }
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); el.classList.add('border-[var(--red)]'); setTimeout(function () { el.classList.remove('border-[var(--red)]'); }, 2000); }
 }
 
-/* پیمایش بین Stepها با گیت اعتبارسنجی — فقط برای حرکت روبه‌جلو؛ بازگشت همیشه آزاد است */
-function attemptGoStep(n) {
-  if (n <= cur) { goStep(n); return; }
-  const missing = validateStep(cur);
-  if (missing.length) { showValidationSummary(missing); refreshStepValidityDots(); return; }
-  showValidationSummary([]);
-  goStep(n);
+/* پرش مستقیم به یک فیلد ناقص در مرحله‌ی مربوطه (از روی لیست خطاهای ثبت نهایی) */
+function jumpToField(name, step) {
+  if (step && step !== cur) { goStep(step); setTimeout(function () { focusField(name); }, 80); }
+  else focusField(name);
 }
 
-function nextStep() {
-  if (cur >= 5) return;
-  attemptGoStep(cur + 1);
-}
-function prevStep() { if(cur > 1) { showValidationSummary([]); goStep(cur - 1); } }
+/* بند ۴۴: پیمایش بین همه‌ی مراحل همیشه آزاد است (بدون گیت اعتبارسنجی رو‌به‌جلو) */
+function attemptGoStep(n) { goStep(n); }
+function nextStep() { if (cur < 5) goStep(cur + 1); }
+function prevStep() { if (cur > 1) goStep(cur - 1); }
 
-/* Step Validation Indicator — نقطه قرمز کوچک روی Stepهایی که سر زده شده‌اند ولی ناقص‌اند */
-function refreshStepValidityDots() {
-  for (let i = 1; i <= 5; i++) {
-    const tab = document.getElementById('step-tab-' + i);
-    if (!tab) continue;
-    let dot = tab.querySelector('.step-invalid-dot');
-    const invalid = ProductCreateState.validation[i] === false;
-    if (invalid && !dot) {
-      dot = document.createElement('span');
-      dot.className = 'step-invalid-dot w-1.5 h-1.5 rounded-full bg-[var(--red)] absolute top-2 left-2';
-      tab.style.position = 'relative';
-      tab.appendChild(dot);
-    } else if (!invalid && dot) {
-      dot.remove();
-    }
-  }
+/* جمع‌آوری تمام فیلدهای اجباری خالی در کل فرم — فقط در لحظه‌ی «ثبت نهایی» استفاده می‌شود (بند ۴۴) */
+function collectAllMissing() {
+  const missing = [];
+  [1, 2, 3, 4, 5].forEach(function (n) {
+    (STEP_REQUIRED_FIELDS[n] || []).forEach(function (pair) {
+      if (!fieldValue(pair[0])) missing.push({ name: pair[0], label: pair[1], step: n });
+    });
+  });
+  return missing;
 }
+
+/* سازگاری با کدهای قبلی: به‌جای نقطه‌های قرمز، رندر کامل Stepper (کسری/تیک/نوار پیشرفت) */
+function refreshStepValidityDots() { renderStepper(); }
 
 function addTag(e) {
   if (e.key !== 'Enter' && e.key !== ',') return;
@@ -496,8 +553,20 @@ function createHiddenInput(name, value) {
 }
 
 function submitForm(statusValue) {
-  document.getElementById('product-status').value = statusValue;
   const form = document.getElementById('real-product-form');
+
+  // بند ۴۴: فقط در «ثبت نهایی» (active) فیلدهای اجباری چک می‌شوند؛ «ذخیره پیش‌نویس» هیچ محدودیتی ندارد.
+  if (statusValue === 'active') {
+    const missing = collectAllMissing();
+    if (missing.length) {
+      showValidationSummary(missing);
+      renderStepper();
+      return; // جلوگیری از ثبت تا تکمیل موارد ناقص
+    }
+    showValidationSummary([]);
+  }
+
+  document.getElementById('product-status').value = statusValue;
 
   document.querySelectorAll('#tags-wrap span').forEach((chip, idx) => {
     const text = chip.textContent.replace('×', '').trim();
@@ -600,5 +669,119 @@ document.addEventListener('DOMContentLoaded', function () {
   // فعال‌سازی UI جستجوپذیر روی Selectهای Step ۱ (بعد از پرشدن مقادیر اولیه) — Step ۲/۳ با Lazy Loading مقداردهی می‌شوند
   initSearchables(document.getElementById('panel-1'));
 
-  refreshStepValidityDots();
+  // به‌روزرسانی زنده‌ی کسری/تیک/نوار پیشرفت با هر تغییر ورودی در کل فرم (بندهای ۴۲،۴۳،۴۵،۴۷)
+  const rpForm = document.getElementById('real-product-form');
+  if (rpForm) {
+    rpForm.addEventListener('input', renderStepper);
+    rpForm.addEventListener('change', renderStepper);
+  }
+
+  renderStepper();
+
+  // بند ۱۶/۲۳: کارت‌های Collapsible با ذخیره وضعیت باز/بسته
+  makeCardsCollapsible();
+  // بند ۲۶: ذخیره خودکار پیش‌نویس + بنر بازیابی
+  initAutosaveDraft();
+  // بند ۳۳: انتخاب نقش نمایشی (Role Preview)
+  var roleSel = document.getElementById('role-preview-select');
+  if (roleSel) roleSel.addEventListener('change', function () { applyRolePreview(this.value); });
 });
+
+/* ══════════════════ بند ۱۶/۲۳ — کارت‌های Collapsible (ذخیره وضعیت در localStorage) ══════════════════ */
+function makeCardsCollapsible() {
+  var cards = document.querySelectorAll('#real-product-form [class*="bg-[var(--s2)]"]');
+  var idx = 0;
+  cards.forEach(function (card) {
+    var header = card.querySelector(':scope > div');
+    if (!header || !/border-b/.test(header.className)) return;
+    if (header.dataset.collapsibleReady === '1') return;
+    header.dataset.collapsibleReady = '1';
+    idx++;
+    var key = 'pc-card-collapsed-' + idx;
+    header.style.position = 'relative';
+    header.style.cursor = 'pointer';
+    var chev = document.createElement('i');
+    chev.className = 'fa-solid fa-chevron-up text-[10px] text-[var(--text3)] card-collapse-chevron';
+    chev.style.position = 'absolute';
+    chev.style.left = '0';
+    chev.style.top = '2px';
+    chev.style.transition = 'transform .2s';
+    header.appendChild(chev);
+    var bodyEls = Array.prototype.slice.call(card.children).filter(function (c) { return c !== header; });
+    function apply(collapsed) {
+      bodyEls.forEach(function (el) { el.classList.toggle('hidden', collapsed); });
+      chev.style.transform = collapsed ? 'rotate(180deg)' : '';
+    }
+    var collapsed = false;
+    try { collapsed = localStorage.getItem(key) === '1'; } catch (e) {}
+    apply(collapsed);
+    header.addEventListener('click', function (e) {
+      if (e.target.closest('button, a, input, select, textarea, label')) return;
+      collapsed = !collapsed;
+      apply(collapsed);
+      try { localStorage.setItem(key, collapsed ? '1' : '0'); } catch (e) {}
+    });
+  });
+}
+
+/* ══════════════════ بند ۲۶ — ذخیره خودکار پیش‌نویس (فقط UI / localStorage) ══════════════════ */
+var AUTOSAVE_KEY = 'pc-autosave-draft';
+function autosaveSerialize() {
+  var form = document.getElementById('real-product-form');
+  if (!form) return null;
+  var data = {};
+  Array.prototype.forEach.call(form.elements, function (el) {
+    if (!el.name || el.type === 'file' || el.name === '_token' || el.name === 'status') return;
+    if (el.type === 'checkbox') data[el.name] = el.checked ? (el.value || '1') : '';
+    else if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+    else data[el.name] = el.value;
+  });
+  return data;
+}
+function autosaveDraft() {
+  try {
+    var data = autosaveSerialize();
+    if (!data) return;
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ t: (new Date()).getTime(), d: data }));
+    var el = document.getElementById('autosave-status');
+    if (el) {
+      var now = new Date();
+      el.textContent = 'آخرین ذخیره خودکار: ' + toFa(('0' + now.getHours()).slice(-2)) + ':' + toFa(('0' + now.getMinutes()).slice(-2));
+    }
+  } catch (e) {}
+}
+function initAutosaveDraft() {
+  try {
+    var raw = localStorage.getItem(AUTOSAVE_KEY);
+    var banner = document.getElementById('draft-recovery-banner');
+    var isDuplicate = !!document.querySelector('input[name="duplicate_from"]');
+    if (raw && banner && !isDuplicate) banner.classList.remove('hidden');
+  } catch (e) {}
+  setInterval(autosaveDraft, 10000); // هر ۱۰ ثانیه
+}
+function restoreAutosaveDraft() {
+  try {
+    var raw = localStorage.getItem(AUTOSAVE_KEY);
+    if (!raw) return;
+    var data = (JSON.parse(raw) || {}).d || {};
+    var form = document.getElementById('real-product-form');
+    Object.keys(data).forEach(function (name) {
+      var els = form.querySelectorAll('[name="' + name.replace(/"/g, '') + '"]');
+      els.forEach(function (el) {
+        if (el.type === 'checkbox') el.checked = !!data[name];
+        else if (el.type === 'radio') el.checked = (el.value === data[name]);
+        else el.value = data[name];
+      });
+    });
+    var banner = document.getElementById('draft-recovery-banner');
+    if (banner) banner.classList.add('hidden');
+    renderStepper();
+    if (typeof refreshFinalSummary === 'function') refreshFinalSummary();
+    if (typeof refreshProductPreview === 'function') refreshProductPreview();
+  } catch (e) {}
+}
+function dismissDraftRecovery() {
+  var banner = document.getElementById('draft-recovery-banner');
+  if (banner) banner.classList.add('hidden');
+  try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) {}
+}

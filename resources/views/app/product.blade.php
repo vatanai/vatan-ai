@@ -1,5 +1,46 @@
 @extends('layouts.app')
 
+@php
+  $seoTitle = $product->meta_title ?: ($product->name_fa . ' | وطن AI');
+  $seoDesc  = $product->meta_description
+      ?: \Illuminate\Support\Str::limit(trim(strip_tags($product->description_fa ?: $product->description_en ?: '')), 160);
+  $seoImg   = $product->og_image
+      ? asset('storage/'.$product->og_image)
+      : ($product->cover ? asset('storage/'.$product->cover)
+      : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')));
+  $seoUrl   = url()->current();
+@endphp
+
+@section('page_title', $seoTitle)
+
+@push('meta')
+  @if($seoDesc)<meta name="description" content="{{ $seoDesc }}">@endif
+  @if($product->meta_keywords)<meta name="keywords" content="{{ $product->meta_keywords }}">@endif
+  <link rel="canonical" href="{{ $seoUrl }}">
+  <meta property="og:type" content="product">
+  <meta property="og:site_name" content="وطن AI">
+  <meta property="og:title" content="{{ $seoTitle }}">
+  @if($seoDesc)<meta property="og:description" content="{{ $seoDesc }}">@endif
+  <meta property="og:image" content="{{ $seoImg }}">
+  <meta property="og:url" content="{{ $seoUrl }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ $seoTitle }}">
+  @if($seoDesc)<meta name="twitter:description" content="{{ $seoDesc }}">@endif
+  <meta name="twitter:image" content="{{ $seoImg }}">
+  <script type="application/ld+json">
+  {!! json_encode([
+      '@context'    => 'https://schema.org',
+      '@type'       => 'Product',
+      'name'        => $product->name_fa,
+      'description' => $seoDesc,
+      'image'       => $seoImg,
+      'category'    => $product->category,
+      'url'         => $seoUrl,
+      'brand'       => ['@type' => 'Brand', 'name' => 'وطن AI'],
+  ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+  </script>
+@endpush
+
 @section('content')
 {{-- تنظیم ارتفاع دقیق برای دسکتاپ منهای ۶۴ پیکسلِ هدر لایوت وطن AI --}}
 <div class="h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] [.light_&]:bg-white text-white [.light_&]:text-black flex flex-col overflow-hidden relative" dir="rtl">

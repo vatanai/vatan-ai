@@ -37,7 +37,8 @@ class CategoryController extends Controller
         $request->validate([
             'name'  => 'required|string|max:255|unique:categories,name',
             'slug'  => 'nullable|string|max:255|unique:categories,slug',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // حداکثر ۲ مگابایت
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'parent_id' => 'nullable|exists:categories,id', // حداکثر ۲ مگابایت
         ], [
             'name.required' => 'وارد کردن نام دسته‌بندی الزامی است.',
             'name.unique'   => 'این نام دسته‌بندی قبلاً ثبت شده است.',
@@ -52,6 +53,13 @@ class CategoryController extends Controller
         // هندل کردن اسلاگ فارسی و انگلیسی (جلوگیری از حذف حروف فارسی توسط لاراول)
         $slugSource = $request->slug ? $request->slug : $request->name;
         $data['slug'] = preg_replace('/\s+/u', '-', trim($slugSource));
+
+        // ساختار درختی: سرشاخه/زیرشاخه + فیلدهای الزامی و مسیر سئو
+        $data['parent_id'] = $request->input('parent_id') ?: null;
+        $data['name_fa']   = $request->name;
+        $data['name_en']   = $request->input('name_en') ?: $request->name;
+        $parentCat = $data['parent_id'] ? Category::find($data['parent_id']) : null;
+        $data['path'] = ($parentCat && $parentCat->path) ? ($parentCat->path . '/' . $data['slug']) : $data['slug'];
 
         // آپلود فیزیکی تصویر روی استوریج محلی پروژه (بدون نیاز به CDN)
         if ($request->hasFile('image')) {
@@ -82,6 +90,7 @@ class CategoryController extends Controller
             'name'  => 'required|string|max:255|unique:categories,name,' . $category->id,
             'slug'  => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'parent_id' => 'nullable|exists:categories,id',
         ], [
             'name.required' => 'وارد کردن نام دسته‌بندی الزامی است.',
             'name.unique'   => 'این نام دسته‌بندی قبلاً ثبت شده است.',
@@ -93,6 +102,13 @@ class CategoryController extends Controller
         
         $slugSource = $request->slug ? $request->slug : $request->name;
         $data['slug'] = preg_replace('/\s+/u', '-', trim($slugSource));
+
+        // ساختار درختی: سرشاخه/زیرشاخه + فیلدهای الزامی و مسیر سئو
+        $data['parent_id'] = $request->input('parent_id') ?: null;
+        $data['name_fa']   = $request->name;
+        $data['name_en']   = $request->input('name_en') ?: $request->name;
+        $parentCat = $data['parent_id'] ? Category::find($data['parent_id']) : null;
+        $data['path'] = ($parentCat && $parentCat->path) ? ($parentCat->path . '/' . $data['slug']) : $data['slug'];
 
         // مدیریت جایگزینی تصویر جدید و حذف تصویر قبلی از هاست
         if ($request->hasFile('image')) {

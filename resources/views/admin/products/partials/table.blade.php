@@ -65,6 +65,7 @@
         <th style="width:40px;"><input type="checkbox" class="row-checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
         <th style="width:64px;"></th>
         <th>محصول</th>
+        <th>کد محصول</th>
         <th>دسته‌بندی</th>
         <th>قیمت</th>
         <th>تعداد اجرا <span class="pending-badge" style="position:static;">نیاز به بررسی برنامه</span></th>
@@ -105,6 +106,11 @@
                 @if($product->is_trending)<span class="badge-pro badge-danger" style="padding:2px 6px;font-size:9px;"><i class="fa-solid fa-fire"></i> ترند</span>@endif
               </div>
             </div>
+          </td>
+
+          <td data-label="کد محصول">
+            {{-- بند ۵۱: کد محصول از روی id واقعی ساخته می‌شود؛ بدون Migration/تغییر بک‌اند و از همین حالا با جستجوی عددی موجود قابل جستجوست. --}}
+            <span class="font-mono text-[11.5px] font-semibold" style="color:var(--text-main);" dir="ltr">#{{ str_pad($product->id, 8, '0', STR_PAD_LEFT) }}</span>
           </td>
 
           <td data-label="دسته‌بندی">
@@ -187,7 +193,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="10" class="td-empty">
+          <td colspan="11" class="td-empty">
             <div class="empty-state">
               <div class="empty-state-icon"><i class="fa-solid fa-box-open"></i></div>
               <div class="empty-state-title">هنوز محصولی ثبت نشده است.</div>

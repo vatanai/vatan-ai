@@ -56,14 +56,28 @@
   <div class="grid grid-cols-1 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
-    {{-- سلکت دسته‌بندی: name باید category_id باشد چون کنترلر همین را می‌خواند (رفع باگ گرفتن همیشگی دسته اول) --}}
+    {{-- سلکت دسته‌بندی درختی: name = category_id (خوانده‌شده توسط کنترلر). ساختار تودرتو با فرورفتگی. --}}
+    @php
+      $__selectedCat = old('category_id', optional($duplicateFrom)->category_id);
+      $__renderCatOptions = function ($categories, $depth = 0) use (&$__renderCatOptions, $__selectedCat) {
+          $html = '';
+          foreach ($categories as $cat) {
+              $prefix   = $depth > 0 ? str_repeat('—', $depth) . ' ' : '';
+              $selected = (string) $__selectedCat === (string) $cat->id ? 'selected' : '';
+              $html .= '<option value="' . $cat->id . '" ' . $selected . '>'
+                     . $prefix . e($cat->name_fa) . '</option>';
+              if ($cat->childrenRecursive->isNotEmpty()) {
+                  $html .= $__renderCatOptions($cat->childrenRecursive, $depth + 1);
+              }
+          }
+          return $html;
+      };
+      $__rootCategories = \App\Models\Category::with('childrenRecursive')
+          ->whereNull('parent_id')->orderBy('sort_order')->get();
+    @endphp
 <select name="category_id" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
   <option value="">انتخاب کنید...</option>
-  @foreach(\App\Models\Category::all() as $cat)
-      <option value="{{ $cat->id }}" {{ old('category_id', optional($duplicateFrom)->category_id) == $cat->id ? 'selected' : '' }}>
-          {{ $cat->name }} — {{ $cat->slug }}
-      </option>
-  @endforeach
+  {!! $__renderCatOptions($__rootCategories) !!}
 </select>
     </div>
   </div>
@@ -84,6 +98,15 @@
   <div class="border-t border-dashed border-[var(--b2)] pt-4">
     <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-lock text-[10px]"></i> اطلاعات داخلی مدیر</div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">وضعیت محصول {!! $newBadge !!}</label>
+        <select name="new_product_status" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]">
+          <option value="draft">پیش‌نویس</option>
+          <option value="active">فعال</option>
+          <option value="inactive">غیرفعال</option>
+        </select>
+        <div class="text-[10px] text-[var(--text3)]">وضعیت اولیه نمایش محصول (نمایشی — تصمیم نهایی با دکمه‌های ثبت/پیش‌نویس است).</div>
+      </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)]">کد داخلی محصول</label>
         <input type="text" name="new_internal_code" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left w-full" placeholder="فقط برای مدیر — مثلاً PRD-0231" value="{{ old('new_internal_code', optional($duplicateFrom)->new_internal_code) }}">
@@ -283,6 +306,27 @@
         <i class="fa-solid fa-icons text-lg text-[var(--text3)] mb-1 block"></i>
         <div class="text-[11px] text-[var(--text2)]" id="new-icon-title">آپلود SVG یا PNG</div>
         <input type="file" id="new-product-icon-file" name="new_product_icon" accept=".svg,.png" class="hidden" onchange="updateFileLabel(this,'new-icon-title')">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
+      {{-- بند ۷: رنگ کارت محصول (Color Picker) — فقط UI --}}
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">رنگ کارت محصول {!! $newBadge !!}</label>
+        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <input type="color" name="new_card_color" value="#16594f" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('new-card-color-hex').value = this.value.toUpperCase()">
+          <input type="text" id="new-card-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#16594F" readonly>
+        </div>
+      </div>
+      {{-- بند ۷: پیش‌نمایش حالت نمایش گالری (Grid/Slider/Carousel) — فقط UI --}}
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">پیش‌نمایش حالت گالری {!! $newBadge !!}</label>
+        <div class="flex gap-2">
+          <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text)]" data-mode="grid" onclick="setGalleryPreviewMode('grid')"><i class="fa-solid fa-table-cells block mb-1"></i>Grid</button>
+          <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="slider" onclick="setGalleryPreviewMode('slider')"><i class="fa-solid fa-images block mb-1"></i>Slider</button>
+          <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="carousel" onclick="setGalleryPreviewMode('carousel')"><i class="fa-solid fa-rectangle-list block mb-1"></i>Carousel</button>
+        </div>
+        <input type="hidden" name="new_gallery_preview_mode" id="new-gallery-preview-mode" value="grid">
       </div>
     </div>
   </div>

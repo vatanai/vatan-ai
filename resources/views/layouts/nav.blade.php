@@ -19,7 +19,6 @@
         ];
         $navItemsAfter = [
           ['route' => 'app.trends', 'key' => 'trends', 'label' => 'ترندز'],
-          ['route' => 'app.profile', 'key' => 'profile', 'label' => 'پروفایل'],
         ];
       @endphp
 
@@ -48,6 +47,17 @@
           <span>{{ $item['label'] }}</span>
         </a>
       @endforeach
+
+      {{-- پروفایل فقط برای کاربر لاگین‌کرده نمایش داده می‌شود تا کلیک مهمان‌ها به صفحه لاگین هدایت نشود --}}
+      @auth
+        <a href="{{ route('app.profile') }}"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           data-key="profile">
+
+          <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>17,'class'=>'ni-on'])</span>
+          <span>پروفایل</span>
+        </a>
+      @endauth
     </div>
 
     {{-- بخش اکشن‌ها و وضعیت احراز هویت — سمت چپ --}}
@@ -68,7 +78,7 @@
       {{-- دکمه تغییر تم (روز / شب / سیستم) --}}
 
       <div class="topnav-theme-wrap relative order-1">
-        <button type="button" id="nav-theme-toggle" class="topnav-theme-btn w-9 h-9 flex items-center justify-center shrink-0 rounded-[12px] border border-white/15 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/5 text-white [.light_&]:text-black transition-all duration-200 hover:bg-white/10 [.light_&]:hover:bg-black/10 cursor-pointer" aria-label="تغییر تم" aria-expanded="false">
+        <button type="button" id="nav-theme-toggle" class="topnav-theme-btn w-[32.3px] h-[32.3px] flex items-center justify-center shrink-0 rounded-[15.6px] border border-white/15 [.light_&]:border-black/10 bg-white/5 [.light_&]:bg-black/5 text-white [.light_&]:text-black transition-all duration-200 hover:bg-white/10 [.light_&]:hover:bg-black/10 cursor-pointer" aria-label="تغییر تم" aria-expanded="false">
           <svg data-icon="moon" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           <svg data-icon="sun" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
           <svg data-icon="system" class="theme-trigger-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -206,6 +216,17 @@
 </nav>
 
 <style>
+  /* ── فونت هدر: فقط YekanBakh در کل هدر دسکتاپ (بدون هیچ فونت دیگر) ──
+     روی #vatan-topnav ست می‌شود تا از طریق ارث‌بری به همه‌ی متن‌ها برسد؛
+     آیکون‌های FontAwesome چون فونت خودشان را از کلاس می‌گیرند دست‌نخورده می‌مانند. */
+  #vatan-topnav { font-family: 'YekanBakh', sans-serif; }
+
+  /* ── حالت روز: متن و آیکون منوی سلکت‌شده کاملاً سفید (آیکون‌ها currentColor هستند) ── */
+  html.light .topnav-link.is-active,
+  html.light .topnav-link.is-active .topnav-link-icon svg {
+    color: #ffffff;
+  }
+
   /* انیمیشن ورود روان مودال */
   @keyframes dropFadeIn {
     from { opacity: 0; transform: translateY(-12px) scale(0.96); }
@@ -303,7 +324,7 @@
     color: #000000;              /* متن مشکی */
     border: none;
     border-radius: 15.6px;        /* خمیدگی مثل باکس‌های هدر */
-    font-family: "YekanBakh", var(--font-sans, sans-serif);
+    font-family: 'YekanBakh', sans-serif;
     position: relative;
     overflow: hidden;
     cursor: pointer;
@@ -331,7 +352,7 @@
     color: #000000;
     font-size: 15px;
     font-weight: 900;              /* YekanBakh کلفت (Fat) هنگام هاور */
-    font-family: "YekanBakh", var(--font-sans, sans-serif);
+    font-family: 'YekanBakh', sans-serif;
     transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
   }
   /* افکت باز شدن روی هاور */
@@ -358,9 +379,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 38px;
+    height: 32.3px; /* ارتفاع ۱۵٪ کمتر (۳۸px → ۳۲٫۳px) */
     padding: 0 13px;
-    border-radius: 15.6px; /* خمیدگی ۲۰٪ بیشتر از مقدار قبلی (۱۳px → ۱۵٫۶px) */
+    border-radius: 15.6px; /* خمیدگی مثل باکس بساز (۱۵٫۶px) */
     background: #1a1a1a; /* حالت شب */
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
@@ -375,8 +396,8 @@
     opacity: 0.85;
   }
   .topnav-token-icon {
-    width: 19.2px; /* ۲۰٪ بزرگتر از ۱۶px */
-    height: 19.2px;
+    width: 22.08px; /* ۱۵٪ بزرگتر (۱۹٫۲px → ۲۲٫۰۸px) */
+    height: 22.08px;
     flex-shrink: 0;
     display: block;
     order: 1; /* آیکون سمت چپ */
@@ -385,6 +406,7 @@
     font-size: 15.6px; /* ۲۰٪ بزرگتر نسبت به سایز پایه ۱۳px */
     font-weight: 800;
     color: #ffffff; /* سفید در هر دو حالت (باکس تیره #1a1a1a) */
+    font-family: 'YekanBakh', sans-serif; /* فونت عدد: یکان بخ */
     font-feature-settings: "tnum";
     order: 0; /* عدد سمت راست */
   }
@@ -608,9 +630,12 @@
 
   function syncThemeUI() {
     var mode = window.vatanGetThemeMode ? window.vatanGetThemeMode() : 'dark';
+    // نگاشت حالت تم به نام آیکون (چون data-icon مقادیر moon/sun/system دارد نه dark/light/system)
+    var iconForMode = { dark: 'moon', light: 'sun', system: 'system' };
+    var wantIcon = iconForMode[mode] || 'moon';
     if (navThemeBtn) {
       navThemeBtn.querySelectorAll('.theme-trigger-icon').forEach(function (icon) {
-        icon.classList.toggle('is-shown', icon.dataset.icon === mode);
+        icon.classList.toggle('is-shown', icon.dataset.icon === wantIcon);
       });
     }
     if (themeMenu) {

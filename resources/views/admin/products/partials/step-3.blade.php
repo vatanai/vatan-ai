@@ -6,10 +6,94 @@
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
 @endphp
 
+{{-- ═══════════════════ Card — متغیرهای پرامپت (NEW / فقط UI — بند ۱۴) ═══════════════════ --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-brackets-curly text-[var(--accent)]"></i> متغیرهای پرامپت {!! $newBadge !!}</div>
+      <div class="text-[10.5px] text-[var(--text3)] mt-1">متغیرهایی که در متن پرامپت با مقدار واقعی جایگزین می‌شوند</div>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs" id="prompt-vars-table">
+      <thead>
+        <tr class="text-[var(--text3)] text-[10.5px]">
+          <th class="p-2 font-semibold text-right">متغیر</th>
+          <th class="p-2 font-semibold text-right">توضیح</th>
+          <th class="p-2 font-semibold text-right">نوع</th>
+          <th class="p-2 font-semibold text-right">پیش‌فرض</th>
+          <th class="p-2 font-semibold text-center">اجباری</th>
+          <th class="p-2"></th>
+        </tr>
+      </thead>
+      <tbody id="prompt-vars-tbody">
+        @foreach([
+          ['{name}','نام کاربر','User'],
+          ['{gender}','جنسیت','User'],
+          ['{style}','سبک انتخابی','User'],
+          ['{product_name}','نام محصول','Product'],
+          ['{image}','عکس ورودی کاربر','Media'],
+          ['{today}','تاریخ امروز','System'],
+        ] as $v)
+          <tr class="border-t border-[var(--b1)]">
+            <td class="p-2"><code class="bg-[var(--b1)] px-1.5 py-0.5 rounded text-[var(--accent)] ltr">{{ $v[0] }}</code></td>
+            <td class="p-2 text-[var(--text2)]">{{ $v[1] }}</td>
+            <td class="p-2"><span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5">{{ $v[2] }}</span></td>
+            <td class="p-2"><input type="text" class="bg-[var(--s1)] border border-[var(--b1)] rounded p-1 text-[11px] text-[var(--text)] w-20" placeholder="—"></td>
+            <td class="p-2 text-center"><input type="checkbox" class="accent-[var(--accent)]"></td>
+            <td class="p-2"></td>
+          </tr>
+        @endforeach
+      </tbody>
+    </table>
+  </div>
+  <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border-2 border-dashed border-[var(--b2)] bg-transparent text-[var(--text3)] text-xs font-semibold mt-3" onclick="addPromptVarRow()">
+    <i class="fa-solid fa-plus"></i> افزودن متغیر جدید
+  </button>
+</div>
+
+<script>
+/* افزودن ردیف متغیر جدید به جدول متغیرهای پرامپت (بند ۱۴) — فقط UI */
+function addPromptVarRow() {
+  var tb = document.getElementById('prompt-vars-tbody');
+  if (!tb) return;
+  var tr = document.createElement('tr');
+  tr.className = 'border-t border-[var(--b1)]';
+  tr.innerHTML =
+    '<td class="p-2"><input type="text" class="bg-[var(--s1)] border border-[var(--b1)] rounded p-1 text-[11px] text-[var(--text)] ltr text-left w-24" placeholder="{variable}"></td>' +
+    '<td class="p-2"><input type="text" class="bg-[var(--s1)] border border-[var(--b1)] rounded p-1 text-[11px] text-[var(--text)] w-full" placeholder="توضیح"></td>' +
+    '<td class="p-2"><select class="bg-[var(--s1)] border border-[var(--b1)] rounded p-1 text-[11px] text-[var(--text)]"><option>User</option><option>Product</option><option>Media</option><option>System</option></select></td>' +
+    '<td class="p-2"><input type="text" class="bg-[var(--s1)] border border-[var(--b1)] rounded p-1 text-[11px] text-[var(--text)] w-20" placeholder="—"></td>' +
+    '<td class="p-2 text-center"><input type="checkbox" class="accent-[var(--accent)]"></td>' +
+    '<td class="p-2"><button type="button" class="text-[var(--red)]" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
+  tb.appendChild(tr);
+}
+</script>
+
+{{-- ═══════════════════ Card — ویژگی‌های خاص محصول (NEW / فقط UI — بند ۴۸) ═══════════════════ --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">
+    <div>
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-swatchbook text-[var(--accent)]"></i> ویژگی‌های خاص محصول {!! $newBadge !!}</div>
+      <div class="text-[10.5px] text-[var(--text3)] mt-1">مثلاً «سبک تصویر» — برای هر ویژگی نوع نمایش و گزینه‌هایش را مشخص کنید</div>
+    </div>
+  </div>
+
+  <div id="product-attributes-list" class="space-y-3"></div>
+
+  <div id="product-attributes-empty" class="text-[11px] text-[var(--text3)] text-center py-3 border-2 border-dashed border-[var(--b2)] rounded-xl">
+    هنوز ویژگی‌ای اضافه نشده است.
+  </div>
+
+  <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border-2 border-dashed border-[var(--b2)] bg-transparent text-[var(--text3)] text-xs font-semibold mt-3" onclick="addProductAttribute()">
+    <i class="fa-solid fa-plus"></i> افزودن ویژگی جدید
+  </button>
+</div>
+
 {{-- ═══════════════════ Card ۲ — فیلدهای ورودی کاربر ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-table-list text-[var(--accent)]"></i> فیلدهای ورودی کاربر</div>
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-table-list text-[var(--accent)]"></i> فیلدهای ورودی کاربر <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:240px;">«نوع فیلد» تعیین می‌کند کاربر چه چیزی وارد کند: متن، عدد، آپلود عکس/فایل، انتخاب از لیست، رادیو یا چک‌باکس.</span></span></div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">این فیلدها هنگام استفاده از محصول از کاربر گرفته می‌شوند</div>
   </div>
   
@@ -229,4 +313,64 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   refreshFormPreview();
 });
+</script>
+
+<script>
+/* ══════ ویژگی‌های خاص محصول (بند ۴۸) — کاملاً UI-only، بدون اتصال Backend ══════ */
+var __attrIdx = 0;
+var ATTR_TYPES = [
+  ['single',  'گزینه‌ای / تک‌انتخابی (Radio یا Dropdown)'],
+  ['multi',   'چندگزینه‌ای / چندانتخابی (Checkbox)'],
+  ['toggle',  'تیک‌زدنی / روشن‌خاموش (Toggle)'],
+  ['variant', 'چند مدل مختلف (Variant Models)'],
+];
+function syncAttrEmptyState() {
+  var list = document.getElementById('product-attributes-list');
+  var empty = document.getElementById('product-attributes-empty');
+  if (list && empty) empty.classList.toggle('hidden', list.children.length > 0);
+}
+function addProductAttribute() {
+  var list = document.getElementById('product-attributes-list');
+  if (!list) return;
+  var i = __attrIdx++;
+  var typeOpts = ATTR_TYPES.map(function (t) { return '<option value="' + t[0] + '">' + t[1] + '</option>'; }).join('');
+  var row = document.createElement('div');
+  row.className = 'attr-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3';
+  row.innerHTML =
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-2.5">' +
+      '<input type="text" name="new_product_attributes[' + i + '][name]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)]" placeholder="نام ویژگی (مثلاً سبک تصویر)">' +
+      '<select name="new_product_attributes[' + i + '][type]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] attr-type" onchange="onAttrTypeChange(this)">' + typeOpts + '</select>' +
+    '</div>' +
+    '<div class="attr-options-block">' +
+      '<label class="text-[10.5px] text-[var(--text3)] mb-1 block">گزینه‌ها <span class="text-[var(--text3)]">— بنویسید و Enter بزنید</span></label>' +
+      '<div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-1.5 flex flex-wrap gap-1.5 items-center min-h-[42px] attr-chips" onclick="this.querySelector(\'.attr-chip-input\').focus()">' +
+        '<input type="text" class="bg-transparent border-none outline-none text-xs text-[var(--text)] flex-1 min-w-[80px] attr-chip-input" placeholder="گزینه..." onkeydown="attrAddChip(event)">' +
+      '</div>' +
+    '</div>' +
+    '<div class="flex justify-end mt-2">' +
+      '<button type="button" class="text-xs text-[var(--red)] bg-[var(--red)]/10 px-2.5 py-1.5 rounded-lg" onclick="this.closest(\'.attr-row\').remove(); syncAttrEmptyState();">حذف ویژگی</button>' +
+    '</div>';
+  list.appendChild(row);
+  onAttrTypeChange(row.querySelector('.attr-type'));
+  syncAttrEmptyState();
+}
+function onAttrTypeChange(sel) {
+  if (!sel) return;
+  var row = sel.closest('.attr-row');
+  if (!row) return;
+  var optBlock = row.querySelector('.attr-options-block');
+  if (optBlock) optBlock.classList.toggle('hidden', sel.value === 'toggle'); // نوع Toggle گزینه ندارد
+}
+function attrAddChip(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  var inp = e.target;
+  var v = inp.value.trim();
+  if (!v) return;
+  var chip = document.createElement('span');
+  chip.className = 'inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]';
+  chip.innerHTML = v + '<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()">×</button>';
+  inp.parentElement.insertBefore(chip, inp);
+  inp.value = '';
+}
 </script>

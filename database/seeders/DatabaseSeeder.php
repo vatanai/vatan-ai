@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminSeeder::class,
+            CategorySeeder::class, // ساختار کامل و درختی دسته‌بندی‌ها (idempotent)
         ]);
     }
 }

@@ -117,13 +117,28 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
               <div class="flex flex-col gap-1.5">
                 <label class="text-xs font-semibold text-[#a8c4a8]">دسته‌بندی <span class="text-[#f05c5c] mr-0.5">*</span></label>
-                {{-- اصلاح باگ: استفاده از category_id واقعی و مدل Category (به‌جای تاکسونومی رشته‌ای قدیمی) --}}
+                {{-- دسته‌بندی درختی: category_id واقعی + ساختار تودرتو با فرورفتگی --}}
+                @php
+                  $curCat = old('category_id', $product->category_id);
+                  $renderCatOptionsEdit = function ($categories, $depth = 0) use (&$renderCatOptionsEdit, $curCat) {
+                      $html = '';
+                      foreach ($categories as $catItem) {
+                          $prefix   = $depth > 0 ? str_repeat('—', $depth) . ' ' : '';
+                          $selected = (string) $curCat === (string) $catItem->id ? 'selected' : '';
+                          $html .= '<option value="' . $catItem->id . '" ' . $selected . '>'
+                                 . $prefix . e($catItem->name_fa) . '</option>';
+                          if ($catItem->childrenRecursive->isNotEmpty()) {
+                              $html .= $renderCatOptionsEdit($catItem->childrenRecursive, $depth + 1);
+                          }
+                      }
+                      return $html;
+                  };
+                  $rootCatsEdit = \App\Models\Category::with('childrenRecursive')
+                      ->whereNull('parent_id')->orderBy('sort_order')->get();
+                @endphp
                 <select name="category_id" class="bg-[#111116] border border-[#222230] rounded-lg p-2.5 text-xs text-white outline-none transition-colors w-full focus:border-[#a07af5]" id="cat-main">
                   <option value="">انتخاب کنید</option>
-                  @php $curCat = old('category_id', $product->category_id); @endphp
-                  @foreach(\App\Models\Category::orderBy('name')->get() as $catItem)
-                    <option value="{{ $catItem->id }}" {{ (string) $curCat === (string) $catItem->id ? 'selected' : '' }}>{{ $catItem->name }} — {{ $catItem->slug }}</option>
-                  @endforeach
+                  {!! $renderCatOptionsEdit($rootCatsEdit) !!}
                 </select>
               </div>
               <div class="flex flex-col gap-1.5">
@@ -396,6 +411,73 @@
                 <textarea name="provider_options" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-[11px] text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder='{"google": {"...": "..."}}'>{{ old('provider_options', is_array($product->provider_options) ? json_encode($product->provider_options, JSON_UNESCAPED_UNICODE) : '') }}</textarea>
               </div>
             </div>
+          </div>
+
+          {{-- ═══ سئو (SEO) ═══ --}}
+          <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+            <div class="text-xs font-bold text-[var(--text)] mb-4 flex items-center gap-2 pb-3 border-b border-[var(--b1)]"><i class="fa-solid fa-magnifying-glass-chart text-[var(--accent)]"></i> سئو (بهینه‌سازی موتور جستجو)</div>
+            <div class="flex flex-col gap-1.5 mb-3.5">
+              <label class="text-xs font-semibold text-[var(--text2)]">عنوان متا (Meta Title)</label>
+              <input type="text" name="meta_title" maxlength="70" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: عکس حرفه‌ای لینکدین | وطن AI" value="{{ old('meta_title', $product->meta_title) }}">
+            </div>
+            <div class="flex flex-col gap-1.5 mb-3.5">
+              <label class="text-xs font-semibold text-[var(--text2)]">توضیحات متا (Meta Description)</label>
+              <textarea name="meta_description" rows="3" maxlength="300" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full resize-y" placeholder="توضیح کوتاه و جذاب برای نتایج گوگل...">{{ old('meta_description', $product->meta_description) }}</textarea>
+            </div>
+            <div class="flex flex-col gap-1.5 mb-3.5">
+              <label class="text-xs font-semibold text-[var(--text2)]">کلمات کلیدی (با ویرگول جدا کنید)</label>
+              <input type="text" name="meta_keywords" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="عکس لینکدین, پرتره هوش مصنوعی" value="{{ old('meta_keywords', $product->meta_keywords) }}">
+            </div>
+            <div class="flex flex-col gap-1.5 md:max-w-md">
+              <label class="text-xs font-semibold text-[var(--text2)]">تصویر اشتراک‌گذاری (OG Image)</label>
+              @if($product->og_image)
+                <img src="{{ asset('storage/'.$product->og_image) }}" class="w-24 h-14 object-cover rounded-lg border border-[var(--b1)] mb-1">
+              @endif
+              <input type="file" name="og_image" accept="image/*" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] w-full">
+              <div class="text-[10px] text-[var(--text3)]">اگر خالی بماند از کاور محصول استفاده می‌شود.</div>
+            </div>
+          </div>
+
+          {{-- ═══ نحوه نمایش در اکسپلور و اپ ═══ --}}
+          @php
+            $eTiles = old('explore_tiles', $product->explore_tiles ?? ['1x1','2x2','1x2','2x1']);
+            if (!is_array($eTiles) || empty($eTiles)) $eTiles = ['1x1','2x2','1x2','2x1'];
+            $eCover = $product->cover ? asset('storage/'.$product->cover) : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp'));
+            $eTileDefs = [
+              '1x1' => ['۱ × ۱ (مربع)', '1 / 1'],
+              '2x2' => ['۲ × ۲ (بزرگ)', '1 / 1'],
+              '1x2' => ['۱ × ۲ (عمودی)', '1 / 2'],
+              '2x1' => ['۲ × ۱ (افقی)', '2 / 1'],
+            ];
+          @endphp
+          <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+            <div class="text-xs font-bold text-[var(--text)] mb-1 flex items-center gap-2"><i class="fa-solid fa-table-cells text-[var(--accent)]"></i> نحوه نمایش در اکسپلور و اپ</div>
+            <div class="text-[10.5px] text-[var(--text3)] mb-4">حداقل یک حالت روشن بماند. حالت‌های خاموش در اکسپلور نمایش داده نمی‌شوند. کاور محصول در هر قاب پیش‌نمایش شده تا تناسبش را ببینید.</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              @foreach($eTileDefs as $mode => $def)
+                <label class="explore-tile-card-e relative flex flex-col gap-2 p-2.5 bg-[var(--s1)] border rounded-xl cursor-pointer transition-all {{ in_array($mode,$eTiles) ? 'border-[var(--accent)]' : 'border-[var(--b1)]' }}">
+                  <div class="mx-auto rounded-lg overflow-hidden bg-[var(--bg)] border border-[var(--b1)]" style="height:7rem;aspect-ratio:{{ $def[1] }};max-width:100%">
+                    <img src="{{ $eCover }}" class="w-full h-full object-cover" alt="">
+                  </div>
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-[11px] font-semibold text-[var(--text2)]">{{ $def[0] }}</span>
+                    <span class="relative w-8 h-[18px] shrink-0 block">
+                      <input type="checkbox" name="explore_tiles[]" value="{{ $mode }}" class="sr-only peer explore-tile-checkbox-e" {{ in_array($mode,$eTiles) ? 'checked' : '' }} onchange="onExploreTileToggleEdit(this)">
+                      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3 before:h-3 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[14px] peer-checked:before:bg-white"></span>
+                    </span>
+                  </div>
+                </label>
+              @endforeach
+            </div>
+            <script>
+              function onExploreTileToggleEdit(cb){
+                var checks=document.querySelectorAll('.explore-tile-checkbox-e');
+                var on=Array.prototype.filter.call(checks,function(c){return c.checked;}).length;
+                if(on===0){cb.checked=true;}
+                var card=cb.closest('.explore-tile-card-e');
+                if(card){card.classList.toggle('border-[var(--accent)]',cb.checked);card.classList.toggle('border-[var(--b1)]',!cb.checked);}
+              }
+            </script>
           </div>
 
           <div class="bg-[#16161c] border border-[#222230] rounded-xl p-5">
