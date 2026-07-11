@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminSeeder::class,
             CategorySeeder::class, // ساختار کامل و درختی دسته‌بندی‌ها (idempotent)
+            AiModelSeeder::class,  // ۱۵ مدل تصویری OpenRouter با نام فارسی (idempotent)
         ]);
     }
 }

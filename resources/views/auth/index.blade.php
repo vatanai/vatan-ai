@@ -17,6 +17,17 @@
   }
   .shake-effect { animation: shake 0.4s ease-in-out; }
 
+  /* اسکرول‌بار ستون فرم لاگین هرگز و تحت هیچ شرایطی نمایش داده نشود (حتی هنگام نمایش خطا) */
+  .auth-form-col {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .auth-form-col::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
   /* حذف باکس سفید/زرد autofill مرورگر روی همه فیلدهای فرم (رمز، ایمیل، موبایل، نام و ...) */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
@@ -276,9 +287,9 @@
   {{-- ستون برندینگ / لوگو (سمت چپ، فقط دسکتاپ) --}}
   <div class="auth-brand-col relative flex-col items-center justify-center bg-[#0a0a0c] p-10 overflow-hidden border-r border-[#222230]">
     <div class="absolute w-[280px] h-[280px] rounded-full bg-[#cffe00] opacity-10 blur-[80px]"></div>
-    <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="وطن استودیو" class="relative z-[1] w-20 h-20 object-contain mb-5">
+    <img src="{{ asset('assets/img/icon vatan.svg') }}" alt="وطن استودیو" class="relative z-[1] w-20 h-20 object-contain mb-5">
     <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن استودیو" class="relative z-[1] w-[140px] object-contain mb-4">
-    <div class="relative z-[1] text-xs text-[#4d7a56] text-center max-w-[220px] leading-[1.8]">وطن، ابزاری برای خلق بی‌نهایت</div>
+    <div class="relative z-[1] text-xs text-[#cffe00] text-center max-w-[220px] leading-[1.8]">وطن، ابزاری برای خلق بی‌نهایت</div>
   </div>
 
 </div>

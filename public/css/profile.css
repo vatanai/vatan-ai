@@ -57,6 +57,28 @@ html, body { overflow-x: hidden; background: var(--bg-page) !important; color: v
 }
 
 /* ═══════════════════════════════════════
+   HEADER موبایل (کپی از هدر نسخه موبایل صفحه هوم)
+   فقط زیر ۶۴۰px نمایش داده می‌شود
+═══════════════════════════════════════ */
+.home-logo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #000000;
+  z-index: 250;
+  padding: calc(env(safe-area-inset-top) + 100px) 16px 18px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+html.light .home-logo { background: #ffffff; }
+.home-logo-wrap { display: flex; align-items: center; gap: 8px; }
+
+/* ═══════════════════════════════════════
    UTILITY: show/hide by breakpoint
 ═══════════════════════════════════════ */
 .show-desktop { display: none !important; }
@@ -82,7 +104,7 @@ html, body { overflow-x: hidden; background: var(--bg-page) !important; color: v
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: calc(env(safe-area-inset-top) + 36px) 16px 16px;
+  padding: calc(env(safe-area-inset-top) + 180px) 16px 16px;
   gap: 12px;
 }
 
@@ -234,8 +256,9 @@ html.light .stat-label { color: #5a7a5a; }
    دکمه‌های اکشن — راست به چپ: تنظیمات | پشتیبانی | خرید اشتراک
 ═══════════════════════════════════════ */
 .action-row {
-  display: flex;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
   direction: rtl;
   width: 100%;
   max-width: 400px;
@@ -287,13 +310,14 @@ html.light .stat-label { color: #5a7a5a; }
   border-radius: 10px;
   border: none;
   background: var(--green);
-  color: #ffffff;
+  color: #000000;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: opacity 0.15s;
 }
+html.light .btn-subscribe { color: #ffffff; }
 .btn-subscribe:active { opacity: 0.85; }
 
 .subscribe-badge {
@@ -471,7 +495,7 @@ html.light .theme-icon-sun  { display: block !important; }
   align-items: center;
   justify-content: space-between;
   direction: rtl;
-  background: var(--bg-affiliate);
+  background: #687f00; /* سبز اصلی هدر (#cffd00) با ۵۰٪ تیره‌تر */
   border: 1px solid var(--border-affiliate);
   border-radius: 12px;
   padding: 12px 14px;
@@ -487,7 +511,7 @@ html.light .theme-icon-sun  { display: block !important; }
   align-items: center;
   gap: 6px;
   background: var(--green);
-  color: #ffffff;
+  color: #000000;
   border: none;
   border-radius: 10px;
   padding: 9px 14px;
@@ -497,6 +521,7 @@ html.light .theme-icon-sun  { display: block !important; }
   white-space: nowrap;
   flex-shrink: 0;
 }
+html.light .promo-btn { color: #ffffff; }
 
 /* ═══════════════════════════════════════
    TABS SECTION
@@ -630,12 +655,13 @@ html.light .tab-icon--svg { color: var(--text-primary); }
   padding: 8px 18px;
   border-radius: 8px;
   background: var(--green, #cffd00);
-  color: #fff;
+  color: #000000;
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   transition: opacity .15s ease;
 }
+html.light .btn-empty-cta { color: #ffffff; }
 .btn-empty-cta:hover { opacity: .9; }
 
 .cell-badge {
@@ -779,6 +805,9 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   .show-desktop { display: inline-flex !important; }
   .hide-desktop { display: none !important; }
 
+  /* هدر موبایل (کپی هدر هوم) — فقط زیر ۶۴۰px، در دسکتاپ/تبلت top-nav جایگزین است */
+  .home-logo { display: none !important; }
+
   .profile-page {
     max-width: 1100px;
     padding-bottom: 40px;
@@ -827,15 +856,13 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   /* پلن رایگان در tablet/desktop حذف */
   .plan-badge { display: none !important; }
 
-  /* دکمه‌های اکشن */
+  /* دکمه‌های اکشن — دسکتاپ: فلکس با نسبت‌های قبلی (فقط موبایل گرید هم‌عرض است) */
   .action-row {
+    display: flex;
     max-width: 340px;
     width: 100%;
     margin-top: 4px;
   }
-
-  /* تنظیمات — پنهان (رفت به هدر) */
-  .settings-wrap { display: none !important; }
 
   /* بنر موبایل — پنهان (داخل hero-left-group هست) */
   .promo-section { display: none; }

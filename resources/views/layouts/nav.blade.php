@@ -48,16 +48,14 @@
         </a>
       @endforeach
 
-      {{-- پروفایل فقط برای کاربر لاگین‌کرده نمایش داده می‌شود تا کلیک مهمان‌ها به صفحه لاگین هدایت نشود --}}
-      @auth
-        <a href="{{ route('app.profile') }}"
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
-           data-key="profile">
+      {{-- پروفایل — همیشه نمایش داده می‌شود (مهمان و کاربر لاگین‌کرده) و همیشه به صفحه پروفایل می‌رود، نه لاگین --}}
+      <a href="{{ route('app.profile') }}"
+         class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+         data-key="profile">
 
-          <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>17,'class'=>'ni-on'])</span>
-          <span>پروفایل</span>
-        </a>
-      @endauth
+        <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>17,'class'=>'ni-on'])</span>
+        <span>پروفایل</span>
+      </a>
     </div>
 
     {{-- بخش اکشن‌ها و وضعیت احراز هویت — سمت چپ --}}
@@ -122,9 +120,15 @@
         <input type="checkbox" aria-label="منوی کاربری" />
         <div tabindex="0" class="topnav-burger" role="button" aria-label="منوی کاربری">
           @auth
-            <img src="{{ auth()->user()->avatar ? asset('storage/' . auth()->user()->avatar) : asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}" alt="پروفایل" class="topnav-burger-img">
+            @if(auth()->user()->avatar)
+              <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="پروفایل" class="topnav-burger-img">
+            @else
+              {{-- کاربر هنوز عکس پروفایل انتخاب نکرده — به‌جای عکس، آیکون پیش‌فرض نمایش داده می‌شود --}}
+              <span class="topnav-burger-icon" aria-hidden="true">@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>19])</span>
+            @endif
           @else
-            <img src="{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}" alt="پروفایل" class="topnav-burger-img">
+            {{-- مهمان (وارد نشده) — همان آیکون پیش‌فرض --}}
+            <span class="topnav-burger-icon" aria-hidden="true">@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>19])</span>
           @endauth
         </div>
 
@@ -138,7 +142,7 @@
             <hr>
             <ul>
               <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
-              <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-user"></i><span>پروفایل شخصی</span></button></li>
+              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید توکن</span></button></li>
               <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
               <hr>
               <li><button type="button" class="is-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
@@ -146,8 +150,9 @@
             <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
           @else
             <ul>
-              <li><button type="button" onclick="window.location.href='{{ route('login') }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود</span></button></li>
+              <li><button type="button" onclick="window.location.href='{{ route('login') }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت‌نام</span></button></li>
               <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
+              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید توکن</span></button></li>
             </ul>
           @endauth
         </nav>
@@ -165,24 +170,18 @@
 
     <div id="vatan-nav-thumb" aria-hidden="true" class="absolute top-1.5 bottom-1.5 left-0 w-0 rounded-full bg-[#cffe00] z-0 pointer-events-none invisible"></div>
 
-    @auth
-      <a href="{{ route('app.profile') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="profile" aria-label="پروفایل">
-        @if(auth()->user()->avatar)
-          <img src="{{ asset('storage/' . auth()->user()->avatar) }}" class="vatan-nav-avatar w-6 h-6 rounded-full object-cover border-[1.5px] border-white [.light_&]:border-black/20 transition-all duration-200 group-[.is-active]:scale-110" alt="پروفایل">
-        @else
-          <span class="vatan-nav-icon-wrap vatan-nav-icon-wrap-18">
-            @include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>18,'class'=>'vatan-nav-icon-off text-white [.light_&]:text-black'])
-            @include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>18,'class'=>'vatan-nav-icon-on text-white [.light_&]:text-black'])
-          </span>
-        @endif
-      </a>
-    @endauth
-
-    @guest
-      <a href="{{ route('login') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="profile" aria-label="ورود به حساب">
-        <i class="fa-solid fa-right-to-bracket vatan-nav-icon text-[19px] text-white [.light_&]:text-black transition-all duration-300 group-[.is-active]:scale-110 group-[.is-active]:text-white"></i>
-      </a>
-    @endguest
+    {{-- پروفایل — همیشه نمایش داده می‌شود (مهمان و کاربر لاگین‌کرده) و همیشه به صفحه پروفایل می‌رود، نه لاگین.
+         فقط با کلیک صریح روی «ورود و ثبت‌نام» (داخل خود صفحه پروفایل) کاربر به لاگین هدایت می‌شود. --}}
+    <a href="{{ route('app.profile') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="profile" aria-label="پروفایل">
+      @if(auth()->check() && auth()->user()->avatar)
+        <img src="{{ asset('storage/' . auth()->user()->avatar) }}" class="vatan-nav-avatar w-6 h-6 rounded-full object-cover border-[1.5px] border-white [.light_&]:border-black/20 transition-all duration-200 group-[.is-active]:scale-110" alt="پروفایل">
+      @else
+        <span class="vatan-nav-icon-wrap vatan-nav-icon-wrap-18">
+          @include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>18,'class'=>'vatan-nav-icon-off text-white [.light_&]:text-black'])
+          @include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>18,'class'=>'vatan-nav-icon-on text-white [.light_&]:text-black'])
+        </span>
+      @endif
+    </a>
 
     <a href="{{ route('app.explore') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="explore" aria-label="اکسپلور">
       <span class="vatan-nav-icon-wrap vatan-nav-icon-wrap-21">
@@ -519,12 +518,11 @@
   .topnav-link.is-active .topnav-link-icon .ni-on,
   .topnav-link:hover .topnav-link-icon .ni-on { opacity: 1; transform: scale(1); }
 
-  /* ── باکس خرید اشتراک (گرادیانت متحرک — سبز وطن/داشبورد) ── */
+  /* ── باکس خرید اشتراک: حالت عادی خط دور تک‌رنگ سبز اصلی، حالت هاور گرادیانت متحرک ── */
   .sub-btn {
     min-width: 132px; height: 40px; padding: 0 16px;
     border: none; border-radius: 15.6px; /* خمیدگی ۲۰٪ بیشتر (۱۳px → ۱۵٫۶px) */
-    background: linear-gradient(to right,#5f7400,#7d9800,#5f7400,#5f7400,#cffe00,#7d9800);
-    background-size: 250%; background-position: left;
+    background: #cffe00; /* حالت عادی: خط دور یک‌رنگ، بدون گرادینت */
     position: relative; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; text-decoration: none;
@@ -543,7 +541,12 @@
     font-size: 13px; font-weight: 800; color: #cffe00; white-space: nowrap;
   }
   .sub-btn span i { font-size: 14.4px; color: #cffe00; }
-  .sub-btn:hover { background-position: right; }
+  .sub-btn:hover {
+    /* حالت هاور: همون گرادینت متحرک قبلی روی خط دور */
+    background: linear-gradient(to right,#5f7400,#7d9800,#5f7400,#5f7400,#cffe00,#7d9800);
+    background-size: 250%;
+    background-position: right;
+  }
   .sub-btn:active { transform: scale(0.95); }
 
   /* ── آیکون پروفایل + منوی کشویی (Popup) ── */
@@ -568,6 +571,9 @@
     transition: transform 0.15s ease, box-shadow 0.2s ease;
   }
   .topnav-burger-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+  /* آیکون پیش‌فرض پروفایل — وقتی کاربر عکسی انتخاب نکرده (یا مهمان است)، به‌جای عکس نمایش داده می‌شود.
+     رنگ آیکون همیشه مشکی است چون پس‌زمینهٔ دایره سبز لیمویی ثابت است (در روز و شب یکسان). */
+  .topnav-burger-icon { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #000; }
   .topnav-burger:hover { transform: scale(1.08); }
   .topnav-burger:active { transform: scale(0.95); }
   .topnav-popup input:focus-visible + .topnav-burger { box-shadow: 0 0 0 3px rgba(207,254,0,0.35); }

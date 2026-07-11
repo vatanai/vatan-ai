@@ -4,45 +4,52 @@
 ═══════════════════════════════════════ */
 (function () {
 
-  /* ───── Theme Toggle ───── */
-  var themeToggle = document.getElementById('themeToggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', function () {
-      window.vatanToggleTheme && window.vatanToggleTheme();
-    });
+  /* ───── هدر موبایل: منوی همبرگری (کپی از هدر هوم) ───── */
+  var profileMenuOpenBtn = document.getElementById('profileMenuOpenBtn');
+  var profileMenuOverlay = document.getElementById('profileMenuOverlay');
+  var profileMenuSheet   = document.getElementById('profileMenuSheet');
+  var profileMenuIsOpen  = false;
+
+  function openProfileMenu() {
+    if (!profileMenuOverlay || !profileMenuSheet) return;
+    profileMenuOverlay.style.display = 'block';
+    setTimeout(function () {
+      profileMenuSheet.style.transform = 'scale(1) translateY(0)';
+      profileMenuSheet.style.opacity = '1';
+    }, 10);
+    profileMenuIsOpen = true;
   }
 
-  /* ───── Settings Dropdown ───── */
-  var settingsBtn  = document.getElementById('settingsBtn');
-  var settingsMenu = document.getElementById('settingsMenu');
-  var menuOpen     = false;
+  window.closeProfileMenu = function () {
+    if (!profileMenuOverlay || !profileMenuSheet) return;
+    profileMenuSheet.style.transform = 'scale(0.9) translateY(-10px)';
+    profileMenuSheet.style.opacity = '0';
+    setTimeout(function () { profileMenuOverlay.style.display = 'none'; }, 200);
+    profileMenuIsOpen = false;
+  };
 
-  function openSettings() {
-    settingsMenu.style.display = 'block';
-    settingsBtn.setAttribute('aria-expanded', 'true');
-    menuOpen = true;
-  }
-
-  function closeSettings() {
-    settingsMenu.style.display = 'none';
-    settingsBtn.setAttribute('aria-expanded', 'false');
-    menuOpen = false;
-  }
-
-  if (settingsBtn && settingsMenu) {
-    settingsBtn.addEventListener('click', function (e) {
+  if (profileMenuOpenBtn) {
+    profileMenuOpenBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      menuOpen ? closeSettings() : openSettings();
+      profileMenuIsOpen ? window.closeProfileMenu() : openProfileMenu();
     });
 
     document.addEventListener('click', function (e) {
-      if (menuOpen && !settingsMenu.contains(e.target) && e.target !== settingsBtn) {
-        closeSettings();
+      if (profileMenuIsOpen && profileMenuSheet && !profileMenuSheet.contains(e.target)) {
+        window.closeProfileMenu();
       }
     });
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && menuOpen) closeSettings();
+      if (e.key === 'Escape' && profileMenuIsOpen) window.closeProfileMenu();
+    });
+  }
+
+  /* ───── هدر موبایل: تم تاگل داخل منوی همبرگری ───── */
+  var profileHeaderThemeToggle = document.getElementById('profileHeaderThemeToggle');
+  if (profileHeaderThemeToggle) {
+    profileHeaderThemeToggle.addEventListener('click', function () {
+      window.vatanToggleTheme && window.vatanToggleTheme();
     });
   }
 
@@ -73,20 +80,26 @@
   });
 
   /* ───── آپلود عکس پروفایل ───── */
-  var changeAvatarBtn = document.getElementById('changeAvatarBtn');
-  var avatarInput     = document.getElementById('avatarInput');
-  var avatarForm      = document.getElementById('avatarUploadForm');
+  var changeAvatarBtn    = document.getElementById('changeAvatarBtn');
+  var avatarClickTrigger = document.getElementById('avatarClickTrigger');
+  var avatarInput        = document.getElementById('avatarInput');
+  var avatarForm         = document.getElementById('avatarUploadForm');
 
-  if (changeAvatarBtn && avatarInput && avatarForm) {
-    changeAvatarBtn.addEventListener('click', function () {
-      avatarInput.click();
-    });
+  // کلیک روی خود عکس آواتار هم مثل قبل، دیالوگ انتخاب فایل رو باز می‌کنه
+  [changeAvatarBtn, avatarClickTrigger].forEach(function (trigger) {
+    if (trigger && avatarInput) {
+      trigger.addEventListener('click', function () {
+        avatarInput.click();
+      });
+    }
+  });
 
+  if (avatarInput && avatarForm) {
     avatarInput.addEventListener('change', function () {
       if (!avatarInput.files || !avatarInput.files[0]) return;
 
       var formData = new FormData(avatarForm);
-      changeAvatarBtn.disabled = true;
+      if (changeAvatarBtn) changeAvatarBtn.disabled = true;
 
       fetch(avatarForm.action, {
         method: 'POST',
@@ -117,7 +130,7 @@
           alert('آپلود عکس پروفایل با خطا مواجه شد. لطفا دوباره تلاش کن.');
         })
         .finally(function () {
-          changeAvatarBtn.disabled = false;
+          if (changeAvatarBtn) changeAvatarBtn.disabled = false;
         });
     });
   }

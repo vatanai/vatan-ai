@@ -50,7 +50,7 @@ class AiModelSeeder extends Seeder
     }
 
     /**
-     * لیست کامل ۱۵ مدل تصویری با اطلاعات OpenRouter (تیر ۱۴۰۵ / July 2026).
+     * لیست کامل ۱۵ مدل تصویری + ۳ مدل ویدیویی با اطلاعات OpenRouter (تیر ۱۴۰۵ / July 2026).
      */
     private function models(): array
     {
@@ -59,6 +59,15 @@ class AiModelSeeder extends Seeder
             'supports_image_input' => true,
             'default_width'        => 1024,
             'default_height'       => 1024,
+            'default_parameters'   => null,
+            'is_active'            => true,
+        ];
+
+        $videoBase = [
+            'output_modality'      => 'video',
+            'supports_image_input' => true, // پشتیبانی از تصویر مرجع برای image-to-video
+            'default_width'        => 1080,
+            'default_height'       => 1920,
             'default_parameters'   => null,
             'is_active'            => true,
         ];
@@ -177,6 +186,38 @@ class AiModelSeeder extends Seeder
                 'provider_name'       => 'Recraft',
                 'cost_per_generation' => 10,
                 'description'         => 'نسخه حرفه‌ای ریکرفت ۴.۱ وکتور با خروجی SVG در رزولوشن بالاتر و جزئیات بیشتر؛ بهترین انتخاب برای برندینگ حرفه‌ای و فایل‌های چاپی وکتوری.',
+            ]),
+
+            // ─── مدل‌های ویدیویی (Video Generation) ────────────────────
+            // نکته: تا قبل از این Seeder، هیچ مدل ویدیویی در جدول ai_models ثبت نشده بود
+            // در حالی‌که محصولاتی با media_type=video/both در پنل قابل تعریف بودند — این باعث
+            // می‌شد فیلد primary_model محصولات ویدیویی به هیچ مدل واقعی متصل نباشد.
+            array_merge($videoBase, [
+                'name'                => 'کلینگ ۲.۵ توربو (Kling V2.5 Turbo)',
+                'openrouter_model_id' => 'kwaivgi/kling-v2.5-turbo',
+                'provider_name'       => 'Kuaishou',
+                'cost_per_generation' => 25,
+                'default_width'       => 1080,
+                'default_height'      => 1920,
+                'description'         => 'مدل تولید ویدیوی کوتاه از تصویر/متن با کیفیت سینمایی و حرکت طبیعی؛ مناسب ریلز، تیزر تبلیغاتی و ویدیوهای مناسبتی عمودی.',
+            ]),
+            array_merge($videoBase, [
+                'name'                => 'ران‌وی جن-۴ توربو (Runway Gen-4 Turbo)',
+                'openrouter_model_id' => 'runwayml/gen-4-turbo',
+                'provider_name'       => 'Runway',
+                'cost_per_generation' => 30,
+                'default_width'       => 1920,
+                'default_height'      => 1080,
+                'description'         => 'مدل تولید ویدیوی سینمایی Runway با کنترل دوربین و حرکت پیشرفته؛ مناسب ویدیوهای کوتاه روایی و تبلیغاتی با کیفیت بالا.',
+            ]),
+            array_merge($videoBase, [
+                'name'                => 'لوما دریم‌مشین ۲ (Luma Dream Machine 2)',
+                'openrouter_model_id' => 'luma/dream-machine-2',
+                'provider_name'       => 'Luma AI',
+                'cost_per_generation' => 18,
+                'default_width'       => 1080,
+                'default_height'      => 1080,
+                'description'         => 'مدل اقتصادی‌تر تولید ویدیو با کیفیت مطلوب و سرعت بالا؛ مناسب تولید انبوه ویدیوهای کوتاه شبکه‌های اجتماعی.',
             ]),
         ];
     }

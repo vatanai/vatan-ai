@@ -33,7 +33,10 @@ class ProductGenerateController extends Controller
             ->where('category', $product->category)
             ->latest()->limit(6)->get();
 
-        return view('app.product', compact('product', 'similar'));
+        // وضعیت سیو بودن محصول برای کاربر لاگین‌کرده فعلی (برای رنگ‌آمیزی اولیه دکمه سیو)
+        $isSaved = auth()->check() ? auth()->user()->hasSavedProduct($product->id) : false;
+
+        return view('app.product', compact('product', 'similar', 'isSaved'));
     }
 
     public function generate(Request $request, Product $product)

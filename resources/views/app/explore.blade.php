@@ -34,38 +34,36 @@
     </div>
   </section>
 
-  {{-- ===== GRID کارت‌ها ===== --}}
+  {{-- ===== GRID کارت‌ها: خروجی واقعی ExploreFeedService (surface='trending') ===== --}}
   @php
-    $trendsCards = [
-      ['img' => asset('assets/img/gemini-boy-man-sitting-on-chair-ai-prompt-riuuaksek4.webp'), 'name' => 'رترو چیر', 'tag' => 'ترند #۱', 'hot' => true],
-      ['img' => asset('assets/img/best-friends-ai-prompt-2.webp'), 'name' => 'بهترین دوست', 'tag' => 'ترند #۲', 'hot' => true],
-      ['img' => asset('assets/img/ai-photo-editor-prompt.webp'), 'name' => 'ادیت فشن', 'tag' => 'ترند #۳', 'hot' => false],
-      ['img' => asset('assets/img/9cb93b50-d93f-462f-b6d4-113f63ffc603.avif'), 'name' => 'ادیت طبیعت', 'tag' => 'ترند #۴', 'hot' => false],
-      ['img' => asset('assets/img/promptbank234.webp'), 'name' => 'پرتره کینگ', 'tag' => 'ترند #۵', 'hot' => true],
-      ['img' => asset('assets/img/hmxsjse1drg8xqmj0mda.webp'), 'name' => 'لوکیشن باز', 'tag' => 'ترند #۶', 'hot' => false],
-      ['img' => asset('assets/img/Screenshot-2025-12-09-at-12.33.35-PM.avif'), 'name' => 'لحظه خاص', 'tag' => 'ترند #۷', 'hot' => false],
-      ['img' => asset('assets/img/promptbank176.webp'), 'name' => 'وینتیج گرل', 'tag' => 'ترند #۸', 'hot' => false],
-      ['img' => asset('assets/img/images.jpg'), 'name' => 'نگاه هنری', 'tag' => 'ترند #۹', 'hot' => false],
-      ['img' => asset('assets/img/lookaside.fbsbx.webp'), 'name' => 'سبک مدرن', 'tag' => 'ترند #۱۰', 'hot' => false],
-    ];
+    // قبلاً اینجا ۱۰ کارت کاملاً هاردکد بود (بدون هیچ ارتباطی با دیتابیس، لینک به /app/product/demo).
+    // حالا از همان موتور فید هوشمند Explore با یک surface مستقل ('trending') استفاده می‌کند.
+    $trendsTiles = $tiles ?? [];
   @endphp
 
   <div class="trends-grid">
-    @foreach ($trendsCards as $card)
-      <div class="trends-card" style="background-image:url('{{ $card['img'] }}');">
+    @forelse ($trendsTiles as $tile)
+      <a href="{{ $tile['link'] ?? '#' }}" class="trends-card" @if(!$tile['video']) style="background-image:url('{{ $tile['src'] }}');" @endif>
+        @if($tile['video'])
+          <video class="trends-card-media" src="{{ $tile['src'] }}" autoplay muted loop playsinline preload="metadata"></video>
+        @endif
         <div class="trends-card-overlay"></div>
-        @if($card['hot'])
+        @if($loop->index < 3)
           <div class="trends-hot-badge">
             <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M17.66 11.2C17.43 10.9 17.15 10.64 16.89 10.38C16.22 9.78 15.46 9.35 14.82 8.72C13.33 7.26 13 4.85 13.95 3C13 3.23 12.17 3.75 11.46 4.32C8.87 6.4 7.85 10.07 9.07 13.22C9.11 13.32 9.15 13.42 9.15 13.55C9.15 13.77 9 13.97 8.8 14.05C8.57 14.15 8.33 14.09 8.14 13.93C8.08 13.88 8.04 13.83 8 13.76C6.87 12.33 6.69 10.28 7.45 8.64C5.78 10 4.87 12.3 5 14.47C5.06 14.97 5.12 15.47 5.29 15.97C5.43 16.57 5.7 17.17 6 17.7C7.08 19.43 8.95 20.67 10.96 20.92C13.1 21.19 15.39 20.8 17.03 19.32C18.86 17.66 19.5 15 18.56 12.72L18.43 12.46C18.22 12 17.66 11.2 17.66 11.2Z"/></svg>
             داغ
           </div>
         @endif
-        <div class="trends-card-rank">{{ $card['tag'] }}</div>
+        <div class="trends-card-rank">ترند #{{ $loop->iteration }}</div>
         <div class="trends-card-info">
-          <p class="trends-card-name">{{ $card['name'] }}</p>
+          <p class="trends-card-name">{{ $tile['name'] }}</p>
         </div>
+      </a>
+    @empty
+      <div style="grid-column:1/-1; text-align:center; padding:40px 16px; color:rgba(255,255,255,.5);">
+        هنوز محصول ترندی برای نمایش وجود ندارد.
       </div>
-    @endforeach
+    @endforelse
   </div>
 
 </div>
@@ -164,6 +162,11 @@
     overflow: hidden; position: relative;
     background-size: cover; background-position: center;
     cursor: pointer;
+    display: block; text-decoration: none; color: inherit;
+  }
+  .trends-card-media {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
   }
   .trends-card-overlay {
     position: absolute; inset: 0;
@@ -260,12 +263,7 @@
     });
   });
 
-  /* ── کلیک روی کارت محصول ── */
-  document.querySelectorAll('.trends-card').forEach(function (card) {
-    card.addEventListener('click', function () {
-      window.location.href = '/app/product/demo';
-    });
-  });
+  /* کارت‌های گرید حالا خودشان <a href> واقعی به صفحه‌ی محصول هستند — نیازی به کلیک دستی نیست */
 }());
 </script>
 @endpush

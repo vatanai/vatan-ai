@@ -125,4 +125,10 @@ class Product extends Model
     {
         return $this->belongsToMany(Category::class, 'category_product');
     }
+
+    /** کاربرانی که این محصول را سیو (ذخیره) کرده‌اند */
+    public function savedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'saved_products')->withTimestamps();
+    }
 }

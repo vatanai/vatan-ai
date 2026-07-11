@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AiModelController;
 use App\Http\Controllers\Admin\AiTestController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SavedProductController;
 use App\Http\Controllers\Admin\PlanController;  
 use App\Http\Controllers\PlanSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController; // استفاده از کنترلر ادمین در پوشه Admin
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::post('/app/product/{product:slug}/save', [SavedProductController::class, 'toggle'])->name('app.product.save');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/pricing/fake-payment/{plan}', [PlanSubscriptionController::class, 'fakePayment'])->name('pricing.fakePayment');
 });
@@ -62,7 +64,7 @@ Route::prefix('app')->group(function () {
     Route::get('/',             fn() => redirect('/app/home'));
     Route::get('/home', [HomeController::class, 'index'])->name('app.home');    
     Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
-    Route::get('/trends',       fn() => view('app.explore'))->name('app.trends');
+    Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
     Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
     Route::get('/product/{product:slug}', [ProductGenerateController::class, 'show'])->name('app.product');

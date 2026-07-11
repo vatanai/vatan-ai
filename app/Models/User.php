@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -75,5 +76,21 @@ class User extends Authenticatable
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    /**
+     * محصولات ذخیره‌شده (سیو) توسط این کاربر — بخش «ذخیره شده‌ها» در صفحه پروفایل.
+     */
+    public function savedProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'saved_products')->withTimestamps();
+    }
+
+    /**
+     * آیا این کاربر محصول مشخص‌شده را قبلاً سیو کرده است؟
+     */
+    public function hasSavedProduct(int $productId): bool
+    {
+        return $this->savedProducts()->where('product_id', $productId)->exists();
     }
 }

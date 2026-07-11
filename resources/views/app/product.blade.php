@@ -42,16 +42,255 @@
 @endpush
 
 @section('content')
-{{-- تنظیم ارتفاع دقیق برای دسکتاپ منهای ۶۴ پیکسلِ هدر لایوت وطن AI --}}
-<div class="h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] [.light_&]:bg-white text-white [.light_&]:text-black flex flex-col overflow-hidden relative" dir="rtl">
+{{-- ریشه صفحه: دسکتاپ دقیقاً یک صفحه بدون اسکرول (بخش اول + دوم کل عرض را پر می‌کنند)،
+     موبایل ارتفاع آزاد و قابل اسکرول (چون بخش‌ها زیر هم چیده می‌شوند) --}}
+<div class="min-h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] [.light_&]:bg-white text-white [.light_&]:text-black flex flex-col overflow-y-auto sm:overflow-hidden relative" dir="rtl">
 
-  {{-- بدنه اصلی صفحه --}}
-  <div class="flex-1 flex overflow-hidden">
+  {{-- بدنه اصلی صفحه: موبایل ستونی (عکس بالا / اطلاعات پایین)، دسکتاپ ردیفی (اطلاعات راست / عکس چپ) --}}
+  <div class="flex-1 flex flex-col sm:flex-row overflow-visible sm:overflow-hidden">
 
-    {{-- بخش تصویر اصلی پیش‌فرض صفحه --}}
-    <div class="flex-1 p-4 md:p-8 flex items-center justify-center relative bg-[#0a0a0c] [.light_&]:bg-white">
+    {{-- ═══ بخش اول: اطلاعات و توضیحات محصول — دسکتاپ سمت راست، عرض ۴۵۰px ═══ --}}
+    <div class="w-full sm:w-[450px] sm:shrink-0 order-2 sm:order-1 bg-[#16161c] [.light_&]:bg-[#f5f5f5] border-r border-white/[0.04] [.light_&]:border-black/[0.06] flex flex-col sm:h-full sm:overflow-hidden">
+      <div class="flex-1 sm:overflow-y-auto p-5 sm:p-6 pb-8 sm:pb-6 flex flex-col gap-5"
+           style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
+
+        {{-- ردیف بالا (فقط دسکتاپ): ضربدر بالا سمت راست + نام محصول روبروی آن (سمت چپ بخش) --}}
+        <div class="hidden sm:flex items-start justify-between gap-3">
+          <button onclick="history.length>1?history.back():location.href='/app/home'"
+            class="shrink-0 text-gray-500 hover:text-white [.light_&]:hover:text-black transition-colors">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+          <h1 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed max-w-[340px]">
+            {{ $product->name_fa }}
+          </h1>
+        </div>
+
+        {{-- نام محصول در موبایل (ضربدر موبایل روی عکس، بخش دوم، قرار دارد) --}}
+        <h1 class="sm:hidden text-[14px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed">
+          {{ $product->name_fa }}
+        </h1>
+
+        {{-- دکمه‌های سیو / اشتراک‌گذاری (انتشار) / نیاز به توکن — دقیقاً روبروی نام محصول --}}
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="btnBookmark" type="button" data-saved="{{ $isSaved ? '1' : '0' }}"
+            class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 transition-colors {{ $isSaved ? 'text-emerald-400' : 'text-gray-400 hover:text-white [.light_&]:hover:text-black' }}">
+            <i id="iconBkm" class="{{ $isSaved ? 'fa-solid' : 'fa-regular' }} fa-bookmark text-[11px]"></i>
+            <span class="text-[11px] font-bold">ذخیره</span>
+          </button>
+
+          <button id="btnShare" type="button"
+            class="w-8 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center justify-center text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
+            <i class="fa-solid fa-share-nodes text-[11px]"></i>
+          </button>
+
+          @if($product->pricing_model === 'per_credit' && $product->credit_cost > 0)
+            <div class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 text-orange-400">
+              <i class="fa-solid fa-bolt text-[10px]"></i>
+              <span class="text-[11px] font-bold">نیاز به {{ $product->credit_cost }} توکن</span>
+            </div>
+          @elseif($product->pricing_model === 'free')
+            <div class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 text-emerald-400">
+              <span class="text-[11px] font-bold">رایگان</span>
+            </div>
+          @endif
+        </div>
+
+        {{-- توضیحات محصول --}}
+        @if($product->description_fa)
+        <div class="flex items-start gap-2.5 bg-white/[0.01] [.light_&]:bg-black/[0.02] p-3 rounded-xl border border-white/[0.03] [.light_&]:border-black/[0.06]">
+          <p class="text-[11px] font-medium text-gray-400 [.light_&]:text-gray-600 leading-relaxed m-0">
+            {{ $product->description_fa }}
+          </p>
+        </div>
+        @endif
+
+        {{-- دکمه بساز: آیکون عصای جادویی + متن «بساز»، رنگ سبز اصلی هدر، خمیدگی هم‌اندازه باکس خرید اشتراک --}}
+        <div class="pt-1">
+          <button type="button" onclick="openWorkspaceModal()" class="vatan-gen-btn" aria-label="بساز">
+            <div class="dots_border"></div>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="sparkle">
+              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M14.187 8.096L15 5.25L15.813 8.096C16.0231 8.83114 16.4171 9.50062 16.9577 10.0413C17.4984 10.5819 18.1679 10.9759 18.903 11.186L21.75 12L18.904 12.813C18.1689 13.0231 17.4994 13.4171 16.9587 13.9577C16.4181 14.4984 16.0241 15.1679 15.814 15.903L15 18.75L14.187 15.904C13.9769 15.1689 13.5829 14.4994 13.0423 13.9587C12.5016 13.4181 11.8321 13.0241 11.097 12.814L8.25 12L11.096 11.187C11.8311 10.9769 12.5006 10.5829 13.0413 10.0423C13.5819 9.50162 13.9759 8.83214 14.186 8.097L14.187 8.096Z"></path>
+              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6 14.25L5.741 15.285C5.59267 15.8785 5.28579 16.4206 4.85319 16.8532C4.42059 17.2858 3.87853 17.5927 3.285 17.741L2.25 18L3.285 18.259C3.87853 18.4073 4.42059 18.7142 4.85319 19.1468C5.28579 19.5794 5.59267 20.1215 5.741 20.715L6 21.75L6.259 20.715C6.40725 20.1216 6.71398 19.5796 7.14639 19.147C7.5788 18.7144 8.12065 18.4075 8.714 18.259L9.75 18L8.714 17.741C8.12065 17.5925 7.5788 17.2856 7.14639 16.853C6.71398 16.4204 6.40725 15.8784 6.259 15.285L6 14.25Z"></path>
+              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6.5 4L6.303 4.5915C6.24777 4.75718 6.15472 4.90774 6.03123 5.03123C5.90774 5.15472 5.75718 5.24777 5.5915 5.303L5 5.5L5.5915 5.697C5.75718 5.75223 5.90774 5.84528 6.03123 5.96877C6.15472 6.09226 6.24777 6.24282 6.303 6.4085L6.5 7L6.697 6.4085C6.75223 6.24282 6.84528 6.09226 6.96877 5.96877C7.09226 5.84528 7.24282 5.75223 7.4085 5.697L8 5.5L7.4085 5.303C7.24282 5.24777 7.09226 5.15472 6.96877 5.03123C6.84528 4.90774 6.75223 4.75718 6.697 4.5915L6.5 4Z"></path>
+            </svg>
+            <span class="text_button">بساز</span>
+          </button>
+        </div>
+
+        <style>
+          /* ── دکمه «بساز» (باکس سمت راست صفحه محصول) ──
+             خمیدگی هم‌اندازه باکس خرید اشتراک هدر (.sub-btn = 15.6px)
+             آیکون + متن به رنگ سبز اصلی هدر (#cffe00)
+             هاور: حاله‌ی ترکیبی از سبز اصلی (به‌جای بنفش پیش‌فرض)، بدون بزرگ‌نمایی زیاد */
+          .vatan-gen-btn {
+            --black-700: hsla(0 0% 12% / 1);
+            --border_radius: 15.6px; /* هم‌اندازه sub-btn هدر */
+            --transtion: 0.3s ease-in-out;
+            --offset: 2px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            box-sizing: border-box;
+            transform-origin: center;
+            padding: 1rem 2rem;
+            background-color: transparent;
+            border: none;
+            border-radius: var(--border_radius);
+            transform: scale(calc(1 + (var(--active, 0) * 0.02))); /* بزرگ‌نمایی خیلی جزئی روی هاور */
+            transition: transform var(--transtion);
+            font-family: 'YekanBakh', sans-serif;
+          }
+          .vatan-gen-btn::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            background-color: var(--black-700);
+            border-radius: var(--border_radius);
+            box-shadow: inset 0 0.5px hsl(0, 0%, 100%), inset 0 -1px 2px 0 hsl(0, 0%, 0%),
+              0px 4px 10px -4px hsla(0 0% 0% / calc(1 - var(--active, 0))),
+              0 0 0 calc(var(--active, 0) * 0.3rem) hsl(71 100% 50% / 0.7);
+            transition: all var(--transtion);
+            z-index: 0;
+          }
+          .vatan-gen-btn::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            background-color: hsla(71 90% 50% / 0.7);
+            background-image: radial-gradient(
+                at 51% 89%,
+                hsla(80, 85%, 62%, 1) 0px,
+                transparent 50%
+              ),
+              radial-gradient(at 100% 100%, hsla(71, 100%, 50%, 1) 0px, transparent 50%),
+              radial-gradient(at 22% 91%, hsla(95, 75%, 45%, 1) 0px, transparent 50%);
+            background-position: top;
+            opacity: var(--active, 0);
+            border-radius: var(--border_radius);
+            transition: opacity var(--transtion);
+            z-index: 2;
+          }
+          .vatan-gen-btn:is(:hover, :focus-visible) {
+            --active: 1;
+          }
+          .vatan-gen-btn:active {
+            transform: scale(0.99);
+          }
+          .vatan-gen-btn .dots_border {
+            --size_border: calc(100% + 2px);
+            overflow: hidden;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: var(--size_border);
+            height: var(--size_border);
+            background-color: transparent;
+            border-radius: var(--border_radius);
+            z-index: -10;
+          }
+          .vatan-gen-btn .dots_border::before {
+            content: "";
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform-origin: left;
+            transform: rotate(0deg);
+            width: 100%;
+            height: 2rem;
+            background-color: white;
+            mask: linear-gradient(transparent 0%, white 120%);
+            animation: vatanGenBtnRotate 2s linear infinite;
+          }
+          @keyframes vatanGenBtnRotate {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+          .vatan-gen-btn .sparkle {
+            position: relative;
+            z-index: 10;
+            width: 1.5rem;
+            flex-shrink: 0;
+          }
+          .vatan-gen-btn .sparkle .path {
+            fill: currentColor;
+            stroke: currentColor;
+            transform-origin: center;
+            color: #cffe00; /* سبز اصلی هدر */
+          }
+          .vatan-gen-btn:is(:hover, :focus) .sparkle .path {
+            animation: vatanGenBtnPath 1.5s linear 0.5s infinite;
+          }
+          .vatan-gen-btn .sparkle .path:nth-child(1) {
+            --scale_path_1: 1.2;
+          }
+          .vatan-gen-btn .sparkle .path:nth-child(2) {
+            --scale_path_2: 1.2;
+          }
+          .vatan-gen-btn .sparkle .path:nth-child(3) {
+            --scale_path_3: 1.2;
+          }
+          @keyframes vatanGenBtnPath {
+            0%, 34%, 71%, 100% { transform: scale(1); }
+            17% { transform: scale(var(--scale_path_1, 1)); }
+            49% { transform: scale(var(--scale_path_2, 1)); }
+            83% { transform: scale(var(--scale_path_3, 1)); }
+          }
+          .vatan-gen-btn .text_button {
+            position: relative;
+            z-index: 10;
+            background-image: linear-gradient(
+              90deg,
+              hsla(71 100% 50% / 1) 0%,
+              hsla(71 100% 50% / var(--active, 0)) 120%
+            );
+            background-clip: text;
+            -webkit-background-clip: text;
+            font-size: 1rem;
+            font-weight: 800;
+            color: transparent;
+          }
+        </style>
+
+        {{-- نمونه خروجی‌ها: عکس‌ها و ویدیوهای نمونه محصول --}}
+        @if(is_array($product->sample_outputs) && count($product->sample_outputs))
+        <div class="space-y-3 mt-3">
+          <h3 class="text-[10px] font-black text-gray-500 [.light_&]:text-gray-600 uppercase tracking-widest">نمونه خروجی‌ها</h3>
+          <div class="grid grid-cols-3 gap-2">
+            @foreach(array_slice($product->sample_outputs,0,3) as $s)
+            <div class="aspect-square rounded-lg bg-[#1a1a1d] [.light_&]:bg-black/[0.04] border border-white/5 [.light_&]:border-black/10 overflow-hidden">
+              @if(preg_match('/\.(mp4|webm|mov)$/i', $s))
+                <video src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90" muted loop playsinline autoplay></video>
+              @else
+                <img src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90">
+              @endif
+            </div>
+            @endforeach
+          </div>
+        </div>
+        @endif
+
+      </div>
+    </div>
+
+    {{-- ═══ بخش دوم: کاور/عکس یا ویدیو محصول — دسکتاپ سمت چپ، تمام عرض باقی‌مانده، بک‌گراند مشکی کامل در حالت شب ═══ --}}
+    <div class="flex-1 order-1 sm:order-2 h-[45vh] sm:h-full p-4 md:p-8 flex items-center justify-center relative bg-black [.light_&]:bg-white">
+      {{-- ضربدر موبایل: بالا سمت چپ همین بخش (عکس) --}}
       <button onclick="history.length>1?history.back():location.href='/app/home'"
-        class="absolute top-5 left-5 z-20 w-8 h-8 flex items-center justify-center
+        class="sm:hidden absolute top-5 left-5 z-20 w-8 h-8 flex items-center justify-center
                rounded-full bg-white/[0.04] [.light_&]:bg-black/[0.04] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.06] [.light_&]:border-black/10
                text-gray-400 hover:text-white [.light_&]:hover:text-black text-xs transition-colors">
         <i class="fa-solid fa-chevron-left"></i>
@@ -67,91 +306,12 @@
         <i class="fa-solid fa-check"></i> آماده شد
       </div>
     </div>
-
-    {{-- سایدبار اطلاعات محصول --}}
-    <div class="w-[380px] shrink-0 bg-[#121214] [.light_&]:bg-[#f5f5f5] border-r border-white/[0.04] [.light_&]:border-black/[0.06] flex flex-col h-full overflow-hidden">
-      <div class="flex-1 overflow-y-auto p-6 pb-32 sm:pb-6 flex flex-col gap-6"
-           style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
-
-        {{-- هدر سایدبار --}}
-        <div class="flex items-start justify-between">
-          <h1 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed max-w-[250px]">
-            {{ $product->name_fa }}
-          </h1>
-          <button onclick="history.length>1?history.back():location.href='/app/home'"
-            class="text-gray-500 hover:text-white [.light_&]:hover:text-black transition-colors">
-            <i class="fa-solid fa-xmark text-sm"></i>
-          </button>
-        </div>
-
-        {{-- دسته‌بندی و قیمت توکنی ابزار --}}
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2 px-3 py-1.5 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-full">
-            <span class="text-[11px] font-bold text-gray-300 [.light_&]:text-gray-700">
-              {{ $product->subcategory ?: $product->category }}
-            </span>
-            @if($product->pricing_model === 'per_credit')
-              <span class="flex items-center gap-1 text-[10px] font-bold text-orange-400">
-                <i class="fa-solid fa-bolt text-[9px]"></i>{{ $product->credit_cost }} توکن
-              </span>
-            @elseif($product->pricing_model === 'free')
-              <span class="text-[10px] font-bold text-emerald-400">رایگان</span>
-            @endif
-          </div>
-          
-          <div class="flex items-center gap-1.5">
-            <button id="btnShare" class="w-8 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
-              <i class="fa-solid fa-share text-[11px]"></i>
-            </button>
-            <button id="btnBookmark" class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-full flex items-center gap-1.5 text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
-              <i id="iconBkm" class="fa-regular fa-bookmark text-[11px]"></i>
-              <span class="text-[11px] font-bold">ذخیره</span>
-            </button>
-          </div>
-        </div>
-
-        {{-- توضیحات محصول --}}
-        @if($product->description_fa)
-        <div class="flex items-start gap-2.5 bg-white/[0.01] [.light_&]:bg-black/[0.02] p-3 rounded-xl border border-white/[0.03] [.light_&]:border-black/[0.06]">
-          <p class="text-[11px] font-medium text-gray-400 [.light_&]:text-gray-600 leading-relaxed m-0">
-            {{ $product->description_fa }}
-          </p>
-        </div>
-        @endif
-
-        {{-- دکمه ورود به کارگاه ساخت --}}
-        <div class="pt-2">
-          <button type="button" onclick="openWorkspaceModal()"
-                  class="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px]
-                         rounded-xl flex items-center justify-center gap-2 transition-all
-                         shadow-lg shadow-indigo-600/20 active:scale-[0.99] cursor-pointer">
-            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-            ورود به کارگاه ساخت تصویر
-          </button>
-        </div>
-
-        {{-- نمونه خروجی‌ها --}}
-        @if(is_array($product->sample_outputs) && count($product->sample_outputs))
-        <div class="space-y-3 mt-2">
-          <h3 class="text-[10px] font-black text-gray-500 [.light_&]:text-gray-600 uppercase tracking-widest">نمونه خروجی‌ها</h3>
-          <div class="grid grid-cols-3 gap-2">
-            @foreach(array_slice($product->sample_outputs,0,3) as $s)
-            <div class="aspect-square rounded-lg bg-[#1a1a1d] [.light_&]:bg-black/[0.04] border border-white/5 [.light_&]:border-black/10 overflow-hidden">
-              <img src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90">
-            </div>
-            @endforeach
-          </div>
-        </div>
-        @endif
-
-      </div>
-    </div>
   </div>
 
   {{-- مودال تخصصی میز کار هوش مصنوعی --}}
   <div id="workspaceModal" class="fixed inset-0 z-[400] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4">
     <div id="modalContent" class="bg-[#121214] border border-white/[0.06] w-full max-w-6xl h-[90vh] max-h-[750px] rounded-[28px] flex flex-col overflow-hidden scale-95 transition-transform duration-300 shadow-2xl">
-      
+
       {{-- هدر مودال --}}
       <div class="p-4 border-b border-white/[0.04] flex items-center justify-between shrink-0 bg-[#161619]">
         <div class="flex items-center gap-2.5">
@@ -167,7 +327,7 @@
 
       {{-- بدنه سه ستونه مودال --}}
       <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-white/[0.04]">
-        
+
         {{-- ستون اول (راست): تصویر الگو --}}
         <div class="p-5 bg-[#0e0e10] flex flex-col h-full overflow-hidden">
           <div class="shrink-0">
@@ -176,12 +336,12 @@
             </span>
             <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">این تصویر مبنای طراحی هوش مصنوعی است.</p>
           </div>
-          
+
           <div class="flex-1 min-h-0 border border-white/[0.03] bg-[#070708] rounded-2xl p-4 flex items-center justify-center overflow-hidden">
             <img src="{{ $product->cover ? asset('storage/'.$product->cover) : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')) }}"
                  alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
           </div>
-          
+
           {{-- تنظیم نسبت تصویر --}}
           <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03]">
             <p class="text-[10px] font-bold text-gray-500 mb-2">تنظیم نسبت تصویر خروجی:</p>
@@ -204,10 +364,10 @@
             <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-[10px] font-bold text-gray-400 self-start">
               ۲. بارگذاری تصویر ورودی
             </span>
-            
+
             <div onclick="document.getElementById('modalFileInp').click()"
-                 class="w-full shrink-0 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] py-4 px-5 
-                        flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/40 
+                 class="w-full shrink-0 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] py-4 px-5
+                        flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/40
                         hover:bg-indigo-500/[0.02] transition-all text-center group">
               <div class="w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.05] group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 flex items-center justify-center text-gray-400 group-hover:text-indigo-400 transition-all">
                 <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
@@ -250,7 +410,7 @@
 
           <div class="flex-1 min-h-0 border border-white/[0.04] bg-[#040405] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
             <img id="modalOutputImage" src="" alt="AI Output" class="hidden max-w-full max-h-full object-contain rounded-xl shadow-2xl">
-            
+
             <div id="outputPlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
               <i class="fa-solid fa-sparkles text-xl text-gray-700"></i>
               <p class="text-[11px] text-gray-500">پس از کلیک روی دکمه ساخت، نتیجه اینجا نمایش داده می‌شود.</p>
@@ -285,18 +445,46 @@
     </div>
   </div>
 
+  {{-- مودال «برای ذخیره میبایست وارد شوید» — فقط برای کاربر مهمان هنگام کلیک روی دکمه سیو --}}
+  <div id="saveLoginModal" class="fixed inset-0 z-[410] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4" dir="rtl">
+    <div id="saveLoginModalContent" class="bg-[#121218] border border-white/10 w-full max-w-sm rounded-[24px] overflow-hidden scale-95 transition-transform duration-300 shadow-2xl relative p-6 text-center flex flex-col items-center gap-4">
+
+      <button type="button" onclick="closeSaveLoginModal()" class="absolute top-4 left-4 w-7 h-7 flex items-center justify-center rounded-full bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+
+      <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-2">
+        <i class="fa-regular fa-bookmark text-2xl"></i>
+      </div>
+
+      <h3 class="text-[15px] font-black text-gray-100">برای ذخیره میبایست به پروفایل خود وارد شوید</h3>
+
+      <div class="w-full grid grid-cols-1 gap-2 mt-2">
+        <a href="{{ route('login') }}" class="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.99] no-underline">
+          <i class="fa-solid fa-right-to-bracket text-xs"></i>
+          ورود
+        </a>
+        <button type="button" onclick="closeSaveLoginModal()" class="w-full h-10 bg-white/[0.03] hover:bg-white/10 text-gray-400 hover:text-white font-bold text-[11px] rounded-xl transition-colors cursor-pointer">
+          بعداً
+        </button>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <style>
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
 
-html, body { 
-  overflow: hidden !important; 
-  height: 100% !important; 
-}
+/* حالت بدون اسکرول فقط در دسکتاپ (+۶۴۰px) — موبایل باید عادی اسکرول کند چون بخش‌ها زیر هم قرار می‌گیرند */
 @media (min-width: 640px) {
-  body { 
+  html, body {
+    overflow: hidden !important;
+    height: 100% !important;
+  }
+  body {
     padding-top: 64px !important;
   }
 }
@@ -306,6 +494,9 @@ html, body {
 @push('scripts')
 <script>
 var GEN_URL = '{{ route('app.product.generate', $product->slug) }}';
+var SAVE_URL = '{{ route('app.product.save', $product->slug) }}';
+var LOGIN_URL = '{{ route('login') }}';
+var IS_AUTH = @json(auth()->check());
 var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 var _modalTimers = [];
 var _modalResultUrl = null;
@@ -351,7 +542,7 @@ function triggerGeneration() {
   var fileInp = document.getElementById('modalFileInp');
   var errorBox = document.getElementById('modalFormError');
   var errorTxt = document.getElementById('modalFormErrorTxt');
-  
+
   if(!fileInp.files || !fileInp.files[0]) {
     errorBox.classList.remove('hidden');
     errorTxt.textContent = 'لطفاً ابتدا تصویر ورودی خود را بارگذاری کنید.';
@@ -370,7 +561,7 @@ function triggerGeneration() {
   var overlay = document.getElementById('modalProgressOverlay');
   overlay.classList.remove('hidden');
   overlay.classList.add('flex');
-  
+
   document.getElementById('btnModalSubmit').disabled = true;
 
   var steps = [
@@ -379,7 +570,7 @@ function triggerGeneration() {
     {t: 'رندر و اعمال سبک...', s: 'طراحی لایه‌های نهایی تصویر', p: 75},
     {t: 'بهینه‌سازی خروجی...', s: 'شفاف‌سازی و آماده‌سازی جهت نمایش', p: 92},
   ];
-  
+
   var stepIdx = 0;
   function processSteps() {
     if (stepIdx >= steps.length) return;
@@ -401,7 +592,7 @@ function triggerGeneration() {
        _modalTimers.forEach(clearTimeout); _modalTimers = [];
        overlay.classList.add('hidden');
        document.getElementById('btnModalSubmit').disabled = false;
-       
+
        // باز کردن پاپ‌آپ سراسری خرید بدون نیاز به رفرش
        if(typeof window.showTokenShortageModal === 'function') {
            window.showTokenShortageModal();
@@ -419,14 +610,14 @@ function triggerGeneration() {
     if (d.success && d.image_url) {
       var outImg = document.getElementById('modalOutputImage');
       var outPh = document.getElementById('outputPlaceholder');
-      
+
       outImg.src = d.image_url;
       outImg.classList.remove('hidden');
       if(outPh) outPh.classList.add('hidden');
 
       _modalResultUrl = d.image_url;
       document.getElementById('modalDlBtn').disabled = false;
-      
+
       document.getElementById('mainImage').src = d.image_url;
       document.getElementById('successBadge').classList.remove('hidden');
 
@@ -445,7 +636,7 @@ function triggerGeneration() {
     overlay.classList.remove('flex');
     overlay.classList.add('hidden');
     document.getElementById('btnModalSubmit').disabled = false;
-    
+
     if(err.message !== 'موجودی اعتبار توکن شما کافی نیست.') {
         errorBox.classList.remove('hidden');
         errorTxt.textContent = err.message || 'ارتباط با سرور برقرار نشد.';
@@ -466,11 +657,67 @@ function doShare() {
 }
 document.getElementById('btnShare').addEventListener('click', doShare);
 
-var _saved = false;
-document.getElementById('btnBookmark').addEventListener('click', function(){
-  _saved = !_saved;
-  document.getElementById('iconBkm').className = _saved ? 'fa-solid fa-bookmark text-[11px]' : 'fa-regular fa-bookmark text-[11px]';
-  this.classList.toggle('text-emerald-400', _saved);
+/* ───── مودال «برای ذخیره باید وارد شوید» ───── */
+function openSaveLoginModal() {
+  var modal = document.getElementById('saveLoginModal');
+  var content = document.getElementById('saveLoginModalContent');
+  if (!modal || !content) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  setTimeout(function() {
+    modal.classList.remove('opacity-0');
+    content.classList.remove('scale-95');
+  }, 20);
+}
+
+function closeSaveLoginModal() {
+  var modal = document.getElementById('saveLoginModal');
+  var content = document.getElementById('saveLoginModalContent');
+  if (!modal || !content) return;
+  modal.classList.add('opacity-0');
+  content.classList.add('scale-95');
+  setTimeout(function() {
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+  }, 300);
+}
+
+/* ───── دکمه سیو: کاربر مهمان → مودال ورود، کاربر لاگین‌کرده → درخواست واقعی به بک‌اند ───── */
+var btnBookmark = document.getElementById('btnBookmark');
+var iconBkm = document.getElementById('iconBkm');
+var _saveBusy = false;
+
+function setBookmarkUI(saved) {
+  iconBkm.className = saved ? 'fa-solid fa-bookmark text-[11px]' : 'fa-regular fa-bookmark text-[11px]';
+  btnBookmark.classList.toggle('text-emerald-400', saved);
+  btnBookmark.dataset.saved = saved ? '1' : '0';
+}
+
+btnBookmark.addEventListener('click', function(){
+  if (!IS_AUTH) {
+    openSaveLoginModal();
+    return;
+  }
+  if (_saveBusy) return;
+  _saveBusy = true;
+
+  fetch(SAVE_URL, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': CSRF,
+      'Accept': 'application/json'
+    }
+  })
+  .then(function(r){
+    if (r.status === 401) { openSaveLoginModal(); throw new Error('unauthenticated'); }
+    return r.json();
+  })
+  .then(function(d){
+    if (d && d.success) setBookmarkUI(!!d.saved);
+  })
+  .catch(function(){})
+  .finally(function(){ _saveBusy = false; });
 });
 </script>
 @endpush

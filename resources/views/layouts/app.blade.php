@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>@yield('page_title', $title ?? 'وطن AI')</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 
   {{-- متاتگ‌های سئوی هر صفحه (description، Open Graph، Twitter، JSON-LD) از این استک تزریق می‌شوند --}}
   @stack('meta')

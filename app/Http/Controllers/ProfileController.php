@@ -30,7 +30,21 @@ public function gallery()
         $user = Auth::user();
 
         if (!$user) {
-            return redirect()->route('login');
+            // مهمان (وارد نشده): صفحه پروفایل با داده‌های پیش‌فرض/خالی نمایش داده می‌شود
+            // به‌جای ریدایرکت خودکار به لاگین — کاربر فقط با کلیک صریح روی
+            // «ورود و ثبت‌نام» داخل خود صفحه پروفایل به لاگین هدایت می‌شود.
+            return view('app.profile', [
+                'isGuest'        => true,
+                'createdImages'  => collect(),
+                'personalImages' => collect(),
+                'savedProducts'  => collect(),
+                'storageUsed'    => 0,
+                'storageTotal'   => 100,
+                'tokenBalance'   => 0,
+                'createdCount'   => 0,
+                'planName'       => 'رایگان',
+                'earnings'       => 0,
+            ]);
         }
 
         // واکشی تصاویر با لود به ترتیب جدیدترین‌ها بر اساس رابطه‌های مدل User
@@ -38,12 +52,15 @@ public function gallery()
         $createdImages = $user->generatedImages()->with('product')->latest()->get();
         $personalImages = $user->uploadedImages()->latest()->get();
 
+        // محصولات ذخیره‌شده (سیو) کاربر — بخش «ذخیره شده‌ها» در صفحه پروفایل
+        $savedProducts = $user->savedProducts()->latest('saved_products.created_at')->get();
+
         // محاسبه حجم مصرفی واقعی کاربر بر حسب بایت
         $createdImagesSize = $user->generatedImages()->sum('size') ?? 0;
         $personalImagesSize = $user->uploadedImages()->sum('size') ?? 0;
-        
+
         $totalBytes = $createdImagesSize + $personalImagesSize;
-        
+
         // تبدیل دقیق بایت به مگابایت با رند کردن تا ۲ رقم اعشار
         $storageUsed = round($totalBytes / (1024 * 1024), 2);
         $storageTotal = 100; // سقف مجاز ۱۰۰ مگابایت
@@ -53,16 +70,19 @@ public function gallery()
         $createdCount  = $createdImages->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
         $earnings      = (int) ($user->referral_earnings ?? 0);
+        $isGuest       = false;
 
         return view('app.profile', compact(
             'createdImages',
             'personalImages',
+            'savedProducts',
             'storageUsed',
             'storageTotal',
             'tokenBalance',
             'createdCount',
             'planName',
-            'earnings'
+            'earnings',
+            'isGuest'
         ));
     }
 

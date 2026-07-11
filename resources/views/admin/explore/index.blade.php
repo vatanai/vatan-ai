@@ -1,6 +1,25 @@
 @extends('layouts.admin')
 @section('title', 'مدیریت اکسپلور — وطن استودیو')
 
+@push('styles')
+<style>
+  /* درایور راهنمای اکسپلور: عمداً از سمت چپ باز می‌شود (نه راست)، چون سمت راست
+     زیر مینی‌سایدبار و سایدبار اصلی پنل قرار می‌گیرد و بخشی از متن پشت آن‌ها پنهان می‌شد.
+     این override فقط مخصوص همین یک درایور است (با #id) و کلاس مشترک .drawer-panel
+     که در صفحات دیگر (مثل پیش‌نمایش محصول) استفاده می‌شود دست‌نخورده می‌ماند. */
+  #explore-guide-panel {
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-right: 1px solid var(--border);
+    transform: translateX(-100%);
+  }
+  #explore-guide-panel.open {
+    transform: translateX(0);
+  }
+</style>
+@endpush
+
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
   @include('admin.partials.header')
@@ -29,9 +48,14 @@
         <div class="text-xl font-extrabold tracking-tight mb-1" style="color:var(--text-h);">مدیریت اکسپلور</div>
         <div class="text-[13px]" style="color:var(--text-soft);">کنترل کامل موتور فید هوشمند: سبک چیدمان کاشی‌ها، کمپین‌ها، آیتم‌های سنجاق‌شده و بوست دستی محصولات</div>
       </div>
-      <a href="{{ route('app.explore') }}" target="_blank" class="btn-pro btn-pro-ghost">
-        <i class="fa-solid fa-arrow-up-left-from-circle text-[11px]"></i> مشاهده صفحه‌ی زنده
-      </a>
+      <div class="flex items-center gap-2">
+        <button type="button" class="btn-pro btn-pro-ghost" onclick="openExploreGuide()">
+          <i class="fa-solid fa-circle-question text-[11px]"></i> راهنمای استفاده از این بخش
+        </button>
+        <a href="{{ route('app.explore') }}" target="_blank" class="btn-pro btn-pro-ghost">
+          <i class="fa-solid fa-arrow-up-left-from-circle text-[11px]"></i> مشاهده صفحه‌ی زنده
+        </a>
+      </div>
     </div>
 
     {{-- ══════════════ کارت‌های آماری کوتاه ══════════════ --}}
@@ -263,11 +287,83 @@
   </div>
 </main>
 
+{{-- ══════════════ درایور راهنمای استفاده ══════════════ --}}
+<div class="drawer-overlay" id="explore-guide-overlay" onclick="closeExploreGuide()"></div>
+<div class="drawer-panel" id="explore-guide-panel">
+
+  <div class="drawer-section flex items-center justify-between" style="position:sticky; top:0; background:var(--card-bg); z-index:2;">
+    <div class="text-[14px] font-extrabold" style="color:var(--text-h);"><i class="fa-solid fa-circle-question" style="color:var(--primary);"></i> راهنمای بخش مدیریت اکسپلور</div>
+    <button type="button" class="icon-action-btn" onclick="closeExploreGuide()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">این بخش چیست و چرا وجود دارد</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      صفحه‌ی «اکسپلور» در اپلیکیشن (همان صفحه‌ای که کاربر با زدن دکمه‌ی «مشاهده صفحه‌ی زنده» می‌بیند) یک گرید از کاشی‌های محصولات است که اندازه‌شان (کوچک، عریض، بلند، بزرگ) و ترتیبشان به‌صورت هوشمند و تا حدی تصادفی تعیین می‌شود؛ هدف این است که هر بار کاربر سر بزند، چیدمان کمی متفاوت و جذاب‌تر از یک لیست ثابت و یکنواخت ببیند.
+      <br><br>
+      قبل از این بخش، این چیدمان و محتوا فقط با تغییر کد توسط برنامه‌نویس قابل تغییر بود. با «مدیریت اکسپلور» شما به‌عنوان مدیر سایت، بدون نیاز به هیچ دانش فنی، می‌توانید نحوه‌ی نمایش، محصولات ویژه، کمپین‌های تبلیغاتی و ترتیب نمایش را مستقیماً از همین صفحه کنترل کنید. هر تغییری که اینجا ذخیره کنید، بلافاصله روی صفحه‌ی زنده اعمال می‌شود.
+      <br><br>
+      این بخش کاملاً مستقل ساخته شده و هیچ تأثیری روی محصولات، سفارشات، کاربران یا هر بخش دیگر پنل ندارد؛ فقط نحوه‌ی «نمایش» محصولات در صفحه‌ی اکسپلور را کنترل می‌کند.
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">۱. تنظیمات نمایش و چیدمان</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      از سه سبک آماده یکی را انتخاب کنید: «کلاسیک متعادل» ترکیب پیش‌فرض و متعادلی از کاشی‌های کوچک و بزرگ است. «فشرده» بیشتر از کاشی‌های کوچک استفاده می‌کند تا تعداد بیشتری محصول در یک صفحه دیده شود. «مجله‌ای» از کاشی‌های بزرگ‌تر بیشتر استفاده می‌کند تا صفحه جلوه‌ی بصری‌تری داشته باشد. اگر هیچ‌کدام دلخواهتان نبود، «سفارشی» را بزنید و درصد دقیق هر اندازه‌ی کاشی را خودتان وارد کنید.
+      <br><br>
+      «سطح تصادفی‌بودن» تعیین می‌کند ترتیب محصولات چقدر در هر بازدید عوض شود: عدد بالاتر یعنی تنوع و جابه‌جایی بیشتر بین بازدیدها؛ عدد پایین‌تر یعنی محصولات پرطرفدار/تازه‌تر ثابت‌تر در بالای صفحه می‌مانند.
+      <br><br>
+      «سهم اسلات‌های کمپین» یعنی چند درصد از کل کاشی‌های صفحه به کمپین‌ها و بنرهای تبلیغاتی اختصاص پیدا کند (مثلاً عدد ۵ یعنی از هر ۲۰ کاشی، یکی کمپین باشد).
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">۲. کمپین‌ها و بنرها</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      برای تبلیغ یک تخفیف، یک مناسبت (مثل نوروز یا یلدا) یا معرفی یک محصول خاص، از این بخش کمپین بسازید: عنوان، تصویر، لینک مقصد (جایی که با کلیک روی کمپین کاربر به آنجا می‌رود)، و «وزن» (هرچه بیشتر باشد، شانس بیشتری برای دیده‌شدن دارد) را وارد کنید. بازه‌ی زمانی شروع و پایان اختیاری است؛ اگر خالی بگذارید، کمپین همیشه فعال می‌ماند.
+      <br><br>
+      هر زمان بخواهید می‌توانید با کلیک روی بج «فعال/غیرفعال» کنار هر کمپین، آن را موقتاً خاموش یا روشن کنید، یا با دکمه‌ی سطل زباله کاملاً حذفش کنید.
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">۳. آیتم‌های سنجاق‌شده (Pin)</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      اگر می‌خواهید یک محصول خاص همیشه در یک موقعیت مشخص از صفحه (مثلاً همیشه اولین کاشی) دیده شود، محصول را از لیست انتخاب کنید و شماره‌ی موقعیت را وارد کنید (عدد ۱ یعنی اولین کاشی). این محصول دیگر تحت‌تأثیر تصادفی‌بودن یا امتیاز قرار نمی‌گیرد و دقیقاً همان‌جا می‌ماند، تا وقتی خودتان از لیست حذفش کنید.
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">۴. بوست دستی محصولات</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      اگر نمی‌خواهید موقعیت محصول را کاملاً ثابت کنید، اما دوست دارید شانس بیشتری برای بالاتر دیده‌شدن داشته باشد، از این بخش به آن محصول امتیاز «بوست» بین ۰ تا ۱۰۰ بدهید. هرچه امتیاز بالاتر باشد، احتمال بیشتری دارد زودتر در صفحه ظاهر شود، اما همچنان در ترکیب تصادفی و متنوع صفحه باقی می‌ماند (برخلاف Pin که موقعیتش کاملاً ثابت است).
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <div class="drawer-label">نکته‌ی پایانی</div>
+    <div class="drawer-value" style="font-weight:400; line-height:2;">
+      بعد از هر تغییر، برای دیدن نتیجه‌ی واقعی کافی است دکمه‌ی «مشاهده صفحه‌ی زنده» را بزنید. چون سطح تصادفی‌بودن فعال است، ممکن است هر بار رفرش صفحه، چیدمان کمی فرق کند — این طبیعی و دقیقاً همان چیزی است که برای جذابیت صفحه تنظیم شده است.
+    </div>
+  </div>
+
+</div>
+
 <script>
   document.querySelectorAll('.explore-style-radio').forEach(function (radio) {
     radio.addEventListener('change', function () {
       document.getElementById('explore-custom-weights').style.display = (this.value === 'custom') ? '' : 'none';
     });
   });
+
+  function openExploreGuide() {
+    document.getElementById('explore-guide-overlay').classList.add('open');
+    document.getElementById('explore-guide-panel').classList.add('open');
+  }
+  function closeExploreGuide() {
+    document.getElementById('explore-guide-overlay').classList.remove('open');
+    document.getElementById('explore-guide-panel').classList.remove('open');
+  }
 </script>
 @endsection

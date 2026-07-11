@@ -414,17 +414,11 @@
       max-width: 500px;
     }
 
-    .hero-ctas {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      margin-bottom: 40px;
-    }
-
     .hero-trust {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+      margin-bottom: 32px;
     }
     .hero-trust-item {
       display: flex;
@@ -447,6 +441,20 @@
       flex-shrink: 0;
     }
 
+    .hero-cta-box {
+      display: inline-flex;
+      padding: 20px;
+      background: var(--s1);
+      border: 1px solid var(--b1);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .hero-cta-box .btn-primary {
+      color: #000000;
+      width: 450px;
+      max-width: 100%;
+    }
+
     /* Hero Visual */
     .hero-visual {
       position: relative;
@@ -459,7 +467,7 @@
     }
 
     .hero-card {
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-md);
       overflow: hidden;
       aspect-ratio: 3/4;
       background: var(--s1);
@@ -511,18 +519,33 @@
     .hero-float-badge .sub  { font-size: 11px; color: var(--text2); }
 
     @media (max-width: 960px) {
+      #hero {
+        padding-top: calc(var(--header-h) + 20px);
+        padding-bottom: 28px;
+      }
       .hero-inner {
         grid-template-columns: 1fr;
-        gap: 48px;
+        gap: 20px;
       }
+      .hero-badge { margin-bottom: 12px; }
+      .hero-title { font-size: clamp(22px, 6vw, 30px); margin-bottom: 10px; line-height: 1.35; }
+      .hero-desc { font-size: 14px; line-height: 1.6; margin-bottom: 18px; max-width: 100%; }
+      .hero-trust { gap: 8px; margin-bottom: 10px; }
+      .hero-trust-item { font-size: 12px; }
+      .hero-cta-box { padding: 12px; }
+      .hero-cta-box .btn-primary { height: 48px; font-size: 15px; }
+
+      /* عکس: فقط یک عکس مربعی و بزرگ، نزدیک به لبه‌های صفحه */
       .hero-visual { order: -1; }
-      .hero-visual-grid { max-width: 520px; margin: 0 auto; }
+      .hero-visual-grid { grid-template-columns: 1fr; max-width: 100%; margin: 0 auto; }
+      .hero-card:nth-child(2),
+      .hero-card:nth-child(3) { display: none; }
+      .hero-card:first-child { aspect-ratio: 1 / 1; }
     }
 
     @media (max-width: 480px) {
-      #hero { padding-top: calc(var(--header-h) + 40px); padding-bottom: 60px; }
-      .hero-ctas { flex-direction: column; }
-      .hero-ctas .btn { width: 100%; }
+      .hero-cta-box { width: 90%; margin: 0 auto; }
+      .hero-cta-box .btn-primary { width: 100%; }
     }
 
     /* ════════════════════════════════════════
@@ -1344,42 +1367,37 @@
         </div>
 
         <h1 class="hero-title reveal reveal-delay-1">
-          عکس خودت را به<br>
-          <span class="highlight">هر سبکی</span> تبدیل کن
+          دنیایی از محصولات هوش مصنوعی، فقط چند کلیک با تو فاصله دارد.
         </h1>
 
         <p class="hero-desc reveal reveal-delay-2">
-          فقط عکس بفرست. وطن استودیو در کمتر از ۲ دقیقه عکس حرفه‌ای، سینمایی و ترند برایت می‌سازد.
+          ما بقیه مسیر را برایت ساده کرده‌ایم؛ فقط انتخاب کن، سریع بساز و از نتیجه‌ی حرفه‌ای لذت ببر.
         </p>
 
-        <div class="hero-ctas reveal reveal-delay-3">
-          <a href="{{ route('app.home') }}" class="btn btn-primary" style="height:56px;padding:0 32px;font-size:16px;">
-            <i class="fa-solid fa-bolt"></i>
-            شروع رایگان
-          </a>
-          <a href="#samples" class="btn btn-ghost" style="height:56px;padding:0 32px;font-size:16px;">
-            <i class="fa-solid fa-images"></i>
-            نمونه خروجی‌ها
-          </a>
-        </div>
-
-        <div class="hero-trust reveal reveal-delay-4">
+        <div class="hero-trust reveal reveal-delay-3">
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
-            تحویل زیر ۲ دقیقه
+            تحویل زیر ۱ دقیقه
           </div>
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
-            بدون پرامپت‌نویسی
+            بیش از ۱۲۰۰ نمونه
           </div>
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
-            خروجی باکیفیت
+            کاربری ساده ولی حرفه‌ای
           </div>
           <div class="hero-trust-item">
             <span class="check"><i class="fa-solid fa-check"></i></span>
             حفظ شباهت چهره
           </div>
+        </div>
+
+        <div class="hero-cta-box reveal reveal-delay-4">
+          <a href="{{ route('app.home') }}" class="btn btn-primary">
+            <i class="fa-solid fa-bolt"></i>
+            شروع رایگان
+          </a>
         </div>
       </div>
 
@@ -1388,7 +1406,7 @@
         <div class="hero-float-badge">
           <span class="icon">⚡️</span>
           <div>
-            <div class="text">زیر ۲ دقیقه</div>
+            <div class="text">زیر ۱ دقیقه</div>
             <div class="sub">تحویل سریع</div>
           </div>
         </div>
