@@ -52,3 +52,47 @@
 ## قبل از هر تغییر بزرگ ظاهری
 
 طبق روال جاری پروژه: هر مرحله را به‌صورت تسک فارسی جدا ثبت کن (TaskCreate)، تسک را کامل تیک نزن، فقط وقتی کاربر صراحتاً تایید کرد تیک بزن.
+
+## دیپلوی و پوش (Deploy) — همیشه دقیقاً همین مراحل
+
+**اپ صحیح روی Liara همیشه `demovatan` است، نه `aivatan`** (اون اپ اصلاً وجود نداره). دامنه‌ی `aivatan.com` به‌صورت custom domain روی همین اپ `demovatan` ست شده. پلتفرم عمداً `laravel` (بدون Docker) است و نباید بدون تایید صریح کاربر عوض بشه — یه Dockerfile قدیمی و بلااستفاده هم توی ریشه‌ی پروژه با اسم `_archive_unused_Dockerfile.txt` نگه داشته شده، فعالش نکن.
+
+### روال استاندارد هر بار (کد + دیتابیس با هم)
+
+```bash
+# ۱. کامیت و پوش (توصیه‌شده، برای بک‌آپ و تاریخچه)
+cd "/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/vatan-ai"
+git add -A
+git commit -m "توضیح تغییرات"
+git push origin crm-integration
+
+# ۲. دیپلوی — بدون --no-cache (سریع‌تره، از کش لایه‌های Docker استفاده می‌کنه)
+liara deploy --app demovatan --platform laravel --port 3000
+
+# ۳. فقط اگر صفحه‌ای بعد از دیپلوی هنوز نسخه‌ی قدیمی رو نشون داد (شک به کش خراب)،
+#    یک‌بار با --no-cache بزن تا کل ایمیج از صفر ساخته بشه:
+# liara deploy --app demovatan --platform laravel --port 3000 --no-cache
+
+# ۴. بعد از تمومِ کامل دیپلوی، حتماً یک SSH تازه (نه تب قدیمی) به demovatan بزن:
+php artisan migrate --force
+```
+
+نیازی به پاک کردن دستی کش (`view:clear`/`config:clear`) نیست — این کار الان خودکار توی هر build از طریق `composer.json` (`post-install-cmd` / `post-update-cmd`) انجام می‌شه، چون پوشه‌ی `storage` روی یک دیسک دائمی (persistent disk) مونت شده و کش‌های قدیمی می‌تونن بین دیپلوی‌ها باقی بمونن.
+
+### نکته‌ی حیاتی: دیتابیس لوکال با Production جدا هستن
+
+هر چیزی که از پنل ادمین **لوکال** اضافه/ویرایش می‌کنی (دسته‌بندی، محصول، تنظیمات...) فقط توی دیتابیس لوکال (`vatan_ai` روی پورت 8889) می‌مونه. دیپلوی فقط **کد** رو به سایت می‌بره، هیچ ردیف دیتابیسی خودکار منتقل نمی‌شه. اگه بعد از یه سری کار لوکال چیزی روی سایت نبود، احتمالاً دیتاست نه کد.
+
+برای انتقال داده‌ی جدید لوکال به Production:
+1. یه dump فقط-داده از جدول موردنظر بگیر (با مسیر کامل mysqldump چون MAMP توی PATH نیست):
+   ```bash
+   /Applications/MAMP/Library/bin/mysql80/bin/mysqldump -h127.0.0.1 -P8889 -uroot -proot --no-create-info --complete-insert --skip-triggers --skip-add-locks vatan_ai NAME_JADVAL > database/data-import/NAME_JADVAL.sql
+   ```
+2. توی همون فایل، `INSERT INTO` رو به `INSERT IGNORE INTO` تغییر بده (وگرنه اگه یه ردیف با id تکراری برخورد کنه، کل import fail می‌شه و هیچی اضافه نمی‌شه).
+3. یه migration جدید idempotent بساز که این فایل رو با `DB::unprepared(file_get_contents(database_path('data-import/NAME_JADVAL.sql')))` اجرا کنه — **حتماً توی `database/` باشه، نه `storage/app/`** (چون `storage/app/.gitignore` تقریباً همه‌چیز رو نادیده می‌گیره و فایل هیچ‌وقت توی دیپلوی نمی‌ره).
+4. مرحله ۴ روال بالا (`php artisan migrate --force`) این ایمپورت رو هم خودکار انجام می‌ده.
+
+### اگه دیپلوی خیلی کند بود یا ارور داد
+
+- پلن فعلی اپ (CPU/RAM) رو از اینجا چک/بالا ببر: `https://console.liara.ir/apps/demovatan/resize` — با منابع خیلی کم (مثلاً ۰.۵ گیگ رم)، build ممکنه خیلی کند بشه یا گیر کنه.
+- `vendor/` توی `.liaraignore` هست و نباید حذفش کنی — Liara خودش موقع build با composer نصبش می‌کنه، آپلود کردنش فقط زمان تلف می‌کنه.
