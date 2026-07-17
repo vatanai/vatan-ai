@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -56,21 +59,22 @@
             "@php artisan test"
         ],
         "post-autoload-dump": [
+            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0",
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
         "post-install-cmd": [
+            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0",
             "@php artisan view:clear --ansi || true",
             "@php artisan config:clear --ansi || true",
-            "@php artisan route:clear --ansi || true",
-            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0"
+            "@php artisan route:clear --ansi || true"
         ],
         "post-update-cmd": [
+            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0",
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
             "@php artisan view:clear --ansi || true",
             "@php artisan config:clear --ansi || true",
-            "@php artisan route:clear --ansi || true",
-            "chmod -R u+rwX,go+rX . 2>/dev/null; [ -f .env ] && chmod 600 .env 2>/dev/null; [ -f storage/oauth-private.key ] && chmod 600 storage/oauth-private.key 2>/dev/null; exit 0"
+            "@php artisan route:clear --ansi || true"
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
