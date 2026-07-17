@@ -5,6 +5,17 @@
 
 @php
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
+
+  // آیکون «راهنمایی آیتم» — فقط برای فیلدهای واقعاً وصل‌شده به Backend (متن کامل از config/product_field_help.php خوانده می‌شود)
+  // نکته مهم: عمداً <span role="button"> است نه <button> واقعی — چون این آیکون گاهی داخل عناصر <label>
+  // (از جمله لیبل خودِ سوییچ روشن/خاموش) قرار می‌گیرد؛ <button> چون خودش هم «Labelable» است ممکن بود مرورگر
+  // آن را به‌جای چک‌باکس واقعی «کنترل صاحب لیبل» در نظر بگیرد و با کلیک روی خودِ سوییچ (نه آیکون)، به‌جای
+  // تغییر وضعیت چک‌باکس، پنجره راهنما باز شود. با <span> این تداخل کاملاً از بین می‌رود.
+  $__help = function (string $key, string $title) {
+      $text = config('product_field_help.' . $key, '');
+      if ($text === '') return '';
+      return '<span class="field-help-btn inline-flex items-center justify-center shrink-0 cursor-pointer text-[var(--text3)] hover:text-[var(--accent)] transition-colors" role="button" tabindex="0" data-help-title="' . e($title) . '" data-help-text="' . e($text) . '" aria-label="راهنمایی آیتم"><i class="fa-solid fa-circle-question text-[10px]"></i></span>';
+  };
 @endphp
 
 {{-- ═══════════════════ نحوه نمایش در اکسپلور و اپ ═══════════════════ --}}
@@ -20,7 +31,7 @@
 @endphp
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-table-cells text-[var(--accent)]"></i> نحوه نمایش در اکسپلور و اپ</div>
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-table-cells text-[var(--accent)]"></i> نحوه نمایش در اکسپلور و اپ {!! $__help('explore_tiles', 'نحوه نمایش در اکسپلور و اپ') !!}</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">این محصول در کدام قالب‌های کاشی نمایش داده شود؟ حداقل یکی باید روشن باشد. اگر حالتی خاموش شود، محصول دیگر در آن قالب در اکسپلور دیده نمی‌شود. کاور محصول در هر قاب پیش‌نمایش می‌شود تا تناسبش را ببینید.</div>
   </div>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="explore-tiles-grid">
@@ -170,13 +181,13 @@
 /* ══════ خلاصه نهایی زنده (فقط خواندن مقادیر واقعی فرم از تمام مراحل، بدون فیلد جدید) ══════ */
 function refreshFinalSummary() {
   const nameFa = document.querySelector('[name="name_fa"]')?.value.trim();
-  const catSel = document.querySelector('[name="category_id"]');
   const modelSel = document.getElementById('primary-model-select');
   const priceSel = document.querySelector('[name="pricing_model"]:checked');
   const mediaSel = document.querySelector('[name="media_type"]:checked');
   const statusInput = document.getElementById('product-status');
 
-  const catText = catSel && catSel.value ? catSel.options[catSel.selectedIndex].textContent : null;
+  // دسته‌بندی چندگانه (تگ‌های چیپ گام اول) — به‌جای سلکت تک‌انتخابی قبلی
+  const catText = (typeof getSelectedCategoryNames === 'function' && getSelectedCategoryNames()) || null;
   const modelText = modelSel && modelSel.value ? modelSel.options[modelSel.selectedIndex].textContent : null;
   const priceText = priceSel ? ({free:'رایگان', per_credit:'کردیتی', subscription:'اشتراکی'}[priceSel.value]) : null;
   const mediaText = mediaSel ? ({photo:'عکس', video:'ویدیو', both:'هر دو'}[mediaSel.value]) : null;
@@ -206,8 +217,8 @@ function refreshFinalSummary() {
 document.addEventListener('DOMContentLoaded', () => {
   refreshFinalSummary();
   // به‌روزرسانی زنده خلاصه با تغییر فیلدهای کلیدی در سایر مراحل
+  // (تغییر دسته‌بندی چندگانه مستقیماً از renderCatChips در step-1.blade.php این تابع را صدا می‌زند)
   document.querySelector('[name="name_fa"]')?.addEventListener('input', refreshFinalSummary);
-  document.querySelector('[name="category_id"]')?.addEventListener('change', refreshFinalSummary);
   document.getElementById('primary-model-select')?.addEventListener('change', refreshFinalSummary);
   document.querySelectorAll('[name="media_type"]').forEach(r => r.addEventListener('change', refreshFinalSummary));
   document.querySelectorAll('[name="pricing_model"]').forEach(r => r.addEventListener('change', refreshFinalSummary));
@@ -227,7 +238,6 @@ function generateProductCode() {
 /* ══════ پیش‌نمایش زنده‌ی صفحه محصول در سایت (بند ۵۰) — فقط خواندن مقادیر واقعی فرم ══════ */
 function refreshProductPreview() {
   var nameEl = document.querySelector('[name="name_fa"]');
-  var catSel = document.querySelector('[name="category_id"]');
   var descEl = document.querySelector('[name="description_fa"]');
   var priceSel = document.querySelector('[name="pricing_model"]:checked');
   var creditEl = document.querySelector('[name="credit_cost"]');
@@ -237,8 +247,11 @@ function refreshProductPreview() {
   var desc = document.getElementById('pp-desc');
   var price = document.getElementById('pp-price');
 
+  // دسته‌بندی چندگانه (تگ‌های چیپ گام اول) — به‌جای سلکت تک‌انتخابی قبلی
+  var catNames = (typeof getSelectedCategoryNames === 'function') ? getSelectedCategoryNames() : '';
+
   if (title) title.textContent = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : 'نام محصول';
-  if (cat)   cat.textContent   = (catSel && catSel.value) ? catSel.options[catSel.selectedIndex].textContent.replace(/—/g, '').trim() : 'دسته‌بندی';
+  if (cat)   cat.textContent   = catNames || 'دسته‌بندی';
   if (desc)  desc.textContent  = (descEl && descEl.value.trim()) ? descEl.value.trim() : 'توضیحات محصول اینجا نمایش داده می‌شود…';
 
   if (price) {
@@ -290,8 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var el = document.querySelector('[name="' + nm + '"]');
     if (el) el.addEventListener('input', refreshProductPreview);
   });
-  var catSel = document.querySelector('[name="category_id"]');
-  if (catSel) catSel.addEventListener('change', refreshProductPreview);
+  // تغییر دسته‌بندی چندگانه مستقیماً از renderCatChips در step-1.blade.php این تابع را صدا می‌زند
   document.querySelectorAll('[name="pricing_model"]').forEach(function (r) { r.addEventListener('change', refreshProductPreview); });
 
   var thumbInput = document.getElementById('thumbnail-file');

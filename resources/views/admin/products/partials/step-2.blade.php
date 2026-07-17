@@ -323,9 +323,24 @@
           <a id="test-result-download" href="#" target="_blank" class="text-[11px] text-[var(--accent)] underline">مشاهده تصویر کامل</a>
         </div>
       </div>
-      <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 flex items-center gap-2">
-        <span class="text-[9.5px] text-[var(--text3)]">آخرین اجرای تست:</span>
-        <span class="text-[11px] text-[var(--text)]" id="stat-last-run">همین الان</span>
+      {{-- بند ۱۳: آمار اجرای تست — آخرین اجرا و مدت پاسخ واقعی؛ Token Usage و Estimated Cost فعلاً Placeholder --}}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <div class="text-[9px] text-[var(--text3)]">آخرین اجرای تست</div>
+          <div class="text-[11px] text-[var(--text)] mt-0.5" id="stat-last-run">—</div>
+        </div>
+        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <div class="text-[9px] text-[var(--text3)]">مدت زمان پاسخ</div>
+          <div class="text-[11px] text-[var(--text)] mt-0.5" id="stat-duration">—</div>
+        </div>
+        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <div class="text-[9px] text-[var(--text3)] flex items-center gap-1 flex-wrap">Token Usage {!! $newBadge !!}</div>
+          <div class="text-[11px] text-[var(--text3)] mt-0.5">—</div>
+        </div>
+        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <div class="text-[9px] text-[var(--text3)] flex items-center gap-1 flex-wrap">Estimated Cost {!! $newBadge !!}</div>
+          <div class="text-[11px] text-[var(--text3)] mt-0.5">—</div>
+        </div>
       </div>
     </div>
 
@@ -470,7 +485,9 @@ function testPromptNow() {
       document.getElementById('test-result-model').textContent = data.model;
       document.getElementById('test-result-download').href = data.image_url;
       var lastRunEl = document.getElementById('stat-last-run');
-      if (lastRunEl) lastRunEl.textContent = 'همین الان (' + Math.round((Date.now() - startedAt) / 1000) + ' ثانیه پیش)';
+      if (lastRunEl) lastRunEl.textContent = 'همین الان';
+      var durEl = document.getElementById('stat-duration');
+      if (durEl) durEl.textContent = Math.max(1, Math.round((Date.now() - startedAt) / 1000)) + ' ثانیه';
       document.getElementById('test-result-box').classList.remove('hidden');
     } else {
       document.getElementById('test-error-text').textContent = data.message || 'خطای ناشناخته';

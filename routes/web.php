@@ -67,7 +67,7 @@ Route::prefix('app')->group(function () {
     Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
     Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
-    Route::get('/product/{product:slug}', [ProductGenerateController::class, 'show'])->name('app.product');
+    Route::get('/product/{product:route_slug}', [ProductGenerateController::class, 'show'])->name('app.product');
     Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])->name('app.product.generate');
 });
 
@@ -108,14 +108,15 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::get('/users/tokens',         [AdminUserController::class, 'tokens'])->name('users.tokens'); // پشتیبانی از دکمه مدیریت توکن قالب شما
 
     // مدیریت محصولات
+    // توجه: مسیر ویرایش دیگر جدا نیست و کامل از پروژه حذف شده — ویرایش هم از همین صفحه «ثبت محصول»
+    // با پارامتر اختیاری محصول انجام می‌شود (مثال: /admin/products/create/52)
     Route::get('/products', [ProductController::class, 'index'])->name('products');
-    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
-    Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
@@ -145,4 +146,15 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::get('/{any}', fn ($any = null) => view('admin.coming-soon'))
         ->where('any', '.*')
         ->name('coming-soon');
+});
+
+// ─── Admin API (Ajax — مدیریت توکن کاربران) ──────────────
+// این روت‌ها فقط برای درخواست‌های Ajax صفحه‌ی «مدیریت توکن» ادمین هستند و
+// کاملاً مستقل از بخش‌های دیگر پنل عمل می‌کنند تا هیچ آسیبی به آن‌ها نرسد.
+Route::prefix('api/v1/admin')->name('admin.api.')->middleware('auth:admin')->group(function () {
+    Route::get('/users/search',              [AdminUserController::class, 'search'])->name('users.search');
+    Route::get('/users/{id}/token-history',  [AdminUserController::class, 'tokenHistory'])->name('users.token_history');
+    Route::get('/users/{id}',                [AdminUserController::class, 'show'])->name('users.show');
+    Route::post('/users/{id}/token',         [AdminUserController::class, 'updateToken'])->name('users.token.update');
+    Route::get('/token-history',             [AdminUserController::class, 'globalTokenHistory'])->name('token_history');
 });

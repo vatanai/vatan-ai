@@ -110,7 +110,7 @@
       promptTemplate: @json($product->prompt_template ?? '—'),
       createdAt: @json($product->created_at?->format('Y/m/d H:i')),
       updatedAt: @json($product->updated_at?->format('Y/m/d H:i')),
-      editUrl: @json(route('admin.products.edit', $product->id)),
+      editUrl: @json(route('admin.products.create', $product->id)),
     },
     @endforeach
   };

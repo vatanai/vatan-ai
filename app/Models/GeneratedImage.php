@@ -44,6 +44,6 @@ class GeneratedImage extends Model
             return null;
         }
 
-        return route('app.product', $this->product->slug);
+        return route('app.product', $this->product->route_slug);
     }
 }

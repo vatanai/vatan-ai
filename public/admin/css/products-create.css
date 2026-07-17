@@ -54,6 +54,11 @@
 /* A11Y: مشخص بودن واضح Focus روی عناصر تعاملی */
 #real-product-form :focus-visible, .admin-content :focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
+/* ── پس‌زمینه تیره‌ی پنجره «راهنمایی آیتم» — دقیقاً همان مقدار rgba استاندارد که در
+   .drawer-overlay و .mobile-sidebar-overlay (design-tokens.css) برای Overlayهای پنل ادمین استفاده شده،
+   تا هیچ رنگ ثابت جدیدی مستقیم در بلید نوشته نشود و در هر دو حالت روز/شب یکسان و صحیح دیده شود. ── */
+.field-help-overlay-bg { background: rgba(0, 0, 0, .55); }
+
 /* ── نوار پیشرفت کلی زیر Stepper (بند ۴۳ و ۴۷) — توپر، گرد و ضخیم، پرشونده از راست به چپ ── */
 #wizard-progress-track {
   position: relative;

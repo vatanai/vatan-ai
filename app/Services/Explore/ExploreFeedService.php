@@ -241,10 +241,10 @@ class ExploreFeedService
             return [
                 'type' => 'product',
                 'video' => in_array($model->media_type, ['video', 'both'], true),
-                'src' => $model->thumbnail ? asset('storage/' . $model->thumbnail) : asset('assets/img/placeholder.webp'),
+                'src' => $model->displayImageUrl(),
                 'name' => $model->name_fa,
                 'tag' => $model->category?->name ?? $model->category ?? 'وطن AI',
-                'link' => route('app.product', $model->slug),
+                'link' => route('app.product', $model->route_slug),
                 '_allowed_sizes' => $this->productAllowedSizes($model),
             ];
         }

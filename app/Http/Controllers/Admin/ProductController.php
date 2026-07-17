@@ -90,18 +90,31 @@ class ProductController extends Controller
     }
 
     /**
-     * نمایش فرم ساخت محصول جدید
+     * نمایش فرم ساخت محصول جدید — و همچنین فرم ویرایش محصول موجود.
+     * مسیر ویرایش جداگانه (products/{product}/edit) کامل حذف شده؛ ویرایش هم از همین
+     * صفحه با پارامتر اختیاری محصول انجام می‌شود، مثلاً: /admin/products/create/52
      */
-    public function create(Request $request)
+    public function create(Request $request, ?Product $product = null)
     {
         $aiModels = AiModel::where('is_active', true)->latest()->get();
 
         $duplicateFrom = null;
-        if ($request->filled('duplicate')) {
+        $isEdit = false;
+
+        if ($product) {
+            // حالت ویرایش — همان فرم ثبت محصول، با مقادیر از پیش پرشده از روی محصول موجود
+            $duplicateFrom = $product;
+            $isEdit = true;
+        } elseif ($request->filled('duplicate')) {
             $duplicateFrom = Product::find($request->get('duplicate'));
         }
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom'));
+        return view('admin.products.create', [
+            'aiModels' => $aiModels,
+            'duplicateFrom' => $duplicateFrom,
+            'product' => $product,
+            'isEdit' => $isEdit,
+        ]);
     }
 
     /**
@@ -115,6 +128,8 @@ class ProductController extends Controller
             'name_en' => 'nullable|string|max:255',
             'slug' => 'nullable|string|max:255',
             'category_id' => 'nullable|integer',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
         ]);
 
         // ۲. ساخت یک نمونه جدید از مدل (برای دور زدن محدودیت fillable دیتابیس)
@@ -133,6 +148,13 @@ class ProductController extends Controller
         }
         $product->slug = $slug;
 
+        // ۳.۱ ساخت خودکار کد ۶ رقمی یکتا برای محصول — این کد پیش از اسلاگ در لینک عمومی محصول قرار می‌گیرد
+        // مثال: aivatan.com/app/product/546834-{$slug}
+        do {
+            $productCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while (Product::where('product_code', $productCode)->exists());
+        $product->product_code = $productCode;
+
         // ۴. دسته‌بندی چندگانه (سرشاخه + زیرشاخه‌ها)
         $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
         if (empty($categoryIds) && $request->filled('category_id')) {
@@ -146,18 +168,22 @@ class ProductController extends Controller
         // ۵. مدیریت فایل‌ها و تصاویر با جایگزین امن
         $duplicateSource = $request->filled('duplicate_from') ? Product::find($request->input('duplicate_from')) : null;
 
-        if ($request->hasFile('thumbnail')) {
-            $product->thumbnail = $request->file('thumbnail')->store('products/thumbnails', 'public');
-        } elseif ($duplicateSource && $duplicateSource->thumbnail && Storage::disk('public')->exists($duplicateSource->thumbnail)) {
-            $product->thumbnail = $this->copyDuplicateFile($duplicateSource->thumbnail, 'products/thumbnails');
-        } else {
-            $product->thumbnail = 'products/thumbnails/default_placeholder.jpg'; 
-        }
-
         if ($request->hasFile('cover')) {
             $product->cover = $request->file('cover')->store('products/covers', 'public');
         } elseif ($duplicateSource && $duplicateSource->cover && Storage::disk('public')->exists($duplicateSource->cover)) {
             $product->cover = $this->copyDuplicateFile($duplicateSource->cover, 'products/covers');
+        }
+
+        if ($request->hasFile('thumbnail')) {
+            $product->thumbnail = $request->file('thumbnail')->store('products/thumbnails', 'public');
+        } elseif ($duplicateSource && $duplicateSource->thumbnail && Storage::disk('public')->exists($duplicateSource->thumbnail)) {
+            $product->thumbnail = $this->copyDuplicateFile($duplicateSource->thumbnail, 'products/thumbnails');
+        } elseif ($product->cover) {
+            // به جای مسیر جعلی قبلی (default_placeholder.jpg که اصلا وجود نداشت و باعث سیاه شدن عکس در هوم/اکسپلور می شد)،
+            // همان تصویر Cover را به عنوان Thumbnail هم کپی می کنیم تا کارت ها همیشه عکس واقعی داشته باشند.
+            $product->thumbnail = $this->copyDuplicateFile($product->cover, 'products/thumbnails');
+        } else {
+            $product->thumbnail = null;
         }
 
         if ($request->hasFile('new_product_icon')) {
@@ -173,6 +199,21 @@ class ProductController extends Controller
             }
         }
         $product->sample_outputs = $samplePaths;
+
+        // ۵.۱ عکس‌های قبل — تصاویر خامی که مدل با آن‌ها ساخته شده (جایگزین فیلد قدیمی Thumbnail در فرم)
+        $beforeImagePaths = [];
+        if ($request->hasFile('before_images')) {
+            foreach ($request->file('before_images') as $file) {
+                $beforeImagePaths[] = $file->store('products/before_images', 'public');
+            }
+        } elseif ($duplicateSource && !empty($duplicateSource->before_images)) {
+            foreach ($duplicateSource->before_images as $existingPath) {
+                if (Storage::disk('public')->exists($existingPath)) {
+                    $beforeImagePaths[] = $this->copyDuplicateFile($existingPath, 'products/before_images');
+                }
+            }
+        }
+        $product->before_images = $beforeImagePaths;
 
         // ۶. فیلدهای سیستمی و هوش مصنوعی
         $product->primary_model = $request->input('primary_model') ?? AiModel::first()?->openrouter_model_id ?? 'stabilityai/stable-diffusion-3';
@@ -236,6 +277,7 @@ class ProductController extends Controller
         $product->output_type = $request->input('output_type') ?? 'image';
         $product->output_format = $request->input('output_format') ?? 'jpg';
         $product->output_count = $request->input('output_count') ?? 1;
+        $product->output_variants = $this->buildOutputVariants($request, (bool) $duplicateSource);
         $product->resolution = $request->input('resolution') ?? '1024×1024';
         $product->aspect_ratio = $request->input('aspect_ratio') ?? '1:1';
         $product->delivery_method = $request->input('delivery_method') ?? 'instant';
@@ -268,15 +310,6 @@ class ProductController extends Controller
         }
 
         return redirect()->route('admin.products')->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
-    }
-
-    /**
-     * نمایش فرم ویرایش محصول
-     */
-    public function edit(Product $product)
-    {
-        $aiModels = AiModel::where('is_active', true)->latest()->get();
-        return view('admin.products.edit', compact('product', 'aiModels'));
     }
 
     /**
@@ -314,6 +347,7 @@ class ProductController extends Controller
             'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
             'cover' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:8192',
             'sample_outputs' => 'nullable|array',
+            'before_images' => 'nullable|array',
             'media_type' => 'nullable|in:photo,video,both',
             'preview_video_url' => 'nullable|url',
             'pipeline_type' => 'nullable|string',
@@ -339,6 +373,12 @@ class ProductController extends Controller
             'new_min_credit_required' => 'nullable|integer',
             'new_max_run_per_user' => 'nullable|integer',
             'new_price_custom_label' => 'nullable|string|max:100',
+            'output_variants' => 'nullable|array',
+            'output_variants.*.title' => 'nullable|string|max:150',
+            'output_variants.*.prompt' => 'nullable|string|max:2000',
+            'output_variants.*.key' => 'nullable|string|max:40',
+            'output_variants.*.image' => 'nullable|string|max:500',
+            'output_variants.*.image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
         $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
@@ -349,14 +389,17 @@ class ProductController extends Controller
             $validated['category'] = Category::where('id', $validated['category_id'])->value('name') ?? 'عمومی';
         }
 
-        if ($request->hasFile('thumbnail')) {
-            if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
-            $validated['thumbnail'] = $request->file('thumbnail')->store('products/thumbnails', 'public');
-        }
-
         if ($request->hasFile('cover')) {
             if ($product->cover) Storage::disk('public')->delete($product->cover);
             $validated['cover'] = $request->file('cover')->store('products/covers', 'public');
+        }
+
+        if ($request->hasFile('thumbnail')) {
+            if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
+            $validated['thumbnail'] = $request->file('thumbnail')->store('products/thumbnails', 'public');
+        } elseif ((!$product->thumbnail || !Storage::disk('public')->exists($product->thumbnail)) && !empty($validated['cover'] ?? null)) {
+            // اگر Thumbnail فعلی خراب/غایب است ولی همین الان یک Cover جدید آپلود شد، از همان به عنوان Thumbnail هم استفاده کن
+            $validated['thumbnail'] = $this->copyDuplicateFile($validated['cover'], 'products/thumbnails');
         }
 
         if ($request->hasFile('new_product_icon')) {
@@ -378,6 +421,15 @@ class ProductController extends Controller
             $validated['sample_outputs'] = array_merge($existingSamples, $newSamples);
         }
 
+        if ($request->hasFile('before_images')) {
+            $newBeforeImages = [];
+            foreach ($request->file('before_images') as $file) {
+                $newBeforeImages[] = $file->store('products/before_images', 'public');
+            }
+            $existingBeforeImages = is_array($product->before_images) ? $product->before_images : [];
+            $validated['before_images'] = array_merge($existingBeforeImages, $newBeforeImages);
+        }
+
         $validated['is_featured'] = $request->has('is_featured');
         $validated['is_new'] = $request->has('is_new');
         $validated['is_trending'] = $request->has('is_trending');
@@ -397,6 +449,9 @@ class ProductController extends Controller
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
         $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
 
+        // مدل‌های خروجی چندگانه — بازسازی کامل از روی فرم (حذف/افزودن/جایگزینی عکس)
+        $validated['output_variants'] = $this->buildOutputVariants($request);
+
         $validated['slug'] = Str::slug($validated['slug']);
 
         if ($request->filled('prompt_template') && $product->prompt_template !== $request->input('prompt_template')) {
@@ -408,6 +463,9 @@ class ProductController extends Controller
                 'user_id'        => auth()->id(),
             ]);
         }
+
+        // new_min_credit_required در دیتابیس NOT NULL است (پیش‌فرض ۰)؛ اگر فرم خالی فرستاد، صفر جایگزین شود
+        $validated['new_min_credit_required'] = $validated['new_min_credit_required'] ?? 0;
 
         $product->update($validated);
 
@@ -434,6 +492,12 @@ class ProductController extends Controller
             }
         }
 
+        if (is_array($product->before_images)) {
+            foreach ($product->before_images as $path) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
         $product->delete();
         return redirect()->route('admin.products')->with('success', 'محصول حذف شد.');
     }
@@ -454,6 +518,13 @@ class ProductController extends Controller
             $slug = $baseSlug . '-' . (++$i);
         }
         $clone->slug = $slug;
+
+        // کد ۶ رقمی باید برای کپی هم جدید و یکتا باشد (replicate مقدار کد اصلی را کپی می‌کند)
+        do {
+            $cloneCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while (Product::where('product_code', $cloneCode)->exists());
+        $clone->product_code = $cloneCode;
+
         $clone->status = 'draft';
         $clone->save();
 
@@ -501,6 +572,53 @@ class ProductController extends Controller
         }
 
         return redirect()->route('admin.products')->with('success', 'عملیات گروهی انجام شد.');
+    }
+
+    /**
+     * ساخت آرایه تمیز «مدل‌های خروجی چندگانه» (Output Variants) از ورودی فرم ادمین.
+     * هر ردیف: title (اجباری)، prompt (اختیاری)، image (مسیر موجود) یا image_file (آپلود جدید).
+     * $copySharedImages فقط هنگام تکثیر محصول true است تا فایل عکس واریانت‌ها برای محصول جدید کپی شود.
+     */
+    private function buildOutputVariants(Request $request, bool $copySharedImages = false): array
+    {
+        $rows = $request->input('output_variants', []);
+        if (!is_array($rows)) return [];
+
+        $files = $request->file('output_variants', []);
+        $out = [];
+
+        foreach ($rows as $i => $row) {
+            if (!is_array($row)) continue;
+            $title = trim((string) ($row['title'] ?? ''));
+            if ($title === '') continue;
+
+            $imagePath = trim((string) ($row['image'] ?? '')) ?: null;
+
+            // آپلود جدید همیشه اولویت دارد
+            $file = $files[$i]['image_file'] ?? null;
+            if ($file && $file->isValid()) {
+                $imagePath = $file->store('products/variants', 'public');
+            } elseif ($imagePath && $copySharedImages && Storage::disk('public')->exists($imagePath)) {
+                // در حالت تکثیر، فایل عکس واریانت هم برای محصول جدید کپی می‌شود تا اشتراکی نماند
+                $imagePath = $this->copyDuplicateFile($imagePath, 'products/variants');
+            } elseif ($imagePath && !Storage::disk('public')->exists($imagePath)) {
+                $imagePath = null;
+            }
+
+            $key = trim((string) ($row['key'] ?? ''));
+            if ($key === '') {
+                $key = 'v_' . Str::random(8);
+            }
+
+            $out[] = [
+                'key'    => $key,
+                'title'  => Str::limit($title, 120, ''),
+                'image'  => $imagePath,
+                'prompt' => trim((string) ($row['prompt'] ?? '')),
+            ];
+        }
+
+        return array_values($out);
     }
 
     private function copyDuplicateFile(string $sourcePath, string $targetDir): string

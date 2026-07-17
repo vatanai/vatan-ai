@@ -230,6 +230,57 @@
     <input type="text" name="card_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: هدیه، پیشنهاد ویژه" value="{{ old('card_label', optional($duplicateFrom)->card_label) }}">
   </div>
 
+  {{-- بند ۲۰: ظاهر کارت محصول (NEW / فقط UI) — رنگ Badge، رنگ پس‌زمینه کارت، نمایش آیکون/Badge، اولویت صفحه اصلی --}}
+  <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-1">
+    <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-palette text-[10px]"></i> ظاهر کارت محصول {!! $newBadge !!}</div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)]">رنگ Badge</label>
+        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <input type="color" name="new_badge_color" value="#16a34a" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('new-badge-color-hex').value = this.value.toUpperCase()">
+          <input type="text" id="new-badge-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#16A34A" readonly>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-semibold text-[var(--text2)]">رنگ پس‌زمینه کارت</label>
+        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
+          <input type="color" name="new_card_bg_color" value="#030f09" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('new-card-bg-color-hex').value = this.value.toUpperCase()">
+          <input type="text" id="new-card-bg-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#030F09" readonly>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
+      <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
+        <div class="min-w-0">
+          <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش آیکون روی کارت</div>
+          <div class="text-[11px] text-[var(--text3)] mt-0.5">آیکون محصول روی کارت دیده شود</div>
+        </div>
+        <span class="relative w-9 h-5 shrink-0 block">
+          <input type="checkbox" name="new_show_icon_on_card" value="1" class="sr-only peer">
+          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+        </span>
+      </label>
+
+      <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
+        <div class="min-w-0">
+          <div class="text-[12.5px] font-semibold text-[var(--text2)]">نمایش Badge روی کارت</div>
+          <div class="text-[11px] text-[var(--text3)] mt-0.5">برچسب/نشان روی کارت دیده شود</div>
+        </div>
+        <span class="relative w-9 h-5 shrink-0 block">
+          <input type="checkbox" name="new_show_badge_on_card" value="1" class="sr-only peer">
+          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+        </span>
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-1.5 md:max-w-xs">
+      <label class="text-xs font-semibold text-[var(--text2)]">اولویت نمایش در صفحه اصلی</label>
+      <input type="number" name="new_home_priority" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1 (عدد کوچک‌تر = بالاتر)">
+    </div>
+  </div>
+
 
 </div>
 

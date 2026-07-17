@@ -44,9 +44,30 @@ class ProductGenerateController extends Controller
         $user = auth()->user();
         $creditCost = $product->credit_cost ?? 0;
 
-        // ۱. بررسی اعتبار توکن کاربر
-        if ($product->pricing_model === 'per_credit' && $creditCost > 0) {
-            if (!$user || $user->tokens < $creditCost) {
+        // ۰. مدل‌های خروجی چندگانه (Output Variants) — اگر محصول واریانت دارد،
+        // کاربر باید حداقل یکی را انتخاب کرده باشد و هزینه توکن در تعداد انتخاب ضرب می‌شود.
+        $variantList = $product->outputVariantList();
+        $selectedVariants = [];
+        if (!empty($variantList)) {
+            $requestedKeys = array_map('strval', (array) $request->input('variants', []));
+            foreach ($variantList as $v) {
+                if (in_array($v['key'], $requestedKeys, true)) {
+                    $selectedVariants[] = $v;
+                }
+            }
+            if (empty($selectedVariants)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'حداقل یک مدل خروجی را انتخاب کنید.',
+                ], 422);
+            }
+        }
+        $runCount = max(1, count($selectedVariants));
+        $totalCreditCost = $creditCost * $runCount;
+
+        // ۱. بررسی اعتبار توکن کاربر (بر اساس جمع کل مدل‌های انتخاب‌شده)
+        if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
+            if (!$user || $user->tokens < $totalCreditCost) {
                 return response()->json([
                     'success' => false,
                     'message' => 'توکن‌های شما کافی نیست.',
@@ -74,8 +95,8 @@ class ProductGenerateController extends Controller
                 }
             }
 
-            $maxStorageBytes = 100 * 1024 * 1024; 
-            $estimatedAiImageSize = 2 * 1024 * 1024; 
+            $maxStorageBytes = 100 * 1024 * 1024;
+            $estimatedAiImageSize = (2 * 1024 * 1024) * $runCount;
 
             if (($currentUsedBytes + $newUploadsSize + $estimatedAiImageSize) > $maxStorageBytes) {
                 return response()->json([
@@ -173,24 +194,66 @@ class ProductGenerateController extends Controller
 
             $outputCount = max(1, (int) ($product->output_count ?? 1));
 
-            // درخواست خروجی از OpenRouter
-            $result = $this->openRouter->generateImageFromPrompt(
-                $product->primary_model ?? 'stabilityai/stable-diffusion-xl',
-                $finalPrompt,
-                $quality,
-                $aspectRatio,
-                $outputCount,
-                $extraPayload
-            );
+            // ۵.۱ لیست اجراها: بدون واریانت = یک اجرا با پرامپت اصلی (رفتار قبلی دست‌نخورده)؛
+            // با واریانت = دقیقاً یک اجرا به‌ازای هر مدل تیک‌خورده، با پرامپت اختصاصی همان مدل.
+            $runs = [];
+            if (!empty($selectedVariants)) {
+                foreach ($selectedVariants as $v) {
+                    $variantPrompt = $finalPrompt;
+                    if ($v['prompt'] !== '') {
+                        $variantPrompt .= "\n\n" . $v['prompt'];
+                    } else {
+                        $variantPrompt .= "\n\nOutput style/scene variant: " . $v['title'];
+                    }
+                    $runs[] = ['prompt' => $variantPrompt, 'key' => $v['key'], 'title' => $v['title'], 'n' => 1];
+                }
+            } else {
+                $runs[] = ['prompt' => $finalPrompt, 'key' => null, 'title' => null, 'n' => $outputCount];
+            }
 
-            // ۶. ذخیره فایل تصویر خروجی روی دیسک سرور (متد اصلاح شده افزوده شد)
-            $imageUrl  = $this->saveGeneratedImage($result);
-            $imagePath = $this->urlToStoragePath($imageUrl);
-            
-            // دریافت حجم فایل ذخیره شده به صورت امن
-            $imageSize = Storage::disk('public')->exists($imagePath) 
-                ? Storage::disk('public')->size($imagePath) 
-                : 1024 * 1024;
+            $generated = [];   // [{key, title, url, path, size, cost, prompt}]
+            $failed    = [];
+
+            foreach ($runs as $run) {
+                try {
+                    $result = $this->openRouter->generateImageFromPrompt(
+                        $product->primary_model ?? 'stabilityai/stable-diffusion-xl',
+                        $run['prompt'],
+                        $quality,
+                        $aspectRatio,
+                        $run['n'],
+                        $extraPayload
+                    );
+
+                    // ۶. ذخیره فایل تصویر خروجی روی دیسک سرور
+                    $imageUrl  = $this->saveGeneratedImage($result);
+                    $imagePath = $this->urlToStoragePath($imageUrl);
+                    $imageSize = Storage::disk('public')->exists($imagePath)
+                        ? Storage::disk('public')->size($imagePath)
+                        : 1024 * 1024;
+
+                    $generated[] = [
+                        'key'    => $run['key'],
+                        'title'  => $run['title'],
+                        'url'    => $imageUrl,
+                        'path'   => $imagePath,
+                        'size'   => $imageSize,
+                        'cost'   => $result['usage']['cost'] ?? 0,
+                        'prompt' => $run['prompt'],
+                    ];
+                } catch (Exception $e) {
+                    Log::error('ProductGenerateController Variant Error [' . ($run['title'] ?? 'default') . ']: ' . $e->getMessage());
+                    $failed[] = $run['title'] ?? 'خروجی';
+                    // اگر تک‌اجرایی بود (رفتار قبلی)، خطا مثل قبل به بیرون پرتاب می‌شود
+                    if (count($runs) === 1) {
+                        throw $e;
+                    }
+                }
+            }
+
+            if (empty($generated)) {
+                throw new Exception('هیچ‌کدام از مدل‌های خروجی انتخاب‌شده با موفقیت ساخته نشد. لطفاً دوباره تلاش کنید.');
+            }
 
             // ۷. ثبت نهایی سوابق در دیتابیس در صورت لاگین بودن کاربر
             if ($user) {
@@ -203,23 +266,36 @@ class ProductGenerateController extends Controller
                     ]);
                 }
 
-                GeneratedImage::create([
-                    'user_id'     => $user->id,
-                    'product_id'  => $product->id,
-                    'image_path'  => $imagePath,
-                    'user_prompt' => $finalPrompt,
-                    'cost'        => $result['usage']['cost'] ?? 0,
-                    'size'        => $imageSize,
-                ]);
+                foreach ($generated as $g) {
+                    GeneratedImage::create([
+                        'user_id'     => $user->id,
+                        'product_id'  => $product->id,
+                        'image_path'  => $g['path'],
+                        'user_prompt' => $g['prompt'],
+                        'cost'        => $g['cost'],
+                        'size'        => $g['size'],
+                    ]);
+                }
 
+                // کسر توکن فقط به‌ازای خروجی‌هایی که واقعاً ساخته شدند
                 if ($product->pricing_model === 'per_credit' && $creditCost > 0) {
-                    $user->decrement('tokens', $creditCost);
+                    $user->decrement('tokens', $creditCost * count($generated));
                 }
             }
 
+            $failedMsg = !empty($failed)
+                ? 'ساخت این مدل‌ها ناموفق بود: ' . implode('، ', $failed)
+                : null;
+
             return response()->json([
                 'success'          => true,
-                'image_url'        => $imageUrl,
+                'image_url'        => $generated[0]['url'],
+                'images'           => array_map(fn ($g) => [
+                    'key'   => $g['key'],
+                    'title' => $g['title'],
+                    'url'   => $g['url'],
+                ], $generated),
+                'failed_message'   => $failedMsg,
                 'used_model'       => $product->primary_model,
                 'remaining_tokens' => $user ? $user->fresh()->tokens : 0,
             ]);

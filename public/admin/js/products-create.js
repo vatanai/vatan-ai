@@ -154,7 +154,7 @@ const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: t
    توجه: الزامی‌بودن فایل‌ها (مثل Thumbnail) اینجا چک نمی‌شود چون در حالت تکثیر محصول ممکن است
    از قبل موجود باشد؛ تصمیم نهایی همیشه با Validation واقعی سمت سرور است. */
 const STEP_REQUIRED_FIELDS = {
-  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_id', 'دسته‌بندی'] ],
+  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_ids', 'دسته‌بندی'] ],
   2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
   3: [], // ورودی و متغیرها: فیلد الزامی خاصی ندارد
   4: [], // خروجی و قیمت: همه مقادیر پیش‌فرض دارند
@@ -162,6 +162,11 @@ const STEP_REQUIRED_FIELDS = {
 };
 
 function fieldValue(name) {
+  // دسته‌بندی چندگانه (تگ‌های انتخاب‌شده) دیگر یک <select> واحد با name=category_id نیست؛
+  // تکمیل‌بودنش یعنی حداقل یک چیپ دسته‌بندی در cat-tags-wrap انتخاب شده باشد.
+  if (name === 'category_ids') {
+    return document.querySelectorAll('#cat-tags-wrap [data-cat-id]').length ? '1' : '';
+  }
   const els = document.getElementsByName(name);
   if (!els.length) return '';
   if (els.length > 1 && els[0].type === 'radio') {
@@ -194,6 +199,17 @@ function showValidationSummary(missing) {
 }
 
 function focusField(name) {
+  if (name === 'category_ids') {
+    const wrap = document.getElementById('cat-tags-wrap');
+    if (wrap) {
+      wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const input = document.getElementById('cat-search-input');
+      if (input) input.focus();
+      wrap.classList.add('border-[var(--red)]');
+      setTimeout(function () { wrap.classList.remove('border-[var(--red)]'); }, 2000);
+    }
+    return;
+  }
   const el = document.getElementsByName(name)[0];
   if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus(); el.classList.add('border-[var(--red)]'); setTimeout(function () { el.classList.remove('border-[var(--red)]'); }, 2000); }
 }
@@ -521,31 +537,6 @@ function refreshFormPreview() {
   box.innerHTML = html;
 }
 
-const subcats = {
-  PEOPLE: ['Professional', 'Fashion', 'Lifestyle'],
-  BUSINESS: ['Real Estate', 'Medical', 'Education'],
-  EVENTS: ['Birthday', 'Wedding', 'Nowruz'],
-  FAMILY: ['Parents', 'Kids'],
-  AVATARS: ['Gaming', 'Anime', 'Fantasy']
-};
-function updateSubcat() {
-  const main = document.getElementById('cat-main').value;
-  const sub = document.getElementById('cat-sub');
-  sub.innerHTML = '';
-  if(!main || !subcats[main]) {
-    sub.innerHTML = '<option value="">ابتدا دسته را انتخاب کنید</option>';
-    sub.disabled = true;
-    refreshSearchable(sub);
-    return;
-  }
-  sub.disabled = false;
-  sub.innerHTML = '<option value="">زیردسته ندارد</option>';
-  subcats[main].forEach(s => {
-    sub.innerHTML += `<option value="${s}">${s}</option>`;
-  });
-  refreshSearchable(sub);
-}
-
 function createHiddenInput(name, value) {
   const input = document.createElement('input');
   input.type = 'hidden'; input.name = name; input.value = value;
@@ -571,6 +562,12 @@ function submitForm(statusValue) {
   document.querySelectorAll('#tags-wrap span').forEach((chip, idx) => {
     const text = chip.textContent.replace('×', '').trim();
     if(text) form.appendChild(createHiddenInput(`tags[${idx}]`, text));
+  });
+
+  // دسته‌بندی‌های چندگانه انتخاب‌شده (تگ‌های چیپ در گام اول) → category_ids[] برای کنترلر
+  document.querySelectorAll('#cat-tags-wrap [data-cat-id]').forEach((chip, idx) => {
+    const id = chip.dataset.catId;
+    if (id) form.appendChild(createHiddenInput(`category_ids[${idx}]`, id));
   });
 
   // ترتیب select‌های fallback همان ترتیب چیده‌شده در صفحه = اولویت ذخیره‌شده در دیتابیس
@@ -628,6 +625,44 @@ function hideGlobalError() {
 }
 window.addEventListener('offline', () => showGlobalError('اتصال اینترنت قطع شد — تغییرات فقط به‌صورت محلی ذخیره می‌شوند.'));
 
+/* ── «راهنمایی آیتم» — پنجره مشترک نمایش توضیح کامل هر فیلد اجباری/اختیاری ──
+   با کلیک روی هر آیکونی با کلاس field-help-btn، عنوان و متن آن (از data-help-title/data-help-text،
+   که در Blade از config('product_field_help.*') پر می‌شوند) در یک پنجره مرکزی نمایش داده می‌شود.
+   رویداد به‌صورت Delegation روی document گرفته می‌شود تا برای آیکون‌های داخل ردیف‌های داینامیک هم کار کند. */
+function openFieldHelp(title, text) {
+  const overlay = document.getElementById('field-help-overlay');
+  const titleEl = document.getElementById('field-help-title');
+  const textEl = document.getElementById('field-help-text');
+  if (!overlay || !titleEl || !textEl) return;
+  titleEl.textContent = title || 'راهنمای فیلد';
+  textEl.textContent = text || '';
+  overlay.classList.remove('hidden');
+}
+function closeFieldHelp() {
+  const overlay = document.getElementById('field-help-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.field-help-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openFieldHelp(btn.dataset.helpTitle, btn.dataset.helpText);
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { closeFieldHelp(); return; }
+  // آیکون راهنما به‌صورت <span role="button"> ساخته می‌شود (نه <button> واقعی — به دلیل تداخل با
+  // «کنترل صاحب لیبل» در سوییچ‌های روشن/خاموش)، پس برخلاف دکمه واقعی با Enter/Space خودش فعال نمی‌شود
+  // و باید این رفتار برای دسترس‌پذیری (Keyboard Accessibility) به‌صورت دستی شبیه‌سازی شود.
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+    const btn = e.target.closest('.field-help-btn');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openFieldHelp(btn.dataset.helpTitle, btn.dataset.helpText);
+  }
+});
+
 /* ── Role-Based UI Locking (فقط نمایشی) — پیش‌فرض Admin یعنی هیچ قفلی اعمال نمی‌شود ── */
 function applyRolePreview(role) {
   const lockable = document.querySelectorAll('[data-role-lockable], .field-advanced, input[name^="new_"], select[name^="new_"], textarea[name^="new_"]');
@@ -644,24 +679,10 @@ function applyRolePreview(role) {
 }
 
 /* ── مقداردهی اولیه فرم هنگام بارگذاری صفحه (فقط برای حالت تکثیر محصول) ──
-   زیردسته باید بعد از پرشدن گزینه‌های آن (updateSubcat) انتخاب شود، و
-   وضعیت فعال/غیرفعال بودن باکس هزینه‌ی کردیت باید با pricing_model هماهنگ شود. */
+   وضعیت فعال/غیرفعال بودن باکس هزینه‌ی کردیت باید با pricing_model هماهنگ شود.
+   دسته‌بندی چندگانه (چیپ‌های cat-tags-wrap) مستقل از اینجا در همان step-1.blade.php مقداردهی اولیه می‌شود. */
 document.addEventListener('DOMContentLoaded', function () {
   goStep(1); // مقداردهی اولیه حالت Stepper (Active/Completed/Pending) طبق طراحی جدید
-
-  const catMain = document.getElementById('cat-main');
-  const wantedSub = CFG.wantedSubcategory;
-  if (catMain && catMain.value) {
-    updateSubcat();
-    if (wantedSub) {
-      const subSel = document.getElementById('cat-sub');
-      const match = Array.from(subSel.options).find(o => o.value === wantedSub);
-      if (match) subSel.value = wantedSub;
-    }
-  } else {
-    const sub = document.getElementById('cat-sub');
-    if (sub) sub.disabled = true;
-  }
 
   const pricingSelect = document.querySelector('select[name="pricing_model"]');
   if (pricingSelect) toggleCreditCost(pricingSelect);

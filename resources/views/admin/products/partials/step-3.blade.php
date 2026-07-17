@@ -4,6 +4,17 @@
 
 @php
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
+
+  // آیکون «راهنمایی آیتم» — فقط برای فیلدهای واقعاً وصل‌شده به Backend (متن کامل از config/product_field_help.php خوانده می‌شود)
+  // نکته مهم: عمداً <span role="button"> است نه <button> واقعی — چون این آیکون گاهی داخل عناصر <label>
+  // (از جمله لیبل خودِ سوییچ روشن/خاموش) قرار می‌گیرد؛ <button> چون خودش هم «Labelable» است ممکن بود مرورگر
+  // آن را به‌جای چک‌باکس واقعی «کنترل صاحب لیبل» در نظر بگیرد و با کلیک روی خودِ سوییچ (نه آیکون)، به‌جای
+  // تغییر وضعیت چک‌باکس، پنجره راهنما باز شود. با <span> این تداخل کاملاً از بین می‌رود.
+  $__help = function (string $key, string $title) {
+      $text = config('product_field_help.' . $key, '');
+      if ($text === '') return '';
+      return '<span class="field-help-btn inline-flex items-center justify-center shrink-0 cursor-pointer text-[var(--text3)] hover:text-[var(--accent)] transition-colors" role="button" tabindex="0" data-help-title="' . e($title) . '" data-help-text="' . e($text) . '" aria-label="راهنمایی آیتم"><i class="fa-solid fa-circle-question text-[10px]"></i></span>';
+  };
 @endphp
 
 {{-- ═══════════════════ Card — متغیرهای پرامپت (NEW / فقط UI — بند ۱۴) ═══════════════════ --}}
@@ -93,7 +104,7 @@ function addPromptVarRow() {
 {{-- ═══════════════════ Card ۲ — فیلدهای ورودی کاربر ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-table-list text-[var(--accent)]"></i> فیلدهای ورودی کاربر <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:240px;">«نوع فیلد» تعیین می‌کند کاربر چه چیزی وارد کند: متن، عدد، آپلود عکس/فایل، انتخاب از لیست، رادیو یا چک‌باکس.</span></span></div>
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-table-list text-[var(--accent)]"></i> فیلدهای ورودی کاربر {!! $__help('input_schema', 'فیلدهای ورودی کاربر') !!}</div>
     <div class="text-[10.5px] text-[var(--text3)] mt-1">این فیلدها هنگام استفاده از محصول از کاربر گرفته می‌شوند</div>
   </div>
   
@@ -111,7 +122,7 @@ function addPromptVarRow() {
           </div>
           <input type="text" name="input_schema[{{ $index }}][label_fa]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] schema-label" placeholder="برچسب فارسی" value="{{ $field['label_fa'] ?? '' }}">
           <select name="input_schema[{{ $index }}][type]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] schema-type">
-            @foreach (['text','textarea','number','image_upload','file_upload','select','radio','checkbox'] as $t)
+            @foreach (['text','textarea','number','image_upload','file_upload','select','radio','checkbox','switch','color'] as $t)
               <option value="{{ $t }}" {{ ($field['type'] ?? '') === $t ? 'selected' : '' }}>{{ $t }}</option>
             @endforeach
           </select>
@@ -132,6 +143,7 @@ function addPromptVarRow() {
             <input type="text" name="input_schema[{{ $index }}][max]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] w-1/3 schema-max" placeholder="حداکثر" value="{{ $field['max'] ?? '' }}">
             <input type="text" name="input_schema[{{ $index }}][regex]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] w-1/3 ltr text-left schema-regex" placeholder="Regex" value="{{ $field['regex'] ?? '' }}">
           </div>
+          <input type="text" name="input_schema[{{ $index }}][options]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] md:col-span-3 schema-options" placeholder="گزینه‌ها برای select/radio/checkbox — با کاما جدا کنید (مثلاً: مشکی,سفید,قرمز)" value="{{ $field['options'] ?? '' }}">
         </div>
       </div>
     @endforeach
@@ -161,6 +173,7 @@ function updateSchemaInputNames() {
     row.querySelector('.schema-min')?.setAttribute('name', `input_schema[${index}][min]`);
     row.querySelector('.schema-max')?.setAttribute('name', `input_schema[${index}][max]`);
     row.querySelector('.schema-regex')?.setAttribute('name', `input_schema[${index}][regex]`);
+    row.querySelector('.schema-options')?.setAttribute('name', `input_schema[${index}][options]`);
   });
 }
 
@@ -180,6 +193,8 @@ function refreshFormPreview() {
     const label = row.querySelector('.schema-label').value.trim() || 'فیلد بدون نام';
     const type = row.querySelector('.schema-type').value;
     const req = row.querySelector('.schema-required').value === '1';
+    const optionsRaw = row.querySelector('.schema-options')?.value.trim() || '';
+    const opts = optionsRaw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     
     const fDiv = document.createElement('div');
     fDiv.className = 'mb-3 flex flex-col gap-1.5 last:mb-0';
@@ -188,11 +203,17 @@ function refreshFormPreview() {
     if(type === 'textarea') {
       inputHtml = `<textarea class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-xs w-full min-h-[60px]" disabled placeholder="ورودی کاربر..."></textarea>`;
     } else if(type === 'select') {
-      inputHtml = `<select class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-xs w-full" disabled><option>گزینه‌های انتخابی...</option></select>`;
+      const optHtml = opts.length ? opts.map(function (o) { return `<option>${o}</option>`; }).join('') : '<option>گزینه‌های انتخابی...</option>';
+      inputHtml = `<select class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-xs w-full" disabled>${optHtml}</select>`;
     } else if(type === 'image_upload' || type === 'file_upload') {
       inputHtml = `<div class="border border-dashed border-[var(--b2)] rounded-lg p-3 text-center text-[11px] text-[var(--text3)] bg-[var(--bg)]"><i class="fa-solid fa-cloud-arrow-up ml-1"></i> آپلود فایل توسط کاربر</div>`;
     } else if(type === 'checkbox' || type === 'radio') {
-      inputHtml = `<div class="flex items-center gap-2 py-1"><input type="${type}" disabled class="accent-[var(--accent)]"><span class="text-xs text-[var(--text2)]">گزینه نمونه</span></div>`;
+      const list = opts.length ? opts : ['گزینه نمونه'];
+      inputHtml = '<div class="flex flex-wrap gap-3 py-1">' + list.map(function (o) { return `<label class="flex items-center gap-1.5"><input type="${type}" disabled class="accent-[var(--accent)]"><span class="text-xs text-[var(--text2)]">${o}</span></label>`; }).join('') + '</div>';
+    } else if(type === 'switch') {
+      inputHtml = `<label class="flex items-center gap-2 py-1"><input type="checkbox" disabled class="accent-[var(--accent)] w-9 h-5"><span class="text-xs text-[var(--text2)]">روشن/خاموش</span></label>`;
+    } else if(type === 'color') {
+      inputHtml = `<input type="color" class="w-12 h-8 rounded-lg border border-[var(--b1)] bg-[var(--bg)]" disabled value="#16594f">`;
     } else {
       inputHtml = `<input type="${type}" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-xs w-full" disabled placeholder="ورودی کاربر...">`;
     }
@@ -269,6 +290,8 @@ function addInputField() {
         <option value="select">select</option>
         <option value="radio">radio</option>
         <option value="checkbox">checkbox</option>
+        <option value="switch">switch</option>
+        <option value="color">color</option>
       </select>
       <select name="input_schema[${index}][required]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] schema-required">
         <option value="1">اجباری</option>
@@ -287,13 +310,14 @@ function addInputField() {
         <input type="text" name="input_schema[${index}][max]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] w-1/3 schema-max" placeholder="حداکثر">
         <input type="text" name="input_schema[${index}][regex]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] w-1/3 ltr text-left schema-regex" placeholder="Regex">
       </div>
+      <input type="text" name="input_schema[${index}][options]" class="bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] md:col-span-3 schema-options" placeholder="گزینه‌ها برای select/radio/checkbox — با کاما جدا کنید (مثلاً: مشکی,سفید,قرمز)">
     </div>
   `;
   
   list.appendChild(div);
   wireInputFieldDrag(div);
   
-  div.querySelectorAll('.schema-id, .schema-label, .schema-type, .schema-required').forEach(el => {
+  div.querySelectorAll('.schema-id, .schema-label, .schema-type, .schema-required, .schema-options').forEach(el => {
     el.addEventListener('input', refreshFormPreview);
     el.addEventListener('change', refreshFormPreview);
   });
@@ -306,7 +330,7 @@ function addInputField() {
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('#input-fields-list .input-schema-row').forEach(row => {
     wireInputFieldDrag(row);
-    row.querySelectorAll('.schema-id, .schema-label, .schema-required, .schema-type').forEach(el => {
+    row.querySelectorAll('.schema-id, .schema-label, .schema-required, .schema-type, .schema-options').forEach(el => {
       el.addEventListener('input', refreshFormPreview);
       el.addEventListener('change', refreshFormPreview);
     });

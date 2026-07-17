@@ -167,7 +167,7 @@
 
     <div class="home-cards-scroll">
       @foreach ($trending as $product)
-        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
           <div class="home-card-overlay"></div>
           <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
           @if ($product->is_featured)
@@ -196,7 +196,7 @@
 
     <div class="home-cards-scroll">
       @foreach ($business as $product)
-        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
           <div class="home-card-overlay"></div>
           <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
           @if ($product->is_featured)
@@ -225,7 +225,7 @@
 
     <div class="home-cards-scroll">
       @foreach ($portrait as $product)
-        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
           <div class="home-card-overlay"></div>
           <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
           @if ($product->is_featured)
@@ -254,7 +254,7 @@
 
     <div class="home-cards-scroll">
       @foreach ($fashion as $product)
-        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
           <div class="home-card-overlay"></div>
           <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
           @if ($product->is_featured)
@@ -283,7 +283,7 @@
 
     <div class="home-cards-scroll">
       @foreach ($videos as $product)
-        <a class="home-card" href="{{ route('app.product', $product->slug) }}" style="background-image: url('{{ $product->thumbnail ? asset('storage/' . $product->thumbnail) : asset('assets/img/placeholder.webp') }}');">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
           <div class="home-card-overlay"></div>
           <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
           @if ($product->is_featured)

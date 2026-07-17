@@ -1,8 +1,27 @@
+  @php
+    /* شماره نسخه‌ی داشبورد — از فایل VERSION در ریشه‌ی پروژه (ردیف «ورژن داشبورد») خونده می‌شه.
+       طبق قانون پروژه: هر تغییری روی داشبورد اعمال شد، این عدد یا خودکار با دستور
+       «php artisan admin:bump-version» یا دستی با ویرایش همون ردیف توی VERSION عوض
+       می‌شه و بلافاصله همین‌جا هم اعمال می‌شه (سند: CLAUDE.md). */
+    $adminDashboardVersion = null;
+    $versionFilePath = base_path('VERSION');
+    if (is_file($versionFilePath)) {
+        $versionFileContent = file_get_contents($versionFilePath);
+        if (preg_match('/ورژن داشبورد\s*:\s*(\d+)/u', $versionFileContent, $versionMatch)) {
+            $adminDashboardVersion = $versionMatch[1];
+        }
+    }
+  @endphp
+
   <header class="topbar flex items-center px-6 gap-3 sticky top-0 z-50 flex-shrink-0 max-[768px]:px-4 max-[768px]:gap-2 max-[480px]:px-3">
 
     <div class="tb-menu-btn flex" onclick="toggleSidebar()" title="باز/بسته کردن منو">
       <i class="fa-solid fa-bars-staggered"></i>
     </div>
+
+    @if($adminDashboardVersion)
+      <span class="tb-version" title="نسخه پنل مدیریت">V.{{ $adminDashboardVersion }}</span>
+    @endif
 
     <div class="tb-breadcrumb flex-1 max-[480px]:overflow-hidden">
       <span class="max-[480px]:hidden">پنل مدیریت</span>

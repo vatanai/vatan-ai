@@ -6,6 +6,17 @@
 @php
   // بادج کوچک کنار فیلدهای جدید تا توسعه‌دهنده Backend دقیقاً بفهمد این مورد هنوز به دیتابیس/API وصل نیست
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
+
+  // آیکون «راهنمایی آیتم» — فقط برای فیلدهای واقعاً وصل‌شده به Backend (متن کامل از config/product_field_help.php خوانده می‌شود)
+  // نکته مهم: عمداً <span role="button"> است نه <button> واقعی — چون این آیکون گاهی داخل عناصر <label>
+  // (از جمله لیبل خودِ سوییچ روشن/خاموش) قرار می‌گیرد؛ <button> چون خودش هم «Labelable» است ممکن بود مرورگر
+  // آن را به‌جای چک‌باکس واقعی «کنترل صاحب لیبل» در نظر بگیرد و با کلیک روی خودِ سوییچ (نه آیکون)، به‌جای
+  // تغییر وضعیت چک‌باکس، پنجره راهنما باز شود. با <span> این تداخل کاملاً از بین می‌رود.
+  $__help = function (string $key, string $title) {
+      $text = config('product_field_help.' . $key, '');
+      if ($text === '') return '';
+      return '<span class="field-help-btn inline-flex items-center justify-center shrink-0 cursor-pointer text-[var(--text3)] hover:text-[var(--accent)] transition-colors" role="button" tabindex="0" data-help-title="' . e($title) . '" data-help-text="' . e($text) . '" aria-label="راهنمایی آیتم"><i class="fa-solid fa-circle-question text-[10px]"></i></span>';
+  };
 @endphp
 
 {{-- ═══════════════════ Card ۱ — اطلاعات اصلی ═══════════════════ --}}
@@ -19,12 +30,12 @@
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">نام فارسی <span class="text-[var(--red)] mr-0.5">*</span></label>
       <input type="text" name="name_fa" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" value="{{ old('name_fa', $duplicateFrom ? $duplicateFrom->name_fa.' (کپی)' : '') }}" placeholder="مثلاً: عکس حرفه‌ای لینکدین">
-      <div class="text-[10px] text-[var(--text3)]">نامی که به کاربر فارسی‌زبان نمایش داده می‌شود</div>
+      <div class="text-[10px] text-[var(--text3)] flex items-center gap-1">نامی که به کاربر فارسی‌زبان نمایش داده می‌شود {!! $__help('name_fa', 'نام فارسی') !!}</div>
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">نام انگلیسی <span class="text-[var(--red)] mr-0.5">*</span></label>
       <input type="text" name="name_en" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('name_en', $duplicateFrom ? $duplicateFrom->name_en.'-copy' : '') }}" placeholder="LinkedIn Professional Headshot" oninput="if(typeof autoSlug === 'function') autoSlug(this)">
-      <div class="text-[10px] text-[var(--text3)]">همچنین برای ساخت خودکار Slug استفاده می‌شود</div>
+      <div class="text-[10px] text-[var(--text3)] flex items-center gap-1">همچنین برای ساخت خودکار Slug استفاده می‌شود {!! $__help('name_en', 'نام انگلیسی') !!}</div>
     </div>
   </div>
 
@@ -32,21 +43,21 @@
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">آدرس URL (Slug) <span class="text-[var(--red)] mr-0.5">*</span></label>
       <input type="text" name="slug" id="slug-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('slug', $duplicateFrom ? $duplicateFrom->slug.'-copy' : '') }}" placeholder="linkedin-professional-headshot" oninput="if(typeof lockSlugManual === 'function') lockSlugManual()">
-      <div class="text-[10px] text-[var(--text3)]">به‌صورت خودکار از نام انگلیسی ساخته می‌شود؛ اگر دستی ویرایش کنید دیگر خودکار به‌روزرسانی نمی‌شود @if($duplicateFrom)— این آدرس باید یکتا باشد، در صورت تکراری بودن هنگام ثبت خطا نمایش داده می‌شود@endif.</div>
+      <div class="text-[10px] text-[var(--text3)] flex items-center gap-1"><span>به‌صورت خودکار از نام انگلیسی ساخته می‌شود؛ اگر دستی ویرایش کنید دیگر خودکار به‌روزرسانی نمی‌شود @if($duplicateFrom)— این آدرس باید یکتا باشد، در صورت تکراری بودن هنگام ثبت خطا نمایش داده می‌شود@endif.</span> {!! $__help('slug', 'آدرس URL (Slug)') !!}</div>
     </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
-        <label class="text-xs font-semibold text-[var(--text2)]">توضیح فارسی</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">توضیح فارسی {!! $__help('description_fa', 'توضیح فارسی') !!}</label>
         <span class="text-[10px] text-[var(--text3)]" id="desc-fa-count">{{ mb_strlen(old('description_fa', optional($duplicateFrom)->description_fa)) }} کاراکتر</span>
       </div>
       <textarea name="description_fa" rows="4" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] resize-y min-h-[100px] leading-relaxed" placeholder="توضیح کوتاهی از محصول برای کاربر..." oninput="document.getElementById('desc-fa-count').textContent = this.value.length + ' کاراکتر'">{{ old('description_fa', optional($duplicateFrom)->description_fa) }}</textarea>
     </div>
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
-        <label class="text-xs font-semibold text-[var(--text2)]">توضیح انگلیسی</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">توضیح انگلیسی {!! $__help('description_en', 'توضیح انگلیسی') !!}</label>
         <span class="text-[10px] text-[var(--text3)]" id="desc-en-count">{{ mb_strlen(old('description_en', optional($duplicateFrom)->description_en)) }} کاراکتر</span>
       </div>
       <textarea name="description_en" rows="4" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] resize-y min-h-[100px] leading-relaxed ltr text-left" placeholder="Short product description for users..." oninput="document.getElementById('desc-en-count').textContent = this.value.length + ' کاراکتر'">{{ old('description_en', optional($duplicateFrom)->description_en) }}</textarea>
@@ -55,36 +66,48 @@
 
   <div class="grid grid-cols-1 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
-    {{-- سلکت دسته‌بندی درختی: name = category_id (خوانده‌شده توسط کنترلر). ساختار تودرتو با فرورفتگی. --}}
-    @php
-      $__selectedCat = old('category_id', optional($duplicateFrom)->category_id);
-      $__renderCatOptions = function ($categories, $depth = 0) use (&$__renderCatOptions, $__selectedCat) {
-          $html = '';
-          foreach ($categories as $cat) {
-              $prefix   = $depth > 0 ? str_repeat('—', $depth) . ' ' : '';
-              $selected = (string) $__selectedCat === (string) $cat->id ? 'selected' : '';
-              $html .= '<option value="' . $cat->id . '" ' . $selected . '>'
-                     . $prefix . e($cat->name_fa) . '</option>';
-              if ($cat->childrenRecursive->isNotEmpty()) {
-                  $html .= $__renderCatOptions($cat->childrenRecursive, $depth + 1);
-              }
-          }
-          return $html;
-      };
-      $__rootCategories = \App\Models\Category::with('childrenRecursive')
-          ->whereNull('parent_id')->orderBy('sort_order')->get();
-    @endphp
-<select name="category_id" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" id="cat-main" required>
-  <option value="">انتخاب کنید...</option>
-  {!! $__renderCatOptions($__rootCategories) !!}
-</select>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">دسته‌بندی محصول <span class="text-[var(--red)] mr-0.5">*</span> {!! $__help('category_ids', 'دسته‌بندی محصول') !!}</label>
+      {{-- دسته‌بندی چندگانه به‌صورت تگ: هر دسته‌ی انتخاب‌شده یک چیپ در cat-tags-wrap است و در لحظه‌ی ثبت فرم
+           (submitForm در products-create.js) به‌صورت category_ids[] به کنترلر ارسال می‌شود؛ کنترلر از قبل
+           آماده‌ی خواندن این آرایه و sync با رابطه‌ی belongsToMany محصول↔دسته‌بندی است. --}}
+      @php
+        $__renderCatFlat = function ($categories, $depth = 0) use (&$__renderCatFlat) {
+            $flat = [];
+            foreach ($categories as $cat) {
+                $flat[] = ['id' => $cat->id, 'name' => $cat->name_fa, 'depth' => $depth];
+                if ($cat->childrenRecursive->isNotEmpty()) {
+                    $flat = array_merge($flat, $__renderCatFlat($cat->childrenRecursive, $depth + 1));
+                }
+            }
+            return $flat;
+        };
+        $__rootCategories  = \App\Models\Category::with('childrenRecursive')->whereNull('parent_id')->orderBy('sort_order')->get();
+        $__categoriesFlat  = $__renderCatFlat($__rootCategories);
+
+        $__selectedCategoryIds = collect(old('category_ids'))->filter()->map(fn ($v) => (int) $v)->values();
+        if ($__selectedCategoryIds->isEmpty() && $duplicateFrom) {
+            $__selectedCategoryIds = $duplicateFrom->categories->pluck('id');
+        }
+        if ($__selectedCategoryIds->isEmpty()) {
+            $__legacySingleCategoryId = old('category_id', optional($duplicateFrom)->category_id);
+            if ($__legacySingleCategoryId) $__selectedCategoryIds = collect([(int) $__legacySingleCategoryId]);
+        }
+        $__selectedCategoriesInit = collect($__categoriesFlat)->whereIn('id', $__selectedCategoryIds->all())->values();
+      @endphp
+      <div class="relative" id="cat-multiselect">
+        <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-1.5 flex flex-wrap gap-1.5 items-center min-h-[42px] cursor-text focus-within:border-[var(--accent)]" id="cat-tags-wrap" onclick="document.getElementById('cat-search-input').focus()">
+          <input type="text" id="cat-search-input" class="bg-transparent border-none outline-none text-xs text-[var(--text)] flex-1 min-w-[120px] text-right" placeholder="جستجو یا انتخاب دسته‌بندی..." autocomplete="off" oninput="renderCatDropdown(this.value)" onfocus="renderCatDropdown(this.value)">
+        </div>
+        <div class="hidden absolute z-30 mt-1 w-full max-h-56 overflow-y-auto bg-[var(--s2)] border border-[var(--b1)] rounded-lg shadow-xl py-1" id="cat-dropdown"></div>
+      </div>
+      <div class="text-[10px] text-[var(--text3)]">می‌توانید بیش از یک دسته‌بندی برای این محصول انتخاب کنید — از لیست انتخاب کنید یا جستجو کنید</div>
+      <script>window.CATEGORIES_FLAT = @json($__categoriesFlat); window.CATEGORIES_SELECTED_INIT = @json($__selectedCategoriesInit);</script>
     </div>
   </div>
 
   <div class="grid grid-cols-1 gap-3.5 mb-5">
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">تگ‌های جستجو <span class="text-[10px] font-normal text-[var(--text3)] mr-1">Enter بزنید</span></label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">تگ‌های جستجو <span class="text-[10px] font-normal text-[var(--text3)] mr-1">Enter بزنید</span> {!! $__help('tags', 'تگ‌های جستجو') !!}</label>
       <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-1.5 flex flex-wrap gap-1.5 items-center min-h-[42px] focus-within:border-[var(--accent)]" id="tags-wrap" onclick="document.getElementById('tags-raw').focus()">
         @foreach ((old('tags', optional($duplicateFrom)->tags ?? [])) as $tag)
           <span class="inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]">{{ $tag }}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()">×</button></span>
@@ -110,10 +133,10 @@
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)]">کد داخلی محصول</label>
         <input type="text" name="new_internal_code" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left w-full" placeholder="فقط برای مدیر — مثلاً PRD-0231" value="{{ old('new_internal_code', optional($duplicateFrom)->new_internal_code) }}">
-        <div class="text-[10px] text-[var(--text3)]">فقط مدیر این کد را می‌بیند</div>
+        <div class="text-[10px] text-[var(--text3)] flex items-center gap-1">فقط مدیر این کد را می‌بیند {!! $__help('new_internal_code', 'کد داخلی محصول') !!}</div>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)]">یادداشت مدیر</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">یادداشت مدیر {!! $__help('new_admin_note', 'یادداشت مدیر') !!}</label>
         <textarea name="new_admin_note" rows="2" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full resize-y" placeholder="یادداشت داخلی — به کاربران نمایش داده نمی‌شود">{{ old('new_admin_note', optional($duplicateFrom)->new_admin_note) }}</textarea>
       </div>
     </div>
@@ -128,9 +151,9 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]" title="نمایش در بخش ویژه صفحه اول سایت">
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
       <div class="min-w-0">
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">محصول ویژه <i class="fa-solid fa-circle-info text-[9px] text-[var(--text3)]"></i></div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">محصول ویژه {!! $__help('is_featured', 'محصول ویژه') !!}</div>
         <div class="text-[11px] text-[var(--text3)] mt-0.5">نمایش در بخش ویژه سایت</div>
       </div>
       <span class="relative w-9 h-5 shrink-0 block">
@@ -139,9 +162,9 @@
       </span>
     </label>
 
-    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]" title="نمایش نشان «جدید» روی کارت محصول">
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
       <div class="min-w-0">
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">برچسب «جدید» <i class="fa-solid fa-circle-info text-[9px] text-[var(--text3)]"></i></div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">برچسب «جدید» {!! $__help('is_new', 'برچسب «جدید»') !!}</div>
         <div class="text-[11px] text-[var(--text3)] mt-0.5">نمایش نشان جدید روی کارت</div>
       </div>
       <span class="relative w-9 h-5 shrink-0 block">
@@ -150,9 +173,9 @@
       </span>
     </label>
 
-    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]" title="نمایش در بخش پرطرفدارها/ترند">
+    <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
       <div class="min-w-0">
-        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">ترند <i class="fa-solid fa-circle-info text-[9px] text-[var(--text3)]"></i></div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">ترند {!! $__help('is_trending', 'ترند') !!}</div>
         <div class="text-[11px] text-[var(--text3)] mt-0.5">نمایش در بخش پرطرفدارها</div>
       </div>
       <span class="relative w-9 h-5 shrink-0 block">
@@ -207,30 +230,30 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-    {{-- Thumbnail --}}
+    {{-- عکس‌های قبل — تصاویر خامی که مدل هوش مصنوعی با آن‌ها ساخته شده --}}
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">تصویر کارت (Thumbnail) @if(!$duplicateFrom)<span class="text-[var(--red)] mr-0.5">*</span>@endif</label>
-      @if($duplicateFrom?->thumbnail)
-        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
-          <img src="{{ asset('storage/'.$duplicateFrom->thumbnail) }}" class="w-12 h-12 rounded-lg object-cover border border-[var(--b2)] shrink-0">
-          <div class="text-[10.5px] text-[var(--text3)] leading-relaxed">تصویر محصول مبدا — اگر تصویر جدیدی انتخاب نکنید، همین تصویر برای محصول کپی‌شده استفاده می‌شود.</div>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">عکس‌های قبل {!! $__help('before_images', 'عکس‌های قبل') !!}</label>
+      @if($duplicateFrom && !empty($duplicateFrom->before_images))
+        <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
+          @foreach($duplicateFrom->before_images as $__bimg)
+            <img src="{{ asset('storage/'.$__bimg) }}" class="w-10 h-10 rounded object-cover border border-[var(--b2)]">
+          @endforeach
+          <span class="text-[10.5px] text-[var(--text3)]">عکس‌های قبل محصول مبدا — با آپلود فایل جدید جایگزین می‌شوند.</span>
         </div>
       @endif
-      <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-6 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors relative overflow-hidden w-full" id="thumb-zone" onclick="document.getElementById('thumbnail-file').click()">
-        <img id="thumb-preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
-        <div id="thumb-empty-state">
-          <i class="fa-solid fa-image text-2xl text-[var(--text3)] mb-2 block"></i>
-          <div class="text-xs font-bold text-[var(--text2)]" id="thumb-title">{{ $duplicateFrom?->thumbnail ? 'انتخاب تصویر جدید (اختیاری)' : 'انتخاب تصویر Thumbnail' }}</div>
-          <div class="text-[10px] text-[var(--text3)] mt-1">بکشید و رها کنید یا کلیک کنید</div>
-        </div>
-        <button type="button" class="hidden absolute top-1.5 left-1.5 w-6 h-6 rounded-md bg-[var(--bg)]/80 text-[var(--red)] text-[11px] items-center justify-center z-10" id="thumb-remove-btn" aria-label="حذف تصویر Thumbnail" onclick="event.stopPropagation(); removeUpload('thumbnail-file','thumb-preview-img','thumb-empty-state','thumb-remove-btn','thumb-title','انتخاب تصویر Thumbnail')"><i class="fa-solid fa-xmark"></i></button>
-        <input type="file" id="thumbnail-file" name="thumbnail" accept="image/*" class="hidden" onchange="updateFileLabel(this,'thumb-title'); previewUpload(this,'thumb-preview-img','thumb-empty-state','thumb-remove-btn')">
+      <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-6 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors relative overflow-hidden w-full" id="before-zone" onclick="document.getElementById('before-file').click()">
+        <i class="fa-solid fa-clock-rotate-left text-2xl text-[var(--text3)] mb-2 block"></i>
+        <div class="text-xs font-bold text-[var(--text2)]" id="before-title">انتخاب عکس‌های خام (قبل از ساخت مدل)</div>
+        <div class="text-[10px] text-[var(--text3)] mt-1">بکشید و رها کنید یا کلیک کنید — چند فایل هم‌زمان مجاز است</div>
+        <div class="flex flex-wrap gap-1.5 justify-center mt-2.5" id="before-preview-strip"></div>
+        <input type="file" id="before-file" name="before_images[]" multiple accept="image/*" class="hidden" onchange="updateFileLabel(this,'before-title',true); previewMultiUpload(this,'before-preview-strip')">
       </div>
+      <div class="text-[10px] text-[var(--text3)]">همان عکس‌های خامی که این مدل هوش مصنوعی با آن‌ها ساخته شده؛ در صفحه محصول برای کاربر با عنوان «عکس‌های قبل» نمایش داده می‌شوند.</div>
     </div>
 
     {{-- Cover --}}
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">تصویر کاور (Cover)</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">تصویر کاور (Cover) {!! $__help('cover', 'تصویر کاور (Cover)') !!}</label>
       @if($duplicateFrom?->cover)
         <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
           <img src="{{ asset('storage/'.$duplicateFrom->cover) }}" class="w-12 h-12 rounded-lg object-cover border border-[var(--b2)] shrink-0">
@@ -252,7 +275,7 @@
 
   {{-- Gallery — نمونه خروجی‌ها --}}
   <div class="flex flex-col gap-1.5 mb-3.5">
-    <label class="text-xs font-semibold text-[var(--text2)]">نمونه خروجی‌ها (چندگانه)</label>
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">نمونه خروجی‌ها (چندگانه) {!! $__help('sample_outputs', 'نمونه خروجی‌ها') !!}</label>
     @if($duplicateFrom && !empty($duplicateFrom->sample_outputs))
       <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
         @foreach($duplicateFrom->sample_outputs as $s)
@@ -273,7 +296,7 @@
 
   {{-- نوع رسانه — Radio Card --}}
   <div class="flex flex-col gap-1.5 mb-3.5">
-    <label class="text-xs font-semibold text-[var(--text2)]">نوع رسانه</label>
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">نوع رسانه {!! $__help('media_type', 'نوع رسانه') !!}</label>
     @php $curMediaType = old('media_type', optional($duplicateFrom)->media_type ?? 'photo'); @endphp
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
       <label class="media-type-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curMediaType == 'photo' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
@@ -293,7 +316,7 @@
 
   <div class="grid grid-cols-1 gap-3.5">
     <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">لینک ویدیوی پیش‌نمایش</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">لینک ویدیوی پیش‌نمایش {!! $__help('preview_video_url', 'لینک ویدیوی پیش‌نمایش') !!}</label>
       <input type="text" name="preview_video_url" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left" placeholder="https://..." value="{{ old('preview_video_url', optional($duplicateFrom)->preview_video_url) }}">
     </div>
   </div>
@@ -301,7 +324,7 @@
   {{-- ── آیکون محصول (فعال و ذخیره‌شونده) ── --}}
   <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-4">
     <div class="flex flex-col gap-1.5 md:max-w-sm">
-      <label class="text-xs font-semibold text-[var(--text2)]">آیکون محصول (Product Icon)</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">آیکون محصول (Product Icon) {!! $__help('new_product_icon', 'آیکون محصول (Product Icon)') !!}</label>
       <div class="border-2 border-dashed border-[var(--b2)] rounded-xl p-4 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors w-full" onclick="document.getElementById('new-product-icon-file').click()">
         <i class="fa-solid fa-icons text-lg text-[var(--text3)] mb-1 block"></i>
         <div class="text-[11px] text-[var(--text2)]" id="new-icon-title">آپلود SVG یا PNG</div>
@@ -343,7 +366,7 @@
   </label>
   <div class="future-section hidden mt-4">
     <div class="flex flex-col gap-1.5 md:max-w-xs">
-      <label class="text-xs font-semibold text-[var(--text2)]">ترتیب نمایش</label>
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">ترتیب نمایش {!! $__help('new_display_order', 'ترتیب نمایش') !!}</label>
       <input type="number" name="new_display_order" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: 1" value="{{ old('new_display_order', optional($duplicateFrom)->new_display_order) }}">
       <div class="text-[10px] text-[var(--text3)]">ترتیب دلخواه نمایش محصول در لیست‌ها (برای فاز مرتب‌سازی دستی).</div>
     </div>
@@ -454,7 +477,7 @@ function wireUploadZone(zoneId, inputId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  ['thumb-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
+  ['before-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
 });
 
 /* ── Radio Card نوع رسانه: هایلایت کردن کارت انتخاب‌شده ── */
@@ -478,4 +501,84 @@ function setGalleryPreviewMode(mode) {
     btn.classList.toggle('text-[var(--text2)]', !active);
   });
 }
+
+/* ── دسته‌بندی محصول: انتخاب چندگانه به‌صورت تگ (جایگزین سلکت تک‌انتخابی قبلی) ──
+   لیست کامل دسته‌بندی‌ها (مسطح‌شده با عمق برای تورفتگی) و دسته‌بندی‌های از‌قبل‌انتخاب‌شده
+   (old('category_ids')/تکثیر محصول/مقدار قدیمی تک‌فیلدی) از طریق window.CATEGORIES_FLAT و
+   window.CATEGORIES_SELECTED_INIT در همین پارشیال تزریق شده‌اند. در لحظه‌ی ثبت فرم،
+   submitForm() در products-create.js این چیپ‌ها را می‌خواند و به category_ids[] تبدیل می‌کند. */
+let selectedCategories = Array.isArray(window.CATEGORIES_SELECTED_INIT) ? window.CATEGORIES_SELECTED_INIT.slice() : [];
+const ALL_CATEGORIES = Array.isArray(window.CATEGORIES_FLAT) ? window.CATEGORIES_FLAT : [];
+
+function renderCatChips() {
+  const wrap = document.getElementById('cat-tags-wrap');
+  const input = document.getElementById('cat-search-input');
+  if (!wrap || !input) return;
+  wrap.querySelectorAll('[data-cat-id]').forEach(el => el.remove());
+  selectedCategories.forEach(cat => {
+    const chip = document.createElement('span');
+    chip.className = 'inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]';
+    chip.dataset.catId = cat.id;
+    chip.innerHTML = `${cat.name}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" aria-label="حذف دسته‌بندی" onclick="removeCategory(${cat.id})">×</button>`;
+    wrap.insertBefore(chip, input);
+  });
+  if (typeof renderStepper === 'function') renderStepper();
+  if (typeof refreshFinalSummary === 'function') refreshFinalSummary();
+  if (typeof refreshProductPreview === 'function') refreshProductPreview();
+}
+
+function addCategory(id) {
+  id = parseInt(id, 10);
+  if (selectedCategories.some(c => c.id === id)) return;
+  const cat = ALL_CATEGORIES.find(c => c.id === id);
+  if (!cat) return;
+  selectedCategories.push(cat);
+  renderCatChips();
+  const input = document.getElementById('cat-search-input');
+  if (input) { input.value = ''; input.focus(); }
+  renderCatDropdown('');
+}
+
+function removeCategory(id) {
+  id = parseInt(id, 10);
+  selectedCategories = selectedCategories.filter(c => c.id !== id);
+  renderCatChips();
+}
+
+/* لیست دسته‌بندی‌های نمایش‌داده‌شده در نام‌های انتخاب‌شده (برای خلاصه/پیش‌نمایش گام پنجم) */
+function getSelectedCategoryNames() {
+  return selectedCategories.map(c => c.name).join('، ');
+}
+
+function renderCatDropdown(filter) {
+  const dd = document.getElementById('cat-dropdown');
+  if (!dd) return;
+  const f = (filter || '').trim().toLowerCase();
+  const items = ALL_CATEGORIES.filter(c => {
+    if (selectedCategories.some(s => s.id === c.id)) return false;
+    if (!f) return true;
+    return c.name.toLowerCase().indexOf(f) !== -1;
+  });
+  dd.innerHTML = '';
+  if (!items.length) {
+    dd.innerHTML = '<div class="px-3 py-3 text-[11px] text-[var(--text3)] text-center">دسته‌بندی‌ای یافت نشد</div>';
+  } else {
+    items.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'px-3 py-2 text-xs cursor-pointer transition-colors text-[var(--text2)] hover:bg-[var(--accent)]/10 hover:text-[var(--text)]';
+      row.textContent = (c.depth > 0 ? '— '.repeat(c.depth) : '') + c.name;
+      row.onclick = () => addCategory(c.id);
+      dd.appendChild(row);
+    });
+  }
+  dd.classList.remove('hidden');
+}
+
+document.addEventListener('click', function (e) {
+  const box = document.getElementById('cat-multiselect');
+  const dd = document.getElementById('cat-dropdown');
+  if (box && dd && !box.contains(e.target)) dd.classList.add('hidden');
+});
+
+document.addEventListener('DOMContentLoaded', renderCatChips);
 </script>

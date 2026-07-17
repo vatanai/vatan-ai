@@ -19,7 +19,7 @@
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
           <a href="/admin/products" class="text-[var(--text2)] hover:text-[var(--text)] transition-colors">محصولات</a>
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-          <span class="text-[var(--text)] font-semibold">{{ $duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید' }}</span>
+          <span class="text-[var(--text)] font-semibold">{{ $product ? 'ویرایش محصول' : ($duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید') }}</span>
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
           {{-- بند ۳۳: انتخاب نقش نمایشی (Role Preview) — فقط UI، پیش‌نمایش قفل فیلدها --}}
@@ -45,6 +45,20 @@
         <button type="button" class="shrink-0 opacity-80 hover:opacity-100" onclick="hideGlobalError()" aria-label="بستن پیام خطا"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
+      {{-- «راهنمایی آیتم» — پنجره مشترک نمایش توضیح کامل هر فیلد اجباری/اختیاری (کلیک روی آیکون کنار توضیح فیلد) --}}
+      <div id="field-help-overlay" class="hidden fixed inset-0 z-[110] field-help-overlay-bg flex items-center justify-center p-4" onclick="if(event.target === this) closeFieldHelp()">
+        <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-2xl shadow-2xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="field-help-title">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-lg bg-[var(--accent)]/12 text-[var(--accent)] flex items-center justify-center shrink-0"><i class="fa-solid fa-circle-question text-sm"></i></span>
+              <div id="field-help-title" class="text-sm font-bold text-[var(--text)]">راهنمای فیلد</div>
+            </div>
+            <button type="button" class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text3)] hover:text-[var(--text)] hover:bg-[var(--b1)] transition-colors" onclick="closeFieldHelp()" aria-label="بستن راهنما"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div id="field-help-text" class="text-xs text-[var(--text2)] leading-relaxed"></div>
+        </div>
+      </div>
+
       @if ($errors->any())
         <div class="bg-[var(--red)]/10 border border-[var(--red)] rounded-xl p-4 mb-6 text-right" role="alert">
             <div class="text-[var(--red)] font-bold text-sm mb-2.5">
@@ -67,7 +81,12 @@
         </div>
       @endif
 
-      @if($duplicateFrom)
+      @if($product)
+        <div class="bg-[var(--accent)]/8 border border-[var(--accent)]/25 rounded-xl p-3.5 mb-5 flex items-center gap-2.5 text-xs text-[var(--accent-soft)]">
+          <i class="fa-solid fa-pen"></i>
+          در حال ویرایش «{{ $product->name_fa }}» — تمام فیلدها با اطلاعات فعلی همین محصول پر شده‌اند؛ فقط موارد لازم را تغییر دهید و ثبت کنید.
+        </div>
+      @elseif($duplicateFrom)
         <div class="bg-[var(--accent)]/8 border border-[var(--accent)]/25 rounded-xl p-3.5 mb-5 flex items-center gap-2.5 text-xs text-[var(--accent-soft)]">
           <i class="fa-solid fa-copy text-[var(--accent)]"></i>
           در حال تکثیر «{{ $duplicateFrom->name_fa }}» — تمام فیلدها با اطلاعات این محصول پر شده‌اند؛ فقط موارد لازم را تغییر دهید و ثبت کنید.
@@ -75,7 +94,7 @@
       @endif
 
       <div class="mb-6">
-        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید' }}</div>
+        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $product ? 'ویرایش محصول' : ($duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید') }}</div>
         <div class="text-xs text-[var(--text3)]">محصول را در ۵ مرحله تنظیم کنید — هویت، رسانه، هوش مصنوعی، ورودی و خروجی</div>
       </div>
 
@@ -190,35 +209,42 @@
         <div id="wizard-progress-track"><div id="wizard-progress-fill"></div></div>
       </div>
 
-      <form id="real-product-form" action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
+      {{-- در حالت ویرایش، فرم باید PUT به‌سمت update() برود نه POST به store() — وگرنه (باگ قبلی)
+           هر «ویرایش» عملاً یک محصول تکراری جدید می‌ساخت و محصول اصلی هرگز به‌روزرسانی نمی‌شد. --}}
+      <form id="real-product-form"
+            action="{{ $product ? route('admin.products.update', $product->id) : route('admin.products.store') }}"
+            method="POST" enctype="multipart/form-data">
         @csrf
+        @if($product)
+          @method('PUT')
+        @endif
         <input type="hidden" name="status" id="product-status" value="active">
         @if($duplicateFrom)
           <input type="hidden" name="duplicate_from" value="{{ $duplicateFrom->id }}">
         @endif
 
         <div class="block space-y-4" id="panel-1">
-          @include('admin.products.partials.step-1', ['duplicateFrom' => $duplicateFrom])
+          @include('admin.products.partials.step-1', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
         {{-- ═══ گام دوم: هوش مصنوعی — پایپ‌لاین و پرامپت ═══ --}}
         <div class="hidden space-y-4" id="panel-2">
-          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom])
+          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
         {{-- ═══ گام سوم: متغیرها و فیلدهای ورودی کاربر ═══ --}}
         <div class="hidden space-y-4" id="panel-3">
-          @include('admin.products.partials.step-3', ['duplicateFrom' => $duplicateFrom])
+          @include('admin.products.partials.step-3', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
         {{-- ═══ گام چهارم: خروجی و قیمت ═══ --}}
         <div class="hidden space-y-4" id="panel-4">
-          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom])
+          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
         {{-- ═══ گام پنجم: بازبینی نهایی ═══ --}}
         <div class="hidden space-y-4" id="panel-5">
-          @include('admin.products.partials.step-5', ['duplicateFrom' => $duplicateFrom])
+          @include('admin.products.partials.step-5', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
       </form>
     </div>

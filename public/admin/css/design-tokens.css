@@ -131,6 +131,16 @@ body.light {
 .tb-breadcrumb .active-crumb { color: var(--text-h); font-weight: 700; }
 .tb-breadcrumb i { font-size: 9px; }
 
+/* نشانگر شماره نسخه پنل مدیریت — عمداً کم‌رنگ و کوچک (نباید توی چشم بزنه) */
+.tb-version {
+  font-size: 10px;
+  color: var(--text-soft);
+  opacity: .55;
+  letter-spacing: .3px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
 .tb-search { position: relative; }
 .tb-search input {
   width: 100%; height: 38px;

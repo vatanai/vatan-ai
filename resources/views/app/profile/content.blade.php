@@ -49,7 +49,7 @@
 {{-- ===== PANEL: ذخیره شده‌ها — محصولات واقعاً سیوشده از جدول saved_products ===== --}}
 <div class="profile-panel panel-saved" data-panel="saved" style="display:none;">
   @forelse ($savedProducts ?? [] as $product)
-    <a href="{{ route('app.product', $product->slug) }}" class="grid-cell" style="display:block;">
+    <a href="{{ route('app.product', $product->route_slug) }}" class="grid-cell" style="display:block;">
       <img src="{{ $product->thumbnail ? asset('storage/'.$product->thumbnail) : ($product->cover ? asset('storage/'.$product->cover) : asset('assets/img/placeholder.webp')) }}" alt="{{ $product->name_fa }}" class="grid-img">
       <div class="saved-badge">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="#ffffff"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z"/></svg>

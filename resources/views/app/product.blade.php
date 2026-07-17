@@ -9,6 +9,12 @@
       : ($product->cover ? asset('storage/'.$product->cover)
       : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')));
   $seoUrl   = url()->current();
+
+  // آیا محصول حداقل یک فیلد آپلود تصویر/فایل داخل تنظیمات داینامیک (input_schema) دارد؟
+  // اگر بله، همان فیلد به‌عنوان تصویر مرجع کافی است و دیگر نیازی به باکس آپلود جداگانه داخل مودال نیست.
+  $__hasSchemaUpload = collect($product->input_schema ?? [])->contains(function ($f) {
+      return in_array($f['type'] ?? '', ['image_upload', 'file_upload'], true);
+  });
 @endphp
 
 @section('page_title', $seoTitle)
@@ -42,314 +48,78 @@
 @endpush
 
 @section('content')
-{{-- ریشه صفحه: دسکتاپ دقیقاً یک صفحه بدون اسکرول (بخش اول + دوم کل عرض را پر می‌کنند)،
-     موبایل ارتفاع آزاد و قابل اسکرول (چون بخش‌ها زیر هم چیده می‌شوند) --}}
-<div class="min-h-screen sm:h-[calc(100vh-64px)] w-full bg-[#0a0a0c] [.light_&]:bg-white text-white [.light_&]:text-black flex flex-col overflow-y-auto sm:overflow-hidden relative" dir="rtl">
+{{-- صفحه محصول — بازطراحی فاز ۱: دو ستون در دسکتاپ (گالری ۶۰٪ / اطلاعات ۴۰٪)، Mobile First،
+     فقط سه بخش: هیرو محصول → توضیحات محصول → محصولات مشابه. صفحه به‌صورت عادی اسکرول می‌شود. --}}
+<div class="w-full bg-[var(--bg-page)] text-[var(--text-primary)]" dir="rtl">
 
-  {{-- بدنه اصلی صفحه: موبایل ستونی (عکس بالا / اطلاعات پایین)، دسکتاپ ردیفی (اطلاعات راست / عکس چپ) --}}
-  <div class="flex-1 flex flex-col sm:flex-row overflow-visible sm:overflow-hidden">
+  {{-- ═══ بخش ۱: هیرو محصول (گالری + اطلاعات + تنظیمات + دکمه ساخت) ═══ --}}
+  {{-- نکته فنی: این بخش عمداً dir="ltr" است تا ترتیب چپ/راست ستون‌ها همیشه صریح و تضمین‌شده باشد
+       (گالری ثابت سمت چپ، اطلاعات ثابت سمت راست) — بدون وابستگی به رفتار مبهم flex-direction در RTL.
+       هر ستون داخلش دوباره dir="rtl" می‌گیرد تا متن/آیکون‌های فارسی داخلش درست بچینند. --}}
+  <section dir="ltr" class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8 pb-8 flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
 
-    {{-- ═══ بخش اول: اطلاعات و توضیحات محصول — دسکتاپ سمت راست، عرض ۴۵۰px ═══ --}}
-    <div class="w-full sm:w-[450px] sm:shrink-0 order-2 sm:order-1 bg-[#16161c] [.light_&]:bg-[#f5f5f5] border-r border-white/[0.04] [.light_&]:border-black/[0.06] flex flex-col sm:h-full sm:overflow-hidden">
-      <div class="flex-1 sm:overflow-y-auto p-5 sm:p-6 pb-8 sm:pb-6 flex flex-col gap-5"
-           style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.06) transparent">
-
-        {{-- ردیف بالا (فقط دسکتاپ): ضربدر بالا سمت راست + نام محصول روبروی آن (سمت چپ بخش) --}}
-        <div class="hidden sm:flex items-start justify-between gap-3">
-          <button onclick="history.length>1?history.back():location.href='/app/home'"
-            class="shrink-0 text-gray-500 hover:text-white [.light_&]:hover:text-black transition-colors">
-            <i class="fa-solid fa-xmark text-sm"></i>
-          </button>
-          <h1 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed max-w-[340px]">
-            {{ $product->name_fa }}
-          </h1>
-        </div>
-
-        {{-- نام محصول در موبایل (ضربدر موبایل روی عکس، بخش دوم، قرار دارد) --}}
-        <h1 class="sm:hidden text-[14px] font-bold text-gray-200 [.light_&]:text-gray-800 uppercase tracking-widest leading-relaxed">
-          {{ $product->name_fa }}
-        </h1>
-
-        {{-- دکمه‌های سیو / اشتراک‌گذاری (انتشار) / نیاز به توکن — دقیقاً روبروی نام محصول --}}
-        <div class="flex items-center gap-2 flex-wrap">
-          <button id="btnBookmark" type="button" data-saved="{{ $isSaved ? '1' : '0' }}"
-            class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 transition-colors {{ $isSaved ? 'text-emerald-400' : 'text-gray-400 hover:text-white [.light_&]:hover:text-black' }}">
-            <i id="iconBkm" class="{{ $isSaved ? 'fa-solid' : 'fa-regular' }} fa-bookmark text-[11px]"></i>
-            <span class="text-[11px] font-bold">ذخیره</span>
-          </button>
-
-          <button id="btnShare" type="button"
-            class="w-8 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center justify-center text-gray-400 hover:text-white [.light_&]:hover:text-black transition-colors">
-            <i class="fa-solid fa-share-nodes text-[11px]"></i>
-          </button>
-
-          @if($product->pricing_model === 'per_credit' && $product->credit_cost > 0)
-            <div class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 text-orange-400">
-              <i class="fa-solid fa-bolt text-[10px]"></i>
-              <span class="text-[11px] font-bold">نیاز به {{ $product->credit_cost }} توکن</span>
-            </div>
-          @elseif($product->pricing_model === 'free')
-            <div class="px-3 h-8 bg-white/[0.03] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/[0.08] rounded-[15.6px] flex items-center gap-1.5 text-emerald-400">
-              <span class="text-[11px] font-bold">رایگان</span>
-            </div>
-          @endif
-        </div>
-
-        {{-- توضیحات محصول --}}
-        @if($product->description_fa)
-        <div class="flex items-start gap-2.5 bg-white/[0.01] [.light_&]:bg-black/[0.02] p-3 rounded-xl border border-white/[0.03] [.light_&]:border-black/[0.06]">
-          <p class="text-[11px] font-medium text-gray-400 [.light_&]:text-gray-600 leading-relaxed m-0">
-            {{ $product->description_fa }}
-          </p>
-        </div>
-        @endif
-
-        {{-- دکمه بساز: آیکون عصای جادویی + متن «بساز»، رنگ سبز اصلی هدر، خمیدگی هم‌اندازه باکس خرید اشتراک --}}
-        <div class="pt-1">
-          <button type="button" onclick="openWorkspaceModal()" class="vatan-gen-btn" aria-label="بساز">
-            <div class="dots_border"></div>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="sparkle">
-              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M14.187 8.096L15 5.25L15.813 8.096C16.0231 8.83114 16.4171 9.50062 16.9577 10.0413C17.4984 10.5819 18.1679 10.9759 18.903 11.186L21.75 12L18.904 12.813C18.1689 13.0231 17.4994 13.4171 16.9587 13.9577C16.4181 14.4984 16.0241 15.1679 15.814 15.903L15 18.75L14.187 15.904C13.9769 15.1689 13.5829 14.4994 13.0423 13.9587C12.5016 13.4181 11.8321 13.0241 11.097 12.814L8.25 12L11.096 11.187C11.8311 10.9769 12.5006 10.5829 13.0413 10.0423C13.5819 9.50162 13.9759 8.83214 14.186 8.097L14.187 8.096Z"></path>
-              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6 14.25L5.741 15.285C5.59267 15.8785 5.28579 16.4206 4.85319 16.8532C4.42059 17.2858 3.87853 17.5927 3.285 17.741L2.25 18L3.285 18.259C3.87853 18.4073 4.42059 18.7142 4.85319 19.1468C5.28579 19.5794 5.59267 20.1215 5.741 20.715L6 21.75L6.259 20.715C6.40725 20.1216 6.71398 19.5796 7.14639 19.147C7.5788 18.7144 8.12065 18.4075 8.714 18.259L9.75 18L8.714 17.741C8.12065 17.5925 7.5788 17.2856 7.14639 16.853C6.71398 16.4204 6.40725 15.8784 6.259 15.285L6 14.25Z"></path>
-              <path class="path" stroke-linejoin="round" stroke-linecap="round" stroke="black" fill="black" d="M6.5 4L6.303 4.5915C6.24777 4.75718 6.15472 4.90774 6.03123 5.03123C5.90774 5.15472 5.75718 5.24777 5.5915 5.303L5 5.5L5.5915 5.697C5.75718 5.75223 5.90774 5.84528 6.03123 5.96877C6.15472 6.09226 6.24777 6.24282 6.303 6.4085L6.5 7L6.697 6.4085C6.75223 6.24282 6.84528 6.09226 6.96877 5.96877C7.09226 5.84528 7.24282 5.75223 7.4085 5.697L8 5.5L7.4085 5.303C7.24282 5.24777 7.09226 5.15472 6.96877 5.03123C6.84528 4.90774 6.75223 4.75718 6.697 4.5915L6.5 4Z"></path>
-            </svg>
-            <span class="text_button">بساز</span>
-          </button>
-        </div>
-
-        <style>
-          /* ── دکمه «بساز» (باکس سمت راست صفحه محصول) ──
-             خمیدگی هم‌اندازه باکس خرید اشتراک هدر (.sub-btn = 15.6px)
-             آیکون + متن به رنگ سبز اصلی هدر (#cffe00)
-             هاور: حاله‌ی ترکیبی از سبز اصلی (به‌جای بنفش پیش‌فرض)، بدون بزرگ‌نمایی زیاد */
-          .vatan-gen-btn {
-            --black-700: hsla(0 0% 12% / 1);
-            --border_radius: 15.6px; /* هم‌اندازه sub-btn هدر */
-            --transtion: 0.3s ease-in-out;
-            --offset: 2px;
-            cursor: pointer;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            width: 100%;
-            box-sizing: border-box;
-            transform-origin: center;
-            padding: 1rem 2rem;
-            background-color: transparent;
-            border: none;
-            border-radius: var(--border_radius);
-            transform: scale(calc(1 + (var(--active, 0) * 0.02))); /* بزرگ‌نمایی خیلی جزئی روی هاور */
-            transition: transform var(--transtion);
-            font-family: 'YekanBakh', sans-serif;
-          }
-          .vatan-gen-btn::before {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            background-color: var(--black-700);
-            border-radius: var(--border_radius);
-            box-shadow: inset 0 0.5px hsl(0, 0%, 100%), inset 0 -1px 2px 0 hsl(0, 0%, 0%),
-              0px 4px 10px -4px hsla(0 0% 0% / calc(1 - var(--active, 0))),
-              0 0 0 calc(var(--active, 0) * 0.3rem) hsl(71 100% 50% / 0.7);
-            transition: all var(--transtion);
-            z-index: 0;
-          }
-          .vatan-gen-btn::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            background-color: hsla(71 90% 50% / 0.7);
-            background-image: radial-gradient(
-                at 51% 89%,
-                hsla(80, 85%, 62%, 1) 0px,
-                transparent 50%
-              ),
-              radial-gradient(at 100% 100%, hsla(71, 100%, 50%, 1) 0px, transparent 50%),
-              radial-gradient(at 22% 91%, hsla(95, 75%, 45%, 1) 0px, transparent 50%);
-            background-position: top;
-            opacity: var(--active, 0);
-            border-radius: var(--border_radius);
-            transition: opacity var(--transtion);
-            z-index: 2;
-          }
-          .vatan-gen-btn:is(:hover, :focus-visible) {
-            --active: 1;
-          }
-          .vatan-gen-btn:active {
-            transform: scale(0.99);
-          }
-          .vatan-gen-btn .dots_border {
-            --size_border: calc(100% + 2px);
-            overflow: hidden;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: var(--size_border);
-            height: var(--size_border);
-            background-color: transparent;
-            border-radius: var(--border_radius);
-            z-index: -10;
-          }
-          .vatan-gen-btn .dots_border::before {
-            content: "";
-            position: absolute;
-            top: 30%;
-            left: 50%;
-            transform-origin: left;
-            transform: rotate(0deg);
-            width: 100%;
-            height: 2rem;
-            background-color: white;
-            mask: linear-gradient(transparent 0%, white 120%);
-            animation: vatanGenBtnRotate 2s linear infinite;
-          }
-          @keyframes vatanGenBtnRotate {
-            to {
-              transform: rotate(360deg);
-            }
-          }
-          .vatan-gen-btn .sparkle {
-            position: relative;
-            z-index: 10;
-            width: 1.5rem;
-            flex-shrink: 0;
-          }
-          .vatan-gen-btn .sparkle .path {
-            fill: currentColor;
-            stroke: currentColor;
-            transform-origin: center;
-            color: #cffe00; /* سبز اصلی هدر */
-          }
-          .vatan-gen-btn:is(:hover, :focus) .sparkle .path {
-            animation: vatanGenBtnPath 1.5s linear 0.5s infinite;
-          }
-          .vatan-gen-btn .sparkle .path:nth-child(1) {
-            --scale_path_1: 1.2;
-          }
-          .vatan-gen-btn .sparkle .path:nth-child(2) {
-            --scale_path_2: 1.2;
-          }
-          .vatan-gen-btn .sparkle .path:nth-child(3) {
-            --scale_path_3: 1.2;
-          }
-          @keyframes vatanGenBtnPath {
-            0%, 34%, 71%, 100% { transform: scale(1); }
-            17% { transform: scale(var(--scale_path_1, 1)); }
-            49% { transform: scale(var(--scale_path_2, 1)); }
-            83% { transform: scale(var(--scale_path_3, 1)); }
-          }
-          .vatan-gen-btn .text_button {
-            position: relative;
-            z-index: 10;
-            background-image: linear-gradient(
-              90deg,
-              hsla(71 100% 50% / 1) 0%,
-              hsla(71 100% 50% / var(--active, 0)) 120%
-            );
-            background-clip: text;
-            -webkit-background-clip: text;
-            font-size: 1rem;
-            font-weight: 800;
-            color: transparent;
-          }
-        </style>
-
-        {{-- نمونه خروجی‌ها: عکس‌ها و ویدیوهای نمونه محصول --}}
-        @if(is_array($product->sample_outputs) && count($product->sample_outputs))
-        <div class="space-y-3 mt-3">
-          <h3 class="text-[10px] font-black text-gray-500 [.light_&]:text-gray-600 uppercase tracking-widest">نمونه خروجی‌ها</h3>
-          <div class="grid grid-cols-3 gap-2">
-            @foreach(array_slice($product->sample_outputs,0,3) as $s)
-            <div class="aspect-square rounded-lg bg-[#1a1a1d] [.light_&]:bg-black/[0.04] border border-white/5 [.light_&]:border-black/10 overflow-hidden">
-              @if(preg_match('/\.(mp4|webm|mov)$/i', $s))
-                <video src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90" muted loop playsinline autoplay></video>
-              @else
-                <img src="{{ asset('storage/'.$s) }}" class="w-full h-full object-cover opacity-90">
-              @endif
-            </div>
-            @endforeach
-          </div>
-        </div>
-        @endif
-
-      </div>
+    <div dir="rtl" class="w-full lg:w-[80%] lg:shrink-0 lg:sticky lg:top-[84px] lg:self-start">
+      @include('app.partials.product-gallery', ['product' => $product])
     </div>
 
-    {{-- ═══ بخش دوم: کاور/عکس یا ویدیو محصول — دسکتاپ سمت چپ، تمام عرض باقی‌مانده، بک‌گراند مشکی کامل در حالت شب ═══ --}}
-    <div class="flex-1 order-1 sm:order-2 h-[45vh] sm:h-full p-4 md:p-8 flex items-center justify-center relative bg-black [.light_&]:bg-white">
-      {{-- ضربدر موبایل: بالا سمت چپ همین بخش (عکس) --}}
-      <button onclick="history.length>1?history.back():location.href='/app/home'"
-        class="sm:hidden absolute top-5 left-5 z-20 w-8 h-8 flex items-center justify-center
-               rounded-full bg-white/[0.04] [.light_&]:bg-black/[0.04] hover:bg-white/10 [.light_&]:hover:bg-black/10 border border-white/[0.06] [.light_&]:border-black/10
-               text-gray-400 hover:text-white [.light_&]:hover:text-black text-xs transition-colors">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-
-      <img id="mainImage"
-        src="{{ $product->cover ? asset('storage/'.$product->cover) : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')) }}"
-        alt="{{ $product->name_fa }}"
-        class="max-w-[85%] max-h-[85%] object-contain rounded-[20px]">
-
-      <div id="successBadge"
-           class="hidden absolute top-6 right-6 bg-emerald-500 text-black font-black text-[10px] px-3 py-1.5 rounded-lg shadow-lg">
-        <i class="fa-solid fa-check"></i> آماده شد
-      </div>
+    <div dir="rtl" class="w-full lg:w-[20%] flex flex-col gap-4">
+      @include('app.partials.product-info', ['product' => $product, 'isSaved' => $isSaved])
+      @include('app.partials.product-options', ['product' => $product])
     </div>
-  </div>
 
-  {{-- مودال تخصصی میز کار هوش مصنوعی --}}
+  </section>
+
+  {{-- ═══ عکس‌های قبل: تصاویر خامی که این محصول با آن‌ها ساخته شده ═══ --}}
+  @include('app.partials.product-before-images', ['product' => $product])
+
+  {{-- ═══ بخش ۲: توضیحات محصول ═══ --}}
+  @include('app.partials.product-description', ['product' => $product])
+
+  {{-- ═══ بخش ۳: محصولات مشابه ═══ --}}
+  @include('app.partials.related-products', ['similar' => $similar])
+
+  {{-- مودال تخصصی میز کار هوش مصنوعی (فرآیند واقعی «شروع ساخت») --}}
   <div id="workspaceModal" class="fixed inset-0 z-[400] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div id="modalContent" class="bg-[#121214] border border-white/[0.06] w-full max-w-6xl h-[90vh] max-h-[750px] rounded-[28px] flex flex-col overflow-hidden scale-95 transition-transform duration-300 shadow-2xl">
+    <div id="modalContent" class="bg-[#121214] [.light_&]:bg-white border border-white/[0.06] [.light_&]:border-black/10 w-full max-w-6xl h-[90vh] max-h-[750px] rounded-[28px] flex flex-col overflow-hidden scale-95 transition-transform duration-300 shadow-2xl">
 
       {{-- هدر مودال --}}
-      <div class="p-4 border-b border-white/[0.04] flex items-center justify-between shrink-0 bg-[#161619]">
+      <div class="p-4 border-b border-white/[0.04] [.light_&]:border-black/10 flex items-center justify-between shrink-0 bg-[#161619] [.light_&]:bg-[#f5f5f5]">
         <div class="flex items-center gap-2.5">
           <div class="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
             <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
           </div>
-          <h3 class="text-[13px] font-bold text-gray-200">میز کار تخصصی تولید تصویر هوش مصنوعی</h3>
+          <h3 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800">میز کار تخصصی تولید تصویر هوش مصنوعی</h3>
         </div>
-        <button type="button" onclick="closeWorkspaceModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+        <button type="button" onclick="closeWorkspaceModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.03] [.light_&]:bg-black/[0.04] text-gray-400 hover:text-white [.light_&]:hover:text-black hover:bg-white/10 [.light_&]:hover:bg-black/10 transition-colors">
           <i class="fa-solid fa-xmark text-sm"></i>
         </button>
       </div>
 
       {{-- بدنه سه ستونه مودال --}}
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-white/[0.04]">
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-white/[0.04] [.light_&]:divide-black/10">
 
         {{-- ستون اول (راست): تصویر الگو --}}
-        <div class="p-5 bg-[#0e0e10] flex flex-col h-full overflow-hidden">
+        <div class="p-5 bg-[#0e0e10] [.light_&]:bg-[#fafafa] flex flex-col h-full overflow-hidden">
           <div class="shrink-0">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-[10px] font-bold text-gray-400 mb-2">
+            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 mb-2">
               ۱. تصویر الگو (محصول شما)
             </span>
-            <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">این تصویر مبنای طراحی هوش مصنوعی است.</p>
+            <p class="text-[11px] text-gray-500 [.light_&]:text-gray-600 mb-3 leading-relaxed">این تصویر مبنای طراحی هوش مصنوعی است.</p>
           </div>
 
-          <div class="flex-1 min-h-0 border border-white/[0.03] bg-[#070708] rounded-2xl p-4 flex items-center justify-center overflow-hidden">
-            <img src="{{ $product->cover ? asset('storage/'.$product->cover) : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')) }}"
+          <div class="flex-1 min-h-0 border border-white/[0.03] [.light_&]:border-black/5 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center overflow-hidden">
+            <img src="{{ $product->displayImageUrl() }}"
                  alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
           </div>
 
           {{-- تنظیم نسبت تصویر --}}
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03]">
-            <p class="text-[10px] font-bold text-gray-500 mb-2">تنظیم نسبت تصویر خروجی:</p>
+          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
+            <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mb-2">تنظیم نسبت تصویر خروجی:</p>
             <div class="flex gap-1.5 flex-wrap">
               @foreach(['1:1'=>'مربع','4:5'=>'پرتره','9:16'=>'عمودی','16:9'=>'افقی'] as $val=>$lbl)
               <label class="cursor-pointer">
                 <input type="radio" name="modal_ratio" value="{{ $val }}" {{ $val==='1:1'?'checked':'' }} class="sr-only peer">
-                <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] bg-white/[0.01] text-gray-400 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
+                <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
                   {{ $lbl }}
                 </span>
               </label>
@@ -358,40 +128,61 @@
           </div>
         </div>
 
-        {{-- ستون دوم (وسط): بخش آپلود تصویر کاربر و دکمه ساخت --}}
-        <div class="p-5 bg-[#121214] flex flex-col h-full overflow-hidden">
+        {{-- ستون دوم (وسط): بخش آپلود تصویر کاربر (در صورت نیاز) و دکمه ساخت --}}
+        <div class="p-5 bg-[#121214] [.light_&]:bg-white flex flex-col h-full overflow-hidden">
           <div class="flex-1 flex flex-col min-h-0 gap-3">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-[10px] font-bold text-gray-400 self-start">
+            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 self-start">
               ۲. بارگذاری تصویر ورودی
             </span>
 
-            <div onclick="document.getElementById('modalFileInp').click()"
-                 class="w-full shrink-0 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] py-4 px-5
-                        flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/40
-                        hover:bg-indigo-500/[0.02] transition-all text-center group">
-              <div class="w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.05] group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 flex items-center justify-center text-gray-400 group-hover:text-indigo-400 transition-all">
-                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+            @if($__hasSchemaUpload)
+              {{-- محصول از فیلد(های) آپلود تعریف‌شده در «تنظیمات محصول» بالای صفحه استفاده می‌کند --}}
+              <div class="flex-1 min-h-0 border border-dashed border-white/[0.06] [.light_&]:border-black/10 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center text-center">
+                <p class="text-[11px] text-gray-500 [.light_&]:text-gray-600 leading-relaxed">
+                  <i class="fa-solid fa-circle-check text-emerald-500 ml-1"></i>
+                  تصویر ورودی از بخش «تنظیمات محصول» در بالای صفحه دریافت می‌شود.
+                </p>
               </div>
-              <div>
-                <p class="text-[11px] font-bold text-gray-200">انتخاب تصویر جدید</p>
+            @else
+              <div onclick="document.getElementById('modalFileInp').click()"
+                   class="w-full shrink-0 rounded-2xl border border-dashed border-white/[0.08] [.light_&]:border-black/15 bg-white/[0.01] [.light_&]:bg-black/[0.02] py-4 px-5
+                          flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/40
+                          hover:bg-indigo-500/[0.02] transition-all text-center group">
+                <div class="w-9 h-9 rounded-xl bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 flex items-center justify-center text-gray-400 [.light_&]:text-gray-600 group-hover:text-indigo-400 transition-all">
+                  <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                </div>
+                <div>
+                  <p class="text-[11px] font-bold text-gray-200 [.light_&]:text-gray-800">انتخاب تصویر جدید</p>
+                </div>
+                <input type="file" id="modalFileInp" accept="image/*" class="hidden" onchange="handleModalUpload(this)">
               </div>
-              <input type="file" id="modalFileInp" accept="image/*" class="hidden" onchange="handleModalUpload(this)">
-            </div>
 
-            <div class="flex-1 min-h-0 border border-white/[0.03] bg-[#070708] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
-              <img id="userImagePreview" src="" alt="User Source" class="hidden max-w-full max-h-full object-contain rounded-xl">
-              <div id="userImagePlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
-                <i class="fa-solid fa-user-astronaut text-lg opacity-40"></i>
-                <p class="text-[10px]">تصویر شما هنوز آپلود نشده است</p>
+              <div class="flex-1 min-h-0 border border-white/[0.03] [.light_&]:border-black/5 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
+                <img id="userImagePreview" src="" alt="User Source" class="hidden max-w-full max-h-full object-contain rounded-xl">
+                <div id="userImagePlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
+                  <i class="fa-solid fa-user-astronaut text-lg opacity-40"></i>
+                  <p class="text-[10px]">تصویر شما هنوز آپلود نشده است</p>
+                </div>
               </div>
-            </div>
+            @endif
           </div>
 
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] space-y-2">
+          {{-- انتخاب مدل‌های خروجی چندگانه (فقط برای محصولات دارای واریانت) --}}
+          @include('app.partials.product-output-variants', ['product' => $product])
+
+          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10 space-y-2">
             <div id="modalFormError" class="hidden p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-bold flex items-center gap-2">
               <i class="fa-solid fa-circle-exclamation"></i>
               <span id="modalFormErrorTxt"></span>
             </div>
+
+            {{-- جمع نهایی توکن برای ساخت — بر اساس تعداد مدل‌های خروجی تیک‌خورده به‌روز می‌شود --}}
+            @if(count($product->outputVariantList()))
+              <div id="variantTokenTotal" class="flex items-center justify-between px-3 h-9 bg-white/[0.02] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/10 rounded-xl text-[10px] font-bold">
+                <span class="text-gray-400 [.light_&]:text-gray-600"><i class="fa-solid fa-bolt text-orange-400 text-[9px] ml-1"></i> جمع توکن برای ساخت</span>
+                <span class="text-orange-400" id="variantTokenTotalNum">—</span>
+              </div>
+            @endif
 
             <button type="button" onclick="triggerGeneration()" id="btnModalSubmit"
                     class="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]">
@@ -401,15 +192,19 @@
         </div>
 
         {{-- ستون سوم (چپ): خروجی رندر شده نهایی هوش مصنوعی --}}
-        <div class="p-5 bg-[#0a0a0c] flex flex-col h-full overflow-hidden">
+        <div class="p-5 bg-[#0a0a0c] [.light_&]:bg-[#fafafa] flex flex-col h-full overflow-hidden">
           <div class="shrink-0">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-[10px] font-bold text-gray-400 mb-2">
+            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 mb-2">
               ۳. خروجی تصویر نهایی
             </span>
           </div>
 
-          <div class="flex-1 min-h-0 border border-white/[0.04] bg-[#040405] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
+          <div class="flex-1 min-h-0 border border-white/[0.04] [.light_&]:border-black/10 bg-[#040405] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
             <img id="modalOutputImage" src="" alt="AI Output" class="hidden max-w-full max-h-full object-contain rounded-xl shadow-2xl">
+
+            {{-- خروجی چندتایی (مدل‌های خروجی چندگانه) — گرید تصاویر ساخته‌شده --}}
+            <div id="modalOutputGrid" class="hidden absolute inset-0 p-3 overflow-y-auto grid grid-cols-2 gap-2 content-start"
+                 style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.08) transparent"></div>
 
             <div id="outputPlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
               <i class="fa-solid fa-sparkles text-xl text-gray-700"></i>
@@ -417,19 +212,19 @@
             </div>
 
             {{-- انیمیشن و اورلی مراحل لودینگ هوش مصنوعی --}}
-            <div id="modalProgressOverlay" class="hidden absolute inset-0 bg-[#0a0a0c]/95 backdrop-blur-md flex-col items-center justify-center text-center p-6 z-20 animate-fade-in">
+            <div id="modalProgressOverlay" class="hidden absolute inset-0 bg-[#0a0a0c]/95 [.light_&]:bg-white/95 backdrop-blur-md flex-col items-center justify-center text-center p-6 z-20 animate-fade-in">
               <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 shadow-inner">
                 <i class="fa-solid fa-wand-magic-sparkles fa-spin text-xl text-indigo-400"></i>
               </div>
-              <p id="modalPgTxt" class="text-[13px] font-bold text-white mb-1">در حال شروع فرآیند...</p>
+              <p id="modalPgTxt" class="text-[13px] font-bold text-white [.light_&]:text-gray-900 mb-1">در حال شروع فرآیند...</p>
               <p id="modalPgSub" class="text-[10px] text-gray-500 mb-4">سیستم در حال آماده‌سازی خط پردازش است</p>
-              <div class="bg-white/5 rounded-full h-1 overflow-hidden w-40 mx-auto">
+              <div class="bg-white/5 [.light_&]:bg-black/5 rounded-full h-1 overflow-hidden w-40 mx-auto">
                 <div id="modalPgBar" class="h-full bg-indigo-500 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
               </div>
             </div>
           </div>
 
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03]">
+          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
             <button id="modalDlBtn" disabled onclick="downloadGeneratedImage()"
               class="w-full h-10 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px]
                      rounded-xl flex items-center justify-center gap-2 transition-colors
@@ -447,9 +242,9 @@
 
   {{-- مودال «برای ذخیره میبایست وارد شوید» — فقط برای کاربر مهمان هنگام کلیک روی دکمه سیو --}}
   <div id="saveLoginModal" class="fixed inset-0 z-[410] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4" dir="rtl">
-    <div id="saveLoginModalContent" class="bg-[#121218] border border-white/10 w-full max-w-sm rounded-[24px] overflow-hidden scale-95 transition-transform duration-300 shadow-2xl relative p-6 text-center flex flex-col items-center gap-4">
+    <div id="saveLoginModalContent" class="bg-[#121218] [.light_&]:bg-white border border-white/10 [.light_&]:border-black/10 w-full max-w-sm rounded-[24px] overflow-hidden scale-95 transition-transform duration-300 shadow-2xl relative p-6 text-center flex flex-col items-center gap-4">
 
-      <button type="button" onclick="closeSaveLoginModal()" class="absolute top-4 left-4 w-7 h-7 flex items-center justify-center rounded-full bg-white/[0.03] text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+      <button type="button" onclick="closeSaveLoginModal()" class="absolute top-4 left-4 w-7 h-7 flex items-center justify-center rounded-full bg-white/[0.03] [.light_&]:bg-black/[0.04] text-gray-400 hover:text-white [.light_&]:hover:text-black hover:bg-white/10 [.light_&]:hover:bg-black/10 transition-colors cursor-pointer">
         <i class="fa-solid fa-xmark text-xs"></i>
       </button>
 
@@ -457,14 +252,14 @@
         <i class="fa-regular fa-bookmark text-2xl"></i>
       </div>
 
-      <h3 class="text-[15px] font-black text-gray-100">برای ذخیره میبایست به پروفایل خود وارد شوید</h3>
+      <h3 class="text-[15px] font-black text-gray-100 [.light_&]:text-gray-900">برای ذخیره میبایست به پروفایل خود وارد شوید</h3>
 
       <div class="w-full grid grid-cols-1 gap-2 mt-2">
         <a href="{{ route('login') }}" class="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.99] no-underline">
           <i class="fa-solid fa-right-to-bracket text-xs"></i>
           ورود
         </a>
-        <button type="button" onclick="closeSaveLoginModal()" class="w-full h-10 bg-white/[0.03] hover:bg-white/10 text-gray-400 hover:text-white font-bold text-[11px] rounded-xl transition-colors cursor-pointer">
+        <button type="button" onclick="closeSaveLoginModal()" class="w-full h-10 bg-white/[0.03] [.light_&]:bg-black/[0.04] hover:bg-white/10 [.light_&]:hover:bg-black/10 text-gray-400 [.light_&]:text-gray-600 hover:text-white [.light_&]:hover:text-black font-bold text-[11px] rounded-xl transition-colors cursor-pointer">
           بعداً
         </button>
       </div>
@@ -477,17 +272,6 @@
 <style>
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
-
-/* حالت بدون اسکرول فقط در دسکتاپ (+۶۴۰px) — موبایل باید عادی اسکرول کند چون بخش‌ها زیر هم قرار می‌گیرند */
-@media (min-width: 640px) {
-  html, body {
-    overflow: hidden !important;
-    height: 100% !important;
-  }
-  body {
-    padding-top: 64px !important;
-  }
-}
 </style>
 @endsection
 
@@ -500,6 +284,67 @@ var IS_AUTH = @json(auth()->check());
 var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 var _modalTimers = [];
 var _modalResultUrl = null;
+
+/* ───── مدل‌های خروجی چندگانه (Output Variants) ───── */
+var CREDIT_COST = {{ (int) ($product->credit_cost ?? 0) }};
+var IS_PER_CREDIT = @json($product->pricing_model === 'per_credit');
+var HAS_VARIANTS = @json(count($product->outputVariantList()) > 0);
+
+function getSelectedVariantKeys() {
+  return Array.prototype.map.call(
+    document.querySelectorAll('#variantPickerGrid .variant-card.is-selected'),
+    function (el) { return el.dataset.key; }
+  );
+}
+
+function toggleVariantCard(el) {
+  el.classList.toggle('is-selected');
+  updateVariantTotal();
+}
+
+function updateVariantTotal() {
+  if (!HAS_VARIANTS) return;
+  var count = getSelectedVariantKeys().length;
+
+  var countEl = document.getElementById('variantPickerCount');
+  if (countEl) countEl.textContent = count ? (Number(count).toLocaleString('fa-IR') + ' مدل انتخاب شده') : 'هیچ مدلی انتخاب نشده';
+
+  var numEl = document.getElementById('variantTokenTotalNum');
+  if (numEl) {
+    if (!IS_PER_CREDIT || CREDIT_COST <= 0) {
+      numEl.textContent = 'رایگان';
+    } else {
+      numEl.textContent = Number(count * CREDIT_COST).toLocaleString('fa-IR') + ' توکن';
+    }
+  }
+}
+
+function renderOutputGrid(images) {
+  var grid = document.getElementById('modalOutputGrid');
+  var outImg = document.getElementById('modalOutputImage');
+  var outPh = document.getElementById('outputPlaceholder');
+  if (!grid) return;
+  grid.innerHTML = '';
+  images.forEach(function (img) {
+    var card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] text-right group cursor-pointer';
+    card.innerHTML =
+      '<img src="' + img.url + '" alt="" class="w-full aspect-square object-cover">' +
+      (img.title ? '<div class="px-1.5 py-1 text-[9px] font-bold text-gray-300 truncate">' + img.title + '</div>' : '');
+    card.addEventListener('click', function () {
+      _modalResultUrl = img.url;
+      document.getElementById('pdpMainImage').src = img.url;
+      document.getElementById('modalDlBtn').disabled = false;
+    });
+    grid.appendChild(card);
+  });
+  if (outImg) outImg.classList.add('hidden');
+  if (outPh) outPh.classList.add('hidden');
+  grid.classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', updateVariantTotal);
 
 function openWorkspaceModal() {
   var modal = document.getElementById('workspaceModal');
@@ -538,21 +383,98 @@ function handleModalUpload(inp) {
   r.readAsDataURL(inp.files[0]);
 }
 
+/* ───── جمع‌آوری مقادیر تنظیمات داینامیک محصول (input_schema) — رندرشده در product-options ─────
+   خروجی: پیام خطا در صورت خالی بودن یک فیلد اجباری (رشته)، یا null در صورت معتبر بودن همه.
+   مقادیر متنی به‌صورت fields[field_id] و فایل‌های آپلودی به‌صورت uploads[field_id] به FormData اضافه می‌شوند
+   (uploads[] دقیقاً همان ساختاری است که ProductGenerateController::generate() از قبل پشتیبانی می‌کند). */
+function collectDynamicFields(fd) {
+  var errorMsg = null;
+
+  document.querySelectorAll('#pdpOptions .pdp-field').forEach(function (el) {
+    var fid = el.dataset.fieldId;
+    var type = el.dataset.fieldType;
+    var required = el.dataset.required === '1';
+    if (!fid) return;
+
+    var labelEl = el.querySelector('label');
+    var labelTxt = labelEl ? labelEl.textContent.replace('*', '').trim() : fid;
+
+    if (type === 'radio') {
+      var checkedRadio = el.querySelector('input[type="radio"]:checked');
+      var val = checkedRadio ? checkedRadio.value : '';
+      if (required && val === '' && !errorMsg) errorMsg = 'لطفاً «' + labelTxt + '» را انتخاب کنید.';
+      fd.append('fields[' + fid + ']', val);
+      return;
+    }
+
+    if (type === 'checkbox' && el.querySelectorAll('.pdp-checkbox-multi').length) {
+      var vals = Array.prototype.map.call(el.querySelectorAll('.pdp-checkbox-multi:checked'), function (c) { return c.value; });
+      if (required && vals.length === 0 && !errorMsg) errorMsg = 'لطفاً حداقل یک گزینه «' + labelTxt + '» را انتخاب کنید.';
+      fd.append('fields[' + fid + ']', vals.join('، '));
+      return;
+    }
+
+    if (type === 'checkbox' || type === 'switch') {
+      var box = el.querySelector('.pdp-field-input');
+      fd.append('fields[' + fid + ']', (box && box.checked) ? '1' : '0');
+      return;
+    }
+
+    if (type === 'image_upload' || type === 'file_upload') {
+      var fileInp = el.querySelector('.pdp-field-input');
+      var file = fileInp && fileInp.files ? fileInp.files[0] : null;
+      if (file) {
+        fd.append('uploads[' + fid + ']', file);
+      } else if (required && !errorMsg) {
+        errorMsg = 'لطفاً «' + labelTxt + '» را انتخاب کنید.';
+      }
+      return;
+    }
+
+    // text / textarea / number / select / color / fallback
+    var input = el.querySelector('.pdp-field-input');
+    var value = input ? input.value : '';
+    if (required && value === '' && !errorMsg) errorMsg = 'لطفاً «' + labelTxt + '» را تکمیل کنید.';
+    fd.append('fields[' + fid + ']', value);
+  });
+
+  return errorMsg;
+}
+
 function triggerGeneration() {
-  var fileInp = document.getElementById('modalFileInp');
   var errorBox = document.getElementById('modalFormError');
   var errorTxt = document.getElementById('modalFormErrorTxt');
 
-  if(!fileInp.files || !fileInp.files[0]) {
+  var fd = new FormData();
+  fd.append('_token', CSRF);
+
+  var dynErr = collectDynamicFields(fd);
+  if (dynErr) {
     errorBox.classList.remove('hidden');
-    errorTxt.textContent = 'لطفاً ابتدا تصویر ورودی خود را بارگذاری کنید.';
+    errorTxt.textContent = dynErr;
+    return;
+  }
+
+  // آپلود عمومی تصویر مرجع — فقط وقتی محصول فیلد آپلود اختصاصی در تنظیماتش تعریف نکرده باشد
+  var fileInp = document.getElementById('modalFileInp');
+  if (fileInp) {
+    if (!fileInp.files || !fileInp.files[0]) {
+      errorBox.classList.remove('hidden');
+      errorTxt.textContent = 'لطفاً ابتدا تصویر ورودی خود را بارگذاری کنید.';
+      return;
+    }
+    fd.append('uploads[photo]', fileInp.files[0]);
+  }
+
+  var selectedVariantKeys = HAS_VARIANTS ? getSelectedVariantKeys() : [];
+  if (HAS_VARIANTS && selectedVariantKeys.length === 0) {
+    errorBox.classList.remove('hidden');
+    errorTxt.textContent = 'حداقل یک مدل خروجی را انتخاب کنید.';
     return;
   }
   errorBox.classList.add('hidden');
 
-  var fd = new FormData();
-  fd.append('_token', CSRF);
-  fd.append('uploads[photo]', fileInp.files[0]);
+  selectedVariantKeys.forEach(function (k) { fd.append('variants[]', k); });
 
   var ratio = document.querySelector('input[name="modal_ratio"]:checked');
   fd.append('output[aspect_ratio]', ratio ? ratio.value : '1:1');
@@ -610,16 +532,28 @@ function triggerGeneration() {
     if (d.success && d.image_url) {
       var outImg = document.getElementById('modalOutputImage');
       var outPh = document.getElementById('outputPlaceholder');
+      var outGrid = document.getElementById('modalOutputGrid');
 
-      outImg.src = d.image_url;
-      outImg.classList.remove('hidden');
-      if(outPh) outPh.classList.add('hidden');
+      if (d.images && d.images.length > 1) {
+        // خروجی چندتایی — دقیقاً مدل‌هایی که کاربر تیک زده بود
+        renderOutputGrid(d.images);
+      } else {
+        if (outGrid) outGrid.classList.add('hidden');
+        outImg.src = d.image_url;
+        outImg.classList.remove('hidden');
+        if(outPh) outPh.classList.add('hidden');
+      }
 
       _modalResultUrl = d.image_url;
       document.getElementById('modalDlBtn').disabled = false;
 
-      document.getElementById('mainImage').src = d.image_url;
-      document.getElementById('successBadge').classList.remove('hidden');
+      document.getElementById('pdpMainImage').src = d.image_url;
+
+      // اگر بعضی مدل‌ها ناموفق بودند، به کاربر اطلاع بده (بدون توقف نتیجه‌های موفق)
+      if (d.failed_message) {
+        errorBox.classList.remove('hidden');
+        errorTxt.textContent = d.failed_message;
+      }
 
       // ═══ به‌روزرسانی زنده و آنی مقدار توکن در دراپ‌داون پروفایل بدون رفرش ═══
       var tokenEl = document.getElementById('top-nav-tokens');
@@ -651,11 +585,12 @@ function downloadGeneratedImage(){
 }
 
 function doShare() {
-  var t = document.querySelector('h1').textContent.trim();
+  var h1 = document.querySelector('h1');
+  var t = h1 ? h1.textContent.trim() : document.title;
   if (navigator.share) navigator.share({title:t, url:location.href}).catch(function(){});
   else if (navigator.clipboard) navigator.clipboard.writeText(location.href);
 }
-document.getElementById('btnShare').addEventListener('click', doShare);
+document.getElementById('btnShare')?.addEventListener('click', doShare);
 
 /* ───── مودال «برای ذخیره باید وارد شوید» ───── */
 function openSaveLoginModal() {
@@ -688,12 +623,14 @@ var iconBkm = document.getElementById('iconBkm');
 var _saveBusy = false;
 
 function setBookmarkUI(saved) {
-  iconBkm.className = saved ? 'fa-solid fa-bookmark text-[11px]' : 'fa-regular fa-bookmark text-[11px]';
-  btnBookmark.classList.toggle('text-emerald-400', saved);
-  btnBookmark.dataset.saved = saved ? '1' : '0';
+  if (iconBkm) iconBkm.className = saved ? 'fa-solid fa-bookmark text-[11px]' : 'fa-regular fa-bookmark text-[11px]';
+  if (btnBookmark) {
+    btnBookmark.classList.toggle('text-[var(--green)]', saved);
+    btnBookmark.dataset.saved = saved ? '1' : '0';
+  }
 }
 
-btnBookmark.addEventListener('click', function(){
+btnBookmark?.addEventListener('click', function(){
   if (!IS_AUTH) {
     openSaveLoginModal();
     return;

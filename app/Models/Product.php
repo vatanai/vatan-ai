@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\GeneratedImage;
 
 class Product extends Model
 {
@@ -12,6 +13,7 @@ class Product extends Model
         'name_fa',
         'name_en',
         'slug',
+        'product_code',
         'description_fa',
         'description_en',
         'meta_title',
@@ -24,6 +26,7 @@ class Product extends Model
         'status',
         'thumbnail',
         'cover',
+        'before_images',
         'sample_outputs',
         'media_type',
         'preview_video_url',
@@ -58,6 +61,7 @@ class Product extends Model
         'output_type',
         'output_format',
         'output_count',
+        'output_variants',
         'resolution',
         'aspect_ratio',
         'delivery_method',
@@ -91,8 +95,10 @@ class Product extends Model
     // ۲. تعریف کست‌ها برای تبدیل خودکار آرایه‌ها به JSON موقع ذخیره در دیتابیس
     protected $casts = [
         'sample_outputs'    => 'array',
+        'before_images'     => 'array',
         'fallback_models'   => 'array',
         'input_schema'      => 'array',
+        'output_variants'   => 'array',
         'explore_tiles'     => 'array',
         'provider_options'  => 'array',
         'tags'              => 'array',
@@ -113,6 +119,32 @@ class Product extends Model
     ];
 
     /**
+     * آدرس نهایی محصول در URL عمومی: کد ۶ رقمی محصول + اسلاگ.
+     * مثال: 546834-concept-sketchbook-portrait
+     * اگر به هر دلیلی کد هنوز ساخته نشده باشد (رکورد خیلی قدیمی)، فقط اسلاگ برگردانده می‌شود.
+     */
+    public function getRouteSlugAttribute(): string
+    {
+        return $this->product_code ? $this->product_code . '-' . $this->slug : $this->slug;
+    }
+
+    /**
+     * بایندینگ سفارشی مسیر برای پارامتر route_slug — کد ۶ رقمی ابتدای مقدار را جدا می‌کند
+     * و محصول را بر اساس اسلاگ واقعی پیدا می‌کند (برای سازگاری با لینک‌های قدیمی بدون کد هم کار می‌کند).
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        if ($field === 'route_slug') {
+            if (preg_match('/^\d{6}-(.+)$/', (string) $value, $matches)) {
+                $value = $matches[1];
+            }
+            return $this->where('slug', $value)->first();
+        }
+
+        return parent::resolveRouteBinding($value, $field);
+    }
+
+    /**
      * ارتباط با تاریخچه تغییرات پرامپت محصول
      */
     public function promptHistories(): HasMany
@@ -126,9 +158,55 @@ class Product extends Model
         return $this->belongsToMany(Category::class, 'category_product');
     }
 
+    /**
+     * سوابق تصاویر ساخته‌شده توسط کاربران با استفاده از این محصول — برای «تعداد ساخت» در صفحه محصول.
+     */
+    public function generatedImages(): HasMany
+    {
+        return $this->hasMany(GeneratedImage::class);
+    }
+
     /** کاربرانی که این محصول را سیو (ذخیره) کرده‌اند */
     public function savedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'saved_products')->withTimestamps();
+    }
+
+    /**
+     * لیست نرمال‌شده «مدل‌های خروجی چندگانه» محصول (Output Variants).
+     * فقط ردیف‌های معتبر (دارای عنوان) برگردانده می‌شوند؛ اگر محصول واریانت نداشته باشد آرایه خالی است.
+     */
+    public function outputVariantList(): array
+    {
+        $raw = is_array($this->output_variants) ? $this->output_variants : [];
+        $out = [];
+        foreach ($raw as $v) {
+            if (!is_array($v)) continue;
+            $title = trim((string) ($v['title'] ?? ''));
+            if ($title === '') continue;
+            $out[] = [
+                'key'    => (string) ($v['key'] ?? ''),
+                'title'  => $title,
+                'image'  => $v['image'] ?? null,
+                'prompt' => trim((string) ($v['prompt'] ?? '')),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * آدرس قابل اعتماد تصویر کارت محصول برای هوم/اکسپلور/صفحه محصول.
+     * اول Thumbnail واقعی روی دیسک، بعد Cover، در نهایت یک SVG خاکستری inline —
+     * هرگز 404 نمی شود، حتی برای رکوردهای قدیمی که مسیر فایلشان از قبل خراب/غایب بوده.
+     */
+    public function displayImageUrl(): string
+    {
+        foreach ([$this->thumbnail, $this->cover] as $path) {
+            if ($path && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                return asset('storage/' . $path);
+            }
+        }
+
+        return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%25" height="100%25" fill="%2315181c"/></svg>';
     }
 }
