@@ -97,3 +97,15 @@ php artisan migrate --force
 
 - پلن فعلی اپ (CPU/RAM) رو از اینجا چک/بالا ببر: `https://console.liara.ir/apps/demovatan/resize` — با منابع خیلی کم (مثلاً ۰.۵ گیگ رم)، build ممکنه خیلی کند بشه یا گیر کنه.
 - `vendor/` توی `.liaraignore` هست و نباید حذفش کنی — Liara خودش موقع build با composer نصبش می‌کنه، آپلود کردنش فقط زمان تلف می‌کنه.
+
+### خطای Permission denied بعد از دیپلوی (فایل config یا هر فایل php)
+
+اگه بعد از دیپلوی، سایت با `Warning: require(...): Failed to open stream: Permission denied` بالا نیومد، یعنی یک یا چند فایل روی مک با پرمیشن بسته (600 — فقط خواندنی برای مالک) ذخیره شدن. `liara deploy` پرمیشن فایل‌ها رو عیناً به سرور می‌بره و چون PHP روی سرور با یوزر دیگه‌ای اجرا می‌شه، نمی‌تونه فایل رو بخونه. (خطای بعدیش مثل `Class "view" does not exist` فقط عارضه‌ی همینه، نه مشکل جدا.)
+
+**قبل از هر دیپلوی** (یا حداقل هر وقت فایل جدیدی به پروژه اضافه شده) این رو یک بار اجرا کن تا پرمیشن‌های بسته درست بشن:
+
+```bash
+find . -type f -perm 600 -not -path "./vendor/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./storage/*" -not -name ".env" -exec chmod 644 {} \;
+```
+
+(`.env` عمداً مستثنی شده — اون باید خصوصی بمونه و اصلاً دیپلوی هم نمی‌شه.)
