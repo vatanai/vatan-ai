@@ -104,18 +104,6 @@
         <ul class="text-[var(--red-soft)] pr-5 list-disc space-y-1" id="validation-summary-list"></ul>
       </div>
 
-      {{-- بند ۲۶: بنر بازیابی پیش‌نویس محلی (فقط UI/localStorage) --}}
-      <div id="draft-recovery-banner" class="hidden bg-[var(--accent)]/8 border border-[var(--accent)]/25 rounded-xl p-3.5 mb-5 flex items-center justify-between gap-3 flex-wrap text-xs">
-        <div class="flex items-center gap-2.5 text-[var(--accent-soft)]">
-          <i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i>
-          یک پیش‌نویس ذخیره‌شده‌ی محلی از قبل موجود است. می‌خواهید بازیابی شود؟
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" class="px-3 h-8 rounded-lg text-[11px] font-bold bg-[var(--accent)] text-white" onclick="restoreAutosaveDraft()">بازیابی</button>
-          <button type="button" class="px-3 h-8 rounded-lg text-[11px] font-bold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)]" onclick="dismissDraftRecovery()">نادیده بگیر</button>
-        </div>
-      </div>
-
       {{-- ═══ Stepper بازطراحی‌شده — یک ساختار واحد و ریسپانسیو (دسکتاپ افقی / موبایل عمودی) ═══ --}}
       <div class="mb-7 bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-2 md:p-1.5">
         <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">
@@ -268,7 +256,7 @@
       </button>
       <div class="flex flex-col items-center gap-0.5 order-3 sm:order-2 w-full sm:w-auto text-center">
         <div class="text-xs text-[var(--text3)]"> مرحله <strong class="text-[var(--text)]" id="step-label-num">۱</strong> از ۶ </div>
-        <div class="text-[10px] text-[var(--text3)]" id="autosave-status"></div>
+        <div class="text-[10px] text-[var(--text3)]">پیش‌نویس فقط با دکمه ذخیره می‌شود</div>
       </div>
       <div class="flex gap-2 order-2 sm:order-3">
         <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] hover:text-[var(--text)] transition-all" id="btn-draft" onclick="submitForm('draft')">
@@ -308,10 +296,6 @@ window.PRODUCT_CREATE_CONFIG = {
   fbIdxStart: {{ $fbIdxStart }},
   fieldIdxStart: {{ $fieldIdxStart }},
   wantedSubcategory: @json(old('subcategory', optional($duplicateFrom)->subcategory)),
-  {{-- کلید پیش‌نویس محلی، جدا به ازای هر حالت/محصول — رفع باگ «کپی»: قبلاً یک کلید سراسری
-       مشترک بود و بازیابی پیش‌نویسِ صفحه «تکثیر محصول» (که نامش «(کپی)» داشت) روی صفحه
-       «ویرایش» محصول دیگر می‌نشست و با ثبت، کلمه کپی به نام محصول اضافه می‌شد. --}}
-  autosaveKey: @json('pc-autosave-' . ($product ? 'edit-' . $product->id : ($duplicateFrom ? 'dup-' . $duplicateFrom->id : 'new'))),
 };
 </script>
 <script src="{{ asset('admin/js/products-create.js') }}?v={{ filemtime(public_path('admin/js/products-create.js')) }}"></script>

@@ -356,6 +356,14 @@ class ProductController extends Controller
             $product->categories()->sync($categoryIds);
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'redirect' => route('admin.products'),
+                'message' => 'محصول جدید با موفقیت ثبت شد.',
+            ]);
+        }
+
         return redirect()->route('admin.products')->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
     }
 
@@ -564,6 +572,14 @@ class ProductController extends Controller
 
         if (!empty($categoryIds)) {
             $product->categories()->sync($categoryIds);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'redirect' => route('admin.products'),
+                'message' => 'تغییرات با موفقیت ثبت شد.',
+            ]);
         }
 
         return redirect()->route('admin.products')->with('success', 'تغییرات با موفقیت ثبت شد.');

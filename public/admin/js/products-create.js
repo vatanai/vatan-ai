@@ -953,11 +953,13 @@ function refreshFormPreview() {
 function createHiddenInput(name, value) {
   const input = document.createElement('input');
   input.type = 'hidden'; input.name = name; input.value = value;
+  input.dataset.submitGenerated = '1';
   return input;
 }
 
-function submitForm(statusValue) {
+async function submitForm(statusValue) {
   const form = document.getElementById('real-product-form');
+  form.querySelectorAll('[data-submit-generated="1"]').forEach(input => input.remove());
 
   const processing = document.querySelector('.image-optimizer-group[data-optimize-state="processing"]');
   if (processing) {
@@ -1028,15 +1030,71 @@ function submitForm(statusValue) {
 
   // Button Loading State — هنگام ارسال واقعی فرم به سرور (رفتار بصری، جلوگیری از دوبار کلیک)
   setButtonsLoading(true, statusValue);
-  form.submit();
+
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new FormData(form),
+      credentials: 'same-origin',
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json') ? await response.json() : null;
+
+    if (!response.ok) {
+      const errors = payload && payload.errors ? payload.errors : {};
+      const messages = Object.values(errors).flat().filter(Boolean);
+      const schemaError = Object.keys(errors).some(key => key === 'input_schema_json' || key.startsWith('input_schema.'));
+
+      if (schemaError) goStep(3);
+      showGlobalError(messages[0] || (payload && payload.message) || 'ثبت محصول انجام نشد. لطفاً مقادیر واردشده را بررسی کنید.');
+      showServerValidationSummary(messages);
+      setButtonsLoading(false, statusValue);
+      return;
+    }
+
+    clearLocalProductDrafts();
+    window.location.assign((payload && payload.redirect) || '/admin/products');
+  } catch (error) {
+    showGlobalError('ارتباط با سرور هنگام ثبت محصول قطع شد. اطلاعات فرم باقی مانده است؛ دوباره تلاش کنید.');
+    setButtonsLoading(false, statusValue);
+  }
+}
+
+function showServerValidationSummary(messages) {
+  const box = document.getElementById('validation-summary');
+  const list = document.getElementById('validation-summary-list');
+  if (!box || !list || !messages.length) return;
+  list.innerHTML = '';
+  messages.forEach(function (message) {
+    const item = document.createElement('li');
+    item.textContent = message;
+    list.appendChild(item);
+  });
+  box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* Loading State یکپارچه برای دکمه‌های پایین صفحه در لحظه ارسال فرم */
 function setButtonsLoading(isLoading, which) {
   const draftBtn = document.getElementById('btn-draft');
   const submitBtn = document.getElementById('btn-submit');
-  [draftBtn, submitBtn].forEach(btn => { if (btn) btn.disabled = isLoading; });
-  if (!isLoading) return;
+  [draftBtn, submitBtn].forEach(btn => {
+    if (!btn) return;
+    btn.disabled = isLoading;
+    if (!isLoading) btn.classList.remove('opacity-70', 'pointer-events-none');
+  });
+  if (!isLoading) {
+    const draftIcon = draftBtn && draftBtn.querySelector('i');
+    const submitIcon = submitBtn && submitBtn.querySelector('i');
+    if (draftIcon) draftIcon.className = 'fa-solid fa-floppy-disk';
+    if (submitIcon) submitIcon.className = 'fa-solid fa-check';
+    return;
+  }
   const target = which === 'draft' ? draftBtn : submitBtn;
   if (target) {
     target.classList.add('opacity-70', 'pointer-events-none');
@@ -1138,8 +1196,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // بند ۱۶/۲۳: کارت‌های Collapsible با ذخیره وضعیت باز/بسته
   makeCardsCollapsible();
-  // بند ۲۶: ذخیره خودکار پیش‌نویس + بنر بازیابی
-  initAutosaveDraft();
+  // پیش‌نویس فقط با دکمه «ذخیره پیش‌نویس» در دیتابیس ثبت می‌شود.
+  // داده‌های محلی نسخه‌های قدیمی پاک می‌شوند تا فرم محصول جدید را آلوده نکنند.
+  clearLocalProductDrafts();
   // بند ۳۳: انتخاب نقش نمایشی (Role Preview)
   var roleSel = document.getElementById('role-preview-select');
   if (roleSel) roleSel.addEventListener('change', function () { applyRolePreview(this.value); });
@@ -1200,69 +1259,14 @@ function makeCardsCollapsible() {
   });
 }
 
-/* ══════════════════ بند ۲۶ — ذخیره خودکار پیش‌نویس (فقط UI / localStorage) ══════════════════ */
-/* کلید پیش‌نویس محلی — به ازای هر حالت/محصول جدا (از PRODUCT_CREATE_CONFIG تزریق می‌شود).
-   رفع باگ «کپی»: کلید سراسری مشترک باعث می‌شد پیش‌نویس صفحه «تکثیر» (با نام «(کپی)»)
-   روی صفحه «ویرایش» محصول دیگری بازیابی شود و کلمه کپی به نام محصول بچسبد. */
-var AUTOSAVE_KEY = (window.PRODUCT_CREATE_CONFIG && window.PRODUCT_CREATE_CONFIG.autosaveKey) || 'pc-autosave-draft';
-// پاک‌سازی کلید سراسری قدیمی تا پیش‌نویس‌های آلوده قبلی هیچ‌وقت دوباره بازیابی نشوند
-try { if (AUTOSAVE_KEY !== 'pc-autosave-draft') localStorage.removeItem('pc-autosave-draft'); } catch (e) {}
-function autosaveSerialize() {
-  var form = document.getElementById('real-product-form');
-  if (!form) return null;
-  var data = {};
-  Array.prototype.forEach.call(form.elements, function (el) {
-    if (!el.name || el.type === 'file' || el.name === '_token' || el.name === 'status') return;
-    if (el.type === 'checkbox') data[el.name] = el.checked ? (el.value || '1') : '';
-    else if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
-    else data[el.name] = el.value;
-  });
-  return data;
-}
-function autosaveDraft() {
+/* پاک‌سازی سازگار با نسخه‌های قبل؛ از این نسخه هیچ محتوای فرم در مرورگر ذخیره نمی‌شود. */
+function clearLocalProductDrafts() {
   try {
-    var data = autosaveSerialize();
-    if (!data) return;
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ t: (new Date()).getTime(), d: data }));
-    var el = document.getElementById('autosave-status');
-    if (el) {
-      var now = new Date();
-      el.textContent = 'آخرین ذخیره خودکار: ' + toFa(('0' + now.getHours()).slice(-2)) + ':' + toFa(('0' + now.getMinutes()).slice(-2));
+    for (var i = localStorage.length - 1; i >= 0; i--) {
+      var key = localStorage.key(i);
+      if (key === 'pc-autosave-draft' || (key && key.indexOf('pc-autosave-') === 0)) {
+        localStorage.removeItem(key);
+      }
     }
   } catch (e) {}
-}
-function initAutosaveDraft() {
-  try {
-    var raw = localStorage.getItem(AUTOSAVE_KEY);
-    var banner = document.getElementById('draft-recovery-banner');
-    var isDuplicate = !!document.querySelector('input[name="duplicate_from"]');
-    if (raw && banner && !isDuplicate) banner.classList.remove('hidden');
-  } catch (e) {}
-  setInterval(autosaveDraft, 10000); // هر ۱۰ ثانیه
-}
-function restoreAutosaveDraft() {
-  try {
-    var raw = localStorage.getItem(AUTOSAVE_KEY);
-    if (!raw) return;
-    var data = (JSON.parse(raw) || {}).d || {};
-    var form = document.getElementById('real-product-form');
-    Object.keys(data).forEach(function (name) {
-      var els = form.querySelectorAll('[name="' + name.replace(/"/g, '') + '"]');
-      els.forEach(function (el) {
-        if (el.type === 'checkbox') el.checked = !!data[name];
-        else if (el.type === 'radio') el.checked = (el.value === data[name]);
-        else el.value = data[name];
-      });
-    });
-    var banner = document.getElementById('draft-recovery-banner');
-    if (banner) banner.classList.add('hidden');
-    renderStepper();
-    if (typeof refreshFinalSummary === 'function') refreshFinalSummary();
-    if (typeof refreshProductPreview === 'function') refreshProductPreview();
-  } catch (e) {}
-}
-function dismissDraftRecovery() {
-  var banner = document.getElementById('draft-recovery-banner');
-  if (banner) banner.classList.add('hidden');
-  try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) {}
 }
