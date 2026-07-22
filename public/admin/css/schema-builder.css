@@ -1,0 +1,238 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   استایل اختصاصی «سازنده ویژگی‌های خاص محصول» (Schema Builder)
+   ─────────────────────────────────────────────────────────────────────────
+   فقط از توکن‌های موجود استفاده می‌کند (تعریف‌شده در design-tokens.css و
+   نگاشت‌های products-create.css: --s1 --s2 --b1 --b2 --text --text2 --text3
+   --accent --green --orange --red). هیچ رنگ ثابت جدیدی معرفی نشده است؛
+   تم روز/شب خودکار از همان توکن‌ها پیروی می‌کند.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── دکمه‌ها ── */
+.sb-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 14px; height: 36px; border: none; border-radius: 10px;
+  background: var(--accent); color: #fff;
+  font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background .2s;
+}
+.sb-btn-primary:hover { background: var(--accent-hover, var(--accent)); }
+
+.sb-btn-dashed {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 14px; border-radius: 10px;
+  border: 2px dashed var(--b2); background: transparent; color: var(--text3);
+  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.sb-btn-dashed:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.sb-add-bottom { width: 100%; margin-top: 12px; }
+
+.sb-count-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 4px; padding: 1px 6px; font-size: 9px; font-weight: 700;
+}
+
+/* ── لیست و کارت فیلد ── */
+.sb-list { display: flex; flex-direction: column; gap: 10px; }
+
+.sb-card {
+  background: var(--s1); border: 1px solid var(--b1); border-radius: 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.sb-card.sb-dragging { opacity: .45; }
+.sb-card.sb-invalid { border-color: color-mix(in srgb, var(--red) 55%, transparent); }
+.sb-card.sb-is-hidden-field { opacity: .62; }
+.sb-card:focus-within { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* هدر کارت */
+.sb-card-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; }
+.sb-grip { color: var(--text3); cursor: grab; flex-shrink: 0; font-size: 12px; padding: 4px 2px; }
+.sb-type-chip {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 8px; padding: 0 9px; height: 30px;
+  font-size: 10.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  font-family: inherit; transition: background .2s;
+}
+.sb-type-chip:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.sb-type-chip .sb-type-caret { font-size: 8px; opacity: .7; }
+
+.sb-head-inputs { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; }
+.sb-field-help { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; color:var(--text3); cursor:pointer; font-size:10px; margin-right:4px; }
+.sb-field-help:hover, .sb-field-help:focus { color:var(--accent); outline:none; }
+.sb-input, .sb-select, .sb-textarea {
+  background: var(--bg); border: 1px solid var(--b1); border-radius: 8px;
+  padding: 7px 9px; font-size: 11.5px; color: var(--text);
+  font-family: inherit; outline: none; width: 100%;
+  transition: border-color .2s;
+}
+.sb-input:focus, .sb-select:focus, .sb-textarea:focus { border-color: var(--accent); }
+.sb-input.sb-err { border-color: var(--red); }
+.sb-textarea { min-height: 58px; resize: vertical; }
+.sb-select { cursor: pointer; }
+.sb-input-label { flex: 2 1 130px; font-weight: 700; }
+.sb-input-id { flex: 1 1 100px; direction: ltr; text-align: left; font-size: 10.5px; color: var(--text2); }
+
+/* چیپ‌های سوییچی (اجباری / مخفی) */
+.sb-flag {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  height: 30px; padding: 0 9px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--b1); background: var(--bg); color: var(--text3);
+  font-size: 10.5px; font-weight: 700; font-family: inherit; white-space: nowrap;
+  transition: all .2s;
+}
+.sb-flag i { font-size: 10px; }
+.sb-flag.sb-on-req { background: color-mix(in srgb, var(--orange) 12%, transparent); color: var(--orange); border-color: color-mix(in srgb, var(--orange) 35%, transparent); }
+.sb-flag.sb-on-hid { background: color-mix(in srgb, var(--text3) 14%, transparent); color: var(--text2); border-color: var(--b2); }
+
+/* اکشن‌های کارت */
+.sb-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; margin-right: auto; }
+.sb-act {
+  width: 28px; height: 28px; border-radius: 8px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text2);
+  font-size: 11px; transition: all .2s;
+}
+.sb-act:hover { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--text); }
+.sb-act.sb-act-del { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); }
+.sb-act.sb-act-del:hover { background: color-mix(in srgb, var(--red) 18%, transparent); }
+.sb-act .sb-chev { transition: transform .2s; }
+.sb-card.sb-open .sb-act .sb-chev { transform: rotate(180deg); }
+
+/* خلاصه چیپ‌ها (در حالت بسته) */
+.sb-summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 12px 10px; }
+.sb-mini {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text3);
+  border-radius: 5px; padding: 2px 7px; font-size: 9.5px; font-weight: 600;
+}
+.sb-mini i { font-size: 8.5px; }
+.sb-mini.sb-mini-req { color: var(--orange); background: color-mix(in srgb, var(--orange) 10%, transparent); }
+.sb-mini.sb-mini-cond { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.sb-mini.sb-mini-credit { color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
+
+/* بدنه کارت (تنظیمات) */
+.sb-body { display: none; border-top: 1px dashed var(--b2); padding: 14px 12px 12px; }
+.sb-card.sb-open .sb-body { display: block; }
+
+.sb-sec { margin-bottom: 14px; }
+.sb-sec:last-child { margin-bottom: 0; }
+.sb-sec-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  letter-spacing: .4px; margin-bottom: 8px;
+}
+.sb-sec-title i { font-size: 9.5px; color: var(--accent); }
+.sb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sb-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.sb-col-span { grid-column: 1 / -1; }
+@media (max-width: 900px) { .sb-grid, .sb-grid-3 { grid-template-columns: 1fr; } }
+
+.sb-fld { display: flex; flex-direction: column; gap: 5px; }
+.sb-fld-label { font-size: 10.5px; font-weight: 600; color: var(--text2); display: flex; align-items: center; gap: 5px; }
+.sb-fld-hint { font-size: 9.5px; color: var(--text3); line-height: 1.7; }
+.sb-ltr { direction: ltr; text-align: left; }
+
+/* ویرایشگر گزینه‌ها */
+.sb-opts { display: flex; flex-direction: column; gap: 7px; }
+.sb-opt-head { display: grid; gap: 7px; font-size: 9.5px; color: var(--text3); font-weight: 700; padding: 0 2px; }
+.sb-opt-row { display: grid; gap: 7px; align-items: center; }
+.sb-opt-row .sb-input { padding: 6px 8px; font-size: 11px; }
+.sb-opt-del {
+  width: 26px; height: 26px; border-radius: 7px; border: none; cursor: pointer;
+  background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red);
+  font-size: 10px; display: inline-flex; align-items: center; justify-content: center;
+}
+.sb-opt-grip { color: var(--text3); cursor: grab; font-size: 10px; text-align: center; }
+
+/* توکن پرامپت */
+.sb-token {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px; padding: 5px 10px;
+  font-size: 11px; color: var(--accent); direction: ltr; font-weight: 700;
+}
+.sb-token-btn {
+  border: none; background: none; color: var(--text3); cursor: pointer;
+  font-size: 10px; padding: 2px; transition: color .2s;
+}
+.sb-token-btn:hover { color: var(--accent); }
+
+/* هشدار داخل کارت */
+.sb-warn {
+  display: flex; align-items: center; gap: 6px;
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
+  color: var(--red); border-radius: 8px; padding: 6px 10px;
+  font-size: 10.5px; font-weight: 600; margin: 0 12px 10px;
+}
+
+/* ── حالت خالی ── */
+.sb-empty { text-align: center; padding: 32px 16px; border: 2px dashed var(--b2); border-radius: 12px; }
+.sb-empty-icon {
+  width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.sb-empty-title { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 4px; }
+.sb-empty-desc { font-size: 10.5px; color: var(--text3); margin-bottom: 12px; }
+
+/* ── مودال کتابخانه انواع ── */
+.sb-overlay {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(0, 0, 0, .55);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.sb-modal {
+  background: var(--s2); border: 1px solid var(--b1); border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  width: 100%; max-width: 680px; max-height: 85vh;
+  display: flex; flex-direction: column;
+}
+.sb-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 18px 14px; border-bottom: 1px solid var(--b1); flex-shrink: 0; }
+.sb-modal-head-right { display: flex; align-items: center; gap: 10px; }
+.sb-modal-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.sb-modal-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.sb-modal-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+.sb-modal-close {
+  width: 28px; height: 28px; border-radius: 8px; border: none; cursor: pointer; flex-shrink: 0;
+  background: none; color: var(--text3); display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.sb-modal-close:hover { color: var(--text); background: var(--b1); }
+.sb-modal-search { padding: 12px 14px; border-bottom: 1px solid var(--b1); flex-shrink: 0; }
+.sb-modal-body { padding: 14px; overflow-y: auto; flex: 1; }
+
+.sb-lib-group-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 700; color: var(--text3); margin: 14px 2px 8px;
+}
+.sb-lib-group-title:first-child { margin-top: 0; }
+.sb-lib-group-title i { color: var(--accent); font-size: 10px; }
+.sb-lib-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 700px) { .sb-lib-grid { grid-template-columns: 1fr 1fr; } }
+.sb-lib-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  background: var(--s1); border: 1px solid var(--b1); border-radius: 10px;
+  padding: 10px 11px; cursor: pointer; text-align: right;
+  font-family: inherit; transition: border-color .2s, background .2s;
+}
+.sb-lib-item:hover { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.sb-lib-item-head { display: flex; align-items: center; gap: 7px; }
+.sb-lib-item-icon {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.sb-lib-item-name { font-size: 11px; font-weight: 700; color: var(--text); }
+.sb-lib-item-desc { font-size: 9.5px; color: var(--text3); line-height: 1.7; }
+.sb-lib-empty { text-align: center; padding: 24px; font-size: 11px; color: var(--text3); }

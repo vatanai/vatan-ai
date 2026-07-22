@@ -4,55 +4,6 @@
 ═══════════════════════════════════════ */
 (function () {
 
-  /* ───── هدر موبایل: منوی همبرگری (کپی از هدر هوم) ───── */
-  var profileMenuOpenBtn = document.getElementById('profileMenuOpenBtn');
-  var profileMenuOverlay = document.getElementById('profileMenuOverlay');
-  var profileMenuSheet   = document.getElementById('profileMenuSheet');
-  var profileMenuIsOpen  = false;
-
-  function openProfileMenu() {
-    if (!profileMenuOverlay || !profileMenuSheet) return;
-    profileMenuOverlay.style.display = 'block';
-    setTimeout(function () {
-      profileMenuSheet.style.transform = 'scale(1) translateY(0)';
-      profileMenuSheet.style.opacity = '1';
-    }, 10);
-    profileMenuIsOpen = true;
-  }
-
-  window.closeProfileMenu = function () {
-    if (!profileMenuOverlay || !profileMenuSheet) return;
-    profileMenuSheet.style.transform = 'scale(0.9) translateY(-10px)';
-    profileMenuSheet.style.opacity = '0';
-    setTimeout(function () { profileMenuOverlay.style.display = 'none'; }, 200);
-    profileMenuIsOpen = false;
-  };
-
-  if (profileMenuOpenBtn) {
-    profileMenuOpenBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      profileMenuIsOpen ? window.closeProfileMenu() : openProfileMenu();
-    });
-
-    document.addEventListener('click', function (e) {
-      if (profileMenuIsOpen && profileMenuSheet && !profileMenuSheet.contains(e.target)) {
-        window.closeProfileMenu();
-      }
-    });
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && profileMenuIsOpen) window.closeProfileMenu();
-    });
-  }
-
-  /* ───── هدر موبایل: تم تاگل داخل منوی همبرگری ───── */
-  var profileHeaderThemeToggle = document.getElementById('profileHeaderThemeToggle');
-  if (profileHeaderThemeToggle) {
-    profileHeaderThemeToggle.addEventListener('click', function () {
-      window.vatanToggleTheme && window.vatanToggleTheme();
-    });
-  }
-
   /* ───── Main Tabs ───── */
   var tabs   = document.querySelectorAll('.profile-tab');
   var panels = document.querySelectorAll('.profile-panel');

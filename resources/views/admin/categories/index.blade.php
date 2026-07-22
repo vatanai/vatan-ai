@@ -1,140 +1,122 @@
 @extends('layouts.admin')
-@section('title', 'مدیریت دسته‌بندی‌ها — AIPIX Admin')
+@section('title', 'مدیریت دسته‌بندی‌ها — وطن استودیو')
 
 @section('content')
-<div class="flex min-h-screen bg-[var(--bg)] text-[var(--text)]" dir="rtl">
-  <main class="flex-1 flex flex-col min-h-screen mr-0 md:mr-[294px]">
-    @include('admin.partials.header')
-
-    <div class="admin-content p-6 flex-1 pb-24 overflow-y-auto max-[768px]:p-[18px]" id="content">
-
-      <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <div class="text-xl font-extrabold tracking-tight mb-1">مدیریت دسته‌بندی‌ها</div>
-          <div class="text-xs text-gray-500">لیست، ویرایش و مدیریت تمامی دسته‌بندی‌های محصولات موجود در سیستم</div>
-        </div>
-        <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-1.5 px-3.5 h-[34px] rounded-lg text-xs font-semibold bg-[var(--accent)] text-[var(--primary)] shadow-lg shadow-[var(--accent)]/10 hover:bg-[var(--accent-hover)] transition-all no-underline cursor-pointer">
-          <i class="fa-solid fa-plus text-[11px]"></i> افزودن دسته‌بندی جدید
-        </a>
+<main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0" dir="rtl">
+  @include('admin.partials.header')
+  <div class="admin-content flex-1 overflow-y-auto p-6 max-[768px]:p-[18px]" id="content">
+    <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">مدیریت دسته‌بندی‌ها</h1>
+        <p class="text-xs text-[var(--text-soft)]">مدیریت دسته‌بندی‌ها و لینک صفحه عمومی هر دسته</p>
       </div>
+      <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold bg-[var(--primary)] text-[var(--accent)] no-underline">
+        <i class="fa-solid fa-plus"></i> افزودن دسته‌بندی
+      </a>
+    </div>
 
-      <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl overflow-hidden">
-        <div class="p-4 border-b border-[var(--b1)] text-xs font-bold text-[var(--text3)] flex items-center gap-2">
-          <i class="fa-solid fa-list text-[var(--accent)]"></i> دسته‌بندی‌های ثبت شده
-        </div>
-        
-        <div class="overflow-x-auto">
-          <table class="w-full text-right border-collapse text-xs">
-            <thead>
-              <tr class="bg-[var(--s1)] border-b border-[var(--b1)] text-[var(--text2)]">
-                <th class="p-4 font-semibold w-20">تصویر</th>
-                <th class="p-4 font-semibold">نام دسته‌بندی</th>
-                <th class="p-4 font-semibold">اسلاگ (Slug)</th>
-                <th class="p-4 font-semibold w-32 text-center">تعداد محصولات</th>
-                <th class="p-4 font-semibold w-36 text-left pl-6">عملیات</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-[var(--b1)]">
-              @forelse($categories as $category)
-                <tr class="hover:bg-[var(--s1)]/40 transition-colors">
-                  <td class="p-4">
-                    @if($category->image)
-                      <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->name }}" class="w-10 h-10 object-cover rounded-lg border border-[var(--b1)]">
-                    @else
-                      <div class="w-10 h-10 rounded-lg bg-[var(--s1)] border border-[var(--b1)] flex items-center justify-center text-[10px] text-[var(--text3)]">
-                        <i class="fa-regular fa-image text-sm"></i>
-                      </div>
-                    @endif
-                  </td>
-                  
-                  <td class="p-4 font-bold text-[var(--text)] text-sm">
-                    {{ $category->name }}
-                  </td>
-                  
-                  <td class="p-4 font-mono text-gray-500 ltr text-right">
-                    {{ $category->slug }}
-                  </td>
-                  
-                  <td class="p-4 text-center">
-                    <span class="inline-flex items-center justify-center px-2 py-1 rounded-md bg-[var(--b1)] text-[var(--text2)] font-semibold min-w-[40px]">
-                      {{ $category->products_count }}
-                    </span>
-                  </td>
-                  
-                  <td class="p-4 text-left pl-6">
-                    <div class="inline-flex items-center gap-2">
-                      <a href="{{ route('admin.categories.edit', $category->id) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--b1)] border border-[var(--b2)] text-[var(--text2)] hover:text-[var(--text)] transition-colors" title="ویرایش">
-                        <i class="fa-regular fa-pen-to-square text-[13px]"></i>
-                      </a>
-                      
-                      <form action="{{ route('admin.categories.destroy', $category->id) }}" method="POST" onsubmit="return confirm('آیا از حذف این دسته‌بندی اطمینان دارید؟ محصولات وابسته به این دسته‌بندی حذف نخواهند شد و بدون دسته‌بندی باقی می‌مانند.');" class="inline">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--red)]/10 border border-[var(--red)]/30 text-[var(--red)] hover:bg-[var(--red)]/20 transition-all cursor-pointer" title="حذف دسته‌بندی">
-                          <i class="fa-regular fa-trash-can text-[13px]"></i>
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              @empty
-                <tr>
-                  <td colspan="5" class="p-8 text-center text-[var(--text3)]">
-                    <div class="flex flex-col items-center justify-center gap-2">
-                      <i class="fa-regular fa-folder-open text-2xl"></i>
-                      <span>هیچ دسته‌بندی‌ای در سیستم ثبت نشده است.</span>
-                    </div>
-                  </td>
-                </tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
+    @if(session('success'))
+      <div class="mb-4 rounded-xl border border-[var(--success)] p-3 text-xs text-[var(--text-main)] bg-[var(--card-bg)]">
+        <i class="fa-solid fa-circle-check text-[var(--success)] ml-1"></i>{{ session('success') }}
       </div>
+    @endif
 
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+      <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-card)]">
+        <div class="flex items-center justify-between mb-3"><span class="text-xs text-[var(--text-soft)]">همه دسته‌بندی‌ها</span><span class="w-9 h-9 rounded-lg bg-[var(--input-bg)] text-[var(--primary)] flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span></div>
+        <strong class="text-2xl text-[var(--text-h)]">{{ number_format($totalCategories) }}</strong>
+        <p class="text-[10px] text-[var(--text-soft)] mt-1">مجموع دسته‌های اصلی و زیر‌دسته‌ها</p>
+      </div>
+      <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-card)]">
+        <div class="flex items-center justify-between mb-3"><span class="text-xs text-[var(--text-soft)]">دسته‌های دارای محصول</span><span class="w-9 h-9 rounded-lg bg-[var(--input-bg)] text-[var(--success)] flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></span></div>
+        <strong class="text-2xl text-[var(--text-h)]">{{ number_format($activeCategories) }}</strong>
+        <p class="text-[10px] text-[var(--text-soft)] mt-1">{{ $totalCategories ? round(($activeCategories / $totalCategories) * 100) : 0 }}٪ از کل دسته‌بندی‌ها</p>
+      </div>
+      <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-card)]">
+        <div class="flex items-center justify-between mb-3"><span class="text-xs text-[var(--text-soft)]">دسته‌های بدون محصول</span><span class="w-9 h-9 rounded-lg bg-[var(--input-bg)] text-[var(--warning)] flex items-center justify-center"><i class="fa-regular fa-folder-open"></i></span></div>
+        <strong class="text-2xl text-[var(--text-h)]">{{ number_format($emptyCategories) }}</strong>
+        <p class="text-[10px] text-[var(--text-soft)] mt-1">نیازمند اتصال محصول یا بازبینی</p>
+      </div>
+      <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-card)]">
+        <div class="flex items-center justify-between mb-3"><span class="text-xs text-[var(--text-soft)]">پرمصرف‌ترین دسته</span><span class="w-9 h-9 rounded-lg bg-[var(--input-bg)] text-[var(--accent)] flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></span></div>
+        <strong class="block text-sm text-[var(--text-h)] truncate" title="{{ $topCategory?->name_fa ?: $topCategory?->name }}">{{ $topCategory?->name_fa ?: $topCategory?->name ?: 'بدون داده' }}</strong>
+        <p class="text-[10px] text-[var(--text-soft)] mt-2">{{ number_format($topCategory ? ($usageCounts[$topCategory->id] ?? 0) : 0) }} استفاده · {{ number_format($totalUsage) }} استفاده کل</p>
+      </div>
     </div>
-  </main>
-</div>
 
-@if(session('success'))
-<div id="success-toast" class="fixed top-6 left-6 z-50 transform translate-x-[-120%] opacity-0 transition-all duration-500 ease-out flex items-center gap-3 bg-[var(--s2)] border border-[var(--text3)]/40 shadow-2xl shadow-[var(--bg)] p-4 rounded-xl min-w-[320px] max-w-sm text-right" dir="rtl">
-    <div class="w-9 h-9 rounded-lg bg-[var(--text3)]/10 flex items-center justify-center text-[var(--text2)] shrink-0">
-        <i class="fa-solid fa-circle-check text-base"></i>
+    <form method="GET" action="{{ route('admin.categories.index') }}" class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-3 mb-5 shadow-[var(--shadow-card)]">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_repeat(4,minmax(130px,auto))_auto] gap-2">
+        <label class="relative"><i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]"></i><input type="search" name="search" value="{{ request('search') }}" placeholder="جستجو در نام، اسلاگ یا مسیر..." class="w-full h-10 pr-9 pl-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)] outline-none focus:border-[var(--primary)]"></label>
+        <select name="content" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت محتوا</option><option value="active" @selected(request('content')==='active')>دارای محصول</option><option value="empty" @selected(request('content')==='empty')>بدون محصول</option></select>
+        <select name="visibility" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت نمایش</option><option value="enabled" @selected(request('visibility')==='enabled')>فعال سیستمی</option><option value="disabled" @selected(request('visibility')==='disabled')>غیرفعال سیستمی</option></select>
+        <select name="type" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">نوع دسته</option><option value="root" @selected(request('type')==='root')>دسته اصلی</option><option value="child" @selected(request('type')==='child')>زیر‌دسته</option><option value="featured" @selected(request('type')==='featured')>ویژه</option></select>
+        <select name="sort" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="usage" @selected(request('sort','usage')==='usage')>بیشترین مصرف</option><option value="products" @selected(request('sort')==='products')>بیشترین محصول</option><option value="name" @selected(request('sort')==='name')>نام دسته</option><option value="latest" @selected(request('sort')==='latest')>جدیدترین</option><option value="oldest" @selected(request('sort')==='oldest')>قدیمی‌ترین</option></select>
+        <div class="flex gap-2"><button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold cursor-pointer"><i class="fa-solid fa-filter ml-1"></i> اعمال</button>@if(request()->hasAny(['search','content','visibility','type','sort']))<a href="{{ route('admin.categories.index') }}" class="h-10 w-10 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] text-[var(--text-soft)] inline-flex items-center justify-center" title="پاک‌کردن فیلترها"><i class="fa-solid fa-xmark"></i></a>@endif</div>
+      </div>
+      <div class="mt-2 text-[10px] text-[var(--text-soft)]">{{ number_format($categories->total()) }} دسته‌بندی مطابق فیلترهای انتخاب‌شده</div>
+    </form>
+
+    <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+      <div class="p-4 border-b border-[var(--divider)] text-xs font-bold text-[var(--text-main)] flex items-center justify-between">
+        <span><i class="fa-solid fa-list text-[var(--primary)] ml-1"></i> دسته‌بندی‌ها بر اساس مصرف</span><span class="text-[10px] font-normal text-[var(--text-soft)]">مصرف = تعداد اجرای واقعی محصولات هر دسته</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-right border-collapse text-xs">
+          <thead><tr class="bg-[var(--input-bg)] text-[var(--text-soft)]">
+            <th class="p-4 w-20">تصویر</th><th class="p-4">نام دسته‌بندی</th><th class="p-4">اسلاگ</th>
+            <th class="p-4 text-center">محصولات</th><th class="p-4 text-center">تعداد استفاده</th><th class="p-4 text-center">وضعیت</th><th class="p-4 text-center">لینک</th><th class="p-4 text-left">عملیات</th>
+          </tr></thead>
+          <tbody class="divide-y divide-[var(--divider)]">
+          @forelse($categories as $category)
+            <tr class="hover:bg-[var(--input-bg)] transition-colors">
+              <td class="p-4">
+                @if($category->image)<img src="{{ asset('storage/'.$category->image) }}" alt="{{ $category->name }}" class="w-10 h-10 object-cover rounded-lg border border-[var(--border)]">
+                @else<div class="w-10 h-10 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] flex items-center justify-center text-[var(--text-soft)]"><i class="fa-regular fa-image"></i></div>@endif
+              </td>
+              <td class="p-4 font-bold text-[var(--text-main)]">{{ $category->name_fa ?: $category->name }}</td>
+              <td class="p-4 font-mono text-[var(--text-soft)]" dir="ltr">{{ $category->slug }}</td>
+              <td class="p-4 text-center"><span class="px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--text-main)]">{{ $category->products_count }}</span></td>
+              <td class="p-4 text-center"><span class="font-bold {{ $category->usage_count > 0 ? 'text-[var(--primary)]' : 'text-[var(--text-soft)]' }}">{{ number_format($category->usage_count) }}</span></td>
+              <td class="p-4 text-center">@if($category->products_count > 0)<span class="inline-flex items-center gap-1 text-[10px] text-[var(--success)]"><i class="fa-solid fa-circle text-[6px]"></i> دارای محصول</span>@else<span class="inline-flex items-center gap-1 text-[10px] text-[var(--text-soft)]"><i class="fa-regular fa-circle text-[6px]"></i> خالی</span>@endif</td>
+              <td class="p-4 text-center">
+                <button type="button" class="copy-category-link inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)] cursor-pointer" data-url="{{ $category->url() }}" title="کپی لینک دسته‌بندی" aria-label="کپی لینک {{ $category->name }}">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </td>
+              <td class="p-4 text-left"><div class="inline-flex gap-2">
+                <a href="{{ route('admin.categories.edit', $category) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)]" title="ویرایش"><i class="fa-regular fa-pen-to-square"></i></a>
+                <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" onsubmit="return confirm('این دسته‌بندی حذف شود؟');">@csrf @method('DELETE')
+                  <button class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[var(--danger)] text-[var(--danger)] bg-transparent cursor-pointer" title="حذف"><i class="fa-regular fa-trash-can"></i></button>
+                </form>
+              </div></td>
+            </tr>
+          @empty
+            <tr><td colspan="8" class="p-10 text-center text-[var(--text-soft)]"><i class="fa-regular fa-folder-open text-2xl block mb-2"></i>دسته‌بندی مطابق این فیلترها پیدا نشد.</td></tr>
+          @endforelse
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="flex-1">
-        <div class="text-xs font-bold text-[var(--text)] mb-0.5">عملیات موفقیت‌آمیز</div>
-        <div class="text-[11px] text-[var(--text3)] leading-relaxed">{{ session('success') }}</div>
-    </div>
-    <button onclick="closeToast('success-toast')" class="text-gray-500 hover:text-[var(--text)] transition-colors p-1 cursor-pointer">
-        <i class="fa-solid fa-xmark text-xs"></i>
-    </button>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const toast = document.getElementById('success-toast');
-        if (toast) {
-            setTimeout(() => {
-                toast.classList.remove('translate-x-[-120%]', 'opacity-0');
-                toast.classList.add('translate-x-0', 'opacity-100');
-            }, 100);
-
-            setTimeout(() => {
-                closeToast('success-toast');
-            }, 5000);
-        }
-    });
-</script>
-@endif
-
-<script>
-    function closeToast(id) {
-        const toast = document.getElementById(id);
-        if (toast) {
-            toast.classList.remove('translate-x-0', 'opacity-100');
-            toast.classList.add('translate-x-[-120%]', 'opacity-0');
-            setTimeout(() => toast.remove(), 500);
-        }
-    }
-</script>
+    @if($categories->hasPages())<div class="mt-5">{{ $categories->links() }}</div>@endif
+    <div id="copy-toast" class="fixed left-6 bottom-6 hidden rounded-lg bg-[var(--card-bg)] border border-[var(--success)] px-4 py-3 text-xs text-[var(--text-main)] shadow-[var(--shadow-card)]">لینک دسته‌بندی کپی شد.</div>
+  </div>
+</main>
 @endsection
+
+@push('scripts')
+<script>
+document.querySelectorAll('.copy-category-link').forEach(function (button) {
+  button.addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(button.dataset.url);
+    } catch (error) {
+      const input = document.createElement('textarea');
+      input.value = button.dataset.url; document.body.appendChild(input); input.select();
+      document.execCommand('copy'); input.remove();
+    }
+    const toast = document.getElementById('copy-toast');
+    toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 2200);
+  });
+});
+</script>
+@endpush

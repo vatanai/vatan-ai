@@ -1,4 +1,4 @@
-<aside class="sidebar fixed top-0 right-16 bottom-0 w-[230px] flex flex-col overflow-y-auto z-[100] direction-rtl" dir="rtl">
+<aside class="sidebar" id="admin-sidebar" dir="rtl">
 
   {{-- لوگو --}}
   <div class="sb-logo">
@@ -50,7 +50,7 @@
             <div class="sub-dot"></div><div class="sub-label">دسته‌بندی‌ها</div>
           </a>
           <a href="{{ route('admin.categories.create') }}" class="sub-item {{ request()->is('admin/categories/create') ? 'active' : '' }}">
-            <div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی جدید</div>
+            <div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی</div>
           </a>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">گزارش محصولات</div>
@@ -64,29 +64,62 @@
       </div>
     </div>
 
-    {{-- اکسپلور --}}
+    {{-- مدیریت صفحات --}}
     <div class="nav-item">
-      <div class="nav-link {{ request()->is('admin/explore*') ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
+      <div class="nav-link {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-        <div class="nav-label">اکسپلور</div>
-        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/explore*') ? 'open' : '' }}"></i>
+        <div class="nav-label">مدیریت صفحات</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ request()->is('admin/explore*') ? 'open' : '' }}" id="explore-submenu">
+      <div class="submenu {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'open' : '' }}" id="explore-submenu">
         <div class="sub-track">
           <a href="{{ route('admin.explore.index') }}" class="sub-item {{ request()->is('admin/explore') ? 'active' : '' }}">
-            <div class="sub-dot"></div><div class="sub-label">مدیریت اکسپلور</div>
+            <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه اکسپلور</div>
+          </a>
+          <a href="{{ route('admin.home-builder.index') }}" class="sub-item {{ request()->is('admin/home-builder*') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه هوم</div>
+          </a>
+          <a href="/admin/coming-soon" class="sub-item {{ request()->is('admin/coming-soon') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه ترند</div>
+          </a>
+          <a href="/admin/content" class="sub-item {{ request()->is('admin/content') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت مقالات</div>
           </a>
         </div>
       </div>
     </div>
 
-    {{-- سفارشات --}}
+    <div class="sb-section">سفارشات</div>
+
+    {{-- مدیریت سفارشات --}}
     <div class="nav-item">
-      <a href="/admin/orders" class="nav-link {{ request()->is('admin/orders*') ? 'active' : '' }}">
+      <div class="nav-link {{ request()->is('admin/orders*') || request()->is('admin/discounts*') ? 'active' : '' }}" onclick="toggleSub('orders-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-cart-shopping"></i></div>
         <div class="nav-label">سفارشات</div>
-        <span class="nav-status-badge warn">بزودی</span>
-      </a>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/orders*') || request()->is('admin/discounts*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/orders*') || request()->is('admin/discounts*') ? 'open' : '' }}" id="orders-submenu">
+        <div class="sub-track">
+          <a href="/admin/orders" class="sub-item {{ request()->is('admin/orders') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">همه سفارشات</div>
+          </a>
+          <a href="/admin/orders/processing" class="sub-item {{ request()->is('admin/orders/processing') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">در حال پردازش</div>
+          </a>
+          <a href="/admin/orders/failed" class="sub-item {{ request()->is('admin/orders/failed') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">ناموفق و نیازمند بررسی</div>
+          </a>
+          <a href="/admin/orders/refunds" class="sub-item {{ request()->is('admin/orders/refunds') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">لغو و بازپرداخت</div>
+          </a>
+          <a href="/admin/orders/analytics" class="sub-item {{ request()->is('admin/orders/analytics') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">آنالیتیکس سفارشات</div>
+          </a>
+          <a href="/admin/discounts" class="sub-item {{ request()->is('admin/discounts*') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">تخفیفات</div>
+          </a>
+        </div>
+      </div>
     </div>
 
     <div class="sb-section">هوش مصنوعی</div>
@@ -138,17 +171,36 @@
 
     <div class="sb-divider"></div>
 
+    {{-- مدیریت پیامک --}}
+    <div class="nav-item">
+      <div class="nav-link {{ request()->is('admin/sms*') ? 'active' : '' }}" onclick="toggleSub('sms-submenu', this)">
+        <div class="nav-icon"><i class="fa-solid fa-comment-sms"></i></div>
+        <div class="nav-label">مدیریت پیامک</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/sms*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/sms*') ? 'open' : '' }}" id="sms-submenu"><div class="sub-track">
+        <a href="{{ route('admin.sms.index') }}" class="sub-item {{ request()->is('admin/sms') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">داشبورد پیامک</div></a>
+        <a href="{{ route('admin.sms.compose') }}" class="sub-item {{ request()->is('admin/sms/compose') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ارسال پیامک</div></a>
+        <a href="{{ route('admin.sms.templates') }}" class="sub-item {{ request()->is('admin/sms/templates*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">پیامک‌های خودکار</div></a>
+        <a href="{{ route('admin.sms.campaigns') }}" class="sub-item {{ request()->is('admin/sms/campaigns') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">مخاطبان و مناسبت‌ها</div></a>
+        <a href="{{ route('admin.sms.history') }}" class="sub-item {{ request()->is('admin/sms/history') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">تاریخچه ارسال‌ها</div></a>
+        @if(auth('admin')->user()?->isLeader())<a href="{{ route('admin.sms.providers') }}" class="sub-item {{ request()->is('admin/sms/providers*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">تنظیمات سرویس‌ها</div></a>@endif
+      </div></div>
+    </div>
+
+    <div class="sb-divider"></div>
+
     {{-- تنظیمات --}}
     <div class="nav-item">
-      <div class="nav-link {{ request()->is('admin/settings*') || request()->is('admin/crm*') ? 'active' : '' }}" onclick="toggleSub('settings-submenu', this)">
+      <div class="nav-link {{ request()->is('admin/settings*') || request()->is('admin/dashboard/crm') ? 'active' : '' }}" onclick="toggleSub('settings-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-gear"></i></div>
         <div class="nav-label">تنظیمات</div>
-        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/settings*') || request()->is('admin/crm*') ? 'open' : '' }}"></i>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/settings*') || request()->is('admin/dashboard/crm') ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ request()->is('admin/settings*') || request()->is('admin/crm*') ? 'open' : '' }}" id="settings-submenu">
+      <div class="submenu {{ request()->is('admin/settings*') || request()->is('admin/dashboard/crm') ? 'open' : '' }}" id="settings-submenu">
         <div class="sub-track">
-          <a href="/admin/crm" class="sub-item {{ request()->is('admin/crm') ? 'active' : '' }}">
-            <div class="sub-dot"></div><div class="sub-label">CRM</div>
+          <a href="/admin/dashboard/crm" class="sub-item {{ request()->is('admin/dashboard/crm') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">سیستم مدیریت پروژه</div>
           </a>
           <a href="/admin/settings/admins" class="sub-item {{ request()->is('admin/settings/admins') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت ادمین‌ها</div>
@@ -215,17 +267,6 @@
               <a href="/admin/bloggers" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست بلاگرها</div></a>
               <a href="/admin/bloggers/commission" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">مدیریت کمیسیون</div></a>
               <a href="/admin/bloggers/traffic" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">گزارش ترافیک</div></a>
-            </div>
-          </div>
-
-          <div class="sub-item sub-item-parent" onclick="toggleSubSub('future-orders-submenu', this)">
-            <div class="sub-dot"></div><div class="sub-label">سفارشات</div>
-            <i class="fa-solid fa-chevron-down sub-chev"></i>
-          </div>
-          <div class="sub-sub-wrap" id="future-orders-submenu">
-            <div class="sub-sub-track">
-              <a href="/admin/orders" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست سفارشات</div></a>
-              <a href="/admin/orders/analytics" class="sub-sub-item"><div class="sub-sub-dot"></div><div class="sub-sub-label">آنالیتیکس سفارشات</div></a>
             </div>
           </div>
 
@@ -332,7 +373,7 @@
             </div>
           </div>
 
-          <a href="/admin/crm/attendance" class="sub-item"><div class="sub-dot"></div><div class="sub-label">حضور و غیاب</div></a>
+          <a href="/admin/dashboard/attendance" class="sub-item"><div class="sub-dot"></div><div class="sub-label">حضور و غیاب</div></a>
           <a href="/admin/jobs" class="sub-item"><div class="sub-dot"></div><div class="sub-label">لاگ جاب‌ها</div></a>
 
         </div>

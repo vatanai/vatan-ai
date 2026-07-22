@@ -2210,3 +2210,4 @@ console.log('%c✓ Phase 8 Complete — Full CRM Overhaul', 'color:#0BBF53;font-
 </script>
 
 <script src="{{ asset('admin/js/crm.js') }}"></script>
+<script src="{{ asset('admin/js/crm-api.js') }}"></script>

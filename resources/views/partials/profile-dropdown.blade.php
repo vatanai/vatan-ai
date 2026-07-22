@@ -16,7 +16,7 @@
   <div class="dropdown-token-section p-2.5 flex flex-col gap-1">
     <span class="token-title text-[11px] text-white/40 [.light_&]:text-black/45">توکن‌های باقی‌مانده:</span>
     <span id="top-nav-tokens" class="token-value text-[13.5px] font-black text-[#cffe00]">
-      {{ number_format(auth()->user()->tokens ?? 0) }} توکن
+      {{ number_format(auth()->user()->token_balance) }} توکن
     </span>
   </div>
   

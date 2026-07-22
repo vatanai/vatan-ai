@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Generation;
-use App\Models\Wallet;
 use App\Models\Transaction;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -73,19 +72,15 @@ class ProcessImageJob implements ShouldQueue
                         'status' => 'completed'
                     ]);
 
-                    // ۲. کسر ۱۰ توکن از کیف پول کاربر عضو شده (بند ۳.۲)
+                    // ۲. هزینه پیش از ارسال job از موجودی رسمی users.tokens کسر شده است.
+                    // اینجا فقط تراکنش مصرف ثبت می‌شود تا دوباره‌کسر اتفاق نیفتد.
                     if ($generation->user_id) {
-                        $wallet = Wallet::where('user_id', $generation->user_id)->first();
-                        if ($wallet && $wallet->tokens_balance >= 10) {
-                            $wallet->decrement('tokens_balance', 10);
-                            
-                            Transaction::create([
-                                'user_id' => $generation->user_id,
-                                'amount' => -10,
-                                'type' => 'usage',
-                                'description' => 'تولید تصویر نانو بنانا در سبک ' . $generation->product->name
-                            ]);
-                        }
+                        Transaction::create([
+                            'user_id' => $generation->user_id,
+                            'amount' => -10,
+                            'type' => 'usage',
+                            'description' => 'تولید تصویر نانو بنانا در سبک ' . $generation->product->name
+                        ]);
                     }
 
                     // ۳. حذف عکس ورودی اصلی برای خلوت ماندن هارد سرور (بند ۳.۲)

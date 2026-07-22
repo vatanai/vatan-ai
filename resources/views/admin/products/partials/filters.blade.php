@@ -10,8 +10,8 @@
 
   همه‌ی فیلترها (جستجو، دسته، زیردسته، وضعیت، نوع قیمت، نوع رسانه، مدل AI،
   بازه‌ی تاریخ) روی ستون‌های واقعاً موجود در جدول products اعمال می‌شوند.
-  فقط گزینه‌های مرتب‌سازی «بیشترین/کمترین استفاده» و «بیشترین درآمد» چون به
-  آمار اجرا نیاز دارند غیرفعال هستند و با بج «نیاز به بررسی برنامه» مشخص شده‌اند.
+  مرتب‌سازی «بیشترین اجرا / کمترین اجرا» به آمار واقعی جدول generations متصل است
+  (generations_count در کنترلر)؛ فقط «بیشترین درآمد» هنوز داده‌ی واقعی ندارد.
   ══════════════════════════════════════════════════════════════════
 --}}
 @php
@@ -40,7 +40,7 @@
   <div class="flex items-center gap-2.5 flex-wrap">
     <div class="flex-1 min-w-[240px] relative">
       <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-soft);"></i>
-      <input type="text" name="search" placeholder="جستجو در نام فارسی، نام انگلیسی، Slug، تگ یا شناسه محصول..."
+      <input type="text" name="search" placeholder="جستجو در نام فارسی، نام انگلیسی، Slug، تگ، کد ۶ رقمی یا شناسه محصول..."
              value="{{ request('search') }}"
              class="input-pro is-lg w-full" dir="rtl">
     </div>
@@ -63,7 +63,7 @@
   </div>
 
   <div class="text-[10.5px] mt-2" style="color:var(--text-soft);">
-    جستجو بر اساس: نام فارسی، نام انگلیسی، Slug، تگ، شناسه محصول
+    جستجو بر اساس: نام فارسی، نام انگلیسی، Slug، تگ، کد ۶ رقمی محصول، شناسه محصول
   </div>
 
   {{-- ─── چیپ‌های فیلتر سریع ─── --}}
@@ -166,8 +166,9 @@
         <option value="newest" {{ request('sort','newest')=='newest'?'selected':'' }}>جدیدترین</option>
         <option value="oldest" {{ request('sort')=='oldest'?'selected':'' }}>قدیمی‌ترین</option>
         <option value="az" {{ request('sort')=='az'?'selected':'' }}>الفبا</option>
-        <option value="most_used" disabled>بیشترین استفاده — نیاز به بررسی برنامه</option>
-        <option value="least_used" disabled>کمترین استفاده — نیاز به بررسی برنامه</option>
+        {{-- مرتب‌سازی واقعی بر اساس آمار اجرای محصولات (جدول generations) --}}
+        <option value="most_used" {{ request('sort')=='most_used'?'selected':'' }}>بیشترین اجرا</option>
+        <option value="least_used" {{ request('sort')=='least_used'?'selected':'' }}>کمترین اجرا</option>
         <option value="most_revenue" disabled>بیشترین درآمد — نیاز به بررسی برنامه</option>
       </select>
     </div>

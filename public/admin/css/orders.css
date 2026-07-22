@@ -1,0 +1,56 @@
+.orders-page{background:var(--page-bg);color:var(--text-main)}
+.orders-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.orders-title{font-size:20px;font-weight:800;color:var(--text-h);margin-bottom:4px}
+.orders-subtitle{font-size:12.5px;color:var(--text-soft)}
+.orders-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.order-btn{height:36px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-main);font-family:inherit;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;cursor:pointer;transition:.18s}
+.order-btn:hover{border-color:var(--primary);color:var(--primary)}
+.order-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--accent)}
+.order-btn.danger{color:var(--danger);border-color:var(--danger-m);background:var(--danger-l)}
+.order-btn.success{color:var(--success);border-color:var(--success-m);background:var(--success-l)}
+.orders-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.order-stat{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:15px;box-shadow:var(--shadow-card)}
+.order-stat-icon{width:34px;height:34px;border-radius:10px;background:var(--primary-l);color:var(--primary);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.order-stat-label{font-size:11px;color:var(--text-soft);margin-bottom:4px}
+.order-stat-value{font-size:21px;font-weight:800;color:var(--text-h)}
+.order-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-card);margin-bottom:16px}
+.order-panel-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.order-panel-title{font-size:13px;font-weight:800;color:var(--text-h)}
+.order-filters{padding:14px;display:grid;grid-template-columns:minmax(220px,2fr) repeat(4,minmax(130px,1fr)) auto;gap:9px;align-items:end}
+.order-field label{display:block;font-size:10.5px;color:var(--text-soft);margin-bottom:6px}
+.order-input,.order-select,.order-textarea{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--input-bg);color:var(--text-main);font-family:inherit;font-size:12px;outline:none;transition:.18s}
+.order-input,.order-select{height:36px;padding:0 11px}
+.order-textarea{padding:10px;min-height:90px;resize:vertical}
+.order-input:focus,.order-select:focus,.order-textarea:focus{border-color:var(--primary);background:var(--card-bg)}
+.orders-table-wrap{overflow:auto}
+.orders-table{width:100%;border-collapse:collapse;min-width:950px}
+.orders-table th{background:var(--input-bg);color:var(--text-soft);font-size:10.5px;font-weight:700;padding:11px 13px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+.orders-table td{padding:12px 13px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-main);vertical-align:middle}
+.orders-table tr:last-child td{border-bottom:0}.orders-table tbody tr:hover{background:var(--nav-hover)}
+.order-number{font-weight:800;color:var(--text-h);direction:ltr;display:inline-block}
+.order-user{display:flex;align-items:center;gap:9px}.order-avatar{width:31px;height:31px;border-radius:50%;background:var(--primary-l);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex:none}
+.order-user-name{font-weight:700;color:var(--text-h);white-space:nowrap}.order-meta{font-size:10.5px;color:var(--text-soft);margin-top:2px}
+.order-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;border:1px solid var(--border);font-size:10.5px;font-weight:700;white-space:nowrap;background:var(--input-bg);color:var(--text-soft)}
+.order-badge.success{background:var(--success-l);border-color:var(--success-m);color:var(--success)}
+.order-badge.warning{background:var(--warning-l);border-color:var(--warning-m);color:var(--warning)}
+.order-badge.danger{background:var(--danger-l);border-color:var(--danger-m);color:var(--danger)}
+.order-badge.info{background:var(--info-l);border-color:var(--info-m);color:var(--info)}
+.order-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.order-empty{text-align:center;padding:55px 20px;color:var(--text-soft)}.order-empty i{font-size:28px;margin-bottom:10px;display:block;opacity:.65}
+.order-pagination{padding:13px 15px;border-top:1px solid var(--border)}
+.order-pagination nav>div:first-child{display:none}.order-pagination nav>div:last-child{display:flex;align-items:center;justify-content:space-between;gap:12px}.order-pagination nav span,.order-pagination nav a{font-family:inherit!important}
+.order-flash{padding:12px 14px;border:1px solid var(--success-m);background:var(--success-l);color:var(--success);border-radius:11px;font-size:12px;font-weight:700;margin-bottom:15px}
+.order-errors{padding:12px 14px;border:1px solid var(--danger-m);background:var(--danger-l);color:var(--danger);border-radius:11px;font-size:12px;margin-bottom:15px}
+.order-detail-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:16px;align-items:start}
+.order-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;padding:5px 16px 14px}
+.order-info-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.order-info-key{font-size:11px;color:var(--text-soft)}.order-info-value{font-size:12px;font-weight:700;color:var(--text-h);text-align:left;word-break:break-word}
+.order-timeline{padding:15px 18px}.order-event{position:relative;padding:0 22px 18px 0;border-right:1px solid var(--sub-line)}.order-event:last-child{padding-bottom:0;border-right-color:transparent}.order-event:before{content:"";position:absolute;right:-5px;top:2px;width:9px;height:9px;border-radius:50%;background:var(--sub-dot-active);border:2px solid var(--card-bg)}
+.order-event-title{font-size:12px;font-weight:700;color:var(--text-h)}.order-event-desc{font-size:11px;color:var(--text-soft);margin-top:4px;line-height:1.8}.order-event-time{font-size:10px;color:var(--text-soft);margin-top:4px}
+.order-form{padding:15px}.order-form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}.order-check{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text-main)}
+.order-progress{height:6px;background:var(--input-bg);border-radius:99px;overflow:hidden;margin-top:6px}.order-progress span{height:100%;background:var(--primary);display:block;border-radius:inherit}
+.analytics-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}.chart-area{height:250px;padding:18px;display:flex;align-items:flex-end;gap:6px}.chart-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px}.chart-bar{width:70%;min-width:5px;background:var(--primary);border-radius:5px 5px 2px 2px;min-height:2px}.chart-label{font-size:9px;color:var(--text-soft);transform:rotate(-45deg);white-space:nowrap}
+.discount-layout{display:grid;grid-template-columns:minmax(310px,390px) minmax(0,1fr);gap:16px;align-items:start}.discount-card-list{display:grid;gap:10px;padding:14px}.discount-card{border:1px solid var(--border);background:var(--input-bg);border-radius:12px;padding:13px}.discount-code{font:800 13px monospace;direction:ltr;color:var(--text-h)}.discount-card-top{display:flex;justify-content:space-between;gap:10px}.discount-card-actions{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+@media(max-width:1200px){.orders-stats{grid-template-columns:repeat(3,1fr)}.order-filters{grid-template-columns:repeat(3,1fr)}.analytics-grid{grid-template-columns:1fr}}
+@media(max-width:800px){.orders-stats{grid-template-columns:repeat(2,1fr)}.order-filters{grid-template-columns:1fr 1fr}.order-detail-grid,.discount-layout{grid-template-columns:1fr}.order-info-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.orders-stats,.order-filters,.order-form-row{grid-template-columns:1fr}.orders-head{display:block}.orders-actions{margin-top:12px}.order-stat{padding:12px}}

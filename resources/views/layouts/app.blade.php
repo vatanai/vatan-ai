@@ -9,11 +9,7 @@
   {{-- متاتگ‌های سئوی هر صفحه (description، Open Graph، Twitter، JSON-LD) از این استک تزریق می‌شوند --}}
   @stack('meta')
 
-  <link class="apple-touch-icon" href="{{ asset('assets/img/icon_vatan.svg') }}">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AIPIX">
+  @include('partials.site-icons')
 
   {{-- ۱. اولویت لود فونت‌ها --}}
   <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
@@ -133,7 +129,7 @@
     }());
   </script>
 </head>
-<body>
+<body id="top">
 
   {{-- محتوای اصلی صفحات --}}
   <main>

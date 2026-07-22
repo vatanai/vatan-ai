@@ -7,7 +7,7 @@
 @endphp
 @if(!empty($__beforeImages))
 <section class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-  <div class="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 sm:p-6">
+  <div class="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-5 sm:p-6">
     <h2 class="text-sm font-bold text-[var(--text-primary)] mb-3">عکس‌های قبل</h2>
     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
       @foreach($__beforeImages as $__bimg)

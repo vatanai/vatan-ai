@@ -58,6 +58,8 @@
     getActivity:       ()            => apiRequest('GET',    '/activity'),
     getAttendance:     ()            => apiRequest('GET',    '/attendance'),
     createAttendance:  (r)           => apiRequest('POST',   '/attendance', r),
+    updateAttendance:  (id, r)       => apiRequest('PUT',    '/attendance/' + id, r),
+    deleteAttendance:  (id)          => apiRequest('DELETE', '/attendance/' + id),
   };
   window.crmApi = crmApi;
 
@@ -344,5 +346,70 @@
     if (typeof renderAttendancePage === 'function') renderAttendancePage();
   };
 
-  console.log('%c✓ CRM متصل به دیتابیس شد (REST API)', 'color:#16594f;font-weight:bold');
+  window.attSaveRecord = function () {
+    const personnelId = document.getElementById('att-personnel').value;
+    const date = document.getElementById('att-date').value;
+    const checkIn = document.getElementById('att-checkin').value;
+    if (!personnelId || !date || !checkIn) {
+      alert('پرسنل، تاریخ و ساعت ورود الزامی است');
+      return;
+    }
+
+    const id = document.getElementById('att-edit-id').value;
+    const payload = {
+      personnel_id: personnelId,
+      date,
+      check_in: checkIn,
+      check_out: document.getElementById('att-no-checkout').checked
+        ? null
+        : (document.getElementById('att-checkout').value || null),
+      note: document.getElementById('att-note').value.trim() || null,
+    };
+
+    runMutation(
+      () => id ? crmApi.updateAttendance(id, payload) : crmApi.createAttendance(payload),
+      id ? 'رکورد ویرایش شد' : 'حضور ثبت شد',
+      async () => {
+        if (typeof attCloseModal === 'function') attCloseModal();
+        await window.loadAttendance();
+      }
+    );
+  };
+
+  window.attDeleteRecord = function (id) {
+    const remove = () => runMutation(
+      () => crmApi.deleteAttendance(id),
+      'رکورد حذف شد',
+      () => window.loadAttendance()
+    );
+    if (typeof crmConfirmToast === 'function') crmConfirmToast('این رکورد حذف شود؟', remove);
+    else if (confirm('این رکورد حذف شود؟')) remove();
+  };
+
+  window.attQuickSubmit = function () {
+    const personnelId = document.getElementById('att-quick-personnel').value;
+    const checkIn = document.getElementById('att-quick-checkin').value;
+    if (!personnelId || !checkIn) {
+      if (typeof crmShowToast === 'function') crmShowToast('error', 'پرسنل و ساعت ورود الزامی است');
+      return;
+    }
+
+    runMutation(
+      () => crmApi.createAttendance({
+        personnel_id: personnelId,
+        date: document.getElementById('att-quick-date').value || attToday(),
+        check_in: checkIn,
+        check_out: document.getElementById('att-quick-checkout').value || null,
+        note: null,
+      }),
+      'حضور ثبت شد',
+      async () => {
+        document.getElementById('att-quick-checkin').value = '';
+        document.getElementById('att-quick-checkout').value = '';
+        await window.loadAttendance();
+      }
+    );
+  };
+
+  console.log('%c✓ سیستم مدیریت پروژه به دیتابیس متصل شد (REST API)', 'color:#16594f;font-weight:bold');
 })();

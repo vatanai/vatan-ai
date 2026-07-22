@@ -18,6 +18,10 @@ use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\PlanSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController; // استفاده از کنترلر ادمین در پوشه Admin
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\SmsController;
+use App\Http\Controllers\Admin\DiscountController;
+use App\Http\Controllers\ProductCatalogController;
 
 // ─── Root & Landing ──────────────────────────────────────
 Route::get('/', fn() => view('site.home'))->name('site.home.root');
@@ -28,19 +32,24 @@ Route::prefix('site')->group(function () {
     Route::get('/about',   fn() => view('site.about'))->name('site.about');
 });
 
+// صفحات پروفایل برای مشاهده عمومی هستند؛ عملیات شخصی همچنان احراز هویت می‌خواهد.
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
+Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
+
 // ─── User Authentication ──────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     
     // ۱. چک کردن وضعیت شماره تلفن قبل از رفتن به مرحله OTP
     Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])->name('auth.checkPhone');
+    Route::post('/auth/send-otp', [AuthController::class, 'sendOtp'])->name('auth.otp.send');
+    Route::post('/auth/verify-otp', [AuthController::class, 'verifyOtp'])->name('auth.otp.verify');
     
     // ۲. ارسال نهایی فرم ورود
     Route::post('/auth/login-submit', [AuthController::class, 'loginSubmit'])->name('auth.login.submit');
     
     // ۳. ارسال نهایی فرم ثبت نام
     Route::post('/auth/register-submit', [AuthController::class, 'registerSubmit'])->name('auth.register.submit');
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
     Route::post('/auth/forgot-send-otp', [AuthController::class, 'sendResetOtp']);
     Route::post('/auth/forgot-verify-otp', [AuthController::class, 'verifyResetOtp']); 
@@ -51,10 +60,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
-    Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
-    Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::post('/app/product/{product:slug}/save', [SavedProductController::class, 'toggle'])->name('app.product.save');
+    Route::post('/app/product/{product:slug}/like', [App\Http\Controllers\LikedProductController::class, 'toggle'])->name('app.product.like');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/pricing/fake-payment/{plan}', [PlanSubscriptionController::class, 'fakePayment'])->name('pricing.fakePayment');
 });
@@ -62,14 +70,29 @@ Route::middleware('auth')->group(function () {
 // ─── App Pages & Generation ──────────────────────────────
 Route::prefix('app')->group(function () {
     Route::get('/',             fn() => redirect('/app/home'));
-    Route::get('/home', [HomeController::class, 'index'])->name('app.home');    
+    Route::get('/home', [HomeController::class, 'index'])->name('app.home');
     Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
     Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
+    Route::get('/products',     [ProductCatalogController::class, 'index'])->name('products.index');
     Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
+    Route::get('/create-preview', [ProductGenerateController::class, 'createPreview'])->name('app.create.preview');
+    Route::get('/create/{product:route_slug}', [ProductGenerateController::class, 'build'])->name('app.create.product');
+    Route::post('/create/{product:route_slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.create.generate');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
+    // لینک تستی صفحه محصول — به جدیدترین محصول فعال ری‌دایرکت می‌شود
+    Route::get('/product-details', function () {
+        $p = \App\Models\Product::where('status', 'active')->latest()->first();
+        return $p
+            ? redirect()->route('app.product', $p->route_slug)
+            : redirect()->route('app.home');
+    })->name('app.product-details');
     Route::get('/product/{product:route_slug}', [ProductGenerateController::class, 'show'])->name('app.product');
-    Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])->name('app.product.generate');
+    Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.product.generate');
 });
+
+Route::get('/category/{path}', [ProductCatalogController::class, 'category'])
+    ->where('path', '.*')
+    ->name('categories.show');
 
 Route::get('/prompts/{id}',          [FrontPromptController::class, 'show'])->name('prompts.show');
 Route::post('/prompts/{id}/generate',[FrontPromptController::class, 'generateImage'])->name('prompts.generate');
@@ -90,6 +113,8 @@ Route::resource('plans', PlanController::class);
 
 Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testImage'])->name('ai-models.test-image');
     Route::post('ai-models/test-prompt', [AiTestController::class, 'testPrompt'])->name('ai-models.test-prompt');
+    Route::get('product-tests/history', [AiTestController::class, 'history'])->name('product-tests.history');
+    Route::patch('product-tests/{run}', [AiTestController::class, 'updateRun'])->name('product-tests.update');
 
     // داشبورد مرکزی
     Route::get('/dashboard/{section?}', [DashboardController::class, 'index'])
@@ -129,10 +154,43 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::resource('ai-models', AiModelController::class)->names('ai-models');
 
     // بقیه بخش‌های فرانت پنل ادمین
-    Route::get('/crm',              fn() => view('admin.crm'))->name('crm');
-    Route::get('/crm/attendance',   fn() => view('admin.attendance'))->name('crm.attendance');
-    Route::get('/orders',           fn() => view('admin.orders'))->name('orders');
-    Route::get('/orders/analytics', fn() => view('admin.orders.analytics'))->name('orders.analytics');
+    Route::get('/crm',              fn() => redirect('/admin/dashboard/crm'))->name('crm');
+    Route::get('/crm/attendance',   fn() => redirect('/admin/dashboard/attendance'))->name('crm.attendance');
+    // مدیریت سفارشات و تخفیفات — روت‌های ثابت باید قبل از پارامتر {order} بمانند.
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/processing', [OrderController::class, 'processing'])->name('orders.processing');
+    Route::get('/orders/failed', [OrderController::class, 'failed'])->name('orders.failed');
+    Route::get('/orders/refunds', [OrderController::class, 'refunds'])->name('orders.refunds');
+    Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/retry', [OrderController::class, 'retry'])->name('orders.retry');
+    Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::patch('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+    Route::patch('/orders/{order}/note', [OrderController::class, 'note'])->name('orders.note');
+
+    Route::get('/discounts', [DiscountController::class, 'index'])->name('discounts.index');
+
+    Route::get('/sms', [SmsController::class, 'index'])->name('sms.index');
+    Route::get('/sms/compose', [SmsController::class, 'compose'])->name('sms.compose');
+    Route::get('/sms/history', [SmsController::class, 'history'])->name('sms.history');
+    Route::get('/sms/campaigns', [SmsController::class, 'campaigns'])->name('sms.campaigns');
+    Route::get('/sms/providers', [SmsController::class, 'providers'])->name('sms.providers');
+    Route::post('/sms/providers', [SmsController::class, 'storeProvider'])->name('sms.providers.store');
+    Route::put('/sms/providers/{provider}', [SmsController::class, 'updateProvider'])->name('sms.providers.update');
+    Route::post('/sms/providers/{provider}/test', [SmsController::class, 'testProvider'])->name('sms.providers.test');
+    Route::post('/sms/send', [SmsController::class, 'send'])->name('sms.send');
+    Route::put('/sms/settings', [SmsController::class, 'settings'])->name('sms.settings');
+    Route::get('/sms/templates', [SmsController::class, 'templates'])->name('sms.templates');
+    Route::post('/sms/templates', [SmsController::class, 'storeTemplate'])->name('sms.templates.store');
+    Route::put('/sms/templates/{template}', [SmsController::class, 'updateTemplate'])->name('sms.templates.update');
+    Route::delete('/sms/templates/{template}', [SmsController::class, 'destroyTemplate'])->name('sms.templates.destroy');
+    Route::patch('/sms/templates/{template}/toggle', [SmsController::class, 'toggleTemplate'])->name('sms.templates.toggle');
+    Route::patch('/sms/templates/{template}/default', [SmsController::class, 'defaultTemplate'])->name('sms.templates.default');
+    Route::post('/sms/templates/{template}/test', [SmsController::class, 'testTemplate'])->name('sms.templates.test');
+    Route::post('/discounts', [DiscountController::class, 'store'])->name('discounts.store');
+    Route::put('/discounts/{discount}', [DiscountController::class, 'update'])->name('discounts.update');
+    Route::patch('/discounts/{discount}/toggle', [DiscountController::class, 'toggle'])->name('discounts.toggle');
+    Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('discounts.destroy');
     Route::get('/analytics',        fn() => view('admin.analytics'))->name('analytics');
     Route::get('/jobs',             fn() => view('admin.jobs'))->name('jobs');
     Route::get('/payments',         fn() => view('admin.payments'))->name('payments');

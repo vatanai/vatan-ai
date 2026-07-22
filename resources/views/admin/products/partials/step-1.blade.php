@@ -17,6 +17,11 @@
       if ($text === '') return '';
       return '<span class="field-help-btn inline-flex items-center justify-center shrink-0 cursor-pointer text-[var(--text3)] hover:text-[var(--accent)] transition-colors" role="button" tabindex="0" data-help-title="' . e($title) . '" data-help-text="' . e($text) . '" aria-label="راهنمایی آیتم"><i class="fa-solid fa-circle-question text-[10px]"></i></span>';
   };
+
+  // منبع «فایل از قبل موجود» برای پیش‌نمایش Thumbnail/Cover/نمونه‌خروجی‌ها: هم در حالت تکثیر محصول
+  // ($duplicateFrom) و هم در حالت ویرایش واقعی محصول ($product) باید همان فایل قبلی نمایش داده شود
+  // و اجباری‌بودنِ آپلود مجدد Thumbnail برداشته شود (چون فایل موجود، اگر آپلود جدیدی انجام نشود، حفظ می‌ماند).
+  $__mediaSource = $duplicateFrom ?? ($product ?? null);
 @endphp
 
 {{-- ═══════════════════ Card ۱ — اطلاعات اصلی ═══════════════════ --}}
@@ -29,12 +34,12 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">نام فارسی <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="text" name="name_fa" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" value="{{ old('name_fa', $duplicateFrom ? $duplicateFrom->name_fa.' (کپی)' : '') }}" placeholder="مثلاً: عکس حرفه‌ای لینکدین">
+      <input type="text" name="name_fa" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)]" value="{{ old('name_fa', $duplicateFrom ? $duplicateFrom->name_fa : '') }}" placeholder="مثلاً: عکس حرفه‌ای لینکدین">
       <div class="text-[10px] text-[var(--text3)] flex items-center gap-1">نامی که به کاربر فارسی‌زبان نمایش داده می‌شود {!! $__help('name_fa', 'نام فارسی') !!}</div>
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">نام انگلیسی <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="text" name="name_en" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('name_en', $duplicateFrom ? $duplicateFrom->name_en.'-copy' : '') }}" placeholder="LinkedIn Professional Headshot" oninput="if(typeof autoSlug === 'function') autoSlug(this)">
+      <input type="text" name="name_en" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('name_en', $duplicateFrom ? $duplicateFrom->name_en : '') }}" placeholder="LinkedIn Professional Headshot" oninput="if(typeof autoSlug === 'function') autoSlug(this)">
       <div class="text-[10px] text-[var(--text3)] flex items-center gap-1">همچنین برای ساخت خودکار Slug استفاده می‌شود {!! $__help('name_en', 'نام انگلیسی') !!}</div>
     </div>
   </div>
@@ -42,7 +47,7 @@
   <div class="grid grid-cols-1 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)]">آدرس URL (Slug) <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="text" name="slug" id="slug-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('slug', $duplicateFrom ? $duplicateFrom->slug.'-copy' : '') }}" placeholder="linkedin-professional-headshot" oninput="if(typeof lockSlugManual === 'function') lockSlugManual()">
+      <input type="text" name="slug" id="slug-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] ltr text-left" value="{{ old('slug', $duplicateFrom ? $duplicateFrom->slug.'-2' : '') }}" placeholder="linkedin-professional-headshot" oninput="if(typeof lockSlugManual === 'function') lockSlugManual()">
       <div class="text-[10px] text-[var(--text3)] flex items-center gap-1"><span>به‌صورت خودکار از نام انگلیسی ساخته می‌شود؛ اگر دستی ویرایش کنید دیگر خودکار به‌روزرسانی نمی‌شود @if($duplicateFrom)— این آدرس باید یکتا باشد، در صورت تکراری بودن هنگام ثبت خطا نمایش داده می‌شود@endif.</span> {!! $__help('slug', 'آدرس URL (Slug)') !!}</div>
     </div>
   </div>
@@ -229,70 +234,96 @@
     <div class="text-[10.5px] text-[var(--text3)] mt-1">تصاویر و ویدیوهایی که محصول را به کاربر نمایش می‌دهند</div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
-    {{-- عکس‌های قبل — تصاویر خامی که مدل هوش مصنوعی با آن‌ها ساخته شده --}}
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">عکس‌های قبل {!! $__help('before_images', 'عکس‌های قبل') !!}</label>
-      @if($duplicateFrom && !empty($duplicateFrom->before_images))
-        <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
-          @foreach($duplicateFrom->before_images as $__bimg)
-            <img src="{{ asset('storage/'.$__bimg) }}" class="w-10 h-10 rounded object-cover border border-[var(--b2)]">
-          @endforeach
-          <span class="text-[10.5px] text-[var(--text3)]">عکس‌های قبل محصول مبدا — با آپلود فایل جدید جایگزین می‌شوند.</span>
+  @php
+    $__mainPaths = array_values(array_filter(array_merge(
+      [$__mediaSource?->cover],
+      (array) ($__mediaSource?->sample_outputs ?? [])
+    )));
+    $__beforePaths = array_values(array_filter((array) ($__mediaSource?->before_images ?? [])));
+  @endphp
+
+  @foreach([
+    ['main-images-file','main_images[]','عکس‌های اصلی','اولین عکس، تصویر اصلی کارت و صفحه محصول است. نسبت تصاویر تغییر نمی‌کند.',$__mainPaths],
+    ['before-images-file','before_images[]','عکس‌های قبل','تصاویر قبل از اجرای محصول؛ بدون برش و با حفظ نسبت.',$__beforePaths],
+  ] as [$inputId,$inputName,$title,$hint,$paths])
+    <div class="image-optimizer-group flex flex-col gap-2 mb-4" data-input="{{ $inputId }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
+      <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }}</label>
+      @if($paths)
+        <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5">
+          @foreach($paths as $path)<img src="{{ asset('storage/'.$path) }}" class="w-11 h-11 rounded-lg object-cover border border-[var(--b2)]" alt="">@endforeach
+          <span class="text-[10.5px] text-[var(--text3)]">تصاویر فعلی؛ با انتخاب تصاویر جدید جایگزین می‌شوند.</span>
         </div>
       @endif
-      <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-6 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors relative overflow-hidden w-full" id="before-zone" onclick="document.getElementById('before-file').click()">
-        <i class="fa-solid fa-clock-rotate-left text-2xl text-[var(--text3)] mb-2 block"></i>
-        <div class="text-xs font-bold text-[var(--text2)]" id="before-title">انتخاب عکس‌های خام (قبل از ساخت مدل)</div>
-        <div class="text-[10px] text-[var(--text3)] mt-1">بکشید و رها کنید یا کلیک کنید — چند فایل هم‌زمان مجاز است</div>
-        <div class="flex flex-wrap gap-1.5 justify-center mt-2.5" id="before-preview-strip"></div>
-        <input type="file" id="before-file" name="before_images[]" multiple accept="image/*" class="hidden" onchange="updateFileLabel(this,'before-title',true); previewMultiUpload(this,'before-preview-strip')">
+      <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-5 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors" onclick="document.getElementById('{{ $inputId }}').click()">
+        <i class="fa-solid fa-images text-xl text-[var(--text3)] mb-1 block"></i>
+        <div class="text-xs text-[var(--text2)] image-file-label">انتخاب تصاویر</div>
+        <div class="text-[10px] text-[var(--text3)] mt-1">{{ $hint }}</div>
+        <div class="flex flex-wrap gap-1.5 justify-center mt-2.5 image-preview-strip"></div>
+        <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" multiple accept="image/jpeg,image/png,image/webp" class="hidden">
       </div>
-      <div class="text-[10px] text-[var(--text3)]">همان عکس‌های خامی که این مدل هوش مصنوعی با آن‌ها ساخته شده؛ در صفحه محصول برای کاربر با عنوان «عکس‌های قبل» نمایش داده می‌شوند.</div>
-    </div>
 
-    {{-- Cover --}}
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">تصویر کاور (Cover) {!! $__help('cover', 'تصویر کاور (Cover)') !!}</label>
-      @if($duplicateFrom?->cover)
-        <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
-          <img src="{{ asset('storage/'.$duplicateFrom->cover) }}" class="w-12 h-12 rounded-lg object-cover border border-[var(--b2)] shrink-0">
-          <div class="text-[10.5px] text-[var(--text3)] leading-relaxed">کاور محصول مبدا — در صورت عدم آپلود جدید، همین کپی می‌شود.</div>
+      <div class="image-compare-workspace hidden border border-[var(--b1)] rounded-2xl overflow-hidden bg-[var(--s1)]">
+        <div class="grid grid-cols-2 gap-0 image-compare-pair">
+          <button type="button" class="relative min-w-0 border-l border-[var(--b1)] bg-[var(--bg)] text-right" onclick="openImageCompareModal(this)">
+            <div class="absolute top-2 right-2 z-[1] px-2 py-1 rounded-lg bg-[var(--s2)]/90 border border-[var(--b1)] text-[10px] text-[var(--text2)]"><i class="fa-solid fa-file-image ml-1"></i>نسخه اصلی</div>
+            <div class="aspect-square flex items-center justify-center overflow-hidden"><img class="image-compare-original w-full h-full object-contain" alt="نسخه اصلی"></div>
+            <div class="p-3 border-t border-[var(--b1)] bg-[var(--s2)]">
+              <div class="image-original-specs flex items-center justify-center gap-3 overflow-x-auto whitespace-nowrap text-[10px] text-[var(--text3)]"></div>
+            </div>
+          </button>
+          <button type="button" class="relative min-w-0 bg-[var(--bg)] text-right" onclick="openImageCompareModal(this)">
+            <div class="absolute top-2 right-2 z-[1] inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--s2)]/90 border border-[var(--b1)] text-[10px] text-[var(--text2)]">
+              <i class="image-result-icon fa-solid fa-hourglass-half text-[var(--text3)]"></i><span>نسخه بهینه‌شده</span>
+            </div>
+            <div class="image-result-loading hidden absolute inset-0 z-[2] bg-[var(--s1)]/85 backdrop-blur-sm items-center justify-center flex-col gap-2 text-[11px] text-[var(--text2)]"><i class="fa-solid fa-spinner fa-spin text-xl text-[var(--accent)]"></i><span>در حال پردازش تصویر…</span></div>
+            <div class="aspect-square flex items-center justify-center overflow-hidden"><img class="image-compare-optimized w-full h-full object-contain opacity-30" alt="نسخه بهینه‌شده"></div>
+            <div class="p-3 border-t border-[var(--b1)] bg-[var(--s2)]">
+              <div class="image-optimized-specs flex items-center justify-center gap-3 overflow-x-auto whitespace-nowrap text-[10px] text-[var(--text3)]"></div>
+            </div>
+          </button>
         </div>
-      @endif
-      <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-6 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors relative overflow-hidden w-full" id="cover-zone" onclick="document.getElementById('cover-file').click()">
-        <img id="cover-preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
-        <div id="cover-empty-state">
-          <i class="fa-solid fa-panorama text-2xl text-[var(--text3)] mb-2 block"></i>
-          <div class="text-xs font-bold text-[var(--text2)]" id="cover-title">انتخاب تصویر کاور اصلی</div>
-          <div class="text-[10px] text-[var(--text3)] mt-1">بکشید و رها کنید یا کلیک کنید</div>
-        </div>
-        <button type="button" class="hidden absolute top-1.5 left-1.5 w-6 h-6 rounded-md bg-[var(--bg)]/80 text-[var(--red)] text-[11px] items-center justify-center z-10" id="cover-remove-btn" aria-label="حذف تصویر کاور" onclick="event.stopPropagation(); removeUpload('cover-file','cover-preview-img','cover-empty-state','cover-remove-btn','cover-title','انتخاب تصویر کاور اصلی')"><i class="fa-solid fa-xmark"></i></button>
-        <input type="file" id="cover-file" name="cover" accept="image/*" class="hidden" onchange="updateFileLabel(this,'cover-title'); previewUpload(this,'cover-preview-img','cover-empty-state','cover-remove-btn')">
+        <div class="image-compare-thumbs flex gap-2 overflow-x-auto p-3 border-t border-[var(--b1)]"></div>
       </div>
-    </div>
-  </div>
 
-  {{-- Gallery — نمونه خروجی‌ها --}}
-  <div class="flex flex-col gap-1.5 mb-3.5">
-    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">نمونه خروجی‌ها (چندگانه) {!! $__help('sample_outputs', 'نمونه خروجی‌ها') !!}</label>
-    @if($duplicateFrom && !empty($duplicateFrom->sample_outputs))
-      <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5 mb-1.5">
-        @foreach($duplicateFrom->sample_outputs as $s)
-          <img src="{{ asset('storage/'.$s) }}" class="w-10 h-10 rounded object-cover border border-[var(--b2)]">
-        @endforeach
-        <span class="text-[10.5px] text-[var(--text3)]">نمونه‌های محصول مبدا — با آپلود فایل جدید جایگزین می‌شوند.</span>
+      <div class="flex items-center gap-2 flex-wrap pt-1">
+        <button type="button" class="image-optimize-btn btn-pro btn-pro-ghost" onclick="optimizeImageGroup(this)">
+          <i class="fa-solid fa-wand-magic-sparkles"></i><span>بهینه‌سازی اتوماتیک</span>
+        </button>
+        <span class="image-optimize-status text-[10.5px] text-[var(--text3)]">@if($paths)برای بررسی تصاویر فعلی دکمه را بزنید.@endif</span>
       </div>
-    @endif
-    <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-5 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors w-full" id="samples-zone" onclick="document.getElementById('samples-file').click()">
-      <i class="fa-solid fa-images text-xl text-[var(--text3)] mb-1 block"></i>
-      <div class="text-xs text-[var(--text2)]" id="samples-title">انتخاب چندین تصویر به عنوان نمونه خروجی</div>
-      <div class="text-[10px] text-[var(--text3)] mt-1">بکشید و رها کنید یا کلیک کنید — چند فایل هم‌زمان مجاز است</div>
-      <div class="flex flex-wrap gap-1.5 justify-center mt-2.5" id="samples-preview-strip"></div>
-      <div class="mt-2.5 space-y-1 text-right" id="samples-upload-queue" onclick="event.stopPropagation()"></div>
-      <input type="file" id="samples-file" name="sample_outputs[]" multiple accept="image/*" class="hidden" onchange="updateFileLabel(this,'samples-title',true); previewMultiUpload(this,'samples-preview-strip'); renderUploadQueue(this,'samples-upload-queue')">
+
+      <div class="image-target-panel hidden bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div><div class="text-[11px] font-semibold text-[var(--text2)]"><i class="fa-solid fa-gauge-high text-[var(--accent)] ml-1.5"></i>انتخاب حجم تقریبی خروجی</div><div class="text-[10px] text-[var(--text3)] mt-1">سه خروجی با کیفیت بیشتر و سه خروجی سبک‌تر از پیشنهاد خودکار. مقدار نهایی ممکن است کمی متفاوت باشد.</div></div>
+          <div class="shrink-0 text-left"><small class="block text-[9px] text-[var(--text3)]">پیشنهاد خودکار</small><strong class="image-auto-size text-xs text-[var(--green)]">—</strong></div>
+        </div>
+        <div class="flex items-center justify-between gap-3 mb-3"><span class="text-[10.5px] text-[var(--text2)]">انتخاب نسخه و حجم خروجی عکس انتخاب‌شده</span><button type="button" class="btn-pro btn-pro-ghost image-reoptimize-btn" onclick="optimizeImageGroup(this)"><i class="fa-solid fa-rotate"></i><span>بررسی مجدد</span></button></div>
+        <div class="image-volume-options-grid grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-2 mb-4">
+          <button type="button" data-profile="original" class="image-volume-choice relative border border-[var(--b1)] bg-[var(--s2)] rounded-xl p-3 text-right transition-colors" onclick="applyImageQuickPreset(this,'original')"><i class="image-choice-check fa-solid fa-circle-check absolute left-2 top-2 text-[var(--green)]" style="display:none"></i><span class="block text-[11px] text-[var(--text2)]"><i class="fa-solid fa-file-image text-[var(--accent)] ml-1.5"></i>نسخه اورجینال</span><strong class="image-original-size block text-xs text-[var(--text)] mt-1">—</strong></button>
+          <button type="button" data-profile="site-standard" class="image-volume-choice relative border border-[var(--b1)] bg-[var(--s2)] rounded-xl p-3 text-right transition-colors" onclick="applyImageQuickPreset(this,'site-standard')"><i class="image-choice-check fa-solid fa-circle-check absolute left-2 top-2 text-[var(--green)]" style="display:none"></i><span class="block text-[11px] text-[var(--text2)]"><i class="fa-solid fa-star text-[var(--accent)] ml-1.5"></i>استاندارد پیشنهادی</span><strong class="block text-xs text-[var(--text)] mt-1">حدود ۳۰۰ کیلوبایت</strong></button>
+          <button type="button" data-profile="site-light" class="image-volume-choice relative border border-[var(--b1)] bg-[var(--s2)] rounded-xl p-3 text-right transition-colors" onclick="applyImageQuickPreset(this,'site-light')"><i class="image-choice-check fa-solid fa-circle-check absolute left-2 top-2 text-[var(--green)]" style="display:none"></i><span class="block text-[11px] text-[var(--text2)]"><i class="fa-solid fa-feather text-[var(--accent)] ml-1.5"></i>استاندارد سبک</span><strong class="block text-xs text-[var(--text)] mt-1">حدود ۱۸۰ کیلوبایت</strong></button>
+          <div class="image-target-options contents"></div>
+        </div>
+
+        <div class="image-size-timeline border-y border-[var(--b1)] py-4 mb-4">
+          <div class="flex items-center justify-between gap-3 mb-2"><span class="text-[10.5px] text-[var(--text2)]"><i class="fa-solid fa-chart-line text-[var(--accent)] ml-1.5"></i>انتخاب آزاد حجم روی نمودار</span><strong class="image-range-value text-xs text-[var(--green)]">—</strong></div>
+          <input type="range" min="60" max="1200" step="10" value="300" class="image-size-range w-full accent-[var(--green)] cursor-pointer" oninput="previewImageRange(this)" onchange="applyImageRange(this)">
+          <div class="flex justify-between text-[9px] text-[var(--text3)] mt-1"><span>سبک‌تر</span><span>حجم استاندارد سایت</span><span>کیفیت بیشتر</span></div>
+        </div>
+
+      </div>
+
+      <div class="image-compare-modal hidden fixed inset-0 z-[130] bg-[var(--page-bg)]/95 backdrop-blur-sm p-4 md:p-8" onclick="if(event.target===this) closeImageCompareModal(this)">
+        <div class="w-full h-full max-w-[1500px] mx-auto flex flex-col bg-[var(--s2)] border border-[var(--b1)] rounded-2xl overflow-hidden">
+          <div class="h-14 shrink-0 px-4 flex items-center justify-between border-b border-[var(--b1)]"><div class="text-xs font-bold text-[var(--text)]"><i class="fa-solid fa-code-compare text-[var(--accent)] ml-2"></i>مقایسه بزرگ قبل و بعد</div><button type="button" class="w-9 h-9 rounded-lg border border-[var(--b1)] text-[var(--text2)]" onclick="closeImageCompareModal(this.closest('.image-compare-modal'))"><i class="fa-solid fa-xmark"></i></button></div>
+          <div class="grid grid-cols-2 gap-0 flex-1 min-h-0">
+            <div class="min-w-0 border-l border-[var(--b1)] flex flex-col"><div class="px-3 py-2 text-[11px] text-[var(--text2)] border-b border-[var(--b1)]">نسخه اصلی</div><div class="flex-1 min-h-0 p-2 flex items-center justify-center bg-[var(--bg)]"><img class="image-modal-original max-w-full max-h-full object-contain" alt="نسخه اصلی در اندازه بزرگ"></div></div>
+            <div class="min-w-0 flex flex-col"><div class="px-3 py-2 text-[11px] text-[var(--text2)] border-b border-[var(--b1)]">نسخه بهینه‌شده</div><div class="flex-1 min-h-0 p-2 flex items-center justify-center bg-[var(--bg)]"><img class="image-modal-optimized max-w-full max-h-full object-contain" alt="نسخه بهینه‌شده در اندازه بزرگ"></div></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+  @endforeach
 
   {{-- نوع رسانه — Radio Card --}}
   <div class="flex flex-col gap-1.5 mb-3.5">
@@ -477,7 +508,7 @@ function wireUploadZone(zoneId, inputId) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  ['before-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
+  ['thumb-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
 });
 
 /* ── Radio Card نوع رسانه: هایلایت کردن کارت انتخاب‌شده ── */

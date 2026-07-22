@@ -11,13 +11,13 @@
 
 
   {{-- ══ MAIN ══ --}}
-  <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
+  <main class="mr-[294px] flex-1 h-screen min-h-0 flex flex-col min-w-0 max-[900px]:mr-0">
 
     {{-- ══ HEADER ══ --}}
     @include('admin.partials.header')
 
     {{-- ══ PAGE CONTENT ══ --}}
-    <div class="flex-1 p-6 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]"
+    <div class="flex-1 min-h-0 p-6 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]"
          id="content"
          style="scrollbar-width:none;-ms-overflow-style:none;">
 

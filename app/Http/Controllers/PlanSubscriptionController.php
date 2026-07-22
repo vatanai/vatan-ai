@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Plan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\SmsEventService;
 
 class PlanSubscriptionController extends Controller
 {
@@ -46,6 +47,11 @@ class PlanSubscriptionController extends Controller
         $user->tokens = ($user->tokens ?? 0) + (int) $planModel->tokens;
         $user->plan_id = $planModel->id;
         $user->save();
+
+        app(SmsEventService::class)->send('credit_changed', $user->phone, [
+            'name'=>$user->name, 'phone'=>$user->phone, 'amount'=>(string)$planModel->tokens,
+            'balance'=>(string)$user->tokens, 'action'=>'افزایش',
+        ]);
 
         // بازگشت به صفحه قیمت‌ها همراه با پیام موفقیت داینامیک
         return redirect()->route('pricing.index')->with(

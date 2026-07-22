@@ -1,0 +1,14 @@
+<div class="sms-modal" id="template-modal" hidden><div class="sms-modal-card content-card"><div class="sms-modal-head"><div><h2 id="template-modal-title">الگوی جدید</h2><p>متن و متغیرهای پیام را تنظیم کنید.</p></div><button type="button" class="icon-action-btn sms-modal-close"><i class="fa-solid fa-xmark"></i></button></div>
+  <form method="POST" id="template-form" action="{{ route('admin.sms.templates.store') }}" class="sms-form">@csrf <input type="hidden" name="_method" id="template-method" value="POST">
+    <div class="sms-row"><div class="sms-field"><label>رویداد سیستم</label><select name="event_key" id="template-event" class="input-pro" required>@foreach($events as $key=>$item)<option value="{{ $key }}">{{ $item['group'] }} — {{ $item['label'] }}</option>@endforeach</select></div><div class="sms-field"><label>نام نمونه</label><input name="name" id="template-name" class="input-pro" maxlength="100" required placeholder="مثلاً رسمی و کوتاه"></div></div>
+    <div class="sms-field"><label>متن پیامک</label><textarea name="body" id="template-body" class="input-pro" maxlength="1000" required></textarea><div class="sms-counter"><span id="sms-char-count">۰ کاراکتر</span><span id="sms-part-count">۰ بخش</span><span id="sms-encoding">یونیکد</span></div></div>
+    <div class="sms-variable-box"><b>متغیرهای قابل استفاده</b><div id="sms-variable-list"></div><small>روی هر متغیر کلیک کنید تا به متن اضافه شود.</small></div>
+    <div class="sms-preview"><b>پیش‌نمایش با داده نمونه</b><p id="sms-preview-text">—</p></div>
+    <div class="sms-row"><label class="sms-toggle"><input type="checkbox" name="is_active" id="template-active" value="1" checked> الگو فعال باشد</label><label class="sms-toggle"><input type="checkbox" name="is_default" id="template-default" value="1"> الگوی پیش‌فرض این رویداد باشد</label></div>
+    <div class="sms-actions"><button type="button" class="btn-pro btn-pro-ghost sms-modal-close">انصراف</button><button class="btn-pro btn-pro-primary">ذخیره الگو</button></div>
+  </form>
+</div></div>
+
+<div class="sms-modal" id="test-modal" hidden><div class="sms-modal-card sms-modal-sm content-card"><div class="sms-modal-head"><div><h2>ارسال پیامک تست</h2><p id="test-template-name"></p></div><button type="button" class="icon-action-btn sms-test-close"><i class="fa-solid fa-xmark"></i></button></div>
+  <form method="POST" id="test-form" class="sms-form">@csrf<div class="sms-field"><label>شماره موبایل مدیر</label><input class="input-pro" name="phone" dir="ltr" value="{{ $settings['admin_test_phone'] ?? '' }}" placeholder="09123456789" required></div><div class="sms-guide-note"><i class="fa-solid fa-circle-info"></i><span>متغیرها با داده‌های نمونه پر می‌شوند و نتیجه واقعی به این شماره ارسال می‌شود.</span></div><div class="sms-actions"><button type="button" class="btn-pro btn-pro-ghost sms-test-close">انصراف</button><button class="btn-pro btn-pro-primary">ارسال تست</button></div></form>
+</div></div>

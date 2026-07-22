@@ -2,54 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Models\HomeSection;
+use App\Services\HomeBuilder\HomeSectionRenderService;
 
 class HomeController extends Controller
 {
+    public function __construct(protected HomeSectionRenderService $renderService)
+    {
+    }
+
     /**
-     * نمایش صفحه اصلی اپ با محصولات واقعی دیتابیس
-     * هر بخش (ترندها، کسب‌وکار، پرتره، فشن، ویدیو) جداگانه واکشی می‌شود
-     * تا دقیقاً همان ردیف‌های فرانت قبلی پر شوند، بدون تغییر در ساختار ویو.
+     * نمایش صفحه اصلی اپ.
+     * Sectionهای این صفحه دیگر در کد ثابت نیستند — از پنل مدیریت («مدیریت صفحه هوم»، فیچر Home Builder)
+     * به‌صورت داینامیک مدیریت می‌شوند. فقط Sectionهای published و به‌ترتیب position واکشی می‌شوند.
      */
     public function index()
     {
-        $baseQuery = Product::query()->where('status', 'active');
+        $pageKey = config('home_builder.default_page_key', HomeSection::DEFAULT_PAGE_KEY);
 
-        // ردیف ۱: ترندهای امروز
-        $trending = (clone $baseQuery)
-            ->where('is_trending', true)
-            ->latest()
-            ->limit(8)
-            ->get();
+        $sections = HomeSection::forPage($pageKey)->published()->ordered()->get();
 
-        // ردیف ۲: کسب‌وکار
-        $business = (clone $baseQuery)
-            ->where('category', 'BUSINESS')
-            ->latest()
-            ->limit(8)
-            ->get();
+        $renderedSections = $this->renderService->prepareMany($sections);
 
-        // ردیف ۳: پرتره سینمایی (دسته PEOPLE)
-        $portrait = (clone $baseQuery)
-            ->where('category', 'PEOPLE')
-            ->latest()
-            ->limit(8)
-            ->get();
-
-        // ردیف ۴: عکاسی فشن (زیردسته Fashion)
-        $fashion = (clone $baseQuery)
-            ->where('subcategory', 'Fashion')
-            ->latest()
-            ->limit(8)
-            ->get();
-
-        // ردیف ۵: ریلز و ویدیو (محصولاتی که نوع رسانه‌شان ویدیو یا هر دو است)
-        $videos = (clone $baseQuery)
-            ->whereIn('media_type', ['video', 'both'])
-            ->latest()
-            ->limit(8)
-            ->get();
-
-        return view('app.home', compact('trending', 'business', 'portrait', 'fashion', 'videos'));
+        return view('app.home', compact('renderedSections'));
     }
 }

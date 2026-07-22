@@ -36,10 +36,10 @@
         @include('admin.partials.sidebar')
 
         <!-- پرده تیره پشت اسلایدبار در حالت موبایل -->
-        <div class="mobile-sidebar-overlay" onclick="toggleSidebar()"></div>
+        <div class="mobile-sidebar-overlay" onclick="adminToggleSidebar()"></div>
 
         <!-- محتوای اصلی بخش مدیریت -->
-        <div class="admin-main">
+        <div class="admin-main" id="admin-main">
             @yield('content')
         </div>
     </div>
@@ -47,10 +47,26 @@
     <script>
       /* باز/بسته کردن اسلایدبار منوها و مینی‌سایدبار در حالت موبایل (زیر ۹۰۰px)
          با دکمه همبرگری در هدر — resources/views/admin/partials/header.blade.php */
-      function toggleSidebar() {
+      /* نام اختصاصی پنل مدیریت؛ با toggleSidebar عمومی اپ تداخل ندارد. */
+      function adminToggleSidebar() {
         const wrap = document.getElementById('admin-wrap');
-        if (wrap) wrap.classList.toggle('sidebar-toggled');
+        if (!wrap) return;
+
+        const isToggled = wrap.classList.toggle('sidebar-toggled');
+        if (window.matchMedia('(min-width: 901px)').matches) {
+          try { localStorage.setItem('admin-sidebar-collapsed', isToggled ? '1' : '0'); } catch (e) {}
+        }
       }
+
+      /* وضعیت جمع‌شدن سایدبار در دسکتاپ بین صفحات حفظ می‌شود. */
+      (function () {
+        if (!window.matchMedia('(min-width: 901px)').matches) return;
+        try {
+          if (localStorage.getItem('admin-sidebar-collapsed') === '1') {
+            document.getElementById('admin-wrap')?.classList.add('sidebar-toggled');
+          }
+        } catch (e) {}
+      })();
     </script>
 
     @yield('scripts')

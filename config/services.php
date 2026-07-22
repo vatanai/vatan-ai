@@ -41,4 +41,11 @@ return [
         'timeout' => env('OPENROUTER_TIMEOUT', 60),
     ],
 
+    'melipayamak' => [
+        'api_key' => env('MELIPAYAMAK_API_KEY'),
+        'base_url' => env('MELIPAYAMAK_BASE_URL', 'https://console.melipayamak.com/api'),
+        'from' => env('MELIPAYAMAK_FROM'),
+        'timeout' => (int) env('MELIPAYAMAK_TIMEOUT', 15),
+    ],
+
 ];

@@ -50,3 +50,21 @@ html.light {
   --red:              #f05c5c;
   --orange:           #f5923a;
 }
+/* ═══════════════════════════════════════
+   قانون حاشیه استاندارد صفحه (سراسر سایت — دسکتاپ)
+   الگوبرداری از چیدمان pixifield:
+   • سقف عرض محتوا: 1400px (وسط‌چین)
+   • حاشیه از هر طرف: clamp(24px, 5vw, 96px)
+     یعنی ۵٪ عرض صفحه از هر طرف؛ حداقل 24px (موبایل)، حداکثر 96px (مانیتورهای بزرگ)
+   استفاده: دور محتوای هر سکشن یک div با کلاس .page-container بگذارید.
+═══════════════════════════════════════ */
+:root {
+  --page-max:    1400px;
+  --page-margin: clamp(24px, 5vw, 96px);
+}
+.page-container {
+  width: 100%;
+  max-width: calc(var(--page-max) + (2 * var(--page-margin)));
+  margin-inline: auto;
+  padding-inline: var(--page-margin);
+}

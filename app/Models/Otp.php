@@ -8,9 +8,11 @@ class Otp extends Model
 {
     protected $fillable = [
         'phone',
+        'purpose',
         'code',
         'expires_at',
-        'used'
+        'used',
+        'attempts',
     ];
 
     protected $casts = [

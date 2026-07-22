@@ -2,8 +2,8 @@
 <div class="cp-header">
   <div class="cp-header__inner">
     <div style="display:flex;align-items:center;gap:14px;">
-      @if($product->thumbnail)
-        <img src="{{ asset('storage/'.$product->thumbnail) }}" alt="{{ $product->name_fa }}"
+      @if($product->displayImageUrl())
+        <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}"
           class="cp-header__thumb" style="width:64px;height:64px;border-radius:12px;object-fit:cover;flex-shrink:0;">
       @endif
       <div>

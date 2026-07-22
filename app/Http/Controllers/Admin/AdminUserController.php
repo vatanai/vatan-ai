@@ -9,6 +9,7 @@ use App\Support\Jalali;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\SmsEventService;
 
 class AdminUserController extends Controller
 {
@@ -205,6 +206,14 @@ class AdminUserController extends Controller
         }
 
         [$freshUser, $log] = $result;
+
+        if ($freshUser->phone) {
+            app(SmsEventService::class)->send('credit_changed', $freshUser->phone, [
+                'name'=>$freshUser->name, 'phone'=>$freshUser->phone, 'amount'=>(string)$amount,
+                'balance'=>(string)$freshUser->tokens, 'action'=>['add'=>'افزایش','deduct'=>'کاهش','set'=>'تنظیم'][$action],
+            ]);
+            app(SmsEventService::class)->notifyLowCredit($freshUser);
+        }
 
         return response()->json([
             'status'      => 'success',

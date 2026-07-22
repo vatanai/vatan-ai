@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\SmsSetting;
+use App\Services\SmsEventService;
 
 class AdminAuthController extends Controller
 {
@@ -30,6 +32,11 @@ class AdminAuthController extends Controller
 
         if (Auth::guard('admin')->attempt($credentials, $request->has('remember'))) {
             $request->session()->regenerate();
+            $admin = Auth::guard('admin')->user();
+            if ($phone = SmsSetting::valueOf('admin_test_phone')) app(SmsEventService::class)->send('admin_login', $phone, [
+                'admin_name'=>$admin->name, 'admin_email'=>$admin->email,
+                'login_time'=>now()->format('Y/m/d H:i'), 'ip'=>$request->ip(),
+            ]);
             return redirect()->intended(route('admin.dashboard'));
         }
 

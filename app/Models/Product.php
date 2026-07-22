@@ -64,8 +64,11 @@ class Product extends Model
         'output_variants',
         'resolution',
         'aspect_ratio',
+        'allowed_aspect_ratios',
         'delivery_method',
         'estimated_time',
+        'last_test_duration_ms',
+        'total_test_tokens',
         'price_tier',
         'discount_percentage',
         'platform',
@@ -102,6 +105,7 @@ class Product extends Model
         'explore_tiles'     => 'array',
         'provider_options'  => 'array',
         'tags'              => 'array',
+        'allowed_aspect_ratios' => 'array',
         'is_featured'       => 'boolean',
         'is_new'            => 'boolean',
         'is_trending'       => 'boolean',
@@ -116,6 +120,10 @@ class Product extends Model
         'new_is_recommended'=> 'boolean',
         'new_is_beta'       => 'boolean',
         'new_show_free_badge'=> 'boolean',
+        'new_min_credit_required' => 'integer',
+        'new_max_run_per_user' => 'integer',
+        'last_test_duration_ms' => 'integer',
+        'total_test_tokens' => 'integer',
     ];
 
     /**
@@ -166,10 +174,45 @@ class Product extends Model
         return $this->hasMany(GeneratedImage::class);
     }
 
+    /**
+     * اجراهای واقعی این محصول (هر رکورد جدول generations = یک بار اجرای محصول توسط کاربر).
+     * مبنای «تعداد اجرا»، کارت «کل اجراها» و مرتب‌سازی «بیشترین اجرا» در پنل ادمین.
+     */
+    public function generations(): HasMany
+    {
+        return $this->hasMany(Generation::class);
+    }
+
+    /** آزمایش‌های مدیریتی محصول؛ جدا از اجراهای واقعی کاربران. */
+    public function testRuns(): HasMany
+    {
+        return $this->hasMany(ProductTestRun::class)->latest();
+    }
+
+    /**
+     * تولید یک کد ۶ رقمی یکتا برای محصول — همان منطق Migration بک‌فیل
+     * (2026_07_13_000001_add_product_code_to_products_table) تا محصولات جدید/کپی‌شده هم
+     * همیشه کد واقعی داشته باشند.
+     */
+    public static function generateUniqueProductCode(): string
+    {
+        do {
+            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        } while (static::where('product_code', $code)->exists());
+
+        return $code;
+    }
+
     /** کاربرانی که این محصول را سیو (ذخیره) کرده‌اند */
     public function savedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'saved_products')->withTimestamps();
+    }
+
+    /** کاربرانی که این محصول را لایک کرده‌اند */
+    public function likedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'liked_products')->withTimestamps();
     }
 
     /**
@@ -201,12 +244,28 @@ class Product extends Model
      */
     public function displayImageUrl(): string
     {
-        foreach ([$this->thumbnail, $this->cover] as $path) {
+        foreach (array_merge([$this->cover], (array) $this->sample_outputs, [$this->thumbnail]) as $path) {
             if ($path && \Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
                 return asset('storage/' . $path);
             }
         }
 
         return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%25" height="100%25" fill="%2315181c"/></svg>';
+    }
+
+    public function allowedAspectRatioList(): array
+    {
+        $allowed = ['1:1', '4:5', '3:4', '9:16', '16:9', '3:2', '2:3'];
+        $schemaField = collect((array) $this->input_schema)->first(
+            fn ($field) => is_array($field) && ($field['type'] ?? null) === 'aspect_ratio'
+        );
+        $schemaRatios = collect((array) ($schemaField['options'] ?? []))
+            ->pluck('value')->map(fn ($value) => (string) $value)->all();
+        $fromSchema = array_values(array_intersect($allowed, $schemaRatios));
+        if ($fromSchema !== []) return $fromSchema;
+
+        $configured = array_values(array_intersect($allowed, array_map('strval', (array) $this->allowed_aspect_ratios)));
+        $legacy = in_array((string) $this->aspect_ratio, $allowed, true) ? (string) $this->aspect_ratio : '1:1';
+        return $configured ?: [$legacy];
     }
 }

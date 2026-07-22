@@ -13,7 +13,7 @@ class Admin extends Authenticatable
     protected $table = 'admins'; // یا 'users' اگر از همان جدول استفاده می‌کنید
 
     protected $fillable = [
-        'name', 'email', 'password', 'remember_token',
+        'name', 'email', 'role', 'password', 'remember_token',
     ];
 
     protected $hidden = [
@@ -25,5 +25,10 @@ class Admin extends Authenticatable
         return [
             'password' => 'hashed',
         ];
+    }
+
+    public function isLeader(): bool
+    {
+        return $this->role === 'leader' || $this->id === static::query()->min('id');
     }
 }

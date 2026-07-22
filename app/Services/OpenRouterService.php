@@ -10,7 +10,7 @@ use Exception;
 
 class OpenRouterService
 {
-    protected string $apiKey;
+    protected ?string $apiKey;
     protected string $baseUrl;
     protected int $defaultTimeout;
 
@@ -81,6 +81,17 @@ class OpenRouterService
         return $json;
     }
 
+    /** تولید محصول با رعایت ترتیب مدل اصلی و fallbackهای ثبت‌شده در پنل. */
+    public function generateForProduct(Product $product, string $prompt, string $resolution, string $aspectRatio, int $count = 1, array $extraPayload = []): array
+    {
+        $models = $this->buildPriorityList($product->primary_model, $product->fallback_models);
+        $timeout = $product->timeout ?: $this->defaultTimeout;
+
+        return $this->tryModelsInOrder($models, $timeout, function (string $modelId) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
+            return $this->generateImageFromPrompt($modelId, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
+        });
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // تولید تصویر با AiModel (برای تست از پنل ادمین)
     // ─────────────────────────────────────────────────────────────────────
@@ -93,6 +104,12 @@ class OpenRouterService
             $extraPayload['aspect_ratio'] ?? '1:1',
             $extraPayload['n']            ?? 1
         );
+    }
+
+    /** اجرای مستقیم یک مدل با تصاویر مرجع؛ مخصوص آزمایشگاه محصول. */
+    public function editImageWithModel(string $modelId, string $prompt, array $base64Images, ?int $timeout = null): array
+    {
+        return $this->callEditViaChat($modelId, $prompt, $base64Images, $timeout ?: $this->defaultTimeout);
     }
 
     // ─────────────────────────────────────────────────────────────────────

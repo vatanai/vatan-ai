@@ -3,303 +3,57 @@
 @section('content')
 <div class="home-page" dir="rtl">
 
-  {{-- ===== SECTION 1: لوگو ===== --}}
-  <section class="home-logo">
-    <div class="home-logo-wrap" style="gap:12px;">
-      <button id="menuOpenBtn" type="button" style="width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
-        <img src="{{ asset('assets/img/icons/hamburger.svg') }}" width="26" height="26" class="floating-icon">
-      </button>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="وطن AI" style="width:31px;height:31px;display:block;">
-        <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="width:77px;height:auto;display:block;">
-      </div>
-    </div>
-    <div style="position:relative; display:inline-block; margin-top:10px;">
-
-      <div style="
-        background: #1e1e1e;
-        border-radius: 9px;
-        padding: 6.84px 13.86px 6.84px 13.86px;
-        font-size: 11.7px;
-        font-weight: 400;
-        color: #ffffff;
-        white-space: nowrap;
-      ">خرید ویژه</div>
-
-      <div style="
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #E8326A;
-        border-radius: 6px;
-        padding: 1.9px 8px;
-        font-size: 10px;
-        font-weight: 800;
-        color: #ffffff;
-        white-space: nowrap;
-        width: fit-content;
-      ">۱۵٪ تخفیف</div>
-
-    </div>
-  </section>
-
-  {{-- ===== HAMBURGER DROPDOWN MENU ===== --}}
-  <div id="menuOverlay" style="display:none;position:fixed;inset:0;z-index:160;" onclick="if(event.target===this){closeMenu();}">
-    <div id="menuSheet" style="position:absolute;top:calc(env(safe-area-inset-top) + 136px);right:12px;width:296px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:scale(0.9) translateY(-10px);opacity:0;transition:transform 0.2s ease,opacity 0.2s ease;transform-origin:top right;">
-
-      {{-- عکس + اسم + تغییر تم --}}
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border-subtle);">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-page);">
-            @if(auth()->user() && auth()->user()->avatar)
-              <img src="{{ asset('storage/' . auth()->user()->avatar) }}" style="width:100%;height:100%;object-fit:cover;">
-            @else
-              <img src="{{ asset('assets/img/icons/nav-profile.svg') }}" class="floating-icon" style="width:100%;height:100%;object-fit:contain;padding:22%;box-sizing:border-box;opacity:.55;">
-            @endif
-          </div>
-          <div>
-            <p style="margin:0;font-size:13px;font-weight:700;color:var(--text-primary);">{{ auth()->user()->name ?? '' }} {{ auth()->user()->last_name ?? '' }}</p>
-            <p style="margin:2px 0 0 0;font-size:11px;color:var(--text-secondary);" dir="ltr">{{ auth()->user()->phone ?? '' }}</p>
-          </div>
-        </div>
-        <button id="theme-toggle" type="button" class="theme-toggle-btn" aria-label="تغییر تم">
-          <span class="theme-toggle-track">
-            <span class="theme-toggle-thumb">
-              {{-- ماه --}}
-              <svg class="theme-icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-              {{-- خورشید --}}
-              <svg class="theme-icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="4.5"/>
-                <line x1="12" y1="2" x2="12" y2="5"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-                <line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/>
-                <line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/>
-                <line x1="2" y1="12" x2="5" y2="12"/>
-                <line x1="19" y1="12" x2="22" y2="12"/>
-                <line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/>
-                <line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
-              </svg>
-            </span>
-          </span>
-        </button>
-      </div>
-
-      {{-- تنظیمات --}}
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-subtle);" onmouseover="this.style.background='var(--bg-surface)'" onmouseout="this.style.background='transparent'">
-        <img src="{{ asset('assets/img/icons/fi-sr-settings.svg') }}" width="16" height="16" class="floating-icon">
-        <span style="font-size:13px;color:var(--text-primary);">تنظیمات</span>
-      </div>
-
-      {{-- خروج --}}
-      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;" onmouseover="this.style.background='#16161c'" onmouseout="this.style.background='transparent'">
-        <i class="fa-solid fa-right-from-bracket" style="font-size:14px;color:#f05c5c;width:16px;text-align:center;"></i>
-        <span style="font-size:13px;color:#f05c5c;">خروج</span>
-      </div>
-
-    </div>
-  </div>
-
   {{-- ===== SECTION 2: خوش‌آمدگویی هوشمند ===== --}}
   <section class="home-greeting">
     <p class="home-greeting-title">سلام، خوش اومدی</p>
     <p class="home-greeting-sub">می‌خوای چی خلق کنی؟</p>
   </section>
 
-  {{-- ===== SECTION 3: نوار جستجوی هوشمند ===== --}}
-  <section class="home-search">
-    <div class="home-search-card">
+  {{-- ===== SECTION 3: باکس جستجو (فعلاً فقط رابط کاربری) ===== --}}
+  <section class="home-imagegen">
+    <div class="ig-box" dir="rtl">
 
-      <div class="home-search-inner">
-        <input type="text" dir="rtl" class="home-search-input search-input" placeholder="فقط بنویس دنبال چی هستی ، همین">
-        <div class="home-search-send-row">
-          <p class="home-search-hint">بیش از ۱۲۰۰ طرح آماده و ۷۰ مدل هوش مصنوعی در اختیار توست</p>
-          <button type="button" class="home-search-send" aria-label="ارسال">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="11" cy="11" r="7" stroke="white" stroke-width="2.5"/>
-              <line x1="16.5" y1="16.5" x2="22" y2="22" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-          </button>
+      {{-- ردیف بالا: افزودن تصویر + پرامپت --}}
+      <div class="ig-top">
+        <label class="ig-plus" aria-label="افزودن تصویر مرجع">
+          <div class="ig-plus-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+          </div>
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="ig-file">
+        </label>
+        <div class="ig-prompt-wrap">
+          <textarea id="igPrompt" class="ig-prompt" rows="2" aria-label="فقط بنویس دنبال چی هستی"></textarea>
+          <div class="ig-prompt-copy" aria-hidden="true">
+            <div class="ig-prompt-title">فقط بنویس دنبال چی هستی<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>
+            <div class="ig-prompt-hint">بیش از ۱۲۰۰ طرح آماده و ۷۰ مدل هوش مصنوعی در اختیار توست</div>
+          </div>
         </div>
       </div>
 
-      <div class="home-chips">
-        <span class="home-chip">
-          <span class="home-chip-line1">ساخت عکس</span>
-          <span class="home-chip-line2">پرتره • فشن • تولد</span>
-        </span>
-        <span class="home-chip">
-          <span class="home-chip-line1">ساخت ویدیو</span>
-          <span class="home-chip-line2">ریلز • تبلیغاتی</span>
-        </span>
-        <span class="home-chip">
-          <span class="home-chip-line1">کسب و کار</span>
-          <span class="home-chip-line2">عکاس • زیبایی • برند</span>
-        </span>
-        <span class="home-chip">
-          <span class="home-chip-line1">ترندهای امروز</span>
-          <span class="home-chip-line2">محبوب‌ترین‌ها</span>
-        </span>
+      {{-- ردیف کنترل‌ها --}}
+      <div class="ig-controls">
+        {{-- فعلاً فقط ظاهر دکمه نمایش داده می‌شود و به بک‌اند متصل نیست --}}
+        <button type="button" class="ig-generate" data-ig="generate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <span>جست و جو</span>
+        </button>
+        <div class="ig-left">
+          @include('app.partials.home-quick-chips')
+        </div>
       </div>
 
     </div>
   </section>
 
-  {{-- ===== SECTION 4: محصولات پرطرفدار (داینامیک از دیتابیس) ===== --}}
+  {{-- ===== SECTION 4: Sectionهای داینامیک صفحه هوم (مدیریت از پنل ادمین → مدیریت صفحه هوم) ===== --}}
+  @include('app.home-builder.partials.styles')
+
   <section class="home-products">
-
-    <div class="home-section-title">
-      <span class="home-section-title-right">محصولات پرطرفدار</span>
-    </div>
-    <p class="home-products-subtitle">عکس‌ها و ویدیوهای خیره‌کننده خلق کنید...</p>
-
-    {{-- ----- ردیف ۱: ترندهای امروز ----- --}}
-    @if ($trending->isNotEmpty())
-    <div class="home-section-title home-section-title--sub">
-      <div>
-        <span class="home-section-title-right">ترندهای امروز</span>
-        <p class="home-section-title-caption">پراستفاده ترین سبک ها</p>
-      </div>
-      <button type="button" class="home-section-viewall">مشاهده همه</button>
-    </div>
-
-    <div class="home-cards-scroll">
-      @foreach ($trending as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
-          <div class="home-card-overlay"></div>
-          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
-          @if ($product->is_featured)
-            <i class="fa-solid fa-crown home-card-badge-tier"></i>
-          @elseif ($product->is_new)
-            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-          @endif
-          <div class="home-card-info">
-            <p class="home-card-name">{{ $product->name_fa }}</p>
-            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
-          </div>
-        </a>
-      @endforeach
-    </div>
-    @endif
-
-    {{-- ----- ردیف ۲: کسب و کار ----- --}}
-    @if ($business->isNotEmpty())
-    <div class="home-section-title home-section-title--sub home-section-title--biz">
-      <div>
-        <span class="home-section-title-right">کسب و کار</span>
-        <p class="home-section-title-caption">محتوا برای برندها</p>
-      </div>
-      <button type="button" class="home-section-viewall">مشاهده همه</button>
-    </div>
-
-    <div class="home-cards-scroll">
-      @foreach ($business as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
-          <div class="home-card-overlay"></div>
-          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
-          @if ($product->is_featured)
-            <i class="fa-solid fa-crown home-card-badge-tier"></i>
-          @elseif ($product->is_new)
-            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-          @endif
-          <div class="home-card-info">
-            <p class="home-card-name">{{ $product->name_fa }}</p>
-            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
-          </div>
-        </a>
-      @endforeach
-    </div>
-    @endif
-
-    {{-- ----- ردیف ۳: پرتره سینمایی ----- --}}
-    @if ($portrait->isNotEmpty())
-    <div class="home-section-title home-section-title--sub home-section-title--biz">
-      <div>
-        <span class="home-section-title-right">پرتره سینمایی</span>
-        <p class="home-section-title-caption">نورپردازی درام و اتمسفر</p>
-      </div>
-      <button type="button" class="home-section-viewall">مشاهده همه</button>
-    </div>
-
-    <div class="home-cards-scroll">
-      @foreach ($portrait as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
-          <div class="home-card-overlay"></div>
-          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
-          @if ($product->is_featured)
-            <i class="fa-solid fa-crown home-card-badge-tier"></i>
-          @elseif ($product->is_new)
-            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-          @endif
-          <div class="home-card-info">
-            <p class="home-card-name">{{ $product->name_fa }}</p>
-            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
-          </div>
-        </a>
-      @endforeach
-    </div>
-    @endif
-
-    {{-- ----- ردیف ۴: عکاسی فشن ----- --}}
-    @if ($fashion->isNotEmpty())
-    <div class="home-section-title home-section-title--sub home-section-title--biz">
-      <div>
-        <span class="home-section-title-right">عکاسی فشن</span>
-        <p class="home-section-title-caption">استایل و مد روز</p>
-      </div>
-      <button type="button" class="home-section-viewall">مشاهده همه</button>
-    </div>
-
-    <div class="home-cards-scroll">
-      @foreach ($fashion as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
-          <div class="home-card-overlay"></div>
-          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
-          @if ($product->is_featured)
-            <i class="fa-solid fa-crown home-card-badge-tier"></i>
-          @elseif ($product->is_new)
-            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-          @endif
-          <div class="home-card-info">
-            <p class="home-card-name">{{ $product->name_fa }}</p>
-            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
-          </div>
-        </a>
-      @endforeach
-    </div>
-    @endif
-
-    {{-- ----- ردیف ۵: ریلز و ویدیو ----- --}}
-    @if ($videos->isNotEmpty())
-    <div class="home-section-title home-section-title--sub home-section-title--biz">
-      <div>
-        <span class="home-section-title-right">ریلز و ویدیو</span>
-        <p class="home-section-title-caption">محتوای ویدیویی هوشمند</p>
-      </div>
-      <button type="button" class="home-section-viewall">مشاهده همه</button>
-    </div>
-
-    <div class="home-cards-scroll">
-      @foreach ($videos as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
-          <div class="home-card-overlay"></div>
-          <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
-          @if ($product->is_featured)
-            <i class="fa-solid fa-crown home-card-badge-tier"></i>
-          @elseif ($product->is_new)
-            <i class="fa-solid fa-bolt home-card-badge-tier"></i>
-          @endif
-          <div class="home-card-info">
-            <p class="home-card-name">{{ $product->name_fa }}</p>
-            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
-          </div>
-        </a>
-      @endforeach
-    </div>
-    @endif
-
+    @forelse($renderedSections as $item)
+      @include('app.home-builder.dispatcher', ['item' => $item])
+    @empty
+      {{-- هنوز هیچ Section منتشرشده‌ای برای صفحه هوم تعریف نشده --}}
+    @endforelse
   </section>
 
 </div>
@@ -377,40 +131,15 @@
 
   .home-page {
     width: 100%;
+    background: #000000;
     max-width: 480px;
     margin: 0 auto;
     min-height: 100vh;
-    padding: calc(env(safe-area-inset-top) + 180px) 16px 120px 16px;
+    padding: 18px 16px 120px;
     direction: rtl;
     font-family: inherit;
   }
-
-  .home-logo {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    max-width: 480px;
-    margin: 0 auto;
-    background: #000000;
-    z-index: 150;
-    padding: calc(env(safe-area-inset-top) + 100px) 16px 18px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-  }
-
-  html.light .home-logo {
-    background: #ffffff;
-  }
-
-  .home-logo-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  html.light .home-page { background: #ffffff; }
 
   .home-greeting {
     margin-top: 36px;
@@ -547,6 +276,328 @@
     font-size: 10px;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* ═══════════════ باکس تولید تصویر (Image Generator) — مطابق دقیق سایت نمونه ═══════════════ */
+  .home-imagegen {
+    margin-top: 12px;
+    max-width: 765px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* کانتینر: bg-[#1a1a1a]/95 backdrop-blur-xl rounded-2xl border-[#2a2a2a] p-4 shadow-2xl */
+  .ig-box {
+    background: var(--bg-card);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 18px 42px -18px rgba(0, 0, 0, 0.45);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  /* ردیف بالا: flex items-center gap-3 mb-4 */
+  .ig-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    direction: rtl;
+  }
+
+  /* دکمه +: w-10 h-10 rounded-xl border-2 border-dashed border-[#333] */
+  .ig-plus { flex-shrink: 0; cursor: pointer; display: block; }
+  .ig-plus-inner {
+    width: 40px;
+    height: 40px;
+    border: 2px dashed var(--border-subtle);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    color: var(--green);
+  }
+  .ig-plus:hover .ig-plus-inner {
+    border-color: var(--green);
+    background: var(--bg-surface);
+  }
+  .ig-plus-inner svg { width: 20px; height: 20px; }
+  .ig-file {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* متن جستجو */
+  .ig-prompt-wrap { flex: 1; min-width: 0; position: relative; }
+  .ig-prompt {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    padding: 4px 0;
+    min-height: 54px;
+    max-height: 120px;
+    overflow-y: auto;
+    direction: rtl;
+    text-align: right;
+  }
+  .ig-prompt::placeholder { color: var(--text-secondary); }
+  .ig-prompt::-webkit-scrollbar { display: none; }
+
+  .ig-prompt-copy {
+    position: absolute;
+    inset: 4px 0 auto 0;
+    pointer-events: none;
+    text-align: right;
+    direction: rtl;
+    transition: opacity 0.15s ease;
+  }
+  .ig-prompt-wrap:focus-within .ig-prompt-copy,
+  .ig-prompt-wrap.has-value .ig-prompt-copy { opacity: 0; }
+  .ig-prompt-title {
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .ig-prompt-hint {
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .typing-dots { display: inline-flex; direction: ltr; margin-right: 2px; }
+  .typing-dots span { animation: typing-dot 1.2s infinite; opacity: 0.2; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typing-dot {
+    0%, 20% { opacity: 0.15; }
+    45% { opacity: 1; }
+    70%, 100% { opacity: 0.15; }
+  }
+
+  /* ردیف کنترل‌ها: flex items-center justify-between */
+  .ig-controls {
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+    direction: ltr;
+  }
+  .ig-left {
+    display: flex;
+    align-items: stretch;
+    flex: 4.35 1 0;
+    min-width: 0;
+  }
+
+  /* پیل‌ها: bg-[#222] border-[#333] text-white h-9 text-sm rounded-lg */
+  .ig-pill {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    background: #222222;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ig-pill--model { justify-content: space-between; min-width: 160px; }
+  .ig-pill--w20 { justify-content: space-between; width: 80px; }
+
+  .ig-inner { display: flex; align-items: center; gap: 8px; }
+  .ig-inner--tight { gap: 6px; }
+  .ig-pill svg { display: block; }
+  .ig-chev { width: 16px; height: 16px; opacity: 0.5; flex-shrink: 0; }
+  .ig-ic { width: 14px; height: 14px; color: #9ca3af; }
+  .ig-model-label { font-weight: 500; }
+
+  /* نشان G: w-4 h-4 rounded bg-[#CFFD00] text-black text-[10px] font-bold */
+  .ig-g-badge {
+    width: 16px;
+    height: 16px;
+    background: var(--green);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    font-weight: 700;
+    font-size: 10px;
+  }
+  .ig-heart { color: #9ca3af; font-size: 14px; line-height: 1; }
+
+  /* خط جداکننده: w-px h-6 bg-[#333] */
+  .ig-divider { width: 1px; height: 24px; background: #333333; flex-shrink: 0; }
+
+  /* استپر تعداد: bg-[#222] rounded-lg px-2 h-9 border-[#333] gap-1 */
+  .ig-step { gap: 4px; padding: 0 8px; }
+  .ig-step-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    padding: 0 4px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ig-step-btn:hover { color: #ffffff; }
+  .ig-step-val {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    width: 32px;
+    text-align: center;
+  }
+
+  /* Draw: text-gray-400 hover:text-white */
+  .ig-draw { gap: 6px; color: #9ca3af; }
+  .ig-draw:hover { color: #ffffff; }
+  .ig-draw .ig-ic { width: 16px; height: 16px; color: currentColor; }
+
+  /* دکمه جستجو هم‌اندازه با هرکدام از چهار آیتم سریع و در سمت چپ آن‌ها */
+  .ig-generate {
+    display: flex;
+    flex-direction: row;
+    direction: rtl;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 40px;
+    min-height: 40px;
+    padding: 6px 8px;
+    background: var(--green);
+    border: none;
+    border-radius: 12px;
+    color: #000000;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+    flex: 0.65 1 0;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .ig-generate:hover { filter: brightness(0.92); }
+  .ig-generate svg { width: 16px; height: 16px; }
+
+  /* ═══════════════ آیتم‌های سریع (جایگزین پیل‌های مدل/نسبت/...) ═══════════════ */
+  .ig-quick-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    direction: rtl;
+  }
+
+  .ig-quick-item {
+    display: flex;
+    flex-direction: row;
+    direction: rtl;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    transition: background 0.18s ease, border-color 0.18s ease;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 40px;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+
+  .ig-quick-item:hover {
+    background: var(--bg-card);
+    border-color: var(--green);
+  }
+
+  .ig-quick-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ig-quick-icon svg {
+    width: 15px;
+    height: 15px;
+    color: var(--green);
+    display: block;
+  }
+
+  .ig-quick-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+    align-items: center;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .ig-quick-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .ig-quick-sub {
+    margin-top: 1px;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  html.light .ig-box { box-shadow: 0 14px 34px -20px rgba(12, 12, 16, 0.22); }
+
+  @media (max-width: 639px) {
+    .ig-box { padding: 12px; }
+    .ig-controls { gap: 9px; }
+    .ig-quick-row { gap: 5px; }
+    .ig-generate,
+    .ig-quick-item {
+      height: 40px;
+      min-height: 40px;
+      padding: 3px;
+      border-radius: 9px;
+    }
+    .ig-generate { font-size: 9px; gap: 3px; }
+    .ig-generate svg { width: 13px; height: 13px; }
+    .ig-quick-item { gap: 3px; }
+    .ig-quick-icon { width: 20px; height: 20px; border-radius: 6px; }
+    .ig-quick-icon svg { width: 12px; height: 12px; }
+    .ig-quick-title { font-size: 8px; }
+    .ig-quick-sub { font-size: 6.5px; line-height: 1.15; }
   }
 
   /* ===== LIGHT MODE — باکس سرچ ===== */
@@ -770,9 +821,6 @@
      TABLET — 640px+
   ══════════════════════════════════ */
   @media (min-width: 640px) {
-    /* هدر موبایل حذف میشه — top nav جایگزینه */
-    .home-logo { display: none !important; }
-
     .home-page {
       max-width: 680px;
       padding: 24px 28px 80px;
@@ -781,6 +829,7 @@
     .home-greeting-title { font-size: 24px; }
 
     .home-search-card { border-radius: 18px; }
+    .ig-box { border-radius: 18px; }
 
     /* اسلایدر بدون negative margin */
     .home-cards-scroll {
@@ -843,43 +892,29 @@
 <script>
 (function () {
 
-  // Theme toggle
-  document.getElementById('theme-toggle').addEventListener('click', function () {
-    vatanToggleTheme();
-  });
-
-  // Hamburger
-  var menuOpenBtn = document.getElementById('menuOpenBtn');
-  var menuOverlay = document.getElementById('menuOverlay');
-  var menuSheet   = document.getElementById('menuSheet');
-  var menuOpen    = false;
-
-  function openMenu() {
-    menuOverlay.style.display = 'block';
-    setTimeout(function () {
-      menuSheet.style.transform = 'scale(1) translateY(0)';
-      menuSheet.style.opacity = '1';
-    }, 10);
-    menuOpen = true;
+  // ===== باکس تولید تصویر =====
+  var igCountEl = document.getElementById('igCount');
+  var igMax = 4, igMin = 1;
+  function igSet(n) {
+    n = Math.max(igMin, Math.min(igMax, n));
+    if (igCountEl) igCountEl.textContent = n;
   }
+  document.querySelectorAll('[data-ig="inc"]').forEach(function (b) {
+    b.addEventListener('click', function () { igSet(parseInt(igCountEl.textContent, 10) + 1); });
+  });
+  document.querySelectorAll('[data-ig="dec"]').forEach(function (b) {
+    b.addEventListener('click', function () { igSet(parseInt(igCountEl.textContent, 10) - 1); });
+  });
 
-  function closeMenu() {
-    menuSheet.style.transform = 'scale(0.9) translateY(-10px)';
-    menuSheet.style.opacity = '0';
-    setTimeout(function () { menuOverlay.style.display = 'none'; }, 200);
-    menuOpen = false;
+  // بزرگ‌شدن خودکار پرامپت
+  var igPrompt = document.getElementById('igPrompt');
+  if (igPrompt) {
+    igPrompt.addEventListener('input', function () {
+      igPrompt.parentElement.classList.toggle('has-value', igPrompt.value.trim().length > 0);
+      igPrompt.style.height = 'auto';
+      igPrompt.style.height = igPrompt.scrollHeight + 'px';
+    });
   }
-
-  menuOpenBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    menuOpen ? closeMenu() : openMenu();
-  });
-
-  document.addEventListener('click', function (e) {
-    if (menuOpen && !menuSheet.contains(e.target)) {
-      closeMenu();
-    }
-  });
 
 })();
 </script>

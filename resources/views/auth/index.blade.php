@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>ورود | وطن استودیو</title>
+@include('partials.site-icons')
 <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 @vite(['resources/css/app.css'])
@@ -37,6 +38,11 @@
     box-shadow: 0 0 0px 1000px #16161c inset !important;
     -webkit-text-fill-color: #ffffff !important;
     caret-color: #ffffff !important;
+    background-color: transparent !important;
+    background-clip: content-box !important;
+    border: 0 !important;
+    outline: 0 !important;
+    border-radius: 9px !important;
     transition: background-color 5000s ease-in-out 0s !important;
   }
 
@@ -116,12 +122,12 @@
           <label class="text-[11px] font-semibold text-[#a8c4a8]">شماره موبایل</label>
           <div class="relative flex items-center bg-[#16161c] border border-[#222230] rounded-[10px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#cffe00]" id="reg-phone-wrap">
             <i class="fa-solid fa-mobile-screen-button text-[#4d7a56] text-[13px] absolute left-[14px] top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <input class="w-full min-w-0 bg-transparent border-0 outline-none text-base text-white text-right pr-[14px] pl-[40px] placeholder:text-[#4d7a56] autofill:shadow-[0_0_0px_1000px_#16161c_inset] autofill:[-webkit-text-fill-color:#fff] autofill:[caret-color:#fff] autofill:[transition:background-color_5000s_ease-in-out_0s]" type="text" id="reg-phone-input" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" />
+            <input class="w-full min-w-0 bg-transparent border-0 outline-none text-base text-white text-right pr-[14px] pl-[40px] placeholder:text-[#4d7a56] autofill:shadow-[0_0_0px_1000px_#16161c_inset] autofill:[-webkit-text-fill-color:#fff] autofill:[caret-color:#fff] autofill:[transition:background-color_5000s_ease-in-out_0s]" type="tel" id="reg-phone-input" name="phone" autocomplete="tel" inputmode="tel" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" />
           </div>
           <div class="hidden text-[10.5px] text-[#f05c5c]" id="reg-phone-error">شماره موبایل معتبر نیست</div>
         </div>
 
-        <button class="flex w-full py-3 border-0 rounded-[10px] bg-[#cffe00] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#b8e600] active:scale-[0.99]" onclick="goToOtp('register')">
+        <button type="button" class="flex w-full py-3 border-0 rounded-[10px] bg-[#cffe00] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#b8e600] active:scale-[0.99]" onmousedown="event.preventDefault()" onclick="goToOtp('register')">
           <span>ادامه</span><i class="fa-solid fa-arrow-left"></i>
         </button>
 
@@ -148,50 +154,34 @@
         <div class="text-center text-[11.5px] text-[#4d7a56] mt-[24px] max-[480px]:mt-[16px]">قبلاً ثبت‌نام کردی؟ <span class="text-[#cffe00] cursor-pointer font-bold" onclick="switchTab('login')">ورود</span></div>
       </div>
 
-      {{-- مرحله ورود: موبایل + رمز عبور در یک صفحه --}}
+      {{-- مرحله ورود با رمز یک‌بارمصرف پیامکی --}}
       <div class="auth-step absolute top-0 left-0 w-full min-w-0 opacity-0 invisible pointer-events-none translate-y-[10px] [transition:opacity_0.28s_ease,transform_0.28s_ease,visibility_0.28s] [&.active]:opacity-100 [&.active]:visible [&.active]:pointer-events-auto [&.active]:translate-y-0" id="login-step-1">
         <div class="text-[17px] font-extrabold text-white mb-1 text-center">خوش آمدید مجدد</div>
-        <div class="text-xs text-[#4d7a56] text-center mb-[22px]">شماره موبایل و رمز عبورت رو وارد کن</div>
+        <div class="text-xs text-[#4d7a56] text-center mb-[22px]">شماره موبایلت را وارد کن تا کد ۵ رقمی بفرستیم</div>
 
         <div class="flex flex-col gap-[6px] mb-4 max-[480px]:mb-[10px]">
           <label class="text-[11px] font-semibold text-[#a8c4a8]">شماره موبایل</label>
           <div class="relative flex items-center bg-[#16161c] border border-[#222230] rounded-[10px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#cffe00]" id="login-phone-wrap">
             <i class="fa-solid fa-mobile-screen-button text-[#4d7a56] text-[13px] absolute left-[14px] top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <input class="w-full min-w-0 bg-transparent border-0 outline-none text-base text-white text-right pr-[14px] pl-[40px] placeholder:text-[#4d7a56] autofill:shadow-[0_0_0px_1000px_#16161c_inset] autofill:[-webkit-text-fill-color:#fff] autofill:[caret-color:#fff] autofill:[transition:background-color_5000s_ease-in-out_0s]" type="text" id="login-phone-input" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" />
+            <input class="w-full min-w-0 bg-transparent border-0 outline-none text-base text-white text-right pr-[14px] pl-[40px] placeholder:text-[#4d7a56] autofill:shadow-[0_0_0px_1000px_#16161c_inset] autofill:[-webkit-text-fill-color:#fff] autofill:[caret-color:#fff] autofill:[transition:background-color_5000s_ease-in-out_0s]" type="tel" id="login-phone-input" name="phone" autocomplete="tel" inputmode="tel" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" />
           </div>
           <div class="hidden text-[10.5px] text-[#f05c5c]" id="login-phone-error">شماره موبایل معتبر نیست</div>
         </div>
 
-        <div class="flex flex-col gap-[6px] mb-2 max-[480px]:mb-[8px]">
-          <label class="text-[11px] font-semibold text-[#a8c4a8]">رمز عبور</label>
-          <div class="relative flex items-center bg-[#16161c] border border-[#222230] rounded-[10px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#cffe00]" id="login-password-wrap">
-            <i class="fa-solid fa-lock" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#4d7a56; font-size:13px; pointer-events:none;"></i>
-            <input class="w-full bg-transparent border-0 outline-none text-base text-white placeholder:text-[#4d7a56]" style="padding-right:40px; padding-left:40px;" type="password" id="login-password-input" placeholder="رمز عبور خود را وارد کنید" />
-            <i class="fa-solid fa-eye-slash cursor-pointer transition-colors hover:text-white" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#4d7a56; font-size:13px;" id="toggle-login-password" onclick="togglePasswordVisibility('login-password-input','toggle-login-password')"></i>
-          </div>
-          <div class="hidden text-[10.5px] text-[#f05c5c]" id="login-password-error">رمز عبور وارد شده اشتباه است</div>
-        </div>
-
-        <div class="text-left mt-[10px] mb-[20px] max-[480px]:mb-4">
-          <a href="{{ route('password.request') }}" class="text-[11px] text-[#4d7a56] hover:text-[#cffe00] transition-colors duration-200">
-            رمز عبور خود را فراموش کرده‌اید؟
-          </a>
-        </div>
-
-        <button class="flex w-full py-3 border-0 rounded-[10px] bg-[#cffe00] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#b8e600] active:scale-[0.99]" onclick="submitLogin()">
-          <span>ورود</span><i class="fa-solid fa-arrow-left"></i>
+        <button type="button" class="flex w-full py-3 border-0 rounded-[10px] bg-[#cffe00] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#b8e600] active:scale-[0.99]" onmousedown="event.preventDefault()" onclick="goToOtp('login')">
+          <span>ارسال کد ورود</span><i class="fa-solid fa-arrow-left"></i>
         </button>
         <div class="text-center text-[11.5px] text-[#4d7a56] mt-[24px] max-[480px]:mt-[16px]">حساب نداری؟ <span class="text-[#cffe00] cursor-pointer font-bold" onclick="switchTab('register')">ثبت‌نام</span></div>
       </div>
 
-      {{-- مرحله تایید کد OTP (فقط ثبت‌نام) --}}
+      {{-- مرحله تایید کد OTP ورود و ثبت‌نام --}}
       <div class="auth-step absolute top-0 left-0 w-full min-w-0 opacity-0 invisible pointer-events-none translate-y-[10px] [transition:opacity_0.28s_ease,transform_0.28s_ease,visibility_0.28s] [&.active]:opacity-100 [&.active]:visible [&.active]:pointer-events-auto [&.active]:translate-y-0" id="step-otp">
         <div class="flex items-center gap-[6px] text-xs text-[#4d7a56] cursor-pointer mb-[14px] w-fit transition-colors duration-150 hover:text-white" id="otp-back"><i class="fa-solid fa-arrow-right text-[11px]"></i> بازگشت</div>
         <div class="text-[17px] font-extrabold text-white mb-1 text-center">کد تأیید رو وارد کن</div>
         <div class="text-xs text-[#4d7a56] text-center mb-[22px]">کد ۵ رقمی به <span id="otp-phone-display" dir="ltr" class="inline-block text-[#cffe00] font-bold">۰۹۱۲۳۴۵۶۷۸۹</span> ارسال شد</div>
         <div class="min-h-[70px] mb-4 max-[480px]:min-h-0 max-[480px]:mb-[10px]">
           <div class="flex gap-2 [direction:ltr] justify-center mb-3" id="otp-boxes">
-            <input class="otp-box w-12 h-[54px] bg-[#16161c] border border-[#222230] rounded-[10px] text-center text-[19px] font-bold text-white outline-none transition-colors duration-150 focus:border-[#cffe00] max-[420px]:w-10 max-[420px]:h-12 max-[420px]:text-[17px]" type="text" maxlength="1" inputmode="numeric" />
+            <input class="otp-box w-12 h-[54px] bg-[#16161c] border border-[#222230] rounded-[10px] text-center text-[19px] font-bold text-white outline-none transition-colors duration-150 focus:border-[#cffe00] max-[420px]:w-10 max-[420px]:h-12 max-[420px]:text-[17px]" type="text" maxlength="1" inputmode="numeric" autocomplete="one-time-code" />
             <input class="otp-box w-12 h-[54px] bg-[#16161c] border border-[#222230] rounded-[10px] text-center text-[19px] font-bold text-white outline-none transition-colors duration-150 focus:border-[#cffe00] max-[420px]:w-10 max-[420px]:h-12 max-[420px]:text-[17px]" type="text" maxlength="1" inputmode="numeric" />
             <input class="otp-box w-12 h-[54px] bg-[#16161c] border border-[#222230] rounded-[10px] text-center text-[19px] font-bold text-white outline-none transition-colors duration-150 focus:border-[#cffe00] max-[420px]:w-10 max-[420px]:h-12 max-[420px]:text-[17px]" type="text" maxlength="1" inputmode="numeric" />
             <input class="otp-box w-12 h-[54px] bg-[#16161c] border border-[#222230] rounded-[10px] text-center text-[19px] font-bold text-white outline-none transition-colors duration-150 focus:border-[#cffe00] max-[420px]:w-10 max-[420px]:h-12 max-[420px]:text-[17px]" type="text" maxlength="1" inputmode="numeric" />
@@ -299,7 +289,7 @@ let mode = 'register';
 let resendTimerId = null;
 let otpExpired = false;
 let currentPhone = '';
-let localGeneratedCode = '';
+let otpVerificationInProgress = false;
 
 // تشخیص کیبورد فارسی/عربی در فیلدهای رمز عبور
 function isPersianKeyboardInput(value) {
@@ -364,106 +354,11 @@ function toPersianDigits(str) {
   return String(str).replace(/[0-9]/g, d => fa[d]);
 }
 
-function generateRandomOTP() {
-  return Math.floor(10000 + Math.random() * 90000).toString();
-}
-
-// ورود: موبایل + رمز روی یک صفحه — همان دو فراخوانی قبلی بک‌اند، فقط پشت سر هم روی یک مرحله
-function submitLogin() {
-  const input = document.getElementById('login-phone-input');
-  const wrap = document.getElementById('login-phone-wrap');
-  const error = document.getElementById('login-phone-error');
-  const pwdInput = document.getElementById('login-password-input');
-  const pwdWrap = document.getElementById('login-password-wrap');
-  const pwdError = document.getElementById('login-password-error');
-  const phone = input.value.trim();
-
-  let valid = true;
-
-  if (!validatePhone(phone)) {
-    wrap.classList.add('border-rose-500');
-    error.textContent = 'شماره موبایل معتبر نیست';
-    error.classList.remove('hidden');
-    valid = false;
-  } else {
-    wrap.classList.remove('border-rose-500');
-    error.classList.add('hidden');
-  }
-
-  if (!pwdInput.value) {
-    pwdWrap.classList.add('border-rose-500');
-    pwdError.textContent = 'رمز عبور را وارد کنید';
-    pwdError.classList.remove('hidden');
-    valid = false;
-  } else {
-    pwdWrap.classList.remove('border-rose-500');
-    pwdError.classList.add('hidden');
-  }
-
-  updateStageHeight();
-  if (!valid) return;
-
-  fetch('/auth/check-phone', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-    },
-    body: JSON.stringify({ phone: phone, mode: 'login' })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.status !== 'success') {
-      wrap.classList.add('border-rose-500');
-      error.textContent = data.message;
-      error.classList.remove('hidden');
-      updateStageHeight();
-      return;
-    }
-
-    currentPhone = phone;
-
-    fetch('/auth/login-submit', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-      },
-      body: JSON.stringify({ phone: currentPhone, password: pwdInput.value })
-    })
-    .then(res => res.json())
-    .then(loginData => {
-      if (loginData.status === 'success') {
-        localStorage.setItem('show_welcome_modal', 'true');
-        localStorage.setItem('user_first_name', loginData.user_name);
-        window.location.href = loginData.redirect;
-      } else {
-        pwdWrap.classList.add('border-rose-500');
-        pwdError.textContent = loginData.message;
-        pwdError.classList.remove('hidden');
-        updateStageHeight();
-      }
-    })
-    .catch(() => {
-      pwdWrap.classList.add('border-rose-500');
-      pwdError.textContent = 'خطا در برقراری ارتباط با سرور';
-      pwdError.classList.remove('hidden');
-      updateStageHeight();
-    });
-  })
-  .catch(() => {
-    wrap.classList.add('border-rose-500');
-    error.textContent = 'خطا در اتصال به سرور';
-    error.classList.remove('hidden');
-    updateStageHeight();
-  });
-}
-
 // ثبت‌نام: بررسی شماره سپس رفتن به مرحله OTP
 function goToOtp(fromMode) {
-  const inputId = 'reg-phone-input';
-  const wrapId = 'reg-phone-wrap';
-  const errorId = 'reg-phone-error';
+  const inputId = fromMode === 'login' ? 'login-phone-input' : 'reg-phone-input';
+  const wrapId = fromMode === 'login' ? 'login-phone-wrap' : 'reg-phone-wrap';
+  const errorId = fromMode === 'login' ? 'login-phone-error' : 'reg-phone-error';
 
   const input = document.getElementById(inputId);
   const wrap = document.getElementById(wrapId);
@@ -509,14 +404,20 @@ function goToOtp(fromMode) {
 }
 
 function processOtpTransition(phone, fromMode) {
-  localGeneratedCode = generateRandomOTP();
-  alert("🔑 کد تأیید وطن استودیو (شبیه‌ساز لوکال):\n" + localGeneratedCode);
-
-  document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
-  document.getElementById('otp-back').onclick = () => goToStep('reg-step-1');
-  goToStep('step-otp');
-  resetOtpBoxes();
-  startResendTimer();
+  fetch('/auth/send-otp', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+    body: JSON.stringify({phone: phone, purpose: fromMode})
+  }).then(async res => ({ok:res.ok, data:await res.json()})).then(({ok,data}) => {
+    if (!ok || data.status !== 'success') throw new Error(data.message || 'ارسال کد ناموفق بود');
+    document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
+    document.getElementById('otp-back').onclick = () => goToStep(fromMode === 'login' ? 'login-step-1' : 'reg-step-1');
+    goToStep('step-otp');
+    resetOtpBoxes();
+    startResendTimer();
+  }).catch(error => {
+    const errorEl = document.getElementById(fromMode === 'login' ? 'login-phone-error' : 'reg-phone-error');
+    errorEl.textContent = error.message; errorEl.classList.remove('hidden'); updateStageHeight();
+  });
 }
 
 function goBackFromPassword() {
@@ -527,7 +428,16 @@ function resetOtpBoxes() {
   const boxes = document.querySelectorAll('.otp-box');
   boxes.forEach(b => { b.value = ''; b.classList.remove('border-rose-500'); });
   document.getElementById('otp-error').classList.add('hidden');
-  boxes[0].focus();
+  otpVerificationInProgress = false;
+  focusFirstOtpBox();
+}
+
+function focusFirstOtpBox() {
+  const firstBox = document.querySelector('.otp-box');
+  if (!firstBox) return;
+  firstBox.focus({preventScroll: true});
+  requestAnimationFrame(() => firstBox.focus({preventScroll: true}));
+  setTimeout(() => firstBox.focus({preventScroll: true}), 120);
 }
 
 function startResendTimer() {
@@ -557,9 +467,7 @@ function startResendTimer() {
 
 function resendOtp() {
   resetOtpBoxes();
-  localGeneratedCode = generateRandomOTP();
-  alert("🔑 کد تأیید جدید (شبیه‌ساز لوکال):\n" + localGeneratedCode);
-  startResendTimer();
+  processOtpTransition(currentPhone, mode);
 }
 
 function showOtpError(message) {
@@ -580,6 +488,8 @@ function confirmOtp() {
   const boxes = document.querySelectorAll('.otp-box');
   const code = Array.from(boxes).map(b => b.value).join('');
 
+  if (otpVerificationInProgress) return;
+
   if (code.length < boxes.length) {
     boxes.forEach(b => { if (!b.value) b.classList.add('border-rose-500'); });
     return;
@@ -589,18 +499,24 @@ function confirmOtp() {
     return;
   }
 
-  if (code === localGeneratedCode) {
-    if (resendTimerId) clearInterval(resendTimerId);
+  otpVerificationInProgress = true;
 
+  fetch('/auth/verify-otp', {
+    method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+    body:JSON.stringify({phone:currentPhone,purpose:mode,code:code})
+  }).then(async res => ({ok:res.ok,data:await res.json()})).then(({ok,data}) => {
+    if (!ok || data.status !== 'success') throw new Error(data.message || 'کد نامعتبر است');
+    if (resendTimerId) clearInterval(resendTimerId);
+    if (mode === 'login') { window.location.href = data.redirect; return; }
     document.getElementById('pwd-title').textContent = 'تعیین رمز عبور';
     document.getElementById('pwd-desc').textContent = 'یک رمز عبور برای حساب خود انتخاب کنید';
-
     goToStep('step-password');
-  } else {
-    showOtpError('کد وارد شده اشتباه است');
-    boxes.forEach(b => b.value = '');
-    boxes[0].focus();
-  }
+  }).catch(error => {
+    otpVerificationInProgress = false;
+    showOtpError(error.message);
+    boxes.forEach(b => b.value='');
+    focusFirstOtpBox();
+  });
 }
 
 function togglePasswordVisibility(inputId, iconId) {
@@ -748,8 +664,6 @@ document.querySelectorAll('.otp-box').forEach((box, i, all) => {
 
 attachPersianKeyboardGuard('password-input', 'password-wrap', 'password-error', 'رمز عبور باید حداقل ۶ کاراکتر باشد');
 attachPersianKeyboardGuard('password-confirm-input', 'password-confirm-wrap', 'password-confirm-error', 'رمز عبور و تکرار آن یکسان نیست');
-attachPersianKeyboardGuard('login-password-input', 'login-password-wrap', 'login-password-error', 'رمز عبور وارد شده اشتباه است');
-
 window.addEventListener('DOMContentLoaded', () => {
   updateStageHeight();
 });

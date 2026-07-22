@@ -299,7 +299,7 @@
   </div>
 
   {{-- دکمه تست پرامپت --}}
-  <div class="border-t border-[var(--b1)] pt-3.5 mt-1">
+  <div class="hidden" aria-hidden="true">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <div>
         <div class="text-xs font-bold text-[var(--text)]">تست پرامپت</div>

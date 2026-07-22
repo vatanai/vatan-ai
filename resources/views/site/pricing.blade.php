@@ -12,7 +12,7 @@
         <p class="text-gray-400 [.light_&]:text-gray-600 text-sm md:text-base leading-relaxed">
             موجودی فعلی حساب شما: 
             <span class="text-emerald-400 font-bold font-mono bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
-                {{ number_format(auth()->user()->tokens ?? 0) }} توکن
+                {{ number_format(auth()->user()->token_balance) }} توکن
             </span>
         </p>
 

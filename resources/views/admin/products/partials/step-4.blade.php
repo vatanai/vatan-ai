@@ -134,14 +134,14 @@
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداقل کردیت لازم</label>
-      <input type="number" name="new_min_credit_required" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1">
+      <input type="number" name="new_min_credit_required" min="0" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1" value="{{ old('new_min_credit_required', optional($duplicateFrom)->new_min_credit_required ?? 0) }}">
     </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداکثر تعداد اجرا برای هر کاربر</label>
-      <input type="number" name="new_max_run_per_user" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="بدون محدودیت">
+      <input type="number" name="new_max_run_per_user" min="1" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="بدون محدودیت" value="{{ old('new_max_run_per_user', optional($duplicateFrom)->new_max_run_per_user) }}">
     </div>
     <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mt-auto">
       <div>
@@ -156,7 +156,7 @@
 
   <div class="flex flex-col gap-1.5">
     <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">برچسب اختصاصی قیمت</label>
-    <input type="text" name="new_price_custom_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: ویژه، اقتصادی، هدیه">
+    <input type="text" name="new_price_custom_label" maxlength="100" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: ویژه، اقتصادی، هدیه" value="{{ old('new_price_custom_label', optional($duplicateFrom)->new_price_custom_label) }}">
     <div class="flex gap-1.5 flex-wrap">
       @foreach (['ویژه','اقتصادی','هدیه'] as $preset)
         <span class="text-[10.5px] bg-[var(--b1)] border border-[var(--b2)] rounded px-2 py-0.5 cursor-pointer text-[var(--text2)] hover:border-[var(--accent)]" onclick="document.querySelector('[name=new_price_custom_label]').value='{{ $preset }}'">{{ $preset }}</span>

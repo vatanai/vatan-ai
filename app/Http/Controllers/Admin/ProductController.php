@@ -7,24 +7,44 @@ use App\Models\Product;
 use App\Models\AiModel;
 use App\Models\ProductPromptHistory;
 use App\Models\Category;
+use App\Models\Generation;
+use App\Models\ProductTestRun;
+use App\Services\ProductImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ProductImageOptimizer $imageOptimizer) {}
     /**
      * نمایش لیست محصولات با جستجو، فیلترهای پیشرفته، مرتب‌سازی و صفحه‌بندی
      */
     public function index(Request $request)
     {
-        $query = Product::query();
+        // آمار واقعی اجرا برای هر محصول از جدول generations:
+        // - generations_count      : تعداد کل اجراهای همان محصول
+        // - unique_users_count     : تعداد کاربران یکتایی که محصول را اجرا کرده‌اند
+        // - last_run_at            : تاریخ/ساعت آخرین اجرای محصول
+        $query = Product::query()
+            ->with('categories')
+            ->withCount('generations')
+            ->addSelect([
+                'unique_users_count' => Generation::selectRaw('count(distinct user_id)')
+                    ->whereColumn('generations.product_id', 'products.id'),
+                'last_run_at' => Generation::select('created_at')
+                    ->whereColumn('generations.product_id', 'products.id')
+                    ->latest('created_at')
+                    ->limit(1),
+            ]);
 
         if ($search = trim((string) $request->get('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name_fa', 'like', "%{$search}%")
                   ->orWhere('name_en', 'like', "%{$search}%")
                   ->orWhere('slug', 'like', "%{$search}%")
+                  ->orWhere('product_code', 'like', "%{$search}%")
                   ->orWhereJsonContains('tags', $search);
                 if (is_numeric($search)) {
                     $q->orWhere('id', (int) $search);
@@ -62,10 +82,13 @@ class ProductController extends Controller
         if ($updatedTo   = $request->get('updated_to'))   $query->whereDate('updated_at', '<=', $updatedTo);
 
         switch ($request->get('sort')) {
-            case 'oldest': $query->oldest(); break;
-            case 'az':     $query->orderBy('name_fa'); break;
+            case 'oldest':     $query->oldest(); break;
+            case 'az':         $query->orderBy('name_fa'); break;
+            // مرتب‌سازی واقعی بر اساس آمار اجرا (ستون محاسبه‌شده‌ی withCount بالا)
+            case 'most_used':  $query->orderByDesc('generations_count')->latest(); break;
+            case 'least_used': $query->orderBy('generations_count')->latest(); break;
             case 'newest':
-            default:       $query->latest(); break;
+            default:           $query->latest(); break;
         }
 
         $perPage = (int) $request->get('per_page', 15);
@@ -79,42 +102,68 @@ class ProductController extends Controller
         $draftCount    = Product::where('status', 'draft')->count();
         $inactiveCount = Product::where('status', 'inactive')->count();
 
+        // ── آمار واقعی اجراها برای کارت‌ها و نوار محبوبیت جدول ──
+        // کل اجراها: تعداد کل رکوردهای جدول generations (هر رکورد = یک اجرا)
+        $totalRuns = Generation::count();
+        // بیشترین تعداد اجرای یک محصول (مبنای درصد نوار محبوبیت هر ردیف جدول)
+        $maxRuns = (int) (Generation::selectRaw('count(*) as runs_count')
+            ->groupBy('product_id')
+            ->orderByDesc('runs_count')
+            ->limit(1)
+            ->value('runs_count') ?? 0);
+        // محبوب‌ترین محصول (بیشترین اجرا) — فقط وقتی حداقل یک اجرا ثبت شده باشد
+        $topProduct = $maxRuns > 0
+            ? Product::withCount('generations')->orderByDesc('generations_count')->first()
+            : null;
+
         $aiModels = AiModel::orderBy('name')->get();
         $categories = Category::orderBy('name')->get();
         $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
 
         return view('admin.products.index', compact(
             'products', 'activeCount', 'draftCount', 'inactiveCount',
+            'totalRuns', 'maxRuns', 'topProduct',
             'aiModels', 'categories', 'recentlyEdited'
         ));
     }
 
     /**
-     * نمایش فرم ساخت محصول جدید — و همچنین فرم ویرایش محصول موجود.
-     * مسیر ویرایش جداگانه (products/{product}/edit) کامل حذف شده؛ ویرایش هم از همین
-     * صفحه با پارامتر اختیاری محصول انجام می‌شود، مثلاً: /admin/products/create/52
+     * نمایش فرم ساخت محصول جدید — یا فرم ویرایش محصول موجود، وقتی از دکمه‌ی «ویرایش»
+     * با آی‌دی محصول (پارامتر اختیاری route) وارد این صفحه شده باشیم.
+     *
+     * نکته مهم (رفع باگ ساختاری): پیش‌تر این متد پارامتر {product} را نادیده می‌گرفت —
+     * یعنی کلیک روی «ویرایش» یک فرم کاملاً خالی باز می‌کرد و ثبتِ آن (چون فرم همیشه به
+     * store() ارسال می‌شود، نه update()) به‌جای ویرایش محصول، یک محصول تکراریِ جدید می‌ساخت.
      */
     public function create(Request $request, ?Product $product = null)
     {
         $aiModels = AiModel::where('is_active', true)->latest()->get();
 
         $duplicateFrom = null;
-        $isEdit = false;
-
-        if ($product) {
-            // حالت ویرایش — همان فرم ثبت محصول، با مقادیر از پیش پرشده از روی محصول موجود
-            $duplicateFrom = $product;
-            $isEdit = true;
-        } elseif ($request->filled('duplicate')) {
+        if ($request->filled('duplicate')) {
             $duplicateFrom = Product::find($request->get('duplicate'));
         }
 
-        return view('admin.products.create', [
-            'aiModels' => $aiModels,
-            'duplicateFrom' => $duplicateFrom,
-            'product' => $product,
-            'isEdit' => $isEdit,
-        ]);
+        // ═══════════════════════════════════════════════════════════════════════
+        // حالت ویرایش واقعی: به‌جای تکرار دستیِ هر فیلد در Blade (ریسک بالای فراموش‌شدن
+        // یک فیلد و از‌دست‌رفتن دوباره‌ی داده — دقیقاً همان خانواده‌ی باگی که مشکل خالی‌شدن
+        // توضیحات محصولات را ایجاد کرده بود)، مقادیر واقعی محصول را برای «همین یک درخواست»
+        // به‌عنوان ورودی قبلی (old()) در دسترس قرار می‌دهیم؛ همان مکانیزمی که Laravel برای
+        // نگه‌داشتن مقادیر فرم بعد از خطای ولیدیشن استفاده می‌کند. نتیجه: تمام old('field', ...)
+        // های موجود در هر ۵ گام ویزارد — بدون نیاز به تغییر دستیِ آن‌ها — مقدار واقعی محصول را
+        // نشان می‌دهند. از session()->now() استفاده می‌شود (نه flashInput()) تا این مقداردهی
+        // فقط مخصوص همین درخواست بماند و به صفحه/محصول بعدی نشتی نکند.
+        if ($product && !$request->session()->hasOldInput()) {
+            $product->loadMissing('categories');
+            $productData = $product->toArray();
+            $productData['category_ids'] = $product->categories->pluck('id')->all();
+            $productData['provider_options'] = (is_array($product->provider_options) && !empty($product->provider_options))
+                ? json_encode($product->provider_options, JSON_UNESCAPED_UNICODE)
+                : null;
+            $request->session()->now('_old_input', $productData);
+        }
+
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product'));
     }
 
     /**
@@ -122,21 +171,34 @@ class ProductController extends Controller
      */
    public function store(Request $request)
     {
+        $this->mergeInputSchemaJson($request);
+
         // ۱. ولیدیشن کاملاً آزاد و منعطف برای تست سریع
-        $request->validate([
+        $validated = $request->validate([
             'name_fa' => 'nullable|string|max:255',
             'name_en' => 'nullable|string|max:255',
             'slug' => 'nullable|string|max:255',
             'category_id' => 'nullable|integer',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'integer|exists:categories,id',
+            'description_fa' => 'nullable|string',
+            'description_en' => 'nullable|string',
+            'new_min_credit_required' => 'nullable|integer|min:0',
+            'new_max_run_per_user' => 'nullable|integer|min:1',
+            'new_price_custom_label' => 'nullable|string|max:100',
+            'main_images' => 'nullable|array|max:20',
+            'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'before_images' => 'nullable|array|max:20',
+            'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'skip_image_optimization' => 'nullable|boolean',
+            ...$this->inputSchemaRules(),
         ]);
 
         // ۲. ساخت یک نمونه جدید از مدل (برای دور زدن محدودیت fillable دیتابیس)
         $product = new Product();
 
         // ۳. مقداردهی فیلدهای اصلی (اگر در فرم خالی باشند، مقدار پیش‌فرض تست قرار می‌گیرد)
-        $product->name_fa = $request->input('name_fa') ?? 'محصول تست ' . rand(100, 999);
+        $product->name_fa = self::stripCopySuffix($request->input('name_fa')) ?? 'محصول تست ' . rand(100, 999);
         $product->name_en = $request->input('name_en') ?? 'Test Product ' . rand(100, 999);
         
         $slugSource = $request->input('slug') ?? $product->name_en;
@@ -148,12 +210,15 @@ class ProductController extends Controller
         }
         $product->slug = $slug;
 
-        // ۳.۱ ساخت خودکار کد ۶ رقمی یکتا برای محصول — این کد پیش از اسلاگ در لینک عمومی محصول قرار می‌گیرد
-        // مثال: aivatan.com/app/product/546834-{$slug}
-        do {
-            $productCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        } while (Product::where('product_code', $productCode)->exists());
-        $product->product_code = $productCode;
+        // ۳.۰.۱ کد ۶ رقمی یکتای محصول — همان کدی که در لینک عمومی محصول و ستون «کد محصول»
+        // لیست ادمین استفاده می‌شود؛ برای هر محصول جدید همین‌جا ساخته می‌شود.
+        $product->product_code = Product::generateUniqueProductCode();
+
+        // ۳.۱ توضیحات فارسی/انگلیسی محصول (متن کامل نمایش داده‌شده در صفحه محصول)
+        // نکته مهم: این دو خط عمداً اضافه شده‌اند — پیش‌تر در این متد اصلاً ذخیره نمی‌شدند
+        // و همین باعث می‌شد توضیحات محصولات جدید با وجود پرشدن فرم، هرگز در دیتابیس ثبت نشود.
+        $product->description_fa = $request->input('description_fa');
+        $product->description_en = $request->input('description_en');
 
         // ۴. دسته‌بندی چندگانه (سرشاخه + زیرشاخه‌ها)
         $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
@@ -165,26 +230,21 @@ class ProductController extends Controller
         $product->category = $primaryId ? (Category::where('id', $primaryId)->value('name') ?? 'عمومی') : 'عمومی';
         $product->subcategory = $request->input('subcategory');
 
-        // ۵. مدیریت فایل‌ها و تصاویر با جایگزین امن
+        // ۵. تصاویر محصول: اولین عکس اصلی = کاور/تصویر کارت، بقیه = گالری.
+        // ستون legacy thumbnail عمداً حذف نمی‌شود تا داده محصولات قدیمی دست‌نخورده بماند.
         $duplicateSource = $request->filled('duplicate_from') ? Product::find($request->input('duplicate_from')) : null;
 
-        if ($request->hasFile('cover')) {
-            $product->cover = $request->file('cover')->store('products/covers', 'public');
+        $mainPaths = $this->storeOptimizedImages($request->file('main_images', []), 'products/main', $request->boolean('skip_image_optimization'));
+        if ($mainPaths) {
+            $product->cover = array_shift($mainPaths);
+            $product->sample_outputs = $mainPaths;
         } elseif ($duplicateSource && $duplicateSource->cover && Storage::disk('public')->exists($duplicateSource->cover)) {
             $product->cover = $this->copyDuplicateFile($duplicateSource->cover, 'products/covers');
+            $product->sample_outputs = $this->copyDuplicateFiles((array) $duplicateSource->sample_outputs, 'products/samples');
         }
-
-        if ($request->hasFile('thumbnail')) {
-            $product->thumbnail = $request->file('thumbnail')->store('products/thumbnails', 'public');
-        } elseif ($duplicateSource && $duplicateSource->thumbnail && Storage::disk('public')->exists($duplicateSource->thumbnail)) {
-            $product->thumbnail = $this->copyDuplicateFile($duplicateSource->thumbnail, 'products/thumbnails');
-        } elseif ($product->cover) {
-            // به جای مسیر جعلی قبلی (default_placeholder.jpg که اصلا وجود نداشت و باعث سیاه شدن عکس در هوم/اکسپلور می شد)،
-            // همان تصویر Cover را به عنوان Thumbnail هم کپی می کنیم تا کارت ها همیشه عکس واقعی داشته باشند.
-            $product->thumbnail = $this->copyDuplicateFile($product->cover, 'products/thumbnails');
-        } else {
-            $product->thumbnail = null;
-        }
+        // ستون thumbnail در دیتابیس قدیمی NOT NULL است؛ برای محصول جدید فقط همان مسیر
+        // عکس اصلی را alias می‌کنیم و هیچ فایل دوم یا سایز دومی ساخته نمی‌شود.
+        $product->thumbnail = $product->cover ?: 'products/thumbnails/default_placeholder.jpg';
 
         if ($request->hasFile('new_product_icon')) {
             $product->new_product_icon = $request->file('new_product_icon')->store('product_icons', 'public');
@@ -192,34 +252,13 @@ class ProductController extends Controller
             $product->new_product_icon = $this->copyDuplicateFile($duplicateSource->new_product_icon, 'product_icons');
         }
 
-        $samplePaths = [];
-        if ($request->hasFile('sample_outputs')) {
-            foreach ($request->file('sample_outputs') as $file) {
-                $samplePaths[] = $file->store('products/samples', 'public');
-            }
-        }
-        $product->sample_outputs = $samplePaths;
-
-        // ۵.۱ عکس‌های قبل — تصاویر خامی که مدل با آن‌ها ساخته شده (جایگزین فیلد قدیمی Thumbnail در فرم)
-        $beforeImagePaths = [];
-        if ($request->hasFile('before_images')) {
-            foreach ($request->file('before_images') as $file) {
-                $beforeImagePaths[] = $file->store('products/before_images', 'public');
-            }
-        } elseif ($duplicateSource && !empty($duplicateSource->before_images)) {
-            foreach ($duplicateSource->before_images as $existingPath) {
-                if (Storage::disk('public')->exists($existingPath)) {
-                    $beforeImagePaths[] = $this->copyDuplicateFile($existingPath, 'products/before_images');
-                }
-            }
-        }
-        $product->before_images = $beforeImagePaths;
+        $product->before_images = $this->storeOptimizedImages($request->file('before_images', []), 'products/before_images', $request->boolean('skip_image_optimization'));
 
         // ۶. فیلدهای سیستمی و هوش مصنوعی
         $product->primary_model = $request->input('primary_model') ?? AiModel::first()?->openrouter_model_id ?? 'stabilityai/stable-diffusion-3';
         $product->fallback_models = $request->input('fallback_models', []);
         $product->prompt_template = $request->input('prompt_template') ?? 'A high tech digital art illustration of {prompt}';
-        $product->input_schema = $request->input('input_schema', []);
+        $product->input_schema = $validated['input_schema'] ?? [];
         $product->timeout = $request->input('timeout') ?? 60;
         $product->pipeline_type = $request->input('pipeline_type') ?? 'image_generation';
 
@@ -277,9 +316,9 @@ class ProductController extends Controller
         $product->output_type = $request->input('output_type') ?? 'image';
         $product->output_format = $request->input('output_format') ?? 'jpg';
         $product->output_count = $request->input('output_count') ?? 1;
-        $product->output_variants = $this->buildOutputVariants($request, (bool) $duplicateSource);
         $product->resolution = $request->input('resolution') ?? '1024×1024';
-        $product->aspect_ratio = $request->input('aspect_ratio') ?? '1:1';
+        $product->allowed_aspect_ratios = $this->aspectRatiosFromSchema($product->input_schema, ['1:1']);
+        $product->aspect_ratio = $product->allowed_aspect_ratios[0];
         $product->delivery_method = $request->input('delivery_method') ?? 'instant';
         $product->estimated_time = $request->input('estimated_time') ?? 30;
         $product->price_tier = $request->input('price_tier') ?? 'standard';
@@ -304,6 +343,7 @@ class ProductController extends Controller
 
         // ۱۰. ذخیره نهایی در دیتابیس
         $product->save();
+        $this->attachDraftTests($request, $product);
 
         if (!empty($categoryIds)) {
             $product->categories()->sync($categoryIds);
@@ -313,10 +353,21 @@ class ProductController extends Controller
     }
 
     /**
+     * نمایش فرم ویرایش محصول
+     */
+    public function edit(Product $product)
+    {
+        $aiModels = AiModel::where('is_active', true)->latest()->get();
+        return view('admin.products.edit', compact('product', 'aiModels'));
+    }
+
+    /**
      * به‌روزرسانی اطلاعات محصول
      */
     public function update(Request $request, Product $product)
     {
+        $this->mergeInputSchemaJson($request);
+
         $validated = $request->validate([
             'name_fa' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
@@ -344,10 +395,11 @@ class ProductController extends Controller
             'explore_tiles' => 'nullable|array',
             'explore_tiles.*' => 'in:1x1,2x2,1x2,2x1',
             'status' => 'nullable|in:active,draft,inactive',
-            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-            'cover' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:8192',
-            'sample_outputs' => 'nullable|array',
-            'before_images' => 'nullable|array',
+            'main_images' => 'nullable|array|max:20',
+            'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'before_images' => 'nullable|array|max:20',
+            'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'skip_image_optimization' => 'nullable|boolean',
             'media_type' => 'nullable|in:photo,video,both',
             'preview_video_url' => 'nullable|url',
             'pipeline_type' => 'nullable|string',
@@ -370,16 +422,58 @@ class ProductController extends Controller
             'new_watermark_size' => 'nullable|integer',
             'new_watermark_type' => 'nullable|string',
             'new_watermark_text_color' => 'nullable|string',
-            'new_min_credit_required' => 'nullable|integer',
-            'new_max_run_per_user' => 'nullable|integer',
+            'new_min_credit_required' => 'nullable|integer|min:0',
+            'new_max_run_per_user' => 'nullable|integer|min:1',
             'new_price_custom_label' => 'nullable|string|max:100',
-            'output_variants' => 'nullable|array',
-            'output_variants.*.title' => 'nullable|string|max:150',
-            'output_variants.*.prompt' => 'nullable|string|max:2000',
-            'output_variants.*.key' => 'nullable|string|max:40',
-            'output_variants.*.image' => 'nullable|string|max:500',
-            'output_variants.*.image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            ...$this->inputSchemaRules(),
         ]);
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // محافظ حیاتی در برابر خالی‌شدن ناخواسته‌ی فیلدها (Phantom-Null Guard):
+        // در Laravel، وقتی یک کلید در آرایه‌ی قوانین ولیدیشن با قانون nullable تعریف شده باشد
+        // ولی آن کلید اصلاً در بدنه‌ی درخواست ارسالی وجود نداشته باشد (نه اینکه خالی باشد، بلکه
+        // اصلاً ارسال نشده باشد)، Validator آن را معتبر تشخیص می‌دهد و $validated آن کلید را با
+        // مقدار null برمی‌گرداند. اگر این $validated مستقیماً به $product->update() داده شود،
+        // مقدار واقعی و قبلاً ذخیره‌شده‌ی آن ستون در دیتابیس با NULL جایگزین می‌شود — دقیقاً همین
+        // باگ باعث خالی‌شدن توضیحات فارسی/انگلیسی محصولات موجود شده بود (فرمی که این فیلد را
+        // شامل نمی‌شد، هنگام ثبت هر تغییر دیگری آن را بی‌سروصدا پاک می‌کرد).
+        // راه‌حل قطعی: فقط کلیدهایی که واقعاً در درخواست ارسالی حاضرند اجازه‌ی ورود به آرایه‌ی
+        // نهایی آپدیت را دارند؛ فیلدهای چک‌باکس/فایل/محاسبه‌شده که در ادامه‌ی این متد صراحتاً
+        // دوباره مقداردهی می‌شوند (is_featured, category, thumbnail و غیره) از این فیلتر تأثیر
+        // نمی‌پذیرند چون بعداً به‌صورت مستقیم روی $validated بازنویسی می‌شوند.
+        $validated = array_intersect_key($validated, $request->all());
+
+        // نرمال‌سازی فیلدهای NOT NULL: فرم گاهی این فیلدها را خالی می‌فرستد،
+        // قانون nullable|integer آن را به null تبدیل می‌کند و چون ستون در دیتابیس
+        // NOT NULL است خطای 1048 (cannot be null) رخ می‌دهد. null را با پیش‌فرض جایگزین می‌کنیم.
+        $notNullDefaults = [
+            'new_display_order'            => 1,
+            'new_card_color'               => '#A07AF5',
+            'new_gallery_preview_mode'     => 'grid',
+            'new_watermark_corner_precise' => 'tr',
+            'new_watermark_opacity'        => 70,
+            'new_watermark_size'           => 30,
+            'new_watermark_type'           => 'logo',
+            'new_watermark_text_color'     => '#FFFFFF',
+            'new_min_credit_required'      => 0,
+        ];
+        foreach ($notNullDefaults as $__nnKey => $__nnDefault) {
+            if (array_key_exists($__nnKey, $validated) && $validated[$__nnKey] === null) {
+                $validated[$__nnKey] = $__nnDefault;
+            }
+        }
+
+        // گارد قطعی باگ «کپی»: هنگام ویرایش/ثبت هیچ‌وقت نباید پسوند «(کپی)» به نام محصول
+        // بچسبد (این پسوند فقط محصول باگ‌های قبلیِ فرم تکثیر/پیش‌نویس محلی بود). اگر به هر
+        // مسیری در نام ارسالی باقی مانده باشد، همین‌جا پاک می‌شود.
+        if (array_key_exists('name_fa', $validated)) {
+            $validated['name_fa'] = self::stripCopySuffix($validated['name_fa']);
+        }
+
+        // اگر محصول قدیمی هنوز کد ۶ رقمی نداشته باشد، هنگام اولین ویرایش برایش ساخته می‌شود
+        if (!$product->product_code) {
+            $validated['product_code'] = Product::generateUniqueProductCode();
+        }
 
         $categoryIds = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('category_ids', [])))));
         if (!empty($categoryIds)) {
@@ -389,17 +483,19 @@ class ProductController extends Controller
             $validated['category'] = Category::where('id', $validated['category_id'])->value('name') ?? 'عمومی';
         }
 
-        if ($request->hasFile('cover')) {
-            if ($product->cover) Storage::disk('public')->delete($product->cover);
-            $validated['cover'] = $request->file('cover')->store('products/covers', 'public');
+        if ($request->hasFile('main_images')) {
+            $mainPaths = $this->storeOptimizedImages($request->file('main_images'), 'products/main', $request->boolean('skip_image_optimization'));
+            $oldMainPaths = array_filter(array_merge([$product->cover], (array) $product->sample_outputs));
+            $validated['cover'] = array_shift($mainPaths);
+            $validated['sample_outputs'] = $mainPaths;
+            Storage::disk('public')->delete($oldMainPaths);
         }
 
-        if ($request->hasFile('thumbnail')) {
-            if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
-            $validated['thumbnail'] = $request->file('thumbnail')->store('products/thumbnails', 'public');
-        } elseif ((!$product->thumbnail || !Storage::disk('public')->exists($product->thumbnail)) && !empty($validated['cover'] ?? null)) {
-            // اگر Thumbnail فعلی خراب/غایب است ولی همین الان یک Cover جدید آپلود شد، از همان به عنوان Thumbnail هم استفاده کن
-            $validated['thumbnail'] = $this->copyDuplicateFile($validated['cover'], 'products/thumbnails');
+        if ($request->hasFile('before_images')) {
+            $beforePaths = $this->storeOptimizedImages($request->file('before_images'), 'products/before_images', $request->boolean('skip_image_optimization'));
+            $oldBeforePaths = array_filter((array) $product->before_images);
+            $validated['before_images'] = $beforePaths;
+            Storage::disk('public')->delete($oldBeforePaths);
         }
 
         if ($request->hasFile('new_product_icon')) {
@@ -410,24 +506,6 @@ class ProductController extends Controller
         if ($request->hasFile('og_image')) {
             if ($product->og_image) Storage::disk('public')->delete($product->og_image);
             $validated['og_image'] = $request->file('og_image')->store('products/seo', 'public');
-        }
-
-        if ($request->hasFile('sample_outputs')) {
-            $newSamples = [];
-            foreach ($request->file('sample_outputs') as $file) {
-                $newSamples[] = $file->store('products/samples', 'public');
-            }
-            $existingSamples = is_array($product->sample_outputs) ? $product->sample_outputs : [];
-            $validated['sample_outputs'] = array_merge($existingSamples, $newSamples);
-        }
-
-        if ($request->hasFile('before_images')) {
-            $newBeforeImages = [];
-            foreach ($request->file('before_images') as $file) {
-                $newBeforeImages[] = $file->store('products/before_images', 'public');
-            }
-            $existingBeforeImages = is_array($product->before_images) ? $product->before_images : [];
-            $validated['before_images'] = array_merge($existingBeforeImages, $newBeforeImages);
         }
 
         $validated['is_featured'] = $request->has('is_featured');
@@ -448,9 +526,15 @@ class ProductController extends Controller
 
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
         $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
-
-        // مدل‌های خروجی چندگانه — بازسازی کامل از روی فرم (حذف/افزودن/جایگزینی عکس)
-        $validated['output_variants'] = $this->buildOutputVariants($request);
+        // مدل‌های جایگزین و فیلدهای ورودی پویا — قبلاً اصلاً در به‌روزرسانی مقداردهی نمی‌شدند
+        // (فقط در store() ثبت می‌شدند)، در نتیجه ویرایش این دو مورد هیچ‌وقت واقعاً ذخیره نمی‌شد
+        $validated['fallback_models'] = $request->input('fallback_models', []);
+        $validated['input_schema'] = $validated['input_schema'] ?? [];
+        $validated['allowed_aspect_ratios'] = $this->aspectRatiosFromSchema(
+            $validated['input_schema'],
+            $product->allowedAspectRatioList()
+        );
+        $validated['aspect_ratio'] = $validated['allowed_aspect_ratios'][0];
 
         $validated['slug'] = Str::slug($validated['slug']);
 
@@ -464,10 +548,8 @@ class ProductController extends Controller
             ]);
         }
 
-        // new_min_credit_required در دیتابیس NOT NULL است (پیش‌فرض ۰)؛ اگر فرم خالی فرستاد، صفر جایگزین شود
-        $validated['new_min_credit_required'] = $validated['new_min_credit_required'] ?? 0;
-
         $product->update($validated);
+        $this->attachDraftTests($request, $product);
 
         if (!empty($categoryIds)) {
             $product->categories()->sync($categoryIds);
@@ -491,11 +573,8 @@ class ProductController extends Controller
                 Storage::disk('public')->delete($path);
             }
         }
-
         if (is_array($product->before_images)) {
-            foreach ($product->before_images as $path) {
-                Storage::disk('public')->delete($path);
-            }
+            foreach ($product->before_images as $path) Storage::disk('public')->delete($path);
         }
 
         $product->delete();
@@ -507,24 +586,21 @@ class ProductController extends Controller
      */
     public function duplicate(Product $product)
     {
+        // نام محصول کپی‌شده دقیقاً همان نام محصول اصلی می‌ماند — هیچ پسوند «(کپی)» یا «-copy»
+        // به نام اضافه نمی‌شود (خواسته صریح مدیر). فقط slug و کد محصول، چون باید یکتا باشند،
+        // مقدار جدید می‌گیرند.
         $clone = $product->replicate();
-        $clone->name_fa = $product->name_fa . ' (کپی)';
-        $clone->name_en = $product->name_en . '-copy';
+        $clone->name_fa = $product->name_fa;
+        $clone->name_en = $product->name_en;
 
-        $baseSlug = Str::slug($product->slug . '-copy');
+        $baseSlug = Str::slug($product->slug . '-2');
         $slug = $baseSlug;
         $i = 1;
         while (Product::where('slug', $slug)->exists()) {
             $slug = $baseSlug . '-' . (++$i);
         }
         $clone->slug = $slug;
-
-        // کد ۶ رقمی باید برای کپی هم جدید و یکتا باشد (replicate مقدار کد اصلی را کپی می‌کند)
-        do {
-            $cloneCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        } while (Product::where('product_code', $cloneCode)->exists());
-        $clone->product_code = $cloneCode;
-
+        $clone->product_code = Product::generateUniqueProductCode();
         $clone->status = 'draft';
         $clone->save();
 
@@ -574,51 +650,104 @@ class ProductController extends Controller
         return redirect()->route('admin.products')->with('success', 'عملیات گروهی انجام شد.');
     }
 
-    /**
-     * ساخت آرایه تمیز «مدل‌های خروجی چندگانه» (Output Variants) از ورودی فرم ادمین.
-     * هر ردیف: title (اجباری)، prompt (اختیاری)، image (مسیر موجود) یا image_file (آپلود جدید).
-     * $copySharedImages فقط هنگام تکثیر محصول true است تا فایل عکس واریانت‌ها برای محصول جدید کپی شود.
-     */
-    private function buildOutputVariants(Request $request, bool $copySharedImages = false): array
+    /** اتصال آزمایش‌هایی که پیش از اولین ذخیره محصول اجرا شده‌اند به رکورد محصول. */
+    private function attachDraftTests(Request $request, Product $product): void
     {
-        $rows = $request->input('output_variants', []);
-        if (!is_array($rows)) return [];
+        $draftUuid = $request->input('test_draft_uuid');
+        if (!$draftUuid || !Str::isUuid($draftUuid)) return;
 
-        $files = $request->file('output_variants', []);
-        $out = [];
+        ProductTestRun::whereNull('product_id')->where('draft_uuid', $draftUuid)->update(['product_id' => $product->id]);
+        $latestDuration = ProductTestRun::where('product_id', $product->id)->where('status', 'completed')->latest()->value('duration_ms');
+        $totalTokens = ProductTestRun::where('product_id', $product->id)->where('status', 'completed')->sum('total_tokens');
+        $product->forceFill(['last_test_duration_ms' => $latestDuration, 'total_test_tokens' => $totalTokens])->saveQuietly();
+    }
 
-        foreach ($rows as $i => $row) {
-            if (!is_array($row)) continue;
-            $title = trim((string) ($row['title'] ?? ''));
-            if ($title === '') continue;
-
-            $imagePath = trim((string) ($row['image'] ?? '')) ?: null;
-
-            // آپلود جدید همیشه اولویت دارد
-            $file = $files[$i]['image_file'] ?? null;
-            if ($file && $file->isValid()) {
-                $imagePath = $file->store('products/variants', 'public');
-            } elseif ($imagePath && $copySharedImages && Storage::disk('public')->exists($imagePath)) {
-                // در حالت تکثیر، فایل عکس واریانت هم برای محصول جدید کپی می‌شود تا اشتراکی نماند
-                $imagePath = $this->copyDuplicateFile($imagePath, 'products/variants');
-            } elseif ($imagePath && !Storage::disk('public')->exists($imagePath)) {
-                $imagePath = null;
-            }
-
-            $key = trim((string) ($row['key'] ?? ''));
-            if ($key === '') {
-                $key = 'v_' . Str::random(8);
-            }
-
-            $out[] = [
-                'key'    => $key,
-                'title'  => Str::limit($title, 120, ''),
-                'image'  => $imagePath,
-                'prompt' => trim((string) ($row['prompt'] ?? '')),
-            ];
+    /**
+     * حذف پسوند سیستمی «(کپی)» از انتهای نام فارسی محصول.
+     * این پسوند فقط توسط باگ‌های قبلی فرم تکثیر/بازیابی پیش‌نویس محلی ساخته می‌شد؛
+     * حالت چندباره «نام (کپی) (کپی)» هم پوشش داده می‌شود. عمداً فقط شکل پرانتزدار
+     * حذف می‌شود تا نام‌هایی که واقعاً به کلمه «کپی» ختم می‌شوند دست‌نخورده بمانند.
+     */
+    private static function stripCopySuffix(?string $name): ?string
+    {
+        if ($name === null) {
+            return null;
         }
 
-        return array_values($out);
+        $clean = trim($name);
+        while (preg_match('/^(.*?)\s*\(\s*کپی\s*\)$/u', $clean, $m) && trim($m[1]) !== '') {
+            $clean = trim($m[1]);
+        }
+
+        return $clean !== '' ? $clean : trim($name);
+    }
+
+    /**
+     * قرارداد بک‌اند سازنده «ویژگی‌های خاص».
+     * فقط کلیدهای شناخته‌شده را وارد JSON محصول می‌کند تا ساختار ناقص یا داده
+     * دلخواه سمت کلاینت، رندر فرم کاربر و ساخت پرامپت را خراب نکند.
+     */
+    private function inputSchemaRules(): array
+    {
+        return [
+            'input_schema' => ['nullable', 'array', 'max:50'],
+            'input_schema.*' => ['array'],
+            'input_schema.*.field_id' => ['required', 'string', 'max:80', 'regex:/^[a-z][a-z0-9_]*$/', 'distinct:strict'],
+            'input_schema.*.label_fa' => ['required', 'string', 'max:150'],
+            'input_schema.*.type' => ['required', 'string', Rule::in(array_keys(config('product_schema_types.types', [])))],
+            'input_schema.*.required' => ['required', Rule::in(['0', '1', 0, 1])],
+            'input_schema.*.hidden' => ['nullable', Rule::in(['0', '1', 0, 1])],
+            'input_schema.*.order' => ['nullable', 'integer', 'min:0', 'max:49'],
+            'input_schema.*.description' => ['nullable', 'string', 'max:500'],
+            'input_schema.*.help_text' => ['nullable', 'string', 'max:500'],
+            'input_schema.*.placeholder' => ['nullable', 'string', 'max:255'],
+            'input_schema.*.default' => ['nullable'],
+            'input_schema.*.credit_cost' => ['nullable', 'integer', 'min:0'],
+            'input_schema.*.variant' => ['nullable', Rule::in(['info', 'warning', 'success'])],
+            'input_schema.*.min' => ['nullable', 'numeric'],
+            'input_schema.*.max' => ['nullable', 'numeric'],
+            'input_schema.*.step' => ['nullable', 'numeric', 'gt:0'],
+            'input_schema.*.regex' => ['nullable', 'string', 'max:255'],
+            'input_schema.*.unit' => ['nullable', 'string', 'max:30'],
+            'input_schema.*.max_files' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'input_schema.*.max_size_mb' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'input_schema.*.accept' => ['nullable', 'string', 'max:255'],
+            'input_schema.*.prompt_mode' => ['nullable', Rule::in(['token', 'append', 'off'])],
+            'input_schema.*.prompt_wrap' => ['nullable', 'string', 'max:500'],
+            'input_schema.*.show_if' => ['nullable', 'array'],
+            'input_schema.*.show_if.field' => ['nullable', 'string', 'max:80'],
+            'input_schema.*.show_if.op' => ['nullable', Rule::in(['eq', 'neq', 'has', 'not_empty'])],
+            'input_schema.*.show_if.value' => ['nullable', 'string', 'max:255'],
+            'input_schema.*.options' => ['nullable', 'array', 'max:100'],
+            'input_schema.*.options.*' => ['array'],
+            'input_schema.*.options.*.label' => ['nullable', 'string', 'max:150'],
+            'input_schema.*.options.*.value' => ['nullable', 'string', 'max:150'],
+            'input_schema.*.options.*.prompt' => ['nullable', 'string', 'max:500'],
+            'input_schema.*.options.*.credit' => ['nullable', 'integer', 'min:0'],
+            'input_schema.*.options.*.image' => ['nullable', 'string', 'max:2048'],
+        ];
+    }
+
+    /**
+     * JSON واحد سازنده ویژگی‌ها را به قرارداد داخلی input_schema تبدیل می‌کند.
+     *
+     * این مسیر تعداد متغیرهای multipart را مستقل از تعداد گزینه‌های هر ویژگی
+     * نگه می‌دارد و از قطع/ناقص‌شدن درخواست توسط max_input_vars جلوگیری می‌کند.
+     * اگر کلاینت قدیمی JSON نفرستد، input_schema تو‌در‌تو بدون تغییر پذیرفته
+     * می‌شود تا سازگاری عقب‌رو حفظ شود.
+     */
+    private function mergeInputSchemaJson(Request $request): void
+    {
+        if (!$request->exists('input_schema_json')) {
+            return;
+        }
+
+        $request->validate([
+            'input_schema_json' => ['required', 'string', 'max:524288', 'json'],
+        ]);
+
+        $schema = json_decode((string) $request->input('input_schema_json'), true);
+        $request->merge(['input_schema' => $schema]);
     }
 
     private function copyDuplicateFile(string $sourcePath, string $targetDir): string
@@ -627,5 +756,53 @@ class ProductController extends Controller
         $newPath = $targetDir . '/' . (string) Str::uuid() . '.' . $extension;
         Storage::disk('public')->copy($sourcePath, $newPath);
         return $newPath;
+    }
+
+    private function copyDuplicateFiles(array $sourcePaths, string $targetDir): array
+    {
+        $copies = [];
+        foreach ($sourcePaths as $sourcePath) {
+            if (is_string($sourcePath) && Storage::disk('public')->exists($sourcePath)) {
+                $copies[] = $this->copyDuplicateFile($sourcePath, $targetDir);
+            }
+        }
+        return $copies;
+    }
+
+    private function storeOptimizedImages(array $files, string $directory, bool $skipOptimization = false): array
+    {
+        $paths = [];
+        try {
+            foreach ($files as $file) {
+                $paths[] = $skipOptimization
+                    ? $file->store($directory, 'public')
+                    : $this->imageOptimizer->store($file, $directory);
+            }
+        } catch (\Throwable $e) {
+            if ($paths) Storage::disk('public')->delete($paths);
+            throw $e;
+        }
+        return $paths;
+    }
+
+    private function normalizedAspectRatios(mixed $ratios): array
+    {
+        $allowed = ['1:1', '4:5', '3:4', '9:16', '16:9', '3:2', '2:3'];
+        $selected = array_values(array_unique(array_intersect($allowed, array_map('strval', (array) $ratios))));
+        return $selected ?: ['1:1'];
+    }
+
+    private function aspectRatiosFromSchema(array $schema, array $fallback): array
+    {
+        foreach ($schema as $field) {
+            if (!is_array($field) || ($field['type'] ?? null) !== 'aspect_ratio') continue;
+            $ratios = array_map(
+                fn ($option) => is_array($option) ? ($option['value'] ?? null) : null,
+                (array) ($field['options'] ?? [])
+            );
+            return $this->normalizedAspectRatios(array_filter($ratios));
+        }
+
+        return $this->normalizedAspectRatios($fallback);
     }
 }

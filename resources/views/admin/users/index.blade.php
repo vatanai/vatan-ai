@@ -4,9 +4,6 @@
 @section('content')
 <div class="flex min-h-screen bg-[#0f111a] text-[#f1f5f9]" dir="rtl">
 
-  @include('admin.partials.sidebar')
-  <div class="sidebar-overlay hidden max-[900px]:block fixed inset-0 z-[99] bg-black/55 opacity-0 pointer-events-none transition-opacity duration-250" id="sidebar-overlay" onclick="toggleSidebar()"></div>
-
   <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
     @include('admin.partials.header')
     <div class="flex-1 p-6 max-[768px]:p-[18px] max-[480px]:p-[14px]">

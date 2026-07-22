@@ -2,12 +2,11 @@
   ══════════════════════════════════════════════════════════════════
   کامپوننت مستقل: جدول محصولات (Layer 3 / Products Table Component)
   ──────────────────────────────────────────────────────────────────
-  ورودی مورد انتظار از View والد: $products (Paginator), $recentlyEdited
-  ستون‌های «تعداد اجرا»، «مصرف کردیت»، «آخرین استفاده» و نوار محبوبیت داده‌ی
-  واقعی ندارند و با بج «نیاز به بررسی برنامه» مشخص شده‌اند. «آخرین ویرایش»
-  از ستون واقعی updated_at خوانده می‌شود (فقط نام ویرایش‌گر در دسترس نیست،
-  چون فیلد updated_by در دیتابیس وجود ندارد — به همین دلیل برچسب
-  «مدیر نامشخص + نیاز به بررسی برنامه» فقط برای بخش نام نمایش داده می‌شود).
+  ورودی مورد انتظار از View والد: $products (Paginator), $recentlyEdited, $maxRuns
+  ستون «تعداد اجرا» و نوار محبوبیت به آمار واقعی جدول generations متصل هستند
+  (generations_count از withCount کنترلر). ستون «کد محصول» کد اصلی ۶ رقمی
+  (product_code) را نشان می‌دهد و ستون «آخرین ویرایش» تاریخ/ساعت شمسی ثبت و
+  آخرین ویرایش را از created_at / updated_at می‌خواند.
 
   data-label روی هر td برای نمایش «جدول → لیست کارتی» در حالت موبایل استفاده
   می‌شود (فقط CSS در design-tokens.css، بدون تغییر منطق). ستون‌های چک‌باکس/
@@ -26,7 +25,7 @@
     @foreach($recentlyEdited as $r)
       <div class="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg" style="background:var(--input-bg);border:1px solid var(--border);">
         <div class="table-thumb" style="width:26px;height:26px;border-radius:6px;">
-          @if($r->thumbnail)<img src="{{ asset('storage/'.$r->thumbnail) }}" alt="">@else<i class="fa-solid fa-image text-[10px]"></i>@endif
+          <img src="{{ $r->displayImageUrl() }}" alt="">
         </div>
         <span class="text-[11.5px] font-semibold" style="color:var(--text-h);">{{ $r->name_fa }}</span>
         <span class="text-[10px]" style="color:var(--text-soft);">{{ $r->updated_at?->diffForHumans() }}</span>
@@ -68,10 +67,10 @@
         <th>کد محصول</th>
         <th>دسته‌بندی</th>
         <th>قیمت</th>
-        <th>تعداد اجرا <span class="pending-badge" style="position:static;">نیاز به بررسی برنامه</span></th>
+        <th>تعداد اجرا</th>
+        <th>زمان اجرا / توکن مصرفی</th>
         <th>وضعیت</th>
         <th>آخرین ویرایش</th>
-        <th>تاریخ ایجاد</th>
         <th>عملیات</th>
       </tr>
     </thead>
@@ -82,11 +81,7 @@
 
           <td class="td-thumb">
             <div class="table-thumb cursor-pointer" onclick="openDrawer({{ $product->id }})">
-              @if($product->thumbnail)
-                <img src="{{ asset('storage/'.$product->thumbnail) }}" alt="">
-              @else
-                <i class="fa-solid fa-image"></i>
-              @endif
+              <img src="{{ $product->displayImageUrl() }}" alt="">
             </div>
           </td>
 
@@ -109,8 +104,12 @@
           </td>
 
           <td data-label="کد محصول">
-            {{-- بند ۵۱: کد محصول از روی id واقعی ساخته می‌شود؛ بدون Migration/تغییر بک‌اند و از همین حالا با جستجوی عددی موجود قابل جستجوست. --}}
-            <span class="font-mono text-[11.5px] font-semibold" style="color:var(--text-main);" dir="ltr">#{{ str_pad($product->id, 8, '0', STR_PAD_LEFT) }}</span>
+            {{-- کد اصلی ۶ رقمی محصول (ستون product_code) — همان کدی که در لینک عمومی محصول استفاده می‌شود --}}
+            @if($product->product_code)
+              <span class="font-mono text-[11.5px] font-semibold" style="color:var(--text-main);" dir="ltr">{{ $product->product_code }}</span>
+            @else
+              <span class="text-[11px]" style="color:var(--text-soft);" title="این محصول قدیمی هنوز کد ندارد — با اولین ویرایش، خودکار ساخته می‌شود">—</span>
+            @endif
           </td>
 
           <td data-label="دسته‌بندی">
@@ -127,12 +126,31 @@
           </td>
 
           <td data-label="تعداد اجرا">
+            {{-- آمار واقعی اجرا از جدول generations (generations_count در کنترلر withCount شده)
+                 نوار محبوبیت = نسبت اجرای این محصول به پراجراترین محصول پلتفرم ($maxRuns) --}}
+            @php
+              $runs = (int) ($product->generations_count ?? 0);
+              $runsPct = ($maxRuns ?? 0) > 0 ? (int) round(($runs / $maxRuns) * 100) : 0;
+            @endphp
             <div class="flex items-center gap-2 pro-tooltip-wrap">
-              <span style="color:var(--text-soft);">—</span>
+              <span class="font-bold text-[12.5px]" style="color:var(--text-h);">{{ number_format($runs) }}</span>
               <div class="progress-track">
-                <div class="progress-fill" style="width:0%;"></div>
+                <div class="progress-fill" style="width:{{ $runsPct }}%;"></div>
               </div>
-              <div class="pro-tooltip" style="width:170px;">نوار محبوبیت و تعداد اجرا — نیاز به بررسی برنامه (اتصال به آمار اجرا)</div>
+              <div class="pro-tooltip" style="width:190px;">این محصول {{ number_format($runs) }} بار توسط کاربران اجرا شده — معادل {{ $runsPct }}٪ پراجراترین محصول پلتفرم</div>
+            </div>
+          </td>
+
+          <td data-label="زمان اجرا / توکن مصرفی">
+            <div style="width:max-content;">
+              <div class="text-[10px] font-bold" style="color:var(--text-soft);">آخرین زمان اجرای تست</div>
+              <div class="text-[11.5px] font-semibold mb-1.5" style="color:var(--text-main);">
+                @if($product->last_test_duration_ms !== null)
+                  {{ $product->last_test_duration_ms < 1000 ? number_format($product->last_test_duration_ms) . ' میلی‌ثانیه' : number_format($product->last_test_duration_ms / 1000, 1) . ' ثانیه' }}
+                @else — @endif
+              </div>
+              <div class="text-[10px] font-bold" style="color:var(--text-soft);">مجموع توکن تست</div>
+              <div class="text-[11.5px] font-semibold" style="color:var(--text-main);">{{ number_format((int) $product->total_test_tokens) }}</div>
             </div>
           </td>
 
@@ -153,15 +171,14 @@
           </td>
 
           <td data-label="آخرین ویرایش">
-            <div class="flex items-center gap-1 pro-tooltip-wrap" style="width:max-content;">
-              <span class="text-[10px] font-semibold is-pending" style="color:var(--text-soft);">مدیر نامشخص</span>
-              <i class="fa-solid fa-circle-info text-[8px]" style="color:var(--warning);"></i>
-              <div class="pro-tooltip" style="width:190px;">نام مدیری که آخرین ویرایش را انجام داده — نیاز به بررسی برنامه (ثبت ویرایش‌گر در دیتابیس)</div>
+            {{-- تاریخ و ساعت شمسی ثبت + آخرین ویرایش محصول (App\Support\Jalali::formatNumeric) --}}
+            <div style="width:max-content;">
+              <div class="text-[10px] font-bold" style="color:var(--text-soft);">تاریخ و ساعت ثبت</div>
+              <div class="text-[11.5px] font-semibold mb-1.5" style="color:var(--text-main);" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->created_at) }}</div>
+              <div class="text-[10px] font-bold" style="color:var(--text-soft);">تاریخ و ساعت آخرین ویرایش</div>
+              <div class="text-[11.5px] font-semibold" style="color:var(--text-main);" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->updated_at) }}</div>
             </div>
-            <div style="color:var(--text-main);">{{ $product->updated_at?->diffForHumans() }}</div>
           </td>
-
-          <td data-label="تاریخ ایجاد" style="color:var(--text-soft);">{{ $product->created_at?->format('Y/m/d') }}</td>
 
           <td data-label="عملیات">
             <div class="flex items-center gap-1 justify-end">

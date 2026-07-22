@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
@@ -12,12 +14,89 @@ class CategoryController extends Controller
     /**
      * نمایش لیست دسته‌بندی‌ها به همراه تعداد محصولات هر کدام
      */
-    public function index()
+    public function index(Request $request)
     {
-        // دریافت دسته‌بندی‌ها به همراه شمارش خودکار محصولات وابسته (products_count)
-        $categories = Category::withCount('products')->latest()->get();
-        
-        return view('admin.categories.index', compact('categories'));
+        // یک محصول ممکن است هم از ستون قدیمی category_id و هم از جدول چنددسته‌ای متصل شده باشد.
+        // UNION باعث می‌شود هر اتصال محصول/دسته فقط یک‌بار در آمار شمرده شود.
+        $productCounts = DB::query()
+            ->fromSub($this->categoryProductPairs(), 'category_products')
+            ->selectRaw('category_id, COUNT(*) as aggregate')
+            ->groupBy('category_id')
+            ->pluck('aggregate', 'category_id');
+
+        $usageCounts = DB::query()
+            ->fromSub($this->categoryProductPairs(), 'category_products')
+            ->join('generations', 'generations.product_id', '=', 'category_products.product_id')
+            ->selectRaw('category_products.category_id, COUNT(generations.id) as aggregate')
+            ->groupBy('category_products.category_id')
+            ->pluck('aggregate', 'category_products.category_id');
+
+        $query = Category::query();
+        if ($search = trim((string) $request->input('search'))) {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('name_fa', 'like', "%{$search}%")
+                    ->orWhere('name_en', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('path', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->input('visibility') === 'enabled') $query->where('is_active', true);
+        if ($request->input('visibility') === 'disabled') $query->where('is_active', false);
+        if ($request->input('type') === 'root') $query->whereNull('parent_id');
+        if ($request->input('type') === 'child') $query->whereNotNull('parent_id');
+        if ($request->input('type') === 'featured') $query->where('is_featured', true);
+
+        $allFiltered = $query->get()->each(function (Category $category) use ($productCounts, $usageCounts) {
+            $category->setAttribute('products_count', (int) ($productCounts[$category->id] ?? 0));
+            $category->setAttribute('usage_count', (int) ($usageCounts[$category->id] ?? 0));
+        });
+
+        if ($request->input('content') === 'active') $allFiltered = $allFiltered->where('products_count', '>', 0);
+        if ($request->input('content') === 'empty') $allFiltered = $allFiltered->where('products_count', 0);
+
+        $allFiltered = (match ($request->input('sort', 'usage')) {
+            'products' => $allFiltered->sortByDesc('products_count'),
+            'name' => $allFiltered->sortBy(fn ($category) => $category->name_fa ?: $category->name),
+            'latest' => $allFiltered->sortByDesc('created_at'),
+            'oldest' => $allFiltered->sortBy('created_at'),
+            default => $allFiltered->sortByDesc('usage_count'),
+        })->values();
+
+        $perPage = 20;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $categories = new LengthAwarePaginator(
+            $allFiltered->forPage($page, $perPage)->values(),
+            $allFiltered->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $allCategories = Category::all();
+        $totalCategories = $allCategories->count();
+        $activeCategories = $allCategories->whereIn('id', $productCounts->filter(fn ($count) => $count > 0)->keys())->count();
+        $emptyCategories = $totalCategories - $activeCategories;
+        $topCategoryId = $usageCounts->sortDesc()->keys()->first();
+        $topCategory = $topCategoryId ? $allCategories->firstWhere('id', (int) $topCategoryId) : null;
+        $totalUsage = (int) $usageCounts->sum();
+
+        return view('admin.categories.index', compact(
+            'categories', 'totalCategories', 'activeCategories', 'emptyCategories',
+            'topCategory', 'totalUsage', 'usageCounts'
+        ));
+    }
+
+    private function categoryProductPairs()
+    {
+        $legacy = DB::table('products')
+            ->whereNotNull('category_id')
+            ->select('category_id', DB::raw('id as product_id'));
+
+        return $legacy->union(
+            DB::table('category_product')->select('category_id', 'product_id')
+        );
     }
 
     /**
@@ -39,6 +118,7 @@ class CategoryController extends Controller
             'slug'  => 'nullable|string|max:255|unique:categories,slug',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'parent_id' => 'nullable|exists:categories,id', // حداکثر ۲ مگابایت
+            'custom_url' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
         ], [
             'name.required' => 'وارد کردن نام دسته‌بندی الزامی است.',
             'name.unique'   => 'این نام دسته‌بندی قبلاً ثبت شده است.',
@@ -56,6 +136,7 @@ class CategoryController extends Controller
 
         // ساختار درختی: سرشاخه/زیرشاخه + فیلدهای الزامی و مسیر سئو
         $data['parent_id'] = $request->input('parent_id') ?: null;
+        $data['custom_url'] = $request->filled('custom_url') ? trim($request->input('custom_url')) : null;
         $data['name_fa']   = $request->name;
         $data['name_en']   = $request->input('name_en') ?: $request->name;
         $parentCat = $data['parent_id'] ? Category::find($data['parent_id']) : null;
@@ -91,6 +172,7 @@ class CategoryController extends Controller
             'slug'  => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'parent_id' => 'nullable|exists:categories,id',
+            'custom_url' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
         ], [
             'name.required' => 'وارد کردن نام دسته‌بندی الزامی است.',
             'name.unique'   => 'این نام دسته‌بندی قبلاً ثبت شده است.',
@@ -105,6 +187,7 @@ class CategoryController extends Controller
 
         // ساختار درختی: سرشاخه/زیرشاخه + فیلدهای الزامی و مسیر سئو
         $data['parent_id'] = $request->input('parent_id') ?: null;
+        $data['custom_url'] = $request->filled('custom_url') ? trim($request->input('custom_url')) : null;
         $data['name_fa']   = $request->name;
         $data['name_en']   = $request->input('name_en') ?: $request->name;
         $parentCat = $data['parent_id'] ? Category::find($data['parent_id']) : null;

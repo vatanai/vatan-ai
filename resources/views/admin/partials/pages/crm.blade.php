@@ -1,7 +1,7 @@
     <div id="crm-page" class="hidden">
   <div class="flex items-center justify-between mb-5">
     <div>
-      <h1 class="text-xl font-extrabold text-watan-text tracking-[-0.4px]">CRM — مدیریت پروژه</h1>
+      <h1 class="text-xl font-extrabold text-watan-text tracking-[-0.4px]">سیستم مدیریت پروژه</h1>
       <div class="text-xs text-watan-text3 mt-[2px]">پروژه‌ها، تسک‌ها و گزارش بهره‌وری</div>
     </div>
     <div id="crm-topbar-actions" style="display:flex;gap:8px;align-items:center">
@@ -266,4 +266,3 @@
     </div>
   </div>
 </div>
-

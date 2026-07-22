@@ -1,3 +1,7 @@
+@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'profile'))
+  @include('app.partials.mobile-header')
+@endif
+
 {{-- ══════════════════════════════════════════
      TOP NAV — تبلت و دسکتاپ (+640px)
 ══════════════════════════════════════════ --}}
@@ -5,7 +9,7 @@
   <div id="vatan-topnav-inner" class="max-w-[1280px] mx-auto px-8 h-16 flex items-center justify-between gap-6">
 
     {{-- لوگو — سمت راست --}}
-    <a href="{{ route('app.home') }}" class="flex items-center gap-2 no-underline shrink-0" aria-label="خانه">
+    <a href="{{ url()->current() }}#top" class="flex items-center gap-2 no-underline shrink-0" aria-label="رفتن به ابتدای همین صفحه">
       <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="31" height="31" class="shrink-0">
       <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="height:29px; width:auto;" class="shrink-0">
     </a>
@@ -24,7 +28,7 @@
 
       @foreach($navItemsBefore as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -40,7 +44,7 @@
 
       @foreach($navItemsAfter as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -50,7 +54,7 @@
 
       {{-- پروفایل — همیشه نمایش داده می‌شود (مهمان و کاربر لاگین‌کرده) و همیشه به صفحه پروفایل می‌رود، نه لاگین --}}
       <a href="{{ route('app.profile') }}"
-         class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[9.6px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+         class="topnav-link text-[14px] font-medium text-[#a2abb7] [.light_&]:text-[#3f4653] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
          data-key="profile">
 
         <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -61,7 +65,6 @@
     {{-- بخش اکشن‌ها و وضعیت احراز هویت — سمت چپ --}}
     <div class="topnav-left-side flex items-center gap-3 shrink-0">
       {{-- باکس نمایش موجودی توکن — سمت چپ دکمه «بساز»، رنگ ست با تم روز/شب --}}
-      @auth
         <div class="topnav-token-box order-2" title="موجودی توکن شما">
           {{-- آیکون توکن: SVG تک‌رنگ با رنگ سبز اصلی #cffe00 --}}
           <svg class="topnav-token-icon" width="16" height="16" viewBox="0 0 24 24" fill="#cffe00" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="توکن">
@@ -69,9 +72,8 @@
             <path d="M18.5,2 C18.72,3.6 19.08,3.96 20.7,4.18 C19.08,4.4 18.72,4.76 18.5,6.36 C18.28,4.76 17.92,4.4 16.3,4.18 C17.92,3.96 18.28,3.6 18.5,2 Z"/>
             <path d="M5.2,16.2 C5.38,17.55 5.68,17.85 7.05,18.03 C5.68,18.21 5.38,18.51 5.2,19.86 C5.02,18.51 4.72,18.21 3.35,18.03 C4.72,17.85 5.02,17.55 5.2,16.2 Z"/>
           </svg>
-          <span class="topnav-token-number">9</span>
+          <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
         </div>
-      @endauth
 
       {{-- دکمه تغییر تم (روز / شب / سیستم) --}}
 
@@ -141,8 +143,8 @@
             </div>
             <hr>
             <ul>
-              <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
               <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید توکن</span></button></li>
+              <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
               <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
               <hr>
               <li><button type="button" class="is-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
@@ -150,7 +152,7 @@
             <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
           @else
             <ul>
-              <li><button type="button" onclick="window.location.href='{{ route('login') }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت‌نام</span></button></li>
+              <li><button type="button" onclick="window.location.href='{{ route('login') }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
               <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
               <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید توکن</span></button></li>
             </ul>
@@ -292,6 +294,11 @@
     opacity: 1;
     transform: scale(1.1);
   }
+  /* آیکون فعال همیشه روی نشانگر لیمویی مشکی است؛ در تم شب هم سفید نمی‌ماند. */
+  .vatan-nav-item.is-active .vatan-nav-icon-off,
+  .vatan-nav-item.is-active .vatan-nav-icon-on {
+    color: #000000;
+  }
   /* پیش‌نمایش حالت کلفت (trend-2) روی هاور آیکون ترندز */
   .vatan-nav-item[data-key="trends"]:hover .vatan-nav-icon-off {
     opacity: 0;
@@ -322,7 +329,7 @@
     background: #cffe00;          /* سبز لیمویی اصلی سایت */
     color: #000000;              /* متن مشکی */
     border: none;
-    border-radius: 15.6px;        /* خمیدگی مثل باکس‌های هدر */
+    border-radius: 12px;          /* خمیدگی مشترک همه باکس‌های تعاملی هدر */
     font-family: 'YekanBakh', sans-serif;
     position: relative;
     overflow: hidden;
@@ -380,7 +387,7 @@
     gap: 6px;
     height: 32.3px; /* ارتفاع ۱۵٪ کمتر (۳۸px → ۳۲٫۳px) */
     padding: 0 13px;
-    border-radius: 15.6px; /* خمیدگی مثل باکس بساز (۱۵٫۶px) */
+    border-radius: 12px; /* خمیدگی باکس: ۱۲px */
     background: #1a1a1a; /* حالت شب */
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
@@ -520,8 +527,8 @@
 
   /* ── باکس خرید اشتراک: حالت عادی خط دور تک‌رنگ سبز اصلی، حالت هاور گرادیانت متحرک ── */
   .sub-btn {
-    min-width: 132px; height: 40px; padding: 0 16px;
-    border: none; border-radius: 15.6px; /* خمیدگی ۲۰٪ بیشتر (۱۳px → ۱۵٫۶px) */
+    min-width: 145.2px; height: 44px; padding: 0 17.6px;
+    border: none; border-radius: 12px; /* خمیدگی باکس: ۱۲px */
     background: #cffe00; /* حالت عادی: خط دور یک‌رنگ، بدون گرادینت */
     position: relative; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
@@ -530,7 +537,7 @@
   }
   .sub-btn::before {
     position: absolute; content: "";
-    width: 96%; height: 88%; border-radius: 12px; /* خمیدگی ۲۰٪ بیشتر (۱۰px → ۱۲px) */
+    width: 96.4%; height: 89.2%; border-radius: 9.6px; /* خط دور ۱۰٪ نازک‌تر + خمیدگی داخلی هماهنگ */
     background-color: #1d2209;
     z-index: 0;
   }
@@ -538,9 +545,9 @@
   .sub-btn span {
     position: relative; z-index: 1;
     display: flex; align-items: center; gap: 7px;
-    font-size: 13px; font-weight: 800; color: #cffe00; white-space: nowrap;
+    font-size: 14.3px; font-weight: 800; color: #cffe00; white-space: nowrap;
   }
-  .sub-btn span i { font-size: 14.4px; color: #cffe00; }
+  .sub-btn span i { font-size: 15.84px; color: #cffe00; }
   .sub-btn:hover {
     /* حالت هاور: همون گرادینت متحرک قبلی روی خط دور */
     background: linear-gradient(to right,#5f7400,#7d9800,#5f7400,#5f7400,#cffe00,#7d9800);
@@ -558,9 +565,9 @@
     display: inline-block; position: relative;
   }
   html.light .topnav-popup {
-    --tp-nav-bg: #ffffff; --tp-nav-border: rgba(0,0,0,0.1);
-    --tp-nav-shadow: rgba(0,0,0,0.18); --tp-item-color: rgba(0,0,0,0.72);
-    --tp-hr-color: rgba(0,0,0,0.07);
+    --tp-nav-bg: #121218; --tp-nav-border: rgba(255,255,255,0.1);
+    --tp-nav-shadow: rgba(0,0,0,0.45); --tp-item-color: rgba(255,255,255,0.72);
+    --tp-hr-color: rgba(255,255,255,0.08);
   }
   .topnav-popup input { display: none; }
   .topnav-burger {
@@ -579,18 +586,18 @@
   .topnav-popup input:focus-visible + .topnav-burger { box-shadow: 0 0 0 3px rgba(207,254,0,0.35); }
   .topnav-popup-window {
     position: absolute; top: calc(var(--tp-diameter) + 12px); left: 0; right: unset;
-    min-width: 212px; padding: 6px;
+    min-width: 260px; padding: 6px;
     background: var(--tp-nav-bg); border: 1px solid var(--tp-nav-border);
     border-radius: var(--tp-radius); box-shadow: 0 10px 30px var(--tp-nav-shadow);
     transform: scale(0.9); transform-origin: top left;
     visibility: hidden; opacity: 0; transition: all 0.16s ease-in-out; z-index: 400;
   }
   .topnav-popup input:checked ~ .topnav-popup-window { transform: scale(1); visibility: visible; opacity: 1; }
-  .topnav-popup-window .tp-userinfo { display: flex; flex-direction: column; gap: 3px; padding: 8px 12px 10px; }
-  .topnav-popup-window .tp-user-name { font-size: 14px; font-weight: 800; color: var(--tp-item-color); }
+  .topnav-popup-window .tp-userinfo { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; }
+  .topnav-popup-window .tp-user-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:800; color:var(--tp-item-color); }
   html:not(.light) .topnav-popup-window .tp-user-name { color: #fff; }
-  html.light .topnav-popup-window .tp-user-name { color: #111; }
-  .topnav-popup-window .tp-user-phone { font-size: 11.5px; font-weight: 600; color: var(--tp-item-color); opacity: 0.6; }
+  html.light .topnav-popup-window .tp-user-name { color: #fff; }
+  .topnav-popup-window .tp-user-phone { margin-right: auto; font-size: 12.65px; font-weight: 600; color: var(--tp-item-color); opacity: 0.6; text-align: left; white-space: nowrap; }
   .topnav-popup-window ul { margin: 0; padding: 0; list-style: none; }
   .topnav-popup-window ul button {
     width: 100%; border: none; background: none; cursor: pointer;
@@ -599,9 +606,22 @@
     padding: 10px 12px; border-radius: 10.8px; white-space: nowrap; transition: all 0.15s ease;
   }
   .topnav-popup-window ul button i { font-size: 15px; width: 18px; text-align: center; }
-  .topnav-popup-window ul button:hover { background: var(--tp-green); color: #fff; }
+  .topnav-popup-window ul button:hover { background: var(--tp-green); color: #000; }
+  .topnav-popup-window ul button:hover i,
+  .topnav-popup-window ul button:hover span { color: #000; }
+  .topnav-popup-window ul button:not(.is-danger):focus,
+  .topnav-popup-window ul button:not(.is-danger):active,
+  .topnav-popup-window ul button:not(.is-danger).is-selected { background: var(--tp-green); color: #000; outline: none; }
+  .topnav-popup-window ul button:not(.is-danger):focus i,
+  .topnav-popup-window ul button:not(.is-danger):focus span,
+  .topnav-popup-window ul button:not(.is-danger):active i,
+  .topnav-popup-window ul button:not(.is-danger):active span,
+  .topnav-popup-window ul button:not(.is-danger).is-selected i,
+  .topnav-popup-window ul button:not(.is-danger).is-selected span { color: #000; }
   .topnav-popup-window ul button.is-danger { color: var(--tp-danger); }
-  .topnav-popup-window ul button.is-danger:hover { background: rgba(255,74,74,0.12); color: var(--tp-danger); }
+  .topnav-popup-window ul button.is-danger:hover { background: var(--tp-danger); color: #fff; }
+  .topnav-popup-window ul button.is-danger:hover i,
+  .topnav-popup-window ul button.is-danger:hover span { color: #fff; }
   .topnav-popup-window hr { margin: 6px 4px; border: none; border-bottom: 1px solid var(--tp-hr-color); }
 
   /* ── ریسپانسیو تبلت (۶۴۰–۹۶۰): جمع‌وجورتر کردن هدر ── */
@@ -610,9 +630,10 @@
     .topnav-left-side { gap: 8px; }
     .topnav-links { gap: 4px; }
     .topnav-link { padding-left: 10px; padding-right: 10px; font-size: 13px; }
-    .sub-btn { min-width: 0; padding: 0 12px; }
-    .sub-btn span { font-size: 12px; }
+    .sub-btn { min-width: 0; padding: 0 13.2px; }
+    .sub-btn span { font-size: 13.2px; }
     .topnav-token-box { padding: 0 10px; }
+    .topnav-create:hover { width: 88px; }
   }
   /* تبلت کوچک: متن خرید اشتراک مخفی، فقط آیکون */
   @media (min-width: 640px) and (max-width: 820px) {
@@ -649,6 +670,10 @@
         item.classList.toggle('is-active', item.dataset.themeChoice === mode);
       });
     }
+    document.querySelectorAll('[data-mobile-theme]').forEach(function (item) {
+      item.classList.toggle('is-active', item.dataset.mobileTheme === mode);
+      item.setAttribute('aria-checked', item.dataset.mobileTheme === mode ? 'true' : 'false');
+    });
   }
 
   function openThemeMenu() {
@@ -691,6 +716,15 @@
 
     document.addEventListener('vatan-theme-changed', syncThemeUI);
   }
+
+  document.querySelectorAll('[data-mobile-theme]').forEach(function (item) {
+    item.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.vatanSetTheme && window.vatanSetTheme(item.dataset.mobileTheme);
+      syncThemeUI();
+    });
+  });
 
   function detectActiveKey() {
     var path = window.location.pathname;
@@ -751,16 +785,27 @@
   }
 
   // بستن پاپ‌آپ پروفایل با کلیک بیرون یا Esc
-  var profilePopup = document.getElementById('profile-popup');
-  var profilePopupInput = profilePopup ? profilePopup.querySelector('input[type="checkbox"]') : null;
-  if (profilePopup && profilePopupInput) {
-    document.addEventListener('click', function (e) {
-      if (!profilePopup.contains(e.target)) profilePopupInput.checked = false;
+  var profilePopups = Array.from(document.querySelectorAll('.topnav-popup'));
+  document.addEventListener('click', function (e) {
+    var openPopup = profilePopups.find(function (popup) {
+      var input = popup.querySelector('input[type="checkbox"]');
+      return input && input.checked;
     });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') profilePopupInput.checked = false;
+    if (!openPopup || openPopup.contains(e.target)) return;
+
+    // کلیک اول بیرون پاپ‌آپ فقط آن را می‌بندد و نباید لینک/محصول زیرش را فعال کند.
+    e.preventDefault();
+    e.stopPropagation();
+    var input = openPopup.querySelector('input[type="checkbox"]');
+    if (input) input.checked = false;
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    profilePopups.forEach(function (popup) {
+      var input = popup.querySelector('input[type="checkbox"]');
+      if (input) input.checked = false;
     });
-  }
+  });
 
   // انیمیشن ردیاب چسبان منوی موبایل (Sliding Thumb)
   var bar   = document.getElementById('vatan-nav-bar');

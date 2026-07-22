@@ -15,9 +15,9 @@
 
   <header class="topbar flex items-center px-6 gap-3 sticky top-0 z-50 flex-shrink-0 max-[768px]:px-4 max-[768px]:gap-2 max-[480px]:px-3">
 
-    <div class="tb-menu-btn flex" onclick="toggleSidebar()" title="باز/بسته کردن منو">
+    <button type="button" class="tb-menu-btn flex" onclick="adminToggleSidebar()" title="باز/بسته کردن منو" aria-label="باز یا بسته کردن منوی مدیریت">
       <i class="fa-solid fa-bars-staggered"></i>
-    </div>
+    </button>
 
     @if($adminDashboardVersion)
       <span class="tb-version" title="نسخه پنل مدیریت">V.{{ $adminDashboardVersion }}</span>
@@ -34,10 +34,10 @@
       <input type="text" placeholder="جستجو در پنل...">
     </div>
 
-    <div class="tb-chip-btn" onclick="setActiveSub(null,'تنظیمات','CRM','crm-page');document.getElementById('breadcrumb').textContent='CRM'" title="CRM">
+    <a class="tb-chip-btn" href="{{ route('admin.dashboard', ['section' => 'crm']) }}" title="سیستم مدیریت پروژه">
       <i class="fa-solid fa-diagram-project"></i>
-      <span>CRM</span>
-    </div>
+      <span>سیستم مدیریت پروژه</span>
+    </a>
 
     <div class="flex items-center gap-2">
       <div class="tb-btn" onclick="toggleMode()" title="تغییر تم" id="theme-btn">

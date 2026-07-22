@@ -11,6 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>وطن استودیو — عکس حرفه‌ای با هوش مصنوعی</title>
   <meta name="description" content="عکس خودت را به سبک‌های حرفه‌ای تبدیل کن. وطن استودیو در کمتر از ۲ دقیقه عکس سینمایی، ترند و حرفه‌ای می‌سازد.">
+  @include('partials.site-icons')
 
   <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -1300,13 +1301,13 @@
 
   </style>
 </head>
-<body>
+<body id="top">
 
 <!-- ══════════════ HEADER ══════════════ -->
 <header id="site-header">
   <div class="container">
     <!-- لوگو -->
-    <a href="/" class="header-logo">
+    <a href="#top" class="header-logo" aria-label="رفتن به ابتدای سایت">
       <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="وطن AI" class="logo-icon">
       <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="logo-text">
     </a>

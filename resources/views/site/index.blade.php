@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AIPIX — هوش مصنوعی</title>
+    @include('partials.site-icons')
 <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,15 +86,15 @@
         }
     </style>
 </head>
-<body>
+<body id="top">
 
-    <div class="logo-wrap">
+    <a href="#top" class="logo-wrap" style="text-decoration:none;" aria-label="رفتن به ابتدای سایت">
         <div class="logo-icons">
             <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="AIPIX" style="width:42px;height:42px;display:block;">
             <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="AIPIX" style="height:28px;display:block;">
         </div>
         <p class="logo-tagline">تصاویر حرفه‌ای با هوش مصنوعی</p>
-    </div>
+    </a>
 
     <a href="{{ route('app.home') }}" class="btn-enter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

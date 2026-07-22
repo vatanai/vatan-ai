@@ -28,6 +28,7 @@ class Category extends Model
         'meta_title',
         'meta_description',
         'canonical_url',
+        'custom_url',
         'og_title',
         'og_description',
         'og_image',
@@ -130,7 +131,13 @@ class Category extends Model
     */
     public function url(): string
     {
-        return url('/category/' . ($this->path ?: $this->slug));
+        if ($this->custom_url) {
+            return str_starts_with($this->custom_url, '/')
+                ? url($this->custom_url)
+                : $this->custom_url;
+        }
+
+        return route('categories.show', ['path' => $this->path ?: $this->slug]);
     }
 
     public function metaTitle(): string

@@ -172,8 +172,8 @@
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-4" data-num="۴">۴</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام چهارم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
+              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">آزمایشگاه محصول</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">تجربه کاربر و مقایسه مدل‌ها</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-4"></span>
@@ -188,13 +188,21 @@
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-5" data-num="۵">۵</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام پنجم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">بازبینی نهایی</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مرور و ثبت محصول</div>
+              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-5"></span>
               <span class="step-check hidden text-[var(--green)]" id="step-check-5" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
             </div>
+          </div>
+
+          <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-5"></div>
+          <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-5-m"></div>
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-6" onclick="goStep(6)">
+            <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-6" data-num="۶">۶</div>
+            <div class="flex-1 min-w-0"><div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام ششم</div><div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">بازبینی نهایی</div><div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مرور و ثبت محصول</div></div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1"><span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-6"></span><span class="step-check hidden text-[var(--green)]" id="step-check-6"><i class="fa-solid fa-circle-check text-sm"></i></span></div>
           </div>
 
         </div>
@@ -237,13 +245,18 @@
           @include('admin.products.partials.step-3', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
-        {{-- ═══ گام چهارم: خروجی و قیمت ═══ --}}
+        {{-- ═══ گام چهارم: آزمایشگاه محصول ═══ --}}
         <div class="hidden space-y-4" id="panel-4">
+          @include('admin.products.partials.step-test-lab', ['aiModels' => $aiModels, 'product' => $product])
+        </div>
+
+        {{-- ═══ گام پنجم: خروجی و قیمت ═══ --}}
+        <div class="hidden space-y-4" id="panel-5">
           @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
-        {{-- ═══ گام پنجم: بازبینی نهایی ═══ --}}
-        <div class="hidden space-y-4" id="panel-5">
+        {{-- ═══ گام ششم: بازبینی نهایی ═══ --}}
+        <div class="hidden space-y-4" id="panel-6">
           @include('admin.products.partials.step-5', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
       </form>
@@ -254,7 +267,7 @@
         <i class="fa-solid fa-arrow-right"></i> <span class="hidden sm:inline">مرحله قبل</span>
       </button>
       <div class="flex flex-col items-center gap-0.5 order-3 sm:order-2 w-full sm:w-auto text-center">
-        <div class="text-xs text-[var(--text3)]"> مرحله <strong class="text-[var(--text)]" id="step-label-num">۱</strong> از ۵ </div>
+        <div class="text-xs text-[var(--text3)]"> مرحله <strong class="text-[var(--text)]" id="step-label-num">۱</strong> از ۶ </div>
         <div class="text-[10px] text-[var(--text3)]" id="autosave-status"></div>
       </div>
       <div class="flex gap-2 order-2 sm:order-3">
@@ -295,6 +308,10 @@ window.PRODUCT_CREATE_CONFIG = {
   fbIdxStart: {{ $fbIdxStart }},
   fieldIdxStart: {{ $fieldIdxStart }},
   wantedSubcategory: @json(old('subcategory', optional($duplicateFrom)->subcategory)),
+  {{-- کلید پیش‌نویس محلی، جدا به ازای هر حالت/محصول — رفع باگ «کپی»: قبلاً یک کلید سراسری
+       مشترک بود و بازیابی پیش‌نویسِ صفحه «تکثیر محصول» (که نامش «(کپی)» داشت) روی صفحه
+       «ویرایش» محصول دیگر می‌نشست و با ثبت، کلمه کپی به نام محصول اضافه می‌شد. --}}
+  autosaveKey: @json('pc-autosave-' . ($product ? 'edit-' . $product->id : ($duplicateFrom ? 'dup-' . $duplicateFrom->id : 'new'))),
 };
 </script>
 <script src="{{ asset('admin/js/products-create.js') }}"></script>

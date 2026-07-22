@@ -46,7 +46,7 @@ class ExploreManagementController extends Controller
         $products = Product::query()
             ->where('status', 'active')
             ->orderBy('name_fa')
-            ->get(['id', 'name_fa', 'slug', 'thumbnail']);
+            ->get(['id', 'name_fa', 'slug', 'thumbnail', 'cover', 'sample_outputs']);
 
         return view('admin.explore.index', [
             'surface' => $surface,

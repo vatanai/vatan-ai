@@ -6,15 +6,40 @@
       ?: \Illuminate\Support\Str::limit(trim(strip_tags($product->description_fa ?: $product->description_en ?: '')), 160);
   $seoImg   = $product->og_image
       ? asset('storage/'.$product->og_image)
-      : ($product->cover ? asset('storage/'.$product->cover)
-      : ($product->thumbnail ? asset('storage/'.$product->thumbnail) : asset('assets/img/placeholder.webp')));
+      : $product->displayImageUrl();
   $seoUrl   = url()->current();
 
-  // آیا محصول حداقل یک فیلد آپلود تصویر/فایل داخل تنظیمات داینامیک (input_schema) دارد؟
-  // اگر بله، همان فیلد به‌عنوان تصویر مرجع کافی است و دیگر نیازی به باکس آپلود جداگانه داخل مودال نیست.
-  $__hasSchemaUpload = collect($product->input_schema ?? [])->contains(function ($f) {
-      return in_array($f['type'] ?? '', ['image_upload', 'file_upload'], true);
-  });
+  // ── تبدیل عدد به رقم فارسی ──
+  $__fa = fn ($n) => strtr((string) $n, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']);
+
+  // ── هزینه توکن هر ساخت ──
+  $__isPerCredit = $product->pricing_model === 'per_credit';
+  $__cost        = (int) ($product->credit_cost ?? 0);
+  $__tokenLabel  = ($__isPerCredit && $__cost > 0) ? ($__fa($__cost) . ' توکن') : 'رایگان';
+  $__tokenPopTxt = ($__isPerCredit && $__cost > 0)
+      ? ('برای ساخت و تولید این عکس ' . $__fa($__cost) . ' توکن نیاز است.')
+      : 'ساخت این محصول رایگان است و توکنی از حساب شما کم نمی‌شود.';
+
+  // ── دسته‌بندی‌ها (رابطه چندگانه؛ اگر خالی بود از فیلد قدیمی category) ──
+  $__cats = $product->categories->pluck('name_fa')->filter()->values()->all();
+  if (empty($__cats) && $product->category) $__cats = [$product->category];
+
+  // ── تگ‌ها ──
+  $__tags = is_array($product->tags) ? array_values(array_filter(array_map('trim', $product->tags))) : [];
+
+  // ── توضیحات ──
+  $__desc = trim((string) ($product->description_fa ?: $product->description_en ?: ''));
+
+  // ── گالری‌ها: عکس‌های اصلی محصول و عکس‌های قبل (before_images) ──
+  $__isVideo = fn ($p) => $p && preg_match('/\.(mp4|webm|mov)$/i', (string) $p);
+  $__productImages = [$product->displayImageUrl()];
+  foreach ((array) ($product->sample_outputs ?? []) as $__o) {
+      if (!$__isVideo($__o)) $__productImages[] = asset('storage/' . $__o);
+  }
+  $__rawImages = [];
+  foreach ((array) ($product->before_images ?? []) as $__b) {
+      if (!$__isVideo($__b)) $__rawImages[] = asset('storage/' . $__b);
+  }
 @endphp
 
 @section('page_title', $seoTitle)
@@ -47,238 +72,565 @@
   </script>
 @endpush
 
+@push('styles')
+<style>
+/* ═══════════════════════════════════════════════════════
+   صفحه محصول اصلی — طراحی دوستونه فول‌صفحه
+   راست: توضیحات محصول | چپ: نمایش بزرگ تصویر (عرض ۱۲۰۰)
+   رنگ‌ها فقط از توکن‌های رسمی اپ (resources/css/app.css)
+═══════════════════════════════════════════════════════ */
+
+/* قانون حاشیه استاندارد صفحه — پشتیبان (نسخه اصلی در app.css) */
+:root{
+  --page-max: 1400px;
+  --page-margin: clamp(24px, 5vw, 96px);
+}
+.page-container{
+  width:100%;
+  max-width:calc(var(--page-max) + (2 * var(--page-margin)));
+  margin-inline:auto;
+  padding-inline:var(--page-margin);
+}
+
+.pd-shell{
+  display:flex;
+  flex-direction:row;      /* در RTL: فرزند اول = سمت راست */
+  width:100%;
+  background:var(--bg-page);
+  color:var(--text-primary);
+}
+
+/* ── دسکتاپ و تبلت (از 768px به بالا): ارتفاع سکشن اول = یک صفحه کامل ── */
+@media (min-width:768px){
+  .pd-shell{
+    height:calc(100vh - 64px); /* 64px هدر فیکس بالای صفحه */
+    overflow:hidden;
+  }
+}
+
+/* ═══════════ ستون راست: توضیحات محصول ═══════════ */
+.pd-info{
+  flex:1 1 0;
+  min-width:0;
+  background:var(--bg-surface);
+  border-inline-start:1px solid var(--border-subtle);
+  display:flex;
+  flex-direction:column;
+}
+@media (min-width:768px){
+  .pd-info{ min-width:340px; }
+  .pd-info-scroll{ overflow-y:auto; }
+}
+@media (min-width:1280px){
+  .pd-info{ min-width:380px; }
+}
+/* اسکرول‌بار کانتینر توضیحات مخفی (اسکرول کار می‌کند) */
+.pd-info-scroll{
+  flex:1 1 auto;
+  padding:28px 26px 40px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+  scrollbar-width:none;
+}
+.pd-info-scroll::-webkit-scrollbar{ width:0; height:0; display:none; }
+
+/* نام محصول */
+.pd-title{
+  font-size:23px;
+  font-weight:800;
+  line-height:1.35;
+  margin:0;
+}
+
+/* دسته‌بندی‌ها (باکس‌دار) + تگ‌ها (بدون باکس) */
+.pd-meta{ display:flex; flex-direction:column; gap:12px; }
+.pd-cats{ display:flex; flex-wrap:wrap; gap:8px; }
+.pd-cat{
+  height:26px;
+  padding:0 11px;
+  display:inline-flex;
+  align-items:center;
+  border-radius:8px;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  font-size:11.5px;
+  font-weight:700;
+  color:var(--text-primary);
+  cursor:pointer;
+  transition:all .2s ease;
+  user-select:none;
+}
+.pd-cat:hover{ border-color:var(--green); }
+.pd-tags{ display:flex; flex-wrap:wrap; gap:4px 12px; }
+.pd-tag{
+  font-size:11px;
+  font-weight:600;
+  color:var(--text-secondary);
+  cursor:pointer;
+  transition:color .2s ease;
+}
+.pd-tag:hover{ color:var(--green); }
+
+/* باکس توضیحات */
+.pd-desc-box{
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  padding:18px 18px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.pd-desc-box h2{
+  font-size:15px;
+  font-weight:800;
+  margin:0;
+}
+.pd-desc-text{
+  font-size:13.5px;
+  line-height:2;
+  color:var(--text-secondary);
+  margin:0;
+  max-height:170px;
+  overflow-y:auto;
+  scrollbar-width:none;
+  padding-inline-end:6px;
+}
+.pd-desc-text::-webkit-scrollbar{ width:0; display:none; }
+
+/* ردیف توکن / سیو / انتشار / لایک — خمیدگی ۱۲، باکس‌های کناری مربع ۴۸×۴۸ */
+.pd-actions{ display:flex; gap:10px; align-items:stretch; }
+.pd-token-wrap{ position:relative; flex:1 1 auto; min-width:0; }
+.pd-token{
+  width:100%;
+  height:40px;
+  border-radius:12px;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-size:13.5px;
+  font-weight:700;
+  color:var(--text-primary);
+  cursor:pointer;
+  transition:all .2s ease;
+  font-family:inherit;
+}
+.pd-token:hover{ border-color:var(--green); }
+.pd-token i{ color:var(--green); font-size:13px; }
+.pd-token b{ color:var(--green); font-weight:800; }
+/* پاپ‌آپ توضیح توکن — زیر باکس توکن باز می‌شود */
+.pd-token-pop{
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  left:0;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:12.5px;
+  font-weight:600;
+  line-height:1.9;
+  color:var(--text-secondary);
+  box-shadow:0 14px 34px rgba(0,0,0,.35);
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(-4px);
+  transition:all .2s ease;
+  z-index:30;
+}
+.pd-token-pop b{ color:var(--green); }
+.pd-token-pop.show{ opacity:1; visibility:visible; transform:none; }
+
+.pd-iconbtn{
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  border-radius:12px;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-primary);
+  font-size:15px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.pd-iconbtn:hover{ border-color:var(--green); transform:translateY(-1px); }
+.pd-iconbtn.is-on{ color:var(--green); border-color:var(--green); }
+/* دکمه لایک: در حالت فعال قرمز */
+.pd-iconbtn.is-liked{ color:var(--red); border-color:var(--red); }
+.pd-iconbtn.is-liked:hover{ border-color:var(--red); }
+
+/* گالری‌ها — ۴ تصویر در هر ردیف */
+.pd-gal h2{
+  font-size:15px;
+  font-weight:800;
+  margin:0 0 12px;
+}
+.pd-gal-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.pd-gal-grid img{
+  width:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+  border-radius:12px;
+  border:1px solid var(--border-subtle);
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.pd-gal-grid img:hover{ border-color:var(--green); transform:translateY(-2px); }
+.pd-gal-grid img.is-viewing{ border:2px solid var(--green); }
+
+/* ═══════════ ستون چپ: نمایش بزرگ تصویر ═══════════ */
+.pd-stage{
+  flex:0 1 1200px;          /* عرض بخش تصاویر: ۱۲۰۰ */
+  min-width:0;
+  position:relative;
+  background:var(--bg-page);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+/* دکمه برگشت (ضربدر) — بالا سمت چپ بخش تصویر */
+.pd-close{
+  position:absolute;
+  top:16px;
+  inset-inline-end:20px;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  background:transparent;
+  border:1px solid var(--border-subtle);
+  color:var(--text-primary);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all .2s ease;
+  z-index:4;
+}
+.pd-close:hover{ border-color:var(--green); box-shadow:0 0 0 3px rgba(207,254,0,.18); }
+
+/* شمارنده بالا */
+.pd-counter{
+  position:absolute;
+  top:20px;
+  inset-inline-start:24px;
+  font-size:15px;
+  font-weight:700;
+  color:var(--text-secondary);
+  letter-spacing:1px;
+  z-index:3;
+}
+
+/* تصویر اصلی */
+.pd-main{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.pd-main img{
+  max-width:100%;
+  max-height:100%;
+  border-radius:12px;
+  object-fit:contain;
+  background:var(--bg-card);
+}
+
+/* ═══════════ سکشن دوم: محصولات مشابه (اسلایدر) ═══════════ */
+.pd-similar{
+  background:var(--bg-page);
+  color:var(--text-primary);
+  padding:48px 0 64px;   /* حاشیه افقی از قانون --page-margin (کلاس .page-container) می‌آید */
+  border-top:1px solid var(--border-subtle);
+}
+.pd-similar-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:22px;
+}
+.pd-similar-head h2{
+  font-size:22px;
+  font-weight:800;
+  margin:0;
+}
+.pd-similar-nav{ display:flex; gap:8px; }
+.pd-similar-nav button{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  color:var(--text-primary);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.pd-similar-nav button:hover{ border-color:var(--green); }
+.pd-similar-track{
+  display:flex;
+  gap:16px;
+  overflow-x:auto;
+  scroll-behavior:smooth;
+  scrollbar-width:none;
+  padding-bottom:6px;
+}
+.pd-similar-track::-webkit-scrollbar{ display:none; }
+.pd-scard{
+  flex:0 0 236px;
+  background:var(--bg-card);
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  cursor:pointer;
+  transition:all .25s ease;
+  text-decoration:none;
+  color:var(--text-primary);
+}
+.pd-scard:hover{ transform:translateY(-4px); border-color:var(--green); }
+.pd-scard img{
+  width:100%;
+  aspect-ratio:1/1;
+  object-fit:cover;
+}
+.pd-scard-body{
+  padding:12px 14px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.pd-scard-cat{
+  align-self:flex-start;
+  height:22px;
+  padding:0 9px;
+  display:inline-flex;
+  align-items:center;
+  border-radius:8px;
+  background:var(--bg-surface);
+  border:1px solid var(--border-subtle);
+  font-size:10.5px;
+  font-weight:700;
+  color:var(--text-secondary);
+}
+.pd-scard-title{
+  font-size:14px;
+  font-weight:800;
+  margin:0;
+  line-height:1.5;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:1;
+  -webkit-box-orient:vertical;
+}
+.pd-scard-desc{
+  font-size:11.5px;
+  line-height:1.7;
+  color:var(--text-secondary);
+  margin:0;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+}
+
+/* ═══════════ فقط موبایل (زیر 768px) — تبلت دقیقاً مثل دسکتاپ است ═══════════ */
+@media (max-width:767px){
+  .pd-shell{ flex-direction:column; }
+  .pd-stage{
+    order:-1;               /* تصاویر بالا */
+    flex:none;
+    width:100%;
+    padding:16px;
+    min-height:52vh;
+  }
+  .pd-main img{ max-height:50vh; }
+  .pd-info{ border-inline-start:none; border-top:1px solid var(--border-subtle); }
+  .pd-info-scroll{ padding:22px 18px 40px; }
+  .pd-title{ font-size:20px; }
+  .pd-similar{ padding:36px 0 110px; } /* جا برای نویگیشن پایین موبایل */
+}
+</style>
+@endpush
+
 @section('content')
-{{-- صفحه محصول — بازطراحی فاز ۱: دو ستون در دسکتاپ (گالری ۶۰٪ / اطلاعات ۴۰٪)، Mobile First،
-     فقط سه بخش: هیرو محصول → توضیحات محصول → محصولات مشابه. صفحه به‌صورت عادی اسکرول می‌شود. --}}
-<div class="w-full bg-[var(--bg-page)] text-[var(--text-primary)]" dir="rtl">
 
-  {{-- ═══ بخش ۱: هیرو محصول (گالری + اطلاعات + تنظیمات + دکمه ساخت) ═══ --}}
-  {{-- نکته فنی: این بخش عمداً dir="ltr" است تا ترتیب چپ/راست ستون‌ها همیشه صریح و تضمین‌شده باشد
-       (گالری ثابت سمت چپ، اطلاعات ثابت سمت راست) — بدون وابستگی به رفتار مبهم flex-direction در RTL.
-       هر ستون داخلش دوباره dir="rtl" می‌گیرد تا متن/آیکون‌های فارسی داخلش درست بچینند. --}}
-  <section dir="ltr" class="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-5 sm:pt-8 pb-8 flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
+{{-- ═══════════ سکشن ۱: توضیحات (راست) + تصویر بزرگ (چپ) — فول‌صفحه ═══════════ --}}
+<div class="pd-shell" dir="rtl">
 
-    <div dir="rtl" class="w-full lg:w-[80%] lg:shrink-0 lg:sticky lg:top-[84px] lg:self-start">
-      @include('app.partials.product-gallery', ['product' => $product])
+  {{-- ═══════ سمت راست: توضیحات محصول ═══════ --}}
+  <aside class="pd-info">
+    <div class="pd-info-scroll">
+
+      {{-- ۱) نام محصول --}}
+      <h1 class="pd-title">{{ $product->name_fa }}</h1>
+
+      {{-- ۲) دسته‌بندی‌ها (باکس‌دار) + تگ‌ها (بدون باکس) --}}
+      @if(count($__cats) || count($__tags))
+      <div class="pd-meta">
+        @if(count($__cats))
+        <div class="pd-cats">
+          @foreach($__cats as $__cat)
+            <span class="pd-cat">{{ $__cat }}</span>
+          @endforeach
+        </div>
+        @endif
+        @if(count($__tags))
+        <div class="pd-tags">
+          @foreach($__tags as $__tag)
+            <span class="pd-tag"># {{ $__tag }}</span>
+          @endforeach
+        </div>
+        @endif
+      </div>
+      @endif
+
+      {{-- ۳) توضیحات داخل باکس --}}
+      @if($__desc !== '')
+      <div class="pd-desc-box">
+        <h2>توضیحات محصول</h2>
+        <p class="pd-desc-text">{!! nl2br(e($__desc)) !!}</p>
+      </div>
+      @endif
+
+      {{-- ۴) توکن مصرفی / سیو / انتشار / لایک --}}
+      <div class="pd-actions">
+        <div class="pd-token-wrap">
+          <button type="button" class="pd-token" id="pdTokenBtn" title="میزان توکن مصرفی">
+            <i class="fa-solid fa-bolt"></i>
+            <b>{{ $__tokenLabel }}</b>
+          </button>
+          <div class="pd-token-pop" id="pdTokenPop">{{ $__tokenPopTxt }}</div>
+        </div>
+        <button type="button" class="pd-iconbtn {{ $isSaved ? 'is-on' : '' }}" id="btnBookmark" data-saved="{{ $isSaved ? '1' : '0' }}" title="ذخیره" aria-label="ذخیره">
+          <i id="iconBkm" class="fa-{{ $isSaved ? 'solid' : 'regular' }} fa-bookmark"></i>
+        </button>
+        <button type="button" class="pd-iconbtn" id="btnShare" title="انتشار" aria-label="انتشار">
+          <i class="fa-solid fa-arrow-up-from-bracket"></i>
+        </button>
+        <button type="button" class="pd-iconbtn {{ ($isLiked ?? false) ? 'is-liked' : '' }}" id="btnLike" data-liked="{{ ($isLiked ?? false) ? '1' : '0' }}" title="لایک" aria-label="لایک">
+          <i id="iconLike" class="fa-{{ ($isLiked ?? false) ? 'solid' : 'regular' }} fa-heart"></i>
+        </button>
+      </div>
+
+      {{-- ۵) تنظیمات داینامیک محصول + دکمه «بساز» (همان دکمه اصلی پروژه) --}}
+      {{-- باکس «تنظیمات محصول» به دستور کاربر مخفی است (hideFields) — فقط دکمه «بساز» نمایش داده می‌شود --}}
+      @include('app.partials.product-options', ['product' => $product, 'genButtonLabel' => 'بساز', 'hideFields' => true])
+
+      {{-- ۶) تصاویر محصول --}}
+      @if(count($__productImages))
+      <div class="pd-gal">
+        <h2>تصاویر محصول</h2>
+        <div class="pd-gal-grid">
+          @foreach($__productImages as $__img)
+            <img src="{{ $__img }}" data-full="{{ $__img }}" alt="{{ $product->name_fa }}" loading="lazy">
+          @endforeach
+        </div>
+      </div>
+      @endif
+
+      {{-- ۷) عکس‌های قبل --}}
+      @if(count($__rawImages))
+      <div class="pd-gal">
+        <h2>عکس‌های قبل</h2>
+        <div class="pd-gal-grid">
+          @foreach($__rawImages as $__img)
+            <img src="{{ $__img }}" data-full="{{ $__img }}" alt="عکس قبل — {{ $product->name_fa }}" loading="lazy">
+          @endforeach
+        </div>
+      </div>
+      @endif
+
     </div>
+  </aside>
 
-    <div dir="rtl" class="w-full lg:w-[20%] flex flex-col gap-4">
-      @include('app.partials.product-info', ['product' => $product, 'isSaved' => $isSaved])
-      @include('app.partials.product-options', ['product' => $product])
+  {{-- ═══════ سمت چپ: نمایش بزرگ تصویر انتخاب‌شده ═══════ --}}
+  <section class="pd-stage" aria-label="نمایش بزرگ تصویر محصول">
+
+    {{-- شمارنده --}}
+    <div class="pd-counter" id="pdCounter"></div>
+
+    {{-- دکمه برگشت به صفحه قبل --}}
+    <button type="button" class="pd-close" id="pdCloseBtn" title="برگشت" aria-label="برگشت به صفحه قبل">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    {{-- تصویر اصلی (خروجی تولید هوش مصنوعی هم روی همین تصویر می‌نشیند) --}}
+    <div class="pd-main">
+      <img id="pdpMainImage" src="{{ $__productImages[0] ?? $product->displayImageUrl() }}" alt="{{ $product->name_fa }}">
     </div>
 
   </section>
 
-  {{-- ═══ عکس‌های قبل: تصاویر خامی که این محصول با آن‌ها ساخته شده ═══ --}}
-  @include('app.partials.product-before-images', ['product' => $product])
-
-  {{-- ═══ بخش ۲: توضیحات محصول ═══ --}}
-  @include('app.partials.product-description', ['product' => $product])
-
-  {{-- ═══ بخش ۳: محصولات مشابه ═══ --}}
-  @include('app.partials.related-products', ['similar' => $similar])
-
-  {{-- مودال تخصصی میز کار هوش مصنوعی (فرآیند واقعی «شروع ساخت») --}}
-  <div id="workspaceModal" class="fixed inset-0 z-[400] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div id="modalContent" class="bg-[#121214] [.light_&]:bg-white border border-white/[0.06] [.light_&]:border-black/10 w-full max-w-6xl h-[90vh] max-h-[750px] rounded-[28px] flex flex-col overflow-hidden scale-95 transition-transform duration-300 shadow-2xl">
-
-      {{-- هدر مودال --}}
-      <div class="p-4 border-b border-white/[0.04] [.light_&]:border-black/10 flex items-center justify-between shrink-0 bg-[#161619] [.light_&]:bg-[#f5f5f5]">
-        <div class="flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
-          </div>
-          <h3 class="text-[13px] font-bold text-gray-200 [.light_&]:text-gray-800">میز کار تخصصی تولید تصویر هوش مصنوعی</h3>
-        </div>
-        <button type="button" onclick="closeWorkspaceModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.03] [.light_&]:bg-black/[0.04] text-gray-400 hover:text-white [.light_&]:hover:text-black hover:bg-white/10 [.light_&]:hover:bg-black/10 transition-colors">
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
-
-      {{-- بدنه سه ستونه مودال --}}
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-white/[0.04] [.light_&]:divide-black/10">
-
-        {{-- ستون اول (راست): تصویر الگو --}}
-        <div class="p-5 bg-[#0e0e10] [.light_&]:bg-[#fafafa] flex flex-col h-full overflow-hidden">
-          <div class="shrink-0">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 mb-2">
-              ۱. تصویر الگو (محصول شما)
-            </span>
-            <p class="text-[11px] text-gray-500 [.light_&]:text-gray-600 mb-3 leading-relaxed">این تصویر مبنای طراحی هوش مصنوعی است.</p>
-          </div>
-
-          <div class="flex-1 min-h-0 border border-white/[0.03] [.light_&]:border-black/5 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center overflow-hidden">
-            <img src="{{ $product->displayImageUrl() }}"
-                 alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
-          </div>
-
-          {{-- تنظیم نسبت تصویر --}}
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
-            <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mb-2">تنظیم نسبت تصویر خروجی:</p>
-            <div class="flex gap-1.5 flex-wrap">
-              @foreach(['1:1'=>'مربع','4:5'=>'پرتره','9:16'=>'عمودی','16:9'=>'افقی'] as $val=>$lbl)
-              <label class="cursor-pointer">
-                <input type="radio" name="modal_ratio" value="{{ $val }}" {{ $val==='1:1'?'checked':'' }} class="sr-only peer">
-                <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
-                  {{ $lbl }}
-                </span>
-              </label>
-              @endforeach
-            </div>
-          </div>
-        </div>
-
-        {{-- ستون دوم (وسط): بخش آپلود تصویر کاربر (در صورت نیاز) و دکمه ساخت --}}
-        <div class="p-5 bg-[#121214] [.light_&]:bg-white flex flex-col h-full overflow-hidden">
-          <div class="flex-1 flex flex-col min-h-0 gap-3">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 self-start">
-              ۲. بارگذاری تصویر ورودی
-            </span>
-
-            @if($__hasSchemaUpload)
-              {{-- محصول از فیلد(های) آپلود تعریف‌شده در «تنظیمات محصول» بالای صفحه استفاده می‌کند --}}
-              <div class="flex-1 min-h-0 border border-dashed border-white/[0.06] [.light_&]:border-black/10 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center text-center">
-                <p class="text-[11px] text-gray-500 [.light_&]:text-gray-600 leading-relaxed">
-                  <i class="fa-solid fa-circle-check text-emerald-500 ml-1"></i>
-                  تصویر ورودی از بخش «تنظیمات محصول» در بالای صفحه دریافت می‌شود.
-                </p>
-              </div>
-            @else
-              <div onclick="document.getElementById('modalFileInp').click()"
-                   class="w-full shrink-0 rounded-2xl border border-dashed border-white/[0.08] [.light_&]:border-black/15 bg-white/[0.01] [.light_&]:bg-black/[0.02] py-4 px-5
-                          flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-indigo-500/40
-                          hover:bg-indigo-500/[0.02] transition-all text-center group">
-                <div class="w-9 h-9 rounded-xl bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/20 flex items-center justify-center text-gray-400 [.light_&]:text-gray-600 group-hover:text-indigo-400 transition-all">
-                  <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
-                </div>
-                <div>
-                  <p class="text-[11px] font-bold text-gray-200 [.light_&]:text-gray-800">انتخاب تصویر جدید</p>
-                </div>
-                <input type="file" id="modalFileInp" accept="image/*" class="hidden" onchange="handleModalUpload(this)">
-              </div>
-
-              <div class="flex-1 min-h-0 border border-white/[0.03] [.light_&]:border-black/5 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
-                <img id="userImagePreview" src="" alt="User Source" class="hidden max-w-full max-h-full object-contain rounded-xl">
-                <div id="userImagePlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
-                  <i class="fa-solid fa-user-astronaut text-lg opacity-40"></i>
-                  <p class="text-[10px]">تصویر شما هنوز آپلود نشده است</p>
-                </div>
-              </div>
-            @endif
-          </div>
-
-          {{-- انتخاب مدل‌های خروجی چندگانه (فقط برای محصولات دارای واریانت) --}}
-          @include('app.partials.product-output-variants', ['product' => $product])
-
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10 space-y-2">
-            <div id="modalFormError" class="hidden p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-[10px] font-bold flex items-center gap-2">
-              <i class="fa-solid fa-circle-exclamation"></i>
-              <span id="modalFormErrorTxt"></span>
-            </div>
-
-            {{-- جمع نهایی توکن برای ساخت — بر اساس تعداد مدل‌های خروجی تیک‌خورده به‌روز می‌شود --}}
-            @if(count($product->outputVariantList()))
-              <div id="variantTokenTotal" class="flex items-center justify-between px-3 h-9 bg-white/[0.02] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/10 rounded-xl text-[10px] font-bold">
-                <span class="text-gray-400 [.light_&]:text-gray-600"><i class="fa-solid fa-bolt text-orange-400 text-[9px] ml-1"></i> جمع توکن برای ساخت</span>
-                <span class="text-orange-400" id="variantTokenTotalNum">—</span>
-              </div>
-            @endif
-
-            <button type="button" onclick="triggerGeneration()" id="btnModalSubmit"
-                    class="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]">
-              <i class="fa-solid fa-bolt text-[11px]"></i> بساز (شروع رندر)
-            </button>
-          </div>
-        </div>
-
-        {{-- ستون سوم (چپ): خروجی رندر شده نهایی هوش مصنوعی --}}
-        <div class="p-5 bg-[#0a0a0c] [.light_&]:bg-[#fafafa] flex flex-col h-full overflow-hidden">
-          <div class="shrink-0">
-            <span class="inline-block px-2.5 py-1 rounded-md bg-white/[0.03] [.light_&]:bg-black/[0.04] border border-white/[0.05] [.light_&]:border-black/10 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 mb-2">
-              ۳. خروجی تصویر نهایی
-            </span>
-          </div>
-
-          <div class="flex-1 min-h-0 border border-white/[0.04] [.light_&]:border-black/10 bg-[#040405] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center relative overflow-hidden">
-            <img id="modalOutputImage" src="" alt="AI Output" class="hidden max-w-full max-h-full object-contain rounded-xl shadow-2xl">
-
-            {{-- خروجی چندتایی (مدل‌های خروجی چندگانه) — گرید تصاویر ساخته‌شده --}}
-            <div id="modalOutputGrid" class="hidden absolute inset-0 p-3 overflow-y-auto grid grid-cols-2 gap-2 content-start"
-                 style="scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.08) transparent"></div>
-
-            <div id="outputPlaceholder" class="text-center text-gray-600 flex flex-col items-center gap-2">
-              <i class="fa-solid fa-sparkles text-xl text-gray-700"></i>
-              <p class="text-[11px] text-gray-500">پس از کلیک روی دکمه ساخت، نتیجه اینجا نمایش داده می‌شود.</p>
-            </div>
-
-            {{-- انیمیشن و اورلی مراحل لودینگ هوش مصنوعی --}}
-            <div id="modalProgressOverlay" class="hidden absolute inset-0 bg-[#0a0a0c]/95 [.light_&]:bg-white/95 backdrop-blur-md flex-col items-center justify-center text-center p-6 z-20 animate-fade-in">
-              <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 shadow-inner">
-                <i class="fa-solid fa-wand-magic-sparkles fa-spin text-xl text-indigo-400"></i>
-              </div>
-              <p id="modalPgTxt" class="text-[13px] font-bold text-white [.light_&]:text-gray-900 mb-1">در حال شروع فرآیند...</p>
-              <p id="modalPgSub" class="text-[10px] text-gray-500 mb-4">سیستم در حال آماده‌سازی خط پردازش است</p>
-              <div class="bg-white/5 [.light_&]:bg-black/5 rounded-full h-1 overflow-hidden w-40 mx-auto">
-                <div id="modalPgBar" class="h-full bg-indigo-500 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
-            <button id="modalDlBtn" disabled onclick="downloadGeneratedImage()"
-              class="w-full h-10 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-[11px]
-                     rounded-xl flex items-center justify-center gap-2 transition-colors
-                     border border-emerald-500/10 cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed">
-              <i class="fa-solid fa-download text-[11px]"></i>
-              دانلود این خروجی
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
-  {{-- مودال «برای ذخیره میبایست وارد شوید» — فقط برای کاربر مهمان هنگام کلیک روی دکمه سیو --}}
-  <div id="saveLoginModal" class="fixed inset-0 z-[410] hidden opacity-0 transition-opacity duration-300 items-center justify-center bg-black/85 backdrop-blur-md p-4" dir="rtl">
-    <div id="saveLoginModalContent" class="bg-[#121218] [.light_&]:bg-white border border-white/10 [.light_&]:border-black/10 w-full max-w-sm rounded-[24px] overflow-hidden scale-95 transition-transform duration-300 shadow-2xl relative p-6 text-center flex flex-col items-center gap-4">
-
-      <button type="button" onclick="closeSaveLoginModal()" class="absolute top-4 left-4 w-7 h-7 flex items-center justify-center rounded-full bg-white/[0.03] [.light_&]:bg-black/[0.04] text-gray-400 hover:text-white [.light_&]:hover:text-black hover:bg-white/10 [.light_&]:hover:bg-black/10 transition-colors cursor-pointer">
-        <i class="fa-solid fa-xmark text-xs"></i>
-      </button>
-
-      <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-2">
-        <i class="fa-regular fa-bookmark text-2xl"></i>
-      </div>
-
-      <h3 class="text-[15px] font-black text-gray-100 [.light_&]:text-gray-900">برای ذخیره میبایست به پروفایل خود وارد شوید</h3>
-
-      <div class="w-full grid grid-cols-1 gap-2 mt-2">
-        <a href="{{ route('login') }}" class="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.99] no-underline">
-          <i class="fa-solid fa-right-to-bracket text-xs"></i>
-          ورود
-        </a>
-        <button type="button" onclick="closeSaveLoginModal()" class="w-full h-10 bg-white/[0.03] [.light_&]:bg-black/[0.04] hover:bg-white/10 [.light_&]:hover:bg-black/10 text-gray-400 [.light_&]:text-gray-600 hover:text-white [.light_&]:hover:text-black font-bold text-[11px] rounded-xl transition-colors cursor-pointer">
-          بعداً
-        </button>
-      </div>
-
-    </div>
-  </div>
-
 </div>
 
-<style>
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
-</style>
+{{-- ═══════════ سکشن ۲: محصولات مشابه (اسلایدر افقی) ═══════════ --}}
+@if($similar->count())
+<section class="pd-similar" dir="rtl">
+  <div class="page-container">
+
+  <div class="pd-similar-head">
+    <h2>محصولات مشابه</h2>
+    <div class="pd-similar-nav">
+      <button type="button" id="pdSimPrev" aria-label="قبلی">
+        <i class="fa-solid fa-chevron-right text-[13px]"></i>
+      </button>
+      <button type="button" id="pdSimNext" aria-label="بعدی">
+        <i class="fa-solid fa-chevron-left text-[13px]"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="pd-similar-track" id="pdSimTrack">
+    @foreach($similar as $item)
+    <a class="pd-scard" href="{{ route('app.product', $item->route_slug) }}">
+      <img src="{{ $item->displayImageUrl() }}" alt="{{ $item->name_fa }}" loading="lazy">
+      <div class="pd-scard-body">
+        @if($item->category)
+          <span class="pd-scard-cat">{{ $item->category }}</span>
+        @endif
+        <h3 class="pd-scard-title">{{ $item->name_fa }}</h3>
+        @php $__sdesc = trim(strip_tags((string) ($item->description_fa ?: $item->description_en ?: ''))); @endphp
+        @if($__sdesc !== '')
+          <p class="pd-scard-desc">{{ \Illuminate\Support\Str::limit($__sdesc, 70) }}</p>
+        @endif
+      </div>
+    </a>
+    @endforeach
+  </div>
+
+  </div>
+</section>
+@endif
+
+{{-- مودال میز کار هوش مصنوعی + مودال ورود --}}
+@include('app.partials.product-workspace-modal', ['product' => $product])
+
 @endsection
 
 @push('scripts')
 <script>
 var GEN_URL = '{{ route('app.product.generate', $product->slug) }}';
 var SAVE_URL = '{{ route('app.product.save', $product->slug) }}';
+var LIKE_URL = '{{ route('app.product.like', $product->slug) }}';
 var LOGIN_URL = '{{ route('login') }}';
 var IS_AUTH = @json(auth()->check());
 var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -384,16 +736,15 @@ function handleModalUpload(inp) {
 }
 
 /* ───── جمع‌آوری مقادیر تنظیمات داینامیک محصول (input_schema) — رندرشده در product-options ─────
-   خروجی: پیام خطا در صورت خالی بودن یک فیلد اجباری (رشته)، یا null در صورت معتبر بودن همه.
-   مقادیر متنی به‌صورت fields[field_id] و فایل‌های آپلودی به‌صورت uploads[field_id] به FormData اضافه می‌شوند
-   (uploads[] دقیقاً همان ساختاری است که ProductGenerateController::generate() از قبل پشتیبانی می‌کند). */
+   خروجی: پیام خطا در صورت خالی بودن یک فیلد اجباری (رشته)، یا null در صورت معتبر بودن همه. */
 function collectDynamicFields(fd) {
   var errorMsg = null;
 
   document.querySelectorAll('#pdpOptions .pdp-field').forEach(function (el) {
     var fid = el.dataset.fieldId;
     var type = el.dataset.fieldType;
-    var required = el.dataset.required === '1';
+    /* فیلدهای مخفی‌شده (باکس تنظیمات حذف‌شده) اجباری حساب نمی‌شوند تا جلوی ساخت را نگیرند */
+    var required = el.dataset.required === '1' && el.offsetParent !== null;
     if (!fid) return;
 
     var labelEl = el.querySelector('label');
@@ -584,6 +935,7 @@ function downloadGeneratedImage(){
   a.href = _modalResultUrl; a.download = 'ai-product-result.png'; a.click();
 }
 
+/* ───── انتشار (اشتراک‌گذاری) ───── */
 function doShare() {
   var h1 = document.querySelector('h1');
   var t = h1 ? h1.textContent.trim() : document.title;
@@ -592,7 +944,7 @@ function doShare() {
 }
 document.getElementById('btnShare')?.addEventListener('click', doShare);
 
-/* ───── مودال «برای ذخیره باید وارد شوید» ───── */
+/* ───── مودال «برای ادامه باید وارد شوید» ───── */
 function openSaveLoginModal() {
   var modal = document.getElementById('saveLoginModal');
   var content = document.getElementById('saveLoginModalContent');
@@ -617,15 +969,15 @@ function closeSaveLoginModal() {
   }, 300);
 }
 
-/* ───── دکمه سیو: کاربر مهمان → مودال ورود، کاربر لاگین‌کرده → درخواست واقعی به بک‌اند ───── */
+/* ───── دکمه سیو: مهمان → مودال ورود، لاگین‌کرده → درخواست واقعی به بک‌اند ───── */
 var btnBookmark = document.getElementById('btnBookmark');
 var iconBkm = document.getElementById('iconBkm');
 var _saveBusy = false;
 
 function setBookmarkUI(saved) {
-  if (iconBkm) iconBkm.className = saved ? 'fa-solid fa-bookmark text-[11px]' : 'fa-regular fa-bookmark text-[11px]';
+  if (iconBkm) iconBkm.className = saved ? 'fa-solid fa-bookmark' : 'fa-regular fa-bookmark';
   if (btnBookmark) {
-    btnBookmark.classList.toggle('text-[var(--green)]', saved);
+    btnBookmark.classList.toggle('is-on', saved);
     btnBookmark.dataset.saved = saved ? '1' : '0';
   }
 }
@@ -656,5 +1008,103 @@ btnBookmark?.addEventListener('click', function(){
   .catch(function(){})
   .finally(function(){ _saveBusy = false; });
 });
+
+/* ───── دکمه لایک: مهمان → مودال ورود، لاگین‌کرده → درخواست واقعی به بک‌اند — فعال = قرمز ───── */
+var btnLike = document.getElementById('btnLike');
+var iconLike = document.getElementById('iconLike');
+var _likeBusy = false;
+
+function setLikeUI(liked) {
+  if (iconLike) iconLike.className = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+  if (btnLike) {
+    btnLike.classList.toggle('is-liked', liked);
+    btnLike.dataset.liked = liked ? '1' : '0';
+  }
+}
+
+btnLike?.addEventListener('click', function(){
+  if (!IS_AUTH) {
+    openSaveLoginModal();
+    return;
+  }
+  if (_likeBusy) return;
+  _likeBusy = true;
+
+  fetch(LIKE_URL, {
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRF-TOKEN': CSRF,
+      'Accept': 'application/json'
+    }
+  })
+  .then(function(r){
+    if (r.status === 401) { openSaveLoginModal(); throw new Error('unauthenticated'); }
+    return r.json();
+  })
+  .then(function(d){
+    if (d && d.success) setLikeUI(!!d.liked);
+  })
+  .catch(function(){})
+  .finally(function(){ _likeBusy = false; });
+});
+
+/* ───── پاپ‌آپ توضیح توکن — با کلیک روی باکس توکن باز/بسته می‌شود ───── */
+var tokenBtn = document.getElementById('pdTokenBtn');
+var tokenPop = document.getElementById('pdTokenPop');
+tokenBtn?.addEventListener('click', function (e) {
+  e.stopPropagation();
+  tokenPop.classList.toggle('show');
+});
+document.addEventListener('click', function (e) {
+  if (tokenPop && !tokenPop.contains(e.target)) tokenPop.classList.remove('show');
+});
+
+/* ───── گالری: کلیک روی عکس‌های سمت راست → نمایش بزرگ در سمت چپ ───── */
+(function () {
+  function toFa(n){ return String(n).replace(/\d/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'[d]; }); }
+
+  var mainImg = document.getElementById('pdpMainImage');
+  var counter = document.getElementById('pdCounter');
+  var galleryImgs = Array.prototype.slice.call(document.querySelectorAll('.pd-gal-grid img'));
+
+  function show(i){
+    var img = galleryImgs[i];
+    if (!img) return;
+    mainImg.src = img.dataset.full || img.src;
+    if (counter) counter.textContent = toFa(i + 1) + ' / ' + toFa(galleryImgs.length);
+    galleryImgs.forEach(function (g, gi) {
+      g.classList.toggle('is-viewing', gi === i);
+    });
+  }
+
+  galleryImgs.forEach(function (img, i) {
+    img.addEventListener('click', function(){ show(i); });
+  });
+
+  if (galleryImgs.length) show(0);
+  else if (counter) counter.textContent = '';
+
+  /* دکمه برگشت به صفحه قبل */
+  document.getElementById('pdCloseBtn')?.addEventListener('click', function () {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = '{{ route('app.home') }}';
+    }
+  });
+
+  /* اسلایدر محصولات مشابه */
+  var track = document.getElementById('pdSimTrack');
+  if (track) {
+    var step = 268; /* عرض کارت + فاصله */
+    document.getElementById('pdSimNext')?.addEventListener('click', function () {
+      track.scrollBy({ left: -step * 2, behavior: 'smooth' });
+    });
+    document.getElementById('pdSimPrev')?.addEventListener('click', function () {
+      track.scrollBy({ left: step * 2, behavior: 'smooth' });
+    });
+  }
+}());
 </script>
 @endpush

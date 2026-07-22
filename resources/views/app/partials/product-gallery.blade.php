@@ -1,7 +1,7 @@
 {{-- ═══════════════════════════════════════════════════════════════
      پارشیال: گالری تصاویر محصول — ستون چپ صفحه محصول (دسکتاپ ~۶۰٪)
      - تصویر اصلی بزرگ + کیفیت بالا + نسبت تصویر ثابت + Sticky در دسکتاپ
-     - Thumbnail اول همیشه «عکس قبل» (تصویر/کاور اصلی محصول) و کاملاً مستقل از بقیه
+     - تصویر اول همیشه «عکس اصلی» محصول است
      - سپس نمونه‌خروجی‌های محصول (sample_outputs)
      - تغییر تصویر با کلیک روی Thumbnail بدون Reload صفحه و با Transition نرم
      - اگر محصول فقط یک تصویر داشته باشد، ردیف Thumbnail اصلاً نمایش داده نمی‌شود
@@ -22,7 +22,7 @@
   </button>
 
   {{-- تصویر/ویدیو اصلی --}}
-  <div class="relative w-full aspect-square rounded-3xl overflow-hidden bg-[var(--bg-surface)] flex items-center justify-center">
+  <div class="relative w-full aspect-square rounded-xl overflow-hidden bg-[var(--bg-surface)] flex items-center justify-center">
     <img id="pdpMainImage" src="{{ $__beforeSrc }}" alt="{{ $product->name_fa }}"
          class="w-full h-full object-contain transition-opacity duration-300 ease-out {{ $__isVideo($__beforeSrc) ? 'hidden' : '' }}">
     <video id="pdpMainVideo" src="{{ $__isVideo($__beforeSrc) ? $__beforeSrc : '' }}" muted loop playsinline autoplay
@@ -33,14 +33,14 @@
   @if($__totalCount > 1)
   <div class="mt-3 flex items-start gap-2.5 overflow-x-auto pb-1" style="scrollbar-width:thin;scrollbar-color:var(--border-subtle) transparent" id="pdpThumbRow">
 
-    {{-- Thumbnail مستقل اول: عکس قبل --}}
-    <button type="button" class="pdp-thumb is-active shrink-0 flex flex-col items-center gap-1.5" aria-label="عکس قبل"
+    {{-- تصویر اصلی محصول --}}
+    <button type="button" class="pdp-thumb is-active shrink-0 flex flex-col items-center gap-1.5" aria-label="عکس اصلی"
             data-src="{{ $__beforeSrc }}" data-type="{{ $__isVideo($__beforeSrc) ? 'video' : 'image' }}"
             onclick="pdpSelectThumb(this)">
       <span class="pdp-thumb-box block w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-xl overflow-hidden border-2 border-transparent bg-[var(--bg-surface)]">
-        <img src="{{ $__beforeSrc }}" alt="عکس قبل" class="w-full h-full object-cover">
+        <img src="{{ $__beforeSrc }}" alt="عکس اصلی" class="w-full h-full object-cover">
       </span>
-      <span class="text-[10px] font-bold text-[var(--text-secondary)]">عکس قبل</span>
+      <span class="text-[10px] font-bold text-[var(--text-secondary)]">عکس اصلی</span>
     </button>
 
     {{-- نمونه تصاویر/ویدیوهای خروجی محصول --}}

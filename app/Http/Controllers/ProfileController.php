@@ -14,7 +14,7 @@ public function gallery()
     $user = auth()->user();
 
     if (!$user) {
-        return redirect()->route('login');
+        return redirect()->route('app.profile');
     }
 
     // واکشی تصاویر بر اساس رابطه‌های مدل User
@@ -66,7 +66,7 @@ public function gallery()
         $storageTotal = 100; // سقف مجاز ۱۰۰ مگابایت
 
         // ───── داده‌های واقعی باکس‌های آمار پروفایل ─────
-        $tokenBalance  = (int) ($user->tokens ?? 0);
+        $tokenBalance  = $user->token_balance;
         $createdCount  = $createdImages->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
         $earnings      = (int) ($user->referral_earnings ?? 0);

@@ -69,4 +69,22 @@ class Jalali
 
         return self::toPersianDigits((string) $jd) . ' ' . $monthName . ' ' . self::toPersianDigits((string) $jy) . ' — ساعت ' . $time;
     }
+
+    /**
+     * فرمت عددی فشرده برای جدول‌های ادمین: «۱۴۰۵/۰۲/۲۲  ۲۱:۳۲»
+     * (سال/ماه/روز شمسی با صفر پیش‌رو + ساعت ۲۴ ساعته، همه با ارقام فارسی)
+     */
+    public static function formatNumeric(?Carbon $date): string
+    {
+        if (!$date) {
+            return '—';
+        }
+
+        [$jy, $jm, $jd] = self::toJalaliYmd((int) $date->format('Y'), (int) $date->format('n'), (int) $date->format('j'));
+
+        $dateStr = sprintf('%04d/%02d/%02d', $jy, $jm, $jd);
+        $timeStr = $date->format('H:i');
+
+        return self::toPersianDigits($dateStr) . '  ' . self::toPersianDigits($timeStr);
+    }
 }

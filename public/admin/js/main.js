@@ -22,7 +22,7 @@ const PAGE_URLS = {
 
 const PAGE_META = {
   'dashboard-page':           { breadcrumb: 'مرکز فرماندهی' },
-  'crm-page':                 { breadcrumb: 'CRM' },
+  'crm-page':                 { breadcrumb: 'سیستم مدیریت پروژه' },
   'attendance-page':          { breadcrumb: 'حضور و غیاب' },
   'products-dashboard-page':  { breadcrumb: 'محصولات — داشبورد محصولات' },
   'products-list-page':       { breadcrumb: 'محصولات — لیست محصولات' },

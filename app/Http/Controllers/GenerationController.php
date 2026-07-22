@@ -8,6 +8,8 @@ use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Services\TokenBalanceService;
+use Illuminate\Validation\ValidationException;
 
 class GenerationController extends Controller
 {
@@ -31,19 +33,11 @@ class GenerationController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
             
-            // بررسی موجودی فعلی کاربر در جدول users
-            if (($user->tokens ?? 0) < $tokenCost) {
+            try {
+                app(TokenBalanceService::class)->debit($user, $tokenCost);
+            } catch (ValidationException) {
                 return response()->json(['error' => 'توکن شما کافی نیست. لطفا حساب خود را شارژ کنید.'], 403);
             }
-
-            // الف) کسر هزینه از موجودی فعلی
-            $user->tokens = $user->tokens - $tokenCost;
-
-            // ب) اضافه کردن دقیق به کل توکن‌های مصرف شده از اول تا الان
-            $user->tokens_used = ($user->tokens_used ?? 0) + $tokenCost;
-
-            // ذخیره تغییرات توکن‌ها در دیتابیس
-            $user->save();
         }
 
         // ذخیره‌سازی تصویر ورودی کاربر در هاست
