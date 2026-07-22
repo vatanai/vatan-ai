@@ -32,7 +32,7 @@
   $__sbInitial = is_array($__sbInitial) ? array_values($__sbInitial) : [];
 @endphp
 
-<link rel="stylesheet" href="{{ asset('admin/css/schema-builder.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/schema-builder.css') }}?v={{ filemtime(public_path('admin/css/schema-builder.css')) }}">
 
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" id="schema-builder-card">
 
@@ -104,4 +104,4 @@ window.SCHEMA_BUILDER_CFG = {
   initial: @json($__sbInitial),
 };
 </script>
-<script src="{{ asset('admin/js/schema-builder.js') }}"></script>
+<script src="{{ asset('admin/js/schema-builder.js') }}?v={{ filemtime(public_path('admin/js/schema-builder.js')) }}"></script>

@@ -314,5 +314,5 @@ window.PRODUCT_CREATE_CONFIG = {
   autosaveKey: @json('pc-autosave-' . ($product ? 'edit-' . $product->id : ($duplicateFrom ? 'dup-' . $duplicateFrom->id : 'new'))),
 };
 </script>
-<script src="{{ asset('admin/js/products-create.js') }}"></script>
+<script src="{{ asset('admin/js/products-create.js') }}?v={{ filemtime(public_path('admin/js/products-create.js')) }}"></script>
 @endsection
