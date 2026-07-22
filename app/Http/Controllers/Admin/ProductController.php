@@ -13,6 +13,8 @@ use App\Services\ProductImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -253,6 +255,11 @@ class ProductController extends Controller
         }
 
         $product->before_images = $this->storeOptimizedImages($request->file('before_images', []), 'products/before_images', $request->boolean('skip_image_optimization'));
+        if ($request->hasFile('main_images') || $request->hasFile('before_images')) {
+            $product->images_optimized_at = $request->boolean('skip_image_optimization') ? null : now();
+        } elseif ($duplicateSource) {
+            $product->images_optimized_at = $duplicateSource->images_optimized_at;
+        }
 
         // ۶. فیلدهای سیستمی و هوش مصنوعی
         $product->primary_model = $request->input('primary_model') ?? AiModel::first()?->openrouter_model_id ?? 'stabilityai/stable-diffusion-3';
@@ -498,6 +505,10 @@ class ProductController extends Controller
             Storage::disk('public')->delete($oldBeforePaths);
         }
 
+        if ($request->hasFile('main_images') || $request->hasFile('before_images')) {
+            $validated['images_optimized_at'] = $request->boolean('skip_image_optimization') ? null : now();
+        }
+
         if ($request->hasFile('new_product_icon')) {
             if ($product->new_product_icon) Storage::disk('public')->delete($product->new_product_icon);
             $validated['new_product_icon'] = $request->file('new_product_icon')->store('product_icons', 'public');
@@ -579,6 +590,89 @@ class ProductController extends Controller
 
         $product->delete();
         return redirect()->route('admin.products')->with('success', 'محصول حذف شد.');
+    }
+
+    /**
+     * میانبر جدول محصولات برای بهینه‌سازی امن تمام عکس‌های اصلی و قبل.
+     * تا قبل از موفقیت کامل هیچ مسیر قبلی حذف یا در دیتابیس جایگزین نمی‌شود.
+     */
+    public function optimizeImages(Product $product)
+    {
+        $lock = Cache::lock('product-image-optimization:' . $product->id, 180);
+        if (!$lock->get()) {
+            return response()->json(['message' => 'بهینه‌سازی این محصول توسط مدیر دیگری در حال انجام است.'], 409);
+        }
+
+        $newlyCreated = [];
+        $committed = false;
+        try {
+            $product->refresh();
+            $oldCover = $product->cover;
+            $oldSamples = array_values(array_filter((array) $product->sample_outputs));
+            $oldBefore = array_values(array_filter((array) $product->before_images));
+            $allOldPaths = array_values(array_unique(array_filter(array_merge([$oldCover], $oldSamples, $oldBefore))));
+
+            if ($allOldPaths === []) {
+                return response()->json(['message' => 'این محصول تصویری برای بهینه‌سازی ندارد.'], 422);
+            }
+
+            $beforeBytes = 0;
+            foreach ($allOldPaths as $path) {
+                if (Storage::disk('public')->exists($path)) $beforeBytes += (int) Storage::disk('public')->size($path);
+            }
+
+            $mapped = [];
+            $optimize = function (?string $path, string $directory) use (&$mapped, &$newlyCreated): ?string {
+                if (!$path) return null;
+                if (isset($mapped[$path])) return $mapped[$path];
+                $newPath = $this->imageOptimizer->optimizeStored($path, $directory);
+                $mapped[$path] = $newPath;
+                if ($newPath !== $path) $newlyCreated[] = $newPath;
+                return $newPath;
+            };
+
+            $newCover = $optimize($oldCover, 'products/main');
+            $newSamples = array_map(fn (string $path) => $optimize($path, 'products/main'), $oldSamples);
+            $newBefore = array_map(fn (string $path) => $optimize($path, 'products/before_images'), $oldBefore);
+
+            DB::transaction(function () use ($product, $oldCover, $newCover, $newSamples, $newBefore) {
+                $product->cover = $newCover;
+                $product->sample_outputs = $newSamples;
+                $product->before_images = $newBefore;
+                $product->images_optimized_at = now();
+                if ($oldCover && $product->thumbnail === $oldCover) $product->thumbnail = $newCover;
+                $product->save();
+            });
+            $committed = true;
+
+            $keptPaths = array_values(array_unique(array_filter(array_merge(
+                [$newCover, $product->thumbnail], $newSamples, $newBefore
+            ))));
+            $obsolete = array_values(array_diff($allOldPaths, $keptPaths));
+            if ($obsolete) Storage::disk('public')->delete($obsolete);
+
+            $afterBytes = 0;
+            foreach ($keptPaths as $path) {
+                if (Storage::disk('public')->exists($path)) $afterBytes += (int) Storage::disk('public')->size($path);
+            }
+
+            return response()->json([
+                'message' => $newlyCreated
+                    ? 'تمام تصاویر محصول با موفقیت بهینه شدند.'
+                    : 'تصاویر این محصول از قبل استاندارد بودند.',
+                'optimized_count' => count($newlyCreated),
+                'image_count' => count($allOldPaths),
+                'before_bytes' => $beforeBytes,
+                'after_bytes' => $afterBytes,
+                'cover_url' => $product->fresh()->displayImageUrl(),
+            ]);
+        } catch (\Throwable $error) {
+            if (!$committed && $newlyCreated) Storage::disk('public')->delete($newlyCreated);
+            report($error);
+            return response()->json(['message' => 'بهینه‌سازی تصاویر انجام نشد؛ فایل‌های قبلی بدون تغییر حفظ شدند.'], 500);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**

@@ -69,6 +69,7 @@
         <th>قیمت</th>
         <th>تعداد اجرا</th>
         <th>زمان اجرا / توکن مصرفی</th>
+        <th>بهینه‌سازی عکس</th>
         <th>وضعیت</th>
         <th>آخرین ویرایش</th>
         <th>عملیات</th>
@@ -154,6 +155,19 @@
             </div>
           </td>
 
+          <td data-label="بهینه‌سازی عکس">
+            <button type="button"
+                    class="product-image-optimize-btn icon-action-btn {{ $product->images_optimized_at ? 'is-optimized' : '' }}"
+                    data-product-id="{{ $product->id }}"
+                    data-state="{{ $product->images_optimized_at ? 'done' : 'idle' }}"
+                    data-url="{{ route('admin.products.optimize_images', $product) }}"
+                    title="{{ $product->images_optimized_at ? 'بهینه‌سازی انجام شده — آخرین بررسی: '.\App\Support\Jalali::formatNumeric($product->images_optimized_at) : 'بهینه‌سازی استاندارد تمام عکس‌های این محصول' }}"
+                    @if($product->images_optimized_at) style="color:var(--success);" @endif
+                    onclick="optimizeProductImagesFromTable(this)">
+              <i class="fa-solid {{ $product->images_optimized_at ? 'fa-circle-check' : 'fa-wand-magic-sparkles' }}"></i>
+            </button>
+          </td>
+
           <td data-label="وضعیت">
             @php
               $statusMap = [
@@ -210,7 +224,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="11" class="td-empty">
+          <td colspan="12" class="td-empty">
             <div class="empty-state">
               <div class="empty-state-icon"><i class="fa-solid fa-box-open"></i></div>
               <div class="empty-state-title">هنوز محصولی ثبت نشده است.</div>
@@ -229,3 +243,50 @@
   @include('admin.products.partials.pagination')
 
 </div>
+
+<script>
+function formatProductImageBytes(bytes) {
+  if (!Number.isFinite(Number(bytes))) return '—';
+  if (Number(bytes) < 1024 * 1024) return Math.max(1, Math.round(Number(bytes) / 1024)).toLocaleString('fa-IR') + ' کیلوبایت';
+  return (Number(bytes) / (1024 * 1024)).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) + ' مگابایت';
+}
+
+async function optimizeProductImagesFromTable(button) {
+  if (!button || button.dataset.state === 'processing') return;
+  const icon = button.querySelector('i');
+  button.dataset.state = 'processing';
+  button.disabled = true;
+  if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
+  button.style.color = 'var(--warning)';
+  button.title = 'در حال بهینه‌سازی تمام تصاویر محصول…';
+
+  try {
+    const response = await fetch(button.dataset.url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+      },
+      credentials: 'same-origin',
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.message || 'بهینه‌سازی تصاویر انجام نشد.');
+
+    button.dataset.state = 'done';
+    if (icon) icon.className = 'fa-solid fa-circle-check';
+    button.style.color = 'var(--success)';
+    button.title = (data.message || 'بهینه‌سازی انجام شد.') + ' حجم قبل: ' + formatProductImageBytes(data.before_bytes) + ' — حجم بعد: ' + formatProductImageBytes(data.after_bytes);
+    const row = button.closest('tr');
+    const cover = row?.querySelector('.td-thumb img');
+    if (cover && data.cover_url) cover.src = data.cover_url + (data.cover_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+  } catch (error) {
+    button.dataset.state = 'failed';
+    if (icon) icon.className = 'fa-solid fa-rotate-right';
+    button.style.color = 'var(--danger)';
+    button.title = error.message || 'خطا در بهینه‌سازی؛ برای تلاش مجدد کلیک کنید.';
+    alert(button.title);
+  } finally {
+    button.disabled = false;
+  }
+}
+</script>

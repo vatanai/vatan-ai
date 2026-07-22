@@ -49,6 +49,47 @@ class ProductImageOptimizer
         return $path;
     }
 
+    /**
+     * بهینه‌سازی امن یک تصویر موجود محصول. اگر فایل از قبل استاندارد باشد همان
+     * مسیر قبلی برگردانده می‌شود؛ در غیر این صورت فایل جدید ساخته می‌شود و حذف
+     * نسخه قبلی فقط پس از ذخیره موفق رکورد محصول بر عهده فراخواننده است.
+     */
+    public function optimizeStored(string $path, string $directory): string
+    {
+        $disk = Storage::disk('public');
+        if (!$disk->exists($path)) {
+            throw new RuntimeException('یکی از تصاویر محصول روی فضای ذخیره‌سازی پیدا نشد.');
+        }
+
+        $realPath = $disk->path($path);
+        $info = @getimagesize($realPath);
+        if (!$info || empty($info[0]) || empty($info[1])) {
+            throw new RuntimeException('یکی از فایل‌های محصول تصویر معتبری نیست.');
+        }
+
+        [$width, $height] = $info;
+        if ($width * $height > 40_000_000) {
+            throw new RuntimeException('ابعاد یکی از تصاویر بیش از حد مجاز است.');
+        }
+
+        $originalBytes = (int) $disk->size($path);
+        if (max($width, $height) <= self::MAX_EDGE && $originalBytes <= self::MAX_BYTES_WITHOUT_REENCODE) {
+            return $path;
+        }
+
+        $encoded = extension_loaded('imagick')
+            ? $this->withImagick($realPath, $width, $height)
+            : $this->withGd($realPath, $info['mime'] ?? '', $width, $height);
+
+        if (max($width, $height) <= self::MAX_EDGE && strlen($encoded) >= $originalBytes) {
+            return $path;
+        }
+
+        $newPath = trim($directory, '/') . '/' . Str::uuid() . '.webp';
+        $disk->put($newPath, $encoded);
+        return $newPath;
+    }
+
     private function targetSize(int $width, int $height): array
     {
         $scale = min(1, self::MAX_EDGE / max($width, $height));

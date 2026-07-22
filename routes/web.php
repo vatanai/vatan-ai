@@ -138,6 +138,7 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::post('/products/{product}/optimize-images', [ProductController::class, 'optimizeImages'])->name('products.optimize_images');
     Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');

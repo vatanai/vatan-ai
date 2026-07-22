@@ -36,4 +36,32 @@ class ProductImageOptimizerTest extends TestCase
         $this->assertSame(800, $info[1]);
         $this->assertSame(2.0, $info[0] / $info[1]);
     }
+
+    public function test_existing_suitable_product_image_keeps_the_same_path(): void
+    {
+        Storage::fake('public');
+        $source = UploadedFile::fake()->image('existing.jpg', 800, 600);
+        $path = $source->storeAs('products/main', 'existing.jpg', 'public');
+
+        $result = app(ProductImageOptimizer::class)->optimizeStored($path, 'products/main');
+
+        $this->assertSame($path, $result);
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_existing_large_product_image_creates_replacement_without_deleting_original(): void
+    {
+        Storage::fake('public');
+        $source = UploadedFile::fake()->image('existing-large.jpg', 2400, 1200);
+        $path = $source->storeAs('products/main', 'existing-large.jpg', 'public');
+
+        $result = app(ProductImageOptimizer::class)->optimizeStored($path, 'products/main');
+
+        $this->assertNotSame($path, $result);
+        $this->assertStringEndsWith('.webp', $result);
+        Storage::disk('public')->assertExists($path);
+        Storage::disk('public')->assertExists($result);
+        $info = getimagesizefromstring(Storage::disk('public')->get($result));
+        $this->assertSame([1600, 800], [$info[0], $info[1]]);
+    }
 }
