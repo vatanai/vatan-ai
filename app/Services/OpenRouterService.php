@@ -11,12 +11,14 @@ use Exception;
 class OpenRouterService
 {
     protected ?string $apiKey;
+    protected ?string $gatewaySecret;
     protected string $baseUrl;
     protected int $defaultTimeout;
 
     public function __construct()
     {
         $this->apiKey   = config('services.openrouter.api_key');
+        $this->gatewaySecret = config('services.openrouter.gateway_secret');
         $this->baseUrl  = rtrim(config('services.openrouter.base_url', 'https://openrouter.ai/api/v1'), '/');
         $this->defaultTimeout = (int) config('services.openrouter.timeout', 60);
     }
@@ -55,12 +57,7 @@ class OpenRouterService
 
         Log::info('OpenRouter: ارسال درخواست تولید تصویر', ['model' => $modelId, 'prompt_length' => strlen($prompt)]);
 
-        $response = Http::withToken($this->apiKey)
-            ->withHeaders([
-                'Content-Type' => 'application/json',
-                'HTTP-Referer' => config('app.url'),
-                'X-Title'      => config('app.name'),
-            ])
+        $response = Http::withHeaders($this->requestHeaders())
             ->timeout($this->defaultTimeout)
             ->post("{$this->baseUrl}/images", $payload);
 
@@ -137,12 +134,7 @@ class OpenRouterService
 
         Log::info('OpenRouter: ارسال درخواست ادیت تصویر', ['model' => $modelId, 'images_count' => count($base64Images)]);
 
-        $response = Http::withToken($this->apiKey)
-            ->withHeaders([
-                'Content-Type' => 'application/json',
-                'HTTP-Referer' => config('app.url'),
-                'X-Title'      => config('app.name'),
-            ])
+        $response = Http::withHeaders($this->requestHeaders())
             ->timeout($timeout)
             ->post("{$this->baseUrl}/chat/completions", $payload);
 
@@ -171,6 +163,23 @@ class OpenRouterService
             : (json_decode($fallbacks ?? '[]', true) ?? []);
 
         return array_values(array_filter(array_merge([$primary], $list)));
+    }
+
+    /** هدرهای مشترک برای اتصال مستقیم یا گیت‌وی امن Cloudflare. */
+    protected function requestHeaders(): array
+    {
+        $headers = [
+            'Authorization' => 'Bearer ' . $this->apiKey,
+            'Content-Type' => 'application/json',
+            'HTTP-Referer' => config('app.url'),
+            'X-Title' => config('app.name'),
+        ];
+
+        if (!empty($this->gatewaySecret)) {
+            $headers['X-Vatan-Gateway-Key'] = $this->gatewaySecret;
+        }
+
+        return $headers;
     }
 
     // ─────────────────────────────────────────────────────────────────────

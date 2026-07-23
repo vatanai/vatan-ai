@@ -38,6 +38,7 @@ return [
     'openrouter' => [
         'api_key' => env('OPENROUTER_API_KEY'),
         'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'gateway_secret' => env('OPENROUTER_GATEWAY_SECRET'),
         'timeout' => env('OPENROUTER_TIMEOUT', 60),
     ],
 

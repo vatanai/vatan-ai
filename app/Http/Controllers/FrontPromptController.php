@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Prompt;
+use App\Services\OpenRouterService;
 
 class FrontPromptController extends Controller
 {
@@ -22,7 +22,7 @@ class FrontPromptController extends Controller
     /**
      * پردازش تصویر آژاکس بر اساس مستندات رسمی ۲۰۲۶ OpenRouter Images API
      */
-    public function generateImage(Request $request, $id)
+    public function generateImage(Request $request, $id, OpenRouterService $openRouter)
     {
         $promptModel = Prompt::findOrFail($id);
 
@@ -67,12 +67,7 @@ class FrontPromptController extends Controller
             }
 
             // ۵. شلیک ریکوئست دقیقاً مطابق با آخرین مستندات ارسالی شما
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'Content-Type'  => 'application/json',
-                'HTTP-Referer'  => config('app.url', 'https://aivatan.liara.run'),
-                'X-Title'       => config('app.name', 'Uniset AI'),
-            ])->timeout(150)->post('https://openrouter.ai/api/v1/images', [
+            $result = $openRouter->generateImageFromPrompt($model, $finalPrompt, '1K', '1:1', 1, [
                 'model'        => $model,
                 'prompt'       => $finalPrompt,
                 'resolution'   => '1K',
@@ -87,19 +82,6 @@ class FrontPromptController extends Controller
                 ]
             ]);
 
-            // ۶. بررسی وضعیت خطا یا عدم دسترسی به کلاینت اوپن‌روتر
-            if ($response->failed()) {
-                Log::error('OpenRouter Response Error Body: ' . $response->body());
-                $errorData = $response->json();
-                $errMessage = $errorData['error']['message'] ?? 'خطای غیرمنتظره در سرورهای هوش مصنوعی.';
-                return response()->json([
-                    'success' => false,
-                    'message' => 'پاسخ ناموفق API: ' . $errMessage
-                ], 500);
-            }
-
-            $result = $response->json();
-            
             // 🟢 اصلاح ساختاری بر اساس مستندات شما: استخراج مستقیم داده از b64_json
             $rawBase64Image = $result['data'][0]['b64_json'] ?? null;
 
