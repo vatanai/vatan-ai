@@ -160,11 +160,13 @@
     recalculateCost();
   });
   root.querySelectorAll('[data-ratio]').forEach((input) => input.addEventListener('change', () => {
-    root.querySelector('[data-ratio-label]').textContent = input.nextElementSibling.querySelector('b').textContent;
+    const ratioLabel = root.querySelector('[data-ratio-label]');
+    const selectedLabel = input.nextElementSibling?.querySelector('b');
+    if (ratioLabel && selectedLabel) ratioLabel.textContent = selectedLabel.textContent;
   }));
 
-  root.querySelector('[data-action=reset]').addEventListener('click', () => window.location.reload());
-  root.querySelector('[data-action=generate]').addEventListener('click', async () => {
+  root.querySelector('[data-action=reset]')?.addEventListener('click', () => window.location.reload());
+  root.querySelector('[data-action=generate]')?.addEventListener('click', async () => {
     const requiredUploadField = [...form.querySelectorAll('.cw-field')].find((field) => field.querySelector('input[type=file]') && field.querySelector('.cw-label b'));
     const requiredUpload = requiredUploadField?.querySelector('.cw-upload');
     if (requiredUpload && !requiredUpload.querySelector('input[type=file]').files.length) {
@@ -219,11 +221,11 @@
   root.querySelectorAll('.cw-result-strip button').forEach((button) => button.addEventListener('click', () => {
     root.querySelectorAll('.cw-result-strip button').forEach((item) => item.classList.toggle('active', item === button));
   }));
-  root.querySelector('[data-action=download]').addEventListener('click', () => {
+  root.querySelector('[data-action=download]')?.addEventListener('click', () => {
     const url = root.querySelector('[data-result] > img').src;
     if (!url) return;
     const link = document.createElement('a'); link.href = url; link.download = 'vatan-ai-output.png'; link.target = '_blank'; link.click();
   });
-  root.querySelector('[data-action=regenerate]').addEventListener('click', () => root.querySelector('[data-action=generate]').click());
+  root.querySelector('[data-action=regenerate]')?.addEventListener('click', () => root.querySelector('[data-action=generate]')?.click());
   updateReadiness();
 }());
