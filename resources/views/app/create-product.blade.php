@@ -11,5 +11,5 @@
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-workspace.js') }}"></script>
+  <script src="{{ asset('js/create-workspace.js') }}?v={{ filemtime(public_path('js/create-workspace.js')) }}"></script>
 @endpush

@@ -63,24 +63,73 @@
     const preview = upload.nextElementSibling;
     ['dragenter', 'dragover'].forEach((name) => upload.addEventListener(name, (event) => { event.preventDefault(); upload.classList.add('dragging'); }));
     ['dragleave', 'drop'].forEach((name) => upload.addEventListener(name, (event) => { event.preventDefault(); upload.classList.remove('dragging'); }));
-    upload.addEventListener('drop', (event) => renderFiles(event.dataTransfer.files));
+    upload.addEventListener('drop', (event) => {
+      const transfer = new DataTransfer();
+      [...event.dataTransfer.files].forEach((file) => transfer.items.add(file));
+      input.files = transfer.files;
+      renderFiles(input.files);
+    });
     input.addEventListener('change', () => renderFiles(input.files));
-    function renderFiles(files) {
+    async function renderFiles(files) {
+      const maxFiles = Number(input.dataset.maxFiles || (input.multiple ? 3 : 1));
+      const selected = [...files].slice(0, maxFiles);
+      if (files.length > maxFiles) {
+        alertText.textContent = `حداکثر ${maxFiles.toLocaleString('fa-IR')} عکس قابل استفاده است؛ عکس‌های اضافه انتخاب نشدند.`;
+        alertBox.hidden = false;
+        const transfer = new DataTransfer(); selected.forEach((file) => transfer.items.add(file)); input.files = transfer.files;
+      }
       preview.innerHTML = '';
-      [...files].slice(0, input.multiple ? 4 : 1).forEach((file) => {
+      selected.forEach((file, index) => {
         const item = document.createElement('div'); item.className = 'cw-preview-item';
         if (file.type.startsWith('image/')) {
           const image = document.createElement('img'); image.src = URL.createObjectURL(file); item.appendChild(image);
         } else { item.innerHTML = '<i class="fa-solid fa-file"></i>'; }
-        const name = document.createElement('span'); name.textContent = file.name; item.appendChild(name); preview.appendChild(item);
+        const name = document.createElement('span'); name.textContent = file.name; item.appendChild(name);
+        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'cw-preview-remove'; remove.setAttribute('aria-label', 'حذف عکس'); remove.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        remove.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); const transfer = new DataTransfer(); selected.filter((_, fileIndex) => fileIndex !== index).forEach((kept) => transfer.items.add(kept)); input.files = transfer.files; renderFiles(input.files); });
+        item.appendChild(remove); preview.appendChild(item);
       });
-      if (input.accept.includes('image') && files.length) { hasPrimaryImage = true; updateReadiness(); }
-      if (input.accept.includes('image') && files.length) {
-        alertBox.hidden = true;
+      if (input.accept.includes('image')) { hasPrimaryImage = [...root.querySelectorAll('[data-upload-input][accept*="image"]')].some((imageInput) => imageInput.files.length); updateReadiness(); }
+      if (input.accept.includes('image') && selected.length) {
         upload.style.borderColor = '';
+        const warnings = (await Promise.all(selected.map(checkImageQuality))).filter(Boolean);
+        if (warnings.length) {
+          alertText.textContent = warnings[0] + ' می‌توانید عکس را عوض کنید یا با همین عکس ادامه دهید.';
+          alertBox.hidden = false;
+        } else if (files.length <= maxFiles) alertBox.hidden = true;
       }
     }
   });
+
+  async function checkImageQuality(file) {
+    if (!file.type.startsWith('image/')) return '';
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch (_) {
+      return '';
+    }
+    // این هشدار صرفاً برای تصاویر واقعاً خیلی کوچک است. عکس‌های موبایل، تصاویر
+    // برش‌خورده و ورودی‌های رایج ۵۱۲ پیکسلی نباید بی‌دلیل کم‌کیفیت اعلام شوند.
+    if (Math.min(bitmap.width, bitmap.height) < 360 && Math.max(bitmap.width, bitmap.height) < 720) {
+      return `ابعاد «${file.name}» خیلی کوچک است؛ برای نتیجه بهتر تصویر بزرگ‌تری انتخاب کنید.`;
+    }
+    if ('FaceDetector' in window) {
+      try {
+        const faces = await new FaceDetector({ fastMode: true, maxDetectedFaces: 3 }).detect(bitmap);
+        // نبودن تشخیص یا چندچهره بودن به‌تنهایی نشانه کیفیت پایین نیست و بین
+        // مرورگرها خطای مثبت کاذب زیادی دارد. فقط چهره بسیار دور را یادآوری کن.
+        if (faces.length === 1) {
+          const box = faces[0].boundingBox;
+          if (Math.min(box.width / bitmap.width, box.height / bitmap.height) < .10) {
+            return `چهره در «${file.name}» خیلی دور است؛ عکس نزدیک‌تر نتیجه بهتری می‌دهد.`;
+          }
+        }
+      } catch (_) {}
+    }
+    bitmap.close?.();
+    return '';
+  }
 
   const baseCost = Number(root.querySelector('[data-cost]').textContent);
   function recalculateCost() {
@@ -94,18 +143,30 @@
         else if ((!['checkbox','radio'].includes(control.type) || control.checked) && control.dataset.optionCredit) extra += Number(control.dataset.optionCredit || 0);
       });
     });
+    const identity = root.querySelector('[data-identity-toggle]');
+    if (identity?.checked) extra += Number(identity.closest('[data-identity-extra]')?.dataset.identityExtra || 0);
     root.querySelector('[data-cost]').textContent = baseCost + extra;
   }
   form.addEventListener('change', recalculateCost);
   form.addEventListener('input', recalculateCost);
   recalculateCost();
+  root.querySelector('[data-identity-toggle]')?.addEventListener('change', (event) => {
+    const grade = root.querySelector('[data-grade-label]');
+    if (grade) grade.textContent = event.target.checked ? 'Grade A · High' : 'Grade B · Medium';
+    if (event.target.checked) {
+      alertText.textContent = 'برای شباهت بهتر، ۲ یا ۳ عکس واضح از زاویه‌های مختلف اضافه کنید.';
+      alertBox.hidden = false;
+    }
+    recalculateCost();
+  });
   root.querySelectorAll('[data-ratio]').forEach((input) => input.addEventListener('change', () => {
     root.querySelector('[data-ratio-label]').textContent = input.nextElementSibling.querySelector('b').textContent;
   }));
 
   root.querySelector('[data-action=reset]').addEventListener('click', () => window.location.reload());
   root.querySelector('[data-action=generate]').addEventListener('click', async () => {
-    const requiredUpload = form.querySelector('.cw-field:has(input[type=file]) .cw-label b')?.closest('.cw-field')?.querySelector('.cw-upload');
+    const requiredUploadField = [...form.querySelectorAll('.cw-field')].find((field) => field.querySelector('input[type=file]') && field.querySelector('.cw-label b'));
+    const requiredUpload = requiredUploadField?.querySelector('.cw-upload');
     if (requiredUpload && !requiredUpload.querySelector('input[type=file]').files.length) {
       alertText.textContent = 'برای ادامه، تصویر الزامی را اضافه کنید.';
       alertBox.hidden = false; requiredUpload.style.borderColor = 'var(--red)';
@@ -130,7 +191,15 @@
     root.querySelectorAll('[data-field-type=resolution] input:checked').forEach((input) => data.append('output[quality]', input.value));
     try {
       const response = await fetch(root.dataset.generateUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' }, body: data });
-      const payload = await response.json();
+      const responseText = await response.text();
+      let payload = {};
+      try { payload = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
+      if (response.status === 401 || response.status === 419) {
+        throw new Error('نشست شما منقضی شده است؛ صفحه را تازه‌سازی کنید و دوباره وارد شوید.');
+      }
+      if (!response.ok && !payload.message && !payload.errors) {
+        throw new Error(response.status >= 500 ? 'ارتباط با سرویس ساخت تصویر برقرار نشد. لطفاً دوباره تلاش کنید.' : 'درخواست ساخت تصویر پذیرفته نشد.');
+      }
       if (!response.ok || !payload.success) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'ساخت تصویر انجام نشد.');
       const images = payload.images?.length ? payload.images : [{ url: payload.image_url, title: '' }];
       const main = result.querySelector(':scope > img'); main.src = images[0].url;
