@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\User;
+use App\Support\PhoneNumber;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -23,8 +24,17 @@ class UserPhoneNormalizationTest extends TestCase
             ['9121234567'],
             ['+989121234567'],
             ['00989121234567'],
+            ['989121234567'],
+            ['+۹۸۹۱۲۱۲۳۴۵۶۷'],
             ['۰۹۱۲۱۲۳۴۵۶۷'],
             ['0912 123 4567'],
         ];
+    }
+
+    #[DataProvider('phoneVariants')]
+    public function test_normalizer_returns_the_database_key(string $input): void
+    {
+        self::assertSame('09121234567', PhoneNumber::normalize($input));
+        self::assertTrue(PhoneNumber::isValid(PhoneNumber::normalize($input)));
     }
 }

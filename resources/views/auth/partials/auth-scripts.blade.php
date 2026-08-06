@@ -62,10 +62,16 @@ function validatePhone(phone) {
 function normalizePhoneDigits(value) {
   const fa = '۰۱۲۳۴۵۶۷۸۹';
   const ar = '٠١٢٣٤٥٦٧٨٩';
-  return String(value).trim()
+  let phone = String(value).trim()
     .replace(/[۰-۹]/g, digit => String(fa.indexOf(digit)))
     .replace(/[٠-٩]/g, digit => String(ar.indexOf(digit)))
     .replace(/[\s\-()]/g, '');
+
+  if (phone.startsWith('+98')) return '0' + phone.slice(3);
+  if (phone.startsWith('0098')) return '0' + phone.slice(4);
+  if (phone.startsWith('98') && phone.length === 12) return '0' + phone.slice(2);
+  if (/^9\d{9}$/.test(phone)) return '0' + phone;
+  return phone;
 }
 
 function normalizeOtpDigits(value) {
