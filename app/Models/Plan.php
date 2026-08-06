@@ -104,7 +104,12 @@ class Plan extends Model
     public function offerFor(?User $user): array
     {
         $segment = $user?->customer_segment ?: 'regular';
-        $override = ($this->audience_overrides ?? [])[$segment] ?? [];
+        // داده‌های پلن‌ها ممکن است از نسخه‌های قدیمی یا ورود دستی ادمین آمده
+        // باشند؛ در این حالت نباید یک مقدار JSON نامعتبر صفحه‌ی عمومی را ۵۰۰ کند.
+        $audienceOverrides = $this->audience_overrides;
+        $audienceOverrides = is_array($audienceOverrides) ? $audienceOverrides : [];
+        $override = $audienceOverrides[$segment] ?? [];
+        $override = is_array($override) ? $override : [];
 
         return [
             'segment' => $segment,
