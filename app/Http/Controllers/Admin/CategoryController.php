@@ -21,7 +21,10 @@ class CategoryController extends Controller
         // UNION باعث می‌شود هر اتصال محصول/دسته فقط یک‌بار در آمار شمرده شود.
         $productStats = DB::query()
             ->fromSub($this->categoryProductPairs(), 'category_products')
-            ->join('products', 'products.id', '=', 'category_products.product_id')
+            ->join('products', function ($join) {
+                $join->on('products.id', '=', 'category_products.product_id')
+                    ->whereNull('products.deleted_at');
+            })
             ->selectRaw('category_products.category_id, COUNT(DISTINCT category_products.product_id) as products_count, MAX(products.created_at) as last_product_at')
             ->groupBy('category_products.category_id')
             ->get()
@@ -105,10 +108,16 @@ class CategoryController extends Controller
     {
         $legacy = DB::table('products')
             ->whereNotNull('category_id')
+            ->whereNull('deleted_at')
             ->select('category_id', DB::raw('id as product_id'));
 
         return $legacy->union(
-            DB::table('category_product')->select('category_id', 'product_id')
+            DB::table('category_product')
+                ->join('products', function ($join) {
+                    $join->on('products.id', '=', 'category_product.product_id')
+                        ->whereNull('products.deleted_at');
+                })
+                ->select('category_product.category_id', 'category_product.product_id')
         );
     }
 

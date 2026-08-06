@@ -764,21 +764,7 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
-        if ($product->cover) Storage::disk('public')->delete($product->cover);
-        if ($product->new_product_icon) Storage::disk('public')->delete($product->new_product_icon);
-        if ($product->og_image) Storage::disk('public')->delete($product->og_image);
-
-        if (is_array($product->sample_outputs)) {
-            foreach ($product->sample_outputs as $path) {
-                Storage::disk('public')->delete($path);
-            }
-        }
-        if (is_array($product->before_images)) {
-            foreach ($product->before_images as $path) Storage::disk('public')->delete($path);
-        }
-
-        $product->delete();
+        $this->removeProduct($product);
         return redirect()->route('admin.products')->with('success', 'محصول حذف شد.');
     }
 
@@ -1021,13 +1007,35 @@ class ProductController extends Controller
                 break;
             case 'delete':
                 foreach ($products->get() as $product) {
-                    if ($product->thumbnail) Storage::disk('public')->delete($product->thumbnail);
+                    $this->removeProduct($product);
                 }
-                $products->delete();
                 break;
         }
 
         return redirect()->route('admin.products')->with('success', 'عملیات گروهی انجام شد.');
+    }
+
+    /**
+     * حذف قطعی از فهرست عمومی: وضعیت را غیرفعال و رکورد را soft-delete می‌کند.
+     * این ترکیب حتی مسیرهای قدیمیِ فیلترشده فقط با status را هم پوشش می‌دهد.
+     */
+    private function removeProduct(Product $product): void
+    {
+        foreach ([
+            $product->thumbnail,
+            $product->cover,
+            $product->new_product_icon,
+            $product->og_image,
+            ...((array) $product->sample_outputs),
+            ...((array) $product->before_images),
+        ] as $path) {
+            if (is_string($path) && $path !== '') {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
+        $product->forceFill(['status' => 'inactive'])->saveQuietly();
+        $product->delete();
     }
 
     /** اتصال آزمایش‌هایی که پیش از اولین ذخیره محصول اجرا شده‌اند به رکورد محصول. */
