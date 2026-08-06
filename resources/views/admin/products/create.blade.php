@@ -35,6 +35,15 @@
             <i class="fa-solid fa-arrow-right text-[11px]"></i>
             بازگشت به لیست
           </a>
+          @if($product)
+            <a href="{{ route('admin.lab.create', ['product_id' => $product->id]) }}" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--primary-l)] text-[var(--primary)] border border-[var(--primary-m)] transition-all no-underline">
+              <i class="fa-solid fa-flask text-[11px]"></i> آزمایش این محصول
+            </a>
+          @else
+            <button type="button" onclick="submitProductAndOpenLab()" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--primary-l)] text-[var(--primary)] border border-[var(--primary-m)] transition-all">
+              <i class="fa-solid fa-flask text-[11px]"></i> ثبت و آزمایش
+            </button>
+          @endif
         </div>
       </div>
 
@@ -113,7 +122,7 @@
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] mb-0.5 transition-colors">گام اول</div>
               <div class="step-title text-xs font-bold transition-colors">هویت محصول</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">اطلاعات پایه، برچسب و رسانه</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">اطلاعات پایه محصول</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-1"></span>
@@ -144,8 +153,8 @@
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-3" data-num="۳">۳</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام سوم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">ورودی و متغیرها</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">فیلدهای فرم کاربر</div>
+              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">ویژگی‌های محصول</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">نمونه و فرم کاربر</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-3"></span>
@@ -160,8 +169,8 @@
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-4" data-num="۴">۴</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام چهارم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">آزمایشگاه محصول</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">تجربه کاربر و مقایسه مدل‌ها</div>
+              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-4"></span>
@@ -171,38 +180,12 @@
 
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-4"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-4-m"></div>
-
           <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-5" onclick="goStep(5)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-5" data-num="۵">۵</div>
-            <div class="flex-1 min-w-0">
-              <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام پنجم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
-            </div>
-            <div class="shrink-0 flex items-center gap-1.5 pr-1">
-              <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-5"></span>
-              <span class="step-check hidden text-[var(--green)]" id="step-check-5" title="این مرحله کامل شده"><i class="fa-solid fa-circle-check text-sm"></i></span>
-            </div>
+            <div class="flex-1 min-w-0"><div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام پنجم</div><div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">بازبینی نهایی</div><div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مرور و ثبت محصول</div></div>
+            <div class="shrink-0 flex items-center gap-1.5 pr-1"><span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-5"></span><span class="step-check hidden text-[var(--green)]" id="step-check-5"><i class="fa-solid fa-circle-check text-sm"></i></span></div>
           </div>
-
-          <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-5"></div>
-          <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-5-m"></div>
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-6" onclick="goStep(6)">
-            <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-6" data-num="۶">۶</div>
-            <div class="flex-1 min-w-0"><div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام ششم</div><div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">بازبینی نهایی</div><div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">مرور و ثبت محصول</div></div>
-            <div class="shrink-0 flex items-center gap-1.5 pr-1"><span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-6"></span><span class="step-check hidden text-[var(--green)]" id="step-check-6"><i class="fa-solid fa-circle-check text-sm"></i></span></div>
-          </div>
-
         </div>
-      </div>
-
-      {{-- نوار پیشرفت کلی فرم (بند ۴۳ و ۴۷) — توپر و ضخیم، از راست به چپ، بر اساس مجموع فیلدهای اجباری کل فرم --}}
-      <div class="mb-7 bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-3.5">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[11px] font-bold text-[var(--text2)] flex items-center gap-1.5"><i class="fa-solid fa-gauge-high text-[var(--accent)] text-[11px]"></i> پیشرفت تکمیل فرم</span>
-          <span class="text-[11px] font-bold font-mono text-[var(--text)]" id="wizard-progress-pct">۰٪</span>
-        </div>
-        <div id="wizard-progress-track"><div id="wizard-progress-fill"></div></div>
       </div>
 
       {{-- در حالت ویرایش، فرم باید PUT به‌سمت update() برود نه POST به store() — وگرنه (باگ قبلی)
@@ -215,12 +198,14 @@
           @method('PUT')
         @endif
         <input type="hidden" name="status" id="product-status" value="active">
+        <input type="hidden" name="open_lab_after_save" id="open-lab-after-save" value="0">
         @if($duplicateFrom)
           <input type="hidden" name="duplicate_from" value="{{ $duplicateFrom->id }}">
         @endif
 
         <div class="block space-y-4" id="panel-1">
           @include('admin.products.partials.step-1', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
+          @include('admin.products.partials.future-updates')
         </div>
 
         {{-- ═══ گام دوم: هوش مصنوعی — پایپ‌لاین و پرامپت ═══ --}}
@@ -233,18 +218,13 @@
           @include('admin.products.partials.step-3', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
-        {{-- ═══ گام چهارم: آزمایشگاه محصول ═══ --}}
+        {{-- ═══ گام چهارم: خروجی و قیمت ═══ --}}
         <div class="hidden space-y-4" id="panel-4">
-          @include('admin.products.partials.step-test-lab', ['aiModels' => $aiModels, 'product' => $product])
-        </div>
-
-        {{-- ═══ گام پنجم: خروجی و قیمت ═══ --}}
-        <div class="hidden space-y-4" id="panel-5">
           @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
-        {{-- ═══ گام ششم: بازبینی نهایی ═══ --}}
-        <div class="hidden space-y-4" id="panel-6">
+        {{-- ═══ گام پنجم: بازبینی نهایی ═══ --}}
+        <div class="hidden space-y-4" id="panel-5">
           @include('admin.products.partials.step-5', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
       </form>
@@ -254,19 +234,25 @@
       <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] hover:text-[var(--text)] transition-all order-1" id="btn-prev" onclick="prevStep()" style="display:none;">
         <i class="fa-solid fa-arrow-right"></i> <span class="hidden sm:inline">مرحله قبل</span>
       </button>
-      <div class="flex flex-col items-center gap-0.5 order-3 sm:order-2 w-full sm:w-auto text-center">
-        <div class="text-xs text-[var(--text3)]"> مرحله <strong class="text-[var(--text)]" id="step-label-num">۱</strong> از ۶ </div>
-        <div class="text-[10px] text-[var(--text3)]">پیش‌نویس فقط با دکمه ذخیره می‌شود</div>
+      <div class="flex-1 min-w-[220px] max-w-xl order-3 sm:order-2 w-full">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[10.5px] font-bold text-[var(--text2)]"><i class="fa-solid fa-gauge-high text-[var(--accent)] ml-1"></i> پیشرفت موارد اجباری</span>
+          <span class="text-[10.5px] font-bold text-[var(--text)]" id="wizard-progress-pct">۰٪</span>
+        </div>
+        <div id="wizard-progress-track"><div id="wizard-progress-fill"></div></div>
+        <div class="text-[9.5px] text-[var(--text3)] mt-1 text-center">مرحله <strong id="step-label-num">۱</strong> از ۵ · پیش‌نویس فقط با دکمه ذخیره می‌شود</div>
       </div>
       <div class="flex gap-2 order-2 sm:order-3">
-        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] hover:text-[var(--text)] transition-all" id="btn-draft" onclick="submitForm('draft')">
-          <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">ذخیره پیش‌نویس</span>
-        </button>
         <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all" id="btn-next" onclick="nextStep()">
           <span class="hidden sm:inline">مرحله بعد</span> <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--green)] text-white hover:bg-[var(--green-hover)] transition-all" id="btn-submit" onclick="submitForm('active')" style="display:none;">
-          <i class="fa-solid fa-check"></i> <span class="hidden sm:inline">ثبت نهایی محصول</span>
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] hover:text-[var(--text)] transition-all" id="btn-draft" onclick="submitForm('draft')">
+          <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">ذخیره در پیش‌نویس</span>
+        </button>
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 md:px-5 h-10 rounded-xl text-xs font-bold cursor-pointer bg-[var(--b1)] text-[var(--text3)] border border-[var(--b2)] transition-all" id="btn-submit" onclick="submitForm('active')" aria-disabled="true">
+          <i class="fa-solid fa-lock" id="final-submit-icon"></i>
+          <span class="hidden sm:inline">ثبت نهایی محصول</span>
+          <span id="final-submit-progress" class="inline-flex items-center justify-center min-w-10 h-6 px-1.5 rounded-md bg-[var(--s2)]/70 text-[10px]" dir="ltr">۰/۰</span>
         </button>
       </div>
     </div>
@@ -283,6 +269,7 @@
             'id' => $m->openrouter_model_id,
             'name' => $m->name,
             'provider' => $m->provider_name,
+            'apiProvider' => $m->provider ?? 'openrouter',
         ];
     });
     $fbIdxStart = count(old('fallback_models', optional($duplicateFrom)->fallback_models ?? []));
@@ -291,7 +278,14 @@
 {{-- مقادیر پویا (مدل‌های AI، ایندکس‌های شروع، زیردسته انتخابی) اینجا به JS تزریق می‌شوند؛
      تمام منطق واقعی در public/admin/js/products-create.js نگه‌داری می‌شود --}}
 <script>
+function submitProductAndOpenLab() {
+  const target = document.getElementById('open-lab-after-save');
+  if (target) target.value = '1';
+  if (typeof submitForm === 'function') submitForm('draft');
+  else document.getElementById('real-product-form')?.submit();
+}
 window.PRODUCT_CREATE_CONFIG = {
+  isFreshProduct: {{ (!$product && !$duplicateFrom && !session()->hasOldInput()) ? 'true' : 'false' }},
   aiModels: @json($aiModelsForJs),
   fbIdxStart: {{ $fbIdxStart }},
   fieldIdxStart: {{ $fieldIdxStart }},

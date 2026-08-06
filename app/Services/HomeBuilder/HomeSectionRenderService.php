@@ -14,6 +14,10 @@ use Illuminate\Support\Collection;
  */
 class HomeSectionRenderService
 {
+    public function __construct(protected HomeSectionLinkService $linkService)
+    {
+    }
+
     /**
      * @return array{section: HomeSection, products?: Collection, categories?: Collection}
      */
@@ -22,7 +26,8 @@ class HomeSectionRenderService
         return match ($section->type) {
             'product_slider', 'product_grid', 'collection' => [
                 'section' => $section,
-                'products' => $this->resolveProducts($section),
+                'products' => $this->productsForDisplay($section),
+                'viewAllUrl' => $this->linkService->viewAllUrl($section),
             ],
             'category_slider' => $this->prepareCategorySlider($section),
             default => [
@@ -43,10 +48,28 @@ class HomeSectionRenderService
         $data = [
             'section' => $section,
             'categories' => $categories,
+            'viewAllUrl' => $this->linkService->viewAllUrl($section),
         ];
 
         if ($section->layout === 'tabs' && $categories->isNotEmpty()) {
-            $data['productsByCategory'] = $this->resolveTabsProductsByCategory($section, $categories);
+            $productsByCategory = $this->resolveTabsProductsByCategory($section, $categories);
+            if ($this->shouldFillEmptySpaces($section)) {
+                $perTab = max(1, min(20, (int) $section->setting('products_per_tab', 8)));
+                $productsByCategory = $productsByCategory->map(
+                    fn (Collection $products) => $this->repeatProductsToTarget($products, $perTab)
+                );
+            }
+            $data['productsByCategory'] = $productsByCategory;
+            $allTabProducts = $productsByCategory
+                ->flatten(1)
+                ->unique('id')
+                ->values();
+            $data['allTabProducts'] = $this->shouldFillEmptySpaces($section)
+                ? $this->repeatProductsToTarget(
+                    $allTabProducts,
+                    max(1, min(20, (int) $section->setting('products_per_tab', 8)))
+                )
+                : $allTabProducts;
         }
 
         return $data;
@@ -94,8 +117,12 @@ class HomeSectionRenderService
                 $subcategoryValue = $section->setting('subcategory_value');
 
                 if (! empty($categoryId)) {
-                    $query->whereHas('categories', function ($q) use ($categoryId) {
-                        $q->where('categories.id', $categoryId);
+                    $categoryIds = $this->categoryAndDescendantIds((int) $categoryId);
+                    $query->where(function ($builder) use ($categoryIds) {
+                        $builder->whereIn('category_id', $categoryIds)
+                            ->orWhereHas('categories', function ($q) use ($categoryIds) {
+                                $q->whereIn('categories.id', $categoryIds);
+                            });
                     });
                 }
                 if (! empty($categoryValue)) {
@@ -126,6 +153,80 @@ class HomeSectionRenderService
         }
 
         return $query->limit($limit)->get();
+    }
+
+    /**
+     * در حالت پرکننده، محصول تازه یا انتخاب اصلی همیشه در ابتدای Collection می‌ماند
+     * و فقط کمبود انتهای مدل نمایشی با چرخش همان محصولات جبران می‌شود.
+     */
+    protected function productsForDisplay(HomeSection $section): Collection
+    {
+        $products = $this->resolveProducts($section)->values();
+        if (! $this->shouldFillEmptySpaces($section) || $products->isEmpty()) {
+            return $products;
+        }
+
+        return $this->repeatProductsToTarget($products, $this->fillTarget($section));
+    }
+
+    protected function shouldFillEmptySpaces(HomeSection $section): bool
+    {
+        return filter_var($section->setting('fill_empty_spaces', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    protected function fillTarget(HomeSection $section): int
+    {
+        $limit = max(1, min(24, (int) $section->setting('limit', 8)));
+
+        if ($section->type === 'product_grid') {
+            return match ($section->layout) {
+                'bento' => 6,
+                'family_duo' => 2,
+                'editorial' => $this->roundUpToMultiple($limit, 3, true),
+                'hover_showcase', 'hover_library' => max(1, min(5, (int) $section->setting('hover_grid_cols', 4)))
+                    * max(1, min(8, (int) $section->setting('hover_grid_rows', 4))),
+                'two_col' => $this->roundUpToMultiple($limit, 2),
+                'four_col' => $this->roundUpToMultiple($limit, 4),
+                default => $this->roundUpToMultiple($limit, 6),
+            };
+        }
+
+        if ($section->type === 'product_slider'
+            && (string) $section->setting('display_mode', 'scroll') === 'grid'
+            && in_array($section->layout, ['default', 'compact'], true)) {
+            $cols = max(2, min(4, (int) $section->setting('grid_cols', 3)));
+            $multiple = $cols === 3 ? 6 : $cols;
+
+            return $this->roundUpToMultiple($limit, $multiple);
+        }
+
+        return $limit;
+    }
+
+    protected function roundUpToMultiple(int $value, int $multiple, bool $mustBeOdd = false): int
+    {
+        $rounded = (int) (ceil($value / $multiple) * $multiple);
+        while ($mustBeOdd && $rounded % 2 === 0) {
+            $rounded += $multiple;
+        }
+
+        return $rounded;
+    }
+
+    protected function repeatProductsToTarget(Collection $products, int $target): Collection
+    {
+        $source = $products->values();
+        if ($source->isEmpty() || $source->count() >= $target) {
+            return $source;
+        }
+
+        $filled = $source->all();
+        $sourceCount = $source->count();
+        for ($index = $sourceCount; $index < $target; $index++) {
+            $filled[] = $source[$index % $sourceCount];
+        }
+
+        return collect($filled);
     }
 
     /**
@@ -183,7 +284,11 @@ class HomeSectionRenderService
         $perTab = (int) $section->setting('products_per_tab', 8);
         $perTab = $perTab > 0 ? min($perTab, 20) : 8;
 
-        $categoryIds = $categories->pluck('id')->all();
+        $allCategories = Category::query()->active()->get(['id', 'parent_id']);
+        $categoryGroups = $categories->mapWithKeys(function (Category $category) use ($allCategories) {
+            return [$category->id => $this->descendantIdsFromCollection($category->id, $allCategories)];
+        });
+        $categoryIds = $categoryGroups->flatten()->unique()->values()->all();
 
         // سقف ایمن روی کل Query (نه فقط هر تب) تا در کاتالوگ‌های بزرگ حجم واکشی نامحدود نشود.
         $safetyLimit = min(500, max(50, $perTab * count($categoryIds) * 3));
@@ -199,13 +304,38 @@ class HomeSectionRenderService
             ->get();
 
         $byCategory = collect();
-        foreach ($categoryIds as $categoryId) {
-            $byCategory[$categoryId] = $products
-                ->filter(fn (Product $product) => $product->categories->contains('id', $categoryId))
+        foreach ($categories as $category) {
+            $groupIds = $categoryGroups->get($category->id, collect([$category->id]));
+            $byCategory[$category->id] = $products
+                ->filter(fn (Product $product) => $groupIds->contains((int) $product->category_id)
+                    || $product->categories->contains(fn (Category $related) => $groupIds->contains((int) $related->id)))
                 ->take($perTab)
                 ->values();
         }
 
         return $byCategory;
+    }
+
+    /** شناسه خود دسته و تمام زیرشاخه‌های آن، برای نمایش صحیح دسته‌های درختی در Home. */
+    protected function categoryAndDescendantIds(int $categoryId): array
+    {
+        $categories = Category::query()->active()->get(['id', 'parent_id']);
+
+        return $this->descendantIdsFromCollection($categoryId, $categories)->all();
+    }
+
+    protected function descendantIdsFromCollection(int $categoryId, Collection $categories): Collection
+    {
+        $ids = collect([$categoryId]);
+        $frontier = collect([$categoryId]);
+
+        while ($frontier->isNotEmpty()) {
+            $children = $categories->whereIn('parent_id', $frontier)->pluck('id')->diff($ids)->values();
+            if ($children->isEmpty()) break;
+            $ids = $ids->concat($children)->unique()->values();
+            $frontier = $children;
+        }
+
+        return $ids;
     }
 }

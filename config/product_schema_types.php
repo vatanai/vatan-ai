@@ -35,6 +35,87 @@
 
 return [
 
+    /*
+    |--------------------------------------------------------------------------
+    | الگوهای پرتکرار ویژگی محصول
+    |--------------------------------------------------------------------------
+    | این هفت الگو مسیر ساده و اصلی مدیر هستند. هر الگو از همان قرارداد
+    | input_schema استفاده می‌کند؛ بنابراین پیش‌نمایش و اثر گزینه‌ها روی
+    | پرامپت، نمایشی یا جدا از بک‌اند نیست.
+    */
+    'templates' => [
+        'gender' => [
+            'label' => 'زن یا مرد',
+            'desc' => 'دو انتخاب با پرامپت مستقل برای هر جنسیت',
+            'icon' => 'fa-venus-mars',
+            'field' => ['type' => 'gender'],
+        ],
+        'name' => [
+            'label' => 'نام یا متن کوتاه',
+            'desc' => 'مثل نام شخص، برند یا نوشته روی تصویر',
+            'icon' => 'fa-font',
+            'field' => [
+                'type' => 'text', 'field_id' => 'name', 'label_fa' => 'نام',
+                'placeholder' => 'نام را وارد کنید', 'required' => '1',
+                'prompt_mode' => 'token',
+            ],
+        ],
+        'description' => [
+            'label' => 'توضیح دلخواه',
+            'desc' => 'متن چندخطی برای شرح صحنه یا درخواست کاربر',
+            'icon' => 'fa-align-right',
+            'field' => [
+                'type' => 'textarea', 'field_id' => 'description', 'label_fa' => 'توضیحات',
+                'placeholder' => 'جزئیات دلخواه را بنویسید', 'prompt_mode' => 'append',
+                'prompt_wrap' => '{value}',
+            ],
+        ],
+        'single_choice' => [
+            'label' => 'انتخاب یکی از چند گزینه',
+            'desc' => 'مثل سبک کلاسیک یا مدرن؛ هر گزینه پرامپت خودش را دارد',
+            'icon' => 'fa-circle-dot',
+            'field' => [
+                'type' => 'radio', 'field_id' => 'style', 'label_fa' => 'سبک',
+                'required' => '1', 'prompt_mode' => 'append',
+                'options' => [
+                    ['value' => 'classic', 'label' => 'کلاسیک', 'prompt' => 'classic timeless visual style'],
+                    ['value' => 'modern', 'label' => 'مدرن', 'prompt' => 'modern minimal visual style'],
+                ],
+            ],
+        ],
+        'multiple_choice' => [
+            'label' => 'انتخاب چند گزینه',
+            'desc' => 'کاربر چند مورد را هم‌زمان انتخاب می‌کند',
+            'icon' => 'fa-list-check',
+            'field' => [
+                'type' => 'multi_select', 'field_id' => 'details', 'label_fa' => 'جزئیات دلخواه',
+                'prompt_mode' => 'append',
+                'options' => [
+                    ['value' => 'natural_light', 'label' => 'نور طبیعی', 'prompt' => 'soft natural lighting'],
+                    ['value' => 'simple_bg', 'label' => 'پس‌زمینه ساده', 'prompt' => 'clean simple background'],
+                ],
+            ],
+        ],
+        'toggle' => [
+            'label' => 'تیک روشن یا خاموش',
+            'desc' => 'مثل حذف پس‌زمینه یا فعال‌کردن یک حالت',
+            'icon' => 'fa-toggle-on',
+            'field' => [
+                'type' => 'switch', 'field_id' => 'remove_background', 'label_fa' => 'حذف پس‌زمینه',
+                'prompt_mode' => 'append', 'prompt_wrap' => 'with {value}',
+            ],
+        ],
+        'image' => [
+            'label' => 'دریافت عکس',
+            'desc' => 'آپلود یک عکس مرجع از کاربر با پیش‌نمایش',
+            'icon' => 'fa-image',
+            'field' => [
+                'type' => 'image_upload', 'field_id' => 'reference_image', 'label_fa' => 'عکس مرجع',
+                'required' => '1', 'max_files' => 1, 'max_size_mb' => 10, 'accept' => 'image/*',
+            ],
+        ],
+    ],
+
     'groups' => [
         'basic'  => ['label' => 'پایه A',           'icon' => 'fa-font'],
         'choice' => ['label' => 'انتخابی',          'icon' => 'fa-list-check'],

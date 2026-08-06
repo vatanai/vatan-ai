@@ -20,7 +20,7 @@ class SmsEventService
 
         try {
             $body = $this->render($template->body, $data);
-            $this->gateway->sendSimple($phone, $body, type: $type . ':' . $eventKey);
+            $this->dispatch($template, $phone, $body, $data, $type . ':' . $eventKey);
             $template->increment('sent_count');
             $template->forceFill(['last_sent_at' => now()])->save();
             return true;
@@ -32,12 +32,20 @@ class SmsEventService
 
     public function test(SmsTemplate $template, string $phone): bool
     {
+        return $this->testWithResult($template, $phone)['success'];
+    }
+
+    public function testWithResult(SmsTemplate $template, string $phone, string $prefix = 'test'): array
+    {
         try {
-            $this->gateway->sendSimple($phone, $this->render($template->body, config('sms_events.samples', [])), type: 'test:' . $template->event_key);
-            return true;
+            $samples = config('sms_events.samples', []);
+            $this->dispatch($template, $phone, $this->render($template->body, $samples), $samples, $prefix . ':' . $template->event_key);
+            $template->increment('sent_count');
+            $template->forceFill(['last_sent_at' => now()])->save();
+            return ['success' => true, 'error' => null];
         } catch (\Throwable $e) {
             Log::warning('SMS test failed', ['template_id'=>$template->id, 'error'=>$e->getMessage()]);
-            return false;
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
@@ -45,6 +53,17 @@ class SmsEventService
     {
         $values = array_merge(config('sms_events.samples', []), $data);
         return preg_replace_callback('/\{([a-z_]+)\}/i', fn($m) => (string)($values[$m[1]] ?? $m[0]), $body);
+    }
+
+    private function dispatch(SmsTemplate $template, string $phone, string $body, array $data, string $type): void
+    {
+        if ($template->provider_method === 'shared') {
+            $variables = $template->provider_variables ?: config("sms_events.events.{$template->event_key}.variables", []);
+            $values = collect($variables)->map(fn ($variable) => $data[$variable] ?? config("sms_events.samples.{$variable}", ''))->all();
+            $this->gateway->sendShared($phone, $values, (string) $template->provider_template_id, $body, $type);
+            return;
+        }
+        $this->gateway->sendSimple($phone, $body, type: $type);
     }
 
     public function notifyLowCredit($user): void

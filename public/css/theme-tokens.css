@@ -1,0 +1,19 @@
+/*
+ * قوانین مشترک تم روز و شب — اپ کاربری و سایت اصلی وطن
+ * منبع رسمی رنگ پس‌زمینه صفحه و هدر است؛ مقدارها را در فایل‌های صفحه تکرار نکنید.
+ * هر تغییر در این توکن‌ها فقط با درخواست صریح کاربر انجام شود.
+ */
+
+:root {
+  --vatan-bg-page: #000000;
+  --vatan-text-page: #ffffff;
+  --vatan-header-bg: #000000;
+  --vatan-header-text: #ffffff;
+  --vatan-header-text-muted: #a2abb7;
+  --vatan-header-border: rgba(255, 255, 255, 0.1);
+}
+
+html.light {
+  --vatan-bg-page: #ffffff;
+  --vatan-text-page: #0c0c10;
+}

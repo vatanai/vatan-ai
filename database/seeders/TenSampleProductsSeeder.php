@@ -49,7 +49,7 @@ class TenSampleProductsSeeder extends Seeder
         $created = 0;
 
         foreach ($this->products() as $data) {
-            if (Product::where('slug', $data['fillable']['slug'])->exists()) {
+            if (Product::withTrashed()->where('slug', $data['fillable']['slug'])->exists()) {
                 continue;
             }
 

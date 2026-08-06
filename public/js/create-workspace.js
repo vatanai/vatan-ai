@@ -1,10 +1,46 @@
 (function () {
   'use strict';
-  const root = document.querySelector('.cw-page');
-  if (!root) return;
-  const form = root.querySelector('#createPreviewForm');
+  const roots = [...document.querySelectorAll('.cw-page')];
+  if (!roots.length) return;
+
+  roots.forEach((root) => {
+  const form = root.querySelector('.cw-form');
   const alertBox = root.querySelector('[data-form-alert]');
   const alertText = alertBox.querySelector('span');
+  const isRedesign = root.dataset.instance === 'redesign';
+  const stageTabButtons = [...root.querySelectorAll('[data-stage-tab]')];
+  const outputStageTab = root.querySelector('[data-output-tab]');
+  const emptyStage = root.querySelector('[data-empty]');
+  const outputPlaceholder = root.querySelector('[data-output-placeholder]');
+  const progressStage = root.querySelector('[data-progress]');
+  const resultStage = root.querySelector('[data-result]');
+  let hasGeneratedOutput = false;
+
+  function setStageTab(tab) {
+    if (!isRedesign) return;
+    stageTabButtons.forEach((button) => button.classList.toggle('active', button.dataset.stageTab === tab));
+    if (tab === 'output' && !outputStageTab?.hidden) {
+      if (emptyStage) emptyStage.hidden = true;
+      if (progressStage) progressStage.hidden = true;
+      if (outputPlaceholder) outputPlaceholder.hidden = hasGeneratedOutput;
+      if (resultStage) resultStage.hidden = !hasGeneratedOutput;
+    } else if (tab === 'upload') {
+      if (resultStage) resultStage.hidden = true;
+      if (outputPlaceholder) outputPlaceholder.hidden = true;
+      if (progressStage?.hidden !== false && emptyStage) emptyStage.hidden = false;
+    }
+  }
+
+  function revealOutputTab() {
+    if (!isRedesign) return;
+    hasGeneratedOutput = true;
+    if (outputStageTab) {
+      outputStageTab.hidden = false;
+    }
+    setStageTab('output');
+  }
+
+  stageTabButtons.forEach((button) => button.addEventListener('click', () => setStageTab(button.dataset.stageTab)));
 
   const tabs = [...root.querySelectorAll('[data-tab]')];
   const panels = [...root.querySelectorAll('[data-panel]')];
@@ -131,7 +167,9 @@
     return '';
   }
 
-  const baseCost = Number(root.querySelector('[data-cost]').textContent);
+  const costElement = root.querySelector('[data-cost]');
+  const baseCostText = costElement?.textContent || root.querySelector('[name="redesign_cost"]')?.value || '0';
+  const baseCost = Number(String(baseCostText).match(/[0-9٠-٩]+/)?.[0] || 0);
   function recalculateCost() {
     let extra = 0;
     root.querySelectorAll('.cw-field:not([hidden])').forEach((field) => {
@@ -145,7 +183,7 @@
     });
     const identity = root.querySelector('[data-identity-toggle]');
     if (identity?.checked) extra += Number(identity.closest('[data-identity-extra]')?.dataset.identityExtra || 0);
-    root.querySelector('[data-cost]').textContent = baseCost + extra;
+    if (costElement) costElement.textContent = baseCost + extra;
   }
   form.addEventListener('change', recalculateCost);
   form.addEventListener('input', recalculateCost);
@@ -168,23 +206,26 @@
   root.querySelector('[data-action=reset]')?.addEventListener('click', () => window.location.reload());
   root.querySelector('[data-action=generate]')?.addEventListener('click', async () => {
     const requiredUploadField = [...form.querySelectorAll('.cw-field')].find((field) => field.querySelector('input[type=file]') && field.querySelector('.cw-label b'));
-    const requiredUpload = requiredUploadField?.querySelector('.cw-upload');
-    if (requiredUpload && !requiredUpload.querySelector('input[type=file]').files.length) {
+    const requiredUpload = requiredUploadField?.querySelector('.cw-upload')
+      || root.querySelector('[data-required-upload="1"]');
+    const requiredUploadInput = requiredUpload?.querySelector('input[type=file]');
+    if (requiredUploadInput && !requiredUploadInput.files.length) {
       alertText.textContent = 'برای ادامه، تصویر الزامی را اضافه کنید.';
       alertBox.hidden = false; requiredUpload.style.borderColor = 'var(--red)';
-      tabs.find((tab) => tab.dataset.tab === 'basic').click(); requiredUpload.scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
+      tabs.find((tab) => tab.dataset.tab === 'basic')?.click(); requiredUpload.scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
     }
     if (root.dataset.authenticated !== '1' && root.dataset.preview !== '1') {
       window.location.href = root.dataset.loginUrl; return;
     }
     const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]'); const result = root.querySelector('[data-result]');
+    setStageTab('upload');
     empty.hidden = true; result.hidden = true; progress.hidden = false;
     const bar = progress.querySelector('.cw-progress-track i'); const text = progress.querySelector('[data-progress-text]');
     bar.style.width = '18%'; text.textContent = 'در حال بررسی ورودی‌ها';
     if (root.dataset.preview === '1' || !root.dataset.generateUrl) {
       setTimeout(() => { bar.style.width = '58%'; text.textContent = 'در حال حفظ جزئیات چهره'; }, 650);
       setTimeout(() => { bar.style.width = '86%'; text.textContent = 'پرداخت نهایی تصویر'; }, 1400);
-      setTimeout(() => { progress.hidden = true; result.hidden = false; }, 2300);
+      setTimeout(() => { progress.hidden = true; result.hidden = false; revealOutputTab(); }, 2300);
       return;
     }
     const submit = root.querySelector('[data-action=generate]'); submit.disabled = true;
@@ -213,9 +254,9 @@
         strip.appendChild(button);
       });
       result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${Number(images.length).toLocaleString('fa-IR')} خروجی آماده شد`;
-      bar.style.width = '100%'; progress.hidden = true; result.hidden = false;
+      bar.style.width = '100%'; progress.hidden = true; result.hidden = false; revealOutputTab();
     } catch (error) {
-      progress.hidden = true; empty.hidden = false; alertText.textContent = error.message; alertBox.hidden = false;
+      progress.hidden = true; empty.hidden = false; setStageTab('upload'); alertText.textContent = error.message; alertBox.hidden = false;
     } finally { submit.disabled = false; }
   });
   root.querySelectorAll('.cw-result-strip button').forEach((button) => button.addEventListener('click', () => {
@@ -224,8 +265,20 @@
   root.querySelector('[data-action=download]')?.addEventListener('click', () => {
     const url = root.querySelector('[data-result] > img').src;
     if (!url) return;
+    const trackUrl = root.dataset.downloadTrackUrl;
+    if (trackUrl) {
+      fetch(trackUrl, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+          'Accept': 'application/json',
+        },
+      }).catch(() => {});
+    }
     const link = document.createElement('a'); link.href = url; link.download = 'vatan-ai-output.png'; link.target = '_blank'; link.click();
   });
   root.querySelector('[data-action=regenerate]')?.addEventListener('click', () => root.querySelector('[data-action=generate]')?.click());
   updateReadiness();
+  });
 }());

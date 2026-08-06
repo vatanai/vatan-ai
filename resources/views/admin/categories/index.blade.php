@@ -8,7 +8,7 @@
     <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
       <div>
         <h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">مدیریت دسته‌بندی‌ها</h1>
-        <p class="text-xs text-[var(--text-soft)]">مدیریت دسته‌بندی‌ها و لینک صفحه عمومی هر دسته</p>
+        <p class="text-xs text-[var(--text-soft)]">تعداد دقیق محصولات یکتا، آخرین ثبت محصول و مدیریت دسته‌بندی‌ها</p>
       </div>
       <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold bg-[var(--primary)] text-[var(--accent)] no-underline">
         <i class="fa-solid fa-plus"></i> افزودن دسته‌بندی
@@ -45,26 +45,49 @@
     </div>
 
     <form method="GET" action="{{ route('admin.categories.index') }}" class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-3 mb-5 shadow-[var(--shadow-card)]">
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_repeat(4,minmax(130px,auto))_auto] gap-2">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_repeat(3,minmax(130px,auto))_auto] gap-2">
         <label class="relative"><i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-soft)]"></i><input type="search" name="search" value="{{ request('search') }}" placeholder="جستجو در نام، اسلاگ یا مسیر..." class="w-full h-10 pr-9 pl-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)] outline-none focus:border-[var(--primary)]"></label>
         <select name="content" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت محتوا</option><option value="active" @selected(request('content')==='active')>دارای محصول</option><option value="empty" @selected(request('content')==='empty')>بدون محصول</option></select>
         <select name="visibility" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت نمایش</option><option value="enabled" @selected(request('visibility')==='enabled')>فعال سیستمی</option><option value="disabled" @selected(request('visibility')==='disabled')>غیرفعال سیستمی</option></select>
         <select name="type" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">نوع دسته</option><option value="root" @selected(request('type')==='root')>دسته اصلی</option><option value="child" @selected(request('type')==='child')>زیر‌دسته</option><option value="featured" @selected(request('type')==='featured')>ویژه</option></select>
-        <select name="sort" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="usage" @selected(request('sort','usage')==='usage')>بیشترین مصرف</option><option value="products" @selected(request('sort')==='products')>بیشترین محصول</option><option value="name" @selected(request('sort')==='name')>نام دسته</option><option value="latest" @selected(request('sort')==='latest')>جدیدترین</option><option value="oldest" @selected(request('sort')==='oldest')>قدیمی‌ترین</option></select>
         <div class="flex gap-2"><button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold cursor-pointer"><i class="fa-solid fa-filter ml-1"></i> اعمال</button>@if(request()->hasAny(['search','content','visibility','type','sort']))<a href="{{ route('admin.categories.index') }}" class="h-10 w-10 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] text-[var(--text-soft)] inline-flex items-center justify-center" title="پاک‌کردن فیلترها"><i class="fa-solid fa-xmark"></i></a>@endif</div>
       </div>
-      <div class="mt-2 text-[10px] text-[var(--text-soft)]">{{ number_format($categories->total()) }} دسته‌بندی مطابق فیلترهای انتخاب‌شده</div>
+      @php
+        $currentSort = request('sort', 'products_desc');
+        $sortOptions = [
+          'products_desc' => ['بیشترین محصول', 'fa-arrow-down-wide-short'],
+          'products_asc' => ['کمترین محصول', 'fa-arrow-up-wide-short'],
+          'last_product' => ['آخرین ثبت محصول', 'fa-clock-rotate-left'],
+          'first_product' => ['قدیمی‌ترین ثبت محصول', 'fa-clock'],
+          'latest' => ['جدیدترین دسته', 'fa-folder-plus'],
+          'oldest' => ['قدیمی‌ترین دسته', 'fa-folder-open'],
+          'usage' => ['بیشترین مصرف', 'fa-chart-line'],
+          'name' => ['نام دسته', 'fa-arrow-down-a-z'],
+        ];
+      @endphp
+      <fieldset class="mt-3 pt-3 border-t border-[var(--divider)]">
+        <legend class="text-[10px] font-bold text-[var(--text-soft)] px-1">مرتب‌سازی تک‌انتخابی</legend>
+        <div class="flex flex-wrap gap-2 mt-1">
+          @foreach($sortOptions as $sortValue => [$sortLabel, $sortIcon])
+            <label class="h-9 px-3 rounded-lg border inline-flex items-center gap-2 text-[11px] font-bold cursor-pointer transition-colors {{ $currentSort === $sortValue ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--accent)]' : 'bg-[var(--input-bg)] border-[var(--border)] text-[var(--text-soft)] hover:border-[var(--primary)] hover:text-[var(--primary)]' }}">
+              <input type="radio" name="sort" value="{{ $sortValue }}" class="sr-only" @checked($currentSort === $sortValue) onchange="this.form.submit()">
+              <i class="fa-solid {{ $sortIcon }}"></i>{{ $sortLabel }}
+            </label>
+          @endforeach
+        </div>
+      </fieldset>
+      <div class="mt-3 text-[10px] text-[var(--text-soft)]">{{ number_format($categories->total()) }} دسته‌بندی مطابق فیلترهای انتخاب‌شده</div>
     </form>
 
     <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
       <div class="p-4 border-b border-[var(--divider)] text-xs font-bold text-[var(--text-main)] flex items-center justify-between">
-        <span><i class="fa-solid fa-list text-[var(--primary)] ml-1"></i> دسته‌بندی‌ها بر اساس مصرف</span><span class="text-[10px] font-normal text-[var(--text-soft)]">مصرف = تعداد اجرای واقعی محصولات هر دسته</span>
+        <span><i class="fa-solid fa-list text-[var(--primary)] ml-1"></i> دسته‌بندی‌ها و محصولات ثبت‌شده</span><span class="text-[10px] font-normal text-[var(--text-soft)]">هر محصول در هر دسته فقط یک‌بار شمرده می‌شود</span>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-right border-collapse text-xs">
           <thead><tr class="bg-[var(--input-bg)] text-[var(--text-soft)]">
             <th class="p-4 w-20">تصویر</th><th class="p-4">نام دسته‌بندی</th><th class="p-4">اسلاگ</th>
-            <th class="p-4 text-center">محصولات</th><th class="p-4 text-center">تعداد استفاده</th><th class="p-4 text-center">وضعیت</th><th class="p-4 text-center">لینک</th><th class="p-4 text-left">عملیات</th>
+            <th class="p-4 text-center">تعداد محصولات</th><th class="p-4 text-center">آخرین ثبت محصول</th><th class="p-4 text-center">تعداد استفاده</th><th class="p-4 text-center">وضعیت</th><th class="p-4 text-center">لینک</th><th class="p-4 text-left">عملیات</th>
           </tr></thead>
           <tbody class="divide-y divide-[var(--divider)]">
           @forelse($categories as $category)
@@ -75,7 +98,8 @@
               </td>
               <td class="p-4 font-bold text-[var(--text-main)]">{{ $category->name_fa ?: $category->name }}</td>
               <td class="p-4 font-mono text-[var(--text-soft)]" dir="ltr">{{ $category->slug }}</td>
-              <td class="p-4 text-center"><span class="px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--text-main)]">{{ $category->products_count }}</span></td>
+              <td class="p-4 text-center"><span class="px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--text-main)] font-bold">{{ number_format($category->products_count) }}</span></td>
+              <td class="p-4 text-center whitespace-nowrap text-[11px] text-[var(--text-soft)]">{{ \App\Support\Jalali::formatNumeric($category->last_product_at) }}</td>
               <td class="p-4 text-center"><span class="font-bold {{ $category->usage_count > 0 ? 'text-[var(--primary)]' : 'text-[var(--text-soft)]' }}">{{ number_format($category->usage_count) }}</span></td>
               <td class="p-4 text-center">@if($category->products_count > 0)<span class="inline-flex items-center gap-1 text-[10px] text-[var(--success)]"><i class="fa-solid fa-circle text-[6px]"></i> دارای محصول</span>@else<span class="inline-flex items-center gap-1 text-[10px] text-[var(--text-soft)]"><i class="fa-regular fa-circle text-[6px]"></i> خالی</span>@endif</td>
               <td class="p-4 text-center">
@@ -91,7 +115,7 @@
               </div></td>
             </tr>
           @empty
-            <tr><td colspan="8" class="p-10 text-center text-[var(--text-soft)]"><i class="fa-regular fa-folder-open text-2xl block mb-2"></i>دسته‌بندی مطابق این فیلترها پیدا نشد.</td></tr>
+            <tr><td colspan="9" class="p-10 text-center text-[var(--text-soft)]"><i class="fa-regular fa-folder-open text-2xl block mb-2"></i>دسته‌بندی مطابق این فیلترها پیدا نشد.</td></tr>
           @endforelse
           </tbody>
         </table>

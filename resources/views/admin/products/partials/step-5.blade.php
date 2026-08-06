@@ -119,7 +119,7 @@ function refreshProductPreview() {
   if (!doc.getElementById('admin-live-preview-style')) {
     var style = doc.createElement('style');
     style.id = 'admin-live-preview-style';
-    style.textContent = '.admin-preview-missing{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px dashed var(--border-subtle);border-radius:9px;color:var(--text-secondary);background:var(--bg-card);font-size:11px;font-weight:700}.admin-preview-missing i{color:var(--green)}.admin-preview-image-missing{width:min(78%,520px);min-height:220px;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}.admin-preview-only{pointer-events:none}';
+    style.textContent = '.admin-preview-missing{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px dashed var(--border-subtle);border-radius:9px;color:var(--text-secondary);background:var(--bg-card);font-size:11px;font-weight:700}.admin-preview-missing i{color:var(--green)}.admin-preview-image-missing{width:min(78%,520px);min-height:220px;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}.pd-gal-grid img{cursor:pointer}.pd-gal-grid img:hover{outline:2px solid var(--green)}';
     doc.head.appendChild(style);
   }
 
@@ -163,7 +163,7 @@ function refreshProductPreview() {
     var gallery = doc.createElement('div'); gallery.className = 'pd-gal admin-preview-only';
     gallery.innerHTML = '<h2></h2><div class="pd-gal-grid"></div>'; gallery.querySelector('h2').textContent = titleText;
     var grid = gallery.querySelector('.pd-gal-grid');
-    if (images.length) images.forEach(function(src){ var img = doc.createElement('img'); img.src = src; img.dataset.full = src; img.alt = name || 'پیش‌نمایش محصول'; grid.appendChild(img); });
+    if (images.length) images.forEach(function(src){ var img = doc.createElement('img'); img.src = src; img.dataset.full = src; img.alt = name || 'پیش‌نمایش محصول'; img.addEventListener('click', function(){ var large = doc.getElementById('pdpMainImage'); if (large) { large.hidden = false; large.src = src; large.scrollIntoView({behavior:'smooth',block:'center'}); } }); grid.appendChild(img); });
     else grid.innerHTML = productPreviewPlaceholder(missingLabel);
     info.appendChild(gallery);
   }
@@ -178,6 +178,45 @@ function refreshProductPreview() {
     var missing = mainWrap?.querySelector('.admin-preview-image-missing');
     if (!missing && mainWrap) { missing = doc.createElement('div'); missing.className = 'admin-preview-missing admin-preview-image-missing'; mainWrap.appendChild(missing); }
     if (missing) missing.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>تصویر اصلی محصول هنوز تکمیل نشده';
+  }
+
+  var mainWrap = main?.parentElement;
+  var watermark = mainWrap?.querySelector('.product-watermark');
+  var watermarkEnabled = document.getElementById('watermark-enabled-input')?.checked
+    && document.querySelector('[name="watermark_position"]:checked')?.value !== 'none';
+  if (watermarkEnabled && mainWrap) {
+    if (!watermark) {
+      watermark = doc.createElement('span');
+      watermark.className = 'product-watermark';
+      watermark.style.cssText = 'position:absolute;z-index:5;display:inline-flex;align-items:center;justify-content:center;pointer-events:none;';
+      mainWrap.appendChild(watermark);
+    }
+    var watermarkType = document.querySelector('[name="new_watermark_type"]:checked')?.value || 'logo';
+    watermark.innerHTML = watermarkType === 'text'
+      ? '<strong>VATAN AI</strong>'
+      : '<img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="Vatan AI" style="width:100%;height:auto;object-fit:contain;">';
+    var opacity = Math.max(0, Math.min(100, Number(document.querySelector('[name="new_watermark_opacity"]')?.value || 70)));
+    var size = Math.max(10, Math.min(100, Number(document.querySelector('[name="new_watermark_size"]')?.value || 30)));
+    watermark.style.opacity = String(opacity / 100);
+    watermark.style.setProperty('width', size + '%', 'important');
+    watermark.style.top = watermark.style.bottom = watermark.style.left = watermark.style.right = 'auto';
+    watermark.style.transform = '';
+    var wmPosition = document.querySelector('[name="watermark_position"]:checked')?.value || 'corner';
+    var wmCorner = document.getElementById('new-watermark-corner-precise')?.value || 'tr';
+    if (wmPosition === 'center') {
+      watermark.style.top = '50%'; watermark.style.left = '50%'; watermark.style.transform = 'translate(-50%,-50%)';
+    } else {
+      watermark.style[wmCorner.charAt(0) === 't' ? 'top' : 'bottom'] = '3%';
+      watermark.style[wmCorner.charAt(1) === 'r' ? 'right' : 'left'] = '3%';
+    }
+    var text = watermark.querySelector('strong');
+    if (text) {
+      text.style.color = document.querySelector('[name="new_watermark_text_color"]')?.value || '#FFFFFF';
+      text.style.fontSize = 'clamp(11px,2vw,28px)';
+      text.style.textShadow = '0 1px 5px rgba(0,0,0,.45)';
+    }
+  } else {
+    watermark?.remove();
   }
 
   doc.querySelector('.pd-similar')?.remove();

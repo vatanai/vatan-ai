@@ -1,24 +1,30 @@
 @if(($products ?? collect())->isNotEmpty())
-<div class="home-section-title home-section-title--sub">
-  <div>
-    <span class="home-section-title-right">{{ $section->title_fa }}</span>
-    @if($section->subtitle_fa)<p class="home-section-title-caption">{{ $section->subtitle_fa }}</p>@endif
-  </div>
-  @if(!in_array($section->layout, ['intro']) && $section->setting('show_view_all', true))
-    <button type="button" class="home-section-viewall">مشاهده همه</button>
-  @endif
-</div>
+@include('app.home-builder.partials.section-header')
 
 @if($section->layout === 'peek')
   @include('app.home-builder.sections.layouts.product-slider-peek')
 @elseif($section->layout === 'intro')
   @include('app.home-builder.sections.layouts.product-slider-intro')
+@elseif($section->layout === 'intro_dual')
+  @include('app.home-builder.sections.layouts.product-slider-intro-dual')
 @elseif($section->layout === 'large')
   @include('app.home-builder.sections.layouts.product-slider-large')
 @elseif($section->layout === 'glass')
   @include('app.home-builder.sections.layouts.product-slider-glass')
 @elseif($section->layout === 'neon')
   @include('app.home-builder.sections.layouts.product-slider-neon')
+@elseif($section->layout === 'cinema')
+  @include('app.home-builder.sections.layouts.product-slider-cinema')
+@elseif($section->layout === 'minimal')
+  @include('app.home-builder.sections.layouts.product-slider-minimal')
+@elseif(str_starts_with($section->layout, 'motion_'))
+  @includeIf('app.home-builder.sections.layouts.product-slider-' . str_replace('_', '-', $section->layout))
+@elseif($section->layout === 'video_loop')
+  @include('app.home-builder.sections.layouts.product-slider-video-loop')
+@elseif($section->layout === 'video_spotlight')
+  @include('app.home-builder.sections.layouts.product-slider-video-spotlight')
+@elseif(str_starts_with($section->layout, 'scroll_'))
+  @includeIf('app.home-builder.sections.layouts.product-slider-' . str_replace('_', '-', $section->layout))
 @else
   @php
     $cardClass = $section->layout === 'compact' ? 'home-card--compact' : '';

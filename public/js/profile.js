@@ -8,27 +8,90 @@
   var tabs   = document.querySelectorAll('.profile-tab');
   var panels = document.querySelectorAll('.profile-panel');
 
+  function activateProfileTab(target, shouldScroll) {
+    var selectedTab = document.querySelector('.profile-tab[data-tab="' + target + '"]');
+    var selectedPanel = document.querySelector('.profile-panel[data-panel="' + target + '"]');
+    if (!selectedTab || !selectedPanel) return;
+
+    tabs.forEach(function (tab) { tab.classList.toggle('active', tab === selectedTab); });
+    panels.forEach(function (panel) {
+      var key = panel.getAttribute('data-panel');
+      var show = key === target;
+      panel.style.display = show ? ((key === 'grid' || key === 'saved' || key === 'referral') ? 'grid' : 'block') : 'none';
+    });
+
+    if (shouldScroll) {
+      window.setTimeout(function () {
+        selectedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 40);
+    }
+  }
+
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var target = tab.getAttribute('data-tab');
-
-      tabs.forEach(function (t) { t.classList.remove('active'); });
-      tab.classList.add('active');
-
-      panels.forEach(function (panel) {
-        var key  = panel.getAttribute('data-panel');
-        var show = key === target;
-
-        if (key === 'grid') {
-          panel.style.display = show ? 'grid' : 'none';
-        } else if (key === 'saved') {
-          panel.style.display = show ? 'grid' : 'none';
-        } else {
-          panel.style.display = show ? 'block' : 'none';
-        }
-      });
+      activateProfileTab(target, false);
+      if (target === 'referral') history.replaceState(null, '', '#referral-program');
     });
   });
+
+  document.querySelectorAll('[data-open-referral]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      activateProfileTab('referral', true);
+      history.replaceState(null, '', '#referral-program');
+    });
+  });
+
+  var requestedTab = new URLSearchParams(window.location.search).get('tab');
+  if (window.location.hash === '#referral-program' || requestedTab === 'referral') {
+    activateProfileTab('referral', true);
+  }
+
+  /* ───── لینک دعوت و اشتراک‌گذاری ───── */
+  var referralLinkInput = document.getElementById('referralLinkInput');
+  var copyReferralLink = document.getElementById('copyReferralLink');
+  var referralCopyFeedback = document.getElementById('referralCopyFeedback');
+
+  function showReferralFeedback(message) {
+    if (!referralCopyFeedback) return;
+    referralCopyFeedback.textContent = message;
+    window.clearTimeout(showReferralFeedback.timer);
+    showReferralFeedback.timer = window.setTimeout(function () {
+      referralCopyFeedback.textContent = '';
+    }, 2800);
+  }
+
+  function copyText(value) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(value);
+    }
+
+    return new Promise(function (resolve, reject) {
+      var helper = document.createElement('textarea');
+      helper.value = value;
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      try {
+        document.execCommand('copy') ? resolve() : reject(new Error('copy-failed'));
+      } catch (error) {
+        reject(error);
+      }
+      helper.remove();
+    });
+  }
+
+  if (copyReferralLink && referralLinkInput) {
+    copyReferralLink.addEventListener('click', function () {
+      copyText(referralLinkInput.value).then(function () {
+        showReferralFeedback('لینک دعوت کپی شد؛ حالا برای مخاطبانت بفرست.');
+      }).catch(function () {
+        referralLinkInput.select();
+        showReferralFeedback('لینک انتخاب شد؛ آن را کپی کن.');
+      });
+    });
+  }
 
   /* ───── آپلود عکس پروفایل ───── */
   var changeAvatarBtn    = document.getElementById('changeAvatarBtn');
@@ -95,6 +158,7 @@
   var previewProductLink = document.getElementById('gridPreviewProductLink');
   var previewProductName = document.getElementById('gridPreviewProductName');
   var previewClose    = document.getElementById('gridPreviewClose');
+  var previewDownloadTrackUrl = '';
 
   function openGridPreview(cell) {
     if (!previewModal) return;
@@ -103,6 +167,7 @@
     var date        = cell.getAttribute('data-date') || '';
     var productName = cell.getAttribute('data-product-name') || 'نامشخص';
     var productUrl  = cell.getAttribute('data-product-url') || '';
+    previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
     previewImg.src = imgUrl;
     previewDownload.href = imgUrl;
@@ -135,6 +200,20 @@
   });
 
   if (previewClose) previewClose.addEventListener('click', closeGridPreview);
+
+  if (previewDownload) {
+    previewDownload.addEventListener('click', function () {
+      if (!previewDownloadTrackUrl) return;
+      fetch(previewDownloadTrackUrl, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json'
+        }
+      }).catch(function () {});
+    });
+  }
 
   var previewBackdrop = previewModal ? previewModal.querySelector('.grid-preview-backdrop') : null;
   if (previewBackdrop) previewBackdrop.addEventListener('click', closeGridPreview);

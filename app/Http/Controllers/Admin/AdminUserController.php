@@ -16,15 +16,76 @@ class AdminUserController extends Controller
     /**
      * نمایش لیست تمام کاربران سیستم (بدون صفحه‌بندی) به همراه محصولات استفاده شده
      */
-    public function index()
+    public function index(Request $request)
     {
+        $filters = $request->validate([
+            'birth_month' => ['nullable', 'integer', 'between:1,12', 'required_with:birth_day'],
+            'birth_day' => ['nullable', 'integer', 'between:1,31'],
+        ]);
+
+        $birthMonth = isset($filters['birth_month']) ? (int) $filters['birth_month'] : null;
+        $birthDay = isset($filters['birth_day']) ? (int) $filters['birth_day'] : null;
+        if ($birthMonth && $birthMonth > 6 && $birthDay === 31) {
+            throw ValidationException::withMessages([
+                'birth_day' => 'ماه انتخاب‌شده روز ۳۱ ندارد.',
+            ]);
+        }
+        $allUsersCount = User::count();
+
         // لود کردن تصاویر خلق شده به همراه محصول مربوط به هر تصویر برای نمایش در مودال
         $users = User::with(['generatedImages.product'])
             ->withCount('generatedImages')
             ->latest()
-            ->get();
+            ->get()
+            ->filter(function (User $user) use ($birthMonth, $birthDay) {
+                if (!$birthMonth && !$birthDay) {
+                    return true;
+                }
+                if (!$user->birth_date) {
+                    return false;
+                }
 
-        return view('admin.users.index', compact('users'));
+                [, $jalaliMonth, $jalaliDay] = Jalali::toJalaliYmd(
+                    (int) $user->birth_date->format('Y'),
+                    (int) $user->birth_date->format('n'),
+                    (int) $user->birth_date->format('j'),
+                );
+
+                return (!$birthMonth || $jalaliMonth === $birthMonth)
+                    && (!$birthDay || $jalaliDay === $birthDay);
+            })
+            ->values();
+
+        return view('admin.users.index', compact('users', 'allUsersCount', 'birthMonth', 'birthDay'));
+    }
+
+    /**
+     * برگرداندن رمز ثبت‌شده‌ی کاربر فقط برای کپی؛ این عملیات رمز را تغییر نمی‌دهد.
+     */
+    public function copyPassword(Request $request, $id)
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        $user = User::find($id);
+
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'کاربر یافت نشد.',
+            ], 404);
+        }
+
+        if (blank($user->password_reveal)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'برای این کاربر رمز کپی‌شدنی ثبت نشده است.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'password' => $user->password_reveal,
+        ]);
     }
 
     /**
@@ -47,6 +108,23 @@ class AdminUserController extends Controller
 
     return response()->json(['status' => 'success', 'message' => 'وضعیت کاربر با موفقیت بروزرسانی شد.']);
 }
+
+    public function changeCustomerSegment(Request $request, $id)
+    {
+        $data = $request->validate([
+            'customer_segment' => 'required|in:regular,loyal',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->update($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $data['customer_segment'] === 'loyal'
+                ? 'کاربر به مشتری ثابت تغییر کرد.'
+                : 'کاربر به گروه عادی تغییر کرد.',
+        ]);
+    }
 
     /**
      * صفحه‌ی مدیریت توکن کاربران (افزودن/کسر/تنظیم موجودی توکن)

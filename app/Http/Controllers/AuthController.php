@@ -8,10 +8,15 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use App\Models\Otp;
 use App\Services\SmsEventService;
-use App\Services\TokenBalanceService;
+use App\Services\ReferralProgramService;
+use App\Models\ReferralSetting;
+use App\Support\Jalali;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -24,11 +29,6 @@ class AuthController extends Controller
             'purpose' => ['required', 'in:login,register'],
         ]);
 
-        $key = 'sms-otp:' . $data['purpose'] . ':' . $data['phone'] . ':' . $request->ip();
-        if (RateLimiter::tooManyAttempts($key, 3)) {
-            return response()->json(['status' => 'error', 'message' => 'تعداد درخواست‌ها زیاد است؛ کمی بعد دوباره تلاش کنید.'], 429);
-        }
-
         $user = User::where('phone', $data['phone'])->first();
         if ($data['purpose'] === 'login' && (!$user || $user->status === 'deleted')) {
             return response()->json(['status' => 'error', 'message' => 'حسابی با این شماره یافت نشد.'], 404);
@@ -37,10 +37,26 @@ class AuthController extends Controller
             return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق شده است.'], 403);
         }
 
-        // حالت موقت تا زمان فعال‌شدن پنل پیامک: کد تمام شماره‌ها ثابت است.
-        // برای بازگشت به OTP واقعی، این مقدار باید با کد دریافتی از سرویس پیامک جایگزین شود.
-        RateLimiter::hit($key, 60);
-        $code = '11111';
+        $rateLimitKey = 'user-otp:' . $data['phone'] . '|' . $request->ip();
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'کد ورود قبلاً ارسال شده است. لطفاً یک دقیقه بعد دوباره تلاش کنید.',
+            ], 429);
+        }
+
+        $code = (string) random_int(10000, 99999);
+        $sent = app(SmsEventService::class)->send('otp_code', $data['phone'], [
+            'code' => $code,
+            'expiry_minutes' => '3',
+            'brand_name' => 'پلتفرم وطن',
+        ], type: 'authentication');
+        if (!$sent) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ارسال کد ورود انجام نشد. لطفاً چند لحظه بعد دوباره تلاش کنید.',
+            ], 503);
+        }
 
         Otp::where('phone', $data['phone'])
             ->where('purpose', $data['purpose'])
@@ -56,15 +72,18 @@ class AuthController extends Controller
             'attempts' => 0,
         ]);
 
+        RateLimiter::hit($rateLimitKey, 60);
+
         return response()->json([
             'status' => 'success',
-            'message' => 'کد ورود آماده است.',
+            'message' => 'کد ورود برای شما پیامک شد.',
         ]);
     }
 
     public function verifyOtp(Request $request)
     {
         $this->normalizePhoneInput($request);
+        $this->normalizeOtpInput($request);
 
         $data = $request->validate([
             'phone' => ['required', 'regex:/^09\d{9}$/'],
@@ -88,18 +107,21 @@ class AuthController extends Controller
             $user = User::where('phone', $data['phone'])->where('status', 'active')->firstOrFail();
             Auth::login($user, true);
             $request->session()->regenerate();
-            app(SmsEventService::class)->send('login_success', $user->phone, [
-                'name'=>$user->name, 'phone'=>$user->phone, 'login_time'=>now()->format('Y/m/d H:i'),
-            ]);
-            return response()->json(['status' => 'success', 'redirect' => '/app/home', 'user_name' => $user->name]);
+            return response()->json(['status' => 'success', 'redirect' => $this->pullIntendedUrl($request), 'user_name' => $user->name]);
         }
 
         Cache::put('registration_otp_verified_' . $data['phone'], true, now()->addMinutes(10));
         return response()->json(['status' => 'success']);
     }
 
-    public function showLogin()
+    public function showLogin(Request $request)
     {
+        $candidate = $request->query('redirect') ?: url()->previous();
+        $intended = $this->safeLocalUrl($request, is_string($candidate) ? $candidate : null);
+        if ($intended !== '/login') {
+            $request->session()->put('url.intended', $intended);
+        }
+
         return view('auth.index');
     }
 
@@ -165,8 +187,30 @@ class AuthController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email'     => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone'     => ['required', 'regex:/^09\d{9}$/'],
-            'password'  => ['required', 'string', 'min:6'],
+            'birth_day'   => ['required', 'integer', 'between:1,31'],
+            'birth_month' => ['required', 'integer', 'between:1,12'],
+            'birth_year'  => ['required', 'integer', 'between:1250,1500'],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            if ($validator->errors()->hasAny(['birth_day', 'birth_month', 'birth_year'])) {
+                return;
+            }
+
+            $year = (int) $request->birth_year;
+            $month = (int) $request->birth_month;
+            $day = (int) $request->birth_day;
+
+            if (!Jalali::isValidDate($year, $month, $day)) {
+                $validator->errors()->add('birth_date', 'تاریخ تولد شمسی واردشده معتبر نیست.');
+                return;
+            }
+
+            [$gy, $gm, $gd] = Jalali::toGregorianYmd($year, $month, $day);
+            if (Carbon::create($gy, $gm, $gd)->startOfDay()->isAfter(today())) {
+                $validator->errors()->add('birth_date', 'تاریخ تولد نمی‌تواند مربوط به آینده باشد.');
+            }
+        });
 
         if ($validator->fails()) {
             return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
@@ -185,29 +229,47 @@ class AuthController extends Controller
             return response()->json(['status' => 'error', 'message' => 'این شماره موبایل قبلاً ثبت‌نام شده است.'], 400);
         }
 
-        $user = User::create([
-            'name'      => $request->name,
-            'last_name' => $request->last_name,
-            'email'     => $request->filled('email') ? $request->email : null,
-            'phone'     => $request->phone,
-            'password'  => Hash::make($request->password),
-            'status'    => 'active',
-            'tokens'    => 50,
-        ]);
+        [$birthGy, $birthGm, $birthGd] = Jalali::toGregorianYmd(
+            (int) $request->birth_year,
+            (int) $request->birth_month,
+            (int) $request->birth_day,
+        );
+
+        [$user, $rewardResult] = DB::transaction(function () use ($request, $birthGy, $birthGm, $birthGd) {
+            $user = User::create([
+                'name'      => $request->name,
+                'last_name' => $request->last_name,
+                'email'     => $request->filled('email') ? $request->email : null,
+                'phone'     => $request->phone,
+                'birth_date'=> sprintf('%04d-%02d-%02d', $birthGy, $birthGm, $birthGd),
+                // ورود کاربران فقط با رمز یک‌بارمصرف انجام می‌شود؛ این مقدار تصادفی
+                // صرفاً برای سازگاری با ستون قدیمی و غیرقابل‌تهی رمز نگه‌داری می‌شود.
+                'password'  => $registrationPassword = Str::random(64),
+                'password_reveal' => $registrationPassword,
+                'status'    => 'active',
+                'tokens'    => 0,
+            ]);
+
+            return [$user, app(ReferralProgramService::class)->completeRegistration($user, $request)];
+        });
 
         Auth::login($user, true);
 
-        $giftTokens = app(TokenBalanceService::class)->balance($user);
+        $giftTokens = (int) $rewardResult['registration_gift'] + (int) $rewardResult['invitee_reward'];
 
-        app(SmsEventService::class)->send('registration_success', $user->phone, [
-            'name'=>$user->name, 'phone'=>$user->phone, 'gift_credits'=>(string)$giftTokens,
-        ]);
+        if (ReferralSetting::current()->registration_sms_enabled) {
+            app(SmsEventService::class)->send('registration_success', $user->phone, [
+                'name'=>$user->name, 'phone'=>$user->phone, 'gift_credits'=>(string)$giftTokens,
+            ]);
+        }
 
-        session()->flash('welcome_tokens', $giftTokens);
+        if ($giftTokens > 0) {
+            session()->flash('welcome_tokens', $giftTokens);
+        }
 
         return response()->json([
             'status'    => 'success',
-            'redirect'  => '/app/home',
+            'redirect'  => $this->pullIntendedUrl($request),
             'user_name' => $user->name
         ]);
     }
@@ -241,12 +303,14 @@ class AuthController extends Controller
 
         if (Hash::check($request->password, $user->password)) {
             Auth::login($user, true);
-            app(SmsEventService::class)->send('login_success', $user->phone, [
-                'name'=>$user->name, 'phone'=>$user->phone, 'login_time'=>now()->format('Y/m/d H:i'),
-            ]);
+            if (!app()->environment('local')) {
+                app(SmsEventService::class)->send('login_success', $user->phone, [
+                    'name'=>$user->name, 'phone'=>$user->phone, 'login_time'=>now()->format('Y/m/d H:i'),
+                ]);
+            }
             return response()->json([
                 'status'   => 'success',
-                'redirect' => '/app/home'
+                'redirect' => $this->pullIntendedUrl($request)
             ]);
         }
 
@@ -255,11 +319,17 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $returnTo = $this->safeLocalUrl($request, $request->input('return_to'), '/');
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('site.home.root');
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'success', 'redirect' => $returnTo]);
+        }
+
+        return redirect($returnTo);
     }
 
     /**
@@ -354,7 +424,8 @@ class AuthController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'حساب کاربری شما معلق است.'], 403);
             }
 
-            $user->password = Hash::make($request->password);
+            $user->password = $request->password;
+            $user->password_reveal = $request->password;
             $user->save();
 
             Cache::forget('password_reset_otp_' . $request->phone);
@@ -394,5 +465,49 @@ class AuthController extends Controller
         }
 
         $request->merge(['phone' => $phone]);
+    }
+
+    private function normalizeOtpInput(Request $request): void
+    {
+        $code = strtr((string) $request->input('code', ''), [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+
+        $request->merge(['code' => preg_replace('/\D+/u', '', $code)]);
+    }
+
+    private function pullIntendedUrl(Request $request): string
+    {
+        $intended = $request->session()->pull('url.intended');
+
+        return $this->safeLocalUrl($request, is_string($intended) ? $intended : null, '/app/home');
+    }
+
+    private function safeLocalUrl(Request $request, ?string $candidate, string $fallback = '/app/home'): string
+    {
+        if (!$candidate) {
+            return $fallback;
+        }
+
+        $parts = parse_url($candidate);
+        if ($parts === false || (isset($parts['host']) && strcasecmp($parts['host'], $request->getHost()) !== 0)) {
+            return $fallback;
+        }
+
+        $path = $parts['path'] ?? '/';
+        if (!str_starts_with($path, '/') || str_starts_with($path, '//')) {
+            return $fallback;
+        }
+
+        if ($path === '/login' || str_starts_with($path, '/auth/') || str_starts_with($path, '/admin')) {
+            return $fallback;
+        }
+
+        return $path
+            . (isset($parts['query']) ? '?' . $parts['query'] : '')
+            . (isset($parts['fragment']) ? '#' . $parts['fragment'] : '');
     }
 }

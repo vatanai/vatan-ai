@@ -49,15 +49,10 @@
   <hr class="border-0 h-px bg-white/5 [.light_&]:bg-black/5 my-1.5 mx-1">
   
   {{-- دکمه خروج متصل به سیستم لاگ‌اوت لاراول --}}
-  <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="dropdown-item flex items-center gap-2.5 p-2.5 text-[#ff4a4a] text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:bg-[#ff4a4a]/10">
+  <button type="button" onclick="window.logoutFromCurrentPage(this)" class="dropdown-item w-full flex items-center gap-2.5 p-2.5 text-[#ff4a4a] text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:bg-[#ff4a4a]/10">
     <i class="fa-solid fa-right-from-bracket w-4 h-4 text-center text-[14px]"></i>
     خروج از حساب
-  </a>
-
-  {{-- فرم هیدن خروج برای امنیت متد POST --}}
-  <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
-    @csrf
-  </form>
+  </button>
 
 </div>
 @endauth

@@ -27,6 +27,7 @@
          class="w-full h-full object-contain transition-opacity duration-300 ease-out {{ $__isVideo($__beforeSrc) ? 'hidden' : '' }}">
     <video id="pdpMainVideo" src="{{ $__isVideo($__beforeSrc) ? $__beforeSrc : '' }}" muted loop playsinline autoplay
            class="w-full h-full object-contain transition-opacity duration-300 ease-out {{ $__isVideo($__beforeSrc) ? '' : 'hidden' }}"></video>
+    @include('app.partials.product-watermark')
   </div>
 
   {{-- ردیف Thumbnailها — فقط وقتی مجموع تصاویر بیشتر از یکی باشد --}}

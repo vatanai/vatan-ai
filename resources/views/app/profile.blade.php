@@ -14,8 +14,10 @@
     {{-- ۳) فایل‌های تو --}}
     @include('app.profile.files')
 
-    {{-- ۴) همکاری در فروش --}}
-    @include('app.profile.referral')
+    @if($referralProfileEnabled ?? false)
+      {{-- ۴) همکاری در فروش --}}
+      @include('app.profile.referral')
+    @endif
 
   </section>
 

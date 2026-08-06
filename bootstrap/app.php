@@ -13,6 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
+        $middleware->validateCsrfTokens(except: ['webhooks/ai/*']);
+
         // مدیریت هوشمند هدایت کاربران مهمان (احراز هویت نشده) بر اساس آدرس درخواست
         $middleware->redirectGuestsTo(function (Request $request) {
             // اگر آدرس درخواست مربوط به بخش ادمین بود

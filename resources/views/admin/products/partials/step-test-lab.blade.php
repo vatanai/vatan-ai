@@ -65,6 +65,17 @@
   </div>
 </div>
 
+{{-- گزینه‌های کم‌کاربرد از گام‌های دیگر، برای خلوت ماندن مسیر اصلی ثبت محصول --}}
+<details class="mt-5 bg-[var(--s2)] border border-dashed border-[var(--b2)] rounded-xl overflow-hidden" id="future-updates-panel">
+  <summary class="p-4 cursor-pointer flex items-center justify-between gap-3 text-xs font-bold text-[var(--text2)]">
+    <span class="flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i> آپدیت‌های آینده</span>
+    <span class="text-[10px] font-normal text-[var(--text3)]">گزینه‌های کم‌استفاده فعلی</span>
+  </summary>
+  <div class="p-4 pt-0 border-t border-[var(--b1)]" id="future-updates-content">
+    <div class="text-[10.5px] text-[var(--text3)] py-4 text-center" id="future-updates-empty">در حال آماده‌سازی گزینه‌ها…</div>
+  </div>
+</details>
+
 <script>
 var productTestMode = 'quick';
 var productTestObjectUrls = [];
@@ -106,4 +117,24 @@ function wireTestFeedback(root){root.querySelectorAll('[data-rating] button').fo
 function formatTestDuration(ms){if(ms==null)return '—';return ms<1000?ms.toLocaleString('fa-IR')+' میلی‌ثانیه':(ms/1000).toLocaleString('fa-IR',{maximumFractionDigits:1})+' ثانیه';}
 async function loadTestHistory(){var url=@json(route('admin.product-tests.history'))+'?'+(@json($testProduct?->id)?'product_id='+@json($testProduct?->id):'draft_uuid='+ensureTestDraftUuid());try{var data=await fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}),list=document.getElementById('test-history-list');if(!data.runs?.length){list.innerHTML='<div class="text-[10.5px] text-[var(--text3)] text-center py-5">هنوز سابقه‌ای ثبت نشده است.</div>';return;}list.innerHTML=data.runs.map(function(r){return '<div class="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--s1)] border border-[var(--b1)]">'+(r.image_url?'<img src="'+r.image_url+'" class="w-14 h-14 rounded-lg object-cover">':'<div class="w-14 h-14 rounded-lg flex items-center justify-center text-[var(--danger)]"><i class="fa-solid fa-triangle-exclamation"></i></div>')+'<div class="min-w-0 flex-1"><div class="text-[10px] font-mono text-[var(--text2)] truncate" dir="ltr">'+escapeTestHtml(r.model)+'</div><div class="text-[9.5px] text-[var(--text3)] mt-1">'+formatTestDuration(r.duration_ms)+' · '+(r.total_tokens==null?'توکن اعلام نشده':Number(r.total_tokens).toLocaleString('fa-IR')+' توکن')+'</div></div>'+(r.is_favorite?'<i class="fa-solid fa-trophy text-[var(--warning)]"></i>':'')+'</div>';}).join('');}catch(e){} }
 function initProductTestLab(){ensureTestDraftUuid();renderTestUserExperience();loadTestHistory();}
+
+function moveFutureProductUpdates() {
+  var target = document.getElementById('future-updates-content');
+  var empty = document.getElementById('future-updates-empty');
+  if (!target) return;
+  var items = Array.from(document.querySelectorAll('[data-future-update]'));
+  items.forEach(function(item) {
+    var section = document.createElement('section');
+    section.className = 'pt-4 mt-4 border-t border-[var(--b1)]';
+    var title = document.createElement('div');
+    title.className = 'text-[11px] font-bold text-[var(--text2)] mb-3 flex items-center gap-2';
+    title.innerHTML = '<i class="fa-solid fa-layer-group text-[var(--accent)]"></i>' + item.dataset.futureUpdate;
+    section.appendChild(title);
+    item.classList.remove('hidden');
+    section.appendChild(item);
+    target.appendChild(section);
+  });
+  if (empty) empty.classList.toggle('hidden', items.length > 0);
+}
+document.addEventListener('DOMContentLoaded', moveFutureProductUpdates);
 </script>

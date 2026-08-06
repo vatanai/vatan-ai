@@ -33,7 +33,11 @@ class ProcessImageJob implements ShouldQueue
         $generation->update(['status' => 'processing']);
 
         try {
-            $apiKey = 'sk-Jr0t9C4ysyU32JuukeK0AdhQVWZwdDOM';
+            $apiKey = (string) config('services.nanobanana.api_key', '');
+            if ($apiKey === '') {
+                $generation->update(['status' => 'failed']);
+                return;
+            }
             $imagePath = storage_path('app/public/' . $generation->input_image);
 
             if (!File::exists($imagePath)) {

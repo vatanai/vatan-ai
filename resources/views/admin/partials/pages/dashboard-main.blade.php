@@ -8,6 +8,30 @@
         </div>
       </div>
 
+      @if(isset($creditOverview))
+      <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:1px;">اعتبار و مصرف سرویس‌ها</div>
+        <a href="{{ route('admin.service-credits.index') }}" style="font-size:11px;color:var(--primary);text-decoration:none;">مدیریت کامل ←</a>
+      </div>
+      <div class="grid grid-cols-4 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        @foreach($creditOverview['accounts'] as $creditAccount)
+          <a href="{{ route('admin.service-credits.index') }}" style="text-decoration:none;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:14px;display:block;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:11px;font-weight:700;color:var(--text-soft);">{{ $creditAccount->name }}</span>
+              <i class="fa-solid {{ $creditAccount->slug === 'openrouter' ? 'fa-route' : ($creditAccount->slug === 'liara' ? 'fa-cloud' : 'fa-wallet') }}" style="color:var(--primary);"></i>
+            </div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ $creditAccount->currency === 'USD' ? '$'.number_format($creditAccount->display_balance, 2) : number_format($creditAccount->display_balance / 10).' تومان' }}</div>
+            <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditAccount->usage_is_estimate ? 'برآورد امروز' : 'مصرف امروز' }}: {{ number_format($creditAccount->today_usage_irr / 10) }} تومان</div>
+          </a>
+        @endforeach
+        <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-soft);margin-bottom:8px;">نرخ آنلاین دلار</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ ($creditOverview['exchange']['rate'] ?? 0) > 0 ? number_format($creditOverview['exchange']['rate'] / 10).' تومان' : 'ناموجود' }}</div>
+          <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditOverview['exchange']['source'] ?? '' }}</div>
+        </div>
+      </div>
+      @endif
+
       <!-- کارت‌های آمار -->
       <div class="grid grid-cols-4 gap-[14px] mb-5 max-[1100px]:grid-cols-2 max-[768px]:grid-cols-2 max-[768px]:gap-[10px] max-[600px]:grid-cols-1">
         <div class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[18px] px-5 cursor-default transition-colors duration-200 hover:border-b2 before:content-[''] before:absolute before:top-0 before:right-0 before:w-[3px] before:h-full before:rounded-tr-[10px] before:rounded-br-[10px] before:opacity-0 before:transition-opacity before:duration-200 hover:before:opacity-100 max-[480px]:py-[14px] max-[480px]:px-4 before:bg-green">
@@ -363,4 +387,3 @@
 
     </div>
     <!-- /dashboard-page -->
-

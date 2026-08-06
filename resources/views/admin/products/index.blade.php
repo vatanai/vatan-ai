@@ -8,8 +8,17 @@
   <div class="admin-content p-6 flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content" dir="rtl" style="background:var(--page-bg);">
 
     @if(session('success'))
-      <div class="mb-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold" style="background:var(--success-l);color:var(--success);border:1px solid var(--success-m);">
-        <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
+      <div class="admin-toast mb-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold" style="background:var(--success-l);color:var(--success);border:1px solid var(--success-m);" role="status">
+        <span class="admin-toast-icon" style="background:var(--success-m);"><i class="fa-solid fa-circle-check"></i></span>
+        <span class="flex-1">{{ session('success') }}</span>
+        <button type="button" onclick="this.closest('.admin-toast').remove()" aria-label="بستن پیام"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    @endif
+    @if(session('error'))
+      <div class="admin-toast mb-4 px-4 py-3 rounded-xl text-[12.5px] font-semibold" style="background:var(--danger-l);color:var(--danger);border:1px solid var(--danger-m);" role="alert">
+        <span class="admin-toast-icon" style="background:var(--danger-m);"><i class="fa-solid fa-triangle-exclamation"></i></span>
+        <span class="flex-1">{{ session('error') }}</span>
+        <button type="button" onclick="this.closest('.admin-toast').remove()" aria-label="بستن پیام"><i class="fa-solid fa-xmark"></i></button>
       </div>
     @endif
 

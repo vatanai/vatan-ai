@@ -2,14 +2,36 @@
 
 namespace App\Services;
 
+use App\Contracts\AiImageProviderInterface;
 use App\Models\Product;
 use App\Models\AiModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
-class OpenRouterService
+class OpenRouterService implements AiImageProviderInterface
 {
+    public function provider(): string
+    {
+        return 'openrouter';
+    }
+
+    public function validateModelConfiguration(AiModel $model): array
+    {
+        $issues = [];
+        if (blank($this->apiKey)) $issues[] = 'OPENROUTER_API_KEY تنظیم نشده است.';
+        if (blank($model->externalModelId())) $issues[] = 'شناسه مدل خالی است.';
+        return ['valid' => empty($issues), 'issues' => $issues];
+    }
+
+    public function getModelCapabilities(AiModel $model): array
+    {
+        return array_merge([
+            'allowed_inputs' => ['prompt', 'resolution', 'aspect_ratio', 'n'],
+            'supports_text_to_image' => true,
+            'supports_image_to_image' => (bool) $model->supports_image_input,
+        ], is_array($model->capability_config) ? $model->capability_config : []);
+    }
     public function translateToPersian(string $text): string
     {
         $response = $this->postWithFailover('/chat/completions', [
@@ -24,6 +46,49 @@ class OpenRouterService
         return trim((string) data_get($response->json(), 'choices.0.message.content'));
     }
 
+    /** ارزیابی تصویری خروجی آزمایش با مدل بینایی ارزان OpenRouter. */
+    public function scoreLabImage(string $modelId, string $prompt, string $imageData, int $timeout = 60): array
+    {
+        if (empty($this->apiKey)) {
+            throw new Exception('OPENROUTER_API_KEY تنظیم نشده است.');
+        }
+
+        $content = [
+            [
+                'type' => 'text',
+                'text' => "پرامپت مورد انتظار:\n{$prompt}\n\n"
+                    . 'تصویر را فقط بر اساس این معیارها از ۱ تا ۵ امتیاز بده: '
+                    . 'prompt_alignment، visual_quality، composition، product_fit. '
+                    . 'فقط JSON معتبر با این ساختار برگردان: '
+                    . '{"scores":{"prompt_alignment":1,"visual_quality":1,"composition":1,"product_fit":1},"summary":"..."}',
+            ],
+            ['type' => 'image_url', 'image_url' => ['url' => $imageData]],
+        ];
+
+        $response = $this->postWithFailover('/chat/completions', [
+            'model' => $modelId ?: 'openai/gpt-4o-mini',
+            'messages' => [['role' => 'user', 'content' => $content]],
+            'temperature' => 0,
+            'response_format' => ['type' => 'json_object'],
+        ], $timeout);
+        $response->throw();
+
+        $json = $response->json();
+        $content = trim((string) data_get($json, 'choices.0.message.content', '{}'));
+        $content = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content);
+        $parsed = json_decode($content, true);
+        if (!is_array($parsed)) $parsed = [];
+
+        return [
+            'scores' => collect((array) ($parsed['scores'] ?? []))
+                ->map(fn ($score) => max(1, min(5, (int) $score)))
+                ->all(),
+            'summary' => trim((string) ($parsed['summary'] ?? '')),
+            'usage' => (array) ($json['usage'] ?? []),
+            'raw' => $json,
+        ];
+    }
+
     protected ?string $apiKey;
     protected ?string $gatewaySecret;
     protected array $baseUrls;
@@ -31,10 +96,13 @@ class OpenRouterService
 
     public function __construct()
     {
-        $this->apiKey   = config('services.openrouter.api_key');
+        $credentials = app(AiProviderCredentials::class)->for('openrouter');
+        $this->apiKey   = $credentials['api_key'] ?: config('services.openrouter.api_key');
         $this->gatewaySecret = config('services.openrouter.gateway_secret');
-        $this->baseUrls = $this->resolveBaseUrls();
-        $this->defaultTimeout = (int) config('services.openrouter.timeout', 60);
+        $settingBaseUrl = null;
+        try { $settingBaseUrl = \App\Models\AiProviderSetting::forProvider('openrouter')?->base_url; } catch (\Throwable) {}
+        $this->baseUrls = $settingBaseUrl ? [rtrim($settingBaseUrl, '/')] : $this->resolveBaseUrls();
+        $this->defaultTimeout = (int) ($credentials['timeout'] ?: config('services.openrouter.timeout', 60));
     }
 
     /**

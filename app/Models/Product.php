@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\GeneratedImage;
 
 class Product extends Model
 {
+    use SoftDeletes;
+
     // ۱. اضافه کردن تمام فیلدهای اصلی و جدید به fillable جهت پشتیبانی از متدهای دیتابیس
     protected $fillable = [
         'name_fa',
@@ -31,7 +34,10 @@ class Product extends Model
         'media_type',
         'preview_video_url',
         'primary_model',
+        'ai_provider',
         'fallback_models',
+        'fallback_model_providers',
+        'lab_grade_config',
         'prompt_template',
         'system_prompt',
         'negative_prompt',
@@ -47,6 +53,10 @@ class Product extends Model
         'identity_strength',
         'preserve_body',
         'identity_instructions',
+        'identity_instructions_fa',
+        'identity_model',
+        'identity_model_provider',
+        'identity_credit_cost',
         'min_reference_images',
         'max_reference_images',
 
@@ -58,6 +68,8 @@ class Product extends Model
         'card_shape',
         'gallery_layout',
         'card_label',
+        'card_label_enabled',
+        'card_label_position',
         'output_type',
         'output_format',
         'output_count',
@@ -76,6 +88,7 @@ class Product extends Model
         'accent_color',
         'tags',
         'explore_tiles',
+        'base_likes_count',
 
         // فیلدهای فاز جدید توسعه
         'new_display_order',
@@ -101,6 +114,8 @@ class Product extends Model
         'sample_outputs'    => 'array',
         'before_images'     => 'array',
         'fallback_models'   => 'array',
+        'fallback_model_providers' => 'array',
+        'lab_grade_config' => 'array',
         'input_schema'      => 'array',
         'output_variants'   => 'array',
         'explore_tiles'     => 'array',
@@ -112,9 +127,11 @@ class Product extends Model
         'is_new'            => 'boolean',
         'is_trending'       => 'boolean',
         'watermark_enabled' => 'boolean',
+        'card_label_enabled' => 'boolean',
         'identity_preservation' => 'boolean',
         'preserve_body'     => 'boolean',
         'identity_strength' => 'integer',
+        'identity_credit_cost' => 'integer',
         'min_reference_images' => 'integer',
         'max_reference_images' => 'integer',
         'seed'              => 'integer',
@@ -126,6 +143,7 @@ class Product extends Model
         'new_max_run_per_user' => 'integer',
         'last_test_duration_ms' => 'integer',
         'total_test_tokens' => 'integer',
+        'base_likes_count'  => 'integer',
     ];
 
     /**
@@ -185,10 +203,33 @@ class Product extends Model
         return $this->hasMany(Generation::class);
     }
 
+    /** دانلودهای ثبت‌شده‌ی این محصول برای رتبه‌بندی و نمایش ترندز. */
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(ProductDownload::class);
+    }
+
+    /** رویدادهای بازدید و بازکردن محصول برای گزارش‌های ترندز. */
+    public function metricEvents(): HasMany
+    {
+        return $this->hasMany(ProductMetricEvent::class);
+    }
+
+    public function creditLogs(): HasMany
+    {
+        return $this->hasMany(ProductCreditLog::class);
+    }
+
     /** آزمایش‌های مدیریتی محصول؛ جدا از اجراهای واقعی کاربران. */
     public function testRuns(): HasMany
     {
         return $this->hasMany(ProductTestRun::class)->latest();
+    }
+
+    /** آزمایش‌های ثبت‌شده در آزمایشگاه مستقل محصولات. */
+    public function labExperiments(): HasMany
+    {
+        return $this->hasMany(LabExperiment::class)->latest();
     }
 
     /**
@@ -215,6 +256,20 @@ class Product extends Model
     public function likedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(User::class, 'liked_products')->withTimestamps();
+    }
+
+    /** عدد نمایشی لایک: عدد پایه‌ی مدیر + لایک‌های واقعی ثبت‌شده کاربران. */
+    public function getDisplayedLikesCountAttribute(): int
+    {
+        $actualLikes = $this->getAttributeFromArray('liked_by_users_count');
+
+        if ($actualLikes === null) {
+            $actualLikes = $this->relationLoaded('likedByUsers')
+                ? $this->likedByUsers->count()
+                : $this->likedByUsers()->count();
+        }
+
+        return max(0, (int) $this->base_likes_count) + (int) $actualLikes;
     }
 
     /**

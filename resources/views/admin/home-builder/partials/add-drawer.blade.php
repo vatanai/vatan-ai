@@ -1,39 +1,41 @@
-{{--
-  Drawer دو-مرحله‌ای افزودن Section:
-  گام ۱) انتخاب نوع Section
-  گام ۲) انتخاب Layout (با Thumbnail) — بعد از انتخاب، Section به‌صورت پیش‌نویس ساخته و
-         بلافاصله Drawer تنظیمات (edit-drawer) برای پرکردن جزئیات باز می‌شود.
---}}
+{{-- گالری مستقیم تمام مدل‌های واقعی؛ انتخاب هر مدل، Drawer تنظیمات همان سکشن را باز می‌کند. --}}
 <div class="drawer-overlay" id="hb-add-overlay" onclick="HomeBuilder.closeAddDrawer()"></div>
 <div class="drawer-panel" id="hb-add-panel">
 
   <div class="drawer-section" style="position:sticky;top:0;background:var(--card-bg);z-index:5;display:flex;align-items:center;justify-content:space-between;">
-    <div class="text-[14px] font-bold" style="color:var(--text-h);" id="hb-add-title">افزودن Section — انتخاب نوع</div>
+    <div>
+      <div class="text-[14px] font-bold" style="color:var(--text-h);" id="hb-add-title">افزودن سکشن — انتخاب مدل نمایشی</div>
+      <div class="text-[10.5px] mt-1" style="color:var(--text-soft);">تمام مدل‌ها با ظاهر واقعی سایت و محتوای فعال نمایش داده می‌شوند.</div>
+    </div>
     <button onclick="HomeBuilder.closeAddDrawer()" class="icon-action-btn"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
-  {{-- گام ۱: انتخاب نوع --}}
-  <div class="drawer-section" id="hb-add-step-type">
-    <div class="grid grid-cols-2 gap-2.5">
-      @foreach($typeRegistry as $typeKey => $type)
-        <button type="button" class="hb-type-card" onclick="HomeBuilder.selectType('{{ $typeKey }}')"
-                style="text-align:right;display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer;">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--card-bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--primary);">
-            <i class="{{ $type['icon'] }}"></i>
+  <div class="drawer-section hb-all-layouts-gallery" id="hb-layout-gallery">
+    @foreach($typeRegistry as $typeKey => $type)
+      <section class="hb-layout-group" data-layout-type="{{ $typeKey }}">
+        <div class="hb-layout-group-head">
+          <span class="hb-layout-group-icon"><i class="{{ $type['icon'] }}"></i></span>
+          <div>
+            <h3>{{ $type['label'] }}</h3>
+            <p>{{ $type['description'] }}</p>
           </div>
-          <div class="text-[12.5px] font-bold" style="color:var(--text-h);">{{ $type['label'] }}</div>
-          <div class="text-[10.5px]" style="color:var(--text-soft);line-height:1.6;">{{ $type['description'] }}</div>
-        </button>
-      @endforeach
-    </div>
-  </div>
-
-  {{-- گام ۲: انتخاب Layout --}}
-  <div class="drawer-section" id="hb-add-step-layout" style="display:none;">
-    <button type="button" class="btn-pro btn-pro-ghost mb-3" onclick="HomeBuilder.backToTypeStep()">
-      <i class="fa-solid fa-arrow-right text-[11px]"></i> بازگشت
-    </button>
-    <div class="grid grid-cols-2 gap-2.5" id="hb-layout-gallery"></div>
+        </div>
+        <div class="grid grid-cols-1 gap-2.5">
+          @foreach($type['layouts'] as $layoutKey => $layout)
+            <div class="hb-layout-card" role="button" tabindex="0"
+                 onclick="HomeBuilder.selectLayout('{{ $typeKey }}','{{ $layoutKey }}')"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();HomeBuilder.selectLayout('{{ $typeKey }}','{{ $layoutKey }}')}"
+                 style="text-align:center;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer;">
+              <div class="hb-layout-preview" id="hb-add-preview-{{ $typeKey }}-{{ $layoutKey }}" data-preview-type="{{ $typeKey }}" data-preview-layout="{{ $layoutKey }}">
+                <div class="hb-preview-loading"><i class="fa-solid fa-spinner fa-spin"></i> پیش‌نمایش واقعی</div>
+                <iframe title="پیش‌نمایش {{ $layout['label'] }}" tabindex="-1"></iframe>
+              </div>
+              <div class="text-[11.5px] font-bold" style="color:var(--text-h);">{{ $layout['label'] }}</div>
+            </div>
+          @endforeach
+        </div>
+      </section>
+    @endforeach
   </div>
 
 </div>

@@ -10,7 +10,8 @@
     ->reject(fn ($device) => $section->isVisibleOn($device))
     ->map(fn ($device) => 'hb-hide-' . $device)
     ->implode(' ');
+  $hoverEffect = preg_replace('/[^a-z0-9_\-]/', '', (string) $section->setting('hover_effect', 'neon_glow')) ?: 'neon_glow';
 @endphp
-<div class="hb-section {{ $visibilityClasses }}" data-section-type="{{ $section->type }}" data-section-id="{{ $section->id }}">
+<div class="hb-section hb-hover-effect--{{ $hoverEffect }} {{ $visibilityClasses }}" data-section-type="{{ $section->type }}" data-section-id="{{ $section->id }}">
   @includeIf('app.home-builder.sections.' . $section->type, $item)
 </div>

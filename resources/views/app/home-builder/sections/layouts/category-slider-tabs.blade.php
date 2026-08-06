@@ -7,9 +7,12 @@
 @php $hbTabsId = 'hb-tabs-' . $section->id; @endphp
 <div id="{{ $hbTabsId }}">
   <div class="hb-tabs-row">
+    <button type="button" class="hb-tab-pill is-active"
+            data-tabs-group="{{ $hbTabsId }}"
+            data-tabs-target="{{ $hbTabsId }}-panel-all">نمایش همه</button>
     @foreach($categories as $hbTabIndex => $category)
       <button type="button"
-              class="hb-tab-pill {{ $hbTabIndex === 0 ? 'is-active' : '' }}"
+              class="hb-tab-pill"
               data-tabs-group="{{ $hbTabsId }}"
               data-tabs-target="{{ $hbTabsId }}-panel-{{ $category->id }}">
         {{ $category->name_fa }}
@@ -17,8 +20,23 @@
     @endforeach
   </div>
 
+  <div class="hb-tabs-panel is-active" id="{{ $hbTabsId }}-panel-all">
+    <div class="home-cards-scroll">
+      @foreach(($allTabProducts ?? collect()) as $product)
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image:url('{{ $product->displayImageUrl() }}')">
+          <div class="home-card-overlay"></div>
+          <div class="home-card-info">
+            <p class="home-card-name">{{ $product->name_fa }}</p>
+            <p class="home-card-tag">{{ $product->subcategory ?: $product->category }}</p>
+            @if($section->setting('show_credit', true))<p class="home-card-credit"><i class="fa-solid fa-bolt"></i>{{ number_format((int) $product->credit_cost) }} کردیت</p>@endif
+          </div>
+        </a>
+      @endforeach
+    </div>
+  </div>
+
   @foreach($categories as $hbTabIndex => $category)
-    <div class="hb-tabs-panel {{ $hbTabIndex === 0 ? 'is-active' : '' }}" id="{{ $hbTabsId }}-panel-{{ $category->id }}">
+    <div class="hb-tabs-panel" id="{{ $hbTabsId }}-panel-{{ $category->id }}">
       <div class="home-cards-scroll">
         @foreach(($productsByCategory[$category->id] ?? collect()) as $product)
           <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\AiImageProviderInterface;
 use App\Models\AiModel;
 use App\Models\Product;
 use Illuminate\Support\Facades\Http;
@@ -24,17 +25,39 @@ use Exception;
  * - پشتیبانی از input (برای image editing در gpt-image-1)
  * ══════════════════════════════════════════════════════
  */
-class LiaraAiService
+class LiaraAiService implements AiImageProviderInterface
 {
+    public function provider(): string
+    {
+        return 'liara';
+    }
+
+    public function validateModelConfiguration(AiModel $model): array
+    {
+        $issues = [];
+        if (blank($this->apiKey)) $issues[] = 'LIARA_AI_API_KEY تنظیم نشده است.';
+        if (blank($model->externalModelId())) $issues[] = 'شناسه مدل خالی است.';
+        return ['valid' => empty($issues), 'issues' => $issues];
+    }
+
+    public function getModelCapabilities(AiModel $model): array
+    {
+        return array_merge([
+            'allowed_inputs' => ['prompt', 'n', 'size', 'quality', 'seed'],
+            'supports_text_to_image' => true,
+            'supports_image_to_image' => (bool) $model->supports_image_input,
+        ], is_array($model->capability_config) ? $model->capability_config : []);
+    }
     protected string $apiKey;
     protected string $baseUrl;
     protected int $timeout;
 
     public function __construct()
     {
-        $this->apiKey  = (string) config('services.liara.api_key', '');
-        $this->baseUrl = rtrim((string) config('services.liara.base_url', 'https://ai.liara.ir/api/v1'), '/');
-        $this->timeout = (int) config('services.liara.timeout', 120);
+        $credentials = app(AiProviderCredentials::class)->for('liara');
+        $this->apiKey  = (string) ($credentials['api_key'] ?: config('services.liara.api_key', ''));
+        $this->baseUrl = rtrim((string) ($credentials['base_url'] ?: config('services.liara.base_url', 'https://ai.liara.ir/api/v1')), '/');
+        $this->timeout = (int) ($credentials['timeout'] ?: config('services.liara.timeout', 120));
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -68,7 +91,7 @@ class LiaraAiService
         $inputImages = $this->extractInputImages($extraPayload);
 
         if (!empty($inputImages)) {
-            return $this->callEditApi($modelId, $prompt, $inputImages, $n, $size, $quality);
+            return $this->callEditApi($modelId, $prompt, $inputImages, $n, $size, $quality, ($extraPayload['input_fidelity'] ?? null) === 'high');
         }
 
         $payload = [
@@ -180,7 +203,8 @@ class LiaraAiService
         array $base64Images,
         int $n = 1,
         string $size = '1024x1024',
-        string $quality = 'high'
+        string $quality = 'high',
+        bool $highInputFidelity = false
     ): array
     {
         if (empty($this->apiKey)) {
@@ -214,13 +238,15 @@ class LiaraAiService
             );
         }
 
-        $response = $request->post($this->baseUrl . '/images/edits', [
+        $payload = [
             'model'   => $modelId,
             'prompt'  => $prompt,
             'n'       => $n,
             'size'    => $size,
             'quality' => $quality,
-        ]);
+        ];
+        if ($highInputFidelity) $payload['input_fidelity'] = 'high';
+        $response = $request->post($this->baseUrl . '/images/edits', $payload);
 
         if ($response->failed()) {
             $body = $response->body();

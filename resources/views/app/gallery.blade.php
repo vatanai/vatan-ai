@@ -6,7 +6,7 @@
     {{-- هدر صفحه --}}
     <div class="gallery-header" style="margin-bottom: 32px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px;">
         <h1 style="font-size: 22px; font-weight: 700; margin: 0 0 8px 0; color: var(--text-primary);">گالری تصاویر من</h1>
-        <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">مدیریت یکپارچه تصاویر خلق‌شده توسط هوش مصنوعی و عکس‌های شخصی آپلود شده</p>
+        <p style="color: var(--text-secondary); font-size: 13px; margin: 0;">مدیریت یکپارچه تصاویر خلق‌شده توسط هوش مصنوعی و عکس‌های ورودی برای ساخت</p>
     </div>
 
     {{-- بخش اول: تصاویر خلق شده هوش مصنوعی --}}
@@ -30,10 +30,10 @@
         @endforelse
     </div>
 
-    {{-- بخش دوم: عکس‌های شخصی آپلود شده --}}
+    {{-- بخش دوم: عکس‌های ورودی برای ساخت --}}
     <div class="section-title" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
         <span style="color: #3b82f6; font-size: 18px;">📁</span>
-        <h2 style="font-size: 16px; font-weight: 700; margin: 0;">عکس‌های شخصی آپلود شده</h2>
+        <h2 style="font-size: 16px; font-weight: 700; margin: 0;">عکس‌های ورودی برای ساخت</h2>
     </div>
 
     <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
@@ -46,7 +46,7 @@
             </div>
         @empty
             <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; padding: 20px 0;">
-                هنوز هیچ عکسی آپلود نکرده‌اید.
+                هنوز هیچ عکس ورودی برای ساخت وارد نکرده‌اید.
             </div>
         @endforelse
     </div>

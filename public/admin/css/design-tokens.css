@@ -149,7 +149,7 @@ body.light {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0 38px 0 14px;
-  font-family: 'Vazirmatn', sans-serif;
+  font-family: 'YekanBakh', sans-serif;
   font-size: 12.5px; color: var(--text-main);
   outline: none; transition: all .2s;
 }
@@ -378,11 +378,40 @@ body.light .mini-btn.active {
 /* ══════════════════════════════════════════════════════════════
    فونت یکسان کل پنل — یکان بخ (فایل فونت از قبل در public/fonts موجود است)
 ════════════════════════════════════════════════════════════════ */
-html, body,
+html, body, body *,
+button, input, select, textarea, option, dialog, dialog *,
 .sidebar, .mini-rail, .topbar, .tb-search input,
 .nav-label, .sub-label, .sub-sub-label, .sb-logo-name, .sb-uname {
-  font-family: 'YekanBakh', 'Vazirmatn', sans-serif !important;
+  font-family: 'YekanBakh', sans-serif !important;
 }
+input::placeholder, textarea::placeholder { font-family: 'YekanBakh', sans-serif !important; }
+.font-mono, code, pre { font-family: 'YekanBakh', sans-serif !important; }
+
+/* آیکون‌ها باید با فونت اختصاصی Font Awesome رندر شوند، نه YekanBakh. */
+.fa,
+.fa-classic,
+.fa-solid,
+.fas,
+.fa-regular,
+.far {
+  font-family: 'Font Awesome 7 Free' !important;
+}
+.fa-brands,
+.fab {
+  font-family: 'Font Awesome 7 Brands' !important;
+}
+
+.tb-iran-clock {
+  min-width: 84px; height: 38px; padding: 4px 10px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card-bg); color: var(--text-main);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  line-height: 1.15; white-space: nowrap;
+}
+.tb-iran-clock-time { font-size: 12px; font-weight: 800; }
+.tb-iran-clock-date { margin-top: 2px; font-size: 9.5px; color: var(--text-soft); }
+.admin-toast { display:flex; align-items:center; gap:10px; box-shadow:var(--shadow-card); font-family:'YekanBakh',sans-serif!important; }
+.admin-toast-icon { width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
 
 /* ══════════════════════════════════════════════════════════════
    اسلایدبار منوها (Sidebar) — کپی دقیق استایل یوآی داشبورد محسن
@@ -707,6 +736,32 @@ body.light .live-chip { color: #16a34a; }
 .table-pro tbody tr.is-selected { background: var(--primary-l); }
 .table-pro tbody td { padding: 14px; font-size: 12.5px; color: var(--text-main); vertical-align: middle; }
 
+/* جدول محصولات ستون‌های بیشتری دارد؛ در دسکتاپ فشرده می‌شود تا اسکرول افقی لازم نباشد. */
+@media (min-width: 768px) {
+  .products-table-compact { table-layout: fixed; width: 100%; }
+  .products-table-compact thead th,
+  .products-table-compact tbody td { padding: 9px 5px; font-size: 11px; }
+  .products-table-compact thead th { font-size: 9.5px; letter-spacing: 0; white-space: normal; line-height: 1.45; }
+  .products-table-compact th:nth-child(1) { width: 28px !important; }
+  .products-table-compact th:nth-child(2) { width: 44px !important; }
+  .products-table-compact th:nth-child(3) { width: 145px; }
+  .products-table-compact th:nth-child(4) { width: 62px; }
+  .products-table-compact th:nth-child(5) { width: 72px; }
+  .products-table-compact th:nth-child(6) { width: 100px; }
+  .products-table-compact th:nth-child(7) { width: 58px; }
+  .products-table-compact th:nth-child(8) { width: 64px; }
+  .products-table-compact th:nth-child(9) { width: 98px; }
+  .products-table-compact th:nth-child(10) { width: 60px; }
+  .products-table-compact th:nth-child(11) { width: 67px; }
+  .products-table-compact th:nth-child(12) { width: 128px; }
+  .products-table-compact th:nth-child(13) { width: 66px; }
+  .products-table-compact .td-product > div { overflow: hidden; }
+  .products-table-compact .td-product .font-mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .products-table-compact .badge-pro { padding: 3px 5px; font-size: 9px; }
+  .products-table-compact .table-thumb { width: 34px; height: 34px; }
+  .products-table-compact .progress-track { width: 30px; }
+}
+
 .row-checkbox {
   width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid var(--border);
   background: var(--input-bg); cursor: pointer; accent-color: var(--primary);
@@ -798,20 +853,68 @@ body.light .live-chip { color: #16a34a; }
 
 /* --- درایور پیش‌نمایش محصول (کلاس‌های قدیمی — برای سازگاری حفظ شده) --- */
 .drawer-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+  position: fixed; top: 0; bottom: 0; left: 0; right: var(--admin-navigation-width);
+  background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
   z-index: 200; opacity: 0; pointer-events: none; transition: opacity .25s;
 }
 .drawer-overlay.open { opacity: 1; pointer-events: auto; }
 .drawer-panel {
-  position: fixed; top: 0; bottom: 0; right: 0; width: 420px; max-width: 92vw;
+  position: fixed; top: 0; bottom: 0; right: var(--admin-navigation-width); width: 420px; max-width: 92vw;
   background: var(--card-bg); border-left: 1px solid var(--border);
   box-shadow: var(--shadow-sb); z-index: 201; overflow-y: auto;
   transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
 }
 .drawer-panel.open { transform: translateX(0); }
+.admin-wrap.sidebar-toggled .drawer-overlay,
+.admin-wrap.sidebar-toggled .drawer-panel { right: 132px; }
+@media (max-width: 900px) {
+  .drawer-overlay,
+  .drawer-panel,
+  .admin-wrap.sidebar-toggled .drawer-overlay,
+  .admin-wrap.sidebar-toggled .drawer-panel { right: 0; }
+}
 .drawer-section { padding: 16px 20px; border-bottom: 1px solid var(--divider); }
 .drawer-label { font-size: 10.5px; font-weight: 700; color: var(--text-soft); letter-spacing: .2px; margin-bottom: 6px; }
 .drawer-value { font-size: 13px; color: var(--text-h); font-weight: 600; }
+
+/* پیش‌نمایش واقعی Home Builder؛ iframe از تداخل CSS سایت و داشبورد جلوگیری می‌کند. */
+#hb-add-panel,
+#hb-edit-panel { width: min(920px, calc(100vw - var(--admin-navigation-width))); }
+.admin-wrap.sidebar-toggled #hb-add-panel,
+.admin-wrap.sidebar-toggled #hb-edit-panel { width: min(920px, calc(100vw - 132px)); }
+.hb-all-layouts-gallery { display:flex; flex-direction:column; gap:24px; }
+.hb-layout-group { display:grid; gap:10px; }
+.hb-layout-group + .hb-layout-group { padding-top:20px; border-top:1px solid var(--divider); }
+.hb-layout-group-head { display:flex; align-items:center; gap:10px; text-align:right; }
+.hb-layout-group-icon { width:36px; height:36px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; border-radius:10px; background:var(--primary-l); color:var(--primary); }
+.hb-layout-group-head h3 { margin:0; font-size:13px; font-weight:800; color:var(--text-h); }
+.hb-layout-group-head p { margin:2px 0 0; font-size:10.5px; color:var(--text-soft); }
+.hb-layout-card { overflow: hidden; transition: border-color .2s, transform .2s; }
+.hb-layout-card:hover { border-color: var(--primary) !important; transform: translateY(-1px); }
+.hb-layout-preview { position: relative; height: 220px; margin-bottom: 8px; overflow: hidden; border-radius: 9px; background: var(--card-bg); border: 1px solid var(--border); }
+.hb-layout-preview iframe { width: 1100px; height: 520px; border: 0; pointer-events: none; transform: scale(.78); transform-origin: top right; }
+.hb-preview-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 7px; color: var(--text-soft); font-size: 11px; background: var(--input-bg); z-index: 1; }
+.hb-layout-preview.is-ready .hb-preview-loading,
+.hb-live-preview-frame.is-ready .hb-preview-loading { display: none; }
+.hb-live-preview-frame { position: relative; width: 100%; height: 720px; margin-inline: auto; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg); transition: width .25s, height .25s; }
+.hb-live-preview-frame iframe { width: 100%; height: 100%; border: 0; background: var(--input-bg); }
+.hb-live-preview-frame.is-tablet { width: min(100%, 770px); height:1024px; }
+.hb-live-preview-frame.is-tablet iframe { width:768px; max-width:100%; }
+.hb-live-preview-frame.is-mobile { width: min(100%, 392px); height:844px; }
+.hb-live-preview-frame.is-mobile iframe { width:390px; max-width:100%; }
+.hb-preview-devices { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--input-bg); }
+.hb-preview-devices button { width: 30px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--text-soft); cursor: pointer; }
+.hb-preview-devices button.is-active { background: var(--primary-l); color: var(--primary); }
+@media (max-width: 900px) {
+  #hb-add-panel,
+  #hb-edit-panel,
+  .admin-wrap.sidebar-toggled #hb-add-panel,
+  .admin-wrap.sidebar-toggled #hb-edit-panel { width: min(920px, 100vw); }
+}
+@media (max-width: 480px) {
+  .hb-live-preview-section { padding-inline:10px; }
+  .hb-live-preview-frame.is-mobile { height:70vh; }
+}
 
 /* --- حالت خالی (Empty State) --- */
 .empty-state { text-align: center; padding: 60px 20px; }

@@ -50,8 +50,36 @@
       </div>
     </div>
     <button type="button" class="sb-btn-primary" onclick="sbOpenLibrary()">
-      <i class="fa-solid fa-plus"></i> افزودن ویژگی
+      <i class="fa-solid fa-sliders"></i> حالت‌های بیشتر
     </button>
+  </div>
+
+  <div class="sb-template-intro">
+    <div>
+      <strong>یک نمونه آماده انتخاب کنید</strong>
+      <span>بعد از افزودن، عنوان و متن پرامپت هر گزینه را به دلخواه تغییر دهید.</span>
+    </div>
+    <span class="sb-template-count">۷ سبک پرتکرار</span>
+  </div>
+  <div class="sb-template-grid">
+    @foreach(config('product_schema_types.templates', []) as $templateKey => $template)
+      <button type="button" class="sb-template-card" onclick="sbAddTemplate(@js($templateKey))">
+        <span class="sb-template-icon"><i class="fa-solid {{ $template['icon'] }}"></i></span>
+        <span>
+          <strong>{{ $template['label'] }}</strong>
+          <small>{{ $template['desc'] }}</small>
+        </span>
+        <i class="fa-solid fa-plus sb-template-plus"></i>
+      </button>
+    @endforeach
+  </div>
+
+  <div class="sb-user-preview">
+    <div class="sb-user-preview-head">
+      <span><i class="fa-solid fa-eye"></i> نمایی که کاربر در سایت می‌بیند</span>
+      <small>هم‌زمان با تغییر ویژگی‌ها به‌روز می‌شود</small>
+    </div>
+    <div id="sb-live-preview" class="sb-live-preview"></div>
   </div>
 
   {{-- ── لیست فیلدها (State-driven — توسط schema-builder.js رندر می‌شود) ──
@@ -100,6 +128,7 @@
 window.SCHEMA_BUILDER_CFG = {
   groups:  @json(config('product_schema_types.groups', [])),
   types:   @json(config('product_schema_types.types', [])),
+  templates: @json(config('product_schema_types.templates', [])),
   help:    @json(config('product_field_help.input_schema_fields', [])),
   initial: @json($__sbInitial),
 };

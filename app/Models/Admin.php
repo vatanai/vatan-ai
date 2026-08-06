@@ -13,22 +13,24 @@ class Admin extends Authenticatable
     protected $table = 'admins'; // یا 'users' اگر از همان جدول استفاده می‌کنید
 
     protected $fillable = [
-        'name', 'email', 'role', 'password', 'remember_token',
+        'name', 'email', 'phone', 'role', 'is_active', 'password', 'password_reveal', 'remember_token',
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'password_reveal', 'remember_token',
     ];
 
     protected function casts(): array
     {
         return [
             'password' => 'hashed',
+            'password_reveal' => 'encrypted',
+            'is_active' => 'boolean',
         ];
     }
 
     public function isLeader(): bool
     {
-        return $this->role === 'leader' || $this->id === static::query()->min('id');
+        return $this->role === 'leader';
     }
 }

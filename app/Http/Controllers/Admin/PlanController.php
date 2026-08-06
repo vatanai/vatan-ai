@@ -3,127 +3,196 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\SavePlanRequest;
 use App\Models\Plan;
+use App\Models\PlanSetting;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class PlanController extends Controller
 {
-    /**
-     * نمایش لیست کامل پلن‌ها
-     */
-    public function index()
+    public function index(Request $request): View
     {
-        $plans = Plan::latest()->get();
-        return view('admin.plans.index', compact('plans'));
-    }
+        $query = Plan::query()->withCount('purchases')->orderBy('sort_order')->orderBy('id');
 
-    /**
-     * نمایش فرم ایجاد پلن جدید
-     */
-    public function create()
-    {
-        return view('admin.plans.create');
-    }
-
-    /**
-     * ذخیره‌سازی داده‌های فرم ایجاد
-     */
-    public function store(Request $request)
-    {
-        // حذف کاما از قیمت برای تبدیل به عدد خام پیش از ولیدیشن
-        if ($request->has('price')) {
-            $request->merge([
-                'price' => str_replace(',', '', $request->price)
-            ]);
+        if ($request->filled('status')) {
+            $request->status === 'archived'
+                ? $query->whereNotNull('archived_at')
+                : $query->whereNull('archived_at')->where('status', $request->status);
         }
 
-        $request->validate([
-            'name'   => 'required|string|max:255',
-            'slug'   => 'required|string|max:255|unique:plans,slug',
-            'price'  => 'required|integer|min:0',
-            'tokens' => 'required|integer|min:1',
-            'image'  => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
-
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('plans', 'public');
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")
+                ->orWhere('plan_code', 'like', "%{$search}%"));
         }
 
-        // فیلد is_active به دلیل عدم وجود در دیتابیس حذف شد تا خطا برطرف شود
-        Plan::create([
-            'name'       => $request->name,
-            'slug'       => Str::slug($request->slug, '-'),
-            'price'      => $request->price,
-            'tokens'     => $request->tokens,
-            'image_path' => $imagePath,
+        return view('admin.plans.index', [
+            'plans' => $query->get(),
+            'display' => PlanSetting::display(),
+            'stats' => [
+                'total' => Plan::count(),
+                'active' => Plan::published()->count(),
+                'draft' => Plan::where('status', 'draft')->whereNull('archived_at')->count(),
+                'purchases' => DB::table('plan_purchases')->where('status', 'completed')->count(),
+            ],
         ]);
-
-        return redirect()->route('admin.plans.index')->with('success', 'پلن جدید با موفقیت ساخته شد.');
     }
 
-    /**
-     * نمایش فرم ویرایش پلن
-     */
-    public function edit(string $id)
+    public function create(): View
     {
-        $plan = Plan::findOrFail($id);
+        return view('admin.plans.create', ['plan' => new Plan()]);
+    }
+
+    public function store(SavePlanRequest $request): RedirectResponse
+    {
+        $plan = DB::transaction(fn () => Plan::create($this->payload($request)));
+
+        return redirect()->route('admin.plans.edit', $plan)->with('success', 'پلن با موفقیت ساخته شد.');
+    }
+
+    public function edit(Plan $plan): View
+    {
         return view('admin.plans.edit', compact('plan'));
     }
 
-    /**
-     * به‌روزرسانی اطلاعات پلن
-     */
-    public function update(Request $request, string $id)
+    public function update(SavePlanRequest $request, Plan $plan): RedirectResponse
     {
-        $plan = Plan::findOrFail($id);
+        DB::transaction(function () use ($request, $plan) {
+            $payload = $this->payload($request, $plan);
+            $payload['version'] = ((int) $plan->version) + 1;
+            $plan->update($payload);
+        });
 
-        // حذف کاما از قیمت پیش از ولیدیشن و آپدیت
-        if ($request->has('price')) {
-            $request->merge([
-                'price' => str_replace(',', '', $request->price)
-            ]);
-        }
-
-        $request->validate([
-            'name'   => 'required|string|max:255',
-            'slug'   => 'required|string|max:255|unique:plans,slug,' . $plan->id,
-            'price'  => 'required|integer|min:0',
-            'tokens' => 'required|integer|min:1',
-            'image'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
-
-        if ($request->hasFile('image')) {
-            if ($plan->image_path) {
-                Storage::disk('public')->delete($plan->image_path);
-            }
-            $plan->image_path = $request->file('image')->store('plans', 'public');
-        }
-
-        $plan->update([
-            'name'       => $request->name,
-            'slug'       => Str::slug($request->slug, '-'),
-            'price'      => $request->price,
-            'tokens'     => $request->tokens,
-            'image_path' => $plan->image_path,
-        ]);
-
-        return redirect()->route('admin.plans.index')->with('success', 'پلن با موفقیت به‌روزرسانی شد.');
+        return back()->with('success', 'تغییرات پلن ذخیره شد.');
     }
 
-    /**
-     * حذف کامل پلن
-     */
-    public function destroy(string $id)
+    public function destroy(Plan $plan): RedirectResponse
     {
-        $plan = Plan::findOrFail($id);
+        if ($plan->purchases()->exists()) {
+            return back()->with('error', 'این پلن سابقه خرید دارد و قابل حذف نیست؛ آن را آرشیو کنید.');
+        }
+
         if ($plan->image_path) {
             Storage::disk('public')->delete($plan->image_path);
         }
         $plan->delete();
 
-        return redirect()->route('admin.plans.index')->with('success', 'پلن مدنظر با موفقیت حذف شد.');
+        return back()->with('success', 'پلن حذف شد.');
+    }
+
+    public function duplicate(Plan $plan): RedirectResponse
+    {
+        $copy = $plan->replicate(['plan_code', 'archived_at']);
+        $copy->name = $plan->name . ' - کپی';
+        $copy->slug = $this->uniqueSlug($plan->slug . '-copy');
+        $copy->status = 'draft';
+        $copy->is_featured = false;
+        $copy->version = 1;
+        $copy->save();
+
+        return redirect()->route('admin.plans.edit', $copy)->with('success', 'یک نسخه پیش‌نویس از پلن ساخته شد.');
+    }
+
+    public function archive(Plan $plan): RedirectResponse
+    {
+        $plan->update(['archived_at' => $plan->archived_at ? null : now()]);
+
+        return back()->with('success', $plan->archived_at ? 'پلن آرشیو شد.' : 'پلن از آرشیو خارج شد.');
+    }
+
+    public function reorder(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['order' => ['required', 'array'], 'order.*' => ['integer', 'exists:plans,id']]);
+        foreach (array_values($data['order']) as $index => $id) {
+            Plan::whereKey($id)->update(['sort_order' => $index + 1]);
+        }
+
+        return back()->with('success', 'ترتیب نمایش پلن‌ها ذخیره شد.');
+    }
+
+    public function updateDisplay(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'mode' => ['required', 'in:cards,comparison'],
+            'home_limit' => ['required', 'integer', 'between:1,6'],
+            'title' => ['required', 'string', 'max:120'],
+            'subtitle' => ['nullable', 'string', 'max:300'],
+        ]);
+        $data['show_images'] = $request->boolean('show_images');
+        $data['show_comparison'] = $request->boolean('show_comparison');
+
+        PlanSetting::updateOrCreate(['key' => 'display'], ['value' => $data]);
+
+        return back()->with('success', 'تنظیمات نمایش ذخیره شد.');
+    }
+
+    private function payload(SavePlanRequest $request, ?Plan $plan = null): array
+    {
+        $data = $request->validated();
+        $features = collect($data['features'])->values()->map(fn ($feature, $index) => [
+            'title' => trim($feature['title']),
+            'value' => trim((string) ($feature['value'] ?? '')),
+            'included' => $feature['included'],
+            'highlighted' => (bool) ($feature['highlighted'] ?? false),
+            'sort_order' => $index + 1,
+        ])->all();
+
+        $imagePath = $plan?->image_path;
+        if ($request->hasFile('image')) {
+            if ($imagePath) {
+                Storage::disk('public')->delete($imagePath);
+            }
+            $imagePath = $request->file('image')->store('plans', 'public');
+        }
+
+        return [
+            'name' => $data['name'],
+            'slug' => Str::slug($data['slug']),
+            'price' => $data['price'],
+            'price_prefix' => $data['price_prefix'] ?? null,
+            'compare_at_price' => $data['compare_at_price'] ?? null,
+            'tokens' => $data['tokens'],
+            'token_label' => $data['token_label'] ?? null,
+            'billing_type' => $data['billing_type'],
+            'is_unlimited' => $data['is_unlimited'],
+            'short_description' => $data['short_description'] ?? null,
+            'description' => $data['description'] ?? null,
+            'icon' => $data['icon'] ?: 'fa-solid fa-gem',
+            'card_style' => $data['card_style'],
+            'badge_text' => $data['badge_text'] ?? null,
+            'features' => $features,
+            'audience_overrides' => [
+                'loyal' => [
+                    'price' => $data['loyal_price'] ?? null,
+                    'tokens' => $data['loyal_tokens'] ?? null,
+                    'bonus_tokens' => $data['loyal_bonus_tokens'] ?? 0,
+                    'visible' => $data['loyal_visible'],
+                    'purchasable' => $data['loyal_purchasable'],
+                ],
+            ],
+            'sort_order' => $data['sort_order'],
+            'status' => $data['status'],
+            'is_featured' => $data['is_featured'],
+            'purchase_limit' => $data['purchase_limit'] ?? null,
+            'starts_at' => $data['starts_at'] ?? null,
+            'ends_at' => $data['ends_at'] ?? null,
+            'image_path' => $imagePath,
+        ];
+    }
+
+    private function uniqueSlug(string $base): string
+    {
+        $slug = Str::slug($base);
+        $candidate = $slug;
+        $number = 2;
+        while (Plan::where('slug', $candidate)->exists()) {
+            $candidate = $slug . '-' . $number++;
+        }
+        return $candidate;
     }
 }

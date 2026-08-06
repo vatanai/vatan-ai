@@ -29,6 +29,8 @@ class LikedProductController extends Controller
         return response()->json([
             'success' => true,
             'liked'   => $liked,
+            'likes_count' => max(0, (int) $product->base_likes_count)
+                + $product->likedByUsers()->count(),
         ]);
     }
 }

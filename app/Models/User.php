@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -22,14 +23,20 @@ class User extends Authenticatable
         'last_name',
         'email',
         'phone',
+        'birth_date',
         'password',
+        'password_reveal',
         'avatar',
         'status',
+        'customer_segment',
         'tokens',            // موجودی فعلی توکن
         'tokens_purchased',  // کل توکن‌های خریداری شده از اول تا الان
         'tokens_used',       // کل توکن‌های مصرف شده
         'plan_id',           // پلن فعلی کاربر (ارتباط با جدول plans)
         'referral_earnings', // موجودی درآمد رفرال به تومان
+        'referral_code',
+        'referred_by',
+        'referral_attributed_at',
     ];
 
     /**
@@ -37,6 +44,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'password_reveal',
         'remember_token',
     ];
 
@@ -47,12 +55,22 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birth_date' => 'date',
             'password' => 'hashed',
+            'password_reveal' => 'encrypted',
             'tokens' => 'integer',
             'tokens_purchased' => 'integer',
             'tokens_used' => 'integer',
             'referral_earnings' => 'integer',
+            'referral_attributed_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            $user->referral_code ??= Str::upper(Str::random(10));
+        });
     }
 
     protected function phone(): Attribute
@@ -111,6 +129,36 @@ class User extends Authenticatable
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function planPurchases(): HasMany
+    {
+        return $this->hasMany(PlanPurchase::class);
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'referred_by');
+    }
+
+    public function invitedUsers(): HasMany
+    {
+        return $this->hasMany(self::class, 'referred_by');
+    }
+
+    public function referralVisits(): HasMany
+    {
+        return $this->hasMany(ReferralVisit::class, 'inviter_id');
+    }
+
+    public function referralRewards(): HasMany
+    {
+        return $this->hasMany(ReferralReward::class);
+    }
+
+    public function getReferralUrlAttribute(): string
+    {
+        return route('referral.visit', ['code' => $this->referral_code]);
     }
 
     /**

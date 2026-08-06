@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>
+    @include('partials.site-icons')
 
     <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-    <link href="{{ asset('admin/css/design-tokens.css') }}" rel="stylesheet">
+    <link href="{{ asset('admin/css/design-tokens.css') }}?v={{ filemtime(public_path('admin/css/design-tokens.css')) }}" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -69,6 +70,7 @@
       })();
     </script>
 
+    @include('admin.partials.jalali-date-inputs')
     @yield('scripts')
 
 </body>

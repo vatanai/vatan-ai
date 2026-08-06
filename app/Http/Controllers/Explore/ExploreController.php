@@ -4,17 +4,30 @@ namespace App\Http\Controllers\Explore;
 
 use App\Http\Controllers\Controller;
 use App\Services\Explore\ExploreFeedService;
+use App\Services\Explore\TrendsService;
+use Illuminate\Http\Request;
 
 /**
  * صفحه‌ی عمومی اکسپلور — فقط رندر. تمام منطق «هوشمند» در ExploreFeedService است.
  */
 class ExploreController extends Controller
 {
-    public function index(ExploreFeedService $feed)
+    public function index(Request $request, ExploreFeedService $feed)
     {
-        $tiles = $feed->buildFeed('explore', 48);
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+        ]);
 
-        return view('app.ideas', compact('tiles'));
+        $query = trim((string) ($validated['q'] ?? ''));
+        $tiles = $feed->buildFeed('explore', null, [
+            'query' => $query,
+            'new_product_ratio' => 45,
+        ]);
+        $termRows = $feed->discoverableTerms();
+        $layoutStyle = $feed->activeLayoutStyle('explore');
+        $layoutPatterns = \App\Models\FeedSetting::DISPLAY_PATTERNS;
+
+        return view('app.ideas', compact('tiles', 'termRows', 'query', 'layoutStyle', 'layoutPatterns'));
     }
 
     /**
@@ -23,10 +36,10 @@ class ExploreController extends Controller
      * Explore استفاده می‌کند، فقط با یک surface جدا ('trending') تا تنظیمات/سنجاق/بوست
      * این صفحه کاملاً مستقل از صفحه‌ی اکسپلور عمومی از پنل ادمین قابل کنترل باشد.
      */
-    public function trending(ExploreFeedService $feed)
+    public function trending(TrendsService $trends)
     {
-        $tiles = $feed->buildFeed('trending', 24);
+        $data = $trends->buildPage();
 
-        return view('app.explore', compact('tiles'));
+        return view('app.trends.index', $data);
     }
 }

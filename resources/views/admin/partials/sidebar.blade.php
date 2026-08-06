@@ -9,15 +9,19 @@
     </div>
   </div>
 
-  {{-- کاربر --}}
-  <div class="sb-user-top">
-    <div class="sb-av">م</div>
+  {{-- کاربر — کلیک روی پروفایل خروج امن از داشبورد و انتقال به لاگین را انجام می‌دهد. --}}
+  @php $currentAdmin = auth('admin')->user(); @endphp
+  <form id="admin-logout-form" method="POST" action="{{ route('admin.logout') }}" class="hidden">
+    @csrf
+  </form>
+  <button type="submit" form="admin-logout-form" class="sb-user-top" style="width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:right;cursor:pointer;" title="خروج از داشبورد" aria-label="خروج از داشبورد">
+    <div class="sb-av">{{ mb_substr($currentAdmin?->name ?? 'م', 0, 1) }}</div>
     <div class="flex-1">
-      <div class="sb-uname">محسن رضایی</div>
-      <div class="sb-urole">مدیر کل</div>
+      <div class="sb-uname">{{ $currentAdmin?->name ?? 'مدیر پنل' }}</div>
+      <div class="sb-urole">{{ $currentAdmin?->isLeader() ? 'رهبر' : 'مدیر' }}</div>
     </div>
     <div class="sb-status-dot"></div>
-  </div>
+  </button>
 
   <nav class="flex-1 py-2">
 
@@ -29,16 +33,26 @@
       </a>
     </div>
 
+    <div class="nav-item">
+      <a href="{{ route('admin.service-credits.index') }}" class="nav-link {{ request()->is('admin/service-credits*') ? 'active' : '' }}">
+        <div class="nav-icon"><i class="fa-solid fa-gauge-high"></i></div>
+        <div class="nav-label">اعتبار سرویس‌ها</div>
+        @if(isset($creditOverview) && ($creditOverview['totals']['low_count'] ?? 0) > 0)
+          <span class="nav-status-badge warn">{{ $creditOverview['totals']['low_count'] }}</span>
+        @endif
+      </a>
+    </div>
+
     <div class="sb-section">مدیریت محصولات</div>
 
     {{-- محصولات --}}
     <div class="nav-item">
-      <div class="nav-link {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'active' : '' }}" onclick="toggleSub('products-submenu', this)">
+      <div class="nav-link {{ request()->is('admin/products*') || request()->is('admin/categories*') || request()->is('admin/lab*') ? 'active' : '' }}" onclick="toggleSub('products-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-box-open"></i></div>
         <div class="nav-label">محصولات</div>
         <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ request()->is('admin/products*') || request()->is('admin/categories*') ? 'open' : '' }}" id="products-submenu">
+      <div class="submenu {{ request()->is('admin/products*') || request()->is('admin/categories*') || request()->is('admin/lab*') ? 'open' : '' }}" id="products-submenu">
         <div class="sub-track">
           <a href="/admin/products" class="sub-item {{ request()->is('admin/products') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">لیست محصولات</div>
@@ -52,6 +66,16 @@
           <a href="{{ route('admin.categories.create') }}" class="sub-item {{ request()->is('admin/categories/create') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی</div>
           </a>
+          <div class="sub-item sub-item-parent {{ request()->is('admin/lab*') ? 'active' : '' }}" onclick="toggleSubSub('products-lab-submenu', this)">
+            <div class="sub-dot"></div><div class="sub-label">آزمایشگاه</div><i class="fa-solid fa-chevron-down sub-chev"></i>
+          </div>
+          <div class="sub-sub-wrap {{ request()->is('admin/lab*') ? 'open' : '' }}" id="products-lab-submenu">
+            <div class="sub-sub-track">
+              <a href="{{ route('admin.lab.create') }}" class="sub-sub-item {{ request()->is('admin/lab/create') ? 'active' : '' }}"><div class="sub-sub-dot"></div><div class="sub-sub-label">آزمایش جدید</div></a>
+              <a href="{{ route('admin.lab.index') }}" class="sub-sub-item {{ request()->is('admin/lab') ? 'active' : '' }}"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست آزمایش‌ها</div></a>
+              <a href="{{ route('admin.lab.reports') }}" class="sub-sub-item {{ request()->is('admin/lab/reports') ? 'active' : '' }}"><div class="sub-sub-dot"></div><div class="sub-sub-label">گزارش آزمایشگاه</div></a>
+            </div>
+          </div>
           <div class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">گزارش محصولات</div>
             <span class="nav-status-badge warn">بزودی</span>
@@ -64,14 +88,33 @@
       </div>
     </div>
 
+    {{-- پلن‌بیلدر فروش --}}
+    <div class="nav-item">
+      <div class="nav-link {{ request()->is('admin/plans*') ? 'active' : '' }}" onclick="toggleSub('plans-submenu', this)">
+        <div class="nav-icon"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="nav-label">پلن‌بیلدر فروش</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/plans*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/plans*') ? 'open' : '' }}" id="plans-submenu">
+        <div class="sub-track">
+          <a href="{{ route('admin.plans.index') }}" class="sub-item {{ request()->is('admin/plans') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">لیست پلن‌ها</div>
+          </a>
+          <a href="{{ route('admin.plans.create') }}" class="sub-item {{ request()->is('admin/plans/create') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">ثبت پلن جدید</div>
+          </a>
+        </div>
+      </div>
+    </div>
+
     {{-- مدیریت صفحات --}}
     <div class="nav-item">
-      <div class="nav-link {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
+      <div class="nav-link {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
         <div class="nav-label">مدیریت صفحات</div>
-        <i class="fa-solid fa-chevron-down nav-chev {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'open' : '' }}"></i>
+        <i class="fa-solid fa-chevron-down nav-chev {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/content*')) ? 'open' : '' }}" id="explore-submenu">
+      <div class="submenu {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}" id="explore-submenu">
         <div class="sub-track">
           <a href="{{ route('admin.explore.index') }}" class="sub-item {{ request()->is('admin/explore') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه اکسپلور</div>
@@ -79,7 +122,7 @@
           <a href="{{ route('admin.home-builder.index') }}" class="sub-item {{ request()->is('admin/home-builder*') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه هوم</div>
           </a>
-          <a href="/admin/coming-soon" class="sub-item {{ request()->is('admin/coming-soon') ? 'active' : '' }}">
+          <a href="{{ route('admin.trends.index') }}" class="sub-item {{ request()->is('admin/trends*') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه ترند</div>
           </a>
           <a href="/admin/content" class="sub-item {{ request()->is('admin/content') ? 'active' : '' }}">
@@ -133,6 +176,9 @@
       </div>
       <div class="submenu {{ request()->is('admin/ai-models*') ? 'open' : '' }}" id="ai-models-submenu">
         <div class="sub-track">
+          <a href="{{ route('admin.ai-models.providers') }}" class="sub-item {{ request()->is('admin/ai-models/providers*') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">لیست پروایدرها</div>
+          </a>
           <a href="{{ route('admin.ai-models.index') }}" class="sub-item {{ request()->is('admin/ai-models') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">لیست مدل‌ها</div>
           </a>
@@ -190,6 +236,39 @@
 
     <div class="sb-divider"></div>
 
+    {{-- همکاری در فروش --}}
+    <div class="nav-item">
+      <div class="nav-link {{ request()->is('admin/referrals*') ? 'active' : '' }}" onclick="toggleSub('referrals-submenu', this)">
+        <div class="nav-icon"><i class="fa-solid fa-people-arrows-left-right"></i></div>
+        <div class="nav-label">همکاری در فروش</div>
+        <i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/referrals*') ? 'open' : '' }}"></i>
+      </div>
+      <div class="submenu {{ request()->is('admin/referrals*') ? 'open' : '' }}" id="referrals-submenu">
+        <div class="sub-track">
+          <a href="{{ route('admin.referrals.overview') }}" class="sub-item {{ request()->is('admin/referrals') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">نمای کلی</div>
+          </a>
+          <a href="{{ route('admin.referrals.settings') }}" class="sub-item {{ request()->is('admin/referrals/settings') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">تنظیمات برنامه</div>
+          </a>
+          <a href="{{ route('admin.referrals.conversions') }}" class="sub-item {{ request()->is('admin/referrals/conversions') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">فهرست دعوت‌ها</div>
+          </a>
+          <a href="{{ route('admin.referrals.rewards') }}" class="sub-item {{ request()->is('admin/referrals/rewards') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">گزارش پاداش‌ها</div>
+          </a>
+          <a href="{{ route('admin.referrals.visits') }}" class="sub-item {{ request()->is('admin/referrals/visits') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">بازدید لینک‌ها</div>
+          </a>
+          <a href="{{ route('admin.referrals.reviews') }}" class="sub-item {{ request()->is('admin/referrals/reviews') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">صف بررسی</div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-divider"></div>
+
     {{-- تنظیمات --}}
     <div class="nav-item">
       <div class="nav-link {{ request()->is('admin/settings*') || request()->is('admin/dashboard/crm') ? 'active' : '' }}" onclick="toggleSub('settings-submenu', this)">
@@ -202,10 +281,9 @@
           <a href="/admin/dashboard/crm" class="sub-item {{ request()->is('admin/dashboard/crm') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">سیستم مدیریت پروژه</div>
           </a>
-          <a href="/admin/settings/admins" class="sub-item {{ request()->is('admin/settings/admins') ? 'active' : '' }}">
+          @if(auth('admin')->user()?->isLeader())<a href="{{ route('admin.settings.admins') }}" class="sub-item {{ request()->is('admin/settings/admins*') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت ادمین‌ها</div>
-            <span class="nav-status-badge info">آینده</span>
-          </a>
+          </a>@endif
           <a href="/admin/settings/access" class="sub-item">
             <div class="sub-dot"></div><div class="sub-label">سطوح دسترسی</div>
             <span class="nav-status-badge info">آینده</span>
@@ -226,6 +304,10 @@
             <div class="sub-dot"></div><div class="sub-label">لاگ فعالیت ادمین‌ها</div>
             <span class="nav-status-badge info">آینده</span>
           </a>
+          <button type="submit" form="admin-logout-form" class="sub-item" style="width:calc(100% - 34px);font:inherit;color:inherit;text-align:right;border:0;background:transparent;">
+            <div class="sub-dot"></div><div class="sub-label">خروج از داشبورد</div>
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -386,6 +468,80 @@
 </aside>
 
 <script>
+/* ── حفظ موقعیت و منوی باز سایدبار هنگام جابه‌جایی بین صفحات ── */
+(function () {
+  const scrollKey = 'admin-sidebar-scroll-top';
+  const openMenuKey = 'admin-sidebar-open-menu';
+  const openSubMenuKey = 'admin-sidebar-open-submenu';
+
+  function saveSidebarState(sidebar) {
+    try {
+      sessionStorage.setItem(scrollKey, String(sidebar.scrollTop));
+      sessionStorage.setItem(openMenuKey, sidebar.querySelector('.submenu.open')?.id || '');
+      sessionStorage.setItem(openSubMenuKey, sidebar.querySelector('.sub-sub-wrap.open')?.id || '');
+    } catch (e) {}
+  }
+
+  function restoreOpenMenu(sidebar) {
+    /* اگر روت فعلی منوی فعال مشخصی دارد، وضعیت سرور اولویت دارد. */
+    const routeActiveMenu = Array.from(sidebar.querySelectorAll('.submenu')).find(
+      menu => menu.querySelector('.sub-item.active, .sub-sub-item.active')
+    );
+    if (routeActiveMenu) return;
+
+    try {
+      const openMenu = document.getElementById(sessionStorage.getItem(openMenuKey) || '');
+      if (openMenu?.classList.contains('submenu')) {
+        openMenu.classList.add('open');
+        openMenu.previousElementSibling?.querySelector('.nav-chev')?.classList.add('open');
+      }
+
+      const openSubMenu = document.getElementById(sessionStorage.getItem(openSubMenuKey) || '');
+      if (openSubMenu?.classList.contains('sub-sub-wrap')) {
+        openSubMenu.classList.add('open');
+        openSubMenu.previousElementSibling?.querySelector('.sub-chev')?.classList.add('open');
+      }
+    } catch (e) {}
+  }
+
+  function restoreSidebarState() {
+    const sidebar = document.getElementById('admin-sidebar');
+    if (!sidebar) return;
+
+    restoreOpenMenu(sidebar);
+
+    try {
+      const savedScrollTop = Number(sessionStorage.getItem(scrollKey));
+      if (Number.isFinite(savedScrollTop) && savedScrollTop >= 0) {
+        sidebar.scrollTop = savedScrollTop;
+      }
+    } catch (e) {}
+
+    let scrollFrame = null;
+    sidebar.addEventListener('scroll', function () {
+      if (scrollFrame) cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(function () {
+        saveSidebarState(sidebar);
+        scrollFrame = null;
+      });
+    }, { passive: true });
+
+    /* قبل از شروع ناوبری ذخیره می‌شود تا حتی در لودهای سریع هم از دست نرود. */
+    sidebar.addEventListener('click', function (event) {
+      if (event.target.closest('a, .nav-link, .sub-item-parent')) {
+        saveSidebarState(sidebar);
+      }
+    });
+    window.addEventListener('pagehide', () => saveSidebarState(sidebar));
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreSidebarState);
+  } else {
+    restoreSidebarState();
+  }
+})();
+
 /* ── باز/بسته کردن زیرمنو سطح ۲ (دقیقا مثل یوآی داشبورد محسن) ── */
 function toggleSub(subId, headerEl) {
   const sub = document.getElementById(subId);

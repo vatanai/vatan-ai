@@ -17,6 +17,14 @@ class Jalali
     ];
 
     /**
+     * زمان دیتابیس UTC است؛ برای نمایش، یک کپی را به ساعت محلی ایران تبدیل می‌کنیم.
+     */
+    protected static function forDisplay(Carbon $date): Carbon
+    {
+        return $date->copy()->setTimezone(config('app.display_timezone', 'Asia/Tehran'));
+    }
+
+    /**
      * تبدیل سال/ماه/روز میلادی به شمسی
      */
     public static function toJalaliYmd(int $gy, int $gm, int $gd): array
@@ -46,6 +54,62 @@ class Jalali
         return [$jy, $jm, $jd];
     }
 
+    /**
+     * تبدیل سال/ماه/روز شمسی به میلادی.
+     */
+    public static function toGregorianYmd(int $jy, int $jm, int $jd): array
+    {
+        $jy += 1595;
+        $days = -355668 + (365 * $jy) + (intdiv($jy, 33) * 8)
+            + intdiv(($jy % 33) + 3, 4) + $jd
+            + ($jm < 7 ? (($jm - 1) * 31) : ((($jm - 7) * 30) + 186));
+
+        $gy = 400 * intdiv($days, 146097);
+        $days %= 146097;
+
+        if ($days > 36524) {
+            $gy += 100 * intdiv(--$days, 36524);
+            $days %= 36524;
+            if ($days >= 365) {
+                $days++;
+            }
+        }
+
+        $gy += 4 * intdiv($days, 1461);
+        $days %= 1461;
+
+        if ($days > 365) {
+            $gy += intdiv($days - 1, 365);
+            $days = ($days - 1) % 365;
+        }
+
+        $gd = $days + 1;
+        $gregorianMonthDays = [0, 31, (($gy % 4 === 0 && $gy % 100 !== 0) || $gy % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        $gm = 1;
+
+        while ($gm <= 12 && $gd > $gregorianMonthDays[$gm]) {
+            $gd -= $gregorianMonthDays[$gm];
+            $gm++;
+        }
+
+        return [$gy, $gm, $gd];
+    }
+
+    /** بررسی کامل تاریخ شمسی، از جمله روز ۳۰ اسفند در سال کبیسه. */
+    public static function isValidDate(int $jy, int $jm, int $jd): bool
+    {
+        if ($jy < 1 || $jm < 1 || $jm > 12 || $jd < 1 || $jd > 31) {
+            return false;
+        }
+        if ($jm > 6 && $jd > 30) {
+            return false;
+        }
+
+        [$gy, $gm, $gd] = self::toGregorianYmd($jy, $jm, $jd);
+
+        return self::toJalaliYmd($gy, $gm, $gd) === [$jy, $jm, $jd];
+    }
+
     public static function toPersianDigits(string $value): string
     {
         return strtr($value, [
@@ -63,6 +127,7 @@ class Jalali
             return '—';
         }
 
+        $date = self::forDisplay($date);
         [$jy, $jm, $jd] = self::toJalaliYmd((int) $date->format('Y'), (int) $date->format('n'), (int) $date->format('j'));
         $monthName = self::$monthNames[$jm] ?? '';
         $time = self::toPersianDigits($date->format('H:i'));
@@ -80,6 +145,7 @@ class Jalali
             return '—';
         }
 
+        $date = self::forDisplay($date);
         [$jy, $jm, $jd] = self::toJalaliYmd((int) $date->format('Y'), (int) $date->format('n'), (int) $date->format('j'));
 
         $dateStr = sprintf('%04d/%02d/%02d', $jy, $jm, $jd);

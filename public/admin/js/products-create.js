@@ -16,21 +16,41 @@ function toFa(v) { return String(v).replace(/[0-9]/g, function (d) { return '۰�
    خروجی: { total, filled, complete, dynamic }
    مرحله ۳ پویاست: بر اساس ردیف‌های واقعاً اضافه‌شده‌ی «فیلدهای ورودی کاربر» (بند ۴۵). */
 function computeStepStatus(n) {
-  if (n === 3) {
-    const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
-    let filled = 0;
-    rows.forEach(function (r) {
-      const idEl  = r.querySelector('.schema-id');
-      const lblEl = r.querySelector('.schema-label');
-      const id  = idEl  ? (idEl.value  || '').trim() : '';
-      const lbl = lblEl ? (lblEl.value || '').trim() : '';
-      if (id && lbl) filled++;
+  if (n === 5) {
+    const ready = [1, 2, 3, 4].every(function (step) {
+      const status = computeStepStatus(step);
+      return status.total === 0 || status.complete;
     });
-    return { total: rows.length, filled: filled, complete: rows.length > 0 && filled === rows.length, dynamic: true };
+    return { total: 1, filled: ready ? 1 : 0, complete: ready, dynamic: true };
+  }
+  if (n === 3) {
+    const featuresEnabled = document.getElementById('special-features-enabled')?.value === '1';
+    const identityFilled = progressReady && progressFieldValue('identity_preservation') ? 1 : 0;
+    if (!featuresEnabled) {
+      return {
+        total: 1,
+        filled: identityFilled,
+        complete: identityFilled === 1,
+        dynamic: true
+      };
+    }
+    const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
+    if (!rows.length) {
+      return { total: 2, filled: identityFilled, complete: false, dynamic: true };
+    }
+    let filled = identityFilled;
+    rows.forEach(function (r) {
+      const requiredInputsComplete = Array.from(r.querySelectorAll('[required]')).every(function (input) {
+        return String(input.value || '').trim() !== '' && input.checkValidity();
+      });
+      const builderValidationPassed = !r.classList.contains('sb-invalid');
+      if (requiredInputsComplete && builderValidationPassed) filled++;
+    });
+    return { total: rows.length + 1, filled: filled, complete: filled === rows.length + 1, dynamic: true };
   }
   const req = STEP_REQUIRED_FIELDS[n] || [];
   let filled = 0;
-  req.forEach(function (pair) { if (fieldValue(pair[0])) filled++; });
+  req.forEach(function (pair) { if (progressReady && progressFieldValue(pair[0])) filled++; });
   return { total: req.length, filled: filled, complete: req.length === 0 ? true : filled === req.length, dynamic: false };
 }
 
@@ -40,7 +60,7 @@ function computeStepStatus(n) {
 function renderStepper() {
   let overallTotal = 0, overallFilled = 0;
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 5; i++) {
     const tab = document.getElementById('step-tab-' + i);
     const num = document.getElementById('step-num-' + i);
     if (!tab || !num) continue;
@@ -94,7 +114,7 @@ function renderStepper() {
   }
 
   // رنگ خط اتصال بین Stepها بر اساس مرحله‌ی فعلی
-  [1,2,3,4,5].forEach(function (idx) {
+  [1,2,3,4].forEach(function (idx) {
     ['conn-'+idx, 'conn-'+idx+'-m'].forEach(function (id) {
       const el = document.getElementById(id);
       if (!el) return;
@@ -109,14 +129,34 @@ function renderStepper() {
   const pctEl = document.getElementById('wizard-progress-pct');
   if (fill) fill.style.width = pct + '%';
   if (pctEl) pctEl.textContent = toFa(pct) + '٪';
+  updateFinalSubmitButton(overallFilled, overallTotal);
+}
+
+function updateFinalSubmitButton(filled, total) {
+  const button = document.getElementById('btn-submit');
+  const progress = document.getElementById('final-submit-progress');
+  const icon = document.getElementById('final-submit-icon');
+  if (!button) return;
+  const complete = total > 0 && filled === total;
+  if (progress) progress.textContent = toFa(filled) + '/' + toFa(total);
+  button.dataset.formComplete = complete ? '1' : '0';
+  button.setAttribute('aria-disabled', complete ? 'false' : 'true');
+  button.classList.toggle('bg-[var(--green)]', complete);
+  button.classList.toggle('text-white', complete);
+  button.classList.toggle('hover:bg-[var(--green-hover)]', complete);
+  button.classList.toggle('bg-[var(--b1)]', !complete);
+  button.classList.toggle('text-[var(--text3)]', !complete);
+  button.classList.toggle('border', !complete);
+  button.classList.toggle('border-[var(--b2)]', !complete);
+  if (icon) icon.className = complete ? 'fa-solid fa-check' : 'fa-solid fa-lock';
 }
 
 /* ── Stepper: جابه‌جایی بین مراحل (پیمایش همیشه آزاد — بند ۴۴) ── */
 function goStep(n) {
-  if (n < 1 || n > 6) return;
+  if (n < 1 || n > 5) return;
   cur = n;
 
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 5; i++) {
     const p = document.getElementById('panel-' + i);
     if (!p) continue;
     if (i === n) { p.classList.remove('hidden'); p.classList.add('block'); }
@@ -124,15 +164,19 @@ function goStep(n) {
   }
 
   document.getElementById('btn-prev').style.display = n === 1 ? 'none' : 'inline-flex';
-  document.getElementById('btn-next').style.display = n === 6 ? 'none' : 'inline-flex';
-  document.getElementById('btn-submit').style.display = n === 6 ? 'inline-flex' : 'none';
+  const nextButton = document.getElementById('btn-next');
+  nextButton.style.display = 'inline-flex';
+  nextButton.disabled = n === 5;
+  nextButton.classList.toggle('opacity-40', n === 5);
+  nextButton.classList.toggle('cursor-not-allowed', n === 5);
+  document.getElementById('btn-submit').style.display = 'inline-flex';
   document.getElementById('step-label-num').textContent = toFa(n);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   renderStepper();
   lazyInitStep(n); // Step Lazy Loading — مقداردهی سنگین هر Step فقط در اولین بازدید آن
   ProductCreateState.ui.currentStep = n;
-  if (n === 6 && typeof refreshProductPreview === 'function') refreshProductPreview();
+  if (n === 5 && typeof refreshProductPreview === 'function') refreshProductPreview();
 }
 
 /* ── Step Lazy Loading: کامپوننت‌های سنگین (Searchable Select و پیش‌نمایش فرم) Step ۲ و ۳
@@ -145,30 +189,44 @@ function lazyInitStep(n) {
   if (panel) initSearchables(panel);
   if (n === 2 && typeof onPrimaryModelChange === 'function') onPrimaryModelChange(); // پایپ‌لاین هوش مصنوعی
   if (n === 3 && typeof refreshFormPreview === 'function') refreshFormPreview();     // ورودی و متغیرها
-  if (n === 4 && typeof initProductTestLab === 'function') initProductTestLab();      // آزمایشگاه محصول
-  if (n === 6 && typeof refreshFinalSummary === 'function') refreshFinalSummary();   // بازبینی نهایی
+  if (n === 5 && typeof refreshFinalSummary === 'function') refreshFinalSummary();   // بازبینی نهایی
 }
 
 /* ── State Management سبک: ProductCreateState فقط یک آینه از وضعیت UI است ── */
-const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: true, 3: true, 4: true, 5: true, 6: true } };
+const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: true, 3: true, 4: true, 5: true } };
 
 /* ── Validation سیستم: حداقل فیلدهای الزامی هر Step (مطابق Validation واقعی کنترلر) ──
    توجه: الزامی‌بودن فایل‌ها (مثل Thumbnail) اینجا چک نمی‌شود چون در حالت تکثیر محصول ممکن است
    از قبل موجود باشد؛ تصمیم نهایی همیشه با Validation واقعی سمت سرور است. */
 const STEP_REQUIRED_FIELDS = {
-  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_ids', 'دسته‌بندی'] ],
-  2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
-  3: [], // ورودی و متغیرها: فیلد الزامی خاصی ندارد
-  4: [], // آزمایشگاه محصول: اجرای تست اختیاری است
-  5: [], // خروجی و قیمت: همه مقادیر پیش‌فرض دارند
-  6: [], // بازبینی نهایی: صرفاً مرور است
+  1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_ids', 'دسته‌بندی'], ['main_images', 'تصویر اصلی محصول'] ],
+  2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['fallback_models[]', 'مدل جایگزین هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
+  3: [ ['identity_preservation', 'وضعیت حفظ هویت'] ],
+  4: [ ['credit_cost', 'هزینه کردیت محصول'] ],
+  5: [], // بازبینی نهایی: صرفاً مرور است
 };
+
+const progressInitialValues = new Map();
+const progressTouchedFields = new Set();
+let progressReady = !CFG.isFreshProduct;
+
+function progressFieldValue(name) {
+  const current = fieldValue(name);
+  if (!CFG.isFreshProduct) return current;
+  return progressTouchedFields.has(name) || current !== (progressInitialValues.get(name) || '') ? current : '';
+}
 
 function fieldValue(name) {
   // دسته‌بندی چندگانه (تگ‌های انتخاب‌شده) دیگر یک <select> واحد با name=category_id نیست؛
   // تکمیل‌بودنش یعنی حداقل یک چیپ دسته‌بندی در cat-tags-wrap انتخاب شده باشد.
   if (name === 'category_ids') {
     return document.querySelectorAll('#cat-tags-wrap [data-cat-id]').length ? '1' : '';
+  }
+  if (name === 'main_images') {
+    const input = document.getElementById('main-images-file');
+    const group = input?.closest('.image-optimizer-group');
+    const hasExisting = (group?.dataset.existing || '[]') !== '[]';
+    return (input?.files?.length || hasExisting) ? '1' : '';
   }
   const els = document.getElementsByName(name);
   if (!els.length) return '';
@@ -201,7 +259,32 @@ function showValidationSummary(missing) {
   box.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
+function alertIncompleteRequiredFields(missing) {
+  const list = missing.map(function (item, index) {
+    return toFa(index + 1) + '. ' + item.label;
+  }).join('\n');
+  alert('ثبت نهایی هنوز آماده نیست. موارد اجباری زیر باقی مانده‌اند:\n\n' + list);
+}
+
 function focusField(name) {
+  if (name === 'special_features') {
+    const toggle = document.getElementById('special-features-enabled');
+    if (toggle) toggle.closest('label')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (String(name).startsWith('schema_row_')) {
+    const index = Number(String(name).replace('schema_row_', ''));
+    const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
+    const row = rows[index];
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      row.classList.add('border-[var(--red)]');
+      const target = row.querySelector('.schema-label, .schema-id');
+      if (target) target.focus();
+      setTimeout(function () { row.classList.remove('border-[var(--red)]'); }, 2000);
+    }
+    return;
+  }
   if (name === 'category_ids') {
     const wrap = document.getElementById('cat-tags-wrap');
     if (wrap) {
@@ -225,17 +308,28 @@ function jumpToField(name, step) {
 
 /* بند ۴۴: پیمایش بین همه‌ی مراحل همیشه آزاد است (بدون گیت اعتبارسنجی رو‌به‌جلو) */
 function attemptGoStep(n) { goStep(n); }
-function nextStep() { if (cur < 6) goStep(cur + 1); }
+function nextStep() { if (cur < 5) goStep(cur + 1); }
 function prevStep() { if (cur > 1) goStep(cur - 1); }
 
 /* جمع‌آوری تمام فیلدهای اجباری خالی در کل فرم — فقط در لحظه‌ی «ثبت نهایی» استفاده می‌شود (بند ۴۴) */
 function collectAllMissing() {
   const missing = [];
-  [1, 2, 3, 4, 5, 6].forEach(function (n) {
+  [1, 2, 3, 4, 5].forEach(function (n) {
     (STEP_REQUIRED_FIELDS[n] || []).forEach(function (pair) {
       if (!fieldValue(pair[0])) missing.push({ name: pair[0], label: pair[1], step: n });
     });
   });
+  document.querySelectorAll('#input-fields-list .input-schema-row').forEach(function (row, index) {
+    const id = (row.querySelector('.schema-id')?.value || '').trim();
+    const label = (row.querySelector('.schema-label')?.value || '').trim();
+    if (!id || !label) {
+      const missingParts = [!label ? 'عنوان' : '', !id ? 'شناسه' : ''].filter(Boolean).join(' و ');
+      missing.push({ name: 'schema_row_' + index, label: 'ویژگی شماره ' + toFa(index + 1) + ': ' + missingParts, step: 3 });
+    }
+  });
+  if (document.getElementById('special-features-enabled')?.value === '1' && !document.querySelectorAll('#input-fields-list .input-schema-row').length) {
+    missing.push({ name: 'special_features', label: 'گام سوم: حداقل یک ویژگی اضافه کنید یا کلید ویژگی‌های خاص را خاموش کنید', step: 3 });
+  }
   return missing;
 }
 
@@ -460,15 +554,57 @@ async function renderImageComparison(group) {
   if (thumbs) {
     thumbs.innerHTML = '';
     const approvals = imageOptimizationApproved.get(group) || [];
-    originals.forEach(function (file, thumbIndex) {
+    const createThumb = function (file, thumbIndex) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border ' + (thumbIndex === index ? 'border-[var(--accent)]' : 'border-[var(--b1)]');
       button.innerHTML = '<img class="w-full h-full object-cover" alt=""><i class="absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] ' + (approvals[thumbIndex] ? 'fa-solid fa-check bg-[var(--green)] text-white' : 'fa-solid fa-xmark bg-[var(--red)] text-white') + '"></i>';
       button.querySelector('img').src = previewUrl(file);
       button.onclick = async function () { selectedImageIndexes.set(group, thumbIndex); await renderImageComparison(group); renderImageTargetOptions(group); };
-      thumbs.appendChild(button);
-    });
+      if (isMainImageGroup(group)) {
+        button.draggable = true;
+        button.title = thumbIndex === 0 ? 'کاور فعلی محصول' : 'برای تغییر ترتیب یا کاور، تصویر را بکشید';
+        button.addEventListener('dragstart', function (event) {
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', String(thumbIndex));
+          button.classList.add('opacity-40');
+        });
+        button.addEventListener('dragover', function (event) {
+          event.preventDefault(); event.dataTransfer.dropEffect = 'move';
+          button.classList.add('border-[var(--green)]');
+        });
+        button.addEventListener('dragleave', function () { button.classList.remove('border-[var(--green)]'); });
+        button.addEventListener('dragend', function () { button.classList.remove('opacity-40', 'border-[var(--green)]'); });
+        button.addEventListener('drop', function (event) {
+          event.preventDefault(); event.stopPropagation();
+          button.classList.remove('border-[var(--green)]');
+          commitImageOrder(group, Number(event.dataTransfer.getData('text/plain')), thumbIndex);
+        });
+      }
+      return button;
+    };
+
+    if (isMainImageGroup(group)) {
+      thumbs.className = 'image-compare-thumbs flex items-stretch gap-3 p-3 border-t border-[var(--b1)] bg-[var(--s2)] overflow-hidden';
+      const coverSection = document.createElement('div');
+      coverSection.className = 'shrink-0 flex flex-col gap-2 pl-3 border-l border-[var(--b1)]';
+      coverSection.innerHTML = '<span class="text-[9px] font-semibold text-[var(--green)]"><i class="fa-solid fa-star ml-1"></i>عکس کاور</span>';
+      coverSection.appendChild(createThumb(originals[0], 0));
+
+      const gallerySection = document.createElement('div');
+      gallerySection.className = 'min-w-0 flex-1 flex flex-col gap-2';
+      gallerySection.innerHTML = '<span class="text-[9px] font-semibold text-[var(--text3)]"><i class="fa-solid fa-images ml-1"></i>عکس‌های دیگر محصول <span class="font-normal">— برای جابه‌جایی بکشید</span></span>';
+      const galleryStrip = document.createElement('div');
+      galleryStrip.className = 'flex gap-2 overflow-x-auto pb-1 min-h-12';
+      originals.slice(1).forEach(function (file, galleryIndex) { galleryStrip.appendChild(createThumb(file, galleryIndex + 1)); });
+      if (originals.length === 1) galleryStrip.innerHTML = '<span class="text-[9px] text-[var(--text3)] self-center">عکس دیگری اضافه نشده است.</span>';
+      gallerySection.appendChild(galleryStrip);
+      thumbs.appendChild(coverSection);
+      thumbs.appendChild(gallerySection);
+    } else {
+      thumbs.className = 'image-compare-thumbs flex gap-2 overflow-x-auto p-3 border-t border-[var(--b1)]';
+      originals.forEach(function (file, thumbIndex) { thumbs.appendChild(createThumb(file, thumbIndex)); });
+    }
   }
   targetPanel?.classList.toggle('hidden', !optimized);
 }
@@ -628,19 +764,136 @@ async function existingImageFiles(group) {
   return files;
 }
 
+function isMainImageGroup(group) {
+  return group?.dataset.input === 'main-images-file';
+}
+
+function moveImageItem(items, fromIndex, toIndex) {
+  const output = items.slice();
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= output.length || toIndex >= output.length) return output;
+  const item = output.splice(fromIndex, 1)[0];
+  output.splice(toIndex, 0, item);
+  return output;
+}
+
+function movedSelectedImageIndex(selected, fromIndex, toIndex) {
+  if (selected === fromIndex) return toIndex;
+  if (fromIndex < toIndex && selected > fromIndex && selected <= toIndex) return selected - 1;
+  if (fromIndex > toIndex && selected >= toIndex && selected < fromIndex) return selected + 1;
+  return selected;
+}
+
+async function commitImageOrder(group, fromIndex, toIndex) {
+  const input = document.getElementById(group.dataset.input);
+  let submitted = Array.from(input?.files || []);
+  const originals = (originalImageFiles.get(group) || []).slice();
+  const optimized = (optimizedImageFiles.get(group) || []).slice();
+  if (!submitted.length) submitted = (optimized.length ? optimized : originals).slice();
+  if (!submitted.length) submitted = await existingImageFiles(group);
+  if (!submitted.length || fromIndex === toIndex) return;
+
+  const approvals = (imageOptimizationApproved.get(group) || Array(submitted.length).fill(true)).slice();
+  const profiles = (selectedImageProfiles.get(group) || Array(submitted.length).fill('')).slice();
+  const selected = selectedImageIndexes.get(group) || 0;
+  const reorderedSubmitted = moveImageItem(submitted, fromIndex, toIndex);
+  input.files = imageFileList(reorderedSubmitted);
+  group.dataset.existing = '[]';
+  originalImageFiles.set(group, moveImageItem(originals.length ? originals : submitted, fromIndex, toIndex));
+  optimizedImageFiles.set(group, optimized.length ? moveImageItem(optimized, fromIndex, toIndex) : []);
+  imageOptimizationApproved.set(group, moveImageItem(approvals, fromIndex, toIndex));
+  selectedImageProfiles.set(group, moveImageItem(profiles, fromIndex, toIndex));
+  selectedImageIndexes.set(group, movedSelectedImageIndex(selected, fromIndex, toIndex));
+  renderImageGroupPreviews(group, reorderedSubmitted);
+  await renderImageComparison(group);
+  renderImageTargetOptions(group);
+  document.dispatchEvent(new CustomEvent('product-images-changed'));
+}
+
 function renderImageGroupPreviews(group, files) {
   const strip = group.querySelector('.image-preview-strip');
   const label = group.querySelector('.image-file-label');
   if (label) label.textContent = files.length ? toFa(files.length) + ' تصویر انتخاب شد' : 'انتخاب تصاویر';
   if (!strip) return;
   strip.innerHTML = '';
-  files.slice(0, 12).forEach(function (file) {
+  files.slice(0, 12).forEach(function (file, index) {
+    const holder = document.createElement('span');
+    holder.className = 'relative inline-flex';
     const image = document.createElement('img');
-    image.className = 'w-11 h-11 rounded-lg object-cover border border-[var(--b2)]';
+    image.className = 'w-14 h-14 rounded-lg object-cover border border-[var(--b2)]';
     image.src = URL.createObjectURL(file);
     image.onload = function () { URL.revokeObjectURL(image.src); };
-    strip.appendChild(image);
+    image.onclick = function (event) {
+      event.stopPropagation();
+      selectedImageIndexes.set(group, index);
+      renderImageComparison(group); renderImageTargetOptions(group);
+    };
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full bg-[var(--red)] text-white text-[8px] flex items-center justify-center border border-[var(--s2)]';
+    remove.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    remove.title = 'حذف این عکس';
+    remove.onclick = function (event) { event.stopPropagation(); removeSelectedImage(group, index); };
+    holder.appendChild(image);
+    holder.appendChild(remove);
+    strip.appendChild(holder);
   });
+}
+
+async function removeSelectedImage(group, index) {
+  const input = document.getElementById(group.dataset.input);
+  let current = Array.from(input?.files || []);
+  if (!current.length) current = (optimizedImageFiles.get(group) || originalImageFiles.get(group) || []).slice();
+  if (!current.length) current = await existingImageFiles(group);
+  current.splice(index, 1);
+  if (input) input.files = imageFileList(current);
+  group.dataset.existing = '[]';
+  const originals = (originalImageFiles.get(group) || []).slice();
+  const optimized = (optimizedImageFiles.get(group) || []).slice();
+  originals.splice(index, 1); optimized.splice(index, 1);
+  originalImageFiles.set(group, originals.length ? originals : current.slice());
+  optimizedImageFiles.set(group, optimized);
+  setImageApproval(group, current.length, current.length > 0);
+  selectedImageIndexes.set(group, Math.max(0, Math.min(index, current.length - 1)));
+  renderImageGroupPreviews(group, current);
+  renderImageComparison(group);
+  if (!current.length) setImageOptimizeState(group, 'idle', 'همه تصاویر حذف شدند.');
+  document.dispatchEvent(new CustomEvent('product-images-changed'));
+}
+
+async function sharpenSelectedImage(button) {
+  const group = button.closest('.image-optimizer-group');
+  const input = document.getElementById(group.dataset.input);
+  let files = Array.from(input?.files || []);
+  if (!files.length) files = await existingImageFiles(group);
+  if (!files.length) return setImageOptimizeState(group, 'idle', 'تصویری برای شارپ‌کردن وجود ندارد.');
+  const index = Math.min(selectedImageIndexes.get(group) || 0, files.length - 1);
+  setImageOptimizeState(group, 'processing', 'در حال شارپ‌کردن عکس انتخاب‌شده…');
+  try {
+    const source = files[index];
+    const image = await loadImageFile(source);
+    const scale = Math.min(1, 1800 / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+    const context = canvas.getContext('2d', { alpha: true, colorSpace: 'srgb' });
+    context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+    context.filter = 'contrast(1.12) saturate(1.04)';
+    context.drawImage(image, 0, 0, width, height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', .93));
+    if (!blob) throw new Error('sharpen failed');
+    files[index] = new File([blob], source.name.replace(/\.[^.]+$/, '') + '-sharp.webp', { type: 'image/webp', lastModified: Date.now() });
+    input.files = imageFileList(files);
+    originalImageFiles.set(group, files.slice());
+    optimizedImageFiles.set(group, files.slice());
+    setImageApproval(group, files.length, true);
+    renderImageGroupPreviews(group, files);
+    await renderImageComparison(group);
+    clientPreparedImages = true;
+    setImageOptimizeState(group, 'done', 'عکس انتخاب‌شده شارپ و آماده ثبت شد.');
+    document.dispatchEvent(new CustomEvent('product-images-changed'));
+  } catch (error) {
+    setImageOptimizeState(group, 'failed', 'شارپ‌کردن عکس انجام نشد؛ دوباره تلاش کنید.');
+  }
 }
 
 async function optimizeImageGroup(buttonOrGroup) {
@@ -710,14 +963,17 @@ function makeSearchable(select) {
   function renderList(filter) {
     const list = panel.querySelector('.ss-list');
     list.innerHTML = '';
-    Array.from(select.options).forEach(opt => {
+    Array.from(select.options).forEach((opt, optionIndex) => {
       if (!opt.value && !opt.textContent.trim()) return;
+      if (opt.hidden || opt.disabled) return;
       if (filter && opt.textContent.toLowerCase().indexOf(filter.toLowerCase()) === -1) return;
       const item = document.createElement('div');
       item.className = 'px-3 py-2 text-xs cursor-pointer transition-colors ' + (opt.value === select.value ? 'bg-[var(--accent)]/15 text-[var(--accent)]' : 'text-[var(--text2)] hover:bg-[var(--accent)]/10 hover:text-[var(--text)]');
       item.textContent = opt.textContent;
       item.onclick = () => {
-        select.value = opt.value;
+        // استفاده از value برای مدل‌های دارای شناسه یکسان بین دو provider
+        // همیشه اولین option را انتخاب می‌کرد. اندیس دقیق، همان گزینه کلیک‌شده را حفظ می‌کند.
+        select.selectedIndex = optionIndex;
         select.dispatchEvent(new Event('change', { bubbles: true }));
         updateButtonLabel();
         panel.classList.add('hidden');
@@ -794,7 +1050,7 @@ function addFallback() {
   div.draggable = true;
 
   const options = AI_MODELS.map(m =>
-    `<option value="${m.id}">${m.name} (${m.provider})</option>`
+    `<option value="${m.id}" data-api-provider="${m.apiProvider || 'openrouter'}">${m.name} (${m.provider})</option>`
   ).join('');
 
   div.innerHTML = `
@@ -957,9 +1213,104 @@ function createHiddenInput(name, value) {
   return input;
 }
 
+const PRODUCT_OFFLINE_DB = 'vatan-admin-offline';
+const PRODUCT_OFFLINE_STORE = 'product-submissions';
+
+function openProductOfflineDb() {
+  return new Promise(function (resolve, reject) {
+    const request = indexedDB.open(PRODUCT_OFFLINE_DB, 1);
+    request.onupgradeneeded = function () {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(PRODUCT_OFFLINE_STORE)) {
+        db.createObjectStore(PRODUCT_OFFLINE_STORE, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = function () { resolve(request.result); };
+    request.onerror = function () { reject(request.error); };
+  });
+}
+
+function offlineStoreTransaction(mode, action) {
+  return openProductOfflineDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(PRODUCT_OFFLINE_STORE, mode);
+      const store = tx.objectStore(PRODUCT_OFFLINE_STORE);
+      const request = action(store);
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error); };
+      tx.oncomplete = function () { db.close(); };
+    });
+  });
+}
+
+function showOfflineStatus(message, state) {
+  let toast = document.getElementById('product-offline-status');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'product-offline-status';
+    toast.className = 'fixed left-5 bottom-20 z-[160] max-w-sm rounded-xl border p-3 text-xs font-bold shadow-xl flex items-center gap-2';
+    document.body.appendChild(toast);
+  }
+  const icon = state === 'synced' ? 'fa-circle-check' : state === 'syncing' ? 'fa-rotate fa-spin' : 'fa-cloud-arrow-up';
+  toast.className = 'fixed left-5 bottom-20 z-[160] max-w-sm rounded-xl border p-3 text-xs font-bold shadow-xl flex items-center gap-2 ' +
+    (state === 'synced' ? 'bg-[var(--green)]/15 border-[var(--green)]/30 text-[var(--green)]' : 'bg-[var(--s2)] border-[var(--b2)] text-[var(--text2)]');
+  toast.innerHTML = '<i class="fa-solid ' + icon + '"></i><span></span>';
+  toast.querySelector('span').textContent = message;
+}
+
+async function queueProductSubmission(form, formData) {
+  const entries = [];
+  formData.forEach(function (value, key) { entries.push([key, value]); });
+  await offlineStoreTransaction('readwrite', function (store) {
+    return store.add({ url: form.action, method: 'POST', entries: entries, createdAt: Date.now() });
+  });
+  showOfflineStatus('این محصول روی همین دستگاه ذخیره شد و بعد از اتصال اینترنت خودکار ثبت می‌شود.', 'queued');
+}
+
+async function syncOfflineProductSubmissions() {
+  if (!navigator.onLine) return;
+  const rows = await offlineStoreTransaction('readonly', function (store) { return store.getAll(); }).catch(function () { return []; });
+  if (!rows.length) return;
+  showOfflineStatus('در حال همگام‌سازی ' + toFa(rows.length) + ' محصول ذخیره‌شده…', 'syncing');
+  let synced = 0;
+  for (const row of rows) {
+    const body = new FormData();
+    row.entries.forEach(function (entry) { body.append(entry[0], entry[1]); });
+    try {
+      const response = await fetch(row.url, {
+        method: row.method || 'POST',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: body,
+        credentials: 'same-origin',
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(function () { return null; });
+        showOfflineStatus((payload && payload.message) || 'همگام‌سازی نیاز به بررسی اطلاعات محصول دارد.', 'queued');
+        continue;
+      }
+      await offlineStoreTransaction('readwrite', function (store) { return store.delete(row.id); });
+      synced++;
+    } catch (error) { break; }
+  }
+  if (synced) showOfflineStatus(toFa(synced) + ' محصول آفلاین با موفقیت در سایت ثبت شد.', 'synced');
+}
+
 async function submitForm(statusValue) {
   const form = document.getElementById('real-product-form');
   form.querySelectorAll('[data-submit-generated="1"]').forEach(input => input.remove());
+
+  // ثبت نهایی تا زمان تکمیل تمام موارد اجباری متوقف می‌ماند. این بررسی پیش از
+  // پردازش تصاویر انجام می‌شود تا مدیر ابتدا فهرست دقیق کمبودهای فرم را ببیند.
+  if (statusValue === 'active') {
+    const missing = collectAllMissing();
+    if (missing.length) {
+      showValidationSummary(missing);
+      renderStepper();
+      alertIncompleteRequiredFields(missing);
+      return;
+    }
+    showValidationSummary([]);
+  }
 
   const processing = document.querySelector('.image-optimizer-group[data-optimize-state="processing"]');
   if (processing) {
@@ -972,34 +1323,19 @@ async function submitForm(statusValue) {
     const approvals = imageOptimizationApproved.get(group) || [];
     return originals.length > 0 && (approvals.length !== originals.length || approvals.some(function (approved) { return !approved; }));
   });
-  if (incompleteOptimization && !allowUnoptimizedImageSubmit) {
-    if (!confirm('حداقل یک تصویر هنوز بهینه یا به‌صورت اورجینال تایید نشده است. آیا می‌خواهید محصول با حجم فعلی تصاویر ثبت شود؟')) {
-      incompleteOptimization.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    allowUnoptimizedImageSubmit = true;
+  if (statusValue === 'active' && incompleteOptimization) {
+    showGlobalError('برای ثبت نهایی، همه تصاویر باید ابتدا بهینه‌سازی یا تأیید شوند.');
+    incompleteOptimization.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
   }
   const failed = document.querySelector('.image-optimizer-group[data-optimize-state="failed"]');
-  if (failed && !allowUnoptimizedImageSubmit) {
-    if (!confirm('بهینه‌سازی بعضی تصاویر انجام نشد. آیا محصول با حجم فعلی تصاویر ثبت شود؟')) {
-      failed.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    allowUnoptimizedImageSubmit = true;
+  if (statusValue === 'active' && failed) {
+    showGlobalError('بهینه‌سازی بعضی تصاویر ناموفق بوده است؛ پیش از ثبت نهایی دوباره تلاش کنید.');
+    failed.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
   }
   if ((allowUnoptimizedImageSubmit || clientPreparedImages) && !form.querySelector('[name="skip_image_optimization"]')) {
     form.appendChild(createHiddenInput('skip_image_optimization', '1'));
-  }
-
-  // بند ۴۴: فقط در «ثبت نهایی» (active) فیلدهای اجباری چک می‌شوند؛ «ذخیره پیش‌نویس» هیچ محدودیتی ندارد.
-  if (statusValue === 'active') {
-    const missing = collectAllMissing();
-    if (missing.length) {
-      showValidationSummary(missing);
-      renderStepper();
-      return; // جلوگیری از ثبت تا تکمیل موارد ناقص
-    }
-    showValidationSummary([]);
   }
 
   document.getElementById('product-status').value = statusValue;
@@ -1017,7 +1353,8 @@ async function submitForm(statusValue) {
 
   // ترتیب select‌های fallback همان ترتیب چیده‌شده در صفحه = اولویت ذخیره‌شده در دیتابیس
   document.querySelectorAll('.fallback-select-item').forEach((select, idx) => {
-    form.appendChild(createHiddenInput(`fallback_models[${idx}]`, select.value));
+    const selected = select.options[select.selectedIndex];
+    form.appendChild(createHiddenInput(`fallback_providers[${idx}]`, selected?.dataset?.apiProvider || 'openrouter'));
   });
 
   // Schema Builder ورودی‌های کامل و نام‌گذاری‌شده را خودش داخل فرم می‌سازد.
@@ -1026,6 +1363,14 @@ async function submitForm(statusValue) {
   // قدیمی همچنان با همان input_schema[...] قبلی کار می‌کند.
   if (typeof window.sbPrepareSubmit === 'function') {
     window.sbPrepareSubmit(form);
+  }
+
+  const preparedFormData = new FormData(form);
+  if (!navigator.onLine) {
+    await queueProductSubmission(form, preparedFormData);
+    clearLocalProductDrafts();
+    setButtonsLoading(false, statusValue);
+    return;
   }
 
   // Button Loading State — هنگام ارسال واقعی فرم به سرور (رفتار بصری، جلوگیری از دوبار کلیک)
@@ -1038,7 +1383,7 @@ async function submitForm(statusValue) {
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
       },
-      body: new FormData(form),
+      body: preparedFormData,
       credentials: 'same-origin',
     });
 
@@ -1060,7 +1405,8 @@ async function submitForm(statusValue) {
     clearLocalProductDrafts();
     window.location.assign((payload && payload.redirect) || '/admin/products');
   } catch (error) {
-    showGlobalError('ارتباط با سرور هنگام ثبت محصول قطع شد. اطلاعات فرم باقی مانده است؛ دوباره تلاش کنید.');
+    await queueProductSubmission(form, preparedFormData);
+    showOfflineStatus('ارتباط هنگام ثبت قطع شد؛ محصول در صف امن محلی قرار گرفت.', 'queued');
     setButtonsLoading(false, statusValue);
   }
 }
@@ -1090,9 +1436,8 @@ function setButtonsLoading(isLoading, which) {
   });
   if (!isLoading) {
     const draftIcon = draftBtn && draftBtn.querySelector('i');
-    const submitIcon = submitBtn && submitBtn.querySelector('i');
     if (draftIcon) draftIcon.className = 'fa-solid fa-floppy-disk';
-    if (submitIcon) submitIcon.className = 'fa-solid fa-check';
+    renderStepper();
     return;
   }
   const target = which === 'draft' ? draftBtn : submitBtn;
@@ -1118,7 +1463,8 @@ function hideGlobalError() {
   const box = document.getElementById('global-error-toast');
   if (box) box.classList.add('hidden');
 }
-window.addEventListener('offline', () => showGlobalError('اتصال اینترنت قطع شد — تغییرات فقط به‌صورت محلی ذخیره می‌شوند.'));
+window.addEventListener('offline', () => showOfflineStatus('اینترنت قطع است؛ می‌توانید ادامه دهید و محصول را در صف محلی ثبت کنید.', 'queued'));
+window.addEventListener('online', syncOfflineProductSubmissions);
 
 /* ── «راهنمایی آیتم» — پنجره مشترک نمایش توضیح کامل هر فیلد اجباری/اختیاری ──
    با کلیک روی هر آیکونی با کلاس field-help-btn، عنوان و متن آن (از data-help-title/data-help-text،
@@ -1177,6 +1523,12 @@ function applyRolePreview(role) {
    وضعیت فعال/غیرفعال بودن باکس هزینه‌ی کردیت باید با pricing_model هماهنگ شود.
    دسته‌بندی چندگانه (چیپ‌های cat-tags-wrap) مستقل از اینجا در همان step-1.blade.php مقداردهی اولیه می‌شود. */
 document.addEventListener('DOMContentLoaded', function () {
+  if (CFG.isFreshProduct) {
+    Object.values(STEP_REQUIRED_FIELDS).flat().forEach(function (pair) {
+      progressInitialValues.set(pair[0], fieldValue(pair[0]));
+    });
+    progressReady = true;
+  }
   goStep(1); // مقداردهی اولیه حالت Stepper (Active/Completed/Pending) طبق طراحی جدید
 
   const pricingSelect = document.querySelector('select[name="pricing_model"]');
@@ -1188,8 +1540,14 @@ document.addEventListener('DOMContentLoaded', function () {
   // به‌روزرسانی زنده‌ی کسری/تیک/نوار پیشرفت با هر تغییر ورودی در کل فرم (بندهای ۴۲،۴۳،۴۵،۴۷)
   const rpForm = document.getElementById('real-product-form');
   if (rpForm) {
-    rpForm.addEventListener('input', renderStepper);
-    rpForm.addEventListener('change', renderStepper);
+    const updateProgress = function (event) {
+      const rawName = event.target?.name || '';
+      const normalizedName = rawName === 'main_images[]' ? 'main_images' : rawName;
+      if (normalizedName) progressTouchedFields.add(normalizedName);
+      renderStepper();
+    };
+    rpForm.addEventListener('input', updateProgress);
+    rpForm.addEventListener('change', updateProgress);
   }
 
   renderStepper();
@@ -1199,6 +1557,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // پیش‌نویس فقط با دکمه «ذخیره پیش‌نویس» در دیتابیس ثبت می‌شود.
   // داده‌های محلی نسخه‌های قدیمی پاک می‌شوند تا فرم محصول جدید را آلوده نکنند.
   clearLocalProductDrafts();
+  syncOfflineProductSubmissions();
   // بند ۳۳: انتخاب نقش نمایشی (Role Preview)
   var roleSel = document.getElementById('role-preview-select');
   if (roleSel) roleSel.addEventListener('change', function () { applyRolePreview(this.value); });
@@ -1207,6 +1566,19 @@ document.addEventListener('DOMContentLoaded', function () {
     setImageOptimizeState(group, 'idle', group.querySelectorAll('[data-existing]').length ? '' : group.querySelector('.image-optimize-status')?.textContent);
     const input = document.getElementById(group.dataset.input);
     if (!input) return;
+    if (!input.files.length && JSON.parse(group.dataset.existing || '[]').length) {
+      existingImageFiles(group).then(function (files) {
+        originalImageFiles.set(group, files.slice());
+        optimizedImageFiles.set(group, []);
+        setImageApproval(group, files.length, true);
+        selectedImageProfiles.set(group, Array(files.length).fill(''));
+        selectedImageIndexes.set(group, 0);
+        renderImageGroupPreviews(group, files);
+        renderImageComparison(group);
+      }).catch(function () {
+        setImageOptimizeState(group, 'failed', 'نمایش تصاویر فعلی ممکن نبود؛ صفحه را دوباره بارگذاری کنید.');
+      });
+    }
     input.addEventListener('change', function () {
       const selected = Array.from(input.files || []);
       originalImageFiles.set(group, selected.slice());
@@ -1244,7 +1616,7 @@ function makeCardsCollapsible() {
     header.appendChild(chev);
     var bodyEls = Array.prototype.slice.call(card.children).filter(function (c) { return c !== header; });
     function apply(collapsed) {
-      bodyEls.forEach(function (el) { el.classList.toggle('hidden', collapsed); });
+      bodyEls.forEach(function (el) { el.style.display = collapsed ? 'none' : ''; });
       chev.style.transform = collapsed ? 'rotate(180deg)' : '';
     }
     var collapsed = false;

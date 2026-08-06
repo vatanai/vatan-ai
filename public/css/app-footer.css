@@ -1,0 +1,150 @@
+/*
+ * کامپوننت ثابت فوتر اپ وطن
+ * قرارداد پروژه: بدون درخواست صریح کاربر، این فایل و پارشیال footer.blade.php تغییر نکنند.
+ * این فایل عمداً بعد از استایل اختصاصی صفحات بارگذاری می‌شود تا فوتر در همه صفحات یکسان بماند.
+ */
+
+body.vatan-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+body.vatan-app-shell > main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+body.vatan-app-shell > .app-footer {
+  --app-footer-bg: var(--vatan-bg-page);
+  --app-footer-text: rgba(255, 255, 255, .6);
+  --app-footer-text-hover: #ffffff;
+  --app-footer-border: #222230;
+  --app-footer-page-max: 1400px;
+  --app-footer-page-margin: clamp(24px, 5vw, 96px);
+
+  flex: none;
+  border-top: 1px solid var(--app-footer-border);
+  background-color: var(--app-footer-bg) !important;
+  color: var(--app-footer-text);
+  font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
+}
+
+html.light body.vatan-app-shell > .app-footer {
+  --app-footer-bg: var(--vatan-bg-page);
+  --app-footer-text: rgba(12, 12, 16, .6);
+  --app-footer-text-hover: #0c0c10;
+  --app-footer-border: #e5e6e6;
+}
+
+.app-footer__inner {
+  width: min(100%, var(--app-footer-page-max));
+  min-height: 118px;
+  margin-inline: auto;
+  padding: 24px var(--app-footer-page-margin);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.app-footer__identity,
+.app-footer__brand,
+.app-footer__links {
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-footer__identity {
+  justify-content: center;
+  gap: 12px;
+}
+
+.app-footer__brand {
+  gap: 7px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-footer__brand-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.app-footer__brand-wordmark {
+  display: block;
+  width: 55px;
+  height: auto;
+}
+
+html.light .app-footer__brand img {
+  filter: invert(1);
+}
+
+.app-footer__copy {
+  color: var(--app-footer-text);
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.app-footer__version {
+  color: var(--app-footer-text);
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  direction: ltr;
+  opacity: .72;
+  white-space: nowrap;
+}
+
+.app-footer__links {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  color: var(--app-footer-text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.app-footer__links a {
+  color: inherit;
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+.app-footer__links a:hover {
+  color: var(--app-footer-text-hover);
+}
+
+.app-footer__pending {
+  cursor: default;
+}
+
+.app-footer__dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--app-footer-border);
+}
+
+@media (max-width: 639px) {
+  body.vatan-app-shell > .app-footer {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .app-footer__inner {
+    min-height: 112px;
+    padding-block: 20px;
+    gap: 14px;
+  }
+
+  .app-footer__links {
+    gap: 7px;
+    max-width: 342px;
+    font-size: 10px;
+  }
+}

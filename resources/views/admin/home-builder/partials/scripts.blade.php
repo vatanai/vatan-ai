@@ -9,6 +9,7 @@ window.HB_CATEGORIES = @json($categories->map(fn($c) => ['id' => $c->id, 'name' 
 window.HB_CSRF = '{{ csrf_token() }}';
 window.HB_LAYOUT_THUMB_BASE = '{{ asset('admin/img/home-builder/layouts') }}';
 window.HB_ROUTES = {
+  preview: '{{ route('admin.home-builder.preview') }}',
   store: '{{ route('admin.home-builder.store') }}',
   update: '{{ url('admin/home-builder') }}/__ID__',
   destroy: '{{ url('admin/home-builder') }}/__ID__',
@@ -19,7 +20,7 @@ window.HB_ROUTES = {
 };
 
 const HomeBuilder = (function () {
-  const state = { isNew: false, currentId: null, selectedType: null, selectedLayout: null, settingsValues: {} };
+  const state = { isNew: false, currentId: null, selectedType: null, selectedLayout: null, settingsValues: {}, previewDevice: 'desktop', previewTimer: null, previewRequestId: 0, layoutPreviewCache: {} };
 
   function fetchJson(url, method, body) {
     return fetch(url, {
@@ -41,12 +42,10 @@ const HomeBuilder = (function () {
 
   // ── Drawer افزودن (گام نوع + گام Layout) ──────────────────────
   function openAddDrawer() {
-    document.getElementById('hb-add-step-type').style.display = '';
-    document.getElementById('hb-add-step-layout').style.display = 'none';
-    document.getElementById('hb-add-title').textContent = 'افزودن Section — انتخاب نوع';
     document.getElementById('hb-add-overlay').classList.add('open');
     document.getElementById('hb-add-panel').classList.add('open');
     document.body.style.overflow = 'hidden';
+    loadAllAddLayoutPreviews();
   }
 
   function closeAddDrawer() {
@@ -55,26 +54,10 @@ const HomeBuilder = (function () {
     document.body.style.overflow = '';
   }
 
-  function backToTypeStep() {
-    document.getElementById('hb-add-step-type').style.display = '';
-    document.getElementById('hb-add-step-layout').style.display = 'none';
-    document.getElementById('hb-add-title').textContent = 'افزودن Section — انتخاب نوع';
-  }
-
-  function selectType(type) {
-    state.selectedType = type;
-    const typeInfo = window.HB_TYPES[type];
-    const gallery = document.getElementById('hb-layout-gallery');
-    gallery.innerHTML = Object.entries(typeInfo.layouts).map(([key, layout]) => `
-      <button type="button" class="hb-layout-card" onclick="HomeBuilder.selectLayout('${type}','${key}')"
-              style="text-align:center;padding:8px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer;">
-        <img src="${window.HB_LAYOUT_THUMB_BASE}/${layout.thumb}" style="width:100%;border-radius:8px;margin-bottom:6px;" alt="">
-        <div class="text-[11.5px] font-bold" style="color:var(--text-h);">${layout.label}</div>
-      </button>
-    `).join('');
-    document.getElementById('hb-add-step-type').style.display = 'none';
-    document.getElementById('hb-add-step-layout').style.display = '';
-    document.getElementById('hb-add-title').textContent = 'افزودن Section — انتخاب Layout';
+  function loadAllAddLayoutPreviews() {
+    document.querySelectorAll('#hb-layout-gallery [data-preview-type][data-preview-layout]').forEach((preview) => {
+      loadLayoutPreview(preview.id, preview.dataset.previewType, preview.dataset.previewLayout);
+    });
   }
 
   function selectLayout(type, layoutKey) {
@@ -119,6 +102,7 @@ const HomeBuilder = (function () {
     document.getElementById('hb-edit-overlay').classList.add('open');
     document.getElementById('hb-edit-panel').classList.add('open');
     document.body.style.overflow = 'hidden';
+    scheduleLivePreview(true);
   }
 
   function closeEditDrawer() {
@@ -135,11 +119,15 @@ const HomeBuilder = (function () {
       return `
         <button type="button" class="hb-layout-card" data-layout-key="${key}" onclick="HomeBuilder.pickEditLayout('${key}')"
                 style="text-align:center;padding:8px;border:1px solid ${active ? 'var(--primary)' : 'var(--border)'};border-radius:12px;background:var(--input-bg);cursor:pointer;">
-          <img src="${window.HB_LAYOUT_THUMB_BASE}/${layout.thumb}" style="width:100%;border-radius:8px;margin-bottom:6px;" alt="">
+          <div class="hb-layout-preview" id="hb-edit-preview-${type}-${key}">
+            <div class="hb-preview-loading"><i class="fa-solid fa-spinner fa-spin"></i> پیش‌نمایش واقعی</div>
+            <iframe title="پیش‌نمایش ${escapeHtml(layout.label)}" tabindex="-1"></iframe>
+          </div>
           <div class="text-[11px] font-bold" style="color:${active ? 'var(--primary)' : 'var(--text-h)'};">${layout.label}</div>
         </button>
       `;
     }).join('');
+    Object.keys(typeInfo.layouts).forEach((layoutKey) => loadLayoutPreview(`hb-edit-preview-${type}-${layoutKey}`, type, layoutKey));
   }
 
   function pickEditLayout(layoutKey) {
@@ -147,6 +135,7 @@ const HomeBuilder = (function () {
     state.selectedLayout = layoutKey;
     renderEditLayoutGallery(state.selectedType, layoutKey);
     renderSettingsFields(state.selectedType, currentValues);
+    scheduleLivePreview(true);
   }
 
   // ── فرم داینامیک تنظیمات اختصاصی هر نوع Section ──────────────────
@@ -160,7 +149,13 @@ const HomeBuilder = (function () {
 
     const visibleFields = typeInfo.settings_fields
       .filter((field) => !field.show_if_layout || field.show_if_layout.includes(state.selectedLayout))
-      .filter((field) => !field.show_if_source || field.show_if_source.includes(String(currentSource)));
+      .filter((field) => !field.show_if_source || field.show_if_source.includes(String(currentSource)))
+      .filter((field) => {
+        if (!field.show_if_setting) return true;
+        const dependency = typeInfo.settings_fields.find((item) => item.key === field.show_if_setting.key);
+        const current = state.settingsValues[field.show_if_setting.key] ?? dependency?.default ?? null;
+        return field.show_if_setting.values.includes(String(current));
+      });
 
     wrap.innerHTML = visibleFields.map((field) => fieldHtml(field, state.settingsValues[field.key])).join('');
 
@@ -173,12 +168,29 @@ const HomeBuilder = (function () {
         renderSettingsFields(type, {});
       });
     }
+
+    const dependencyKeys = [...new Set(typeInfo.settings_fields.filter((field) => field.show_if_setting).map((field) => field.show_if_setting.key))];
+    dependencyKeys.forEach((key) => {
+      const dependencyEl = document.getElementById(`hb-sf-${key}`);
+      if (!dependencyEl) return;
+      dependencyEl.addEventListener('change', function () {
+        state.settingsValues = Object.assign({}, state.settingsValues, collectSettingsValues(type));
+        renderSettingsFields(type, {});
+        scheduleLivePreview(true);
+      });
+    });
+
+    wrap.querySelectorAll('input,select,textarea').forEach((el) => {
+      el.addEventListener('input', () => scheduleLivePreview());
+      el.addEventListener('change', () => scheduleLivePreview());
+    });
   }
 
   function fieldHtml(field, value) {
     const val = value === undefined || value === null ? (field.default ?? '') : value;
     const id = `hb-sf-${field.key}`;
     const label = `<div class="drawer-label mb-1">${field.label}</div>`;
+    const placeholder = escapeHtml(field.placeholder || '');
 
     if (field.type === 'textarea') {
       return `<div>${label}<textarea id="${id}" class="input-pro" rows="3" style="height:auto;padding-top:8px;">${escapeHtml(val)}</textarea></div>`;
@@ -212,7 +224,7 @@ const HomeBuilder = (function () {
       </div>`;
     }
     // text (پیش‌فرض)
-    return `<div>${label}<input type="text" id="${id}" class="input-pro" value="${escapeHtml(val)}"></div>`;
+    return `<div>${label}<input type="text" id="${id}" class="input-pro" value="${escapeHtml(val)}" placeholder="${placeholder}"></div>`;
   }
 
   function initProductPicker(key) {
@@ -271,11 +283,107 @@ const HomeBuilder = (function () {
     const results = document.getElementById(`hb-pick-${key}-results`);
     if (input) input.value = '';
     if (results) { results.style.display = 'none'; results.innerHTML = ''; }
+    scheduleLivePreview();
   }
 
   function unpickProduct(key, id) {
     window.__hbProductPick[key] = (window.__hbProductPick[key] || []).filter((p) => String(p.id) !== String(id));
     renderPickChips(key);
+    scheduleLivePreview();
+  }
+
+  function previewPayload(type, layout, includeFormValues) {
+    const typeInfo = window.HB_TYPES[type];
+    let settings = {};
+    if (includeFormValues && state.selectedType === type) {
+      settings = Object.assign({}, state.settingsValues || {}, collectSettingsValues(type));
+    } else {
+      (typeInfo.settings_fields || []).forEach((field) => {
+        if (field.default !== undefined) settings[field.key] = field.default;
+      });
+    }
+
+    return {
+      type,
+      layout,
+      title_fa: includeFormValues ? (document.getElementById('hb-f-title_fa')?.value || null) : null,
+      subtitle_fa: includeFormValues ? (document.getElementById('hb-f-subtitle_fa')?.value || null) : null,
+      settings,
+      responsive: includeFormValues ? collectResponsive() : {},
+      device: state.previewDevice,
+    };
+  }
+
+  function fetchPreview(payload) {
+    return fetch(window.HB_ROUTES.preview, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': window.HB_CSRF,
+        'Accept': 'text/html',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('ساخت پیش‌نمایش انجام نشد');
+      return response.text();
+    });
+  }
+
+  function loadLayoutPreview(containerId, type, layout) {
+    const container = document.getElementById(containerId);
+    const iframe = container?.querySelector('iframe');
+    if (!container || !iframe) return;
+    const cacheKey = `${type}:${layout}`;
+    const previewPromise = state.layoutPreviewCache[cacheKey]
+      ? Promise.resolve(state.layoutPreviewCache[cacheKey])
+      : fetchPreview(previewPayload(type, layout, false)).then((html) => {
+          state.layoutPreviewCache[cacheKey] = html;
+          return html;
+        });
+    previewPromise
+      .then((html) => {
+        iframe.srcdoc = html;
+        iframe.addEventListener('load', () => container.classList.add('is-ready'), { once: true });
+      })
+      .catch(() => {
+        const loading = container.querySelector('.hb-preview-loading');
+        if (loading) loading.textContent = 'پیش‌نمایش در دسترس نیست';
+      });
+  }
+
+  function scheduleLivePreview(immediate = false) {
+    clearTimeout(state.previewTimer);
+    state.previewTimer = setTimeout(renderLivePreview, immediate ? 0 : 350);
+  }
+
+  function renderLivePreview() {
+    if (!state.selectedType || !state.selectedLayout) return;
+    const frame = document.getElementById('hb-live-preview-frame');
+    const iframe = document.getElementById('hb-live-preview-iframe');
+    if (!frame || !iframe || !document.getElementById('hb-edit-panel')?.classList.contains('open')) return;
+    const requestId = ++state.previewRequestId;
+    frame.classList.remove('is-ready');
+    fetchPreview(previewPayload(state.selectedType, state.selectedLayout, true))
+      .then((html) => {
+        if (requestId !== state.previewRequestId) return;
+        iframe.srcdoc = html;
+        iframe.addEventListener('load', () => frame.classList.add('is-ready'), { once: true });
+      })
+      .catch(() => {
+        if (requestId !== state.previewRequestId) return;
+        const loading = frame.querySelector('.hb-preview-loading');
+        if (loading) loading.textContent = 'خطا در ساخت پیش‌نمایش';
+      });
+  }
+
+  function setPreviewDevice(device) {
+    state.previewDevice = device;
+    const frame = document.getElementById('hb-live-preview-frame');
+    if (frame) frame.className = `hb-live-preview-frame is-${device}`;
+    document.querySelectorAll('.hb-preview-devices button').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.device === device);
+    });
+    scheduleLivePreview(true);
   }
 
   function escapeHtml(v) {
@@ -401,16 +509,24 @@ const HomeBuilder = (function () {
     });
   }
 
-  document.addEventListener('DOMContentLoaded', initDragDrop);
+  document.addEventListener('DOMContentLoaded', function () {
+    initDragDrop();
+    ['hb-f-title_fa', 'hb-f-subtitle_fa', 'hb-f-resp-mobile-layout'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => scheduleLivePreview());
+      el.addEventListener('change', () => scheduleLivePreview());
+    });
+  });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closeAddDrawer(); closeEditDrawer(); }
   });
 
   return {
-    openAddDrawer, closeAddDrawer, backToTypeStep, selectType, selectLayout,
+    openAddDrawer, closeAddDrawer, selectLayout,
     openEditDrawer, closeEditDrawer, pickEditLayout, saveSection,
     duplicate, setStatus, destroy,
-    pickProduct, unpickProduct,
+    pickProduct, unpickProduct, setPreviewDevice,
   };
 })();
 </script>

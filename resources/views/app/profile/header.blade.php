@@ -69,7 +69,7 @@
       <div class="stat-sep"></div>
       <div class="stat-col">
         <span class="stat-number">{{ number_format($earnings) }}</span>
-        <span class="stat-label">تومان درآمد</span>
+        <span class="stat-label">توکن دعوت</span>
       </div>
     </div>
 
@@ -114,30 +114,34 @@
       <div class="stat-sep"></div>
       <div class="stat-col">
         <span class="stat-number">{{ number_format($earnings) }}</span>
-        <span class="stat-label">تومان درآمد</span>
+        <span class="stat-label">توکن دعوت</span>
       </div>
     </div>
 
-    {{-- بنر همکاری در فروش (desktop) --}}
+    @if($referralProfileEnabled ?? false)
+      {{-- بنر همکاری در فروش (desktop) --}}
+      <div class="promo-banner">
+        <p class="promo-text">دعوت کن؛ هدیه بده و توکن بگیر</p>
+        <button type="button" class="promo-btn" data-open-referral>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v1H5v-1z"/></svg>
+        همکاری در فروش
+        </button>
+      </div>
+    @endif
+
+  </div>
+
+</section>
+
+@if($referralProfileEnabled ?? false)
+  {{-- ===== بنر همکاری در فروش (mobile) ===== --}}
+  <section class="promo-section">
     <div class="promo-banner">
-      <p class="promo-text">برنامه ویژه کسب درآمد مستمر</p>
-      <button type="button" class="promo-btn">
+      <p class="promo-text">دعوت کن؛ هدیه بده و توکن بگیر</p>
+      <button type="button" class="promo-btn" data-open-referral>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v1H5v-1z"/></svg>
         همکاری در فروش
       </button>
     </div>
-
-  </div>
-
-</section>
-
-{{-- ===== بنر همکاری در فروش (mobile) ===== --}}
-<section class="promo-section">
-  <div class="promo-banner">
-    <p class="promo-text">برنامه ویژه کسب درآمد مستمر</p>
-    <button type="button" class="promo-btn">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm0 2h14v1H5v-1z"/></svg>
-      همکاری در فروش
-    </button>
-  </div>
-</section>
+  </section>
+@endif

@@ -20,8 +20,10 @@
   };
 @endphp
 
+@include('admin.products.partials.identity-settings', ['aiModels' => $aiModels, 'product' => $product, 'duplicateFrom' => $duplicateFrom])
+
 {{-- ═══════════════════ Card — متغیرهای پرامپت (NEW / فقط UI — بند ۱۴) ═══════════════════ --}}
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+<div class="hidden bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" data-future-update="متغیرهای پرامپت">
   <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">
     <div>
       <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-brackets-curly text-[var(--accent)]"></i> متغیرهای پرامپت {!! $newBadge !!}</div>
@@ -89,4 +91,45 @@ function addPromptVarRow() {
      (عنوان، توضیح، Placeholder، پیش‌فرض، اجباری/اختیاری، مخفی، ترتیب، شرط نمایش،
      اعتبارسنجی، کردیت و تاثیر در پرامپت) در همین سازنده مدیریت و در ستون
      input_schema ذخیره می‌شود. --}}
-@include('admin.products.partials.schema-builder', ['product' => $product ?? null, 'duplicateFrom' => $duplicateFrom ?? null])
+@php
+  $specialFeaturesEnabled = (bool) old(
+      'special_features_enabled',
+      !empty((array) (($product ?? $duplicateFrom ?? null)?->input_schema))
+  );
+@endphp
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-4">
+  <div class="flex items-center gap-3">
+    <div>
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2">ویژگی‌های خاص محصول {!! $__help('input_schema', 'ویژگی‌های خاص محصول') !!}
+        <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+          <input type="checkbox" class="sr-only peer" id="special-features-switch" {{ $specialFeaturesEnabled ? 'checked' : '' }} onchange="toggleSpecialFeatures(this.checked)">
+          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+        </label>
+      </div>
+      <div id="special-features-state-text" class="text-[10.5px] text-[var(--text3)] mt-1">
+        {{ $specialFeaturesEnabled ? 'ویژگی‌های خاص این محصول فعال است' : 'این محصول ویژگی خاصی ندارد' }}
+      </div>
+    </div>
+    <input type="hidden" name="special_features_enabled" id="special-features-enabled" value="{{ $specialFeaturesEnabled ? '1' : '0' }}">
+  </div>
+</div>
+
+<div id="special-features-builder" class="transition-opacity {{ $specialFeaturesEnabled ? '' : 'opacity-40 pointer-events-none select-none' }}" aria-disabled="{{ $specialFeaturesEnabled ? 'false' : 'true' }}">
+  @include('admin.products.partials.schema-builder', ['product' => $product ?? null, 'duplicateFrom' => $duplicateFrom ?? null])
+</div>
+
+<script>
+function toggleSpecialFeatures(forceEnabled) {
+  var input = document.getElementById('special-features-enabled');
+  var enabled = typeof forceEnabled === 'boolean' ? forceEnabled : input?.value !== '1';
+  if (input) input.value = enabled ? '1' : '0';
+  var builder = document.getElementById('special-features-builder');
+  builder?.classList.toggle('opacity-40', !enabled);
+  builder?.classList.toggle('pointer-events-none', !enabled);
+  builder?.classList.toggle('select-none', !enabled);
+  builder?.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+  var text = document.getElementById('special-features-state-text');
+  if (text) text.textContent = enabled ? 'ویژگی‌های خاص این محصول فعال است' : 'این محصول ویژگی خاصی ندارد';
+  if (typeof renderStepper === 'function') renderStepper();
+}
+</script>

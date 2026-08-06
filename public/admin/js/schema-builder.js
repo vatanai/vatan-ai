@@ -19,6 +19,7 @@
   var CFG = window.SCHEMA_BUILDER_CFG || { groups: {}, types: {}, initial: [] };
   var TYPES = CFG.types || {};
   var GROUPS = CFG.groups || {};
+  var TEMPLATES = CFG.templates || {};
 
   /* وضعیت مرکزی — تنها منبع حقیقت UI */
   var SB = { fields: [], libTarget: null };
@@ -181,7 +182,74 @@
       countEl.textContent = toFaNum(SB.fields.length) + ' ویژگی';
     }
     validateAll();
+    renderLivePreview();
     if (typeof window.renderStepper === 'function') { try { window.renderStepper(); } catch (e) {} }
+  }
+
+  window.sbAddTemplate = function (key) {
+    var template = TEMPLATES[key];
+    if (!template || !template.field) return;
+    var base = newField(template.field.type || 'text');
+    var field = normalizeField(Object.assign({}, base, template.field));
+    if (!field.field_id) field.field_id = uniqueId(field.type);
+    else field.field_id = uniqueId(field.field_id);
+    field._autoId = false;
+    field._open = true;
+    SB.fields.push(field);
+    renderAll();
+    var cards = document.querySelectorAll('#input-fields-list .sb-card');
+    if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  function renderLivePreview() {
+    var root = document.getElementById('sb-live-preview');
+    if (!root) return;
+    if (!SB.fields.length) {
+      root.innerHTML = '<div class="sb-preview-empty"><i class="fa-solid fa-arrow-up"></i><span>یکی از نمونه‌های بالا را انتخاب کنید تا فرم واقعی کاربر اینجا نمایش داده شود.</span></div>';
+      return;
+    }
+    root.innerHTML = SB.fields.map(function (field, index) {
+      if (field.hidden === '1') return '';
+      if (field.type === 'divider') return '<hr class="sb-preview-divider">';
+      if (field.type === 'section') return '<div class="sb-preview-section">' + esc(field.label_fa || 'عنوان بخش') + '</div>';
+      if (field.type === 'info') return '<div class="sb-preview-info"><i class="fa-solid fa-circle-info"></i>' + esc(field.description || field.label_fa || 'راهنمای این بخش') + '</div>';
+      var id = 'sb-preview-' + index;
+      var label = '<label for="' + id + '" class="sb-preview-label">' + esc(field.label_fa || 'عنوان ویژگی') + (field.required === '1' ? '<b>*</b>' : '') + '</label>';
+      var control = previewControl(field, id, index);
+      return '<div class="sb-preview-field">' + label + control +
+        (field.description ? '<small>' + esc(field.description) + '</small>' : '') + '</div>';
+    }).join('');
+  }
+
+  function previewControl(field, id, index) {
+    var opts = field.options || [];
+    if (field.type === 'textarea' || field.type === 'prompt' || field.type === 'negative_prompt') {
+      return '<textarea id="' + id + '" placeholder="' + esc(field.placeholder || 'بنویسید…') + '"></textarea>';
+    }
+    if (field.type === 'select') {
+      return '<select id="' + id + '"><option>انتخاب کنید</option>' + opts.map(function (o) { return '<option>' + esc(o.label || o.value) + '</option>'; }).join('') + '</select>';
+    }
+    if (['radio', 'gender', 'button_group', 'style_preset', 'aspect_ratio', 'resolution'].indexOf(field.type) > -1) {
+      return '<div class="sb-preview-options">' + opts.map(function (o, i) {
+        return '<label><input type="radio" name="sb-preview-radio-' + index + '"' + (i === 0 ? ' checked' : '') + '><span>' + esc(o.label || o.value || 'گزینه') + '</span></label>';
+      }).join('') + '</div>';
+    }
+    if (field.type === 'multi_select') {
+      return '<div class="sb-preview-options">' + opts.map(function (o) {
+        return '<label><input type="checkbox"><span>' + esc(o.label || o.value || 'گزینه') + '</span></label>';
+      }).join('') + '</div>';
+    }
+    if (field.type === 'switch' || field.type === 'checkbox') {
+      return '<label class="sb-preview-switch"><input type="checkbox"><span></span><em>فعال</em></label>';
+    }
+    if (['image_upload', 'multi_image', 'file_upload'].indexOf(field.type) > -1) {
+      return '<label class="sb-preview-upload" for="' + id + '"><i class="fa-solid fa-cloud-arrow-up"></i><span>برای انتخاب فایل کلیک کنید</span><input id="' + id + '" type="file"' + (field.type === 'multi_image' ? ' multiple' : '') + '></label>';
+    }
+    if (field.type === 'slider' || field.type === 'strength') {
+      return '<input id="' + id + '" type="range" min="' + esc(field.min || 0) + '" max="' + esc(field.max || 100) + '" value="' + esc(field.default || 50) + '">';
+    }
+    if (field.type === 'color') return '<input id="' + id + '" type="color" value="' + esc(field.default || '#16594f') + '">';
+    return '<input id="' + id + '" type="' + (field.type === 'number' || field.type === 'seed' ? 'number' : 'text') + '" placeholder="' + esc(field.placeholder || 'بنویسید…') + '" value="' + esc(field.default || '') + '">';
   }
 
   /* نام input بر اساس ایندکس فیلد */
@@ -216,10 +284,10 @@
         '</button>' +
         '<div class="sb-head-inputs">' +
           (showLabel
-            ? helpBtn('label_fa', 'عنوان ویژگی') + '<input type="text" class="sb-input sb-input-label schema-label" name="' + nm(i, 'label_fa') + '" value="' + esc(f.label_fa) + '" placeholder="عنوان ویژگی (مثلاً سبک تصویر)" data-k="label_fa">'
+            ? '<span style="color:var(--danger);font-weight:800;" title="اجباری">*</span>' + helpBtn('label_fa', 'عنوان ویژگی') + '<input type="text" required class="sb-input sb-input-label schema-label" name="' + nm(i, 'label_fa') + '" value="' + esc(f.label_fa) + '" placeholder="عنوان ویژگی (مثلاً سبک تصویر)" data-k="label_fa">'
             : '<input type="hidden" class="schema-label" name="' + nm(i, 'label_fa') + '" value="' + esc(f.label_fa) + '">') +
           (showLabel
-            ? helpBtn('field_id', 'شناسه فیلد') + '<input type="text" class="sb-input sb-input-id schema-id" name="' + nm(i, 'field_id') + '" value="' + esc(f.field_id) + '" placeholder="field_id" data-k="field_id" title="شناسه فیلد — همین شناسه به‌صورت {' + esc(f.field_id) + '} در پرامپت استفاده می‌شود">'
+            ? '<span style="color:var(--danger);font-weight:800;" title="اجباری">*</span>' + helpBtn('field_id', 'شناسه فیلد') + '<input type="text" required class="sb-input sb-input-id schema-id" name="' + nm(i, 'field_id') + '" value="' + esc(f.field_id) + '" placeholder="field_id" data-k="field_id" title="شناسه فیلد — همین شناسه به‌صورت {' + esc(f.field_id) + '} در پرامپت استفاده می‌شود">'
             : '<input type="hidden" class="schema-id" name="' + nm(i, 'field_id') + '" value="' + esc(f.field_id) + '">') +
         '</div>' +
         (!isLayout(f)
@@ -376,7 +444,7 @@
   function optCols(f) {
     var c = caps(f);
     var cols = ['18px', '1.2fr', '1fr']; // grip، عنوان، مقدار
-    var heads = ['', 'عنوان نمایش (فارسی)', 'مقدار / کلید (EN)'];
+    var heads = ['', 'عنوان نمایش (فارسی) *', 'مقدار / کلید (EN) *'];
     if (c.opt_prompt) { cols.push('1.4fr'); heads.push('متن پرامپت این گزینه (EN)'); }
     if (c.opt_credit) { cols.push('64px'); heads.push('کردیت+'); }
     if (c.opt_image) { cols.push('1fr'); heads.push('آدرس تصویر'); }
@@ -723,6 +791,8 @@
     if (!listEl) return;
     SB.fields = (Array.isArray(CFG.initial) ? CFG.initial : []).map(normalizeField);
     renderAll();
+    listEl.addEventListener('input', function () { setTimeout(renderLivePreview, 0); });
+    listEl.addEventListener('change', function () { setTimeout(renderLivePreview, 0); });
   });
 
 })();

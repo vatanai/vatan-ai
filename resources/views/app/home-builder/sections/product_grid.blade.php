@@ -1,13 +1,16 @@
 @if(($products ?? collect())->isNotEmpty())
-<div class="home-section-title home-section-title--sub">
-  <div>
-    <span class="home-section-title-right">{{ $section->title_fa }}</span>
-    @if($section->subtitle_fa)<p class="home-section-title-caption">{{ $section->subtitle_fa }}</p>@endif
-  </div>
-</div>
+@include('app.home-builder.partials.section-header')
 
 @if($section->layout === 'bento')
   @include('app.home-builder.sections.layouts.product-grid-bento')
+@elseif($section->layout === 'editorial')
+  @include('app.home-builder.sections.layouts.product-grid-editorial')
+@elseif($section->layout === 'family_duo')
+  @include('app.home-builder.sections.layouts.product-grid-family-duo')
+@elseif($section->layout === 'hover_showcase')
+  @include('app.home-builder.sections.layouts.product-grid-hover-showcase')
+@elseif($section->layout === 'hover_library')
+  @include('app.home-builder.sections.layouts.product-grid-hover-library')
 @else
   @php $cols = match($section->layout) { 'two_col' => 2, 'four_col' => 4, default => 3 }; @endphp
   <div class="hb-grid hb-cols-{{ $cols }}">

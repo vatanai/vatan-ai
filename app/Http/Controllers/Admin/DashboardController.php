@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Generation;
 use App\Models\Product;
+use App\Services\ServiceCreditOverviewService;
+use App\Services\ServiceCreditSynchronizer;
 
 class DashboardController extends Controller
 {
-    public function index($section = null)
+    public function index(
+        ServiceCreditOverviewService $creditOverview,
+        ServiceCreditSynchronizer $creditSynchronizer,
+        $section = null
+    )
     {
         try {
             $stats = [
@@ -21,6 +27,8 @@ class DashboardController extends Controller
             $stats = ['users_count' => 0, 'generations_count' => 0, 'products_count' => 0];
         }
 
+        $creditSynchronizer->sync();
+
         return view('admin.dashboard', [
             'stats'    => $stats,
             'topProds' => [],
@@ -28,6 +36,7 @@ class DashboardController extends Controller
             'cats'     => [],
             'models'   => [],
             'actions'  => [],
+            'creditOverview' => $creditOverview->get(true),
         ]);
     }
 }

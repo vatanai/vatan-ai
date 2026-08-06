@@ -1,0 +1,115 @@
+html,body{overflow-x:hidden}
+.referral-settings-page{padding:24px;display:grid;gap:18px;color:var(--text-main)}
+.referral-page-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.referral-page-head h1{margin:5px 0 3px;font-size:22px;font-weight:900;color:var(--text-h)}
+.referral-page-head p{margin:0;font-size:12px;line-height:1.8;color:var(--text-soft)}
+.referral-eyebrow{display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;color:var(--primary)}
+.referral-head-status{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:99px;background:var(--card-bg);font-size:11px;font-weight:800;color:var(--text-soft)}
+.referral-head-status span{width:8px;height:8px;border-radius:50%;background:var(--text-soft)}
+.referral-head-status.is-active{color:var(--success);border-color:var(--success-m);background:var(--success-l)}
+.referral-head-status.is-active span{background:var(--success)}
+.referral-alert{display:flex;align-items:center;gap:9px;padding:11px 14px;border:1px solid;border-radius:12px;font-size:12px;font-weight:700}
+.referral-alert.is-success{color:var(--success);border-color:var(--success-m);background:var(--success-l)}
+.referral-alert.is-error{color:var(--danger);border-color:var(--danger-m);background:var(--danger-l)}
+.referral-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.referral-stat-card{min-height:92px;display:flex;align-items:center;gap:12px}
+.referral-stat-card .stat-card-icon{position:static;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.referral-stat-card .stat-card-icon.is-primary{background:var(--primary-l);color:var(--primary)}
+.referral-stat-card .stat-card-icon.is-success{background:var(--success-l);color:var(--success)}
+.referral-stat-card .stat-card-icon.is-info{background:var(--info-l);color:var(--info)}
+.referral-stat-card .stat-card-icon.is-warning{background:var(--warning-l);color:var(--warning)}
+.referral-settings-form{display:grid;gap:18px}
+.referral-hub-card{overflow:hidden}
+.referral-hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:18px}
+.referral-hub-link{display:flex;align-items:center;gap:12px;min-width:0;padding:14px;border:1px solid var(--border);border-radius:13px;background:var(--input-bg);color:var(--text-main);text-decoration:none;transition:border-color .2s,background .2s}
+.referral-hub-link:hover{border-color:var(--primary);background:var(--primary-l)}
+.referral-hub-link>span{width:40px;height:40px;flex:0 0 40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--card-bg);border:1px solid var(--border);color:var(--primary)}
+.referral-hub-link>div{display:grid;gap:4px;min-width:0;flex:1}
+.referral-hub-link strong{font-size:12px;color:var(--text-h)}
+.referral-hub-link small{font-size:9.5px;line-height:1.7;color:var(--text-soft)}
+.referral-hub-link>i{font-size:10px;color:var(--text-soft)}
+.referral-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.referral-config-card{overflow:hidden}
+.referral-card-head{display:flex;align-items:flex-start;gap:11px;padding:16px 18px;border-bottom:1px solid var(--divider)}
+.referral-card-head h2{margin:0 0 4px;font-size:14px;font-weight:900;color:var(--text-h)}
+.referral-card-head p{margin:0;font-size:10.5px;line-height:1.7;color:var(--text-soft)}
+.referral-card-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.referral-card-icon.is-primary{background:var(--primary-l);color:var(--primary)}
+.referral-card-icon.is-success{background:var(--success-l);color:var(--success)}
+.referral-card-icon.is-info{background:var(--info-l);color:var(--info)}
+.referral-card-icon.is-warning{background:var(--warning-l);color:var(--warning)}
+.referral-card-body{padding:16px 18px;display:grid;gap:14px}
+.referral-toggle-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer}
+.referral-toggle-row>span:first-child{display:grid;gap:3px;min-width:0;padding-left:52px}
+.referral-toggle-row strong{font-size:11.5px;color:var(--text-h)}
+.referral-toggle-row small{font-size:9.5px;line-height:1.6;color:var(--text-soft)}
+.referral-switch-input{position:absolute;opacity:0;pointer-events:none}
+.referral-switch{position:absolute;left:12px;width:40px;height:22px;border-radius:99px;border:1px solid var(--border);background:var(--card-bg);transition:all .2s}
+.referral-switch:after{content:"";position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;background:var(--text-soft);transition:all .2s}
+.referral-switch-input:checked+.referral-switch{background:var(--primary);border-color:var(--primary)}
+.referral-switch-input:checked+.referral-switch:after{right:20px;background:var(--accent)}
+body.light .referral-switch-input:checked+.referral-switch:after{background:var(--card-bg)}
+.referral-fields{display:grid;gap:11px}
+.referral-fields.two-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
+.referral-field{display:grid;gap:6px;min-width:0}
+.referral-field>span{font-size:10.5px;font-weight:800;color:var(--text-main)}
+.referral-field>small{font-size:9px;line-height:1.6;color:var(--text-soft)}
+.referral-field>small.is-important{display:flex;align-items:flex-start;gap:6px;padding:8px 10px;border-radius:9px;color:var(--primary);background:var(--primary-l);border:1px solid var(--primary-m)}
+.referral-field .input-pro{width:100%;height:40px}
+.referral-field .referral-textarea{height:auto;min-height:82px;padding:10px 12px;line-height:1.8;resize:vertical}
+.referral-input-suffix{position:relative}
+.referral-input-suffix .input-pro{padding-left:52px}
+.referral-input-suffix b{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:9.5px;font-weight:700;color:var(--text-soft);pointer-events:none}
+.referral-check-row{display:flex;align-items:flex-start;gap:9px;font-size:10.5px;line-height:1.7;color:var(--text-main);cursor:pointer}
+.referral-check-row input[type="checkbox"]{width:16px;height:16px;margin-top:1px;flex:0 0 auto;accent-color:var(--primary)}
+.referral-divider{height:1px;background:var(--divider)}
+.referral-profile-note{display:flex;align-items:flex-start;gap:8px;padding:10px 11px;border:1px solid var(--info-m);border-radius:10px;background:var(--info-l);color:var(--info);font-size:10px;line-height:1.7}
+.referral-save-bar{position:sticky;bottom:14px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 16px;border:1px solid var(--border);border-radius:14px;background:var(--card-bg);box-shadow:var(--shadow-card)}
+.referral-save-bar>div{display:grid;gap:2px}
+.referral-save-bar strong{font-size:12px;color:var(--text-h)}
+.referral-save-bar span{font-size:9.5px;color:var(--text-soft)}
+.referral-reports{overflow:hidden}
+.referral-reports-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:17px 18px;border-bottom:1px solid var(--divider)}
+.referral-reports-head h2{margin:0 0 4px;font-size:15px;font-weight:900;color:var(--text-h)}
+.referral-reports-head p{margin:0;font-size:10.5px;line-height:1.7;color:var(--text-soft)}
+.referral-report-tabs{display:flex;gap:8px;padding:13px 18px;border-bottom:1px solid var(--divider);overflow-x:auto}
+.referral-report-tabs a{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text-soft);font-size:11px;font-weight:800;text-decoration:none;white-space:nowrap}
+.referral-report-tabs a b{min-width:23px;padding:3px 6px;border-radius:7px;background:var(--card-bg);color:var(--text-soft);font-size:9px;text-align:center}
+.referral-report-tabs a.is-active{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
+.referral-report-tabs a.is-active b{background:var(--primary);color:var(--accent)}
+.referral-filter-form{display:grid;grid-template-columns:minmax(210px,1.5fr) repeat(5,minmax(120px,1fr));gap:10px;padding:14px 18px;border-bottom:1px solid var(--divider);align-items:end}
+.referral-filter-form label{display:grid;gap:6px;min-width:0}
+.referral-filter-form label>span{font-size:9.5px;font-weight:800;color:var(--text-soft)}
+.referral-filter-form .input-pro{width:100%;height:38px;min-width:0}
+.referral-filter-search>div{position:relative}
+.referral-filter-search i{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-soft)}
+.referral-filter-search input{padding-right:34px}
+.referral-filter-actions{display:flex;gap:7px;grid-column:1/-1;justify-content:flex-end}
+.referral-table-wrap{overflow-x:auto}
+.referral-report-table{min-width:960px}
+.referral-report-table td strong{font-size:11.5px;color:var(--text-h)}
+.referral-report-table td>small{display:block;margin-top:4px;font-size:9px;color:var(--text-soft)}
+.referral-report-table code{display:inline-block;direction:ltr;padding:4px 7px;border-radius:7px;background:var(--input-bg);border:1px solid var(--border);color:var(--primary);font-size:10px}
+.referral-risk-reason{max-width:210px;line-height:1.6;color:var(--warning)!important}
+.referral-cell-note{display:block;max-width:190px;font-size:10px;line-height:1.6;color:var(--text-soft)}
+.referral-landing-url{display:block;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right;color:var(--text-soft);font-size:10px}
+.referral-review-form{display:grid;gap:6px;min-width:180px}
+.referral-review-form .input-pro{height:32px;font-size:10px}
+.referral-review-form>div{display:flex;gap:5px;justify-content:flex-end}
+.referral-action{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px;border:1px solid;border-radius:7px;font-size:9.5px;font-weight:800;cursor:pointer}
+.referral-action.is-approve{background:var(--success-l);border-color:var(--success-m);color:var(--success)}
+.referral-action.is-reject{background:var(--danger-l);border-color:var(--danger-m);color:var(--danger)}
+.referral-no-action{font-size:9.5px;color:var(--text-soft)}
+.referral-report-table .td-empty{padding:38px 18px;text-align:center!important;color:var(--text-soft)}
+.referral-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;border-top:1px solid var(--divider);font-size:10px;color:var(--text-soft)}
+.referral-pagination>div{display:flex;align-items:center;gap:7px}
+.referral-pagination a,.referral-pagination .is-disabled{padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--input-bg);color:var(--text-main);text-decoration:none}
+.referral-pagination .is-disabled{opacity:.45}
+.referral-pagination b{font-size:9.5px;color:var(--text-soft)}
+.referral-simple-pages{padding:12px 18px;border-top:1px solid var(--divider)}
+@media(max-width:1180px){.referral-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-config-grid{grid-template-columns:1fr}}
+@media(max-width:1400px){.referral-filter-form{grid-template-columns:repeat(3,minmax(0,1fr))}.referral-filter-search{grid-column:span 2}}
+@media(max-width:900px){.sidebar{transform:translateX(calc(100% + 64px))}}
+@media(max-width:767px){.referral-report-table{min-width:0}.referral-table-wrap{padding:12px;background:var(--page-bg)}.referral-report-table tbody td[data-label="عملیات"]{display:block}.referral-review-form{width:100%;min-width:0}.referral-review-form>div{justify-content:flex-start}.referral-landing-url,.referral-cell-note,.referral-risk-reason{max-width:58%;text-align:left}.referral-pagination{align-items:stretch;flex-direction:column}.referral-pagination>div{justify-content:space-between}}
+@media(max-width:640px){.referral-settings-page{padding:14px;gap:14px}.referral-page-head{align-items:flex-start}.referral-page-head h1{font-size:19px}.referral-head-status{width:100%;justify-content:center}.referral-stat-grid{grid-template-columns:1fr 1fr;gap:8px}.referral-stat-card{min-height:82px;padding:12px}.referral-stat-card .stat-card-icon{width:36px;height:36px}.referral-stat-card .stat-card-value{font-size:17px}.referral-stat-card .stat-card-label{font-size:10px;white-space:normal}.referral-hub-grid{grid-template-columns:1fr;padding:14px}.referral-card-head,.referral-card-body{padding:14px}.referral-fields.two-columns{grid-template-columns:1fr}.referral-save-bar{bottom:8px;align-items:stretch;flex-direction:column}.referral-save-bar .btn-pro{width:100%;justify-content:center}.referral-reports-head{align-items:stretch;flex-direction:column}.referral-reports-head .btn-pro{justify-content:center}.referral-filter-form{grid-template-columns:1fr;padding:13px}.referral-filter-search{grid-column:auto}.referral-filter-actions{justify-content:stretch}.referral-filter-actions>*{flex:1;justify-content:center}.referral-report-tabs{padding:11px 13px}}
+@media(max-width:390px){.referral-stat-grid{grid-template-columns:1fr}.referral-stat-card{min-height:72px}}

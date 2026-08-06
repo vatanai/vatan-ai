@@ -46,16 +46,32 @@ class ExploreManagementController extends Controller
         $products = Product::query()
             ->where('status', 'active')
             ->orderBy('name_fa')
-            ->get(['id', 'name_fa', 'slug', 'thumbnail', 'cover', 'sample_outputs']);
+            ->get(['id', 'name_fa', 'slug', 'thumbnail', 'cover', 'sample_outputs', 'tags', 'is_featured', 'is_new', 'is_trending', 'media_type']);
+
+        $categories = \App\Models\Category::query()
+            ->active()
+            ->orderBy('sort_order')
+            ->orderBy('name_fa')
+            ->get(['id', 'parent_id', 'name_fa', 'name', 'name_en']);
+
+        $filterTags = $products->flatMap(fn (Product $product) => (array) $product->tags)
+            ->map(fn ($tag) => trim(ltrim((string) $tag, '#')))
+            ->filter()
+            ->unique(fn ($tag) => mb_strtolower($tag))
+            ->sort()
+            ->values();
 
         return view('admin.explore.index', [
             'surface' => $surface,
             'setting' => $setting,
-            'presets' => FeedSetting::LAYOUT_PRESETS,
+            'patterns' => FeedSetting::DISPLAY_PATTERNS,
+            'effectiveLayoutStyle' => FeedSetting::effectiveLayoutStyle($setting->layout_style),
             'campaigns' => $campaigns,
             'pins' => $pins,
             'boostedItems' => $boostedItems,
             'products' => $products,
+            'categories' => $categories,
+            'filterTags' => $filterTags,
         ]);
     }
 
@@ -64,28 +80,34 @@ class ExploreManagementController extends Controller
         $surface = $this->feed->getOrCreateSurface($this->surfaceKey, 'اکسپلور');
 
         $data = $request->validate([
-            'layout_style' => 'required|in:classic,dense,magazine,custom',
+            'layout_style' => 'required|in:' . implode(',', array_keys(FeedSetting::DISPLAY_PATTERNS)),
             'randomness_level' => 'required|integer|min:0|max:100',
             'campaign_ratio' => 'required|integer|min:0|max:100',
-            'tile_1x1' => 'required_if:layout_style,custom|nullable|integer|min:0|max:100',
-            'tile_wide' => 'required_if:layout_style,custom|nullable|integer|min:0|max:100',
-            'tile_tall' => 'required_if:layout_style,custom|nullable|integer|min:0|max:100',
-            'tile_big' => 'required_if:layout_style,custom|nullable|integer|min:0|max:100',
+            'include_categories' => 'nullable|array',
+            'include_categories.*' => 'integer|exists:categories,id',
+            'include_tags' => 'nullable|array',
+            'include_tags.*' => 'string|max:100',
+            'include_traits' => 'nullable|array',
+            'include_traits.*' => 'in:featured,normal,new,trending',
+            'include_media' => 'nullable|array',
+            'include_media.*' => 'in:photo,video',
+            'include_products' => 'nullable|array',
+            'include_products.*' => 'integer|exists:products,id',
+            'exclude_categories' => 'nullable|array',
+            'exclude_categories.*' => 'integer|exists:categories,id',
+            'exclude_tags' => 'nullable|array',
+            'exclude_tags.*' => 'string|max:100',
+            'exclude_traits' => 'nullable|array',
+            'exclude_traits.*' => 'in:featured,normal,new,trending',
+            'exclude_media' => 'nullable|array',
+            'exclude_media.*' => 'in:photo,video',
+            'exclude_products' => 'nullable|array',
+            'exclude_products.*' => 'integer|exists:products,id',
         ]);
 
-        if ($data['layout_style'] === 'custom') {
-            $tileWeights = [
-                'size-1x1' => (int) $data['tile_1x1'],
-                'size-wide' => (int) $data['tile_wide'],
-                'size-tall' => (int) $data['tile_tall'],
-                'size-big' => (int) $data['tile_big'],
-            ];
-            if (array_sum($tileWeights) <= 0) {
-                return back()->withErrors(['tile_1x1' => 'جمع وزن‌های سبک سفارشی نمی‌تواند صفر باشد.'])->withInput();
-            }
-        } else {
-            $tileWeights = FeedSetting::LAYOUT_PRESETS[$data['layout_style']];
-        }
+        $tileWeights = FeedSetting::LAYOUT_PRESETS[$data['layout_style']];
+        $includeFilters = $this->normaliseAudienceFilters($data, 'include');
+        $excludeFilters = $this->normaliseAudienceFilters($data, 'exclude');
 
         // نسخه‌ی قبلی را غیرفعال و نسخه‌ی جدید را فعال می‌کنیم (تاریخچه حفظ می‌شود)
         FeedSetting::where('feed_surface_id', $surface->id)
@@ -98,10 +120,26 @@ class ExploreManagementController extends Controller
             'tile_weights' => $tileWeights,
             'randomness_level' => $data['randomness_level'],
             'campaign_ratio' => $data['campaign_ratio'],
+            'include_filters' => $includeFilters,
+            'exclude_filters' => $excludeFilters,
             'is_active_version' => true,
         ]);
 
         return back()->with('success', 'تنظیمات نمایش اکسپلور بروزرسانی شد.');
+    }
+
+    protected function normaliseAudienceFilters(array $data, string $prefix): array
+    {
+        return [
+            'categories' => array_values(array_unique(array_map('intval', $data[$prefix . '_categories'] ?? []))),
+            'tags' => array_values(array_unique(array_filter(array_map(
+                fn ($tag) => trim(ltrim((string) $tag, '#')),
+                $data[$prefix . '_tags'] ?? []
+            )))),
+            'traits' => array_values(array_unique($data[$prefix . '_traits'] ?? [])),
+            'media' => array_values(array_unique($data[$prefix . '_media'] ?? [])),
+            'products' => array_values(array_unique(array_map('intval', $data[$prefix . '_products'] ?? []))),
+        ];
     }
 
     public function storeCampaign(Request $request)

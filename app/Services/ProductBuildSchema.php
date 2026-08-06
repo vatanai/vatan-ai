@@ -13,6 +13,9 @@ class ProductBuildSchema
     public function fields(Product $product): array
     {
         $fields = collect($product->input_schema ?? [])
+            // داده قدیمی/واردشده ممکن است آیتم null یا string داشته باشد؛
+            // یک آیتم خراب نباید کل صفحه و دکمه نهایی ساخت را حذف کند.
+            ->filter(fn ($field) => is_array($field))
             ->map(fn (array $field) => $this->normalizeField($field))
             ->filter(fn (array $field) => $field['id'] !== '' && !$field['hidden'])
             ->values();
@@ -41,8 +44,8 @@ class ProductBuildSchema
                 'type' => (int) $product->max_reference_images > 1 ? 'multi_image' : 'image_upload',
                 'label_fa' => 'تصویر مرجع',
                 'description' => 'برای حفظ دقیق هویت، تصویر واضح و باکیفیت بارگذاری کنید.',
-                'required' => '1',
-                'max_files' => max(1, (int) $product->max_reference_images),
+                'required' => '0',
+                'max_files' => min(3, max(2, (int) $product->max_reference_images)),
                 'max_size_mb' => 10,
                 'accept' => 'image/*',
             ]));
@@ -53,7 +56,10 @@ class ProductBuildSchema
 
     public function promptFields(Product $product): array
     {
-        $raw = collect($product->input_schema ?? [])->map(fn (array $field) => $this->normalizeField($field))->values();
+        $raw = collect($product->input_schema ?? [])
+            ->filter(fn ($field) => is_array($field))
+            ->map(fn (array $field) => $this->normalizeField($field))
+            ->values();
         return $raw->isNotEmpty() ? $raw->all() : $this->fields($product);
     }
 
@@ -64,12 +70,18 @@ class ProductBuildSchema
             'description' => $product->description_fa ?: $product->description_en ?: 'تنظیمات را کامل کنید و خروجی اختصاصی خود را بسازید.',
             'cover' => $product->displayImageUrl(),
             'cost' => (int) ($product->credit_cost ?? 0),
+            'identity' => [
+                'available' => (bool) $product->identity_preservation,
+                'extra_cost' => max(0, (int) $product->identity_credit_cost),
+                'max_images' => min(3, max(2, (int) ($product->max_reference_images ?: 3))),
+            ],
             'estimated_time' => $product->estimated_time ? 'حدود ' . number_format((int) $product->estimated_time) . ' ثانیه' : 'حدود یک دقیقه',
             'output_count' => max(1, (int) ($product->output_count ?? 1)),
             'output_variants' => $product->outputVariantList(),
             'fields' => $this->fields($product),
+            'download_track_url' => route('app.product.download', $product->slug),
             'generate_url' => route('app.create.generate', $product->route_slug),
-            'login_url' => route('login'),
+            'login_url' => route('login', ['redirect' => request()->fullUrl()]),
             'is_authenticated' => auth()->check(),
         ];
     }
@@ -81,6 +93,7 @@ class ProductBuildSchema
             'output' => ['nullable', 'array'],
             'output.aspect_ratio' => ['nullable', Rule::in($product->allowedAspectRatioList())],
             'output.quality' => ['nullable', Rule::in(['1K', '2K', '4K'])],
+            'identity_preservation' => ['nullable', 'boolean'],
         ];
         foreach ($this->fields($product) as $field) {
             if ($this->isLayout($field['type'])) continue;

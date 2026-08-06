@@ -1,10 +1,5 @@
 @if(($products ?? collect())->isNotEmpty())
-<div class="home-section-title home-section-title--sub">
-  <div>
-    <span class="home-section-title-right">{{ $section->title_fa }}</span>
-    @if($section->subtitle_fa)<p class="home-section-title-caption">{{ $section->subtitle_fa }}</p>@endif
-  </div>
-</div>
+@include('app.home-builder.partials.section-header')
 
 <div class="home-cards-scroll">
   @foreach($products as $product)

@@ -2,10 +2,13 @@
 
 return [
     'events' => [
+        'otp_code' => ['label' => 'رمز یک‌بارمصرف ورود', 'group' => 'کاربران', 'variables' => ['code', 'expiry_minutes', 'brand_name']],
         'login_success' => ['label' => 'ورود موفق کاربر', 'group' => 'کاربران', 'variables' => ['name', 'phone', 'login_time']],
         'registration_success' => ['label' => 'ثبت‌نام موفق', 'group' => 'کاربران', 'variables' => ['name', 'phone', 'gift_credits']],
         'password_reset' => ['label' => 'بازیابی رمز عبور', 'group' => 'کاربران', 'variables' => ['name', 'phone']],
         'purchase_success' => ['label' => 'خرید موفق', 'group' => 'سفارشات', 'variables' => ['name', 'phone', 'order_number', 'product_name', 'amount', 'balance']],
+        'plan_purchase_success' => ['label' => 'خرید موفق پلن', 'group' => 'پلن‌ها', 'variables' => ['name', 'plan_name']],
+        'plan_purchase_failed' => ['label' => 'خرید ناموفق پلن', 'group' => 'پلن‌ها', 'variables' => ['name', 'plan_name']],
         'order_completed' => ['label' => 'تکمیل سفارش', 'group' => 'سفارشات', 'variables' => ['name', 'phone', 'order_number', 'product_name', 'balance']],
         'order_failed' => ['label' => 'ناموفق بودن سفارش', 'group' => 'سفارشات', 'variables' => ['name', 'phone', 'order_number', 'product_name']],
         'refund_success' => ['label' => 'بازگشت اعتبار', 'group' => 'سفارشات', 'variables' => ['name', 'phone', 'order_number', 'amount', 'balance']],
@@ -20,9 +23,10 @@ return [
     ],
     'samples' => [
         'name' => 'محمد رضایی', 'phone' => '09123456789', 'login_time' => '۱۴۰۵/۰۴/۳۰ - ۱۰:۳۰',
-        'gift_credits' => '۵۰', 'order_number' => 'ORD-14050430-1024', 'product_name' => 'ساخت تصویر حرفه‌ای',
+        'gift_credits' => '۵۰', 'order_number' => 'ORD-14050430-1024', 'product_name' => 'ساخت تصویر حرفه‌ای', 'plan_name' => 'حرفه‌ای',
         'amount' => '۱۲۰', 'balance' => '۸۵۰', 'action' => 'افزایش', 'threshold' => '۱۰۰',
         'discount_code'=>'BIRTHDAY20', 'brand_name'=>'وطن استودیو', 'occasion_name'=>'نوروز',
         'admin_name'=>'مدیر سایت', 'admin_email'=>'admin@example.com', 'ip'=>'127.0.0.1', 'provider_name'=>'ملی‌پیامک',
+        'code'=>'۱۲۳۴۵', 'expiry_minutes'=>'۳',
     ],
 ];

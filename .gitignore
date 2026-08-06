@@ -35,10 +35,16 @@
 !/storage/framework/views/.gitignore
 /storage/logs/*
 !/storage/logs/.gitignore
-#/vendor
+/vendor
 _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
 
 database/data-import/*.bak.discard
+/database/local-backups/
+
+# --- standardization: local backups & junk (added by cleanup) ---
+/_standardize_backup/
+*.bak-*
+.fuse_hidden*

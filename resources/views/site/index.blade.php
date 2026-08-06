@@ -6,11 +6,12 @@
     <title>AIPIX — هوش مصنوعی</title>
     @include('partials.site-icons')
 <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/theme-tokens.css') }}?v={{ filemtime(public_path('css/theme-tokens.css')) }}" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'IRANSansXFaNum', sans-serif;
-            background: #000000;
+            background: var(--vatan-bg-page);
             color: #ffffff;
             min-height: 100vh;
             min-height: 100dvh;

@@ -20,7 +20,7 @@
       <div class="text-[12.5px] font-semibold text-[var(--text2)]">فعال‌سازی واترمارک</div>
       <div class="text-[11px] text-[var(--text3)] mt-0.5">در صورت غیرفعال بودن، تنظیمات زیر مخفی می‌شوند</div>
     </div>
-    @php $wmEnabled = old('watermark_enabled', $duplicateFrom ? $duplicateFrom->watermark_enabled : true); @endphp
+  @php $wmEnabled = old('watermark_enabled', $duplicateFrom ? $duplicateFrom->watermark_enabled : false); @endphp
     <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
       <input type="checkbox" name="watermark_enabled" value="1" {{ $wmEnabled ? 'checked' : '' }} class="sr-only peer" id="watermark-enabled-input" onchange="toggleWatermarkSettings()">
       <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
@@ -28,6 +28,16 @@
   </div>
 
   <div id="watermark-settings-wrap" class="{{ $wmEnabled ? '' : 'hidden' }}">
+    <div class="grid grid-cols-1 md:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.2fr)] gap-4 mb-4">
+      <div class="relative rounded-xl overflow-hidden border border-[var(--b1)] bg-[var(--bg)] aspect-square">
+        <img id="watermark-live-image" class="w-full h-full object-contain" alt="پیش‌نمایش واترمارک">
+        <div id="watermark-live-mark" class="absolute top-3 right-3 px-2 py-1 rounded-lg bg-[var(--s2)]/80 text-[var(--text)] text-[10px] font-bold border border-[var(--b1)]">
+          <img src="{{ asset('assets/img/vatan-logo.svg') }}" class="watermark-live-logo h-5 w-auto" alt="وطن">
+          <span class="watermark-live-text hidden">VATAN AI</span>
+        </div>
+      </div>
+      <div class="flex items-center text-[10.5px] leading-7 text-[var(--text3)]">این پیش‌نمایش از عکس اصلی همین محصول استفاده می‌کند. موقعیت، اندازه و شفافیت واترمارک را تغییر دهید تا نتیجه را قبل از ثبت ببینید.</div>
+    </div>
     <div class="flex flex-col gap-1.5 mb-3.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">موقعیت واترمارک <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:220px;">تعیین می‌کند لوگو یا متن واترمارک روی کدام قسمت تصویر خروجی قرار بگیرد.</span></span></label>
       @php $curWmPos = old('watermark_position', optional($duplicateFrom)->watermark_position ?? 'corner'); @endphp
@@ -57,7 +67,7 @@
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text3)]" data-corner="bl" onclick="setPreciseCorner('bl')"><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center block mb-1"></i>پایین چپ</button>
           <button type="button" class="corner-precise-btn text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text3)]" data-corner="br" onclick="setPreciseCorner('br')"><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center rotate-90 block mb-1"></i>پایین راست</button>
         </div>
-        <input type="hidden" name="new_watermark_corner_precise" id="new-watermark-corner-precise" value="tr">
+        <input type="hidden" name="new_watermark_corner_precise" id="new-watermark-corner-precise" value="{{ old('new_watermark_corner_precise', optional($duplicateFrom)->new_watermark_corner_precise ?? 'tr') }}">
       </div>
     </div>
 
@@ -67,14 +77,16 @@
           <span class="flex items-center gap-1.5 flex-wrap">شفافیت واترمارک</span>
           <span class="text-[var(--accent)] font-mono text-[11px]" id="wm-opacity-val">70%</span>
         </label>
-        <input type="range" name="new_watermark_opacity" min="0" max="100" value="70" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
+        @php $wmOpacity = old('new_watermark_opacity', optional($duplicateFrom)->new_watermark_opacity ?? 70); @endphp
+        <input type="range" name="new_watermark_opacity" min="0" max="100" value="{{ $wmOpacity }}" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-opacity-val').textContent = this.value + '%'">
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between flex-wrap gap-1.5">
           <span class="flex items-center gap-1.5 flex-wrap">اندازه واترمارک</span>
           <span class="text-[var(--accent)] font-mono text-[11px]" id="wm-size-val">30%</span>
         </label>
-        <input type="range" name="new_watermark_size" min="10" max="100" value="30" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-size-val').textContent = this.value + '%'">
+        @php $wmSize = old('new_watermark_size', optional($duplicateFrom)->new_watermark_size ?? 30); @endphp
+        <input type="range" name="new_watermark_size" min="10" max="100" value="{{ $wmSize }}" class="w-full accent-[var(--accent)]" oninput="document.getElementById('wm-size-val').textContent = this.value + '%'">
       </div>
     </div>
 
@@ -83,17 +95,17 @@
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">نوع واترمارک</label>
         <div class="grid grid-cols-2 gap-2">
           <label class="flex items-center justify-center gap-1.5 p-2.5 bg-[var(--s1)] border border-[var(--accent)] bg-[var(--accent)]/8 rounded-lg cursor-pointer text-xs text-[var(--text)]">
-            <input type="radio" name="new_watermark_type" value="logo" checked class="accent-[var(--accent)]"> Logo
+            <input type="radio" name="new_watermark_type" value="logo" {{ old('new_watermark_type', optional($duplicateFrom)->new_watermark_type ?? 'logo') === 'logo' ? 'checked' : '' }} class="accent-[var(--accent)]"> Logo
           </label>
           <label class="flex items-center justify-center gap-1.5 p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer text-xs text-[var(--text2)]">
-            <input type="radio" name="new_watermark_type" value="text" class="accent-[var(--accent)]"> Text
+            <input type="radio" name="new_watermark_type" value="text" {{ old('new_watermark_type', optional($duplicateFrom)->new_watermark_type ?? 'logo') === 'text' ? 'checked' : '' }} class="accent-[var(--accent)]"> Text
           </label>
         </div>
       </div>
       <div class="flex flex-col gap-1.5">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">رنگ متن واترمارک</label>
         <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
-          <input type="color" name="new_watermark_text_color" value="#ffffff" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('wm-text-color-hex').value = this.value.toUpperCase()">
+          <input type="color" name="new_watermark_text_color" value="{{ old('new_watermark_text_color', optional($duplicateFrom)->new_watermark_text_color ?? '#FFFFFF') }}" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('wm-text-color-hex').value = this.value.toUpperCase()">
           <input type="text" id="wm-text-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#FFFFFF" readonly>
         </div>
       </div>
@@ -129,8 +141,8 @@
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5 transition-all {{ $curPricing != 'per_credit' ? 'opacity-30 pointer-events-none' : '' }}" id="credit-cost-wrap">
-      <label class="text-xs font-semibold text-[var(--text2)]">هزینه کردیت محصول</label>
-      <input type="number" name="credit_cost" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثال: 5" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost ?? 0) }}">
+      <label class="text-xs font-semibold text-[var(--text2)]">هزینه کردیت محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
+      <input type="number" name="credit_cost" min="1" required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="هزینه کردیت را وارد کنید" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost) }}">
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداقل کردیت لازم</label>
@@ -172,11 +184,13 @@
     <div class="text-[10.5px] text-[var(--text3)] mt-1">این تنظیمات تعیین می‌کند محصول در اپ و نسخه موبایل چگونه نمایش داده شود</div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-3.5">
-    <div class="flex flex-col gap-1.5">
+  <div>
+    <div class="min-w-0">
+  <div class="flex flex-col gap-3 mb-3.5">
+    <div class="flex flex-col gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-xl">
       <label class="text-xs font-semibold text-[var(--text2)]">حالت نمایش</label>
       @php $curDisplayMode = old('display_mode', optional($duplicateFrom)->display_mode ?? 'card'); @endphp
-      <div class="flex flex-col gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
         @foreach(['card' => ['کارت استاندارد','fa-square'], 'featured' => ['ویژه بزرگ','fa-star'], 'simple' => ['ساده','fa-minus']] as $val => $meta)
           <label class="preview-card-option flex items-center gap-2.5 p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curDisplayMode == $val ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
             <input type="radio" name="display_mode" value="{{ $val }}" {{ $curDisplayMode == $val ? 'checked' : '' }} class="accent-[var(--accent)]">
@@ -187,10 +201,10 @@
       </div>
     </div>
 
-    <div class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-xl">
       <label class="text-xs font-semibold text-[var(--text2)]">شکل کارت <span class="text-[10px] text-[var(--text3)] font-normal">(اولویت با موبایل)</span></label>
       @php $curCardShape = old('card_shape', optional($duplicateFrom)->card_shape ?? 'portrait'); @endphp
-      <div class="flex flex-col gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <label class="shape-card-option flex items-center gap-2.5 p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curCardShape == 'portrait' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
           <input type="radio" name="card_shape" value="portrait" {{ $curCardShape == 'portrait' ? 'checked' : '' }} class="accent-[var(--accent)]">
           <span class="block w-4 h-5 rounded-sm border border-[var(--text3)] shrink-0"></span>
@@ -210,10 +224,10 @@
       </div>
     </div>
 
-    <div class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-xl">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">چیدمان گالری <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:220px;">نحوه‌ی چیده‌شدن نمونه‌خروجی‌ها در صفحه محصول: شبکه‌ای منظم، آبشاری یا اسلایدر.</span></span></label>
       @php $curGalleryLayout = old('gallery_layout', optional($duplicateFrom)->gallery_layout ?? 'grid'); @endphp
-      <div class="flex flex-col gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
         @foreach(['grid' => ['شبکه','fa-table-cells'], 'masonry' => ['آبشاری','fa-grip'], 'slider' => ['اسلایدر','fa-images']] as $val => $meta)
           <label class="preview-card-option flex items-center gap-2.5 p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curGalleryLayout == $val ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
             <input type="radio" name="gallery_layout" value="{{ $val }}" {{ $curGalleryLayout == $val ? 'checked' : '' }} class="accent-[var(--accent)]">
@@ -225,13 +239,26 @@
     </div>
   </div>
 
-  <div class="flex flex-col gap-1.5 mb-4">
-    <label class="text-xs font-semibold text-[var(--text2)]">برچسب اختیاری روی کارت</label>
-    <input type="text" name="card_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: هدیه، پیشنهاد ویژه" value="{{ old('card_label', optional($duplicateFrom)->card_label) }}">
+  <div class="border border-[var(--b1)] rounded-xl p-3 mb-4">
+    <label class="flex items-center justify-between gap-3 cursor-pointer mb-3">
+      <span class="text-xs font-semibold text-[var(--text2)]">برچسب اختیاری روی کارت</span>
+      <span class="relative w-9 h-5 shrink-0 block">
+        <input type="checkbox" name="card_label_enabled" value="1" class="sr-only peer" {{ old('card_label_enabled', optional($duplicateFrom)->card_label_enabled) ? 'checked' : '' }} onchange="refreshCardGalleryPreview()">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </span>
+    </label>
+    <input type="text" name="card_label" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full" placeholder="مثلاً: هدیه، پیشنهاد ویژه" value="{{ old('card_label', optional($duplicateFrom)->card_label) }}" oninput="refreshCardGalleryPreview()">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+      @foreach(['top-right'=>'بالا راست','top-left'=>'بالا چپ','bottom-right'=>'پایین راست','bottom-left'=>'پایین چپ'] as $position => $label)
+        <label class="text-[10px] p-2 border border-[var(--b1)] rounded-lg text-[var(--text2)] cursor-pointer"><input type="radio" name="card_label_position" value="{{ $position }}" class="ml-1" {{ old('card_label_position', optional($duplicateFrom)->card_label_position ?? 'top-right') === $position ? 'checked' : '' }} onchange="refreshCardGalleryPreview()">{{ $label }}</label>
+      @endforeach
+    </div>
+  </div>
+    </div>
   </div>
 
   {{-- بند ۲۰: ظاهر کارت محصول (NEW / فقط UI) — رنگ Badge، رنگ پس‌زمینه کارت، نمایش آیکون/Badge، اولویت صفحه اصلی --}}
-  <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-1">
+  <div class="hidden border-t border-dashed border-[var(--b2)] pt-4 mt-1" data-future-update="ظاهر کارت محصول">
     <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-palette text-[10px]"></i> ظاهر کارت محصول {!! $newBadge !!}</div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
@@ -288,7 +315,7 @@
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">
     <div>
-      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-rocket text-[var(--accent)]"></i> انتشار محصول {!! $newBadge !!}</div>
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-rocket text-[var(--accent)]"></i> انتشار محصول</div>
       <div class="text-[10.5px] text-[var(--text3)] mt-1">زمان‌بندی و محل نمایش محصول پس از انتشار</div>
     </div>
   </div>
@@ -390,56 +417,4 @@
   </div>
 </div>
 
-<script>
-/* ══════ Card ۱ — نمایش/مخفی‌سازی تنظیمات واترمارک + دقت گوشه ══════ */
-function toggleWatermarkSettings() {
-  const enabled = document.getElementById('watermark-enabled-input').checked;
-  document.getElementById('watermark-settings-wrap').classList.toggle('hidden', !enabled);
-}
-function onWatermarkPosChange() {
-  document.querySelectorAll('.wm-pos-card').forEach(card => card.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8'));
-  const checked = document.querySelector('input[name="watermark_position"]:checked');
-  if (checked) checked.closest('.wm-pos-card').classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-  document.getElementById('wm-precise-corner-wrap').classList.toggle('hidden', !checked || checked.value !== 'corner');
-}
-function setPreciseCorner(corner) {
-  document.getElementById('new-watermark-corner-precise').value = corner;
-  document.querySelectorAll('.corner-precise-btn').forEach(btn => {
-    const active = btn.dataset.corner === corner;
-    btn.classList.toggle('border-[var(--accent)]', active);
-    btn.classList.toggle('bg-[var(--accent)]/8', active);
-    btn.classList.toggle('text-[var(--text)]', active);
-    btn.classList.toggle('border-[var(--b1)]', !active);
-    btn.classList.toggle('bg-[var(--s1)]', !active);
-    btn.classList.toggle('text-[var(--text3)]', !active);
-  });
-}
-
-/* ══════ Card ۲/۳ — رادیوکارت‌های Pricing/Display/Shape/Gallery: هایلایت کارت انتخاب‌شده ══════ */
-function wireCardRadioGroup(selector) {
-  document.querySelectorAll(selector + ' input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      document.querySelectorAll(selector).forEach(card => card.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8'));
-      if (radio.checked) radio.closest(selector.replace(' input','')).classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-      if (typeof refreshFinalSummary === 'function') refreshFinalSummary();
-    });
-  });
-}
-document.querySelectorAll('.pricing-card, .preview-card-option, .shape-card-option').forEach(card => {
-  const radio = card.querySelector('input[type="radio"]');
-  if (!radio) return;
-  radio.addEventListener('change', () => {
-    document.querySelectorAll('.' + card.className.split(' ')[0]).forEach(c => c.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8'));
-    if (radio.checked) card.classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-    refreshFinalSummary();
-  });
-});
-
-/* توجه: تابع refreshFinalSummary و کارت «خلاصه نهایی» به step-5.blade.php منتقل شدند (گام پنجم).
-   توابع بالا (toggleWatermarkSettings/onWatermarkPosChange) و رادیوکارت‌های این صفحه در صورت وجود
-   refreshFinalSummary در Scope سراسری آن را صدا می‌زنند تا خلاصه گام پنجم زنده به‌روزرسانی شود. */
-document.addEventListener('DOMContentLoaded', () => {
-  toggleWatermarkSettings();
-  onWatermarkPosChange();
-});
-</script>
+@include('admin.products.partials.step-4-scripts')

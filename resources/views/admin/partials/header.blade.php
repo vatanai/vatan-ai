@@ -34,6 +34,11 @@
       <input type="text" placeholder="جستجو در پنل...">
     </div>
 
+    <div class="tb-iran-clock max-[1100px]:hidden" title="ساعت رسمی ایران">
+      <span class="tb-iran-clock-time" id="iran-clock-time">--:--:--</span>
+      <span class="tb-iran-clock-date" id="iran-clock-date">----/--/--</span>
+    </div>
+
     <a class="tb-chip-btn" href="{{ route('admin.dashboard', ['section' => 'crm']) }}" title="سیستم مدیریت پروژه">
       <i class="fa-solid fa-diagram-project"></i>
       <span>سیستم مدیریت پروژه</span>
@@ -73,5 +78,24 @@
           ? '<i class="fa-solid fa-sun"></i>'
           : '<i class="fa-solid fa-moon"></i>';
       }
+    })();
+    (function iranClock() {
+      const timeEl = document.getElementById('iran-clock-time');
+      const dateEl = document.getElementById('iran-clock-date');
+      if (!timeEl || !dateEl) return;
+      const serverEpoch = {{ now('Asia/Tehran')->getTimestampMs() }};
+      const startedAt = Date.now();
+      window.AdminIranClock = {
+        serverEpoch: serverEpoch,
+        startedAt: startedAt,
+        now: function () { return new Date(this.serverEpoch + (Date.now() - this.startedAt)); }
+      };
+      const render = function () {
+        const now = window.AdminIranClock.now();
+        timeEl.textContent = new Intl.DateTimeFormat('fa-IR', { timeZone:'Asia/Tehran', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' }).format(now);
+        dateEl.textContent = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { timeZone:'Asia/Tehran', year:'numeric', month:'2-digit', day:'2-digit' }).format(now).replace(/\u200e|\u200f/g, '');
+      };
+      render();
+      window.setInterval(render, 1000);
     })();
   </script>

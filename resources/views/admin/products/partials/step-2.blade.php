@@ -8,135 +8,86 @@
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
 @endphp
 
-{{-- ═══════════════════ Card ۰ — نوع سوژه و حفظ هویت ═══════════════════ --}}
-@php
-  $curSubjectType   = old('subject_type', optional($duplicateFrom)->subject_type ?? 'generic');
-  $curIdentityOn    = old('identity_preservation', optional($duplicateFrom)->identity_preservation ?? false);
-  $curIdentityStr   = old('identity_strength', optional($duplicateFrom)->identity_strength ?? 80);
-  $curPreserveBody  = old('preserve_body', optional($duplicateFrom)->preserve_body ?? false);
-  $curMinRef        = old('min_reference_images', optional($duplicateFrom)->min_reference_images ?? 0);
-  $curMaxRef        = old('max_reference_images', optional($duplicateFrom)->max_reference_images ?? 1);
-@endphp
-<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
-  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-user-check text-[var(--accent)]"></i> نوع سوژه و حفظ هویت</div>
-    <div class="text-[10.5px] text-[var(--text3)] mt-1">تعیین می‌کند خروجی چقدر باید به کاربر (چهره/هیکل) شبیه باشد — مهم‌ترین عامل دقت</div>
-  </div>
-
-  {{-- نوع سوژه محصول --}}
-  <div class="flex flex-col gap-1.5 mb-4">
-    <label class="text-xs font-semibold text-[var(--text2)]">نوع سوژهٔ محصول</label>
-    @php
-      $subjectOptions = [
-        'generic' => ['عمومی', 'fa-shapes'],
-        'face'    => ['چهره‌محور', 'fa-face-smile'],
-        'body'    => ['چهره و هیکل', 'fa-person'],
-        'product' => ['محصول/شیء', 'fa-box'],
-        'scene'   => ['صحنه/منظره', 'fa-image'],
-      ];
-    @endphp
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-      @foreach($subjectOptions as $val => $meta)
-        <label class="subject-type-card flex flex-col items-center gap-1.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curSubjectType == $val ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
-          <input type="radio" name="subject_type" value="{{ $val }}" {{ $curSubjectType == $val ? 'checked' : '' }} class="hidden" onchange="onSubjectTypeChange(this)">
-          <i class="fa-solid {{ $meta[1] }} text-sm text-[var(--text2)]"></i>
-          <span class="text-[11px] text-[var(--text2)] text-center">{{ $meta[0] }}</span>
-        </label>
-      @endforeach
-    </div>
-    <div class="text-[10px] text-[var(--text3)]">با انتخاب «چهره‌محور» یا «چهره و هیکل»، حفظ هویت به‌صورت خودکار روشن می‌شود.</div>
-  </div>
-
-  {{-- کلید اصلی حفظ هویت --}}
-  <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mb-3.5">
-    <div>
-      <div class="text-[12.5px] font-semibold text-[var(--text2)]">فعال‌سازی حفظ هویت (Identity Preservation)</div>
-      <div class="text-[11px] text-[var(--text3)] mt-0.5">خروجی باید همان شخصِ تصویر ورودی باشد — چهره و ویژگی‌ها حفظ شود</div>
-    </div>
-    <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-      <input type="checkbox" name="identity_preservation" value="1" id="identity-preservation-input" {{ $curIdentityOn ? 'checked' : '' }} class="sr-only peer" onchange="toggleIdentitySettings()">
-      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-    </label>
-  </div>
-
-  {{-- تنظیمات حفظ هویت — با روشن شدن کلید بالا نمایش داده می‌شوند --}}
-  <div id="identity-settings-wrap" class="{{ $curIdentityOn ? '' : 'hidden' }} space-y-3.5">
-
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)] flex items-center justify-between">
-        <span>شدت شباهت به کاربر</span>
-        <span class="text-[var(--accent)] font-mono text-[11px]" id="identity-strength-val">{{ $curIdentityStr }}%</span>
-      </label>
-      <input type="range" name="identity_strength" min="0" max="100" value="{{ $curIdentityStr }}" class="w-full accent-[var(--accent)]" oninput="document.getElementById('identity-strength-val').textContent = this.value + '%'">
-      <div class="text-[10px] text-[var(--text3)]">هرچه بالاتر، خروجی به تصویر ورودی نزدیک‌تر و خلاقیت مدل کمتر می‌شود.</div>
-    </div>
-
-    <div class="flex items-center justify-between p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg">
-      <div>
-        <div class="text-[12.5px] font-semibold text-[var(--text2)]">حفظ هیکل و تناسب بدن</div>
-        <div class="text-[11px] text-[var(--text3)] mt-0.5">علاوه بر چهره، فرم بدن هم مشابه کاربر بماند</div>
-      </div>
-      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
-        <input type="checkbox" name="preserve_body" value="1" {{ $curPreserveBody ? 'checked' : '' }} class="sr-only peer">
-        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
-      </label>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)]">حداقل تصویر ورودی لازم</label>
-        <input type="number" name="min_reference_images" min="0" max="20" value="{{ $curMinRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="0">
-        <div class="text-[10px] text-[var(--text3)]">اگر بیشتر از ۰ باشد، کاربر بدون آپلود عکس نمی‌تواند اجرا کند.</div>
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)]">حداکثر تصویر ورودی مجاز</label>
-        <input type="number" name="max_reference_images" min="0" max="20" value="{{ $curMaxRef }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="1">
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-1.5">
-      <label class="text-xs font-semibold text-[var(--text2)]">دستور اختصاصی حفظ هویت (انگلیسی — اختیاری)</label>
-      <textarea name="identity_instructions" rows="3" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="Keep the exact same face and identity of the person in the uploaded photo...">{{ old('identity_instructions', optional($duplicateFrom)->identity_instructions) }}</textarea>
-      <div class="text-[10px] text-[var(--text3)]">خالی بگذارید تا دستور پیش‌فرض حرفه‌ای حفظ چهره (و هیکل در صورت فعال بودن) خودکار به پرامپت افزوده شود.</div>
-    </div>
-  </div>
-
-  <script>
-    function toggleIdentitySettings() {
-      var on = document.getElementById('identity-preservation-input').checked;
-      document.getElementById('identity-settings-wrap').classList.toggle('hidden', !on);
-    }
-    function onSubjectTypeChange(radio) {
-      document.querySelectorAll('.subject-type-card').forEach(function (c) {
-        c.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-      });
-      if (radio.checked) radio.closest('.subject-type-card').classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-
-      var idInput = document.getElementById('identity-preservation-input');
-      var bodyInput = document.querySelector('input[name="preserve_body"]');
-      if (radio.value === 'face' || radio.value === 'body') {
-        idInput.checked = true;
-        if (radio.value === 'body' && bodyInput) bodyInput.checked = true;
-      }
-      toggleIdentitySettings();
-    }
-  </script>
-</div>
-
 {{-- ═══════════════════ Card ۱ — پایپ‌لاین هوش مصنوعی ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
   <div class="mb-4 pb-3 border-b border-[var(--b1)]">
-    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-microchip text-[var(--accent)]"></i> پایپ‌لاین هوش مصنوعی <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">«زمان انتظار (Timeout)» حداکثر ثانیه‌ای است که سیستم منتظر پاسخ مدل می‌ماند. «نوع پایپ‌لاین» مشخص می‌کند خروجی از صفر تولید شود، عکس کاربر ویرایش شود یا متن تولید شود.</span></span></div>
-    <div class="text-[10.5px] text-[var(--text3)] mt-1">مدل اصلی و مدل‌های جایگزین در زمان اجرای محصول</div>
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2 flex-wrap"><i class="fa-solid fa-microchip text-[var(--accent)]"></i> پایپ‌لاین هوش مصنوعی <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:290px;">مدل اصلی اولین انتخاب برای ساخت تصویر است. اگر OpenRouter یا مدل اصلی پاسخ موفق ندهد، سیستم خودکار مدل جایگزین را امتحان می‌کند. زمان انتظار و نوع پردازش تصویر در معماری نهایی به‌صورت امن و خودکار تنظیم شده‌اند و نیازی به انتخاب مدیر ندارند.</span></span></div>
+    <div class="text-[10.5px] text-[var(--text3)] mt-1">مدل اصلی اجباری است و مدل جایگزین متفاوت، هنگام خطا به‌صورت خودکار اجرا می‌شود.</div>
   </div>
 
-  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase">مدل اصلی — اولویت یک</div>
+  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase flex items-center gap-1.5">مدل اصلی — اولویت یک <span class="text-[var(--red)]">*</span><span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">اولین مدل برای ساخت خروجی است. سه کارت پیشنهادی، جدیدترین خانواده مدل‌های تصویری ChatGPT را در اولویت قرار می‌دهند؛ همچنان می‌توانید هر مدل فعال دیگری را از جست‌وجو انتخاب کنید.</span></span></div>
   <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5 mb-4">
-    @php $curPrimaryModel = old('primary_model', optional($duplicateFrom)->primary_model); @endphp
-    <select name="primary_model" id="primary-model-select" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full focus:border-[var(--accent)] mb-2" onchange="onPrimaryModelChange()">
+    @php
+      // وضعیت روشن/خاموش providerها را از کلید مرکزی می‌خوانیم؛ همان فلگی
+      // که در پنل «مدیریت مدل‌های هوش مصنوعی» توسط ادمین تنظیم می‌شود.
+      // اگر provider خاموش باشد، دکمه انتخاب آن اینجا نمایش داده نمی‌شود.
+      $providerStatus = \App\Support\ProviderStatus::all();
+      $curPrimaryModel = old('primary_model', optional($duplicateFrom)->primary_model);
+      $curSavedProvider = old('ai_provider', optional($duplicateFrom)->ai_provider);
+      // برای محصول جدید OpenRouter پیش‌فرض است؛ محصول ذخیره‌شده provider خودش را نگه می‌دارد.
+      $providerLabels = ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'];
+      $curApiProvider  = collect($providerStatus)->filter()->keys()->first() ?: 'openrouter';
+      if (in_array($curSavedProvider, array_keys($providerLabels), true)) {
+        $curApiProvider = $curSavedProvider;
+      }
+      if ($curPrimaryModel) {
+        $matchedApiModel = $aiModels->first(
+          fn ($model) => $model->openrouter_model_id === $curPrimaryModel
+            && (!$curSavedProvider || $model->provider === $curSavedProvider)
+        );
+        if ($matchedApiModel) {
+          $curApiProvider = $matchedApiModel->provider ?? 'openrouter';
+        }
+      }
+    @endphp
+
+    {{-- تاگل انتخاب Provider — فقط providerهای روشن نمایش داده می‌شوند --}}
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <span class="text-[10px] text-[var(--text3)] font-semibold ml-1">سرویس:</span>
+      @foreach($providerLabels as $providerKey => $providerLabel)
+        @if($providerStatus[$providerKey] ?? false)
+          <button type="button" id="lbl-api-{{ $providerKey }}" onclick="onApiProviderChange('{{ $providerKey }}')" class="api-provider-btn inline-flex items-center gap-1.5 px-3 h-7 rounded-lg text-[11px] font-bold border transition-all cursor-pointer {{ $curApiProvider === $providerKey ? 'active-provider' : '' }}">{{ $providerLabel }}</button>
+        @endif
+      @endforeach
+      @if(!collect($providerStatus)->contains(true))
+        <span class="text-[10.5px] text-[var(--red)] font-bold">
+          <i class="fa-solid fa-triangle-exclamation ml-1"></i>
+          هیچ سرویس هوش مصنوعی فعال نیست. لطفاً از «مدیریت مدل‌های هوش مصنوعی» یکی را روشن کنید.
+        </span>
+      @endif
+    </div>
+
+    {{-- Select مدل اصلی — آپشن‌ها فیلتر می‌شوند بر اساس provider --}}
+    <script>var __currentApiProvider = '{{ $curApiProvider }}';</script>
+    <input type="hidden" name="ai_provider" id="ai-provider-input" value="{{ $curApiProvider }}">
+    <div id="recommended-openrouter-models" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 {{ $curApiProvider === 'openrouter' ? '' : 'hidden' }}">
+      @foreach([
+        ['openai/gpt-image-2', 3, 'بهترین کیفیت'],
+        ['openai/gpt-image-1', 2, 'کیفیت حرفه‌ای'],
+        ['openai/gpt-image-1-mini', 1, 'بهینه‌تر'],
+      ] as [$recommendedId, $stars, $caption])
+        @php $recommendedModel = $aiModels->first(fn($model) => $model->provider === 'openrouter' && $model->openrouter_model_id === $recommendedId); @endphp
+        @if($recommendedModel)
+          <button type="button" data-recommended-model="{{ $recommendedId }}" onclick="selectRecommendedModel('{{ $recommendedId }}')" class="recommended-model-card relative text-right bg-[var(--s1)] border border-[var(--b1)] rounded-lg px-2.5 py-2 hover:border-[var(--accent)] transition-colors">
+            <i class="recommended-model-check fa-solid fa-circle-check absolute left-2 top-1/2 -translate-y-1/2 text-[var(--green)]" style="display:none" aria-hidden="true"></i>
+            <span class="flex items-center gap-1.5 leading-none mb-1"><span class="text-[var(--warning)] text-[8.5px]">@for($star=0;$star<$stars;$star++)<i class="fa-solid fa-star"></i>@endfor</span><small class="text-[9px] text-[var(--text3)]">{{ $caption }}</small></span>
+            <span class="block text-[10.5px] font-bold text-[var(--text)] pl-5">{{ $recommendedModel->name }}</span>
+          </button>
+        @endif
+      @endforeach
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+    <select name="primary_model" id="primary-model-select" data-searchable required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full focus:border-[var(--accent)] mb-2" onchange="onPrimaryModelChange()">
       <option value="">— انتخاب مدل اصلی —</option>
       @foreach ($aiModels as $model)
-        <option value="{{ $model->openrouter_model_id }}" data-name="{{ $model->name }}" data-provider="{{ $model->provider_name }}" {{ $curPrimaryModel == $model->openrouter_model_id ? 'selected' : '' }}>
+        <option value="{{ $model->openrouter_model_id }}"
+                data-name="{{ $model->name }}"
+                data-provider="{{ $model->provider_name }}"
+                data-api-provider="{{ $model->provider ?? 'openrouter' }}"
+                data-output-modality="{{ $model->output_modality }}"
+                {{ $curPrimaryModel == $model->openrouter_model_id
+                    && (!$curSavedProvider || $curSavedProvider === ($model->provider ?? 'openrouter'))
+                    ? 'selected' : '' }}>
           {{ $model->name }} ({{ $model->provider_name }})
         </option>
       @endforeach
@@ -144,36 +95,36 @@
 
     {{-- کارت اطلاعات مدل — بعد از انتخاب نمایش داده می‌شود (نام/Provider واقعی هستند) --}}
     <div id="model-info-card" class="hidden bg-[var(--bg)] border border-[var(--b1)] rounded-lg p-3 mb-3">
-      <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2 flex-wrap">
         <div class="text-xs font-bold text-[var(--text)]" id="model-info-name">—</div>
         <span class="text-[10px] font-mono text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded px-1.5 py-0.5" id="model-info-provider">—</span>
-      </div>
-      <div class="flex items-center gap-1.5 flex-wrap">
         <span class="text-[10px] text-[var(--text3)]">نوع مدل:</span>
-        <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-image ml-1"></i>Image</span>
+        <span id="model-info-media" class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-image ml-1"></i>عکس</span>
         <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-eye ml-1"></i>Vision</span>
         <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-font ml-1"></i>Text</span>
       </div>
     </div>
-
-    <div class="grid grid-cols-2 gap-2">
-      <input type="number" name="timeout" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="زمان انتظار (ثانیه)" value="{{ old('timeout', optional($duplicateFrom)->timeout ?? 60) }}">
-      @php $curPipeline = old('pipeline_type', optional($duplicateFrom)->pipeline_type ?? 'image_editing'); @endphp
-      <select name="pipeline_type" data-searchable class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]">
-        <option value="image_generation" {{ $curPipeline == 'image_generation' ? 'selected' : '' }}>تولید عکس از صفر</option>
-        <option value="image_editing" {{ $curPipeline == 'image_editing' ? 'selected' : '' }}>ویرایش عکس آپلودی کاربر</option>
-        <option value="text_generation" {{ $curPipeline == 'text_generation' ? 'selected' : '' }}>تولید متن</option>
-      </select>
     </div>
+
+    <input type="hidden" name="timeout" value="60">
+    <input type="hidden" name="pipeline_type" value="image_editing">
   </div>
 
-  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase">مدل‌های جایگزین — اولویت دو، سه و...</div>
+  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase flex items-center gap-1.5">مدل جایگزین — اولویت دو <span class="text-[var(--red)]">*</span><span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">در انتخاب کارت‌های پیشنهادی، یک مدل متفاوت و یک رده پایین‌تر خودکار انتخاب می‌شود. انتخاب دستی هر دو مدل نیز امکان‌پذیر است، اما مدل دوم نباید با مدل اصلی یکسان باشد.</span></span></div>
   <p class="text-[10.5px] text-[var(--text3)] mb-2.5 leading-relaxed">
     اگر مدل اصلی پاسخ نداد، سیستم به ترتیبی که اینجا چیده‌اید سراغ مدل بعدی می‌رود. برای تغییر ترتیب، ردیف را با آیکون کنار آن بکشید.
   </p>
-  <div id="fallback-list" class="space-y-2">
-    @foreach ((old('fallback_models', optional($duplicateFrom)->fallback_models ?? [])) as $i => $fbModelId)
-      <div class="fallback-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3 flex items-center gap-3" id="fb-preload-{{ $i }}" draggable="true">
+  @php
+    $configuredFallbacks = old('fallback_models', optional($duplicateFrom)->fallback_models ?? []);
+    $configuredFallbackProviders = old('fallback_providers', optional($duplicateFrom)->fallback_model_providers ?? []);
+    if (empty($configuredFallbacks)) {
+      $configuredFallbacks = ['openai/gpt-image-1-mini'];
+      $configuredFallbackProviders = [$curApiProvider];
+    }
+  @endphp
+  <div id="fallback-list" class="space-y-2 md:w-1/2 md:ml-auto">
+    @foreach ($configuredFallbacks as $i => $fbModelId)
+      <div class="fallback-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3 flex items-center gap-3" id="fb-preload-{{ $i }}">
         <i class="fa-solid fa-grip-vertical text-[var(--text3)] cursor-grab shrink-0 fb-drag-handle hidden md:block" title="برای تغییر اولویت بکشید"></i>
         <div class="flex md:hidden flex-col gap-0.5 shrink-0">
           <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'up')" aria-label="جابه‌جایی به بالا"><i class="fa-solid fa-caret-up"></i></button>
@@ -182,20 +133,15 @@
         <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت {{ $i + 2 }}</span>
         <select name="fallback_models[]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item" data-searchable>
           @foreach ($aiModels as $model)
-            <option value="{{ $model->openrouter_model_id }}" {{ $model->openrouter_model_id === $fbModelId ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider_name }})</option>
+            <option value="{{ $model->openrouter_model_id }}"
+                    data-api-provider="{{ $model->provider ?? 'openrouter' }}"
+                    {{ $model->openrouter_model_id === $fbModelId && ($configuredFallbackProviders[$i] ?? null) === ($model->provider ?? 'openrouter') ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider_name }})</option>
           @endforeach
         </select>
-        <label class="relative w-8 h-[18px] shrink-0 block cursor-pointer" title="NEW Enable/Disable — فقط UI، برنامه‌نویسی شود">
-          <input type="checkbox" class="sr-only peer" checked>
-          <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3 before:h-3 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[14px] peer-checked:before:bg-white"></span>
-        </label>
-        <button type="button" class="text-xs text-[var(--red)] bg-[var(--red)]/10 px-2.5 py-1.5 rounded-lg shrink-0" onclick="this.closest('.fallback-row').remove(); renumberFallbacks();">حذف</button>
+        <input type="hidden" name="fallback_providers[]" class="fallback-provider-input" value="{{ $configuredFallbackProviders[$i] ?? $curApiProvider }}">
       </div>
     @endforeach
   </div>
-  <button type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border-2 border-dashed border-[var(--b2)] bg-transparent text-[var(--text3)] text-xs font-semibold mt-2" onclick="addFallback()">
-    <i class="fa-solid fa-plus"></i> افزودن مدل جایگزین
-  </button>
 </div>
 
 {{-- ═══════════════════ Card ۲ — تنظیمات پرامپت ═══════════════════ --}}
@@ -247,7 +193,7 @@
       </div>
     </div>
 
-    <div class="flex flex-col gap-1.5 mt-2">
+    <div class="hidden flex flex-col gap-1.5 mt-2" data-future-update="جستجوی متغیر">
       <label class="text-[11px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">جستجوی متغیر</label>
       <input type="text" id="var-search-input" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-[11px] text-[var(--text)] outline-none focus:border-[var(--accent)] w-full" placeholder="جستجوی متغیر..." oninput="filterVarChips(this.value)">
     </div>
@@ -271,7 +217,7 @@
   </div>
 
   {{-- نسخه‌بندی و تاریخچه پرامپت (NEW / فقط UI — بند ۳۰) --}}
-  <div class="border-t border-dashed border-[var(--b2)] pt-3.5 mt-3">
+  <div class="hidden border-t border-dashed border-[var(--b2)] pt-3.5 mt-3" data-future-update="نسخه‌ها و تاریخچه پرامپت">
     <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
       <div class="text-[11px] font-bold text-[var(--text2)] flex items-center gap-1.5 flex-wrap"><i class="fa-solid fa-clock-rotate-left text-[var(--accent)]"></i> نسخه‌ها و تاریخچه پرامپت {!! $newBadge !!}</div>
       <button type="button" class="text-[10.5px] px-2.5 py-1 rounded-md bg-[var(--text)]/5 text-[var(--text2)] hover:text-[var(--text)] transition-colors" onclick="savePromptVersion()"><i class="fa-solid fa-floppy-disk ml-1"></i>ذخیره نسخه فعلی</button>
@@ -281,7 +227,7 @@
   </div>
 
   {{-- ── پارامترهای واقعی کیفیت (به Backend وصل هستند) ── --}}
-  <div class="border-t border-[var(--b1)] pt-3.5 mt-3 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+  <div class="hidden border-t border-[var(--b1)] pt-3.5 mt-3 grid grid-cols-1 md:grid-cols-2 gap-3.5" data-future-update="تنظیمات تکمیلی خروجی">
     <div class="flex flex-col gap-1.5 md:col-span-2">
       <label class="text-xs font-semibold text-[var(--text2)]">Negative Prompt — چیزهایی که نباید در خروجی باشد (انگلیسی)</label>
       <textarea name="negative_prompt" rows="2" spellcheck="false" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left font-mono leading-relaxed resize-y" placeholder="blurry, deformed face, extra fingers, low quality, watermark...">{{ old('negative_prompt', optional($duplicateFrom)->negative_prompt) }}</textarea>
@@ -353,285 +299,5 @@
   </div>
 </div>
 
-<script>
-/* ══════ Card ۱ — کارت اطلاعات مدل اصلی ══════ */
-function onPrimaryModelChange() {
-  const sel = document.getElementById('primary-model-select');
-  const card = document.getElementById('model-info-card');
-  if (!sel || !card) return;
-  
-  const opt = sel.options[sel.selectedIndex];
-  if (!opt || !sel.value) { card.classList.add('hidden'); return; }
-  
-  document.getElementById('model-info-name').textContent = opt.getAttribute('data-name') || '—';
-  document.getElementById('model-info-provider').textContent = opt.getAttribute('data-provider') || '—';
-  card.classList.remove('hidden');
-}
-
-/* ══════ مدیریت و چینش مدل‌های جایگزین (Fallback Models) ══════ */
-function renumberFallbacks() {
-  document.querySelectorAll('#fallback-list .fb-priority').forEach((el, index) => {
-    el.textContent = 'اولویت ' + (index + 2);
-  });
-}
-
-function wireFallbackDrag(row) {
-  row.addEventListener('dragstart', (e) => {
-    e.dataTransfer.setData('text/plain', '');
-    row.classList.add('opacity-50');
-    window.draggedRow = row;
-  });
-  row.addEventListener('dragend', () => {
-    row.classList.remove('opacity-50');
-  });
-  row.addEventListener('dragover', (e) => { e.preventDefault(); });
-  row.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (window.draggedRow && window.draggedRow !== row) {
-      const list = document.getElementById('fallback-list');
-      const all = Array.from(list.children);
-      if (all.indexOf(window.draggedRow) < all.indexOf(row)) {
-        row.after(window.draggedRow);
-      } else {
-        row.before(window.draggedRow);
-      }
-      renumberFallbacks();
-    }
-  });
-}
-
-function moveFallbackRow(btn, dir) {
-  const row = btn.closest('.fallback-row');
-  if (!row) return;
-  if (dir === 'up' && row.previousElementSibling) {
-    row.previousElementSibling.before(row);
-  } else if (dir === 'down' && row.nextElementSibling) {
-    row.nextElementSibling.after(row);
-  }
-  renumberFallbacks();
-}
-
-function addFallback() {
-  const list = document.getElementById('fallback-list');
-  const selectHtml = document.getElementById('primary-model-select')?.innerHTML || '';
-  const count = list.children.length;
-  
-  const div = document.createElement('div');
-  div.className = 'fallback-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3 flex items-center gap-3';
-  div.draggable = true;
-  div.innerHTML = `
-    <i class="fa-solid fa-grip-vertical text-[var(--text3)] cursor-grab shrink-0 fb-drag-handle hidden md:block" title="برای تغییر اولویت بکشید"></i>
-    <div class="flex md:hidden flex-col gap-0.5 shrink-0">
-      <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'up')" aria-label="جابه‌جایی به بالا"><i class="fa-solid fa-caret-up"></i></button>
-      <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'down')" aria-label="جابه‌جایی به پایین"><i class="fa-solid fa-caret-down"></i></button>
-    </div>
-    <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت ${count + 2}</span>
-    <select name="fallback_models[]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item">
-      ${selectHtml}
-    </select>
-    <label class="relative w-8 h-[18px] shrink-0 block cursor-pointer">
-      <input type="checkbox" class="sr-only peer" checked>
-      <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3 before:h-3 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[14px] peer-checked:before:bg-white"></span>
-    </label>
-    <button type="button" class="text-xs text-[var(--red)] bg-[var(--red)]/10 px-2.5 py-1.5 rounded-lg shrink-0" onclick="this.closest('.fallback-row').remove(); renumberFallbacks();">حذف</button>
-  `;
-  
-  // پاک کردن آپشن پیشفرض شبیه‌سازی شده از سلکتور کپی شده
-  const firstOpt = div.querySelector('select option[value=""]');
-  if (firstOpt) firstOpt.remove();
-
-  list.appendChild(div);
-  wireFallbackDrag(div);
-}
-
-/* ══════ تست پرامپت — فراخوانی واقعی Backend ══════ */
-function testPromptNow() {
-  var prompt  = document.getElementById('prompt-template').value.trim();
-  var modelId = document.getElementById('primary-model-select').value;
-
-  if (!prompt)   { alert('ابتدا پرامپت را بنویسید.'); return; }
-  if (!modelId)  { alert('ابتدا مدل اصلی را انتخاب کنید.'); return; }
-
-  document.getElementById('test-result-box').classList.add('hidden');
-  document.getElementById('test-error-box').classList.add('hidden');
-
-  var btn  = document.getElementById('btn-test-prompt');
-  var text = document.getElementById('btn-test-text');
-  btn.disabled = true;
-  text.textContent = 'در حال تولید...';
-
-  var csrfToken = document.querySelector('input[name="_token"]')?.value || '';
-  var startedAt = Date.now();
-
-  fetch('{{ route('admin.ai-models.test-prompt') }}', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': csrfToken,
-      'X-Requested-With': 'XMLHttpRequest',
-    },
-    body: JSON.stringify({
-      prompt:   prompt,
-      model_id: modelId,
-    }),
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    btn.disabled = false;
-    text.textContent = 'اجرای تست';
-
-    if (data.success) {
-      document.getElementById('test-result-img').src = data.image_url;
-      document.getElementById('test-result-model').textContent = data.model;
-      document.getElementById('test-result-download').href = data.image_url;
-      var lastRunEl = document.getElementById('stat-last-run');
-      if (lastRunEl) lastRunEl.textContent = 'همین الان';
-      var durEl = document.getElementById('stat-duration');
-      if (durEl) durEl.textContent = Math.max(1, Math.round((Date.now() - startedAt) / 1000)) + ' ثانیه';
-      document.getElementById('test-result-box').classList.remove('hidden');
-    } else {
-      document.getElementById('test-error-text').textContent = data.message || 'خطای ناشناخته';
-      document.getElementById('test-error-box').classList.remove('hidden');
-    }
-  })
-  .catch(function(err) {
-    btn.disabled = false;
-    text.textContent = 'اجرای تست';
-    document.getElementById('test-error-text').textContent = 'خطا در ارتباط با سرور: ' + err.message;
-    document.getElementById('test-error-box').classList.remove('hidden');
-  });
-}
-
-/* ══════ Prompt Editor قابلیت‌های پیشرفته ══════ */
-function updatePromptLineNumbers() {
-  const ta = document.getElementById('prompt-template');
-  const gutter = document.getElementById('prompt-line-numbers');
-  if(!ta || !gutter) return;
-  const lines = ta.value.split('\n').length;
-  let out = '';
-  for (let i = 1; i <= lines; i++) out += i + '\n';
-  gutter.textContent = out;
-}
-function syncPromptScroll() {
-  const ta = document.getElementById('prompt-template');
-  const gutter = document.getElementById('prompt-line-numbers');
-  if(ta && gutter) gutter.scrollTop = ta.scrollTop;
-}
-function autoResizePrompt() {
-  const ta = document.getElementById('prompt-template');
-  if(!ta) return;
-  ta.style.height = 'auto';
-  ta.style.height = Math.max(150, ta.scrollHeight) + 'px';
-}
-function onPromptInput() {
-  const ta = document.getElementById('prompt-template');
-  if(!ta) return;
-  updatePromptLineNumbers();
-  autoResizePrompt();
-  syncPromptScroll();
-  document.getElementById('prompt-char-count').textContent = ta.value.length + ' کاراکتر';
-  document.getElementById('prompt-token-estimate').textContent = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی)';
-  const matches = ta.value.match(/\{[a-zA-Z0-9_]+\}/g) || [];
-  document.getElementById('prompt-vars-detected').textContent = matches.length + ' متغیر شناسایی شد';
-}
-function copyPromptText() {
-  const ta = document.getElementById('prompt-template');
-  if(!ta) return;
-  ta.select();
-  navigator.clipboard?.writeText(ta.value).catch(() => document.execCommand('copy'));
-}
-function clearPromptText() {
-  if (!confirm('متن پرامپت پاک شود؟')) return;
-  const ta = document.getElementById('prompt-template');
-  if(!ta) return;
-  ta.value = '';
-  onPromptInput();
-  ta.focus();
-}
-function toggleExpandEditor() {
-  const wrap = document.getElementById('prompt-editor-card');
-  const btn = document.getElementById('expand-editor-btn');
-  if(!wrap || !btn) return;
-  const expanded = wrap.classList.toggle('prompt-fullscreen');
-  if (expanded) {
-    wrap.classList.add('fixed','inset-4','z-50','bg-[var(--s2)]','p-4','rounded-xl','border','border-[var(--accent)]','shadow-2xl','overflow-y-auto');
-    btn.innerHTML = '<i class="fa-solid fa-compress ml-1"></i>بستن تمام‌صفحه';
-  } else {
-    wrap.classList.remove('fixed','inset-4','z-50','bg-[var(--s2)]','p-4','rounded-xl','border','border-[var(--accent)]','shadow-2xl','overflow-y-auto');
-    btn.innerHTML = '<i class="fa-solid fa-expand ml-1"></i>Expand Editor';
-  }
-}
-function insertVar(v) {
-  const ta = document.getElementById('prompt-template');
-  if(!ta) return;
-  const start = ta.selectionStart;
-  const end = ta.selectionEnd;
-  ta.value = ta.value.substring(0, start) + v + ta.value.substring(end);
-  ta.selectionStart = ta.selectionEnd = start + v.length;
-  onPromptInput();
-  ta.focus();
-}
-
-function filterVarChips(term) {
-  term = term.toLowerCase();
-  document.querySelectorAll('#var-chips .var-chip').forEach(chip => {
-    chip.classList.toggle('hidden', term && chip.textContent.toLowerCase().indexOf(term) === -1);
-  });
-}
-function filterVarCategory(cat) {
-  document.querySelectorAll('.var-cat-btn').forEach(btn => {
-    const active = btn.dataset.cat === cat;
-    btn.classList.toggle('border-[var(--accent)]', active);
-    btn.classList.toggle('bg-[var(--accent)]/10', active);
-    btn.classList.toggle('text-[var(--accent)]', active);
-    btn.classList.toggle('border-[var(--b1)]', !active);
-    btn.classList.toggle('text-[var(--text3)]', !active);
-  });
-  document.querySelectorAll('#var-chips .var-chip').forEach(chip => {
-    chip.classList.toggle('hidden', cat !== 'all' && chip.dataset.cat !== cat);
-  });
-}
-
-/* ══════ نسخه‌بندی و تاریخچه پرامپت (بند ۳۰) — فقط UI، درون‌حافظه‌ای ══════ */
-var __promptVersions = [];
-function __escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function savePromptVersion() {
-  var ta = document.getElementById('prompt-template');
-  if (!ta || !ta.value.trim()) { alert('ابتدا پرامپت را بنویسید.'); return; }
-  var now = new Date();
-  var stamp = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2) + ':' + ('0' + now.getSeconds()).slice(-2);
-  __promptVersions.unshift({ time: stamp, text: ta.value });
-  renderPromptVersions();
-}
-function renderPromptVersions() {
-  var list = document.getElementById('prompt-versions-list');
-  var empty = document.getElementById('prompt-versions-empty');
-  if (!list) return;
-  list.innerHTML = '';
-  if (empty) empty.classList.toggle('hidden', __promptVersions.length > 0);
-  __promptVersions.forEach(function (v, i) {
-    var row = document.createElement('div');
-    row.className = 'flex items-center gap-2 bg-[var(--s1)] border border-[var(--b1)] rounded-lg px-2.5 py-1.5';
-    var preview = __escHtml(v.text.replace(/\s+/g, ' ').slice(0, 40));
-    row.innerHTML =
-      '<i class="fa-solid fa-code-branch text-[10px] text-[var(--text3)] shrink-0"></i>' +
-      '<span class="text-[10px] text-[var(--text3)] font-mono shrink-0">' + v.time + '</span>' +
-      '<span class="text-[11px] text-[var(--text2)] flex-1 truncate ltr text-left">' + preview + '</span>' +
-      '<button type="button" class="text-[10.5px] text-[var(--accent)] shrink-0" onclick="restorePromptVersion(' + i + ')">بازگردانی</button>' +
-      '<button type="button" class="text-[10.5px] text-[var(--red)] shrink-0" onclick="deletePromptVersion(' + i + ')"><i class="fa-solid fa-xmark"></i></button>';
-    list.appendChild(row);
-  });
-}
-function restorePromptVersion(i) {
-  var v = __promptVersions[i]; if (!v) return;
-  var ta = document.getElementById('prompt-template');
-  if (ta) { ta.value = v.text; if (typeof onPromptInput === 'function') onPromptInput(); }
-}
-function deletePromptVersion(i) { __promptVersions.splice(i, 1); renderPromptVersions(); }
-
-document.addEventListener('DOMContentLoaded', () => {
-  onPrimaryModelChange();
-  document.querySelectorAll('#fallback-list .fallback-row').forEach(row => wireFallbackDrag(row));
-  onPromptInput();
-});
-</script>
+@include('admin.products.partials.step-2-scripts')
+@include('admin.products.partials.step-2-styles')

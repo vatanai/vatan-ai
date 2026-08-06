@@ -17,6 +17,51 @@
   #explore-guide-panel.open {
     transform: translateX(0);
   }
+  .explore-pattern-option { position: relative; display: block; cursor: pointer; }
+  .explore-pattern-option > input { position: absolute; opacity: 0; pointer-events: none; }
+  .explore-pattern-card {
+    height: 100%; padding: 12px; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--input-bg);
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  }
+  .explore-pattern-option:hover .explore-pattern-card { border-color: var(--primary); }
+  .explore-pattern-option > input:checked + .explore-pattern-card {
+    border-color: var(--primary); background: var(--primary-l);
+    box-shadow: inset 0 0 0 1px var(--primary-m);
+  }
+  .explore-pattern-preview {
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 6px;
+    gap: 2px; direction: ltr; min-height: 70px; padding: 6px; margin-bottom: 10px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg);
+  }
+  .explore-pattern-cell { border-radius: 2px; background: var(--border); }
+  .explore-pattern-cell:not(.size-1x1) { background: var(--primary); }
+  .explore-pattern-choice { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); }
+  .explore-pattern-option > input:checked + .explore-pattern-card .explore-pattern-choice {
+    border: 4px solid var(--primary); background: var(--card-bg);
+  }
+  .explore-audience-box { padding:14px; border:1px solid var(--border); border-radius:14px; background:var(--input-bg); }
+  .explore-audience-box.is-include { box-shadow:inset 3px 0 0 var(--primary); }
+  .explore-audience-box.is-exclude { box-shadow:inset 3px 0 0 var(--danger); }
+  .explore-audience-box.is-include > div:first-child i { color:var(--primary); }
+  .explore-audience-box.is-exclude > div:first-child i { color:var(--danger); }
+  .explore-filter-state { padding:3px 8px; border-radius:999px; white-space:nowrap; font-size:9.5px; font-weight:800; color:var(--text-soft); border:1px solid var(--border); background:var(--card-bg); }
+  .explore-filter-chip { cursor:pointer; }
+  .explore-filter-chip input { position:absolute; opacity:0; pointer-events:none; }
+  .explore-filter-chip span { display:block; padding:6px 10px; border:1px solid var(--border); border-radius:9px; background:var(--card-bg); color:var(--text-soft); font-size:10.5px; font-weight:700; transition:.2s ease; }
+  .explore-audience-box.is-include .explore-filter-chip input:checked + span { color:var(--primary); border-color:var(--primary); background:var(--primary-l); }
+  .explore-audience-box.is-exclude .explore-filter-chip input:checked + span { color:var(--danger); border-color:var(--danger); background:var(--danger-l); }
+  .explore-filter-details { margin-top:8px; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); }
+  .explore-filter-details summary { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; cursor:pointer; list-style:none; color:var(--text-main); font-size:10.5px; font-weight:700; }
+  .explore-filter-details summary::-webkit-details-marker { display:none; }
+  .explore-filter-count { min-width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; background:var(--input-bg); color:var(--text-soft); font-size:9.5px; }
+  .explore-filter-dropdown { padding:0 9px 9px; border-top:1px solid var(--border); padding-top:9px; }
+  .explore-filter-list { max-height:180px; overflow-y:auto; display:grid; gap:4px; }
+  .explore-filter-list label { display:flex; align-items:center; gap:8px; min-height:31px; padding:5px 7px; border-radius:7px; color:var(--text-soft); font-size:10.5px; cursor:pointer; }
+  .explore-filter-list label:hover { background:var(--primary-l); color:var(--text-main); }
+  .explore-filter-list input { accent-color:var(--primary); }
+  .explore-audience-box.is-exclude .explore-filter-list input { accent-color:var(--danger); }
+  .explore-filter-list small { margin-right:auto; padding:2px 5px; border-radius:5px; background:var(--primary-l); color:var(--primary); font-size:8.5px; }
 </style>
 @endpush
 
@@ -27,7 +72,7 @@
   <div class="admin-content p-6 flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content" dir="rtl" style="background:var(--page-bg);">
 
     @php
-      $styleLabels = ['classic' => 'کلاسیک متعادل', 'dense' => 'فشرده (بیشتر تک‌کاشی)', 'magazine' => 'مجله‌ای (بلوک‌های بزرگ)', 'custom' => 'سفارشی'];
+      $styleLabels = collect($patterns)->mapWithKeys(fn ($pattern, $key) => [$key => $pattern['label']])->all();
     @endphp
 
     @if(session('success'))
@@ -62,14 +107,14 @@
     <div class="grid grid-cols-4 max-[900px]:grid-cols-2 max-[480px]:grid-cols-1 gap-3 mb-5">
       <div class="stat-card">
         <div class="stat-card-icon" style="background:var(--primary-l);color:var(--primary);"><i class="fa-solid fa-table-cells-large"></i></div>
-        <div><div class="stat-card-value">{{ $styleLabels[$setting->layout_style] ?? $setting->layout_style }}</div><div class="stat-card-label">سبک فعلی چیدمان</div></div>
+        <div><div class="stat-card-value">{{ $styleLabels[$effectiveLayoutStyle] }}</div><div class="stat-card-label">سبک فعلی چیدمان</div></div>
       </div>
       <div class="stat-card">
         <div class="stat-card-icon" style="background:var(--info-l);color:var(--info);"><i class="fa-solid fa-shuffle"></i></div>
         <div><div class="stat-card-value">٪{{ $setting->randomness_level }}</div><div class="stat-card-label">سطح تصادفی‌بودن</div></div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-icon" style="background:#a07af51a;color:#a07af5;"><i class="fa-solid fa-bullhorn"></i></div>
+        <div class="stat-card-icon" style="background:var(--info-l);color:var(--info);"><i class="fa-solid fa-bullhorn"></i></div>
         <div><div class="stat-card-value">{{ $campaigns->where('is_active', true)->count() }}</div><div class="stat-card-label">کمپین فعال</div></div>
       </div>
       <div class="stat-card">
@@ -81,39 +126,52 @@
     {{-- ══════════════ ۱. تنظیمات نمایش ══════════════ --}}
     <div class="content-card p-5 mb-5">
       <div class="text-[14px] font-extrabold mb-1" style="color:var(--text-h);"><i class="fa-solid fa-sliders" style="color:var(--primary);"></i> تنظیمات نمایش و چیدمان</div>
-      <div class="text-[11.5px] mb-4" style="color:var(--text-soft);">چند مدل سبک نمایش آماده — یا سبک سفارشی با وزن دلخواه هر اندازه کاشی</div>
+      <div class="text-[11.5px] mb-4" style="color:var(--text-soft);">چهار معماری ذخیره‌شونده؛ هر انتخاب در موبایل، تبلت و دسکتاپ با چرخه‌ی متناسب همان نمایشگر تکرار می‌شود</div>
 
       <form method="POST" action="{{ route('admin.explore.settings.update') }}" id="explore-settings-form">
         @csrf
 
-        <div class="grid grid-cols-3 max-[768px]:grid-cols-1 gap-3 mb-4">
-          @php
-            $styleLabels = ['classic' => 'کلاسیک متعادل', 'dense' => 'فشرده (بیشتر تک‌کاشی)', 'magazine' => 'مجله‌ای (بلوک‌های بزرگ)', 'custom' => 'سفارشی'];
-          @endphp
-          @foreach(array_merge($presets, ['custom' => []]) as $key => $weights)
-            <label class="flex items-center gap-3 p-3 rounded-xl cursor-pointer" style="border:1px solid var(--border); background:var(--input-bg);">
-              <input type="radio" name="layout_style" value="{{ $key }}" class="explore-style-radio" style="accent-color:var(--primary);" {{ $setting->layout_style === $key ? 'checked' : '' }}>
-              <span class="text-[12.5px] font-bold" style="color:var(--text-h);">{{ $styleLabels[$key] }}</span>
+        <div class="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[620px]:grid-cols-1 gap-3 mb-4">
+          @foreach($patterns as $key => $pattern)
+            @php
+              $occupied = [];
+              $previewSlots = [];
+              $dimensions = ['size-1x1' => [1, 1], 'size-wide' => [2, 1], 'size-tall' => [1, 2], 'size-big' => [2, 2]];
+              foreach ($pattern['anchors'] as $anchor) {
+                  [$size, $row, $col] = $anchor;
+                  $previewSlots[] = $anchor;
+                  [$width, $height] = $dimensions[$size];
+                  for ($r = $row; $r < $row + $height; $r++) for ($c = $col; $c < $col + $width; $c++) $occupied[$r.':'.$c] = true;
+              }
+              for ($r = 1; $r <= $pattern['rows']; $r++) for ($c = 1; $c <= 3; $c++) if (!isset($occupied[$r.':'.$c])) $previewSlots[] = ['size-1x1', $r, $c];
+            @endphp
+            <label class="explore-pattern-option">
+              <input type="radio" name="layout_style" value="{{ $key }}" {{ $effectiveLayoutStyle === $key ? 'checked' : '' }}>
+              <span class="explore-pattern-card block">
+                <span class="explore-pattern-preview" style="grid-template-rows:repeat({{ $pattern['rows'] }}, 6px);">
+                  @foreach($previewSlots as $slot)
+                    @php [$size, $row, $col] = $slot; [$width, $height] = $dimensions[$size]; @endphp
+                    <span class="explore-pattern-cell {{ $size }}" style="grid-column:{{ $col }} / span {{ $width }};grid-row:{{ $row }} / span {{ $height }};"></span>
+                  @endforeach
+                </span>
+                <span class="flex items-start justify-between gap-2">
+                  <span>
+                    <span class="block text-[12.5px] font-extrabold" style="color:var(--text-h);">{{ $pattern['label'] }}</span>
+                    <span class="block text-[10.5px] mt-1 leading-5" style="color:var(--text-soft);">{{ $pattern['description'] }}</span>
+                  </span>
+                  <span class="explore-pattern-choice shrink-0 mt-0.5"></span>
+                </span>
+              </span>
             </label>
           @endforeach
         </div>
 
-        <div id="explore-custom-weights" class="grid grid-cols-4 max-[768px]:grid-cols-2 gap-3 mb-4" style="{{ $setting->layout_style === 'custom' ? '' : 'display:none;' }}">
-          <div>
-            <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">۱×۱ (٪)</label>
-            <input type="number" name="tile_1x1" min="0" max="100" class="input-pro w-full" value="{{ $setting->tile_weights['size-1x1'] ?? 64 }}">
-          </div>
-          <div>
-            <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">عریض ۲×۱ (٪)</label>
-            <input type="number" name="tile_wide" min="0" max="100" class="input-pro w-full" value="{{ $setting->tile_weights['size-wide'] ?? 14 }}">
-          </div>
-          <div>
-            <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">بلند ۱×۲ (٪)</label>
-            <input type="number" name="tile_tall" min="0" max="100" class="input-pro w-full" value="{{ $setting->tile_weights['size-tall'] ?? 14 }}">
-          </div>
-          <div>
-            <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">بزرگ ۲×۲ (٪)</label>
-            <input type="number" name="tile_big" min="0" max="100" class="input-pro w-full" value="{{ $setting->tile_weights['size-big'] ?? 8 }}">
+        <div class="pt-4 mt-4 mb-4" style="border-top:1px solid var(--border);">
+          <div class="text-[13px] font-extrabold mb-1" style="color:var(--text-h);"><i class="fa-solid fa-filter" style="color:var(--primary);"></i> فیلتر محصولات قابل نمایش</div>
+          <div class="text-[10.5px] mb-3" style="color:var(--text-soft);">اگر هیچ گزینه‌ای در بخش ورودی انتخاب نشود، همه محصولات فعال مجاز هستند؛ قوانین سمت حذف همیشه اولویت دارند.</div>
+          <div class="grid grid-cols-2 max-[900px]:grid-cols-1 gap-3">
+            @include('admin.explore.partials.audience-filter', ['mode' => 'include'])
+            @include('admin.explore.partials.audience-filter', ['mode' => 'exclude'])
           </div>
         </div>
 
@@ -310,7 +368,7 @@
   <div class="drawer-section">
     <div class="drawer-label">۱. تنظیمات نمایش و چیدمان</div>
     <div class="drawer-value" style="font-weight:400; line-height:2;">
-      از سه سبک آماده یکی را انتخاب کنید: «کلاسیک متعادل» ترکیب پیش‌فرض و متعادلی از کاشی‌های کوچک و بزرگ است. «فشرده» بیشتر از کاشی‌های کوچک استفاده می‌کند تا تعداد بیشتری محصول در یک صفحه دیده شود. «مجله‌ای» از کاشی‌های بزرگ‌تر بیشتر استفاده می‌کند تا صفحه جلوه‌ی بصری‌تری داشته باشد. اگر هیچ‌کدام دلخواهتان نبود، «سفارشی» را بزنید و درصد دقیق هر اندازه‌ی کاشی را خودتان وارد کنید.
+      یکی از چهار معماری تصویری را انتخاب کنید. «الگوی اکسل ۱۱ ردیفی» همان نمونه‌ی تأییدشده است و سه مدل «متعادل»، «عمودی» و «بنری» نمونه‌های جایگزین هستند. هر الگو در موبایل، تبلت و دسکتاپ چرخه‌ی مخصوص عرض همان دستگاه را دارد و بعد از پایان چرخه دوباره از ابتدا تکرار می‌شود.
       <br><br>
       «سطح تصادفی‌بودن» تعیین می‌کند ترتیب محصولات چقدر در هر بازدید عوض شود: عدد بالاتر یعنی تنوع و جابه‌جایی بیشتر بین بازدیدها؛ عدد پایین‌تر یعنی محصولات پرطرفدار/تازه‌تر ثابت‌تر در بالای صفحه می‌مانند.
       <br><br>
@@ -351,10 +409,25 @@
 </div>
 
 <script>
-  document.querySelectorAll('.explore-style-radio').forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      document.getElementById('explore-custom-weights').style.display = (this.value === 'custom') ? '' : 'none';
+  document.querySelectorAll('[data-filter-group]').forEach(function (group) {
+    var search = group.querySelector('[data-filter-search]');
+    var items = Array.from(group.querySelectorAll('[data-filter-item]'));
+    var counter = group.querySelector('[data-filter-count]');
+    var syncCount = function () {
+      if (counter) counter.textContent = items.filter(function (item) {
+        return item.querySelector('input[type="checkbox"]')?.checked;
+      }).length;
+    };
+    search?.addEventListener('input', function () {
+      var query = this.value.trim().toLocaleLowerCase('fa');
+      items.forEach(function (item) {
+        item.style.display = !query || (item.dataset.filterText || '').includes(query) ? '' : 'none';
+      });
     });
+    items.forEach(function (item) {
+      item.querySelector('input[type="checkbox"]')?.addEventListener('change', syncCount);
+    });
+    syncCount();
   });
 
   function openExploreGuide() {

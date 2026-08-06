@@ -114,7 +114,7 @@ class ProductsSampleSeeder extends Seeder
             $slug = Str::slug($data['name_en']);
 
             // اگر قبلاً با همین slug ثبت شده باشد، دوباره درج نمی‌شود (اجرای امن و تکرارپذیر)
-            if (Product::where('slug', $slug)->exists()) {
+            if (Product::withTrashed()->where('slug', $slug)->exists()) {
                 continue;
             }
 

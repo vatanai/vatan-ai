@@ -3,42 +3,56 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductMetricEvent;
 use App\Models\GeneratedImage;
 use App\Models\UserUpload;
 use App\Models\Order;
 use App\Models\Discount;
-use App\Services\OpenRouterService;
+use App\Models\ReferralSetting;
+use App\Services\AiProviderRouter;
 use App\Services\ProductBuildSchema;
 use App\Services\ProductPromptBuilder;
 use App\Services\SmsEventService;
 use App\Http\Requests\GenerateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
 class ProductGenerateController extends Controller
 {
-    public function __construct(protected OpenRouterService $openRouter)
+    public function __construct(protected AiProviderRouter $openRouter)
     {
     }
 
-    public function create(Request $request)
+    public function create(Request $request, ProductBuildSchema $schema)
     {
         $slug = $request->query('product');
-        $product = $slug
-            ? Product::where('slug', $slug)->where('status', 'active')->first()
-            : null;
-        return $product
-            ? redirect()->route('app.create.product', $product->route_slug)
-            : view('app.create', compact('product'));
+        // هر دو لینک قدیمی و جدید را پشتیبانی می‌کنیم:
+        // ?product=slug و ?product=123456-slug باید همان محصول را باز کنند.
+        // اگر محصول مشخص شده باشد، هرگز به‌صورت بی‌صدا محصول دیگری جایگزین نشود.
+        if ($slug !== null && $slug !== '') {
+            $product = (new Product())->resolveRouteBinding($slug, 'route_slug');
+            abort_unless($product && $product->status === 'active', 404);
+        } else {
+            // لینک عمومی «بساز» همچنان یک محصول فعال پیش‌فرض برای شروع دارد.
+            $product = Product::where('status', 'active')->latest()->first();
+        }
+
+        return view('app.create', [
+            'product' => $product,
+            'buildProduct' => $product ? $schema->pageData($product) : null,
+        ]);
     }
 
-    public function build(Product $product, ProductBuildSchema $schema)
+    public function build(Product $product)
     {
         abort_unless($product->status === 'active', 404);
-        $buildProduct = $schema->pageData($product);
-        return view('app.create-product', compact('product', 'buildProduct'));
+
+        // مسیر قدیمی را به مسیر اصلی منتقل می‌کنیم تا تمام لینک‌ها یک تجربه و
+        // یک فرم ساخت داشته باشند و مشخصات محصول در صفحه‌ی «بساز» از بین نرود.
+        return redirect()->route('app.create', ['product' => $product->route_slug]);
     }
 
     /**
@@ -47,7 +61,14 @@ class ProductGenerateController extends Controller
      */
     public function createPreview()
     {
-        $previewProduct = [
+        $previewProduct = $this->previewProductData();
+
+        return view('app.create-preview', compact('previewProduct'));
+    }
+
+    private function previewProductData(): array
+    {
+        return [
             'name' => 'پرتره سینمایی فوق‌واقعی',
             'description' => 'چهره شما با حفظ دقیق هویت، نورپردازی سینمایی و جزئیات طبیعی بازآفرینی می‌شود.',
             'cover' => asset('assets/img/moody-portrait-of-a-young-man-with-a-black-horse-on-a-ranch-ai-photo-editing-prompt.avif'),
@@ -56,8 +77,6 @@ class ProductGenerateController extends Controller
             'output_count' => 4,
             'fields' => $this->previewInputSchema(),
         ];
-
-        return view('app.create-preview', compact('previewProduct'));
     }
 
     private function previewInputSchema(): array
@@ -97,6 +116,20 @@ class ProductGenerateController extends Controller
 
     public function show(Product $product)
     {
+        $metricPayload = [
+            'product_id' => $product->id,
+            'user_id' => auth()->id(),
+            'session_id' => session()->getId(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ];
+        ProductMetricEvent::create($metricPayload + ['event_type' => 'view']);
+        if (request()->query('source') === 'trends') {
+            ProductMetricEvent::create($metricPayload + ['event_type' => 'trend_open']);
+        }
+
+        $product->loadCount('likedByUsers');
+
         $similar = Product::where('status', 'active')
             ->where('id', '!=', $product->id)
             ->where('category', $product->category)
@@ -111,7 +144,17 @@ class ProductGenerateController extends Controller
             try { $isLiked = auth()->user()->hasLikedProduct($product->id); } catch (\Throwable $e) {}
         }
 
-        return view('app.product', compact('product', 'similar', 'isSaved', 'isLiked'));
+        $referralSettings = ReferralSetting::current();
+        $productReferralUrl = auth()->check() && $referralSettings->referralIsActive()
+            ? route('referral.product', [
+                'code' => auth()->user()->referral_code,
+                'product' => $product->route_slug,
+            ])
+            : null;
+
+        return view('app.product', compact(
+            'product', 'similar', 'isSaved', 'isLiked', 'referralSettings', 'productReferralUrl'
+        ));
     }
 
     public function generate(GenerateProductRequest $request, Product $product, ProductBuildSchema $schema, ProductPromptBuilder $promptBuilder)
@@ -120,7 +163,10 @@ class ProductGenerateController extends Controller
         $reservedCredit = 0;
         $order = null;
         $fieldValues = (array) $request->input('fields', []);
-        $creditCost = max(0, (int) ($product->credit_cost ?? 0)) + $schema->additionalCredit($product, $fieldValues);
+        $identityRequested = (bool) $product->identity_preservation && $request->boolean('identity_preservation');
+        $creditCost = max(0, (int) ($product->credit_cost ?? 0))
+            + $schema->additionalCredit($product, $fieldValues)
+            + ($identityRequested ? max(0, (int) $product->identity_credit_cost) : 0);
 
         // ۰. مدل‌های خروجی چندگانه (Output Variants) — اگر محصول واریانت دارد،
         // کاربر باید حداقل یکی را انتخاب کرده باشد و هزینه توکن در تعداد انتخاب ضرب می‌شود.
@@ -183,6 +229,12 @@ class ProductGenerateController extends Controller
 
         // اصلاح دریافت فایل‌ها بر اساس ساختار ارسالی جاوااسکریپت (uploads)
         $allFiles = $schema->flattenUploads($request);
+        if (in_array($product->subject_type, ['face', 'body'], true) && count($allFiles) > 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'برای محصولات چهره‌محور حداکثر ۳ عکس مرجع قابل استفاده است.',
+            ], 422);
+        }
 
         // ۲. بررسی سخت‌گیرانه سقف فضای ذخیره‌سازی (حداکثر ۱۰۰ مگابایت)
         if ($user) {
@@ -209,7 +261,7 @@ class ProductGenerateController extends Controller
         }
 
         // ۳. ساخت پرامپت نهایی: system_prompt + قالب (با جایگذاری متغیرها) + دستور حفظ هویت
-        $finalPrompt = $promptBuilder->build($product, $fieldValues);
+        $finalPrompt = $promptBuilder->build($product, $fieldValues, $identityRequested);
 
         // ۴. پردازش و ذخیره‌سازی عکس‌های آپلودی کاربر
         $base64Images  = [];
@@ -234,7 +286,7 @@ class ProductGenerateController extends Controller
 
         // ۴.۱ الزام تصویر مرجع برای محصولات هویت‌محور/ویرایشی
         $minRefs = (int) ($product->min_reference_images ?? 0);
-        if ($minRefs > 0 && count($base64Images) < $minRefs) {
+        if ($identityRequested && $minRefs > 0 && count($base64Images) < $minRefs) {
             foreach ($uploadedPaths as $up) {
                 Storage::disk('public')->delete($up['path']);
             }
@@ -248,7 +300,17 @@ class ProductGenerateController extends Controller
         $schemaFields = collect($schema->fields($product));
         $valueForType = fn (string $type) => (($field = $schemaFields->firstWhere('type', $type)) ? ($fieldValues[$field['id']] ?? null) : null);
         $aspectRatio = $request->input('output.aspect_ratio', $valueForType('aspect_ratio') ?? $product->aspect_ratio ?? '1:1');
-        $quality     = $request->input('output.quality', $valueForType('resolution') ?? $product->resolution ?? '1K');
+        // حالت عادی همیشه Grade B / Medium و حفظ هویت همیشه Grade A / High است.
+        $quality = $identityRequested ? '2K' : '1K';
+
+        $executionProduct = $product;
+        if ($identityRequested && $product->identity_model) {
+            $executionProduct = $product->replicate();
+            $executionProduct->primary_model = $product->identity_model;
+            $executionProduct->ai_provider = $product->identity_model_provider ?: $product->ai_provider;
+            $executionProduct->fallback_models = [];
+            $executionProduct->fallback_model_providers = [];
+        }
 
         try {
             // هر درخواست ساخت، یک سفارش قابل‌پیگیری در پنل مدیریت ایجاد می‌کند.
@@ -264,13 +326,14 @@ class ProductGenerateController extends Controller
                 'discount_credits' => $discountCredits,
                 'final_credits' => $totalCreditCost,
                 'discount_code' => $discount?->code,
-                'ai_model' => $product->primary_model,
+                'ai_model' => $executionProduct->primary_model,
                 'attempts' => 1,
                 'input_payload' => [
                     'fields' => $fieldValues,
                     'variants' => array_column($selectedVariants, 'key'),
                     'aspect_ratio' => $aspectRatio,
                     'quality' => $quality,
+                    'identity_preservation' => $identityRequested,
                 ],
                 'source' => 'app',
                 'paid_at' => now(),
@@ -314,6 +377,9 @@ class ProductGenerateController extends Controller
                     'type'      => 'image_url',
                     'image_url' => ['url' => $b64],
                 ], $base64Images);
+            }
+            if ($identityRequested) {
+                $extraPayload['input_fidelity'] = 'high';
             }
 
             // پارامترهای واقعی مؤثر بر کیفیت — فقط در صورت مقداردهی ارسال می‌شوند
@@ -362,7 +428,7 @@ class ProductGenerateController extends Controller
             foreach ($runs as $run) {
                 try {
                     $attempt = $this->openRouter->generateForProduct(
-                        $product,
+                        $executionProduct,
                         $run['prompt'],
                         $quality,
                         $aspectRatio,
@@ -447,7 +513,7 @@ class ProductGenerateController extends Controller
             $order?->update([
                 'status' => 'completed',
                 'processing_status' => 'completed',
-                'ai_model' => $usedModels[0] ?? $product->primary_model,
+                'ai_model' => $usedModels[0] ?? $executionProduct->primary_model,
                 'final_credits' => $actualCredit,
                 'original_credits' => $actualOriginalCredit,
                 'discount_credits' => $actualDiscount,
@@ -471,7 +537,7 @@ class ProductGenerateController extends Controller
                     'url'   => $g['url'],
                 ], $generated),
                 'failed_message'   => $failedMsg,
-                'used_model'       => $usedModels[0] ?? $product->primary_model,
+                'used_model'       => $usedModels[0] ?? $executionProduct->primary_model,
                 'remaining_tokens' => $user ? $user->fresh()->tokens : 0,
             ]);
 
@@ -526,12 +592,16 @@ class ProductGenerateController extends Controller
         $directUrl = $responseData['data'][0]['url'] 
             ?? $responseData[0]['url'] 
             ?? null;
+        $downloadHeaders = $responseData['data'][0]['headers']
+            ?? $responseData[0]['headers']
+            ?? [];
 
         if ($directUrl) {
             try {
-                $imageContent = file_get_contents($directUrl);
-                if ($imageContent !== false) {
-                    Storage::disk('public')->put($filename, $imageContent);
+                $download = Http::withHeaders(is_array($downloadHeaders) ? $downloadHeaders : [])
+                    ->connectTimeout(15)->timeout(120)->get($directUrl);
+                if ($download->successful()) {
+                    Storage::disk('public')->put($filename, $download->body());
                     return asset('storage/' . $filename);
                 }
             } catch (Exception $e) {

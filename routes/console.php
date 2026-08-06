@@ -2,6 +2,20 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+use App\Services\AiCatalogSyncService;
+
+Schedule::command('credits:sync')
+    ->everyMinute()
+    ->withoutOverlapping(10);
+
+Artisan::command('ai:sync-catalog {provider=all}', function (string $provider, AiCatalogSyncService $syncer) {
+    $this->info('همگام‌سازی کاتالوگ مدل‌های عکس و ویدیو شروع شد.');
+    $result = $syncer->sync($provider);
+    foreach ($result as $name => $stats) {
+        $this->line($name . ': ' . json_encode($stats, JSON_UNESCAPED_UNICODE));
+    }
+})->purpose('همگام‌سازی مدل‌های عکس و ویدیو از Fal.ai و Replicate');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

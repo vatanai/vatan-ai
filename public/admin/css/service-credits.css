@@ -1,0 +1,61 @@
+.credit-page{padding:24px;background:var(--page-bg)}
+.credit-head,.credit-head-actions,.credit-card-head,.credit-row,.credit-status,.credit-actions{display:flex;align-items:center}
+.credit-head{justify-content:space-between;gap:16px;margin-bottom:20px}
+.credit-head h1{font-size:22px;font-weight:800;color:var(--text-h);margin:0}
+.credit-subtitle{font-size:12px;color:var(--text-soft);margin-top:4px}
+.credit-head-actions,.credit-actions{gap:8px;flex-wrap:wrap}
+.credit-btn{height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-main);padding:0 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none}
+.credit-btn:hover{border-color:var(--primary);color:var(--primary)}
+.credit-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--accent)}
+.credit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.credit-summary,.credit-card,.credit-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-card)}
+.credit-summary{padding:17px}
+.credit-summary-label{font-size:11px;color:var(--text-soft);margin-bottom:7px}
+.credit-summary-value{font-size:23px;font-weight:800;color:var(--text-h)}
+.credit-summary-meta{font-size:10px;color:var(--text-soft);margin-top:5px}
+.credit-rate{border-color:var(--primary)}
+.credit-accounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.credit-card{padding:18px;position:relative;overflow:hidden}
+.credit-card:before{content:"";position:absolute;top:0;right:0;width:4px;height:100%;background:var(--primary)}
+.credit-card.low:before{background:var(--danger)}
+.credit-card-head{justify-content:space-between;gap:12px;margin-bottom:18px}
+.credit-service{display:flex;align-items:center;gap:10px}
+.credit-logo{width:42px;height:42px;border-radius:12px;background:var(--input-bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:18px}
+.credit-name{font-size:15px;font-weight:800;color:var(--text-h)}
+.credit-status{gap:5px;font-size:10px;color:var(--text-soft)}
+.credit-dot{width:7px;height:7px;border-radius:50%;background:var(--text-soft)}
+.credit-status.online .credit-dot{background:var(--success)}
+.credit-balance-label{font-size:11px;color:var(--text-soft)}
+.credit-balance{font-size:29px;line-height:1.2;font-weight:900;color:var(--text-h);margin:5px 0}
+.credit-balance-irr{font-size:12px;color:var(--primary);font-weight:700}
+.credit-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.credit-metric{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:10px}
+.credit-metric span{display:block;font-size:10px;color:var(--text-soft);margin-bottom:4px}
+.credit-metric strong{font-size:12px;color:var(--text-main)}
+.credit-progress{height:7px;background:var(--input-bg);border-radius:99px;overflow:hidden;margin:8px 0}
+.credit-progress span{display:block;height:100%;background:var(--primary);border-radius:inherit}
+.credit-warning{font-size:10px;color:var(--danger);font-weight:700}
+.credit-panel{padding:18px;margin-bottom:18px}
+.credit-panel-title{font-size:14px;font-weight:800;color:var(--text-h);margin-bottom:14px}
+.credit-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.credit-field label{display:block;font-size:10px;color:var(--text-soft);margin-bottom:5px}
+.credit-field input,.credit-field select,.credit-field textarea{width:100%;min-height:40px;border:1px solid var(--border);background:var(--input-bg);color:var(--text-main);border-radius:9px;padding:8px 10px;font-family:inherit;font-size:12px;outline:none}
+.credit-field input:focus,.credit-field select:focus,.credit-field textarea:focus{border-color:var(--primary)}
+.credit-check{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-main);margin-top:20px}
+.credit-table-wrap{overflow-x:auto}
+.credit-table{width:100%;border-collapse:collapse;font-size:11px}
+.credit-table th,.credit-table td{text-align:right;padding:11px;border-bottom:1px solid var(--border);white-space:nowrap}
+.credit-table th{color:var(--text-soft);font-weight:700}
+.credit-table td{color:var(--text-main)}
+.credit-badge{padding:3px 8px;border-radius:7px;background:var(--input-bg);color:var(--text-soft)}
+.credit-badge.usage{color:var(--danger)}
+.credit-badge.charge,.credit-badge.refund{color:var(--success)}
+.credit-alert{padding:10px 13px;border:1px solid var(--border);border-radius:10px;margin-bottom:14px;font-size:12px;color:var(--text-main);background:var(--card-bg)}
+.credit-alert.success{border-color:var(--success);color:var(--success)}
+.credit-alert.error{border-color:var(--danger);color:var(--danger)}
+.credit-modal{display:none;position:fixed;inset:0;z-index:800;background:var(--nav-active);align-items:center;justify-content:center;padding:18px}
+.credit-modal.open{display:flex}
+.credit-modal-box{width:min(680px,100%);max-height:90vh;overflow:auto;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow-card)}
+@media(max-width:1100px){.credit-grid{grid-template-columns:repeat(2,1fr)}.credit-form-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.credit-page{padding:14px}.credit-head{align-items:flex-start;flex-direction:column}.credit-accounts{grid-template-columns:1fr}.credit-grid{grid-template-columns:1fr 1fr}.credit-metrics{grid-template-columns:1fr}.credit-form-grid{grid-template-columns:1fr}}
+@media(max-width:430px){.credit-grid{grid-template-columns:1fr}}

@@ -18,6 +18,9 @@ Route::middleware(['web', 'auth:admin'])
     ->group(function () {
 
         Route::get('/', [HomeBuilderController::class, 'index'])->name('index');
+        Route::get('/showcase', [HomeBuilderController::class, 'showcase'])->name('showcase');
+        Route::get('/showcase/preview/{type}/{layout}', [HomeBuilderController::class, 'showcasePreview'])->name('showcase.preview');
+        Route::post('/preview', [HomeBuilderController::class, 'preview'])->name('preview');
 
         Route::post('/', [HomeBuilderController::class, 'store'])->name('store');
         Route::put('/{homeSection}', [HomeBuilderController::class, 'update'])->name('update');

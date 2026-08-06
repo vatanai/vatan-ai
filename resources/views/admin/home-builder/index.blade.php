@@ -20,6 +20,9 @@
         <div class="text-[13px]" style="color:var(--text-soft);">ساخت، ترتیب‌دهی و انتشار Sectionهای صفحه اصلی اپ — بدون نیاز به برنامه‌نویس</div>
       </div>
       <div class="flex items-center gap-2">
+        <a href="{{ route('admin.home-builder.showcase') }}" class="btn-pro btn-pro-ghost">
+          <i class="fa-solid fa-grip text-[11px]"></i> گالری همه مدل‌ها
+        </a>
         <button type="button" class="btn-pro btn-pro-primary" onclick="HomeBuilder.openAddDrawer()">
           <i class="fa-solid fa-plus text-[11px]"></i> افزودن Section
         </button>

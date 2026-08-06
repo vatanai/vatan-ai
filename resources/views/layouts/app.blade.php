@@ -13,19 +13,18 @@
 
   {{-- ۱. اولویت لود فونت‌ها --}}
   <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
+  <link href="{{ asset('css/theme-tokens.css') }}?v={{ filemtime(public_path('css/theme-tokens.css')) }}" rel="stylesheet">
   @vite(['resources/css/app.css', 'resources/js/app.js'])
   @stack('styles')
+  {{-- استایل مستقل فوتر عمداً بعد از استایل صفحات لود می‌شود؛ بدون تایید کاربر جابه‌جا یا ادغام نشود. --}}
+  <link href="{{ asset('css/app-footer.css') }}?v={{ filemtime(public_path('css/app-footer.css')) }}" rel="stylesheet">
 
   <style>
     
     /* تعریف متغیرهای رنگی برای جلوگیری از ارور بک‌گراند */
     :root {
-      --bg-color: #0c0c10;
-      --text-color: #ffffff;
-    }
-    html.light {
-      --bg-color: #ffffff;
-      --text-color: #0c0c10;
+      --bg-color: var(--vatan-bg-page);
+      --text-color: var(--vatan-text-page);
     }
 
     html {
@@ -129,12 +128,38 @@
     }());
   </script>
 </head>
-<body id="top">
+@php
+  $hideAppFooter = request()->routeIs(
+      'app.profile',
+      'profile',
+      'profile.gallery',
+      'app.create',
+      'app.create.preview',
+      'app.create.architecture',
+      'app.create.product',
+      'app.product',
+      'app.product-details'
+  );
+
+  $showAppFooter = ! $hideAppFooter && request()->routeIs(
+      'app.*',
+      'products.index',
+      'categories.show',
+      'profile',
+      'profile.gallery',
+      'prompts.show'
+  );
+@endphp
+<body id="top" @class(['vatan-app-shell' => $showAppFooter])>
 
   {{-- محتوای اصلی صفحات --}}
   <main>
     @yield('content')
   </main>
+
+  @if($showAppFooter)
+    @include('app.partials.footer')
+  @endif
 
   {{-- ناوبری هدر و فوتر موبایل --}}
   @include('layouts.nav')

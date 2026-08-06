@@ -15,7 +15,7 @@
   ══════════════════════════════════════════════════════════════════
 --}}
 @php
-  $chipGroupKeys = ['status', 'featured', 'is_new', 'trending', 'pricing_model'];
+  $chipGroupKeys = ['status', 'featured', 'is_new', 'trending', 'pricing_model', 'ai_status', 'sort'];
   $baseQuery = request()->except($chipGroupKeys);
   $chipUrl = function ($key, $value) use ($baseQuery) {
       $q = $baseQuery;
@@ -25,10 +25,10 @@
   };
   $isChipActive = function ($key, $value) {
       return $value === null
-          ? !collect(['status','featured','is_new','trending','pricing_model'])->some(fn($k) => request()->filled($k))
+          ? !collect(['status','featured','is_new','trending','pricing_model','ai_status','sort'])->some(fn($k) => request()->filled($k))
           : request()->get($key) === $value;
   };
-  $hasAdvancedFilters = request()->filled('subcategory') || request()->filled('media_type') || request()->filled('ai_model')
+  $hasAdvancedFilters = request()->filled('subcategory') || request()->filled('media_type') || request()->filled('ai_model') || request()->filled('ai_provider') || request()->filled('ai_status') || request()->filled('model_cost_min') || request()->filled('model_cost_max') || request()->filled('credit_min') || request()->filled('credit_max')
       || request()->filled('created_from') || request()->filled('created_to') || request()->filled('updated_from') || request()->filled('updated_to');
 @endphp
 
@@ -55,7 +55,7 @@
       <i class="fa-solid fa-chevron-down text-[9px] transition-transform duration-200" id="advanced-filter-chevron"></i>
     </button>
 
-    @if(request()->anyFilled(['search','category','subcategory','status','pricing_model','media_type','ai_model','created_from','created_to','updated_from','updated_to','featured','is_new','trending','sort']))
+    @if(request()->anyFilled(['search','category','subcategory','status','pricing_model','media_type','ai_model','ai_provider','ai_status','model_cost_min','model_cost_max','credit_min','credit_max','created_from','created_to','updated_from','updated_to','featured','is_new','trending','sort']))
       <a href="{{ route('admin.products') }}" class="btn-pro btn-pro-ghost" title="پاک کردن همه فیلترها">
         <i class="fa-solid fa-xmark text-[11px]"></i> پاک کردن
       </a>
@@ -77,6 +77,15 @@
     <a href="{{ $chipUrl('trending', '1') }}" class="chip-filter {{ $isChipActive('trending','1') ? 'active' : '' }}">ترند</a>
     <a href="{{ $chipUrl('pricing_model', 'free') }}" class="chip-filter {{ $isChipActive('pricing_model','free') ? 'active' : '' }}">رایگان</a>
     <a href="{{ $chipUrl('pricing_model', 'paid') }}" class="chip-filter {{ $isChipActive('pricing_model','paid') ? 'active' : '' }}">پولی</a>
+    <a href="{{ $chipUrl('sort', 'most_liked') }}" class="chip-filter {{ $isChipActive('sort','most_liked') ? 'active' : '' }}"><i class="fa-solid fa-arrow-trend-up text-[9px]"></i> بیشترین لایک</a>
+    <a href="{{ $chipUrl('sort', 'least_liked') }}" class="chip-filter {{ $isChipActive('sort','least_liked') ? 'active' : '' }}"><i class="fa-solid fa-arrow-trend-down text-[9px]"></i> کمترین لایک</a>
+    <span class="pro-tooltip-wrap inline-flex">
+      <a href="{{ $chipUrl('ai_status', 'invalid') }}" class="chip-filter {{ $isChipActive('ai_status','invalid') ? 'active' : '' }}">
+        <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> مدل AI نامعتبر
+        <i class="fa-solid fa-circle-question text-[9px]"></i>
+      </a>
+      <span class="pro-tooltip" style="width:260px;">محصولاتی را نشان می‌دهد که مدل آن‌ها حذف یا غیرفعال شده، سرویسشان خاموش است یا هنوز هیچ مدل معتبری ندارند.</span>
+    </span>
   </div>
 
   {{-- ─── پنل فیلتر پیشرفته (جمع‌شونده) ─── --}}
@@ -137,8 +146,48 @@
       <select name="ai_model" class="input-pro w-full">
         <option value="">همه مدل‌ها</option>
         @foreach(($aiModels ?? []) as $m)
-          <option value="{{ $m->openrouter_model_id }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }}</option>
+          <option value="{{ $m->openrouter_model_id }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }} — {{ $m->provider === 'liara' ? 'لیارا' : 'OpenRouter' }}</option>
         @endforeach
+      </select>
+    </div>
+
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">حداقل هزینه مدل به دلار</label>
+      <input type="number" step="0.000001" min="0" name="model_cost_min" value="{{ request('model_cost_min') }}" class="input-pro w-full" dir="ltr" placeholder="0.01">
+    </div>
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">حداکثر هزینه مدل به دلار</label>
+      <input type="number" step="0.000001" min="0" name="model_cost_max" value="{{ request('model_cost_max') }}" class="input-pro w-full" dir="ltr" placeholder="1.00">
+    </div>
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">حداقل قیمت محصول (کردیت)</label>
+      <input type="number" min="0" name="credit_min" value="{{ request('credit_min') }}" class="input-pro w-full" dir="ltr" placeholder="0">
+    </div>
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">حداکثر قیمت محصول (کردیت)</label>
+      <input type="number" min="0" name="credit_max" value="{{ request('credit_max') }}" class="input-pro w-full" dir="ltr" placeholder="100">
+    </div>
+
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">سرویس ارائه‌دهنده</label>
+      <select name="ai_provider" class="input-pro w-full">
+        <option value="">همه سرویس‌ها</option>
+        @foreach(['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'] as $providerKey => $providerLabel)
+          <option value="{{ $providerKey }}" {{ request('ai_provider') === $providerKey ? 'selected' : '' }}>{{ $providerLabel }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div>
+      <label class="text-[10.5px] font-bold flex items-center gap-1.5 mb-1.5" style="color:var(--text-soft);">
+        سلامت اتصال هوش مصنوعی
+        <span class="pro-tooltip-wrap inline-flex cursor-help"><i class="fa-solid fa-circle-question text-[9px]"></i><span class="pro-tooltip" style="width:260px;">«معتبر» یعنی مدل و سرویس آن قابل استفاده‌اند. «نامعتبر» شامل مدل حذف‌شده، غیرفعال، سرویس خاموش یا محصول بدون مدل است.</span></span>
+      </label>
+      <select name="ai_status" class="input-pro w-full">
+        <option value="">همه وضعیت‌ها</option>
+        <option value="valid" {{ request('ai_status') === 'valid' ? 'selected' : '' }}>مدل معتبر</option>
+        <option value="invalid" {{ request('ai_status') === 'invalid' ? 'selected' : '' }}>نامعتبر یا تعیین‌نشده</option>
+        <option value="unassigned" {{ request('ai_status') === 'unassigned' ? 'selected' : '' }}>فقط تعیین‌نشده</option>
       </select>
     </div>
 
@@ -169,6 +218,8 @@
         {{-- مرتب‌سازی واقعی بر اساس آمار اجرای محصولات (جدول generations) --}}
         <option value="most_used" {{ request('sort')=='most_used'?'selected':'' }}>بیشترین اجرا</option>
         <option value="least_used" {{ request('sort')=='least_used'?'selected':'' }}>کمترین اجرا</option>
+        <option value="most_liked" {{ request('sort')=='most_liked'?'selected':'' }}>بیشترین لایک</option>
+        <option value="least_liked" {{ request('sort')=='least_liked'?'selected':'' }}>کمترین لایک</option>
         <option value="most_revenue" disabled>بیشترین درآمد — نیاز به بررسی برنامه</option>
       </select>
     </div>

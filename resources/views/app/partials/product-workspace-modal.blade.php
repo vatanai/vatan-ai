@@ -189,7 +189,7 @@
     <h3 class="text-[15px] font-black text-gray-100 [.light_&]:text-gray-900">برای این کار میبایست به پروفایل خود وارد شوید</h3>
 
     <div class="w-full grid grid-cols-1 gap-2 mt-2">
-      <a href="{{ route('login') }}" class="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.99] no-underline">
+      <a href="{{ route('login', ['redirect' => request()->fullUrl()]) }}" class="w-full h-11 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.99] no-underline">
         <i class="fa-solid fa-right-to-bracket text-xs"></i>
         ورود
       </a>

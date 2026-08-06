@@ -17,16 +17,20 @@ class TokenLog extends Model
         'user_id',
         'admin_id',
         'action',
+        'source',
+        'event_key',
         'amount',
         'balance_before',
         'balance_after',
         'note',
+        'metadata',
     ];
 
     protected $casts = [
         'amount'         => 'integer',
         'balance_before' => 'integer',
         'balance_after'  => 'integer',
+        'metadata'       => 'array',
     ];
 
     public function user(): BelongsTo

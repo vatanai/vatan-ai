@@ -123,7 +123,7 @@
   </div>
 
   {{-- ── اطلاعات داخلی مدیر (فعال و ذخیره‌شونده) ── --}}
-  <div class="border-t border-dashed border-[var(--b2)] pt-4">
+  <div class="hidden border-t border-dashed border-[var(--b2)] pt-4" data-future-update="اطلاعات داخلی مدیر">
     <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-lock text-[10px]"></i> اطلاعات داخلی مدیر</div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       <div class="flex flex-col gap-1.5">
@@ -181,7 +181,7 @@
     <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]">
       <div class="min-w-0">
         <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5">ترند {!! $__help('is_trending', 'ترند') !!}</div>
-        <div class="text-[11px] text-[var(--text3)] mt-0.5">نمایش در بخش پرطرفدارها</div>
+        <div class="text-[11px] text-[var(--text3)] mt-0.5">نمایش در صفحه ترندز و فهرست محصولات ترند</div>
       </div>
       <span class="relative w-9 h-5 shrink-0 block">
         <input type="checkbox" name="is_trending" value="1" {{ old('is_trending', optional($duplicateFrom)->is_trending) ? 'checked' : '' }} class="sr-only peer">
@@ -190,8 +190,9 @@
     </label>
   </div>
 
-  <div class="text-[10.5px] font-bold text-[var(--text3)] mt-4 mb-3 tracking-wide uppercase flex items-center gap-1.5 pt-4 border-t border-dashed border-[var(--b2)]"><i class="fa-solid fa-award text-[10px]"></i> برچسب‌های ویژه</div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+  <div class="hidden" data-future-update="برچسب‌های ویژه">
+    <div class="text-[10.5px] font-bold text-[var(--text3)] mt-4 mb-3 tracking-wide uppercase flex items-center gap-1.5 pt-4 border-t border-dashed border-[var(--b2)]"><i class="fa-solid fa-award text-[10px]"></i> برچسب‌های ویژه</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
     <label class="toggle-card flex items-start justify-between gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-colors hover:border-[var(--b2)]" title="نمایش نشان Premium روی کارت محصول">
       <div class="min-w-0">
         <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">NEW Premium {!! $newBadge !!}</div>
@@ -224,6 +225,7 @@
         <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
       </span>
     </label>
+    </div>
   </div>
 </div>
 
@@ -243,23 +245,17 @@
   @endphp
 
   @foreach([
-    ['main-images-file','main_images[]','عکس‌های اصلی','اولین عکس، تصویر اصلی کارت و صفحه محصول است. نسبت تصاویر تغییر نمی‌کند.',$__mainPaths],
+    ['main-images-file','main_images[]','عکس‌های اصلی','بعد از انتخاب تصاویر، کاور را از نوار تصاویر کوچک زیر پیش‌نمایش تعیین کنید.',$__mainPaths],
     ['before-images-file','before_images[]','عکس‌های قبل','تصاویر قبل از اجرای محصول؛ بدون برش و با حفظ نسبت.',$__beforePaths],
   ] as [$inputId,$inputName,$title,$hint,$paths])
     <div class="image-optimizer-group flex flex-col gap-2 mb-4" data-input="{{ $inputId }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
-      <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }}</label>
-      @if($paths)
-        <div class="flex items-center gap-1.5 flex-wrap bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-2.5">
-          @foreach($paths as $path)<img src="{{ asset('storage/'.$path) }}" class="w-11 h-11 rounded-lg object-cover border border-[var(--b2)]" alt="">@endforeach
-          <span class="text-[10.5px] text-[var(--text3)]">تصاویر فعلی؛ با انتخاب تصاویر جدید جایگزین می‌شوند.</span>
-        </div>
-      @endif
+      <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }} @if($inputId === 'main-images-file')<span class="text-[var(--red)] mr-0.5">*</span>@endif</label>
       <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-5 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors" onclick="document.getElementById('{{ $inputId }}').click()">
         <i class="fa-solid fa-images text-xl text-[var(--text3)] mb-1 block"></i>
         <div class="text-xs text-[var(--text2)] image-file-label">انتخاب تصاویر</div>
         <div class="text-[10px] text-[var(--text3)] mt-1">{{ $hint }}</div>
-        <div class="flex flex-wrap gap-1.5 justify-center mt-2.5 image-preview-strip"></div>
-        <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" multiple accept="image/jpeg,image/png,image/webp" class="hidden">
+        <div class="flex flex-wrap gap-2 justify-center mt-3 image-preview-strip"></div>
+        <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" multiple accept="image/jpeg,image/png,image/webp" class="hidden" @if($inputId === 'main-images-file' && empty($paths)) required @endif>
       </div>
 
       <div class="image-compare-workspace hidden border border-[var(--b1)] rounded-2xl overflow-hidden bg-[var(--s1)]">
@@ -288,6 +284,9 @@
       <div class="flex items-center gap-2 flex-wrap pt-1">
         <button type="button" class="image-optimize-btn btn-pro btn-pro-ghost" onclick="optimizeImageGroup(this)">
           <i class="fa-solid fa-wand-magic-sparkles"></i><span>بهینه‌سازی اتوماتیک</span>
+        </button>
+        <button type="button" class="btn-pro btn-pro-ghost" onclick="sharpenSelectedImage(this)">
+          <i class="fa-solid fa-eye"></i><span>شارپ‌کردن عکس انتخاب‌شده</span>
         </button>
         <span class="image-optimize-status text-[10.5px] text-[var(--text3)]">@if($paths)برای بررسی تصاویر فعلی دکمه را بزنید.@endif</span>
       </div>
@@ -354,7 +353,7 @@
 
   {{-- ── آیکون محصول (فعال و ذخیره‌شونده) ── --}}
   <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-4">
-    <div class="flex flex-col gap-1.5 md:max-w-sm">
+    <div class="hidden flex flex-col gap-1.5 md:max-w-sm" data-future-update="آیکون محصول">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">آیکون محصول (Product Icon) {!! $__help('new_product_icon', 'آیکون محصول (Product Icon)') !!}</label>
       <div class="border-2 border-dashed border-[var(--b2)] rounded-xl p-4 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors w-full" onclick="document.getElementById('new-product-icon-file').click()">
         <i class="fa-solid fa-icons text-lg text-[var(--text3)] mb-1 block"></i>
@@ -365,7 +364,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-3.5">
       {{-- بند ۷: رنگ کارت محصول (Color Picker) — فقط UI --}}
-      <div class="flex flex-col gap-1.5">
+      <div class="hidden flex flex-col gap-1.5" data-future-update="رنگ کارت محصول">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">رنگ کارت محصول {!! $newBadge !!}</label>
         <div class="flex items-center gap-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
           <input type="color" name="new_card_color" value="#16594f" class="w-9 h-9 rounded-md border border-[var(--b1)] bg-transparent cursor-pointer shrink-0" oninput="document.getElementById('new-card-color-hex').value = this.value.toUpperCase()">
@@ -374,20 +373,51 @@
       </div>
       {{-- بند ۷: پیش‌نمایش حالت نمایش گالری (Grid/Slider/Carousel) — فقط UI --}}
       <div class="flex flex-col gap-1.5">
-        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">پیش‌نمایش حالت گالری {!! $newBadge !!}</label>
+        <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">پیش‌نمایش حالت گالری</label>
         <div class="flex gap-2">
           <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--accent)] bg-[var(--accent)]/8 text-[var(--text)]" data-mode="grid" onclick="setGalleryPreviewMode('grid')"><i class="fa-solid fa-table-cells block mb-1"></i>Grid</button>
           <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="slider" onclick="setGalleryPreviewMode('slider')"><i class="fa-solid fa-images block mb-1"></i>Slider</button>
           <button type="button" class="gallery-mode-btn flex-1 text-[10.5px] p-2 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[var(--text2)]" data-mode="carousel" onclick="setGalleryPreviewMode('carousel')"><i class="fa-solid fa-rectangle-list block mb-1"></i>Carousel</button>
         </div>
+        <div id="gallery-mode-live-preview" class="grid grid-cols-5 gap-1.5 p-2 bg-[var(--bg)] border border-[var(--b1)] rounded-xl max-w-md"></div>
         <input type="hidden" name="new_gallery_preview_mode" id="new-gallery-preview-mode" value="grid">
       </div>
     </div>
   </div>
 </div>
 
+{{-- ── تعداد لایک نمایشی ── --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mb-5">
+  <div class="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <label for="base-likes-count" class="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
+        تعداد لایک {!! $__help('base_likes_count', 'تعداد لایک') !!}
+      </label>
+      <p class="text-[10.5px] text-[var(--text3)] mt-1">لایک‌های واقعی کاربران به این عدد پایه اضافه می‌شوند.</p>
+    </div>
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <button type="button" class="h-10 px-3 rounded-lg border border-[var(--b1)] bg-[var(--s1)] text-[11px] font-semibold text-[var(--text2)] hover:border-[var(--accent)] transition-colors" onclick="randomizeBaseLikes()">
+        <i class="fa-solid fa-shuffle ml-1"></i> عدد تصادفی
+      </button>
+      <div class="relative flex-1 sm:w-40">
+        <input id="base-likes-count" type="number" name="base_likes_count" min="0" max="999999999" inputmode="numeric"
+               value="{{ old('base_likes_count', $suggestedLikesCount ?? 120) }}"
+               class="w-full h-10 bg-[var(--s1)] border border-[var(--b1)] rounded-lg px-9 py-2 text-sm font-bold text-[var(--text)] text-center focus:outline-none focus:border-[var(--accent)]">
+        <i class="fa-regular fa-heart absolute right-3 top-1/2 -translate-y-1/2 text-[var(--danger)] text-xs pointer-events-none"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function randomizeBaseLikes() {
+  var input = document.getElementById('base-likes-count');
+  if (input) input.value = Math.floor(Math.random() * 131) + 120;
+}
+</script>
+
 {{-- ── بخش فازهای بعدی: خاموش تا وقتی نیاز شود ── --}}
-<div class="future-block bg-[var(--s2)] border border-dashed border-[var(--b2)] rounded-xl p-5 mb-5">
+<div class="hidden future-block bg-[var(--s2)] border border-dashed border-[var(--b2)] rounded-xl p-5 mb-5" data-future-update="تنظیمات فاز بعد">
   <label class="flex items-center justify-between gap-2 cursor-pointer">
     <div class="text-xs font-bold text-[var(--text2)] flex items-center gap-2"><i class="fa-solid fa-flask text-[var(--text3)]"></i> تنظیمات فاز بعد <span class="text-[10px] font-normal text-[var(--text3)]">(فعلاً نیازی نیست)</span></div>
     <span class="relative w-9 h-5 shrink-0 block">
@@ -404,212 +434,4 @@
   </div>
 </div>
 
-<script>
-/* تابع مشترک باز/بستن بخش‌های فاز بعد */
-function toggleFutureSection(cb){ var b = cb.closest('.future-block'); if(b){ var s = b.querySelector('.future-section'); if(s) s.classList.toggle('hidden', !cb.checked); } }
-
-/* ── ابزارهای کمکی عمومی مربوط به فایلهای آپلود ── */
-function updateFileLabel(input, labelId, isMultiple = false) {
-  const label = document.getElementById(labelId);
-  if (!label) return;
-  if (input.files && input.files.length > 0) {
-    label.textContent = isMultiple ? input.files.length + ' فایل انتخاب شد' : input.files[0].name;
-  }
-}
-
-/* ── کامپوننت مستقل: Preview / Replace / Remove برای Uploadهای تک‌فایلی ── */
-function previewUpload(input, imgId, emptyStateId, removeBtnId) {
-  if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const img = document.getElementById(imgId);
-    img.src = e.target.result;
-    img.classList.remove('hidden');
-    document.getElementById(emptyStateId).classList.add('hidden');
-    const btn = document.getElementById(removeBtnId);
-    btn.classList.remove('hidden');
-    btn.classList.add('flex');
-  };
-  reader.readAsDataURL(input.files[0]);
-}
-
-function removeUpload(inputId, imgId, emptyStateId, removeBtnId, titleId, defaultTitle) {
-  const input = document.getElementById(inputId);
-  if(input) input.value = '';
-  const img = document.getElementById(imgId);
-  if(img) img.classList.add('hidden');
-  const empty = document.getElementById(emptyStateId);
-  if(empty) empty.classList.remove('hidden');
-  const btn = document.getElementById(removeBtnId);
-  if(btn) {
-    btn.classList.add('hidden');
-    btn.classList.remove('flex');
-  }
-  const title = document.getElementById(titleId);
-  if(title) title.textContent = defaultTitle;
-}
-
-/* پیش‌نمایش چندفایلی برای گالری نمونه خروجی‌ها */
-function previewMultiUpload(input, stripId) {
-  const strip = document.getElementById(stripId);
-  if(!strip) return;
-  strip.innerHTML = '';
-  if (!input.files) return;
-  Array.from(input.files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const img = document.createElement('img');
-      img.src = e.target.result;
-      img.className = 'w-11 h-11 rounded-lg object-cover border border-[var(--b2)]';
-      strip.appendChild(img);
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-/* NEW: Upload Queue System — نمایش صف فایل‌های در حال آپلود برای Uploadهای چندگانه */
-function renderUploadQueue(input, queueId) {
-  const queue = document.getElementById(queueId);
-  if (!queue) return;
-  queue.innerHTML = '';
-  if (!input.files || !input.files.length) return;
-  Array.from(input.files).forEach(file => {
-    const row = document.createElement('div');
-    row.className = 'flex items-center gap-2 bg-[var(--bg)] border border-[var(--b1)] rounded-lg px-2 py-1.5 mt-1';
-    row.innerHTML = `
-      <i class="fa-solid fa-file-image text-[10px] text-[var(--text3)] shrink-0"></i>
-      <span class="text-[10px] text-[var(--text2)] flex-1 truncate">${file.name}</span>
-      <div class="w-16 h-1 bg-[var(--b1)] rounded-full overflow-hidden shrink-0"><div class="h-full bg-[var(--green)]" style="width:100%"></div></div>
-      <span class="text-[9px] text-[var(--green)] shrink-0">آماده</span>
-    `;
-    queue.appendChild(row);
-  });
-}
-
-/* ── Drag & Drop عمومی برای Uploadها ── */
-function wireUploadZone(zoneId, inputId) {
-  const zone = document.getElementById(zoneId);
-  const input = document.getElementById(inputId);
-  if (!zone || !input) return;
-  ['dragover', 'dragenter'].forEach(evt => zone.addEventListener(evt, e => {
-    e.preventDefault(); e.stopPropagation();
-    zone.classList.add('border-[var(--accent)]');
-  }));
-  ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
-    e.preventDefault(); e.stopPropagation();
-    zone.classList.remove('border-[var(--accent)]');
-  }));
-  zone.addEventListener('drop', e => {
-    if (e.dataTransfer.files && e.dataTransfer.files.length) {
-      input.files = e.dataTransfer.files;
-      input.dispatchEvent(new Event('change'));
-    }
-  });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  ['thumb-zone', 'cover-zone', 'samples-zone'].forEach(id => wireUploadZone(id, id.replace('-zone', '-file')));
-});
-
-/* ── Radio Card نوع رسانه: هایلایت کردن کارت انتخاب‌شده ── */
-document.querySelectorAll('.media-type-card input[type="radio"]').forEach(radio => {
-  radio.addEventListener('change', () => {
-    document.querySelectorAll('.media-type-card').forEach(card => card.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/8'));
-    if (radio.checked) radio.closest('.media-type-card').classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/8');
-  });
-});
-
-/* ── NEW: انتخاب حالت پیش‌نمایش گالری (فقط UI) ── */
-function setGalleryPreviewMode(mode) {
-  document.getElementById('new-gallery-preview-mode').value = mode;
-  document.querySelectorAll('.gallery-mode-btn').forEach(btn => {
-    const active = btn.dataset.mode === mode;
-    btn.classList.toggle('border-[var(--accent)]', active);
-    btn.classList.toggle('bg-[var(--accent)]/8', active);
-    btn.classList.toggle('text-[var(--text)]', active);
-    btn.classList.toggle('border-[var(--b1)]', !active);
-    btn.classList.toggle('bg-[var(--s1)]', !active);
-    btn.classList.toggle('text-[var(--text2)]', !active);
-  });
-}
-
-/* ── دسته‌بندی محصول: انتخاب چندگانه به‌صورت تگ (جایگزین سلکت تک‌انتخابی قبلی) ──
-   لیست کامل دسته‌بندی‌ها (مسطح‌شده با عمق برای تورفتگی) و دسته‌بندی‌های از‌قبل‌انتخاب‌شده
-   (old('category_ids')/تکثیر محصول/مقدار قدیمی تک‌فیلدی) از طریق window.CATEGORIES_FLAT و
-   window.CATEGORIES_SELECTED_INIT در همین پارشیال تزریق شده‌اند. در لحظه‌ی ثبت فرم،
-   submitForm() در products-create.js این چیپ‌ها را می‌خواند و به category_ids[] تبدیل می‌کند. */
-let selectedCategories = Array.isArray(window.CATEGORIES_SELECTED_INIT) ? window.CATEGORIES_SELECTED_INIT.slice() : [];
-const ALL_CATEGORIES = Array.isArray(window.CATEGORIES_FLAT) ? window.CATEGORIES_FLAT : [];
-
-function renderCatChips() {
-  const wrap = document.getElementById('cat-tags-wrap');
-  const input = document.getElementById('cat-search-input');
-  if (!wrap || !input) return;
-  wrap.querySelectorAll('[data-cat-id]').forEach(el => el.remove());
-  selectedCategories.forEach(cat => {
-    const chip = document.createElement('span');
-    chip.className = 'inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]';
-    chip.dataset.catId = cat.id;
-    chip.innerHTML = `${cat.name}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" aria-label="حذف دسته‌بندی" onclick="removeCategory(${cat.id})">×</button>`;
-    wrap.insertBefore(chip, input);
-  });
-  if (typeof renderStepper === 'function') renderStepper();
-  if (typeof refreshFinalSummary === 'function') refreshFinalSummary();
-  if (typeof refreshProductPreview === 'function') refreshProductPreview();
-}
-
-function addCategory(id) {
-  id = parseInt(id, 10);
-  if (selectedCategories.some(c => c.id === id)) return;
-  const cat = ALL_CATEGORIES.find(c => c.id === id);
-  if (!cat) return;
-  selectedCategories.push(cat);
-  renderCatChips();
-  const input = document.getElementById('cat-search-input');
-  if (input) { input.value = ''; input.focus(); }
-  renderCatDropdown('');
-}
-
-function removeCategory(id) {
-  id = parseInt(id, 10);
-  selectedCategories = selectedCategories.filter(c => c.id !== id);
-  renderCatChips();
-}
-
-/* لیست دسته‌بندی‌های نمایش‌داده‌شده در نام‌های انتخاب‌شده (برای خلاصه/پیش‌نمایش گام پنجم) */
-function getSelectedCategoryNames() {
-  return selectedCategories.map(c => c.name).join('، ');
-}
-
-function renderCatDropdown(filter) {
-  const dd = document.getElementById('cat-dropdown');
-  if (!dd) return;
-  const f = (filter || '').trim().toLowerCase();
-  const items = ALL_CATEGORIES.filter(c => {
-    if (selectedCategories.some(s => s.id === c.id)) return false;
-    if (!f) return true;
-    return c.name.toLowerCase().indexOf(f) !== -1;
-  });
-  dd.innerHTML = '';
-  if (!items.length) {
-    dd.innerHTML = '<div class="px-3 py-3 text-[11px] text-[var(--text3)] text-center">دسته‌بندی‌ای یافت نشد</div>';
-  } else {
-    items.forEach(c => {
-      const row = document.createElement('div');
-      row.className = 'px-3 py-2 text-xs cursor-pointer transition-colors text-[var(--text2)] hover:bg-[var(--accent)]/10 hover:text-[var(--text)]';
-      row.textContent = (c.depth > 0 ? '— '.repeat(c.depth) : '') + c.name;
-      row.onclick = () => addCategory(c.id);
-      dd.appendChild(row);
-    });
-  }
-  dd.classList.remove('hidden');
-}
-
-document.addEventListener('click', function (e) {
-  const box = document.getElementById('cat-multiselect');
-  const dd = document.getElementById('cat-dropdown');
-  if (box && dd && !box.contains(e.target)) dd.classList.add('hidden');
-});
-
-document.addEventListener('DOMContentLoaded', renderCatChips);
-</script>
+@include('admin.products.partials.step-1-scripts')

@@ -1,13 +1,14 @@
 {{-- هدر مشترک موبایل اپ: هوم، اکسپلور، ترندز و پروفایل --}}
+@php $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled; @endphp
 <header class="app-mobile-header" aria-label="هدر اپلیکیشن" dir="rtl">
-  <a href="{{ url()->current() }}#top" class="app-mobile-brand" aria-label="رفتن به ابتدای همین صفحه">
+  <a href="{{ route('app.home') }}" class="app-mobile-brand" aria-label="رفتن به خانه اپ">
     <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="28" height="28">
     <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="app-mobile-wordmark">
   </a>
 
   <div class="app-mobile-actions">
       <div class="topnav-token-box app-mobile-token" title="موجودی توکن شما">
-        <svg class="topnav-token-icon" viewBox="0 0 24 24" fill="#cffe00" role="img" aria-label="توکن"><path d="M12,3 C12.7,8.3 13.7,9.3 19,10 C13.7,10.7 12.7,11.7 12,17 C11.3,11.7 10.3,10.7 5,10 C10.3,9.3 11.3,8.3 12,3 Z"/><path d="M18.5,2 C18.72,3.6 19.08,3.96 20.7,4.18 C19.08,4.4 18.72,4.76 18.5,6.36 C18.28,4.76 17.92,4.4 16.3,4.18 C17.92,3.96 18.28,3.6 18.5,2 Z"/></svg>
+        <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
         <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
       </div>
 
@@ -44,16 +45,15 @@
         @auth
           <ul>
             <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید توکن</span></button></li>
-            <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
+            @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
             <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
             <hr>
-            <li><button type="button" class="is-danger" onclick="event.preventDefault(); document.getElementById('logout-form-app-mobile').submit();"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
+            <li><button type="button" class="is-danger" onclick="window.logoutFromCurrentPage(this)"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
           </ul>
-          <form id="logout-form-app-mobile" action="{{ route('logout') }}" method="POST" class="hidden">@csrf</form>
         @else
           <ul>
-            <li><button type="button" onclick="window.location.href='{{ route('login') }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
-            <li><button type="button" onclick="window.location.href='#'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('login', ['redirect' => request()->fullUrl()]) }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
+            @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
             <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید توکن</span></button></li>
           </ul>
         @endauth
@@ -71,10 +71,10 @@
       min-height:calc(env(safe-area-inset-top, 0px) + 61px);
       padding:calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
       align-items:center; justify-content:space-between;
-      background:#000; border-bottom:1px solid rgba(255,255,255,.1);
+      background:var(--vatan-header-bg); border-bottom:1px solid var(--vatan-header-border);
       font-family:'YekanBakh',sans-serif;
     }
-    html.light .app-mobile-header { background:#fff; border-bottom-color:rgba(0,0,0,.1); }
+    html.light .app-mobile-header { background:var(--vatan-header-bg); border-bottom-color:var(--vatan-header-border); }
     .app-mobile-brand { display:flex; align-items:center; gap:6px; flex:0 0 auto; text-decoration:none; }
     .app-mobile-brand img { display:block; flex-shrink:0; }
     .app-mobile-wordmark { width:65px; height:auto; }

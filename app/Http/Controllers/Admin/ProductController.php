@@ -9,22 +9,48 @@ use App\Models\ProductPromptHistory;
 use App\Models\Category;
 use App\Models\Generation;
 use App\Models\ProductTestRun;
+use App\Models\LabExperiment;
+use App\Models\ProductCreditLog;
 use App\Services\ProductImageOptimizer;
+use App\Services\OpenRouterService;
+use App\Services\ExchangeRateService;
+use App\Support\ProviderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
-    public function __construct(private readonly ProductImageOptimizer $imageOptimizer) {}
+    public function __construct(
+        private readonly ProductImageOptimizer $imageOptimizer,
+        private readonly ExchangeRateService $exchangeRate,
+    ) {}
+
+    public function translateIdentityPrompt(Request $request, OpenRouterService $openRouter)
+    {
+        $data = $request->validate(['text' => ['required', 'string', 'max:12000']]);
+        return response()->json(['translation' => $openRouter->translateToPersian($data['text'])]);
+    }
     /**
      * نمایش لیست محصولات با جستجو، فیلترهای پیشرفته، مرتب‌سازی و صفحه‌بندی
      */
     public function index(Request $request)
     {
+        // منبع مشترک مدل‌های قابل‌انتخاب در «ثبت محصول» و «تغییر سریع لیست».
+        // لیارا: همه مدل‌های هر دو پلن؛ OpenRouter: فقط مدل‌های فعال.
+        $assignableAiModels = $this->assignableAiModels()->get();
+        $validAiModelsByProvider = $assignableAiModels
+            ->groupBy('provider')
+            ->map(fn ($models) => $models->pluck('openrouter_model_id')->filter()->values()->all())
+            ->all();
+        $validAiModelKeys = $assignableAiModels
+            ->mapWithKeys(fn (AiModel $model) => [$model->provider . '|' . $model->openrouter_model_id => true])
+            ->all();
+
         // آمار واقعی اجرا برای هر محصول از جدول generations:
         // - generations_count      : تعداد کل اجراهای همان محصول
         // - unique_users_count     : تعداد کاربران یکتایی که محصول را اجرا کرده‌اند
@@ -32,6 +58,24 @@ class ProductController extends Controller
         $query = Product::query()
             ->with('categories')
             ->withCount('generations')
+            ->withCount('labExperiments')
+            ->withCount(['labExperiments as scored_lab_experiments_count' => function ($experimentQuery) {
+                $experimentQuery
+                    ->where('status', 'completed')
+                    ->whereHas('runs', function ($runQuery) {
+                        $runQuery
+                            ->where('status', 'completed')
+                            ->whereHas('outputs', function ($outputQuery) {
+                                $outputQuery->where(function ($scoreQuery) {
+                                    $scoreQuery
+                                        ->whereNotNull('manual_score')
+                                        ->orWhereHas('scores');
+                                });
+                            });
+                    });
+            }])
+            ->withCount(['testRuns as legacy_test_runs_count'])
+            ->withCount('likedByUsers')
             ->addSelect([
                 'unique_users_count' => Generation::selectRaw('count(distinct user_id)')
                     ->whereColumn('generations.product_id', 'products.id'),
@@ -67,6 +111,12 @@ class ProductController extends Controller
         if ($aiModel = $request->get('ai_model')) {
             $query->where('primary_model', $aiModel);
         }
+        if ($aiProvider = $request->get('ai_provider')) {
+            $query->where('ai_provider', $aiProvider);
+        }
+        if ($aiStatus = $request->get('ai_status')) {
+            $this->applyAiModelStatusFilter($query, $aiStatus, $validAiModelsByProvider);
+        }
         if ($pricingModel = $request->get('pricing_model')) {
             if ($pricingModel === 'paid') {
                 $query->where('pricing_model', '!=', 'free');
@@ -74,6 +124,14 @@ class ProductController extends Controller
                 $query->where('pricing_model', $pricingModel);
             }
         }
+        if ($request->filled('model_cost_min') || $request->filled('model_cost_max')) {
+            $modelsByCost = AiModel::query();
+            if ($request->filled('model_cost_min')) $modelsByCost->where('cost_per_generation_usd', '>=', (float) $request->input('model_cost_min'));
+            if ($request->filled('model_cost_max')) $modelsByCost->where('cost_per_generation_usd', '<=', (float) $request->input('model_cost_max'));
+            $query->whereIn('primary_model', $modelsByCost->pluck('openrouter_model_id')->all() ?: ['__no_matching_model__']);
+        }
+        if ($request->filled('credit_min')) $query->where('credit_cost', '>=', (int) $request->input('credit_min'));
+        if ($request->filled('credit_max')) $query->where('credit_cost', '<=', (int) $request->input('credit_max'));
         if ($request->filled('featured'))  $query->where('is_featured', true);
         if ($request->filled('is_new'))    $query->where('is_new', true);
         if ($request->filled('trending'))  $query->where('is_trending', true);
@@ -89,6 +147,8 @@ class ProductController extends Controller
             // مرتب‌سازی واقعی بر اساس آمار اجرا (ستون محاسبه‌شده‌ی withCount بالا)
             case 'most_used':  $query->orderByDesc('generations_count')->latest(); break;
             case 'least_used': $query->orderBy('generations_count')->latest(); break;
+            case 'most_liked': $query->orderByRaw('(base_likes_count + (select count(*) from liked_products where liked_products.product_id = products.id)) desc')->latest(); break;
+            case 'least_liked': $query->orderByRaw('(base_likes_count + (select count(*) from liked_products where liked_products.product_id = products.id)) asc')->latest(); break;
             case 'newest':
             default:           $query->latest(); break;
         }
@@ -122,10 +182,12 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
         $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
 
+        $exchange = $this->exchangeRate->usdToIrr();
         return view('admin.products.index', compact(
             'products', 'activeCount', 'draftCount', 'inactiveCount',
             'totalRuns', 'maxRuns', 'topProduct',
-            'aiModels', 'categories', 'recentlyEdited'
+            'aiModels', 'assignableAiModels', 'validAiModelKeys', 'categories', 'recentlyEdited',
+            'exchange'
         ));
     }
 
@@ -139,7 +201,19 @@ class ProductController extends Controller
      */
     public function create(Request $request, ?Product $product = null)
     {
-        $aiModels = AiModel::where('is_active', true)->latest()->get();
+        // فقط مدل‌های providerهای روشن نمایش داده می‌شوند؛ برای لیارا همه
+        // مدل‌ها (از جمله مدل‌های پلن دوم) و برای OpenRouter مدل‌های فعال.
+        // طوری که وقتی
+        // OpenRouter از پنل ادمین خاموش شده باشد، هیچ‌کدام از مدل‌های آن
+        // در فرم ثبت/ویرایش محصول به کاربر نمایش داده نشود (مدل‌ها حذف
+        // نمی‌شوند، فقط از UI مخفی می‌شوند تا هر لحظه با روشن‌کردن provider
+        // دوباره ظاهر گردند).
+        $aiModels = AiModel::whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
+            ->where(function ($query) {
+                $query->where('provider', 'liara')
+                    ->orWhere('is_active', true);
+            })
+            ->latest()->get();
 
         $duplicateFrom = null;
         if ($request->filled('duplicate')) {
@@ -165,7 +239,9 @@ class ProductController extends Controller
             $request->session()->now('_old_input', $productData);
         }
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product'));
+        $suggestedLikesCount = random_int(120, 250);
+
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount'));
     }
 
     /**
@@ -174,27 +250,52 @@ class ProductController extends Controller
    public function store(Request $request)
     {
         $this->mergeInputSchemaJson($request);
+        if (!$request->boolean('special_features_enabled')) {
+            $request->merge(['input_schema' => []]);
+        }
 
-        // ۱. ولیدیشن کاملاً آزاد و منعطف برای تست سریع
+        $isPublishing = $request->input('status') === 'active';
+
+        // پیش‌نویس می‌تواند ناقص بماند؛ انتشار فقط با تکمیل موارد حیاتی مجاز است.
         $validated = $request->validate([
-            'name_fa' => 'nullable|string|max:255',
-            'name_en' => 'nullable|string|max:255',
-            'slug' => 'nullable|string|max:255',
+            'name_fa' => [Rule::requiredIf($isPublishing), 'nullable', 'string', 'max:255'],
+            'name_en' => [Rule::requiredIf($isPublishing), 'nullable', 'string', 'max:255'],
+            'slug' => [Rule::requiredIf($isPublishing), 'nullable', 'string', 'max:255'],
             'category_id' => 'nullable|integer',
-            'category_ids' => 'nullable|array',
+            'category_ids' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1'],
             'category_ids.*' => 'integer|exists:categories,id',
+            'primary_model' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
+            'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'fallback_providers' => 'nullable|array',
+            'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
+            'fallback_models' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:5'],
+            'fallback_models.*' => ['string'],
+            'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
+            'identity_preservation' => ['required', 'boolean'],
+            'identity_model' => ['nullable', 'string'],
+            'identity_model_provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'identity_credit_cost' => ['nullable', 'integer', 'min:0'],
+            'identity_instructions' => ['nullable', 'string'],
+            'identity_instructions_fa' => ['nullable', 'string'],
+            'min_reference_images' => ['nullable', 'integer', 'min:0', 'max:3'],
+            'max_reference_images' => ['nullable', 'integer', 'min:1', 'max:3'],
+            'pricing_model' => 'nullable|in:free,per_credit,subscription',
+            'credit_cost' => [Rule::requiredIf($isPublishing), 'nullable', 'integer', 'min:1'],
+            'status' => 'nullable|in:active,draft,inactive',
             'description_fa' => 'nullable|string',
             'description_en' => 'nullable|string',
+            'base_likes_count' => 'nullable|integer|min:0|max:999999999',
             'new_min_credit_required' => 'nullable|integer|min:0',
             'new_max_run_per_user' => 'nullable|integer|min:1',
             'new_price_custom_label' => 'nullable|string|max:100',
-            'main_images' => 'nullable|array|max:20',
+            'main_images' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:20'],
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'skip_image_optimization' => 'nullable|boolean',
             ...$this->inputSchemaRules(),
         ]);
+        $this->validateAiProviderSelection($request);
 
         // ۲. ساخت یک نمونه جدید از مدل (برای دور زدن محدودیت fillable دیتابیس)
         $product = new Product();
@@ -215,6 +316,9 @@ class ProductController extends Controller
         // ۳.۰.۱ کد ۶ رقمی یکتای محصول — همان کدی که در لینک عمومی محصول و ستون «کد محصول»
         // لیست ادمین استفاده می‌شود؛ برای هر محصول جدید همین‌جا ساخته می‌شود.
         $product->product_code = Product::generateUniqueProductCode();
+        $product->base_likes_count = $request->filled('base_likes_count')
+            ? max(0, (int) $request->input('base_likes_count'))
+            : random_int(120, 250);
 
         // ۳.۱ توضیحات فارسی/انگلیسی محصول (متن کامل نمایش داده‌شده در صفحه محصول)
         // نکته مهم: این دو خط عمداً اضافه شده‌اند — پیش‌تر در این متد اصلاً ذخیره نمی‌شدند
@@ -262,8 +366,18 @@ class ProductController extends Controller
         }
 
         // ۶. فیلدهای سیستمی و هوش مصنوعی
-        $product->primary_model = $request->input('primary_model') ?? AiModel::first()?->openrouter_model_id ?? 'stabilityai/stable-diffusion-3';
+        // اگر ادمین مدلی انتخاب نکرده باشد، به‌جای اولین مدل ثبت‌شده در سیستم
+        // (که ممکن است متعلق به providerِ خاموش‌شده باشد) اولین مدل فعال از
+        // یک provider روشن انتخاب می‌شود.
+        $selectedModel = $this->selectedAiModel($request);
+        $fallbackModel = $selectedModel ?: AiModel::where('is_active', true)
+                ->whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
+                ->first();
+        $product->primary_model = $fallbackModel?->openrouter_model_id
+            ?? 'stabilityai/stable-diffusion-3';
+        $product->ai_provider = $fallbackModel?->provider ?? 'openrouter';
         $product->fallback_models = $request->input('fallback_models', []);
+        $product->fallback_model_providers = $request->input('fallback_providers', []);
         $product->prompt_template = $request->input('prompt_template') ?? 'A high tech digital art illustration of {prompt}';
         $product->input_schema = $validated['input_schema'] ?? [];
         $product->timeout = $request->input('timeout') ?? 60;
@@ -278,12 +392,18 @@ class ProductController extends Controller
 
         // ۶.۲ نوع سوژه و حفظ هویت (چهره/هیکل)
         $product->subject_type          = $request->input('subject_type') ?? 'generic';
-        $product->identity_preservation = $request->has('identity_preservation');
+        $product->identity_preservation = $request->boolean('identity_preservation');
         $product->identity_strength     = $request->input('identity_strength') ?? 80;
         $product->preserve_body         = $request->has('preserve_body');
-        $product->identity_instructions = $request->input('identity_instructions');
-        $product->min_reference_images  = $request->input('min_reference_images') ?? 0;
-        $product->max_reference_images  = $request->input('max_reference_images') ?? 1;
+        $product->identity_instructions = $request->input('identity_instructions')
+            ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructions();
+        $product->identity_instructions_fa = $request->input('identity_instructions_fa')
+            ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructionsFa();
+        $product->identity_model        = $request->input('identity_model');
+        $product->identity_model_provider = $request->input('identity_model_provider');
+        $product->identity_credit_cost  = max(0, (int) $request->input('identity_credit_cost', 0));
+        $product->min_reference_images  = min(3, max(0, (int) $request->input('min_reference_images', 1)));
+        $product->max_reference_images  = min(3, max(1, (int) $request->input('max_reference_images', 3)));
 
         // ۶.۳ سئو
         $product->meta_title       = $request->input('meta_title');
@@ -320,6 +440,8 @@ class ProductController extends Controller
         $product->card_shape = $request->input('card_shape') ?? 'portrait';
         $product->gallery_layout = $request->input('gallery_layout') ?? 'grid';
         $product->card_label = $request->input('card_label');
+        $product->card_label_enabled = $request->boolean('card_label_enabled');
+        $product->card_label_position = $request->input('card_label_position', 'top-right');
         $product->output_type = $request->input('output_type') ?? 'image';
         $product->output_format = $request->input('output_format') ?? 'jpg';
         $product->output_count = $request->input('output_count') ?? 1;
@@ -348,20 +470,28 @@ class ProductController extends Controller
         $product->new_max_run_per_user = $request->input('new_max_run_per_user');
         $product->new_price_custom_label = $request->input('new_price_custom_label');
 
-        // ۱۰. ذخیره نهایی در دیتابیس
-        $product->save();
-        $this->attachDraftTests($request, $product);
-
-        if (!empty($categoryIds)) {
-            $product->categories()->sync($categoryIds);
-        }
+        // ۱۰. ذخیره نهایی به‌صورت اتمیک: محصول، دسته‌بندی‌ها و تست‌ها یا همگی
+        // ثبت می‌شوند یا در صورت هر خطا همگی rollback می‌شوند؛ محصول نیمه‌کاره
+        // در دیتابیس باقی نمی‌ماند و محصولات قبلی نیز دست‌نخورده می‌مانند.
+        DB::transaction(function () use ($product, $request, $categoryIds) {
+            $product->save();
+            if (!empty($categoryIds)) {
+                $product->categories()->sync($categoryIds);
+            }
+            $this->attachDraftTests($request, $product);
+        });
 
         if ($request->expectsJson()) {
+            session()->flash('success', $isPublishing ? 'محصول با موفقیت ثبت و منتشر شد.' : 'پیش‌نویس محصول با موفقیت ذخیره شد.');
             return response()->json([
                 'ok' => true,
-                'redirect' => route('admin.products'),
-                'message' => 'محصول جدید با موفقیت ثبت شد.',
+                'redirect' => $request->boolean('open_lab_after_save') ? route('admin.lab.create', ['product_id' => $product->id]) : route('admin.products'),
+                'message' => $isPublishing ? 'محصول با موفقیت ثبت و منتشر شد.' : 'پیش‌نویس محصول با موفقیت ذخیره شد.',
             ]);
+        }
+
+        if ($request->boolean('open_lab_after_save')) {
+            return redirect()->route('admin.lab.create', ['product_id' => $product->id])->with('success', 'محصول ذخیره شد؛ حالا تصاویر و مدل‌های آزمایش را انتخاب کنید.');
         }
 
         return redirect()->route('admin.products')->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
@@ -372,7 +502,19 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        $aiModels = AiModel::where('is_active', true)->latest()->get();
+        // فقط مدل‌های providerهای روشن نمایش داده می‌شوند؛ برای لیارا همه
+        // مدل‌ها (از جمله مدل‌های پلن دوم) و برای OpenRouter مدل‌های فعال.
+        // طوری که وقتی
+        // OpenRouter از پنل ادمین خاموش شده باشد، هیچ‌کدام از مدل‌های آن
+        // در فرم ثبت/ویرایش محصول به کاربر نمایش داده نشود (مدل‌ها حذف
+        // نمی‌شوند، فقط از UI مخفی می‌شوند تا هر لحظه با روشن‌کردن provider
+        // دوباره ظاهر گردند).
+        $aiModels = AiModel::whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
+            ->where(function ($query) {
+                $query->where('provider', 'liara')
+                    ->orWhere('is_active', true);
+            })
+            ->latest()->get();
         return view('admin.products.edit', compact('product', 'aiModels'));
     }
 
@@ -382,27 +524,42 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $this->mergeInputSchemaJson($request);
+        if (!$request->boolean('special_features_enabled')) {
+            $request->merge(['input_schema' => []]);
+        }
+        $isPublishing = $request->input('status') === 'active';
 
         $validated = $request->validate([
             'name_fa' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug,' . $product->id,
             'category_id' => 'nullable|integer',
-            'category_ids' => 'nullable|array',
+            'category_ids' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1'],
             'category_ids.*' => 'integer|exists:categories,id',
-            'primary_model' => 'nullable|string',
-            'prompt_template' => 'nullable|string',
+            'primary_model' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
+            'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'fallback_providers' => 'nullable|array',
+            'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
+            'fallback_models' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:5'],
+            'fallback_models.*' => ['string'],
+            'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
             'system_prompt' => 'nullable|string',
             'negative_prompt' => 'nullable|string',
             'seed' => 'nullable|integer',
             'provider_options' => 'nullable|string',
             'subject_type' => 'nullable|in:generic,face,body,product,scene',
+            'identity_preservation' => ['required', 'boolean'],
+            'identity_model' => ['nullable', 'string'],
+            'identity_model_provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'identity_credit_cost' => ['nullable', 'integer', 'min:0'],
             'identity_strength' => 'nullable|integer|min:0|max:100',
             'identity_instructions' => 'nullable|string',
-            'min_reference_images' => 'nullable|integer|min:0|max:20',
-            'max_reference_images' => 'nullable|integer|min:0|max:20',
+            'identity_instructions_fa' => 'nullable|string',
+            'min_reference_images' => 'nullable|integer|min:0|max:3',
+            'max_reference_images' => 'nullable|integer|min:1|max:3',
             'description_fa' => 'nullable|string',
             'description_en' => 'nullable|string',
+            'base_likes_count' => 'nullable|integer|min:0|max:999999999',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:300',
             'meta_keywords' => 'nullable|string|max:255',
@@ -410,7 +567,7 @@ class ProductController extends Controller
             'explore_tiles' => 'nullable|array',
             'explore_tiles.*' => 'in:1x1,2x2,1x2,2x1',
             'status' => 'nullable|in:active,draft,inactive',
-            'main_images' => 'nullable|array|max:20',
+            'main_images' => [Rule::requiredIf($isPublishing && !$product->cover), 'nullable', 'array', 'min:1', 'max:20'],
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
@@ -421,11 +578,13 @@ class ProductController extends Controller
             'timeout' => 'nullable|integer',
             'watermark_position' => 'nullable|string',
             'pricing_model' => 'nullable|in:free,per_credit,subscription',
-            'credit_cost' => 'nullable|integer',
+            'credit_cost' => [Rule::requiredIf($isPublishing), 'nullable', 'integer', 'min:1'],
             'display_mode' => 'nullable|string',
             'card_shape' => 'nullable|string',
             'gallery_layout' => 'nullable|string',
             'card_label' => 'nullable|string|max:100',
+            'card_label_enabled' => 'nullable|boolean',
+            'card_label_position' => 'nullable|in:top-right,top-left,bottom-right,bottom-left',
             'new_display_order' => 'nullable|integer',
             'new_internal_code' => 'nullable|string|max:100',
             'new_admin_note' => 'nullable|string',
@@ -442,6 +601,7 @@ class ProductController extends Controller
             'new_price_custom_label' => 'nullable|string|max:100',
             ...$this->inputSchemaRules(),
         ]);
+        $this->validateAiProviderSelection($request);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // محافظ حیاتی در برابر خالی‌شدن ناخواسته‌ی فیلدها (Phantom-Null Guard):
@@ -457,6 +617,13 @@ class ProductController extends Controller
         // دوباره مقداردهی می‌شوند (is_featured, category, thumbnail و غیره) از این فیلتر تأثیر
         // نمی‌پذیرند چون بعداً به‌صورت مستقیم روی $validated بازنویسی می‌شوند.
         $validated = array_intersect_key($validated, $request->all());
+
+        // مقدار ذخیره‌شده دقیقاً از همان رکورد مرکب provider + model گرفته
+        // می‌شود؛ نه از اولین رکوردی که فقط شناسه مدل یکسان دارد.
+        if ($selectedModel = $this->selectedAiModel($request)) {
+            $validated['primary_model'] = $selectedModel->openrouter_model_id;
+            $validated['ai_provider'] = $selectedModel->provider;
+        }
 
         // نرمال‌سازی فیلدهای NOT NULL: فرم گاهی این فیلدها را خالی می‌فرستد،
         // قانون nullable|integer آن را به null تبدیل می‌کند و چون ستون در دیتابیس
@@ -531,14 +698,19 @@ class ProductController extends Controller
         $validated['is_new'] = $request->has('is_new');
         $validated['is_trending'] = $request->has('is_trending');
         $validated['watermark_enabled'] = $request->has('watermark_enabled');
-        $validated['new_is_premium'] = $request->has('new_is_premium');
-        $validated['new_is_recommended'] = $request->has('new_is_recommended');
-        $validated['new_is_beta'] = $request->has('new_is_beta');
+        $validated['card_label_enabled'] = $request->has('card_label_enabled');
         $validated['new_show_free_badge'] = $request->has('new_show_free_badge');
 
         // حفظ هویت — چک‌باکس‌ها و provider_options
-        $validated['identity_preservation'] = $request->has('identity_preservation');
+        $validated['identity_preservation'] = $request->boolean('identity_preservation');
         $validated['preserve_body'] = $request->has('preserve_body');
+        $validated['identity_credit_cost'] = max(0, (int) $request->input('identity_credit_cost', 0));
+        $validated['min_reference_images'] = min(3, max(0, (int) $request->input('min_reference_images', 1)));
+        $validated['max_reference_images'] = min(3, max(1, (int) $request->input('max_reference_images', 3)));
+        $validated['identity_instructions'] = $request->input('identity_instructions')
+            ?: ($product->identity_instructions ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructions());
+        $validated['identity_instructions_fa'] = $request->input('identity_instructions_fa')
+            ?: ($product->identity_instructions_fa ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructionsFa());
         $providerOptionsRaw = $request->input('provider_options');
         $validated['provider_options'] = $providerOptionsRaw ? (json_decode($providerOptionsRaw, true) ?: null) : null;
         $validated['seed'] = $request->filled('seed') ? (int) $request->input('seed') : null;
@@ -548,6 +720,7 @@ class ProductController extends Controller
         // مدل‌های جایگزین و فیلدهای ورودی پویا — قبلاً اصلاً در به‌روزرسانی مقداردهی نمی‌شدند
         // (فقط در store() ثبت می‌شدند)، در نتیجه ویرایش این دو مورد هیچ‌وقت واقعاً ذخیره نمی‌شد
         $validated['fallback_models'] = $request->input('fallback_models', []);
+        $validated['fallback_model_providers'] = $request->input('fallback_providers', []);
         $validated['input_schema'] = $validated['input_schema'] ?? [];
         $validated['allowed_aspect_ratios'] = $this->aspectRatiosFromSchema(
             $validated['input_schema'],
@@ -575,6 +748,7 @@ class ProductController extends Controller
         }
 
         if ($request->expectsJson()) {
+            session()->flash('success', $request->input('status') === 'draft' ? 'تغییرات محصول به‌صورت پیش‌نویس ذخیره شد.' : 'تغییرات محصول با موفقیت ثبت شد.');
             return response()->json([
                 'ok' => true,
                 'redirect' => route('admin.products'),
@@ -711,6 +885,7 @@ class ProductController extends Controller
         }
         $clone->slug = $slug;
         $clone->product_code = Product::generateUniqueProductCode();
+        $clone->base_likes_count = random_int(120, 250);
         $clone->status = 'draft';
         $clone->save();
 
@@ -725,6 +900,101 @@ class ProductController extends Controller
         return request()->wantsJson() 
             ? response()->json(['status' => $product->status]) 
             : redirect()->route('admin.products');
+    }
+
+    /**
+     * ویرایش سریع هزینه کردیت از منوی همان ردیف در لیست محصولات.
+     */
+    public function updateCredit(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'credit_cost' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        [$product, $log] = DB::transaction(function () use ($request, $product, $validated) {
+            $lockedProduct = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $before = (int) $lockedProduct->credit_cost;
+            $after = (int) $validated['credit_cost'];
+
+            $lockedProduct->forceFill([
+                'credit_cost' => $after,
+                'pricing_model' => $after === 0 ? 'free' : 'per_credit',
+            ])->save();
+
+            $log = ProductCreditLog::create([
+                'product_id' => $lockedProduct->id,
+                'admin_id' => $request->user('admin')?->id,
+                'action' => 'set',
+                'amount' => $after,
+                'credit_before' => $before,
+                'credit_after' => $after,
+                'note' => $validated['note'] ?? null,
+                'ip_address' => $request->ip(),
+                'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+            ]);
+
+            return [$lockedProduct, $log];
+        });
+
+        return response()->json([
+            'ok' => true,
+            'credit_cost' => $product->credit_cost,
+            'pricing_model' => $product->pricing_model,
+            'message' => 'کردیت محصول با موفقیت تغییر کرد و در تاریخچه ثبت شد.',
+            'log' => [
+                'id' => $log->id,
+                'credit_before' => $log->credit_before,
+                'credit_after' => $log->credit_after,
+                'admin' => $request->user('admin')?->name,
+                'created_at' => $log->created_at?->toDateTimeString(),
+            ],
+        ]);
+    }
+
+    /** تغییر سریع مدل اصلی یک محصول، مستقل از فرم چندمرحله‌ای ثبت محصول. */
+    public function updateAiModel(Request $request, Product $product)
+    {
+        $model = $this->validateAssignableAiModel($request);
+
+        $product->forceFill([
+            'primary_model' => $model->openrouter_model_id,
+            'ai_provider' => $model->provider,
+        ])->save();
+
+        return response()->json([
+            'ok' => true,
+            'product_id' => $product->id,
+            'provider' => $model->provider,
+            'model_id' => $model->openrouter_model_id,
+            'model_name' => $model->shortDisplayName(),
+            'message' => 'مدل هوش مصنوعی محصول ذخیره شد.',
+        ]);
+    }
+
+    /** تغییر مدل اصلی چند محصول انتخاب‌شده، بدون تغییر سایر تنظیمات AI آن‌ها. */
+    public function bulkUpdateAiModel(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
+        $model = $this->validateAssignableAiModel($request);
+
+        $updated = Product::whereIn('id', $validated['ids'])->update([
+            'primary_model' => $model->openrouter_model_id,
+            'ai_provider' => $model->provider,
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated,
+            'provider' => $model->provider,
+            'model_id' => $model->openrouter_model_id,
+            'model_name' => $model->shortDisplayName(),
+            'message' => "مدل هوش مصنوعی {$updated} محصول تغییر کرد.",
+        ]);
     }
 
     public function bulkAction(Request $request)
@@ -877,6 +1147,139 @@ class ProductController extends Controller
             }
         }
         return $copies;
+    }
+
+    /**
+     * شناسه مدل ممکن است بین Liara و OpenRouter یکسان باشد؛ بنابراین علاوه
+     * بر شناسه، تعلق مدل به provider انتخاب‌شده را هم در سمت سرور قطعی می‌کنیم.
+     */
+    private function validateAiProviderSelection(Request $request): void
+    {
+        $provider = $request->input('ai_provider');
+        $primaryModel = $request->input('primary_model');
+
+        if (!$provider || !$primaryModel) {
+            return;
+        }
+
+        $primaryIsValid = AiModel::query()
+            ->where('provider', $provider)
+            ->where('openrouter_model_id', $primaryModel)
+            ->when($provider !== 'liara', fn ($query) => $query->where('is_active', true))
+            ->exists();
+
+        $fallbacks = array_values(array_filter((array) $request->input('fallback_models', [])));
+        $fallbackProviders = array_values((array) $request->input('fallback_providers', []));
+        $fallbacksAreValid = count($fallbacks) === count($fallbackProviders);
+        foreach ($fallbacks as $index => $fallbackModel) {
+            $fallbackProvider = $fallbackProviders[$index] ?? null;
+            if (!$fallbackProvider || !ProviderStatus::isEnabled($fallbackProvider) || !AiModel::query()
+                ->where('provider', $fallbackProvider)
+                ->where('openrouter_model_id', $fallbackModel)
+                ->when($fallbackProvider !== 'liara', fn ($query) => $query->where('is_active', true))
+                ->exists()) {
+                $fallbacksAreValid = false;
+                break;
+            }
+        }
+
+        $hasPrimaryAsFallback = collect($fallbacks)->contains(function ($fallbackModel, $index) use ($primaryModel, $provider, $fallbackProviders) {
+            return $fallbackModel === $primaryModel && ($fallbackProviders[$index] ?? null) === $provider;
+        });
+        if (count($fallbacks) < 1 || count($fallbacks) > 5 || $hasPrimaryAsFallback) {
+            $fallbacksAreValid = false;
+        }
+
+        if (!$primaryIsValid || !$fallbacksAreValid) {
+            throw ValidationException::withMessages([
+                'primary_model' => 'مدل اصلی باید متعلق به سرویس انتخاب‌شده باشد و تمام مدل‌های جایگزین باید فعال باشند.',
+            ]);
+        }
+    }
+
+    /**
+     * مدل اصلی را با کلید مرکب provider + model id برمی‌گرداند.
+     * شناسه مدل به‌تنهایی یکتا نیست و ممکن است در Liara و OpenRouter مشترک باشد.
+     */
+    private function selectedAiModel(Request $request): ?AiModel
+    {
+        $provider = (string) $request->input('ai_provider');
+        $modelId = (string) $request->input('primary_model');
+
+        if ($provider === '' || $modelId === '') {
+            return null;
+        }
+
+        return AiModel::query()
+            ->where('provider', $provider)
+            ->where('openrouter_model_id', $modelId)
+            ->first();
+    }
+
+    /** Query واحد مدل‌های مجاز برای ثبت محصول و تغییر سریع از لیست. */
+    private function assignableAiModels()
+    {
+        return AiModel::query()
+            ->whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
+            ->where(function ($query) {
+                $query->where('provider', 'liara')->orWhere('is_active', true);
+            })
+            ->orderBy('provider')
+            ->orderBy('name');
+    }
+
+    private function validateAssignableAiModel(Request $request): AiModel
+    {
+        $validated = $request->validate([
+            'ai_provider' => ['required', Rule::in(ProviderStatus::PROVIDERS)],
+            'primary_model' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (!ProviderStatus::isEnabled($validated['ai_provider'])) {
+            throw ValidationException::withMessages([
+                'ai_provider' => 'سرویس انتخاب‌شده در حال حاضر خاموش است.',
+            ]);
+        }
+
+        $model = $this->assignableAiModels()
+            ->where('provider', $validated['ai_provider'])
+            ->where('openrouter_model_id', $validated['primary_model'])
+            ->first();
+
+        if (!$model) {
+            throw ValidationException::withMessages([
+                'primary_model' => 'مدل انتخاب‌شده معتبر یا قابل استفاده نیست.',
+            ]);
+        }
+
+        return $model;
+    }
+
+    private function applyAiModelStatusFilter($query, string $status, array $validModelsByProvider): void
+    {
+        $validCondition = function ($validQuery) use ($validModelsByProvider) {
+            foreach ($validModelsByProvider as $provider => $modelIds) {
+                $validQuery->orWhere(function ($providerQuery) use ($provider, $modelIds) {
+                    $providerQuery->where('ai_provider', $provider)
+                        ->whereIn('primary_model', $modelIds ?: ['__none__']);
+                });
+            }
+        };
+
+        if ($status === 'valid') {
+            $query->where($validCondition);
+        } elseif ($status === 'unassigned') {
+            $query->where(function ($missing) {
+                $missing->whereNull('primary_model')->orWhere('primary_model', '')
+                    ->orWhereNull('ai_provider')->orWhere('ai_provider', '');
+            });
+        } elseif ($status === 'invalid') {
+            $query->where(function ($invalid) use ($validCondition) {
+                $invalid->whereNull('primary_model')->orWhere('primary_model', '')
+                    ->orWhereNull('ai_provider')->orWhere('ai_provider', '')
+                    ->orWhereNot($validCondition);
+            });
+        }
     }
 
     private function storeOptimizedImages(array $files, string $directory, bool $skipOptimization = false): array

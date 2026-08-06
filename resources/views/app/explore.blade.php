@@ -7,10 +7,6 @@
   <section class="trends-header">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <h1 class="trends-title">ترندز</h1>
-      <span class="trends-live-badge">
-        <span class="trends-live-dot"></span>
-        زنده
-      </span>
     </div>
 
     {{-- سرچ --}}
@@ -71,13 +67,13 @@
 
 @push('styles')
 <style>
-  html, body { background: #000000; overflow-x: hidden; }
-  html.light, html.light body { background: #ffffff; }
+  html, body { background: var(--vatan-bg-page); overflow-x: hidden; }
+  html.light, html.light body { background: var(--vatan-bg-page); }
 
   .trends-page {
     width: 100%; max-width: 480px;
     margin: 0 auto;
-    background: var(--bg, #000000);
+    background: var(--bg, var(--vatan-bg-page));
     min-height: 100vh;
     padding-bottom: 120px;
   }
@@ -92,23 +88,6 @@
     margin: 0;
   }
 
-  .trends-live-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(233,30,140,0.15);
-    border: 1px solid rgba(233,30,140,0.35);
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 12px; font-weight: 700; color: #e91e8c;
-  }
-  .trends-live-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #e91e8c;
-    animation: livePulse 1.4s infinite;
-  }
-  @keyframes livePulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.7); }
-  }
 
   .trends-search-wrap { margin-bottom: 12px; }
   .trends-search-box {

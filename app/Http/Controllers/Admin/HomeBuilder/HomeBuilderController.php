@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin\HomeBuilder;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\HomeBuilder\StoreHomeSectionRequest;
 use App\Http\Requests\HomeBuilder\UpdateHomeSectionRequest;
+use App\Http\Requests\HomeBuilder\PreviewHomeSectionRequest;
 use App\Models\Category;
 use App\Models\HomeSection;
 use App\Models\Product;
+use App\Services\HomeBuilder\HomeSectionPreviewService;
 use Illuminate\Http\Request;
 
 /**
@@ -59,6 +61,36 @@ class HomeBuilderController extends Controller
             'categories' => $categories,
             'typeRegistry' => config('home_builder.types'),
             'statuses' => config('home_builder.statuses'),
+        ]);
+    }
+
+    public function preview(PreviewHomeSectionRequest $request, HomeSectionPreviewService $previewService)
+    {
+        return response()->view('admin.home-builder.preview', [
+            'item' => $previewService->make($request->validated()),
+        ]);
+    }
+
+    /** گالری مرجع تمام مدل‌های سکشن برای مدیران و طراحان سایت. */
+    public function showcase()
+    {
+        return view('admin.home-builder.showcase', [
+            'typeRegistry' => config('home_builder.types'),
+        ]);
+    }
+
+    public function showcasePreview(string $type, string $layout, HomeSectionPreviewService $previewService)
+    {
+        $layouts = (array) config("home_builder.types.{$type}.layouts", []);
+        abort_unless(array_key_exists($layout, $layouts), 404);
+
+        return response()->view('admin.home-builder.preview', [
+            'item' => $previewService->make([
+                'type' => $type,
+                'layout' => $layout,
+                'settings' => [],
+                'responsive' => [],
+            ]),
         ]);
     }
 

@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import '@fortawesome/fontawesome-free/css/all.min.css';
-@import '../../node_modules/@fortawesome/fontawesome-free/css/all.min.css';
 @source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
 @source "../../storage/framework/views/*.php";
 @source "../**/*.blade.php";
@@ -11,7 +10,7 @@
     --font-vazir: "Vazirmatn", "YekanBakh", sans-serif;
     --font-sans: "Vazirmatn", "YekanBakh", ui-sans-serif, system-ui, sans-serif;
 
-    --bg: #0c0c10;
+    --bg: var(--vatan-bg-page);
     --s1: #111116;
     --s2: #16161c;
     --b1: #222230;
@@ -25,7 +24,7 @@
    تغییر تم با کلاس .light روی <html> انجام می‌شه (نه data-theme).
 ═══════════════════════════════════════ */
 :root {
-  --bg-page:          #0c0c10;
+  --bg-page:          var(--vatan-bg-page);
   --bg-surface:       #111116;
   --bg-card:          #16161c;
   --text-primary:     #ffffff;
@@ -38,7 +37,7 @@
   --orange:           #f5923a;
 }
 html.light {
-  --bg-page:          #ffffff;
+  --bg-page:          var(--vatan-bg-page);
   --bg-surface:       #f5f5f5;
   --bg-card:          #ffffff;
   --text-primary:     #0c0c10;
@@ -61,6 +60,8 @@ html.light {
 :root {
   --page-max:    1400px;
   --page-margin: clamp(24px, 5vw, 96px);
+  /* خط مشترک هدر و محتوای صفحه هوم در دسکتاپ بزرگ: تقریباً ۴ سانتی‌متر */
+  --home-desktop-grid-gutter: 151px;
 }
 .page-container {
   width: 100%;

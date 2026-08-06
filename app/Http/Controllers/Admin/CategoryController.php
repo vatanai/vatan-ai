@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,11 +19,17 @@ class CategoryController extends Controller
     {
         // یک محصول ممکن است هم از ستون قدیمی category_id و هم از جدول چنددسته‌ای متصل شده باشد.
         // UNION باعث می‌شود هر اتصال محصول/دسته فقط یک‌بار در آمار شمرده شود.
-        $productCounts = DB::query()
+        $productStats = DB::query()
             ->fromSub($this->categoryProductPairs(), 'category_products')
-            ->selectRaw('category_id, COUNT(*) as aggregate')
-            ->groupBy('category_id')
-            ->pluck('aggregate', 'category_id');
+            ->join('products', 'products.id', '=', 'category_products.product_id')
+            ->selectRaw('category_products.category_id, COUNT(DISTINCT category_products.product_id) as products_count, MAX(products.created_at) as last_product_at')
+            ->groupBy('category_products.category_id')
+            ->get()
+            ->keyBy('category_id');
+
+        $productCounts = $productStats->mapWithKeys(fn ($stat, $categoryId) => [
+            $categoryId => (int) $stat->products_count,
+        ]);
 
         $usageCounts = DB::query()
             ->fromSub($this->categoryProductPairs(), 'category_products')
@@ -48,20 +55,26 @@ class CategoryController extends Controller
         if ($request->input('type') === 'child') $query->whereNotNull('parent_id');
         if ($request->input('type') === 'featured') $query->where('is_featured', true);
 
-        $allFiltered = $query->get()->each(function (Category $category) use ($productCounts, $usageCounts) {
-            $category->setAttribute('products_count', (int) ($productCounts[$category->id] ?? 0));
+        $allFiltered = $query->get()->each(function (Category $category) use ($productStats, $usageCounts) {
+            $stat = $productStats->get($category->id);
+            $category->setAttribute('products_count', (int) ($stat?->products_count ?? 0));
+            $category->setAttribute('last_product_at', $stat?->last_product_at ? Carbon::parse($stat->last_product_at) : null);
             $category->setAttribute('usage_count', (int) ($usageCounts[$category->id] ?? 0));
         });
 
         if ($request->input('content') === 'active') $allFiltered = $allFiltered->where('products_count', '>', 0);
         if ($request->input('content') === 'empty') $allFiltered = $allFiltered->where('products_count', 0);
 
-        $allFiltered = (match ($request->input('sort', 'usage')) {
-            'products' => $allFiltered->sortByDesc('products_count'),
+        $allFiltered = (match ($request->input('sort', 'products_desc')) {
+            'products', 'products_desc' => $allFiltered->sortByDesc('products_count'),
+            'products_asc' => $allFiltered->sortBy('products_count'),
             'name' => $allFiltered->sortBy(fn ($category) => $category->name_fa ?: $category->name),
             'latest' => $allFiltered->sortByDesc('created_at'),
             'oldest' => $allFiltered->sortBy('created_at'),
-            default => $allFiltered->sortByDesc('usage_count'),
+            'last_product' => $allFiltered->sortByDesc(fn ($category) => $category->last_product_at?->getTimestamp() ?? 0),
+            'first_product' => $allFiltered->sortBy(fn ($category) => $category->last_product_at?->getTimestamp() ?? PHP_INT_MAX),
+            'usage' => $allFiltered->sortByDesc('usage_count'),
+            default => $allFiltered->sortByDesc('products_count'),
         })->values();
 
         $perPage = 20;

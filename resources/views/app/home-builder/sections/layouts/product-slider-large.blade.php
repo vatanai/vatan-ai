@@ -23,16 +23,19 @@
     @php($hbBadge = $hbLargeBadge($product))
     <a class="hb-large-card" href="{{ route('app.product', $product->route_slug) }}">
       <div class="hb-large-media" style="background-image: url('{{ $product->displayImageUrl() }}');">
-        @if($hbBadge)
+        @if($hbBadge && $section->setting('large_show_status_badge', true))
           <span class="hb-large-badge {{ $hbBadge['class'] }}">{{ $hbBadge['label'] }}</span>
+        @endif
+        @if($section->setting('large_show_ribbon', false) && $section->setting('large_ribbon_text'))
+          <span class="hb-large-ribbon">{{ $section->setting('large_ribbon_text') }}</span>
         @endif
       </div>
       <div class="hb-large-body">
         @if($section->setting('show_credit', true))
           <div class="hb-card-cost"><i class="fa-solid fa-bolt"></i> {{ number_format((int) $product->credit_cost) }} کردیت</div>
         @endif
-        <p class="hb-large-title">{{ $product->name_fa }}</p>
-        <p class="hb-large-desc">{{ $product->subcategory ?: $product->category }}</p>
+        @if($section->setting('show_title', true))<p class="hb-large-title">{{ $product->name_fa }}</p>@endif
+        @if($section->setting('show_category', true))<p class="hb-large-desc">{{ $product->subcategory ?: $product->category }}</p>@endif
       </div>
     </a>
   @endforeach

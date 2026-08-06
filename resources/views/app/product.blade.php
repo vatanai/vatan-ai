@@ -266,6 +266,14 @@
 /* دکمه لایک: در حالت فعال قرمز */
 .pd-iconbtn.is-liked{ color:var(--red); border-color:var(--red); }
 .pd-iconbtn.is-liked:hover{ border-color:var(--red); }
+.pd-iconbtn.pd-likebtn{
+  flex-direction:column;
+  gap:3px;
+  padding:3px 0 2px;
+  line-height:1;
+}
+.pd-likebtn #iconLike{ font-size:14px; transform:translateY(-1px); }
+.pd-like-count{ font-size:9.35px; font-weight:700; line-height:1; direction:ltr; transform:translateY(1px); }
 
 /* گالری‌ها — ۴ تصویر در هر ردیف */
 .pd-gal h2{
@@ -452,6 +460,28 @@
   -webkit-box-orient:vertical;
 }
 
+/* انتخاب روش انتشار محصول */
+.product-share-modal{position:fixed;inset:0;z-index:520;display:none;align-items:center;justify-content:center;padding:18px}
+.product-share-modal.is-open{display:flex}
+.product-share-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px)}
+.product-share-card{position:relative;z-index:1;width:min(100%,440px);padding:18px;border:1px solid var(--border-subtle);border-radius:18px;background:var(--bg-card);box-shadow:0 20px 60px rgba(0,0,0,.42)}
+.product-share-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.product-share-head h2{margin:0 0 5px;font-size:16px;font-weight:900;color:var(--text-primary)}
+.product-share-head p{margin:0;font-size:11px;line-height:1.8;color:var(--text-secondary)}
+.product-share-close{width:34px;height:34px;flex:0 0 34px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--bg-surface);color:var(--text-secondary);cursor:pointer}
+.product-share-options{display:grid;gap:10px}
+.product-share-option{width:100%;display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--border-subtle);border-radius:14px;background:var(--bg-surface);color:var(--text-primary);text-align:right;cursor:pointer;font-family:inherit;transition:border-color .2s,background .2s}
+.product-share-option:hover{border-color:var(--green);background:var(--bg-page)}
+.product-share-option>span{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--bg-page);color:var(--text-secondary)}
+.product-share-option.is-earning>span{background:var(--bg-affiliate);color:var(--green)}
+.product-share-option>div{display:grid;gap:4px;min-width:0;flex:1}
+.product-share-option strong{font-size:12px;font-weight:900;color:var(--text-primary)}
+.product-share-option small{font-size:9.5px;line-height:1.7;color:var(--text-secondary)}
+.product-share-option>i{font-size:10px;color:var(--text-secondary)}
+.product-share-option:disabled{opacity:.5;cursor:not-allowed}
+.product-share-code{direction:ltr;display:inline-flex;width:max-content;margin-top:2px;padding:3px 7px;border-radius:7px;background:var(--bg-page);color:var(--green);font-size:9px;font-weight:800}
+.product-share-feedback{min-height:18px;margin:10px 2px -4px;font-size:10px;color:var(--green)}
+
 /* ═══════════ فقط موبایل (زیر 768px) — تبلت دقیقاً مثل دسکتاپ است ═══════════ */
 @media (max-width:767px){
   .pd-shell{ flex-direction:column; }
@@ -526,8 +556,9 @@
         <button type="button" class="pd-iconbtn" id="btnShare" title="انتشار" aria-label="انتشار">
           <i class="fa-solid fa-arrow-up-from-bracket"></i>
         </button>
-        <button type="button" class="pd-iconbtn {{ ($isLiked ?? false) ? 'is-liked' : '' }}" id="btnLike" data-liked="{{ ($isLiked ?? false) ? '1' : '0' }}" title="لایک" aria-label="لایک">
+        <button type="button" class="pd-iconbtn pd-likebtn {{ ($isLiked ?? false) ? 'is-liked' : '' }}" id="btnLike" data-liked="{{ ($isLiked ?? false) ? '1' : '0' }}" data-like-count="{{ $product->displayed_likes_count }}" title="لایک" aria-label="لایک">
           <i id="iconLike" class="fa-{{ ($isLiked ?? false) ? 'solid' : 'regular' }} fa-heart"></i>
+          <small class="pd-like-count" id="likeCount">{{ number_format($product->displayed_likes_count) }}</small>
         </button>
       </div>
 
@@ -622,6 +653,7 @@
 @endif
 
 {{-- مودال میز کار هوش مصنوعی + مودال ورود --}}
+@include('app.partials.product-share-modal')
 @include('app.partials.product-workspace-modal', ['product' => $product])
 
 @endsection
@@ -631,7 +663,7 @@
 var GEN_URL = '{{ route('app.product.generate', $product->slug) }}';
 var SAVE_URL = '{{ route('app.product.save', $product->slug) }}';
 var LIKE_URL = '{{ route('app.product.like', $product->slug) }}';
-var LOGIN_URL = '{{ route('login') }}';
+var LOGIN_URL = @json(route('login', ['redirect' => request()->fullUrl()]));
 var IS_AUTH = @json(auth()->check());
 var CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 var _modalTimers = [];
@@ -931,18 +963,79 @@ function triggerGeneration() {
 
 function downloadGeneratedImage(){
   if (!_modalResultUrl) return;
+  fetch(@json(route('app.product.download', $product->slug)), {
+    method: 'POST',
+    keepalive: true,
+    headers: {
+      'X-CSRF-TOKEN': CSRF,
+      'Accept': 'application/json'
+    }
+  }).catch(function () {});
   var a = document.createElement('a');
   a.href = _modalResultUrl; a.download = 'ai-product-result.png'; a.click();
 }
 
-/* ───── انتشار (اشتراک‌گذاری) ───── */
-function doShare() {
-  var h1 = document.querySelector('h1');
-  var t = h1 ? h1.textContent.trim() : document.title;
-  if (navigator.share) navigator.share({title:t, url:location.href}).catch(function(){});
-  else if (navigator.clipboard) navigator.clipboard.writeText(location.href);
+/* ───── انتشار معمولی یا انتشار برای دریافت پاداش ───── */
+var productShareModal = document.getElementById('productShareModal');
+var productShareFeedback = document.getElementById('productShareFeedback');
+
+function openProductShareModal() {
+  if (!productShareModal) return;
+  productShareModal.classList.add('is-open');
+  productShareModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
 }
-document.getElementById('btnShare')?.addEventListener('click', doShare);
+
+function closeProductShareModal() {
+  if (!productShareModal) return;
+  productShareModal.classList.remove('is-open');
+  productShareModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function copyProductShareLink(url) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(url);
+  return new Promise(function(resolve, reject) {
+    var helper = document.createElement('textarea');
+    helper.value = url;
+    helper.style.position = 'fixed';
+    helper.style.opacity = '0';
+    document.body.appendChild(helper);
+    helper.select();
+    try { document.execCommand('copy') ? resolve() : reject(); } catch (error) { reject(error); }
+    helper.remove();
+  });
+}
+
+function shareProductLink(button) {
+  var loginUrl = button.dataset.loginUrl;
+  if (loginUrl) { window.location.href = loginUrl; return; }
+
+  var url = button.dataset.url;
+  var title = button.dataset.title || document.title;
+  if (!url) return;
+
+  if (navigator.share) {
+    navigator.share({title:title, url:url}).then(closeProductShareModal).catch(function(){});
+  } else {
+    copyProductShareLink(url).then(function() {
+      productShareFeedback.textContent = button.dataset.mode === 'earning'
+        ? 'لینک کسب پاداش با کد اختصاصی شما کپی شد.'
+        : 'لینک معمولی محصول کپی شد.';
+    });
+  }
+}
+
+document.getElementById('btnShare')?.addEventListener('click', openProductShareModal);
+document.querySelectorAll('[data-product-share]').forEach(function(button) {
+  button.addEventListener('click', function() { shareProductLink(button); });
+});
+document.querySelectorAll('[data-close-product-share]').forEach(function(button) {
+  button.addEventListener('click', closeProductShareModal);
+});
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape' && productShareModal?.classList.contains('is-open')) closeProductShareModal();
+});
 
 /* ───── مودال «برای ادامه باید وارد شوید» ───── */
 function openSaveLoginModal() {
@@ -1012,14 +1105,17 @@ btnBookmark?.addEventListener('click', function(){
 /* ───── دکمه لایک: مهمان → مودال ورود، لاگین‌کرده → درخواست واقعی به بک‌اند — فعال = قرمز ───── */
 var btnLike = document.getElementById('btnLike');
 var iconLike = document.getElementById('iconLike');
+var likeCount = document.getElementById('likeCount');
 var _likeBusy = false;
 
-function setLikeUI(liked) {
+function setLikeUI(liked, count) {
   if (iconLike) iconLike.className = liked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
   if (btnLike) {
     btnLike.classList.toggle('is-liked', liked);
     btnLike.dataset.liked = liked ? '1' : '0';
+    if (Number.isFinite(Number(count))) btnLike.dataset.likeCount = String(count);
   }
+  if (likeCount && Number.isFinite(Number(count))) likeCount.textContent = Number(count).toLocaleString('fa-IR');
 }
 
 btnLike?.addEventListener('click', function(){
@@ -1043,7 +1139,7 @@ btnLike?.addEventListener('click', function(){
     return r.json();
   })
   .then(function(d){
-    if (d && d.success) setLikeUI(!!d.liked);
+    if (d && d.success) setLikeUI(!!d.liked, d.likes_count);
   })
   .catch(function(){})
   .finally(function(){ _likeBusy = false; });

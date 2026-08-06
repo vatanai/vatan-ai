@@ -9,33 +9,33 @@
     <p class="home-greeting-sub">می‌خوای چی خلق کنی؟</p>
   </section>
 
-  {{-- ===== SECTION 3: باکس جستجو (فعلاً فقط رابط کاربری) ===== --}}
+  {{-- ===== SECTION 3: جستجوی زنده محصولات + انتقال به کاتالوگ ===== --}}
   <section class="home-imagegen">
     <div class="ig-box" dir="rtl">
 
-      {{-- ردیف بالا: افزودن تصویر + پرامپت --}}
-      <div class="ig-top">
-        <label class="ig-plus" aria-label="افزودن تصویر مرجع">
+      {{-- ردیف بالا: ورود سریع به جست‌وجو + پرامپت --}}
+      <form class="ig-top" id="home-search-form" action="{{ route('products.index') }}" method="GET">
+        <button type="button" class="ig-plus" id="ig-focus-search" aria-label="شروع تایپ در جست‌وجو">
           <div class="ig-plus-inner">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
           </div>
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple class="ig-file">
-        </label>
+        </button>
         <div class="ig-prompt-wrap">
-          <textarea id="igPrompt" class="ig-prompt" rows="2" aria-label="فقط بنویس دنبال چی هستی"></textarea>
+          <textarea id="igPrompt" name="search" class="ig-prompt" rows="2" autocomplete="off" aria-label="فقط بنویس دنبال چی هستی"></textarea>
           <div class="ig-prompt-copy" aria-hidden="true">
             <div class="ig-prompt-title">فقط بنویس دنبال چی هستی<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>
             <div class="ig-prompt-hint">بیش از ۱۲۰۰ طرح آماده و ۷۰ مدل هوش مصنوعی در اختیار توست</div>
           </div>
+          <div class="ig-search-results" id="ig-search-results" hidden></div>
         </div>
-      </div>
+      </form>
 
       {{-- ردیف کنترل‌ها --}}
       <div class="ig-controls">
-        {{-- فعلاً فقط ظاهر دکمه نمایش داده می‌شود و به بک‌اند متصل نیست --}}
-        <button type="button" class="ig-generate" data-ig="generate">
+        {{-- ثبت فرم، کاربر را به صفحه نتایج کامل کاتالوگ می‌برد. --}}
+        <button type="submit" form="home-search-form" class="ig-generate" data-ig="generate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-          <span>جست و جو</span>
+          <span>جست و جوی هوشمند</span>
         </button>
         <div class="ig-left">
           @include('app.partials.home-quick-chips')
@@ -61,9 +61,9 @@
 
 @push('styles')
 <style>
-  html, body { background: #000000; overflow-x: hidden; }
-  html.light, html.light body { background: #ffffff; }
-  :root { --bg: #000000; }
+  html, body { background: var(--vatan-bg-page); overflow-x: hidden; }
+  html.light, html.light body { background: var(--vatan-bg-page); }
+  :root { --bg: var(--vatan-bg-page); }
 
   .floating-icon {
     transition: filter 0.2s ease;
@@ -131,7 +131,7 @@
 
   .home-page {
     width: 100%;
-    background: #000000;
+    background: var(--vatan-bg-page);
     max-width: 480px;
     margin: 0 auto;
     min-height: 100vh;
@@ -139,7 +139,7 @@
     direction: rtl;
     font-family: inherit;
   }
-  html.light .home-page { background: #ffffff; }
+  html.light .home-page { background: var(--vatan-bg-page); }
 
   .home-greeting {
     margin-top: 36px;
@@ -281,9 +281,11 @@
   /* ═══════════════ باکس تولید تصویر (Image Generator) — مطابق دقیق سایت نمونه ═══════════════ */
   .home-imagegen {
     margin-top: 12px;
-    max-width: 765px;
+    max-width: 842px;
     margin-left: auto;
     margin-right: auto;
+    position: relative;
+    z-index: 100;
   }
 
   /* کانتینر: bg-[#1a1a1a]/95 backdrop-blur-xl rounded-2xl border-[#2a2a2a] p-4 shadow-2xl */
@@ -308,7 +310,16 @@
   }
 
   /* دکمه +: w-10 h-10 rounded-xl border-2 border-dashed border-[#333] */
-  .ig-plus { flex-shrink: 0; cursor: pointer; display: block; }
+  .ig-plus {
+    flex-shrink: 0;
+    cursor: pointer;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
   .ig-plus-inner {
     width: 40px;
     height: 40px;
@@ -319,6 +330,7 @@
     justify-content: center;
     transition: border-color 0.2s ease, background 0.2s ease;
     color: var(--green);
+    transform: translateY(-2px);
   }
   .ig-plus:hover .ig-plus-inner {
     border-color: var(--green);
@@ -396,7 +408,7 @@
   .ig-left {
     display: flex;
     align-items: stretch;
-    flex: 4.35 1 0;
+    flex: 3.9 1 0;
     min-width: 0;
   }
 
@@ -491,12 +503,12 @@
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.15s ease;
-    flex: 0.65 1 0;
+    flex: 0 0 154px;
     min-width: 0;
     box-sizing: border-box;
   }
   .ig-generate:hover { filter: brightness(0.92); }
-  .ig-generate svg { width: 16px; height: 16px; }
+  .ig-generate svg { width: 18px; height: 18px; }
 
   /* ═══════════════ آیتم‌های سریع (جایگزین پیل‌های مدل/نسبت/...) ═══════════════ */
   .ig-quick-row {
@@ -506,6 +518,7 @@
     flex: 1;
     min-width: 0;
     direction: rtl;
+    justify-content: flex-start;
   }
 
   .ig-quick-item {
@@ -523,7 +536,7 @@
     text-align: center;
     font-family: inherit;
     transition: background 0.18s ease, border-color 0.18s ease;
-    flex: 1 1 0;
+    flex: 0 1 calc(20.5% - 6px);
     min-width: 0;
     height: 40px;
     min-height: 40px;
@@ -547,8 +560,8 @@
   }
 
   .ig-quick-icon svg {
-    width: 15px;
-    height: 15px;
+    width: 18px;
+    height: 18px;
     color: var(--green);
     display: block;
   }
@@ -578,7 +591,67 @@
     text-align: center;
   }
 
-  html.light .ig-box { box-shadow: 0 14px 34px -20px rgba(12, 12, 16, 0.22); }
+  html.light .ig-box {
+    background: color-mix(in srgb, var(--bg-card) 96%, var(--green) 4%);
+    border-color: color-mix(in srgb, var(--border-subtle) 76%, var(--green) 24%);
+    box-shadow: 0 18px 45px -28px color-mix(in srgb, var(--green) 34%, transparent);
+  }
+  html.light .ig-plus-inner,
+  html.light .ig-quick-item {
+    background: color-mix(in srgb, var(--bg-surface) 96%, var(--green) 4%);
+  }
+  html.light .ig-quick-icon {
+    background: color-mix(in srgb, var(--bg-card) 90%, var(--green) 10%);
+  }
+
+  .ig-attachments {
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    margin:-7px 52px 12px 0;
+  }
+  .ig-attachment {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    max-width:180px;
+    height:30px;
+    padding:0 9px;
+    border-radius:9px;
+    border:1px solid var(--border-subtle);
+    background:var(--bg-surface);
+    color:var(--text-secondary);
+    font-size:9.5px;
+  }
+  .ig-attachment span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .ig-attachment button { border:0;background:transparent;color:var(--text-secondary);cursor:pointer;padding:0; }
+  .ig-search-results {
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    left:0;
+    z-index:1000;
+    padding:7px;
+    border-radius:14px;
+    border:1px solid var(--border-subtle);
+    background:var(--bg-card);
+    box-shadow:0 18px 45px rgba(0,0,0,.3);
+  }
+  .ig-search-result {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px;
+    border-radius:10px;
+    color:var(--text-primary);
+    text-decoration:none;
+  }
+  .ig-search-result:hover { background:var(--bg-surface); }
+  .ig-search-result img { width:38px;height:38px;border-radius:9px;object-fit:cover;flex:none; }
+  .ig-search-result strong { display:block;font-size:11.5px; }
+  .ig-search-result small { display:block;margin-top:2px;color:var(--text-secondary);font-size:9px; }
+  .ig-search-all { display:flex;justify-content:center;padding:8px;color:var(--green);font-size:10px;font-weight:800;text-decoration:none;border-top:1px solid var(--border-subtle); }
+  .ig-search-empty { padding:12px;text-align:center;color:var(--text-secondary);font-size:10.5px; }
 
   @media (max-width: 639px) {
     .ig-box { padding: 12px; }
@@ -586,18 +659,23 @@
     .ig-quick-row { gap: 5px; }
     .ig-generate,
     .ig-quick-item {
-      height: 40px;
-      min-height: 40px;
+      height: 36px;
+      min-height: 36px;
       padding: 3px;
       border-radius: 9px;
     }
     .ig-generate { font-size: 9px; gap: 3px; }
+    .ig-generate { flex: 0.65 1 0; }
     .ig-generate svg { width: 13px; height: 13px; }
-    .ig-quick-item { gap: 3px; }
+    .ig-quick-item {
+      gap: 3px;
+      flex-basis: calc(22.55% - 5px);
+    }
     .ig-quick-icon { width: 20px; height: 20px; border-radius: 6px; }
-    .ig-quick-icon svg { width: 12px; height: 12px; }
+    .ig-quick-icon svg { width: 13px; height: 13px; }
     .ig-quick-title { font-size: 8px; }
     .ig-quick-sub { font-size: 6.5px; line-height: 1.15; }
+    .ig-attachments { margin-right:0; }
   }
 
   /* ===== LIGHT MODE — باکس سرچ ===== */
@@ -660,7 +738,7 @@
   }
 
   .home-section-title {
-    margin-top: 28px;
+    margin-top: 31px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -683,7 +761,7 @@
   }
 
   .home-section-title--biz {
-    margin-top: 28px;
+    margin-top: 31px;
   }
 
   .home-section-title-right {
@@ -830,6 +908,7 @@
 
     .home-search-card { border-radius: 18px; }
     .ig-box { border-radius: 18px; }
+    .ig-quick-item { flex-basis: calc(23.575% - 6px); }
 
     /* اسلایدر بدون negative margin */
     .home-cards-scroll {
@@ -850,8 +929,8 @@
   ══════════════════════════════════ */
   @media (min-width: 1024px) {
     .home-page {
-      max-width: 1080px;
-      padding: 32px 40px 60px;
+      max-width: none;
+      padding: 32px 114px 60px;
     }
 
     /* هدینگ و سرچ — سانتر و محدود */
@@ -859,6 +938,7 @@
     .home-greeting-title { font-size: clamp(22px, 2vw, 28px); }
 
     .home-search { max-width: 680px; margin-left: auto; margin-right: auto; }
+    .ig-quick-item { flex-basis: calc(20.5% - 6px); }
 
     /* کارت‌های اسلایدر */
     .home-cards-scroll {
@@ -882,7 +962,7 @@
      LARGE DESKTOP — 1280px+
   ══════════════════════════════════ */
   @media (min-width: 1280px) {
-    .home-page { max-width: 1200px; padding: 36px 56px 60px; }
+    .home-page { max-width: none; padding: 36px var(--home-desktop-grid-gutter) 60px; }
     .home-cards-scroll .home-card { width: 220px; max-width: 230px; }
   }
 </style>
@@ -908,13 +988,96 @@
 
   // بزرگ‌شدن خودکار پرامپت
   var igPrompt = document.getElementById('igPrompt');
+  var igForm = document.getElementById('home-search-form');
+  var igResults = document.getElementById('ig-search-results');
+  var igSearchTimer = null;
+  var igSearchRequest = null;
   if (igPrompt) {
     igPrompt.addEventListener('input', function () {
       igPrompt.parentElement.classList.toggle('has-value', igPrompt.value.trim().length > 0);
       igPrompt.style.height = 'auto';
       igPrompt.style.height = igPrompt.scrollHeight + 'px';
+      clearTimeout(igSearchTimer);
+      if (igPrompt.value.trim().length < 2) {
+        if (igResults) { igResults.hidden = true; igResults.innerHTML = ''; }
+        return;
+      }
+      igSearchTimer = setTimeout(runHomeSearch, 260);
+    });
+    igPrompt.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        igForm?.requestSubmit();
+      }
     });
   }
+
+  document.getElementById('ig-focus-search')?.addEventListener('click', function () {
+    igPrompt?.focus({ preventScroll: true });
+    var cursorPosition = igPrompt?.value.length || 0;
+    igPrompt?.setSelectionRange(cursorPosition, cursorPosition);
+  });
+
+  if (igForm) {
+    igForm.addEventListener('submit', function (event) {
+      if ((igPrompt?.value || '').trim().length < 2) {
+        event.preventDefault();
+        igPrompt?.focus();
+      }
+    });
+  }
+
+  function runHomeSearch() {
+    var query = (igPrompt?.value || '').trim();
+    if (query.length < 2 || !igResults) return;
+    if (igSearchRequest) igSearchRequest.abort();
+    igSearchRequest = new AbortController();
+    fetch(@json(route('app.home.search')) + '?q=' + encodeURIComponent(query), {
+      headers: { 'Accept': 'application/json' },
+      signal: igSearchRequest.signal,
+      credentials: 'same-origin'
+    }).then(function (response) {
+      if (!response.ok) throw new Error('search_failed');
+      return response.json();
+    }).then(function (data) {
+      igResults.innerHTML = '';
+      (data.items || []).forEach(function (item) {
+        var link = document.createElement('a');
+        link.className = 'ig-search-result';
+        link.href = item.url;
+        var image = document.createElement('img');
+        image.src = item.image;
+        image.alt = '';
+        var copy = document.createElement('span');
+        var title = document.createElement('strong');
+        title.textContent = item.name;
+        var meta = document.createElement('small');
+        meta.textContent = item.meta || 'محصول هوش مصنوعی';
+        copy.append(title, meta);
+        link.append(image, copy);
+        igResults.appendChild(link);
+      });
+      if (!(data.items || []).length) {
+        var empty = document.createElement('div');
+        empty.className = 'ig-search-empty';
+        empty.textContent = 'محصولی با این عبارت پیدا نشد';
+        igResults.appendChild(empty);
+      } else {
+        var all = document.createElement('a');
+        all.className = 'ig-search-all';
+        all.href = data.all_results_url;
+        all.textContent = 'نمایش همه نتایج';
+        igResults.appendChild(all);
+      }
+      igResults.hidden = false;
+    }).catch(function (error) {
+      if (error.name !== 'AbortError') igResults.hidden = true;
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    if (igResults && !event.target.closest('.ig-prompt-wrap')) igResults.hidden = true;
+  });
 
 })();
 </script>

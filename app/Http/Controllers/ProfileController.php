@@ -2,8 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ReferralConversion;
+use App\Models\ReferralReward;
+use App\Models\ReferralSetting;
+use App\Models\ReferralVisit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
@@ -28,6 +34,8 @@ public function gallery()
     {
         // گرفتن اطلاعات دقیق کاربر لاگین شده فعلی
         $user = Auth::user();
+        $referralSettings = ReferralSetting::current();
+        $referralProfileEnabled = (bool) $referralSettings->profile_enabled;
 
         if (!$user) {
             // مهمان (وارد نشده): صفحه پروفایل با داده‌های پیش‌فرض/خالی نمایش داده می‌شود
@@ -44,6 +52,9 @@ public function gallery()
                 'createdCount'   => 0,
                 'planName'       => 'رایگان',
                 'earnings'       => 0,
+                'referralSettings' => $referralSettings,
+                'referralProfileEnabled' => $referralProfileEnabled,
+                'referralData' => $this->emptyReferralData(),
             ]);
         }
 
@@ -69,7 +80,8 @@ public function gallery()
         $tokenBalance  = $user->token_balance;
         $createdCount  = $createdImages->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
-        $earnings      = (int) ($user->referral_earnings ?? 0);
+        $referralData  = $this->referralData($user, $referralSettings);
+        $earnings      = $referralData['paid_tokens'];
         $isGuest       = false;
 
         return view('app.profile', compact(
@@ -82,8 +94,77 @@ public function gallery()
             'createdCount',
             'planName',
             'earnings',
-            'isGuest'
+            'isGuest',
+            'referralSettings',
+            'referralProfileEnabled',
+            'referralData'
         ));
+    }
+
+    private function referralData(User $user, ReferralSetting $settings): array
+    {
+        if (! Schema::hasTable('referral_visits')
+            || ! Schema::hasTable('referral_conversions')
+            || ! Schema::hasTable('referral_rewards')) {
+            return array_merge($this->emptyReferralData(), [
+                'code' => $user->referral_code,
+                'link' => $user->referral_url,
+                'share_message' => $this->shareMessage($settings, $user->referral_url),
+            ]);
+        }
+
+        $recentInvites = ReferralConversion::query()
+            ->where('inviter_id', $user->id)
+            ->with(['invitee:id,name,last_name,phone', 'rewards' => fn ($query) => $query
+                ->where('user_id', $user->id)
+                ->latest()])
+            ->withExists(['invitee as purchase_completed' => fn ($query) => $query
+                ->whereHas('planPurchases', fn ($purchase) => $purchase->where('status', 'completed'))])
+            ->latest()
+            ->limit(8)
+            ->get();
+
+        $inviterRewards = ReferralReward::query()
+            ->where('user_id', $user->id)
+            ->where('reward_type', 'inviter_reward');
+
+        return [
+            'code' => $user->referral_code,
+            'link' => $user->referral_url,
+            'share_message' => $this->shareMessage($settings, $user->referral_url),
+            'visits' => ReferralVisit::query()->where('inviter_id', $user->id)->count(),
+            'registrations' => ReferralConversion::query()->where('inviter_id', $user->id)->count(),
+            'successful_purchases' => ReferralConversion::query()
+                ->where('inviter_id', $user->id)
+                ->whereHas('invitee.planPurchases', fn ($query) => $query->where('status', 'completed'))
+                ->count(),
+            'paid_tokens' => (int) (clone $inviterRewards)->where('status', 'paid')->sum('amount'),
+            'pending_tokens' => (int) (clone $inviterRewards)->where('status', 'pending')->sum('amount'),
+            'recent_invites' => $recentInvites,
+        ];
+    }
+
+    private function emptyReferralData(): array
+    {
+        return [
+            'code' => null,
+            'link' => null,
+            'share_message' => null,
+            'visits' => 0,
+            'registrations' => 0,
+            'successful_purchases' => 0,
+            'paid_tokens' => 0,
+            'pending_tokens' => 0,
+            'recent_invites' => collect(),
+        ];
+    }
+
+    private function shareMessage(ReferralSetting $settings, string $link): string
+    {
+        $message = $settings->share_message
+            ?: 'با لینک دعوت من به وطن بپیوند و هدیه شروع دریافت کن: {referral_link}';
+
+        return str_replace('{referral_link}', $link, $message);
     }
 
     /**

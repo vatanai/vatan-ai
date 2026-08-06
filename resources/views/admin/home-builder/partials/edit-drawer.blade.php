@@ -10,6 +10,24 @@
     <button onclick="HomeBuilder.closeEditDrawer()" class="icon-action-btn"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
+  <div class="drawer-section hb-live-preview-section">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <div>
+        <div class="drawer-label mb-0">پیش‌نمایش زنده سایت</div>
+        <div class="text-[10px] mt-1" style="color:var(--text-soft);">با داده‌ها و تصاویر واقعی محصولات فعال</div>
+      </div>
+      <div class="hb-preview-devices" role="group" aria-label="اندازه پیش‌نمایش">
+        <button type="button" class="is-active" data-device="desktop" onclick="HomeBuilder.setPreviewDevice('desktop')" title="دسکتاپ"><i class="fa-solid fa-desktop"></i></button>
+        <button type="button" data-device="tablet" onclick="HomeBuilder.setPreviewDevice('tablet')" title="تبلت"><i class="fa-solid fa-tablet-screen-button"></i></button>
+        <button type="button" data-device="mobile" onclick="HomeBuilder.setPreviewDevice('mobile')" title="موبایل"><i class="fa-solid fa-mobile-screen"></i></button>
+      </div>
+    </div>
+    <div class="hb-live-preview-frame is-desktop" id="hb-live-preview-frame">
+      <div class="hb-preview-loading"><i class="fa-solid fa-spinner fa-spin"></i> در حال ساخت پیش‌نمایش واقعی…</div>
+      <iframe id="hb-live-preview-iframe" title="پیش‌نمایش زنده سکشن" loading="eager"></iframe>
+    </div>
+  </div>
+
   <div class="drawer-section">
     <div class="drawer-label mb-1">عنوان بخش</div>
     <input type="text" id="hb-f-title_fa" class="input-pro" placeholder="مثلاً ترندهای امروز">
@@ -22,7 +40,7 @@
 
   <div class="drawer-section">
     <div class="drawer-label mb-2">Layout</div>
-    <div class="grid grid-cols-2 gap-2" id="hb-edit-layout-gallery"></div>
+    <div class="grid grid-cols-1 gap-2" id="hb-edit-layout-gallery"></div>
   </div>
 
   <div class="drawer-section">
