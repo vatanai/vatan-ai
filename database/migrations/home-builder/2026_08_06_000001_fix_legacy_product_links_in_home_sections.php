@@ -11,7 +11,7 @@ return new class extends Migration
         DB::table('home_sections')
             ->where('page_key', 'app_home')
             ->orderBy('id')
-            ->get(['id', 'settings'])
+            ->get(['id', 'title_fa', 'settings'])
             ->each(function (object $section): void {
                 $settings = json_decode((string) $section->settings, true);
                 if (! is_array($settings)) {
@@ -29,6 +29,12 @@ return new class extends Migration
                         $settings[$key] = $fixed;
                         $changed = true;
                     }
+                }
+
+                if (($settings['view_all_link'] ?? null) === '/category/portrait'
+                    && $section->title_fa === 'ترندهای امروز') {
+                    $settings['view_all_link'] = '/app/trends';
+                    $changed = true;
                 }
 
                 if ($changed) {

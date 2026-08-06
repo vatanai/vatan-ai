@@ -17,7 +17,7 @@ return new class extends Migration
         DB::table('home_sections')->where('page_key', 'app_home')->update(['status' => 'hidden']);
 
         $sections = [
-            $this->products('product_slider', 'peek', 'ترندهای امروز', 'پراستفاده‌ترین سبک‌های پرتره برای شروع سریع', [1, 36, 37, 6, 9], 1, 'portrait', ['source' => 'trending', 'hover_effect' => 'neon_glow']),
+            $this->products('product_slider', 'peek', 'ترندهای امروز', 'پراستفاده‌ترین سبک‌های پرتره برای شروع سریع', [1, 36, 37, 6, 9], 1, 'portrait', ['source' => 'trending', 'hover_effect' => 'neon_glow', 'view_all_link' => '/app/trends']),
             $this->products('product_slider', 'motion_shimmer', 'استوری‌هایی که دیده می‌شوند', 'قالب‌های آماده برای ساخت استوری حرفه‌ای و چشم‌گیر', [10, 2, 7, 1], 34, 'social/instagram/story', ['hover_effect' => 'shine']),
             $this->hero('default', 'امروز چه چیزی ترند شده؟', 'محبوب‌ترین ایده‌ها و سبک‌های روز را ببین و با چند کلیک نسخه خودت را بساز.', '/assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg', 'دیدن ترندها', '/trends'),
             $this->products('product_grid', 'bento', 'عکس محصول، آماده فروش', 'محصولت را با عکس‌های حرفه‌ای و تبلیغاتی بهتر معرفی کن', [8, 2, 10, 1, 36, 37], 77, 'business/product-photo', ['hover_effect' => 'zoom_soft']),
