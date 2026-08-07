@@ -146,7 +146,7 @@
       <select name="ai_model" class="input-pro w-full">
         <option value="">همه مدل‌ها</option>
         @foreach(($aiModels ?? []) as $m)
-          <option value="{{ $m->openrouter_model_id }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }} — {{ $m->provider === 'liara' ? 'لیارا' : 'OpenRouter' }}</option>
+          <option value="{{ $m->openrouter_model_id }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }} — {{ ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$m->provider] ?? $m->provider_name }}</option>
         @endforeach
       </select>
     </div>

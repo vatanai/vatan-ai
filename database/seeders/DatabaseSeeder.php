@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             CategorySeeder::class, // ساختار کامل و درختی دسته‌بندی‌ها (idempotent)
             AiModelSeeder::class,  // ۱۵ مدل تصویری OpenRouter با نام فارسی (idempotent)
+            ReplicateCuratedModelSeeder::class, // مدل‌های منتخب Replicate با schema و دسته‌بندی تخصصی
         ]);
     }
 }

@@ -41,7 +41,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         // منبع مشترک مدل‌های قابل‌انتخاب در «ثبت محصول» و «تغییر سریع لیست».
-        // لیارا: همه مدل‌های هر دو پلن؛ OpenRouter: فقط مدل‌های فعال.
+        // منبع مشترک: فقط مدل‌های فعال از تمام providerهای روشن.
         $assignableAiModels = $this->assignableAiModels()->get();
         $validAiModelsByProvider = $assignableAiModels
             ->groupBy('provider')
@@ -56,8 +56,9 @@ class ProductController extends Controller
         // - unique_users_count     : تعداد کاربران یکتایی که محصول را اجرا کرده‌اند
         // - last_run_at            : تاریخ/ساعت آخرین اجرای محصول
         $query = Product::query()
-            ->with('categories')
+            ->with(['categories', 'latestLabExperiment.runs.outputs.managerScore'])
             ->withCount('generations')
+            ->withCount(['generations as completed_generations_count' => fn ($generationQuery) => $generationQuery->where('status', 'completed')])
             ->withCount('labExperiments')
             ->withCount(['labExperiments as scored_lab_experiments_count' => function ($experimentQuery) {
                 $experimentQuery
@@ -158,6 +159,16 @@ class ProductController extends Controller
             $perPage = 15;
         }
 
+        // شناسه‌ی تمام نتایج فیلترشده را برای «انتخاب همه‌ی نتایج» در عملیات گروهی
+        // به صفحه می‌فرستیم؛ انتخاب گروهی نباید به محصولات صفحه‌ی فعلی محدود بماند.
+        $matchingProductIds = (clone $query)
+            ->reorder()
+            ->select('products.id')
+            ->pluck('products.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
         $products = $query->paginate($perPage)->withQueryString();
 
         $activeCount   = Product::where('status', 'active')->count();
@@ -178,7 +189,9 @@ class ProductController extends Controller
             ? Product::withCount('generations')->orderByDesc('generations_count')->first()
             : null;
 
-        $aiModels = AiModel::orderBy('name')->get();
+        // فیلترها و منوی تغییر سریع باید دقیقاً همان مدل‌های قابل‌استفاده‌ی
+        // ثبت محصول را نشان دهند؛ مدل خاموش یا متعلق به provider خاموش نمایش داده نشود.
+        $aiModels = $assignableAiModels;
         $categories = Category::orderBy('name')->get();
         $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
 
@@ -187,7 +200,7 @@ class ProductController extends Controller
             'products', 'activeCount', 'draftCount', 'inactiveCount',
             'totalRuns', 'maxRuns', 'topProduct',
             'aiModels', 'assignableAiModels', 'validAiModelKeys', 'categories', 'recentlyEdited',
-            'exchange'
+            'exchange', 'matchingProductIds'
         ));
     }
 
@@ -201,19 +214,8 @@ class ProductController extends Controller
      */
     public function create(Request $request, ?Product $product = null)
     {
-        // فقط مدل‌های providerهای روشن نمایش داده می‌شوند؛ برای لیارا همه
-        // مدل‌ها (از جمله مدل‌های پلن دوم) و برای OpenRouter مدل‌های فعال.
-        // طوری که وقتی
-        // OpenRouter از پنل ادمین خاموش شده باشد، هیچ‌کدام از مدل‌های آن
-        // در فرم ثبت/ویرایش محصول به کاربر نمایش داده نشود (مدل‌ها حذف
-        // نمی‌شوند، فقط از UI مخفی می‌شوند تا هر لحظه با روشن‌کردن provider
-        // دوباره ظاهر گردند).
-        $aiModels = AiModel::whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
-            ->where(function ($query) {
-                $query->where('provider', 'liara')
-                    ->orWhere('is_active', true);
-            })
-            ->latest()->get();
+        // فقط مدل‌های فعالِ providerهای روشن وارد گام دوم و گام‌های وابسته می‌شوند.
+        $aiModels = $this->assignableAiModels()->get();
 
         $duplicateFrom = null;
         if ($request->filled('duplicate')) {
@@ -240,8 +242,12 @@ class ProductController extends Controller
         }
 
         $suggestedLikesCount = random_int(120, 250);
+        $exchange = $this->exchangeRate->usdToIrr();
+        $labTested = $product
+            ? $product->labExperiments()->where('status', 'completed')->exists()
+            : false;
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount'));
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested'));
     }
 
     /**
@@ -435,7 +441,7 @@ class ProductController extends Controller
         $product->preview_video_url = $request->input('preview_video_url');
         $product->watermark_position = $request->input('watermark_position') ?? 'corner';
         $product->pricing_model = $request->input('pricing_model') ?? 'per_credit';
-        $product->credit_cost = $request->input('credit_cost') ?? 5;
+        $product->credit_cost = $request->input('credit_cost') ?? 10;
         $product->display_mode = $request->input('display_mode') ?? 'card';
         $product->card_shape = $request->input('card_shape') ?? 'portrait';
         $product->gallery_layout = $request->input('gallery_layout') ?? 'grid';
@@ -502,19 +508,8 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        // فقط مدل‌های providerهای روشن نمایش داده می‌شوند؛ برای لیارا همه
-        // مدل‌ها (از جمله مدل‌های پلن دوم) و برای OpenRouter مدل‌های فعال.
-        // طوری که وقتی
-        // OpenRouter از پنل ادمین خاموش شده باشد، هیچ‌کدام از مدل‌های آن
-        // در فرم ثبت/ویرایش محصول به کاربر نمایش داده نشود (مدل‌ها حذف
-        // نمی‌شوند، فقط از UI مخفی می‌شوند تا هر لحظه با روشن‌کردن provider
-        // دوباره ظاهر گردند).
-        $aiModels = AiModel::whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
-            ->where(function ($query) {
-                $query->where('provider', 'liara')
-                    ->orWhere('is_active', true);
-            })
-            ->latest()->get();
+        // فقط مدل‌های فعالِ providerهای روشن در فرم ویرایش نمایش داده می‌شوند.
+        $aiModels = $this->assignableAiModels()->get();
         return view('admin.products.edit', compact('product', 'aiModels'));
     }
 
@@ -986,10 +981,12 @@ class ProductController extends Controller
     public function bulkAction(Request $request)
     {
         $validated = $request->validate([
-            'action'     => 'required|in:activate,deactivate,delete,change_category',
-            'ids'        => 'required|array|min:1',
+            'action'     => 'required|in:activate,deactivate,delete,change_category,set_credit',
+            'ids'        => 'required|array|min:1|max:5000',
             'ids.*'      => 'integer|exists:products,id',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'credit_cost' => ['required_if:action,set_credit', 'nullable', 'integer', 'min:0', 'max:1000000'],
+            'note'        => ['nullable', 'string', 'max:255'],
         ]);
 
         $products = Product::whereIn('id', $validated['ids']);
@@ -1005,6 +1002,38 @@ class ProductController extends Controller
                 $categoryName = Category::where('id', $validated['category_id'])->value('name') ?? 'عمومی';
                 $products->update(['category_id' => $validated['category_id'], 'category' => $categoryName]);
                 break;
+            case 'set_credit':
+                $creditCost = (int) $validated['credit_cost'];
+                $note = $validated['note'] ?? 'تغییر گروهی هزینه‌ی محصول';
+                $adminId = $request->user('admin')?->id;
+                $userAgent = Str::limit((string) $request->userAgent(), 1000, '');
+
+                DB::transaction(function () use ($validated, $creditCost, $note, $adminId, $request, $userAgent) {
+                    $lockedProducts = Product::whereIn('id', $validated['ids'])
+                        ->lockForUpdate()
+                        ->get();
+
+                    foreach ($lockedProducts as $product) {
+                        $before = (int) $product->credit_cost;
+                        $product->forceFill([
+                            'credit_cost' => $creditCost,
+                            'pricing_model' => $creditCost === 0 ? 'free' : 'per_credit',
+                        ])->save();
+
+                        ProductCreditLog::create([
+                            'product_id' => $product->id,
+                            'admin_id' => $adminId,
+                            'action' => 'set',
+                            'amount' => $creditCost,
+                            'credit_before' => $before,
+                            'credit_after' => $creditCost,
+                            'note' => $note,
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $userAgent,
+                        ]);
+                    }
+                });
+                break;
             case 'delete':
                 foreach ($products->get() as $product) {
                     $this->removeProduct($product);
@@ -1012,7 +1041,11 @@ class ProductController extends Controller
                 break;
         }
 
-        return redirect()->route('admin.products')->with('success', 'عملیات گروهی انجام شد.');
+        $message = $validated['action'] === 'set_credit'
+            ? 'هزینه‌ی کردیت محصولات انتخاب‌شده با موفقیت تغییر کرد.'
+            : 'عملیات گروهی انجام شد.';
+
+        return redirect()->route('admin.products')->with('success', $message);
     }
 
     /**
@@ -1170,10 +1203,10 @@ class ProductController extends Controller
             return;
         }
 
-        $primaryIsValid = AiModel::query()
+        $primaryIsValid = ProviderStatus::isEnabled($provider) && AiModel::query()
             ->where('provider', $provider)
             ->where('openrouter_model_id', $primaryModel)
-            ->when($provider !== 'liara', fn ($query) => $query->where('is_active', true))
+            ->where('is_active', true)
             ->exists();
 
         $fallbacks = array_values(array_filter((array) $request->input('fallback_models', [])));
@@ -1184,7 +1217,7 @@ class ProductController extends Controller
             if (!$fallbackProvider || !ProviderStatus::isEnabled($fallbackProvider) || !AiModel::query()
                 ->where('provider', $fallbackProvider)
                 ->where('openrouter_model_id', $fallbackModel)
-                ->when($fallbackProvider !== 'liara', fn ($query) => $query->where('is_active', true))
+                ->where('is_active', true)
                 ->exists()) {
                 $fallbacksAreValid = false;
                 break;
@@ -1224,14 +1257,12 @@ class ProductController extends Controller
             ->first();
     }
 
-    /** Query واحد مدل‌های مجاز برای ثبت محصول و تغییر سریع از لیست. */
+    /** Query واحد مدل‌های مجاز برای ثبت محصول، ویرایش و تغییر سریع از لیست. */
     private function assignableAiModels()
     {
         return AiModel::query()
             ->whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
-            ->where(function ($query) {
-                $query->where('provider', 'liara')->orWhere('is_active', true);
-            })
+            ->where('is_active', true)
             ->orderBy('provider')
             ->orderBy('name');
     }

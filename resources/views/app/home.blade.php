@@ -482,7 +482,7 @@
   .ig-draw:hover { color: #ffffff; }
   .ig-draw .ig-ic { width: 16px; height: 16px; color: currentColor; }
 
-  /* دکمه جستجو هم‌اندازه با هرکدام از چهار آیتم سریع و در سمت چپ آن‌ها */
+  /* دکمه جستجو هم‌اندازه با آیتم‌های سریع و در سمت چپ آن‌ها */
   .ig-generate {
     display: flex;
     flex-direction: row;
@@ -527,16 +527,17 @@
     direction: rtl;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    position: relative;
+    gap: 0;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 10px;
-    padding: 6px 10px;
+    padding: 6px 8px 6px 6px;
     cursor: pointer;
     text-align: center;
     font-family: inherit;
     transition: background 0.18s ease, border-color 0.18s ease;
-    flex: 0 1 calc(20.5% - 6px);
+    flex: 1 1 0;
     min-width: 0;
     height: 40px;
     min-height: 40px;
@@ -557,6 +558,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
   }
 
   .ig-quick-icon svg {
@@ -573,13 +579,16 @@
     align-items: center;
     text-align: center;
     min-width: 0;
+    width: 100%;
+    padding-right: 28px;
   }
 
   .ig-quick-title {
     font-size: 12.5px;
     font-weight: 700;
     color: var(--text-primary);
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.2;
   }
 
   .ig-quick-sub {
@@ -589,6 +598,7 @@
     color: var(--text-secondary);
     white-space: nowrap;
     text-align: center;
+    line-height: 1.2;
   }
 
   html.light .ig-box {
@@ -669,10 +679,11 @@
     .ig-generate svg { width: 13px; height: 13px; }
     .ig-quick-item {
       gap: 3px;
-      flex-basis: calc(22.55% - 5px);
+      flex-basis: calc(20% - 5px);
     }
-    .ig-quick-icon { width: 20px; height: 20px; border-radius: 6px; }
+    .ig-quick-icon { width: 20px; height: 20px; right: 5px; border-radius: 6px; }
     .ig-quick-icon svg { width: 13px; height: 13px; }
+    .ig-quick-text { padding-right: 22px; }
     .ig-quick-title { font-size: 8px; }
     .ig-quick-sub { font-size: 6.5px; line-height: 1.15; }
     .ig-attachments { margin-right:0; }
@@ -908,7 +919,7 @@
 
     .home-search-card { border-radius: 18px; }
     .ig-box { border-radius: 18px; }
-    .ig-quick-item { flex-basis: calc(23.575% - 6px); }
+    .ig-quick-item { flex-basis: calc(20% - 6px); }
 
     /* اسلایدر بدون negative margin */
     .home-cards-scroll {
@@ -938,7 +949,9 @@
     .home-greeting-title { font-size: clamp(22px, 2vw, 28px); }
 
     .home-search { max-width: 680px; margin-left: auto; margin-right: auto; }
-    .ig-quick-item { flex-basis: calc(20.5% - 6px); }
+    .ig-quick-item { flex-basis: calc(20% - 6px); }
+    .ig-generate,
+    .ig-quick-item { height: 48px; min-height: 48px; }
 
     /* کارت‌های اسلایدر */
     .home-cards-scroll {

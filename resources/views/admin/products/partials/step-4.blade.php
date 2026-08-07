@@ -142,7 +142,7 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
     <div class="flex flex-col gap-1.5 transition-all {{ $curPricing != 'per_credit' ? 'opacity-30 pointer-events-none' : '' }}" id="credit-cost-wrap">
       <label class="text-xs font-semibold text-[var(--text2)]">هزینه کردیت محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
-      <input type="number" name="credit_cost" min="1" required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="هزینه کردیت را وارد کنید" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost) }}">
+      <input type="number" name="credit_cost" min="1" required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="هزینه کردیت را وارد کنید" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost ?? 10) }}">
     </div>
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداقل کردیت لازم</label>

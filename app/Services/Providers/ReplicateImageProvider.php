@@ -59,6 +59,55 @@ class ReplicateImageProvider extends AbstractQueuedImageProvider
         return (array) $response->json();
     }
 
+    /**
+     * Replicate برای مدل‌های مختلف نام ورودی متفاوت دارد؛ مثلاً
+     * PhotoMaker از input_image و Stable Video Diffusion از input_image
+     * استفاده می‌کند. این لایه ورودی‌های عمومی محصول را به schema همان مدل
+     * تبدیل می‌کند و برای مدل‌های هویت‌محور، نبود تصویر را قبل از رزرو هزینه
+     * متوقف می‌کند.
+     */
+    protected function buildInput(AiModel $model, string $prompt, string $resolution, string $aspectRatio, int $count, array $extraPayload): array
+    {
+        $input = parent::buildInput($model, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
+        $capabilities = $this->getModelCapabilities($model);
+        $allowed = array_values((array) ($capabilities['allowed_inputs'] ?? []));
+        $references = $this->referenceUrls($extraPayload['input_references'] ?? $extraPayload['input'] ?? []);
+        $requiredReferences = max(0, (int) ($capabilities['required_reference_count'] ?? 0));
+
+        if ($requiredReferences > count($references)) {
+            throw new RuntimeException(sprintf(
+                'مدل %s برای اجرا به حداقل %d تصویر ورودی نیاز دارد.',
+                $model->name ?: $model->externalModelId(),
+                $requiredReferences
+            ));
+        }
+
+        foreach ((array) ($capabilities['reference_fields'] ?? []) as $index => $field) {
+            if (isset($references[$index]) && in_array($field, $allowed, true)) {
+                $input[$field] = $references[$index];
+            }
+        }
+
+        // در مدل‌هایی که تعداد خروجی را با num_outputs می‌گیرند، مقدار
+        // انتخاب‌شده از محصول باید صریحاً به همان نام ارسال شود.
+        if (in_array('num_outputs', $allowed, true)) {
+            $input['num_outputs'] = max(1, min(10, $count));
+        }
+
+        // Flux نسبت تصویر را مستقیم می‌گیرد و width/height را نادیده می‌گیرد.
+        if (in_array('aspect_ratio', $allowed, true)) {
+            $input['aspect_ratio'] = $aspectRatio;
+        }
+
+        // ابزارهای ارتقا و ویدیویی فقط تصویر را می‌گیرند و prompt عمومی
+        // محصول نباید به‌صورت بی‌دلیل وارد ورودی آن‌ها شود.
+        if ($model->task_type === 'upscaling' || $model->task_type === 'image_to_video') {
+            unset($input['prompt']);
+        }
+
+        return $input;
+    }
+
     protected function pollRemote(AiModel $model, string $requestId): array
     {
         $credentials = $this->credentials->for('replicate');

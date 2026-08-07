@@ -40,7 +40,7 @@
       <span class="app-footer__dot" aria-hidden="true"></span>
       <span class="app-footer__pending" title="بزودی" aria-label="قوانین — بزودی">قوانین</span>
       <span class="app-footer__dot" aria-hidden="true"></span>
-      <span class="app-footer__pending" title="بزودی" aria-label="حریم خصوصی — بزودی">حریم خصوصی</span>
+      <a href="{{ route('privacy') }}">حریم خصوصی</a>
       <span class="app-footer__dot" aria-hidden="true"></span>
       <a href="https://t.me/vatanstudio_bot" target="_blank" rel="noopener noreferrer">پشتیبانی</a>
     </nav>

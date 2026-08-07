@@ -94,6 +94,7 @@ class AiModel extends Model
 
     protected $casts = [
         'task_type' => 'string',
+        'default_parameters' => 'array',
         'supports_image_input' => 'boolean',
         'supports_face_identity' => 'boolean',
         'supports_multiple_faces' => 'boolean',
@@ -157,6 +158,42 @@ class AiModel extends Model
             'upscaling' => 'افزایش کیفیت',
             default => $this->mediaLabel(),
         };
+    }
+
+    /** نام فنی انگلیسی برای جدول‌های انتخاب مدل. */
+    public function englishDisplayName(): string
+    {
+        return $this->externalModelId();
+    }
+
+    /** امتیاز کیفی مدیریتی؛ تا زمان ثبت امتیاز واقعی، مقدار نمایشی موقت ۱۰ از ۱۰ است. */
+    public function qualityScore(): ?float
+    {
+        $configured = $this->capability('quality_score')
+            ?? data_get($this->pricing_config ?: [], 'quality_score');
+
+        if (is_numeric($configured)) {
+            return max(0, min(10, (float) $configured));
+        }
+
+        $knownScores = [
+            'zsxkib/instant-id' => 9.0,
+            'lucataco/modelscope-facefusion' => 9.0,
+            'tencentarc/photomaker' => 8.5,
+            'black-forest-labs/flux-dev' => 9.0,
+            'black-forest-labs/flux-schnell' => 8.0,
+            'lucataco/realvisxl-v2.0' => 8.5,
+            'lucataco/real-esrgan' => 8.5,
+            'sunfjun/stable-video-diffusion' => 7.5,
+        ];
+
+        return $knownScores[$this->externalModelId()] ?? 10.0;
+    }
+
+    public function qualityGradeLabel(): string
+    {
+        $score = $this->qualityScore();
+        return $score === null ? 'ثبت نشده' : rtrim(rtrim(number_format($score, 1), '0'), '.') . ' از ۱۰';
     }
 
     /**

@@ -52,6 +52,7 @@ class RunLabModelJob implements ShouldQueue
             if ($references) $extra['input_references'] = $references;
             if (($settings['seed'] ?? null) !== null && $settings['seed'] !== '') $extra['seed'] = (int) $settings['seed'];
             if ($run->experiment->negative_prompt) $extra['negative_prompt'] = $run->experiment->negative_prompt;
+            $extra['preserve_face'] = (bool) $run->preserve_face;
 
             $result = $router->generateImageFromPrompt(
                 $run->model_id,
@@ -59,7 +60,8 @@ class RunLabModelJob implements ShouldQueue
                 $providerResolution,
                 (string) ($settings['grade_aspect_ratio'] ?? $settings['aspect_ratio'] ?? '1:1'),
                 max(1, min(4, (int) ($settings['count'] ?? 1))),
-                $extra
+                $extra,
+                $run->provider
             );
 
             $items = (array) ($result['data'] ?? []);
@@ -85,11 +87,31 @@ class RunLabModelJob implements ShouldQueue
                     }
                 }
                 if (!$path && !$remoteUrl) continue;
+                $metadata = ['provider_item' => array_filter(['revised_prompt' => $item['revised_prompt'] ?? null])];
+                $width = $height = null;
+                $size = null;
+                $mime = null;
+                if ($path && Storage::disk('public')->exists($path)) {
+                    $size = (int) Storage::disk('public')->size($path);
+                    $mime = Storage::disk('public')->mimeType($path) ?: 'image/png';
+                    $absolute = method_exists(Storage::disk('public'), 'path') ? Storage::disk('public')->path($path) : null;
+                    if ($absolute && is_file($absolute)) {
+                        $dimensions = @getimagesize($absolute);
+                        $width = $dimensions[0] ?? null;
+                        $height = $dimensions[1] ?? null;
+                    }
+                }
                 $run->outputs()->create([
                     'output_path' => $path,
                     'remote_url' => $remoteUrl,
                     'status' => 'completed',
-                    'metadata' => ['provider_item' => array_filter(['revised_prompt' => $item['revised_prompt'] ?? null])],
+                    'width' => $width,
+                    'height' => $height,
+                    'ratio' => $width && $height ? round($width / $height, 4) : null,
+                    'size' => $size,
+                    'mime_type' => $mime,
+                    'color_profile' => 'RGB',
+                    'metadata' => $metadata,
                 ]);
             }
 
@@ -99,9 +121,14 @@ class RunLabModelJob implements ShouldQueue
 
             $usage = (array) ($result['usage'] ?? []);
             $actualCost = (float) ($usage['cost'] ?? $run->estimated_cost_usd) + $scoringCost;
+            $durationMs = (int) round((microtime(true) - $started) * 1000);
+            $rateToman = (float) $run->exchange_rate_irr / 10;
             $run->forceFill([
                 'status' => 'completed',
                 'actual_cost_usd' => $actualCost,
+                'actual_cost_toman' => $actualCost * $rateToman,
+                'build_seconds' => max(1, (int) round($durationMs / 1000)),
+                'tokens_used' => (int) ($usage['total_tokens'] ?? $usage['tokens'] ?? 0),
                 'provider_response' => array_filter([
                     'id' => $result['id'] ?? null,
                     'model' => $result['model'] ?? $run->model_id,
@@ -109,13 +136,14 @@ class RunLabModelJob implements ShouldQueue
                     'usage' => $usage,
                 ], fn ($value) => $value !== null && $value !== []),
                 'completed_at' => now(),
-                'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'duration_ms' => $durationMs,
             ])->save();
         } catch (\Throwable $error) {
             $run->forceFill([
                 'status' => 'failed',
                 'error_message' => Str::limit($error->getMessage(), 1000, ''),
                 'completed_at' => now(),
+                'build_seconds' => max(1, (int) round((microtime(true) - $started))),
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
             ])->save();
         }
@@ -130,13 +158,24 @@ class RunLabModelJob implements ShouldQueue
         $runs = $experiment->runs;
         $terminal = $runs->every(fn ($run) => in_array($run->status, ['completed', 'failed', 'cancelled'], true));
         $status = $terminal
-            ? ($runs->contains(fn ($run) => $run->status === 'completed') ? 'completed' : 'failed')
+            ? ($runs->contains(fn ($run) => $run->status === 'completed')
+                ? ($runs->contains(fn ($run) => $run->status === 'failed') ? 'partially_failed' : 'completed')
+                : 'failed')
             : ($runs->contains(fn ($run) => $run->status === 'processing') ? 'processing' : 'queued');
+        $totalUsd = (float) $runs->sum(fn ($run) => (float) $run->actual_cost_usd);
+        $rateToman = (float) $experiment->exchange_rate_irr / 10;
         $experiment->forceFill([
             'status' => $status,
-            'actual_cost_usd' => $runs->sum(fn ($run) => (float) $run->actual_cost_usd),
+            'actual_cost_usd' => $totalUsd,
+            'actual_cost_irr' => $totalUsd * (float) $experiment->exchange_rate_irr,
+            'actual_cost_toman' => $totalUsd * $rateToman,
+            'total_cost_usd' => $totalUsd,
+            'total_cost_toman' => $totalUsd * $rateToman,
+            'models_count' => $runs->count(),
             'started_at' => $runs->min('started_at') ?: $experiment->started_at,
             'completed_at' => $terminal ? now() : null,
+            'tested_at' => $terminal ? now() : $experiment->tested_at,
+            'report_status' => $terminal && $status !== 'failed' ? 'ready' : ($status === 'failed' ? 'failed' : 'draft'),
         ])->save();
     }
 

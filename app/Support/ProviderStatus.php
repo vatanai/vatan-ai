@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\AiProviderSetting;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -11,12 +12,13 @@ use Illuminate\Support\Facades\Cache;
  * هدف: بدون حذف یا خراب‌کردن هیچ کدی از OpenRouterService یا LiaraAiService،
  * فقط با یک کلید ساده در پنل ادمین بتوانیم یک provider را «فریز» کنیم.
  *
- * ذخیره‌سازی: Cache دائمی (چون CACHE_STORE=database است، دیتا پایدار است
- * حتی پس از ری‌استارت سرور). کلید cache به‌شکل provider.<name>.enabled.
+ * ذخیره‌سازی: علاوه بر Cache، وضعیت صریح ادمین داخل settings همان provider
+ * ذخیره می‌شود تا با پاک‌شدن Cache یا تغییر workerها از بین نرود.
  *
  * پیش‌فرض‌ها (اولین بار که کاربر هنوز چیزی تنظیم نکرده):
  *   - liara      → true  (فعال — سرویس اصلی داخل ایران، بدون VPN)
  *   - openrouter → true  (فعال — قابل انتخاب در ثبت محصول)
+ *   - fal/replicate → اگر کلید داشته باشند فعال، وگرنه خاموش
  *
  * برای برگرداندن OpenRouter کافیست از پنل ادمین آن را روشن کنند؛
  * هیچ کدی نه پاک شده و نه فریز شده — فقط یک flag کوچک است.
@@ -45,9 +47,25 @@ class ProviderStatus
             return false;
         }
 
+        // اگر ادمین قبلاً در پنل وضعیت مشخص کرده، این مقدار مرجع اصلی است.
+        try {
+            $savedSettings = (array) (AiProviderSetting::forProvider($provider)?->settings ?? []);
+            if (array_key_exists('admin_enabled', $savedSettings)) {
+                return (bool) $savedSettings['admin_enabled'];
+            }
+        } catch (\Throwable) {
+            // تا قبل/هنگام migration، Cache و env همچنان fallback هستند.
+        }
+
+        // Cacheهای قدیمی ممکن است وضعیت پیش‌فرض «خاموش» را نگه داشته باشند.
+        // اگر کلید ثبت شده و هنوز وضعیت دستی ذخیره نشده، provider آماده‌به‌کار است.
+        if (self::hasCredentials($provider)) {
+            return true;
+        }
+
         return (bool) Cache::rememberForever(
             self::cacheKey($provider),
-            fn () => self::DEFAULTS[$provider] ?? false
+            fn () => self::defaultFor($provider)
         );
     }
 
@@ -59,6 +77,16 @@ class ProviderStatus
         $provider = strtolower(trim($provider));
         if (!in_array($provider, self::PROVIDERS, true)) {
             return;
+        }
+
+        try {
+            $setting = AiProviderSetting::firstOrNew(['provider' => $provider]);
+            $savedSettings = (array) $setting->settings;
+            $savedSettings['admin_enabled'] = $enabled;
+            $setting->settings = $savedSettings;
+            $setting->save();
+        } catch (\Throwable) {
+            // Cache پایین‌تر همچنان امکان کنترل وضعیت را حفظ می‌کند.
         }
 
         Cache::forever(self::cacheKey($provider), $enabled);
@@ -91,5 +119,26 @@ class ProviderStatus
     protected static function cacheKey(string $provider): string
     {
         return 'provider.' . $provider . '.enabled';
+    }
+
+    protected static function defaultFor(string $provider): bool
+    {
+        // پرووایدری که کلیدش قبلاً ثبت شده، در اولین استفاده آماده است؛
+        // بعد از اولین تغییر دستی، admin_enabled مرجع قطعی خواهد بود.
+        return self::hasCredentials($provider) || (self::DEFAULTS[$provider] ?? false);
+    }
+
+    protected static function hasCredentials(string $provider): bool
+    {
+        try {
+            if (AiProviderSetting::forProvider($provider)?->hasApiKey()) {
+                return true;
+            }
+        } catch (\Throwable) {
+            // تنظیمات دیتابیس ممکن است هنوز ساخته نشده باشد.
+        }
+
+        return filled(config("services.{$provider}.api_key"))
+            || filled(config("services.{$provider}.api_token"));
     }
 }

@@ -502,13 +502,13 @@
     document.getElementById('product-ai-dialog-title').textContent = title;
     document.getElementById('product-ai-dialog-subtitle').textContent = subtitle;
     document.getElementById('product-ai-dialog-state').textContent = 'با انتخاب مدل، تغییر به‌صورت خودکار ذخیره می‌شود.';
-    providerSelect.innerHTML = providers.map(function (provider) {
+    providerSelect.innerHTML = ['all'].concat(providers).map(function (provider) {
       const labels = {liara: 'لیارا', openrouter: 'OpenRouter', fal: 'Fal.ai', replicate: 'Replicate'};
-      return '<option value="' + provider + '">' + (labels[provider] || provider) + '</option>';
+      return '<option value="' + provider + '">' + (provider === 'all' ? 'همه پرووایدرها' : (labels[provider] || provider)) + '</option>';
     }).join('');
     providerSelect.value = providers.includes(productAiDialogState.currentProvider)
       ? productAiDialogState.currentProvider
-      : (providers[0] || '');
+      : 'all';
     renderProductAiModelOptions();
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', 'open');
@@ -517,12 +517,35 @@
   function renderProductAiModelOptions() {
     const provider = document.getElementById('product-ai-provider-select')?.value || '';
     const modelSelect = document.getElementById('product-ai-model-select');
-    const models = productAiModels().filter(function (model) { return model.provider === provider; });
+    const models = productAiModels().filter(function (model) { return provider === 'all' || model.provider === provider; });
     modelSelect.innerHTML = '<option value="">یک مدل انتخاب کنید...</option>' + models.map(function (model) {
       const plan = model.provider === 'liara' && model.plan ? ' — ' + model.plan : '';
       return '<option value="' + pmEsc(model.id) + '">' + pmEsc(model.name) + plan + '</option>';
     }).join('');
     if (provider === productAiDialogState.currentProvider) modelSelect.value = productAiDialogState.currentModel;
+    const holder = document.getElementById('product-ai-model-options');
+    if (holder) {
+      holder.innerHTML = models.map(function (model) {
+        const selected = model.provider === productAiDialogState.currentProvider && model.id === productAiDialogState.currentModel;
+        return '<button type="button" class="product-ai-model-row' + (selected ? ' is-selected' : '') + '" data-model-id="' + pmEsc(model.id) + '" data-model-provider="' + pmEsc(model.provider) + '" onclick="selectProductAiModel(this)">' +
+          '<span dir="ltr" class="font-mono">' + pmEsc(model.englishName || model.id) + '</span>' +
+          '<span>' + pmEsc(model.persianName || model.name) + '</span>' +
+          '<span><b>' + pmEsc(model.providerFa || model.provider) + '</b><small dir="ltr">' + pmEsc(model.providerEn || model.provider) + '</small></span>' +
+          '<span>' + pmEsc(model.usage || 'ثبت نشده') + '</span>' +
+          '<span class="model-quality-grade">' + pmEsc(model.grade || 'ثبت نشده') + '</span>' +
+          '</button>';
+      }).join('') || '<div class="p-4 text-center text-[10px]" style="color:var(--text-soft);">برای این فهرست مدلی وجود ندارد.</div>';
+    }
+  }
+
+  function selectProductAiModel(row) {
+    const providerSelect = document.getElementById('product-ai-provider-select');
+    const modelSelect = document.getElementById('product-ai-model-select');
+    if (!row || !providerSelect || !modelSelect) return;
+    providerSelect.value = row.dataset.modelProvider || '';
+    renderProductAiModelOptions();
+    modelSelect.value = row.dataset.modelId || '';
+    saveProductAiModelSelection();
   }
 
   async function saveProductAiModelSelection() {
@@ -590,18 +613,49 @@
   }
 
   /* ─── انتخاب چندگانه ردیف‌ها + نوار عملیات گروهی ─── */
+  var bulkSelectionState = { allMatching: false };
+
+  function getSelectedBulkProductIds() {
+    if (bulkSelectionState.allMatching) {
+      return Array.isArray(window.PRODUCT_MATCHING_IDS) ? window.PRODUCT_MATCHING_IDS.slice() : [];
+    }
+    return [...document.querySelectorAll('.bulk-check:checked')].map(function (checkbox) { return checkbox.value; });
+  }
+
+  function updateBulkSelectionUi() {
+    var checked = document.querySelectorAll('.bulk-check:checked');
+    var selectedIds = getSelectedBulkProductIds();
+    var toolbar = document.getElementById('bulk-toolbar');
+    var selectAllMatchingButton = document.getElementById('bulk-select-all-matching');
+    var totalMatching = Array.isArray(window.PRODUCT_MATCHING_IDS) ? window.PRODUCT_MATCHING_IDS.length : 0;
+    var visibleCount = document.querySelectorAll('.bulk-check').length;
+
+    document.getElementById('bulk-count').textContent = selectedIds.length.toLocaleString('fa-IR');
+    toolbar.style.display = selectedIds.length > 0 ? 'flex' : 'none';
+    if (selectAllMatchingButton) {
+      selectAllMatchingButton.style.display = !bulkSelectionState.allMatching && checked.length === visibleCount && totalMatching > visibleCount ? 'inline-flex' : 'none';
+      selectAllMatchingButton.textContent = 'انتخاب همه‌ی ' + totalMatching.toLocaleString('fa-IR') + ' نتیجه‌ی فیلترشده';
+    }
+  }
+
+  function selectAllMatchingProducts() {
+    if (!Array.isArray(window.PRODUCT_MATCHING_IDS) || !window.PRODUCT_MATCHING_IDS.length) return;
+    bulkSelectionState.allMatching = true;
+    document.querySelectorAll('.bulk-check').forEach(function (checkbox) { checkbox.checked = true; });
+    updateBulkSelectionUi();
+  }
+
   function toggleSelectAll(cb) {
+    bulkSelectionState.allMatching = false;
     document.querySelectorAll('.bulk-check').forEach(c => c.checked = cb.checked);
-    onRowCheck();
+    updateBulkSelectionUi();
   }
   function onRowCheck() {
-    const checked = document.querySelectorAll('.bulk-check:checked');
-    const toolbar = document.getElementById('bulk-toolbar');
-    document.getElementById('bulk-count').textContent = checked.length;
-    toolbar.style.display = checked.length > 0 ? 'flex' : 'none';
+    bulkSelectionState.allMatching = false;
+    updateBulkSelectionUi();
   }
   function submitBulk(action) {
-    const checked = [...document.querySelectorAll('.bulk-check:checked')].map(c => c.value);
+    const checked = getSelectedBulkProductIds();
     if (!checked.length) return;
     if (action === 'delete' && !confirm(`${checked.length} محصول انتخاب‌شده حذف شود؟`)) return;
 
@@ -617,13 +671,13 @@
   }
   function submitBulkCategory(category) {
     if (!category) return;
-    const checked = [...document.querySelectorAll('.bulk-check:checked')];
+    const checked = getSelectedBulkProductIds();
     if (!checked.length) return;
     const form = document.getElementById('bulk-action-form');
     form.querySelectorAll('input[name="ids[]"], input[name="category"]').forEach(el => el.remove());
-    checked.forEach(c => {
+    checked.forEach(id => {
       const input = document.createElement('input');
-      input.type = 'hidden'; input.name = 'ids[]'; input.value = c.value;
+      input.type = 'hidden'; input.name = 'ids[]'; input.value = id;
       form.appendChild(input);
     });
     const catInput = document.createElement('input');

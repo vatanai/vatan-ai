@@ -8,12 +8,16 @@ use App\Models\AiModel;
 use App\Models\AiProviderRequest;
 use App\Models\Product;
 use App\Services\AiProviderCredentials;
+use App\Services\AiProviderLimitService;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, AiAsyncImageProviderInterface
 {
-    public function __construct(protected AiProviderCredentials $credentials)
+    public function __construct(
+        protected AiProviderCredentials $credentials,
+        protected AiProviderLimitService $limits
+    )
     {
     }
 
@@ -165,22 +169,33 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         $configuredWebhook = ($model->supports_webhook && $providerSettings['webhook_enabled'])
             ? $this->credentials->webhookUrl($this->provider())
             : null;
-        $remote = $this->submitRemote($model, $input, $webhookUrl ?: $configuredWebhook);
-        $requestId = (string) ($remote['request_id'] ?? $remote['id'] ?? '');
-        if ($requestId === '') {
-            throw new RuntimeException('provider شناسه‌ی درخواست برنگرداند.');
-        }
+        $estimatedCost = $this->estimateCost($model, $payload);
+        $outputs = max(1, (int) ($payload['n'] ?? 1));
+        $reservation = $this->limits->reserve($model, $estimatedCost, $outputs);
 
-        AiProviderRequest::updateOrCreate(
-            ['provider' => $this->provider(), 'external_request_id' => $requestId],
-            [
-                'ai_model_id' => $model->id,
+        try {
+            $remote = $this->submitRemote($model, $input, $webhookUrl ?: $configuredWebhook);
+            $requestId = (string) ($remote['request_id'] ?? $remote['id'] ?? '');
+            if ($requestId === '') {
+                throw new RuntimeException('provider شناسه‌ی درخواست برنگرداند.');
+            }
+
+            $reservation->update([
+                'external_request_id' => $requestId,
                 'status' => 'queued',
-                'estimated_cost_usd' => $this->estimateCost($model, $payload),
                 'raw_response' => $remote,
                 'submitted_at' => now(),
-            ]
-        );
+            ]);
+        } catch (\Throwable $error) {
+            // برای جلوگیری از عبور درخواست‌های خطادار از سقف عددی/هزینه‌ای،
+            // رزرو تا پایان بازه باقی می‌ماند و وضعیت خطا می‌گیرد.
+            $reservation->update([
+                'status' => 'failed',
+                'error_message' => \Illuminate\Support\Str::limit($error->getMessage(), 1000, ''),
+                'completed_at' => now(),
+            ]);
+            throw $error;
+        }
 
         return [
             'provider' => $this->provider(),

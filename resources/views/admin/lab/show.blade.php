@@ -94,6 +94,18 @@
     </section>
 
     <section class="content-card overflow-hidden mb-4">
+      <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">جدول محاسبه دقیق</h2></div>
+      <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>محصول</th><th>کد گزارش</th><th>تعداد مدل</th><th>زمان کل</th><th>قیمت دلار</th><th>قیمت تومان</th><th>هزینه آزمایش دلار</th><th>هزینه آزمایش تومان</th><th>نمره نهایی</th></tr></thead><tbody><tr><td>{{ $experiment->product_name_snapshot ?: $experiment->product?->name_fa }}</td><td dir="ltr">{{ $experiment->report_code ?: '—' }}</td><td>{{ $experiment->models_count ?: $experiment->runs->count() }}</td><td>{{ $experiment->runs->sum('build_seconds') ?: ($experiment->runs->sum('duration_ms') ? number_format($experiment->runs->sum('duration_ms') / 1000, 2) : '—') }} ثانیه</td><td dir="ltr">${{ number_format((float)($experiment->total_cost_usd ?: $experiment->actual_cost_usd ?: $experiment->estimated_cost_usd), 4) }}</td><td>{{ number_format((float)($experiment->total_cost_toman ?: $experiment->actual_cost_toman ?: $experiment->estimated_cost_toman)) }}</td><td dir="ltr">${{ number_format((float)$experiment->lab_cost_usd, 4) }}</td><td>{{ number_format((float)$experiment->lab_cost_toman) }}</td><td>{{ $experiment->overall_score ? number_format((float)$experiment->overall_score, 1).' از ۱۰' : '—' }}</td></tr></tbody></table></div>
+    </section>
+
+    <section class="content-card overflow-hidden mb-4">
+      <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">نمره مدیر سایت</h2><p class="text-[10px] mt-1" style="color:var(--text-soft);">نمره، شباهت، کیفیت جزئیات و اولویت استفاده هر خروجی را ثبت کنید؛ اطلاعات بلافاصله در جدول محاسبه دقیق ذخیره می‌شود.</p></div>
+      <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>مدل</th><th>نمره ۱ تا ۱۰</th><th>شباهت</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>ثبت</th></tr></thead><tbody>
+      @foreach($experiment->runs as $run) @foreach($run->outputs as $output) @php($manager = $output->managerScore)<tr><td>{{ $run->alias ?: $run->model_id }}</td><td colspan="4"><form method="POST" action="{{ route('admin.lab.outputs.manager-score', $output) }}" class="flex gap-2 flex-wrap">@csrf<input class="input-pro" style="width:82px" type="number" min="1" max="10" name="overall_score" value="{{ $manager?->overall_score }}" placeholder="۱–۱۰"><select class="input-pro" name="similarity_score"><option value="">شباهت</option>@foreach(['خیلی کم','کم','متوسط','زیاد','خیلی زیاد'] as $v)<option @selected($manager?->similarity_score === $v)>{{ $v }}</option>@endforeach</select><select class="input-pro" name="detail_quality"><option value="">جزئیات</option>@foreach(['ضعیف','قابل قبول','خوب','عالی'] as $v)<option @selected($manager?->detail_quality === $v)>{{ $v }}</option>@endforeach</select><input class="input-pro" style="width:90px" type="number" min="1" max="{{ max(1, $experiment->runs->count()) }}" name="usage_priority" value="{{ $manager?->usage_priority }}" placeholder="اولویت"></form></td><td><button class="btn-pro btn-pro-primary" type="submit" form="manager-score-{{ $output->id }}">ذخیره</button></td></tr>@endforeach @endforeach
+      </tbody></table></div>
+    </section>
+
+    <section class="content-card overflow-hidden mb-4">
       <div class="p-4 border-b" style="border-color:var(--border);">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div><h2 class="text-sm font-extrabold" style="color:var(--text-h);">خروجی‌های آزمایش</h2><p class="text-[10px] mt-1" style="color:var(--text-soft);">خروجی همه‌ی مدل‌ها براساس گرید کنار هم نمایش داده شده تا مقایسه و انتخاب برنده‌ی هر گرید ساده باشد.</p></div>
@@ -291,4 +303,5 @@
 @if($isRunning)
 <script>window.setTimeout(() => window.location.reload(), 4000);</script>
 @endif
+<script>document.addEventListener('click', function (event) { const button = event.target.closest('button[form^="manager-score-"]'); if (!button) return; event.preventDefault(); const form = button.closest('tr')?.querySelector('form'); if (form) form.submit(); });</script>
 @endsection

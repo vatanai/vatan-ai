@@ -35,12 +35,29 @@
 </div>
 @endif
 
+<style>
+  .products-table-compact thead th:nth-child(7),
+  .products-table-compact thead th:nth-child(10) { line-height:1.35; }
+  .products-table-compact .td-product .badge-success[title*="آزمایشگاه"] { display:none; }
+  .products-table-compact td[data-label*="بهینه"] > div { display:grid !important; grid-template-columns:1fr; gap:5px; justify-items:center; }
+  .products-table-compact td[data-label*="بهینه"] > div > button,
+  .products-table-compact td[data-label*="بهینه"] > div > a { width:34px; height:34px; min-height:34px; border:1px solid var(--border); border-radius:8px; background:var(--input-bg); }
+  .products-table-compact .product-price-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; text-align:center; }
+  .products-table-compact .product-price-stack span,
+  .products-table-compact .product-run-token-stack > div { display:flex; align-items:center; justify-content:center; gap:5px; white-space:nowrap; }
+  .products-table-compact .product-price-stack small,
+  .products-table-compact .product-run-token-stack span { color:var(--text-soft); font-size:9px; font-weight:700; }
+  .products-table-compact .product-price-stack b,
+  .products-table-compact .product-run-token-stack strong { color:var(--text-main); font-size:11px; font-weight:800; }
+</style>
+
 {{-- ─── نوار عملیات گروهی (Bulk Action) — فقط وقتی چند ردیف انتخاب شود نمایش داده می‌شود ─── --}}
 <form id="bulk-action-form" method="POST" action="{{ route('admin.products.bulk_action') }}">
   @csrf
   <input type="hidden" name="action" id="bulk-action-input">
   <div id="bulk-toolbar" class="bulk-toolbar" style="display:none;">
     <span class="text-[12px] font-bold" style="color:var(--primary);"><span id="bulk-count">0</span> محصول انتخاب شده</span>
+    <button type="button" id="bulk-select-all-matching" class="btn-pro btn-pro-ghost" style="display:none;" onclick="selectAllMatchingProducts()">انتخاب همه‌ی نتایج فیلترشده</button>
     <div class="w-px h-4" style="background:var(--border);"></div>
     <button type="button" class="btn-pro btn-pro-ghost" onclick="submitBulk('activate')"><i class="fa-solid fa-circle-check text-[11px]"></i> فعال کردن</button>
     <button type="button" class="btn-pro btn-pro-ghost" onclick="submitBulk('deactivate')"><i class="fa-solid fa-circle-xmark text-[11px]"></i> غیرفعال کردن</button>
@@ -48,6 +65,7 @@
       <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkAiModelDialog()"><i class="fa-solid fa-microchip text-[11px]"></i> تغییر مدل هوش مصنوعی <i class="fa-solid fa-circle-question text-[9px]"></i></button>
       <span class="pro-tooltip" style="width:270px;">مدل اصلی همه محصولات انتخاب‌شده را یکجا تغییر می‌دهد. پرامپت، ویژگی‌ها و مدل‌های جایگزین محصولات تغییری نمی‌کنند.</span>
     </span>
+    <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkCreditDialog()"><i class="fa-solid fa-coins text-[11px]"></i> تغییر گروهی کردیت</button>
     <select class="input-pro" style="width:150px;height:34px;" onchange="submitBulkCategory(this.value)">
       <option value="">تغییر دسته به...</option>
       @foreach(($categories ?? []) as $cat)
@@ -71,10 +89,10 @@
         <th>کد محصول</th>
         <th style="text-align:center;">دسته‌بندی</th>
         <th style="text-align:center;"><span class="block">ویژگی‌ها</span><span class="block">هوش مصنوعی</span></th>
-        <th>قیمت</th>
+        <th style="text-align:center;"><span class="block">توکن</span><span class="block">قیمت</span></th>
         <th style="text-align:center;"><span class="block">تعداد اجرا</span><span class="block">تعداد لایک</span></th>
         <th style="text-align:center;"><span class="block">زمان اجرا</span><span class="block">توکن مصرفی</span></th>
-        <th style="text-align:center;">بهینه‌سازی و آزمایش</th>
+        <th style="text-align:center;">بهینه سازی آزمایش</th>
         <th style="text-align:center;"><span class="block">وضعیت</span><span class="block">لینک</span></th>
         <th>آخرین ویرایش</th>
         <th>عملیات</th>
@@ -159,18 +177,22 @@
             </div>
           </td>
 
-          <td data-label="قیمت" id="product-credit-cell-{{ $product->id }}">
-            @if($product->pricing_model === 'free')
-              <span class="badge-pro badge-success">رایگان</span>
-            @else
-              <div class="font-bold" style="color:var(--text-h);">{{ $product->credit_cost }} <span class="text-[10.5px] font-normal" style="color:var(--text-soft);">کردیت</span></div>
-            @endif
+          <td data-label="توکن / قیمت" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
             @php
+              $labExperiment = $product->latestLabExperiment;
               $modelCostUsd = $assignedAiModel?->cost_per_generation_usd;
               $modelCostIrr = $modelCostUsd !== null ? (float) $modelCostUsd * (float) ($exchange['rate'] ?? 0) : null;
+              $priceUsd = $labExperiment
+                ? (float) ($labExperiment->total_cost_usd ?: $labExperiment->actual_cost_usd ?: $labExperiment->estimated_cost_usd)
+                : ($modelCostUsd !== null ? (float) $modelCostUsd : null);
+              $priceToman = $labExperiment
+                ? (float) ($labExperiment->total_cost_toman ?: $labExperiment->actual_cost_toman ?: $labExperiment->estimated_cost_toman)
+                : ($modelCostIrr !== null ? (float) $modelCostIrr / 10 : null);
             @endphp
-            <div class="mt-1.5 text-[10px]" style="color:var(--text-soft);" title="هزینه هر خروجی مدل اصلی با نرخ روز دلار">
-              @if($modelCostUsd !== null)<span dir="ltr">${{ number_format((float)$modelCostUsd, 4) }}</span><span class="mx-1">·</span>{{ number_format($modelCostIrr / 10) }} تومان @else قیمت مدل ثبت نشده @endif
+            <div class="product-price-stack" title="توکن محصول و قیمت ثبت‌شده در آخرین آزمایش">
+              <span><small>توکن</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost)) }}</b></span>
+              <span dir="ltr"><small>دلار</small><b>{{ $priceUsd !== null ? '$' . number_format($priceUsd, 4) : '—' }}</b></span>
+              <span><small>تومان</small><b>{{ $priceToman !== null ? number_format($priceToman) : '—' }}</b></span>
             </div>
           </td>
 
@@ -197,26 +219,29 @@
           </td>
 
           <td data-label="زمان اجرا / توکن مصرفی" style="text-align:center;">
-            <div class="flex flex-col items-center justify-center gap-2">
-              <div class="text-center">
-                <div class="text-[10px] font-bold" style="color:var(--text-soft);">آخرین زمان اجرای تست</div>
-                <div class="text-[11.5px] font-semibold" style="color:var(--text-main);">
-                @if($product->last_test_duration_ms !== null)
-                  {{ $product->last_test_duration_ms < 1000 ? number_format($product->last_test_duration_ms) . ' میلی‌ثانیه' : number_format($product->last_test_duration_ms / 1000, 1) . ' ثانیه' }}
-                @else — @endif
-                </div>
-              </div>
-              <div class="text-center">
-                <div class="text-[10px] font-bold" style="color:var(--text-soft);">مجموع توکن تست</div>
-                <div class="text-[11.5px] font-semibold" style="color:var(--text-main);">{{ number_format((int) $product->total_test_tokens) }}</div>
-              </div>
+            @php
+              $labRuns = $labExperiment?->runs ?? collect();
+              $labRunForStats = $labRuns->firstWhere('is_selected', true)
+                ?? $labRuns->filter(fn ($run) => $run->rank !== null)->sortBy('rank')->first()
+                ?? $labRuns->firstWhere('status', 'completed')
+                ?? $labRuns->first();
+              $labBuildSeconds = $labRunForStats?->build_seconds !== null
+                ? (float) $labRunForStats->build_seconds
+                : ($labRunForStats?->duration_ms !== null ? (float) $labRunForStats->duration_ms / 1000 : null);
+              $labRunTokens = $labRunForStats?->tokens_used;
+              $totalUserTokens = (int) ($product->completed_generations_count ?? 0) * max(0, (int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost));
+            @endphp
+            <div class="product-run-token-stack flex flex-col items-center justify-center gap-1.5">
+              <div><span>زمان اجرا</span><strong>{{ $labBuildSeconds !== null ? number_format($labBuildSeconds, 1) . ' ثانیه' : '—' }}</strong></div>
+              <div><span>توکن مصرفی</span><strong>{{ $labRunTokens !== null ? number_format((int) $labRunTokens) : '—' }}</strong></div>
+              <div><span>مجموع توکن</span><strong>{{ number_format($totalUserTokens) }}</strong></div>
             </div>
           </td>
 
           @php
             $hasScoredLabExperiment = (int) ($product->scored_lab_experiments_count ?? 0) > 0;
           @endphp
-          <td data-label="بهینه‌سازی و آزمایش" style="text-align:center;">
+          <td data-label="بهینه سازی آزمایش" style="text-align:center;">
             <div class="flex items-center justify-center gap-1.5">
               <button type="button"
                       class="product-image-optimize-btn icon-action-btn {{ $product->images_optimized_at ? 'is-optimized' : '' }}"
@@ -229,7 +254,8 @@
                       onclick="optimizeProductImagesFromTable(this)">
                 <i class="fa-solid {{ $product->images_optimized_at ? 'fa-circle-check' : 'fa-wand-magic-sparkles' }}"></i>
               </button>
-              <a href="{{ $hasScoredLabExperiment ? route('admin.lab.index', ['product_id' => $product->id]) : route('admin.lab.create', ['product_id' => $product->id]) }}"
+              <a href="{{ $hasScoredLabExperiment ? '#' : route('admin.lab.create', ['product_id' => $product->id]) }}"
+                 @if($hasScoredLabExperiment) data-summary-url="{{ route('admin.lab.products.summary', $product) }}" onclick="openProductLabSummary(event, this)" @endif
                  class="icon-action-btn inline-flex items-center justify-center"
                  style="color:{{ $hasScoredLabExperiment ? 'var(--success)' : 'var(--danger)' }};"
                  title="{{ $hasScoredLabExperiment ? 'آزمایش انجام و امتیازدهی شده — مشاهده نتایج' : 'هنوز آزمایش امتیازدهی‌شده‌ای برای این محصول ثبت نشده — شروع آزمایش' }}"
@@ -372,8 +398,12 @@
       </div>
       <div>
         <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">مدل</label>
-        <select id="product-ai-model-select" class="input-pro w-full" onchange="saveProductAiModelSelection()"></select>
+        <select id="product-ai-model-select" class="hidden" onchange="saveProductAiModelSelection()"></select>
       </div>
+    </div>
+    <div class="product-ai-model-table-wrap mt-3">
+      <div class="product-ai-model-table-head"><span dir="ltr">اسم انگلیسی مدل</span><span>اسم فارسی</span><span>پرووایدر</span><span>کاربری</span><span>گرید</span></div>
+      <div id="product-ai-model-options" class="product-ai-model-options"></div>
     </div>
     <div class="mt-3 p-3 rounded-xl text-[10.5px] leading-6" style="background:var(--primary-l);border:1px solid var(--primary-m);color:var(--text-main);">
       <i class="fa-solid fa-circle-info ml-1" style="color:var(--primary);"></i>
@@ -385,15 +415,22 @@
 
 <script>
 @php
-  $assignableAiModelsForJs = ($assignableAiModels ?? collect())->map(fn ($model) => [
+$assignableAiModelsForJs = ($assignableAiModels ?? collect())->map(fn ($model) => [
     'id' => $model->openrouter_model_id,
     'name' => $model->name,
+    'englishName' => $model->englishDisplayName(),
+    'persianName' => $model->name,
     'provider' => $model->provider,
+    'providerFa' => ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
+    'providerEn' => ['liara' => 'Liara AI', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
+    'usage' => $model->taskLabel(),
+    'grade' => $model->qualityGradeLabel(),
     'plan' => $model->liara_plan,
   ])->values()->all();
 @endphp
 window.PRODUCT_ASSIGNABLE_AI_MODELS = @json($assignableAiModelsForJs);
 window.PRODUCT_BULK_AI_URL = @json(route('admin.products.bulk_update_ai_model'));
+window.PRODUCT_MATCHING_IDS = @json($matchingProductIds ?? []);
 </script>
 
 <style>
@@ -401,6 +438,16 @@ window.PRODUCT_BULK_AI_URL = @json(route('admin.products.bulk_update_ai_model'))
 #product-credit-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
 #product-ai-model-dialog{position:fixed;inset:0;margin:auto;}
 #product-ai-model-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
+.product-ai-model-table-wrap{max-height:270px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);}
+.product-ai-model-table-head,.product-ai-model-row{display:grid;grid-template-columns:1.45fr 1.35fr .95fr 1.15fr .62fr;align-items:center;gap:8px;min-width:690px;padding:8px 9px;}
+.product-ai-model-table-head{color:var(--text-soft);font-size:8px;font-weight:800;border-bottom:1px solid var(--border);}
+.product-ai-model-row{width:100%;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text-main);font-size:8.5px;text-align:right;cursor:pointer;}
+.product-ai-model-row:last-child{border-bottom:0;}
+.product-ai-model-row:hover,.product-ai-model-row.is-selected{background:var(--primary-l);}
+.product-ai-model-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.product-ai-model-row>span:nth-child(3){display:flex;flex-direction:column;gap:1px;}
+.product-ai-model-row>span:nth-child(3) small{color:var(--text-soft);font-size:7.5px;}
+.product-ai-model-row .model-quality-grade{color:var(--warning);font-weight:800;}
 @media (min-width:901px){#product-credit-dialog{transform:translateX(-147px);}}
 @media (min-width:901px){#product-ai-model-dialog{transform:translateX(-147px);}}
 </style>
@@ -433,6 +480,34 @@ window.PRODUCT_BULK_AI_URL = @json(route('admin.products.bulk_update_ai_model'))
     <div class="flex items-center justify-end gap-2 mt-5">
       <button type="button" class="btn-pro btn-pro-ghost" onclick="closeProductCreditDialog()">انصراف</button>
       <button type="submit" class="btn-pro btn-pro-primary" id="product-credit-dialog-submit"><i class="fa-solid fa-check"></i> ذخیره کردیت</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="product-bulk-credit-dialog" class="rounded-2xl p-0 w-[min(92vw,440px)]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
+  <form method="dialog" id="product-bulk-credit-dialog-form" class="p-5">
+    <div class="flex items-start justify-between gap-3 mb-5">
+      <div>
+        <div class="text-[14px] font-extrabold" style="color:var(--text-h);">تغییر گروهی هزینه‌ی کردیت</div>
+        <div id="product-bulk-credit-dialog-count" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
+      </div>
+      <button type="button" class="icon-action-btn" onclick="closeBulkCreditDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-3 rounded-xl text-[10.5px] leading-6 mb-4" style="background:var(--primary-l);border:1px solid var(--primary-m);color:var(--text-main);">
+      هزینه‌ی محصول برای همه‌ی موارد انتخاب‌شده ثبت می‌شود و سابقه‌ی تغییر هر محصول نیز ذخیره خواهد شد.
+    </div>
+    <label for="product-bulk-credit-dialog-input" class="block text-[11.5px] font-bold mb-2">هزینه‌ی جدید برای هر اجرا</label>
+    <div class="flex items-center gap-2">
+      <input id="product-bulk-credit-dialog-input" type="number" min="0" max="1000000" step="1" required
+             class="input-pro w-full" style="height:44px;" inputmode="numeric" value="10" placeholder="مثلاً ۱۰">
+      <span class="text-[11px] whitespace-nowrap" style="color:var(--text-soft);">توکن</span>
+    </div>
+    <label for="product-bulk-credit-dialog-note" class="block text-[11.5px] font-bold mt-4 mb-2">توضیح تغییر <span class="font-normal" style="color:var(--text-soft);">(اختیاری)</span></label>
+    <input id="product-bulk-credit-dialog-note" type="text" maxlength="255" class="input-pro w-full" style="height:44px;" placeholder="مثلاً یکسان‌سازی قیمت محصولات عکس">
+    <div id="product-bulk-credit-dialog-error" class="hidden text-[10.5px] mt-2" style="color:var(--danger);"></div>
+    <div class="flex items-center justify-end gap-2 mt-5">
+      <button type="button" class="btn-pro btn-pro-ghost" onclick="closeBulkCreditDialog()">انصراف</button>
+      <button type="submit" class="btn-pro btn-pro-primary"><i class="fa-solid fa-check"></i> ثبت برای همه</button>
     </div>
   </form>
 </dialog>
@@ -552,6 +627,57 @@ function showProductCreditToast(message) {
   document.body.appendChild(toast);
   setTimeout(function () { toast.remove(); }, 4500);
 }
+
+function openBulkCreditDialog() {
+  var ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
+  if (!ids.length) return;
+  var dialog = document.getElementById('product-bulk-credit-dialog');
+  document.getElementById('product-bulk-credit-dialog-count').textContent = ids.length.toLocaleString('fa-IR') + ' محصول برای تغییر انتخاب شده است.';
+  document.getElementById('product-bulk-credit-dialog-input').value = '10';
+  document.getElementById('product-bulk-credit-dialog-note').value = '';
+  document.getElementById('product-bulk-credit-dialog-error').classList.add('hidden');
+  dialog.showModal();
+  setTimeout(function () { document.getElementById('product-bulk-credit-dialog-input').focus(); }, 30);
+}
+
+function closeBulkCreditDialog() {
+  document.getElementById('product-bulk-credit-dialog')?.close();
+}
+
+document.getElementById('product-bulk-credit-dialog-form')?.addEventListener('submit', function (event) {
+  event.preventDefault();
+  var value = String(document.getElementById('product-bulk-credit-dialog-input').value).trim();
+  var errorBox = document.getElementById('product-bulk-credit-dialog-error');
+  if (!/^\d+$/.test(value) || Number(value) > 1000000) {
+    errorBox.textContent = 'هزینه‌ی توکن باید یک عدد صحیح بین صفر تا ۱٬۰۰۰٬۰۰۰ باشد.';
+    errorBox.classList.remove('hidden');
+    return;
+  }
+
+  var ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
+  if (!ids.length) {
+    closeBulkCreditDialog();
+    return;
+  }
+
+  var form = document.getElementById('bulk-action-form');
+  form.querySelectorAll('input[name="ids[]"], input[name="credit_cost"], input[name="note"], input[name="category_id"]').forEach(function (el) { el.remove(); });
+  ids.forEach(function (id) {
+    var input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'ids[]'; input.value = id;
+    form.appendChild(input);
+  });
+  var creditInput = document.createElement('input');
+  creditInput.type = 'hidden'; creditInput.name = 'credit_cost'; creditInput.value = Number(value);
+  form.appendChild(creditInput);
+  var noteInput = document.createElement('input');
+  noteInput.type = 'hidden'; noteInput.name = 'note'; noteInput.value = document.getElementById('product-bulk-credit-dialog-note').value.trim();
+  form.appendChild(noteInput);
+  document.getElementById('bulk-action-input').value = 'set_credit';
+  closeBulkCreditDialog();
+  form.submit();
+});
+
 function formatProductImageBytes(bytes) {
   if (!Number.isFinite(Number(bytes))) return '—';
   if (Number(bytes) < 1024 * 1024) return Math.max(1, Math.round(Number(bytes) / 1024)).toLocaleString('fa-IR') + ' کیلوبایت';
@@ -595,5 +721,13 @@ async function optimizeProductImagesFromTable(button) {
   } finally {
     button.disabled = false;
   }
+}
+
+async function openProductLabSummary(event, link) {
+  event.preventDefault();
+  let dialog = document.getElementById('product-lab-summary-dialog');
+  if (!dialog) { dialog = document.createElement('dialog'); dialog.id='product-lab-summary-dialog'; dialog.style.cssText='width:min(980px,94vw);max-height:88vh;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text-main);padding:0;'; document.body.appendChild(dialog); }
+  dialog.innerHTML='<div style="padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><strong>جزئیات کامل آزمایش</strong><button type="button" class="icon-action-btn" onclick="this.closest(\'dialog\').close()"><i class="fa-solid fa-xmark"></i></button></div><div style="padding:28px;text-align:center;color:var(--text-soft)">در حال دریافت اطلاعات…</div></div>'; dialog.showModal();
+  try { const response=await fetch(link.dataset.summaryUrl,{headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok) throw new Error(data.message); const rows=(data.runs||[]).map(run=>`<tr><td>${run.model||'—'}</td><td>${run.provider||'—'}</td><td>${run.quality||'—'}</td><td>${run.size||'—'}</td><td>${run.seconds??'—'} ثانیه</td><td>${run.score??'—'}</td><td>${run.rank??'—'}</td><td>${run.cost_usd?('$'+Number(run.cost_usd).toFixed(4)):'—'}</td></tr>`).join(''); dialog.querySelector('div').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><strong>${data.product?.name||'آزمایش محصول'}</strong><small style="display:block;color:var(--text-soft)">${data.product?.code||''} · ${data.report_code||''}</small></div><button type="button" class="icon-action-btn" onclick="this.closest('dialog').close()"><i class="fa-solid fa-xmark"></i></button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0;font-size:11px"><span>مدل‌ها: <b>${data.models_count||0}</b></span><span>نمره: <b>${data.overall_score||'—'}</b></span><span>دلار: <b>${Number(data.cost?.usd||0).toFixed(4)}</b></span><span>تومان: <b>${Number(data.cost?.toman||0).toLocaleString('fa-IR')}</b></span></div><div style="overflow:auto"><table class="table-pro"><thead><tr><th>مدل</th><th>پرووایدر</th><th>کیفیت</th><th>نسبت</th><th>زمان ساخت</th><th>امتیاز</th><th>رتبه</th><th>هزینه</th></tr></thead><tbody>${rows}</tbody></table></div>`; } catch(error) { dialog.querySelector('div').innerHTML='<div style="padding:28px;color:var(--danger)">'+(error.message||'دریافت اطلاعات انجام نشد.')+'</div>'; }
 }
 </script>

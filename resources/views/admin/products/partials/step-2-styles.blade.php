@@ -1,4 +1,32 @@
 <style>
+/* ── انتخاب دو مرحله‌ای provider و مدل ── */
+.model-picker-field { position:relative; }
+.model-picker-label { display:block; margin-bottom:6px; color:var(--text3); font-size:10px; font-weight:700; }
+.model-picker-shell { position:relative; }
+.model-picker-trigger { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:40px; padding:9px 11px; border:1px solid var(--b1); border-radius:9px; background:var(--s1); color:var(--text); font-size:11px; font-weight:700; text-align:right; cursor:pointer; }
+.model-picker-trigger:hover,.model-picker-trigger:focus { border-color:var(--accent); outline:none; }
+.model-picker-trigger i { color:var(--text3); font-size:9px; }
+.model-picker-menu { position:absolute; z-index:40; top:calc(100% + 6px); right:0; left:0; max-height:330px; overflow:auto; padding:7px; border:1px solid var(--b1); border-radius:11px; background:var(--s2); box-shadow:var(--shadow-card); }
+.model-picker-provider-head,.model-picker-provider-row { display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:8px; }
+.model-picker-provider-head { padding:5px 8px; color:var(--text3); font-size:9px; font-weight:800; border-bottom:1px solid var(--b1); }
+.model-picker-provider-row { width:100%; padding:9px 8px; border:0; border-bottom:1px solid var(--b1); background:transparent; color:var(--text2); font-size:10px; text-align:right; cursor:pointer; }
+.model-picker-provider-row:last-child { border-bottom:0; }
+.model-picker-provider-row:hover,.model-picker-provider-row.is-selected { background:var(--primary-l); color:var(--text); }
+.model-picker-provider-row span:last-child { color:var(--text3); text-align:left; }
+.model-picker-empty { display:block; margin-top:5px; color:var(--red); font-size:10px; }
+.model-picker-model-menu { min-width:520px; right:auto; left:0; }
+.model-picker-model-head,.model-picker-model-row { display:grid; grid-template-columns:1.6fr 1.2fr .7fr; align-items:center; gap:8px; }
+.model-picker-model-head { padding:6px 8px; color:var(--text3); font-size:8.5px; font-weight:800; border-bottom:1px solid var(--b1); }
+.model-picker-model-row { width:100%; padding:9px 8px; border:0; border-bottom:1px solid var(--b1); background:transparent; color:var(--text2); font-size:9px; line-height:1.5; text-align:right; cursor:pointer; }
+.model-picker-model-row:last-child { border-bottom:0; }
+.model-picker-model-row:hover,.model-picker-model-row.is-selected { background:var(--primary-l); color:var(--text); }
+.model-picker-model-row > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.model-picker-model-name { display:flex; flex-direction:column; gap:1px; }
+.model-picker-model-name b,.model-picker-model-name small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.model-picker-model-name small { color:var(--text3); font-size:8px; }
+.model-quality-grade { color:var(--warning); font-weight:800; white-space:nowrap; }
+@media (max-width:760px) { .model-picker-model-menu { min-width:0; width:calc(100vw - 54px); right:0; left:auto; } .model-picker-model-head,.model-picker-model-row { min-width:490px; } .model-picker-model-menu { overflow-x:auto; } }
+
 /* ── دکمه‌های toggle provider در step-2 ── */
 .api-provider-btn {
   background: transparent;

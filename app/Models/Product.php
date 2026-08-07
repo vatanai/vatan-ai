@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\GeneratedImage;
 
@@ -230,6 +231,16 @@ class Product extends Model
     public function labExperiments(): HasMany
     {
         return $this->hasMany(LabExperiment::class)->latest();
+    }
+
+    public function latestLabExperiment(): HasOne
+    {
+        return $this->hasOne(LabExperiment::class)->ofMany([
+            'completed_at' => 'max',
+            'id' => 'max',
+        ], function ($query) {
+            $query->whereIn('status', ['completed', 'evaluated', 'finalized']);
+        });
     }
 
     /**

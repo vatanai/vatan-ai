@@ -210,7 +210,7 @@
 
         {{-- ═══ گام دوم: هوش مصنوعی — پایپ‌لاین و پرامپت ═══ --}}
         <div class="hidden space-y-4" id="panel-2">
-          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom, 'product' => $product])
+          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom, 'product' => $product, 'exchange' => $exchange ?? [], 'labTested' => $labTested ?? false])
         </div>
 
         {{-- ═══ گام سوم: متغیرها و فیلدهای ورودی کاربر ═══ --}}
@@ -270,6 +270,9 @@
             'name' => $m->name,
             'provider' => $m->provider_name,
             'apiProvider' => $m->provider ?? 'openrouter',
+            'englishName' => $m->englishDisplayName(),
+            'usage' => $m->taskLabel(),
+            'grade' => $m->qualityGradeLabel(),
         ];
     });
     $fbIdxStart = count(old('fallback_models', optional($duplicateFrom)->fallback_models ?? []));

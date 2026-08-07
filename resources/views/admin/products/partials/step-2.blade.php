@@ -41,19 +41,33 @@
       }
     @endphp
 
-    {{-- تاگل انتخاب Provider — فقط providerهای روشن نمایش داده می‌شوند --}}
-    <div class="flex items-center gap-2 mb-3 flex-wrap">
-      <span class="text-[10px] text-[var(--text3)] font-semibold ml-1">سرویس:</span>
-      @foreach($providerLabels as $providerKey => $providerLabel)
-        @if($providerStatus[$providerKey] ?? false)
-          <button type="button" id="lbl-api-{{ $providerKey }}" onclick="onApiProviderChange('{{ $providerKey }}')" class="api-provider-btn inline-flex items-center gap-1.5 px-3 h-7 rounded-lg text-[11px] font-bold border transition-all cursor-pointer {{ $curApiProvider === $providerKey ? 'active-provider' : '' }}">{{ $providerLabel }}</button>
-        @endif
-      @endforeach
-      @if(!collect($providerStatus)->contains(true))
-        <span class="text-[10.5px] text-[var(--red)] font-bold">
-          <i class="fa-solid fa-triangle-exclamation ml-1"></i>
-          هیچ سرویس هوش مصنوعی فعال نیست. لطفاً از «مدیریت مدل‌های هوش مصنوعی» یکی را روشن کنید.
-        </span>
+    @php
+      $providerEnglishLabels = ['liara' => 'Liara AI', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'];
+      $availableProviders = collect($providerLabels)->filter(function ($label, $key) use ($providerStatus, $aiModels) {
+        return ($providerStatus[$key] ?? false) && $aiModels->contains(fn ($model) => ($model->provider ?? 'openrouter') === $key);
+      });
+    @endphp
+
+    {{-- انتخاب اول: فقط provider؛ مدل‌ها در باکس دوم نمایش داده می‌شوند --}}
+    <div class="model-picker-field mb-3">
+      <label class="model-picker-label">پرووایدر</label>
+      <div class="model-picker-shell" id="api-provider-picker-shell">
+        <button type="button" id="api-provider-picker-button" class="model-picker-trigger" onclick="toggleApiProviderMenu()" aria-haspopup="listbox" aria-expanded="false">
+          <span id="api-provider-picker-label">{{ $curApiProvider === 'all' ? 'همه پرووایدرها' : ($providerLabels[$curApiProvider] ?? 'انتخاب پرووایدر') }}</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div id="api-provider-picker-menu" class="model-picker-menu hidden" role="listbox">
+          <div class="model-picker-provider-head"><span>نام فارسی</span><span dir="ltr">English name</span></div>
+          <button type="button" class="model-picker-provider-row" data-provider-choice="all" onclick="selectApiProvider('all')"><span>همه پرووایدرها</span><span dir="ltr">All providers</span></button>
+          @foreach($availableProviders as $providerKey => $providerLabel)
+            <button type="button" class="model-picker-provider-row {{ $curApiProvider === $providerKey ? 'is-selected' : '' }}" data-provider-choice="{{ $providerKey }}" onclick="selectApiProvider('{{ $providerKey }}')">
+              <span>{{ $providerLabel }}</span><span dir="ltr">{{ $providerEnglishLabels[$providerKey] ?? $providerKey }}</span>
+            </button>
+          @endforeach
+        </div>
+      </div>
+      @if($availableProviders->isEmpty())
+        <span class="model-picker-empty"><i class="fa-solid fa-triangle-exclamation ml-1"></i>هیچ پرووایدر فعالی با مدل قابل‌استفاده وجود ندارد.</span>
       @endif
     </div>
 
@@ -76,8 +90,32 @@
         @endif
       @endforeach
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
-    <select name="primary_model" id="primary-model-select" data-searchable required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] w-full focus:border-[var(--accent)] mb-2" onchange="onPrimaryModelChange()">
+    <div class="grid grid-cols-1 gap-3 items-start">
+    <div class="model-picker-field">
+      <label class="model-picker-label">مدل هوش مصنوعی</label>
+      <div class="model-picker-shell" id="primary-model-picker-shell">
+        <button type="button" id="primary-model-picker-button" class="model-picker-trigger" onclick="togglePrimaryModelMenu()" aria-haspopup="listbox" aria-expanded="false">
+          <span id="primary-model-picker-label">— انتخاب مدل اصلی —</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div id="primary-model-menu" class="model-picker-menu model-picker-model-menu hidden" role="listbox">
+          <div class="model-picker-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>کاربری</span><span>گرید</span></div>
+          <div id="primary-model-options">
+            @foreach ($aiModels as $model)
+              @php
+                $modelProvider = $model->provider ?? 'openrouter';
+              @endphp
+              <button type="button" class="model-picker-model-row {{ $curPrimaryModel === $model->openrouter_model_id && (!$curSavedProvider || $curSavedProvider === $modelProvider) ? 'is-selected' : '' }}" data-model-provider="{{ $modelProvider }}" data-model-id="{{ $model->openrouter_model_id }}" onclick="selectPrimaryModelFromPicker(this)">
+                <span class="model-picker-model-name"><b>{{ $model->name }}</b><small dir="ltr">{{ $model->externalModelId() }}</small></span>
+                <span>{{ $model->taskLabel() }}</span>
+                <span class="model-quality-grade">{{ $model->qualityGradeLabel() }}</span>
+              </button>
+            @endforeach
+          </div>
+        </div>
+      </div>
+    </div>
+    <select name="primary_model" id="primary-model-select" required class="hidden" onchange="onPrimaryModelChange()">
       <option value="">— انتخاب مدل اصلی —</option>
       @foreach ($aiModels as $model)
         <option value="{{ $model->openrouter_model_id }}"
@@ -298,6 +336,9 @@
     </div>
   </div>
 </div>
+
+{{-- ═══════════════════ آزمایشگاه مدل‌های هوش مصنوعی — فقط UI ═══════════════════ --}}
+@include('admin.products.partials.ai-model-lab', ['aiModels' => $aiModels, 'exchange' => $exchange ?? [], 'labTested' => $labTested ?? false, 'product' => $product ?? null])
 
 @include('admin.products.partials.step-2-scripts')
 @include('admin.products.partials.step-2-styles')

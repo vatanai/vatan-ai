@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Support\ProviderStatus;
 use App\Models\AiProviderSetting;
 use App\Services\AiProviderConnectionTester;
+use App\Services\AiProviderLimitService;
 use App\Services\AiCatalogSyncService;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ExchangeRateService;
@@ -18,13 +19,20 @@ use Illuminate\Support\Facades\File;
 
 class AiModelController extends Controller
 {
-    public function index(ExchangeRateService $exchangeRate)
+    public function index(Request $request, ExchangeRateService $exchangeRate)
     {
         $models = AiModel::latest()->get();
-        return view('admin.ai-models.index', ['models' => $models, 'exchange' => $exchangeRate->usdToIrr()]);
+        return view('admin.ai-models.index', [
+            'models' => $models,
+            'exchange' => $exchangeRate->usdToIrr(),
+            'providerStatus' => ProviderStatus::all(),
+            'initialProvider' => in_array($request->query('provider'), ProviderStatus::PROVIDERS, true)
+                ? $request->query('provider')
+                : 'all',
+        ]);
     }
 
-    public function providers(ServiceCreditOverviewService $creditOverview)
+    public function providers(ServiceCreditOverviewService $creditOverview, AiProviderLimitService $limitService)
     {
         $models = AiModel::latest()->get();
         $providerStatus = ProviderStatus::all();
@@ -36,7 +44,10 @@ class AiModelController extends Controller
             }
         });
         $creditAccounts = $creditOverview->get()['accounts']->keyBy('slug');
-        return view('admin.ai-models.providers', compact('models', 'providerStatus', 'providerSettings', 'creditAccounts'));
+        $usageLimits = collect(ProviderStatus::PROVIDERS)->mapWithKeys(fn (string $provider) => [
+            $provider => $limitService->summary($provider),
+        ]);
+        return view('admin.ai-models.providers', compact('models', 'providerStatus', 'providerSettings', 'creditAccounts', 'usageLimits'));
     }
 
     public function createProvider()
@@ -45,10 +56,10 @@ class AiModelController extends Controller
     }
 
     /**
-     * تغییر وضعیت روشن/خاموش یک provider (Liara یا OpenRouter).
+     * تغییر وضعیت روشن/خاموش هر provider.
      *
      * این متد در پنل ادمین یک کلید کوچک بالای لیست مدل‌ها می‌سازد؛
-     * وقتی کاربر روی آن می‌زند، وضعیت provider در Cache دائمی ذخیره می‌شود
+     * وقتی کاربر روی آن می‌زند، وضعیت provider در تنظیمات امن و Cache ذخیره می‌شود
      * و کل سیستم (فرم ثبت محصول، روتر تولید تصویر و ...) فوراً از آن پیروی می‌کند.
      * کد OpenRouterService یا LiaraAiService دست‌نخورده باقی می‌ماند — فقط
      * یک flag روشن/خاموش عوض می‌شود.
@@ -73,11 +84,11 @@ class AiModelController extends Controller
             ->with('success', "سرویس {$label} با موفقیت {$stateFa} شد.");
     }
 
-    public function toggleModel(AiModel $aiModel)
+    public function toggleModel(Request $request, AiModel $aiModel)
     {
         $aiModel->update(['is_active' => ! $aiModel->is_active]);
 
-        return redirect()->route('admin.ai-models.index')
+        return $this->modelActionRedirect($request, $aiModel)
             ->with('success', 'وضعیت مدل با موفقیت تغییر کرد.');
     }
 
@@ -93,6 +104,12 @@ class AiModelController extends Controller
             'webhook_enabled' => 'nullable|boolean',
             'clear_api_key' => 'nullable|boolean',
             'clear_webhook_secret' => 'nullable|boolean',
+            'usage_limit_enabled' => 'nullable|boolean',
+            'usage_limit_window_minutes' => 'nullable|integer|min:1|max:10080',
+            'usage_limit_max_requests' => 'nullable|integer|min:0|max:100000',
+            'usage_limit_max_cost_usd' => 'nullable|numeric|min:0|max:100000',
+            'usage_limit_max_concurrent' => 'nullable|integer|min:0|max:1000',
+            'usage_limit_max_outputs' => 'nullable|integer|min:1|max:10',
         ]);
 
         $setting = AiProviderSetting::firstOrNew(['provider' => $data['provider']]);
@@ -106,6 +123,26 @@ class AiModelController extends Controller
         elseif (filled($data['api_key'] ?? null)) $setting->api_key = $data['api_key'];
         if ($data['clear_webhook_secret'] ?? false) $setting->webhook_secret = null;
         elseif (filled($data['webhook_secret'] ?? null)) $setting->webhook_secret = $data['webhook_secret'];
+        if ($request->hasAny([
+            'usage_limit_enabled',
+            'usage_limit_window_minutes',
+            'usage_limit_max_requests',
+            'usage_limit_max_cost_usd',
+            'usage_limit_max_concurrent',
+            'usage_limit_max_outputs',
+        ])) {
+            $savedSettings = (array) $setting->settings;
+            $savedLimits = array_replace(AiProviderLimitService::DEFAULTS, (array) ($savedSettings['usage_limits'] ?? []));
+            $savedSettings['usage_limits'] = [
+                'enabled' => (bool) ($data['usage_limit_enabled'] ?? false),
+                'window_minutes' => (int) ($data['usage_limit_window_minutes'] ?? $savedLimits['window_minutes']),
+                'max_requests' => (int) ($data['usage_limit_max_requests'] ?? $savedLimits['max_requests']),
+                'max_cost_usd' => (float) ($data['usage_limit_max_cost_usd'] ?? $savedLimits['max_cost_usd']),
+                'max_concurrent' => (int) ($data['usage_limit_max_concurrent'] ?? $savedLimits['max_concurrent']),
+                'max_outputs' => (int) ($data['usage_limit_max_outputs'] ?? $savedLimits['max_outputs']),
+            ];
+            $setting->settings = $savedSettings;
+        }
         $setting->save();
 
         return redirect()->route('admin.ai-models.providers')->with('success', 'تنظیمات provider با رمزنگاری ذخیره شد.');
@@ -141,9 +178,14 @@ class AiModelController extends Controller
         }
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('admin.ai-models.create', ['categories' => Category::roots()->active()->orderBy('sort_order')->orderBy('name_fa')->get()]);
+        return view('admin.ai-models.create', [
+            'categories' => Category::roots()->active()->orderBy('sort_order')->orderBy('name_fa')->get(),
+            'selectedProvider' => in_array($request->query('provider'), ProviderStatus::PROVIDERS, true)
+                ? $request->query('provider')
+                : 'replicate',
+        ]);
     }
 
     public function store(StoreAiModelRequest $request)
@@ -280,7 +322,7 @@ class AiModelController extends Controller
             ->with('success', 'اطلاعات مدل هوش مصنوعی با موفقیت به‌روزرسانی شد.');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $model = AiModel::findOrFail($id);
 
@@ -295,8 +337,19 @@ class AiModelController extends Controller
 
         $model->delete();
 
-        return redirect()->route('admin.ai-models.index')
+        return $this->modelActionRedirect($request, $model)
             ->with('success', 'مدل هوش مصنوعی با موفقیت از پایگاه داده حذف شد.');
+    }
+
+    private function modelActionRedirect(Request $request, AiModel $model)
+    {
+        if ($request->input('return_to') === 'providers') {
+            return redirect()->route('admin.ai-models.providers');
+        }
+
+        return redirect()->route('admin.ai-models.index', [
+            'provider' => $request->input('provider', $model->provider),
+        ]);
     }
 
     private function decodeJson(?string $value): ?array

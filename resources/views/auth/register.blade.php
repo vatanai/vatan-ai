@@ -63,7 +63,7 @@
       </div>
     </div>
 
-    <div class="text-center text-[10.5px] text-watan-text3 leading-[1.8] mt-4">با ادامه، <a href="#" class="text-green no-underline">قوانین و مقررات</a> و <a href="#" class="text-green no-underline">حریم خصوصی</a> وطن استودیو رو می‌پذیری.</div>
+    <div class="text-center text-[10.5px] text-watan-text3 leading-[1.8] mt-4">با ادامه، <a href="#" class="text-green no-underline">قوانین و مقررات</a> و <a href="{{ route('privacy') }}" class="text-green no-underline">حریم خصوصی</a> وطن استودیو رو می‌پذیری.</div>
   </div>
 
 </div>

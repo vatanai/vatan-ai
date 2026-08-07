@@ -207,10 +207,11 @@ class AiProviderRouter
         string $resolution   = '1K',
         string $aspectRatio  = '1:1',
         int    $n            = 1,
-        array  $extraPayload = []
+        array  $extraPayload = [],
+        ?string $preferredProvider = null
     ): array {
         $this->assertHasEnabledProvider();
-        return $this->serviceForModelId($modelId)->generateImageFromPrompt(
+        return $this->serviceForModelId($modelId, $preferredProvider)->generateImageFromPrompt(
             $modelId, $prompt, $resolution, $aspectRatio, $n, $extraPayload
         );
     }

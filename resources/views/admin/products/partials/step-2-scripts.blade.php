@@ -1,4 +1,58 @@
 <script>
+/* ══════ انتخاب دو مرحله‌ای provider و مدل ══════ */
+function toggleApiProviderMenu() {
+  const menu = document.getElementById('api-provider-picker-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('hidden') === false;
+  document.getElementById('api-provider-picker-button')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) document.getElementById('primary-model-menu')?.classList.add('hidden');
+}
+
+function togglePrimaryModelMenu() {
+  const menu = document.getElementById('primary-model-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('hidden') === false;
+  document.getElementById('primary-model-picker-button')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) document.getElementById('api-provider-picker-menu')?.classList.add('hidden');
+}
+
+function updateApiProviderPicker(provider) {
+  const label = document.getElementById('api-provider-picker-label');
+  const choice = document.querySelector('[data-provider-choice="' + provider + '"]');
+  if (label) label.textContent = provider === 'all' ? 'همه پرووایدرها' : (choice?.querySelector('span')?.textContent || provider);
+  document.querySelectorAll('[data-provider-choice]').forEach(function (item) {
+    item.classList.toggle('is-selected', item.dataset.providerChoice === provider);
+  });
+}
+
+function renderPrimaryModelPicker(provider) {
+  document.querySelectorAll('#primary-model-options .model-picker-model-row').forEach(function (row) {
+    row.classList.toggle('hidden', provider !== 'all' && row.dataset.modelProvider !== provider);
+  });
+}
+
+function selectApiProvider(provider) {
+  onApiProviderChange(provider);
+  document.getElementById('api-provider-picker-menu')?.classList.add('hidden');
+  document.getElementById('api-provider-picker-button')?.setAttribute('aria-expanded', 'false');
+}
+
+function selectPrimaryModelFromPicker(row) {
+  const select = document.getElementById('primary-model-select');
+  if (!select || !row) return;
+  const provider = row.dataset.modelProvider || '';
+  const modelId = row.dataset.modelId || '';
+  const option = Array.from(select.options).find(function (item) {
+    return item.value === modelId && item.getAttribute('data-api-provider') === provider;
+  });
+  if (!option) return;
+  onApiProviderChange(provider);
+  select.value = option.value;
+  select.dispatchEvent(new Event('change', {bubbles:true}));
+  document.getElementById('primary-model-menu')?.classList.add('hidden');
+  document.getElementById('primary-model-picker-button')?.setAttribute('aria-expanded', 'false');
+}
+
 /* ══════ Card ۱ — کارت اطلاعات مدل اصلی ══════ */
 function onPrimaryModelChange() {
   const sel = document.getElementById('primary-model-select');
@@ -17,7 +71,15 @@ function onPrimaryModelChange() {
   if (providerInput && selectedProvider) {
     providerInput.value = selectedProvider;
     __currentApiProvider = selectedProvider;
+    updateApiProviderPicker(selectedProvider);
+    renderPrimaryModelPicker(selectedProvider);
   }
+
+  const pickerLabel = document.getElementById('primary-model-picker-label');
+  if (pickerLabel) pickerLabel.textContent = opt.getAttribute('data-name') || opt.value || '— انتخاب مدل اصلی —';
+  document.querySelectorAll('#primary-model-options .model-picker-model-row').forEach(function (row) {
+    row.classList.toggle('is-selected', row.dataset.modelId === opt.value && row.dataset.modelProvider === selectedProvider);
+  });
 
   document.getElementById('model-info-name').textContent = opt.getAttribute('data-name') || '—';
   document.getElementById('model-info-provider').textContent = opt.getAttribute('data-provider') || '—';
@@ -75,16 +137,19 @@ function setFallbackSelection(select, modelId, provider) {
   select.dispatchEvent(new Event('change', {bubbles:true}));
 }
 
-/* ══════ فیلتر Provider — لیارا / OpenRouter ══════ */
+/* ══════ فیلتر Provider — همه‌ی سرویس‌های فعال ══════ */
 function onApiProviderChange(provider) {
   __currentApiProvider = provider;
   const providerInput = document.getElementById('ai-provider-input');
-  if (providerInput) providerInput.value = provider;
+  // «همه» فقط فیلتر نمایشی است و نباید به‌عنوان provider واقعی فرم ارسال شود.
+  if (providerInput && provider !== 'all') providerInput.value = provider;
 
   // آپدیت استایل دکمه‌های تاگل
   document.querySelectorAll('.api-provider-btn').forEach(btn => btn.classList.remove('active-provider'));
   const activeBtn = document.getElementById('lbl-api-' + provider);
   if (activeBtn) activeBtn.classList.add('active-provider');
+  updateApiProviderPicker(provider);
+  renderPrimaryModelPicker(provider);
   document.getElementById('recommended-openrouter-models')?.classList.toggle('hidden', provider !== 'openrouter');
 
   // فیلتر آپشن‌های select مدل اصلی
@@ -94,7 +159,7 @@ function onApiProviderChange(provider) {
     Array.from(primarySel.options).forEach(opt => {
       if (!opt.value) return; // آپشن placeholder رو نگه دار
       const ap = opt.getAttribute('data-api-provider') || 'openrouter';
-      const match = (ap === provider);
+      const match = (provider === 'all' || ap === provider);
       opt.hidden   = !match;
       opt.disabled = !match;
       if (!match && opt.selected) { opt.selected = false; needReset = true; }
@@ -387,6 +452,16 @@ function restorePromptVersion(i) {
 function deletePromptVersion(i) { __promptVersions.splice(i, 1); renderPromptVersions(); }
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('#api-provider-picker-shell')) {
+      document.getElementById('api-provider-picker-menu')?.classList.add('hidden');
+      document.getElementById('api-provider-picker-button')?.setAttribute('aria-expanded', 'false');
+    }
+    if (!event.target.closest('#primary-model-picker-shell')) {
+      document.getElementById('primary-model-menu')?.classList.add('hidden');
+      document.getElementById('primary-model-picker-button')?.setAttribute('aria-expanded', 'false');
+    }
+  });
   clearRecommendedModelSelection();
   onPrimaryModelChange();
   clearRecommendedModelSelection();

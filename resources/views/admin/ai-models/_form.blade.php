@@ -1,6 +1,6 @@
 @php
   $editing = isset($model);
-  $currentProvider = old('provider', $model->provider ?? 'replicate');
+  $currentProvider = old('provider', $model->provider ?? ($selectedProvider ?? 'replicate'));
   $selectedCategoryIds = collect(old('category_ids', $model->recommended_category_ids ?? []))->map(fn ($id) => (int) $id)->all();
   $externalId = old('external_model_id', $model->external_model_id ?? $model->openrouter_model_id ?? '');
   $inputSchema = old('input_schema', json_encode($model->input_schema ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));

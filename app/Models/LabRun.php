@@ -11,7 +11,8 @@ class LabRun extends Model
     protected $guarded = [];
     protected $casts = [
         'model_snapshot' => 'array', 'parameters' => 'array', 'provider_response' => 'array',
-        'estimated_cost_usd' => 'decimal:6', 'actual_cost_usd' => 'decimal:6', 'final_score' => 'decimal:2', 'is_selected' => 'boolean', 'exchange_rate_irr' => 'decimal:2',
+        'estimated_cost_usd' => 'decimal:6', 'actual_cost_usd' => 'decimal:6', 'estimated_cost_toman' => 'decimal:2', 'actual_cost_toman' => 'decimal:2', 'final_score' => 'decimal:2', 'is_selected' => 'boolean', 'preserve_face' => 'boolean', 'exchange_rate_irr' => 'decimal:2',
+        'build_seconds' => 'integer', 'tokens_used' => 'integer',
         'started_at' => 'datetime', 'completed_at' => 'datetime',
     ];
     public function experiment(): BelongsTo { return $this->belongsTo(LabExperiment::class, 'lab_experiment_id'); }

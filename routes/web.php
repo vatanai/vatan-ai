@@ -31,6 +31,8 @@ use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
 
 // ─── Root & Landing ──────────────────────────────────────
+// صفحه‌ی اصلی عمومی باید برای کاربر واردشده هم قابل مشاهده باشد؛
+// ورود به بخش کاربری از دکمه‌های داخل صفحه یا مسیرهای /app انجام می‌شود.
 Route::get('/', fn() => view('site.home'))->name('site.home.root');
 Route::get('/site', fn() => redirect('/'));
 Route::get('/r/{code}', [ReferralController::class, 'visit'])
@@ -44,6 +46,8 @@ Route::prefix('site')->group(function () {
     Route::get('/pricing', [PlanSubscriptionController::class, 'index'])->name('pricing.index');
     Route::get('/about',   fn() => view('site.about'))->name('site.about');
 });
+
+Route::get('/privacy', fn() => view('site.privacy'))->name('privacy');
 
 Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token()]))
     ->name('auth.csrf-token');
@@ -212,6 +216,8 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::post('/lab', [LabExperimentController::class, 'store'])->name('lab.store');
     Route::get('/lab/reports', [LabExperimentController::class, 'reports'])->name('lab.reports');
     Route::get('/lab/products/{product}/images', [LabExperimentController::class, 'productImages'])->name('lab.products.images');
+    Route::get('/lab/products/{product}/summary', [LabExperimentController::class, 'productSummary'])->name('lab.products.summary');
+    Route::post('/lab/products/{product}/quick-run', [LabExperimentController::class, 'quickRun'])->name('lab.products.quick-run');
     Route::get('/lab/{experiment}/status', [LabExperimentController::class, 'status'])->name('lab.status');
     Route::get('/lab/{experiment}', [LabExperimentController::class, 'show'])->name('lab.show');
     Route::post('/lab/{experiment}/cancel', [LabExperimentController::class, 'cancel'])->name('lab.cancel');
@@ -219,6 +225,7 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::post('/lab/{experiment}/apply', [LabExperimentController::class, 'apply'])->name('lab.apply');
     Route::post('/lab/runs/{run}/retry', [LabExperimentController::class, 'retry'])->name('lab.runs.retry');
     Route::post('/lab/outputs/{output}/score', [LabExperimentController::class, 'score'])->name('lab.outputs.score');
+    Route::post('/lab/outputs/{output}/manager-score', [LabExperimentController::class, 'managerScore'])->name('lab.outputs.manager-score');
 
     // مدیریت یکپارچه محصولات و بنرهای صفحه ترندز
     Route::get('/trends', [TrendController::class, 'index'])->name('trends.index');

@@ -2,6 +2,8 @@
   $offer = $offer ?? $plan->offerFor(auth()->user());
   $planDisplay = $planDisplay ?? ['show_images' => false];
   $preview = $preview ?? false;
+  // پلن‌های قدیمی ممکن است slug نداشته باشند؛ مسیر خرید، شناسه‌ی پلن را هم می‌پذیرد.
+  $purchasePlanKey = filled($plan->slug) ? $plan->slug : $plan->getKey();
   $totalTokens = (int) $offer['tokens'] + (int) $offer['bonus_tokens'];
   $style = array_key_exists($plan->card_style ?: 'classic', config('plan_card_styles')) ? ($plan->card_style ?: 'classic') : 'classic';
   $isSplit = $style === 'split';
@@ -48,7 +50,7 @@
     @elseif($plan->billing_type === 'custom')
       <a href="/#contact" class="vpc__cta">درخواست مشاوره فروش</a>
     @elseif(auth()->check())
-      <form action="{{ route('pricing.fakePayment', $plan->slug) }}" method="POST">@csrf<button class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">انتخاب و فعال‌سازی پلن</button></form>
+      <form action="{{ route('pricing.fakePayment', $purchasePlanKey) }}" method="POST">@csrf<button class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">انتخاب و فعال‌سازی پلن</button></form>
     @else
       <a href="{{ route('login', ['redirect' => request()->fullUrl()]) }}" class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">ورود و انتخاب پلن</a>
     @endif

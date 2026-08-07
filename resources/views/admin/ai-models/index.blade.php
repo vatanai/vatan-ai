@@ -35,6 +35,9 @@
         <p class="text-xs text-[var(--text-soft)] m-0">مدیریت مدل‌های عکس و ویدیو، کاربرد مدل و وضعیت فعال‌بودن</p>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ route('admin.ai-models.providers') }}" class="btn-pro btn-pro-ghost no-underline inline-flex items-center gap-2">
+          <i class="fa-solid fa-plug"></i> مدیریت پرووایدرها
+        </a>
         <a href="{{ route('admin.ai-models.create') }}" class="btn-pro btn-pro-primary no-underline inline-flex items-center gap-2">
           <i class="fa-solid fa-plus"></i> ثبت مدل دستی
         </a>
@@ -74,10 +77,13 @@
       </div>
       <div class="overflow-x-auto">
         <table class="table-pro w-full">
-          <thead><tr><th>مدل</th><th>کاربرد مدل</th><th>پروایدر</th><th>شناسه / نسخه</th><th>قابلیت‌ها</th><th>هزینه به تومان</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+          <thead><tr><th>مدل</th><th>کاربرد مدل</th><th>گرید</th><th>پروایدر</th><th>شناسه / نسخه</th><th>قابلیت‌ها</th><th>هزینه به تومان</th><th>وضعیت</th><th>عملیات</th></tr></thead>
           <tbody>
             @forelse($models as $model)
-              @php $meta = $providerMeta[$model->provider] ?? ['label' => $model->provider, 'color' => 'neutral']; @endphp
+              @php
+                $meta = $providerMeta[$model->provider] ?? ['label' => $model->provider, 'color' => 'neutral'];
+                $providerIsEnabled = $providerStatus[$model->provider] ?? false;
+              @endphp
               <tr data-provider-row="{{ $model->provider }}" data-media-row="{{ $model->output_modality }}">
                 <td>
                   <div class="flex items-center gap-2.5 min-w-[210px]">
@@ -86,7 +92,13 @@
                   </div>
                 </td>
                 <td class="text-center align-middle">@if(in_array($model->output_modality, ['image', 'video'], true))<i class="model-purpose-icon fa-solid {{ $model->mediaIcon() }}" aria-hidden="true"></i>@endif</td>
-                <td><span class="badge-pro badge-pro-{{ $meta['color'] }}">{{ $meta['label'] }}</span></td>
+                <td><span class="model-quality-grade">{{ $model->qualityGradeLabel() }}</span></td>
+                <td>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="badge-pro badge-pro-{{ $meta['color'] }}">{{ $meta['label'] }}</span>
+                    <span class="provider-inline-state {{ $providerIsEnabled ? 'is-on' : 'is-off' }}">{{ $providerIsEnabled ? 'فعال' : 'غیرفعال' }}</span>
+                  </div>
+                </td>
                 <td dir="ltr" class="text-left font-mono text-[11px] text-[var(--text-main)]">
                   <div>{{ $model->externalModelId() }}</div>
                   @if($model->external_version)<div class="text-[10px] text-[var(--text-soft)] mt-1">version: {{ $model->external_version }}</div>@endif
@@ -108,7 +120,7 @@
                 <td><div class="flex items-center gap-2"><a class="icon-action-btn" href="{{ route('admin.ai-models.edit', $model) }}" title="ویرایش"><i class="fa-regular fa-pen-to-square"></i></a><form method="POST" action="{{ route('admin.ai-models.destroy', $model) }}" onsubmit="return confirm('این مدل حذف شود؟')">@csrf @method('DELETE')<button class="icon-action-btn text-[var(--danger)]" type="submit" title="حذف"><i class="fa-regular fa-trash-can"></i></button></form></div></td>
               </tr>
             @empty
-              <tr><td colspan="8"><div class="empty-state">هنوز مدلی ثبت نشده است. از دکمه‌ی «ثبت مدل دستی» شروع کنید.</div></td></tr>
+              <tr><td colspan="9"><div class="empty-state">هنوز مدلی ثبت نشده است. از دکمه‌ی «ثبت مدل دستی» شروع کنید.</div></td></tr>
             @endforelse
           </tbody>
         </table>
@@ -134,6 +146,10 @@
   .summary-icon.is-warning { color:var(--warning); background:color-mix(in srgb,var(--warning) 10%,transparent); }
   .summary-icon.is-purple { color:var(--primary); background:var(--primary-l); }
   .model-purpose-icon { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; color:var(--primary); background:var(--primary-l); font-size:12px; }
+  .model-quality-grade { color:var(--warning); font-size:10px; font-weight:800; white-space:nowrap; }
+  .provider-inline-state { display:inline-flex; align-items:center; min-height:19px; padding:2px 5px; border:1px solid; border-radius:6px; font-size:8px; font-weight:800; }
+  .provider-inline-state.is-on { color:var(--success); border-color:color-mix(in srgb,var(--success) 28%,transparent); background:color-mix(in srgb,var(--success) 8%,transparent); }
+  .provider-inline-state.is-off { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 28%,transparent); background:color-mix(in srgb,var(--danger) 8%,transparent); }
   .provider-card[data-provider-enabled="1"] { border-color: color-mix(in srgb, var(--success) 42%, var(--border)); }
   .provider-card[data-provider-enabled="0"] { border-color: color-mix(in srgb, var(--danger) 42%, var(--border)); }
   .provider-status-box { display:inline-flex; align-items:center; justify-content:center; min-height:25px; padding:4px 8px; border:1px solid; border-radius:7px; font-size:9px; font-weight:800; white-space:nowrap; }
@@ -158,7 +174,7 @@
 
 @section('scripts')
 <script>
-  let selectedProvider = 'all';
+  let selectedProvider = @json($initialProvider ?? 'all');
   let selectedMedia = 'all';
 
   function applyModelFilters() {
@@ -185,5 +201,10 @@
       applyModelFilters();
     });
   });
+
+  document.querySelectorAll('[data-provider-filter]').forEach(button => {
+    button.classList.toggle('active', button.dataset.providerFilter === selectedProvider);
+  });
+  applyModelFilters();
 </script>
 @endsection

@@ -148,6 +148,29 @@ class AiCatalogSyncService
             $model->external_model_id = $data['external_model_id'];
             $model->openrouter_model_id = $data['external_model_id'];
             $model->is_active = true;
+        } elseif ($data['provider'] === 'replicate') {
+            // همگام‌سازی عمومی Replicate باید schema زنده را تازه کند، اما
+            // تنظیمات تخصصی ثبت‌شده برای مدل‌های منتخب (مثل نگاشت input_image
+            // و تعداد تصاویر مرجع) نباید با پاسخ عمومی کاتالوگ حذف شود.
+            $existingCapabilities = is_array($model->capability_config) ? $model->capability_config : [];
+            $incomingCapabilities = is_array($data['capability_config'] ?? null) ? $data['capability_config'] : [];
+            foreach (['field_map', 'required_reference_count', 'reference_fields'] as $key) {
+                if (array_key_exists($key, $existingCapabilities) && !array_key_exists($key, $incomingCapabilities)) {
+                    $incomingCapabilities[$key] = $existingCapabilities[$key];
+                }
+            }
+            $data['capability_config'] = $incomingCapabilities;
+
+            $existingPricing = is_array($model->pricing_config) ? $model->pricing_config : [];
+            $incomingPricing = is_array($data['pricing_config'] ?? null) ? $data['pricing_config'] : [];
+            $data['pricing_config'] = array_merge($existingPricing, $incomingPricing);
+
+            if (blank($data['default_parameters'] ?? null) && !empty($model->default_parameters)) {
+                $data['default_parameters'] = $model->default_parameters;
+            }
+            if ($model->supports_face_identity && empty($data['supports_face_identity'])) {
+                $data['supports_face_identity'] = true;
+            }
         }
 
         $model->fill($data);

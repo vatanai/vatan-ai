@@ -147,7 +147,8 @@
       'categories.show',
       'profile',
       'profile.gallery',
-      'prompts.show'
+      'prompts.show',
+      'privacy'
   );
 @endphp
 <body id="top" @class(['vatan-app-shell' => $showAppFooter])>

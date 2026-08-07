@@ -17,6 +17,19 @@ class LabExperiment extends Model
         'actual_cost_usd' => 'decimal:6',
         'estimated_cost_irr' => 'decimal:2',
         'actual_cost_irr' => 'decimal:2',
+        'estimated_cost_toman' => 'decimal:2',
+        'actual_cost_toman' => 'decimal:2',
+        'total_cost_usd' => 'decimal:6',
+        'total_cost_toman' => 'decimal:2',
+        'lab_cost_usd' => 'decimal:6',
+        'lab_cost_toman' => 'decimal:2',
+        'lab_enabled' => 'boolean',
+        'input_image_size' => 'integer',
+        'exchange_rate_usd' => 'decimal:2',
+        'exchange_rate_eur' => 'decimal:2',
+        'exchange_rate_usdt' => 'decimal:2',
+        'tested_at' => 'datetime',
+        'evaluated_at' => 'datetime',
         'overall_score' => 'decimal:2',
         'exchange_rate_irr' => 'decimal:2',
         'started_at' => 'datetime',
@@ -42,7 +55,7 @@ class LabExperiment extends Model
     {
         return [
             'queued' => 'در صف', 'processing' => 'در حال اجرا', 'completed' => 'تکمیل‌شده',
-            'failed' => 'ناموفق', 'cancelled' => 'لغوشده',
+            'failed' => 'ناموفق', 'partially_failed' => 'بخشی ناموفق', 'evaluated' => 'ارزیابی‌شده', 'finalized' => 'نهایی‌شده', 'cancelled' => 'لغوشده',
         ][$this->status] ?? $this->status;
     }
 
