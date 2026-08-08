@@ -387,7 +387,7 @@ class LabExperimentController extends Controller
     public function status(LabExperiment $experiment)
     {
         $experiment->load(['product', 'images', 'runs.aiModel', 'runs.outputs.scores', 'runs.outputs.managerScore']);
-        if ($experiment->status === 'completed') {
+        if ($experiment->status === 'completed' && (string) data_get($experiment->settings, 'scoring_model', '') !== '') {
             $this->recalculateRanking($experiment);
             $experiment->load(['product', 'images', 'runs.aiModel', 'runs.outputs.scores', 'runs.outputs.managerScore']);
         }
@@ -570,6 +570,9 @@ class LabExperimentController extends Controller
         $experiment = $output->loadMissing('run.experiment.runs.outputs.managerScore')->run->experiment;
         $maxPriority = $experiment->runs->count();
         if (!empty($data['usage_priority']) && $data['usage_priority'] > $maxPriority) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'اولویت استفاده نمی‌تواند بیشتر از تعداد مدل‌های آزمایش باشد.', 'errors' => ['usage_priority' => ['اولویت استفاده نمی‌تواند بیشتر از تعداد مدل‌های آزمایش باشد.']]], 422);
+            }
             return back()->withErrors(['usage_priority' => 'اولویت استفاده نمی‌تواند بیشتر از تعداد مدل‌های آزمایش باشد.']);
         }
 
@@ -580,6 +583,9 @@ class LabExperimentController extends Controller
                 ->where('lab_run_output_id', '!=', $output->id)
                 ->exists();
             if ($duplicate) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'این اولویت برای خروجی دیگری ثبت شده است.', 'errors' => ['usage_priority' => ['این اولویت برای خروجی دیگری ثبت شده است.']]], 422);
+                }
                 return back()->withErrors(['usage_priority' => 'این اولویت برای خروجی دیگری ثبت شده است.']);
             }
         }
@@ -686,7 +692,7 @@ class LabExperimentController extends Controller
             'ratio' => $width && $height ? round($width / $height, 4) : null,
             'size' => $disk->exists($path) ? (int) $disk->size($path) : null,
             'mime_type' => $mime,
-            'format' => strtoupper(pathinfo($path, PATHINFO_EXTENSION) ?: last(explode('/', $mime))),
+            'format' => strtoupper(pathinfo($path, PATHINFO_EXTENSION) ?: Str::after($mime, '/')),
             'color' => 'RGB',
         ];
     }
@@ -816,7 +822,7 @@ class LabExperimentController extends Controller
             'overall_score' => $experiment->overall_score,
             'tested_at' => optional($experiment->tested_at ?: $experiment->completed_at)->toIso8601String(),
             'runs' => $experiment->runs->map(function (LabRun $run) {
-                return ['id' => $run->id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'status' => $run->status, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'tokens' => $run->tokens_used, 'cost_usd' => (float) ($run->actual_cost_usd ?? $run->estimated_cost_usd), 'cost_toman' => (float) ($run->actual_cost_toman ?? $run->estimated_cost_toman), 'score' => $run->final_score, 'rank' => $run->rank, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => $output->scores->where('evaluator_type', 'ai')->map(fn ($score) => ['criterion' => $score->criterion, 'score' => $score->score])->values()])->values()];
+                return ['id' => $run->id, 'model_id' => $run->model_id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'status' => $run->status, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'tokens' => $run->tokens_used, 'retry_count' => (int) $run->retry_count, 'cost_usd' => (float) ($run->actual_cost_usd ?? $run->estimated_cost_usd), 'cost_toman' => (float) ($run->actual_cost_toman ?? $run->estimated_cost_toman), 'score' => null, 'rank' => $run->final_score !== null ? $run->rank : null, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'meta' => ['dimensions' => $output->width && $output->height ? $output->width . ' × ' . $output->height : null, 'width' => $output->width, 'height' => $output->height, 'ratio' => $output->ratio, 'size' => $output->size, 'format' => $output->mime_type ? strtoupper(Str::after($output->mime_type, '/')) : null, 'mime' => $output->mime_type, 'color' => $output->color_profile], 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => []])->values()];
             })->values(),
         ];
     }

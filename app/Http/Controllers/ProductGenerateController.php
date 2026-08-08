@@ -555,10 +555,6 @@ class ProductGenerateController extends Controller
                     'error_message' => $e->getMessage(),
                     'processing_duration_ms' => $order->processing_started_at ? $order->processing_started_at->diffInMilliseconds(now()) : null,
                 ]);
-                if ($user?->phone) app(SmsEventService::class)->send('order_failed', $user->phone, [
-                    'name'=>$user->name, 'phone'=>$user->phone, 'order_number'=>$order->order_number,
-                    'product_name'=>$product->name_fa ?? $product->name ?? '',
-                ]);
                 $order->recordEvent('failed', 'پردازش ناموفق بود', $e->getMessage());
             }
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

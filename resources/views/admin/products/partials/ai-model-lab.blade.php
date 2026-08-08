@@ -43,7 +43,7 @@
 @endphp
 
 @php($labVersion = $labVersion ?? 'V12')
-<section class="ai-model-lab" id="ai-model-lab" aria-labelledby="ai-model-lab-title">
+<section class="ai-model-lab" id="ai-model-lab" aria-labelledby="ai-model-lab-title" data-run-url="{{ $product ? route('admin.lab.products.quick-run', $product) : '' }}" data-run-template="{{ route('admin.lab.products.quick-run', ['product' => '__PRODUCT_ID__']) }}" data-product-images-template="{{ route('admin.lab.products.images', ['product' => '__PRODUCT_ID__']) }}" data-manager-score-template="{{ route('admin.lab.outputs.manager-score', ['output' => '__OUTPUT_ID__']) }}">
   <div class="ai-model-lab-header">
     <div class="ai-model-lab-heading">
       <span class="ai-model-lab-icon"><i class="fa-solid fa-flask-vial"></i></span>
@@ -61,7 +61,7 @@
         <span class="ai-model-lab-switch" aria-hidden="true"><span></span></span>
         <i class="fa-solid fa-chevron-down ai-model-lab-chevron" aria-hidden="true"></i>
       </button>
-      <span class="ai-model-lab-toolbar-item ai-model-lab-tested is-tested" title="وضعیت آزمایش محصول"><i class="fa-solid fa-circle-check"></i> آزمایش شده</span>
+      <span class="ai-model-lab-toolbar-item ai-model-lab-tested {{ $labTested ? 'is-tested' : 'is-untested' }}" title="وضعیت آزمایش محصول"><i class="fa-solid {{ $labTested ? 'fa-circle-check' : 'fa-circle-xmark' }}"></i> {{ $labTested ? 'آزمایش شده' : 'آزمایش نشده' }}</span>
     </div>
   </div>
 
@@ -80,7 +80,8 @@
               <option value="catalog-{{ $labModel['id'] }}">{{ $labModel['persianName'] }} · {{ $labModel['englishName'] }} · {{ $labModel['providerLabel'] }}</option>
             @endforeach
           </select>
-          <button type="button" class="ai-model-lab-evaluate" onclick="evaluateAiModelLab()"><i class="fa-solid fa-ranking-star"></i> ارزیابی خروجی‌ها</button>
+          <button type="button" class="ai-model-lab-evaluate" onclick="evaluateAiModelLab()"><i class="fa-solid fa-ranking-star"></i> ارزیابی</button>
+          <button type="button" class="ai-model-lab-evaluate ai-model-lab-evaluate-settings" aria-label="تنظیمات ارزیابی" title="تنظیمات"><i class="fa-solid fa-gear"></i></button>
         </div>
         <div class="ai-model-lab-action-group">
           <button type="button" class="ai-model-lab-toolbar-item ai-model-lab-reset" onclick="resetAiModelLab()"><i class="fa-solid fa-rotate-left"></i> ریست تنظیمات</button>
@@ -103,7 +104,7 @@
       <button type="button" class="ai-model-lab-add" onclick="addAiModelLabRow()">
         <i class="fa-solid fa-plus"></i> افزودن مدل دیگر
       </button>
-      <span><i class="fa-solid fa-circle-info"></i> این تنظیمات فعلاً ذخیره یا اجرا نمی‌شوند.</span>
+      <span><i class="fa-solid fa-circle-info"></i> آزمایش واقعی برای محصول ذخیره‌شده اجرا و در لیست آزمایش‌ها ثبت می‌شود.</span>
     </div>
 
     <section class="ai-model-lab-output" aria-labelledby="ai-model-lab-output-title">
@@ -173,10 +174,11 @@
       </div>
     </section>
   </div>
+  <div class="ai-model-lab-loading hidden" id="ai-model-lab-loading"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال اجرای آزمایش مدل‌ها...</span></div>
 </section>
 
 <style>
-  #ai-model-lab { overflow:hidden; border:1px solid var(--b1); border-radius:14px; background:var(--s2); }
+  #ai-model-lab { position:relative; overflow:hidden; border:1px solid var(--b1); border-radius:14px; background:var(--s2); }
   #ai-model-lab .ai-model-lab-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px 18px; }
   #ai-model-lab .ai-model-lab-header-actions { display:flex; align-items:center; gap:7px; flex-shrink:0; direction:ltr; }
   #ai-model-lab .ai-model-lab-header-actions .ai-model-lab-tested { direction:rtl; }
@@ -210,6 +212,7 @@
   #ai-model-lab button.ai-model-lab-toolbar-item:hover { border-color:var(--accent); color:var(--text); }
   #ai-model-lab .ai-model-lab-toolbar-item i { font-size:9px; }
   #ai-model-lab .ai-model-lab-tested.is-tested { min-height:34px; box-sizing:border-box; border-color:var(--green); color:var(--green); }
+  #ai-model-lab .ai-model-lab-tested.is-untested { min-height:34px; box-sizing:border-box; border-color:var(--danger); color:var(--danger); }
   #ai-model-lab .ai-model-lab-reset { border-color:var(--warning); color:var(--warning); background:var(--warning-l); }
   #ai-model-lab .ai-model-lab-reset:hover { border-color:var(--warning); color:var(--warning); background:var(--warning-l); }
   #ai-model-lab .ai-model-lab-evaluation-box { display:flex; align-items:center; gap:6px; width:max-content; min-height:37px; height:37px; box-sizing:border-box; padding:3px 5px; border:1px solid var(--b1); border-radius:8px; background:var(--s1); margin-inline:4px; direction:rtl; }
@@ -226,8 +229,11 @@
   #ai-model-lab .ai-model-lab-defaults-menu button:hover { color:var(--text); background:var(--primary-l); }
   #ai-model-lab .ai-model-lab-evaluate { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:112px; height:32px; padding:0 12px; border:1px solid var(--primary); border-radius:8px; color:var(--primary); background:var(--primary-l); font-family:inherit; font-size:9.5px; font-weight:900; cursor:pointer; transition:all .18s ease; }
   #ai-model-lab .ai-model-lab-evaluate:hover { color:var(--s2); background:var(--primary); }
+  #ai-model-lab .ai-model-lab-evaluate-settings { min-width:32px; width:32px; padding:0; }
   #ai-model-lab .ai-model-lab-run { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:101px; height:37px; padding:0 15px; border:1px solid var(--green); border-radius:8px; color:var(--green); background:var(--green-l); font-family:inherit; font-size:11.55px; font-weight:600; cursor:pointer; transition:all .18s ease; }
   #ai-model-lab .ai-model-lab-run:hover { color:var(--s2); background:var(--green); }
+  #ai-model-lab .ai-model-lab-loading { position:absolute; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; gap:9px; color:var(--text); background:color-mix(in srgb, var(--s2) 82%, transparent); font-size:12px; font-weight:900; }
+  #ai-model-lab .ai-model-lab-loading.hidden { display:none; }
   #ai-model-lab .ai-model-lab-rows { display:grid; gap:9px; }
   #ai-model-lab .ai-model-lab-row { display:grid; grid-template-columns:minmax(150px, .9fr) minmax(220px, 1.45fr) minmax(130px, .7fr) minmax(130px, .75fr) minmax(105px, .55fr) 32px; align-items:end; gap:9px; padding:12px; border:1px solid var(--b1); border-radius:11px; background:var(--s1); }
   #ai-model-lab .ai-model-lab-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
@@ -364,9 +370,18 @@
   let rowIndex = 0;
   let labRunReady = false;
   let managerScores = {};
+  let currentExperiment = null;
+  let labRunPollTimer = null;
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const faNumber = value => Number(value).toLocaleString('fa-IR');
+  const formatBytes = value => {
+    const bytes = Number(value);
+    if (!Number.isFinite(bytes) || bytes <= 0) return '—';
+    return bytes < 1024 * 1024 ? Math.max(1, Math.round(bytes / 1024)).toLocaleString('fa-IR') + ' کیلوبایت' : (bytes / (1024 * 1024)).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) + ' مگابایت';
+  };
+  const formatRatio = value => value ? Number(value).toLocaleString('fa-IR', { maximumFractionDigits: 3 }) : '—';
+  const formatMoney = value => Number(value || 0).toLocaleString('fa-IR');
 
   function providerMarkup() {
     return '<option value="">انتخاب پرووایدر</option>' + providers.map(provider =>
@@ -399,6 +414,35 @@
   function renderLabModelOutputs() {
     const holder = document.getElementById('ai-model-lab-output-model-cards');
     if (!holder) return;
+    if (currentExperiment) {
+      holder.innerHTML = (currentExperiment.runs || []).map((run, index) => {
+        const output = (run.outputs || [])[0] || {};
+        const imageUrl = output.url || sampleImage;
+        const outputMeta = output.meta || {};
+        const quality = run.quality || '—';
+        const size = run.size || '—';
+        const dollar = '$' + Number(run.cost_usd || 0).toFixed(4);
+        const toman = formatMoney(run.cost_toman || 0);
+        const statusLabel = run.status === 'completed' ? 'آماده' : (run.status === 'failed' ? 'ناموفق' : 'در حال اجرا');
+        return `
+          <article class="ai-model-lab-output-card ai-model-lab-model-output-card">
+            <div class="ai-model-lab-card-head"><span class="ai-model-lab-card-head-english" dir="ltr">${esc(run.model || '—')}</span><span class="ai-model-lab-card-head-persian">${esc(run.model || 'مدل آزمایشی')}</span></div>
+            <div class="ai-model-lab-output-frame">
+              <img src="${esc(imageUrl)}" alt="خروجی ${esc(run.model || 'مدل')}" loading="lazy">
+              <span class="ai-model-lab-output-image-label">آزمایش مدل ${ordinalNames[index] || faNumber(index + 1)}</span>
+            </div>
+            <div class="ai-model-lab-output-meta">
+              <div><strong><span>مدل: <b dir="ltr">${esc(run.model || '—')}</b></span><span>وضعیت: ${esc(statusLabel)}</span></strong></div>
+              <div><strong class="ai-model-lab-money-stack"><span dir="ltr"><em>دلار</em><b>${dollar}</b></span><span dir="rtl"><em>تومان</em><b>${toman}</b></span></strong></div>
+              <div><strong><span>ابعاد: ${esc(outputMeta.dimensions || '—')}</span><span>زمان ساخت: ${run.seconds ?? '—'} ثانیه</span></strong></div>
+              <div><strong><span>کیفیت: ${esc(quality)}</span><span>سایز: ${esc(size)}</span></strong></div>
+              <div><strong><span>توکن: ${run.tokens ? Number(run.tokens).toLocaleString('fa-IR') : '—'}</span><span>تلاش مجدد: ${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</span></strong></div>
+              <div><strong><span>فرمت: ${esc(outputMeta.format || '—')}</span><span>حفظ چهره: ${run.preserve_face ? 'فعال' : 'خاموش'}</span></strong></div>
+            </div>
+          </article>`;
+      }).join('');
+      return;
+    }
     const rows = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId);
     holder.innerHTML = rows.map((row, index) => {
       const selectedModel = models.find(item => item.id === row.dataset.modelId);
@@ -435,6 +479,45 @@
   function renderCalculationTable() {
     const table = document.getElementById('ai-model-lab-calculation-rows');
     if (!table) return;
+    if (currentExperiment) {
+      const countTarget = root.querySelector('[data-lab-summary="model-count"]');
+      const inputTarget = root.querySelector('[data-lab-summary="input-image"]');
+      const evaluatorTarget = root.querySelector('[data-lab-summary="evaluator"]');
+      const totalUsdTarget = root.querySelector('[data-lab-summary="total-usd"]');
+      const totalTomanTarget = root.querySelector('[data-lab-summary="total-toman"]');
+      const reportStatus = root.querySelector('[data-lab-summary="report-status"]');
+      const reportId = root.querySelector('[data-lab-summary="report-id"]');
+      if (countTarget) countTarget.textContent = faNumber(currentExperiment.models_count || 0) + ' مدل';
+      if (inputTarget) inputTarget.textContent = currentExperiment.input?.path || '—';
+      if (evaluatorTarget) evaluatorTarget.textContent = '—';
+      if (totalUsdTarget) totalUsdTarget.textContent = Number(currentExperiment.cost?.usd || 0).toFixed(4);
+      if (totalTomanTarget) totalTomanTarget.textContent = formatMoney(currentExperiment.cost?.toman || 0);
+      if (reportStatus) reportStatus.textContent = currentExperiment.status_label || currentExperiment.status || '—';
+      if (reportId) reportId.textContent = currentExperiment.report_code || '—';
+      table.innerHTML = (currentExperiment.runs || []).map((run, index) => {
+        const output = (run.outputs || [])[0] || {};
+        const outputMeta = output.meta || {};
+        const manager = output.manager || {};
+        return `<tr data-lab-model-row="${esc(run.id || '')}">
+          <td><strong>${esc(run.model || '—')}</strong><small dir="ltr">${esc(run.model_id || '')}</small></td>
+          <td>${esc(run.provider || '—')}</td>
+          <td dir="ltr">${esc(run.quality || '—')} · ${esc(run.size || '—')}</td>
+          <td>${run.preserve_face ? 'فعال' : 'خاموش'}</td>
+          <td dir="ltr">${Number(run.cost_usd || 0).toFixed(4)}</td>
+          <td dir="rtl">${formatMoney(run.cost_toman || 0)}</td>
+          <td dir="ltr">${run.seconds ?? '—'}</td>
+          <td dir="ltr">${run.tokens ? Number(run.tokens).toLocaleString('fa-IR') : '—'}</td>
+          <td>${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</td>
+          <td class="lab-score">—</td>
+          <td class="lab-manager-score">${esc(manager.overall || '—')}</td>
+          <td>${esc(manager.similarity || '—')}</td>
+          <td>${esc(manager.detail || '—')}</td>
+          <td>${esc(manager.priority || '—')}</td>
+          <td class="lab-rank">${run.rank ? faNumber(run.rank) : '—'}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="15" class="ai-model-lab-table-empty">هنوز خروجی واقعی ثبت نشده است.</td></tr>';
+      return;
+    }
     const rows = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId);
     const countTarget = root.querySelector('[data-lab-summary="model-count"]');
     const inputTarget = root.querySelector('[data-lab-summary="input-image"]');
@@ -443,7 +526,7 @@
     const selectedInput = labInputItems.find(item => item.selected) || labInputItems[0];
     if (countTarget) countTarget.textContent = faNumber(rows.length) + ' مدل';
     if (inputTarget) inputTarget.textContent = selectedInput?.name || 'تصویر نمونه';
-    if (evaluatorTarget) evaluatorTarget.textContent = evaluator?.selectedOptions?.[0]?.textContent || 'GPT-4o mini · مقایسه‌گر تصویر';
+    if (evaluatorTarget) evaluatorTarget.textContent = '—';
     const totalUsd = rows.reduce((total, row, index) => {
       const model = models.find(item => item.id === row.dataset.modelId);
       return total + Number(model?.costUsd ?? (index === 0 ? .042 : .055));
@@ -489,6 +572,31 @@
   function renderManagerScoreTable() {
     const table = document.getElementById('ai-model-lab-manager-score-rows');
     if (!table) return;
+    if (currentExperiment) {
+      const realRows = (currentExperiment.runs || []).map((run, index) => {
+        const output = (run.outputs || [])[0] || {};
+        return { run, output, index, manager: output.manager || {} };
+      }).filter(item => item.output?.id);
+      if (!realRows.length) {
+        table.innerHTML = '<tr><td colspan="5" class="ai-model-lab-table-empty">بعد از آماده شدن خروجی‌ها، نمره مدیر سایت اینجا ذخیره می‌شود.</td></tr>';
+        return;
+      }
+      const selectOptions = (values, selected, label = value => value) => '<option value="">انتخاب</option>' + values.map(value => {
+        const selectedAttr = String(value) === String(selected ?? '') ? ' selected' : '';
+        return `<option value="${esc(value)}"${selectedAttr}>${esc(label(value))}</option>`;
+      }).join('');
+      const overallValues = Array.from({ length: 10 }, (_, index) => index + 1);
+      const qualitativeValues = ['عالی', 'خوب', 'متوسط', 'ضعیف'];
+      const priorityValues = Array.from({ length: realRows.length }, (_, index) => index + 1);
+      table.innerHTML = realRows.map(({ run, output, index, manager }) => `<tr data-manager-output-row="${esc(output.id)}">
+        <td>${esc(run.model || ('مدل ' + faNumber(index + 1)))} <small dir="ltr">${esc(run.model_id || '—')}</small></td>
+        <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'overall', this.value, true)">${selectOptions(overallValues, manager.overall, value => faNumber(value) + ' از ۱۰')}</select></td>
+        <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'similarity', this.value, true)">${selectOptions(qualitativeValues, manager.similarity)}</select></td>
+        <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'detail', this.value, true)">${selectOptions(qualitativeValues, manager.detail)}</select></td>
+        <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'priority', this.value, true)">${selectOptions(priorityValues, manager.priority, value => 'اولویت ' + faNumber(value))}</select></td>
+      </tr>`).join('');
+      return;
+    }
     const rows = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId);
     if (!rows.length) {
       table.innerHTML = '<tr><td colspan="5" class="ai-model-lab-table-empty">پس از انتخاب مدل، گزینه‌های نمره‌دهی اینجا نمایش داده می‌شوند.</td></tr>';
@@ -516,6 +624,9 @@
   }
 
   function refreshOutputPreview() {
+    currentExperiment = null;
+    window.clearTimeout(labRunPollTimer);
+    setLabLoading(false);
     labRunReady = false;
     const calculationStatus = document.getElementById('ai-model-lab-calculation-status');
     const outputStatus = document.getElementById('ai-model-lab-output-status');
@@ -538,10 +649,45 @@
     if (label) label.textContent = faNumber(count) + ' مدل';
   }
 
-  window.updateAiManagerScore = function (modelId, key, value) {
+  async function saveManagerScore(outputId, key, value) {
+    const template = root.dataset.managerScoreTemplate || '';
+    if (!outputId || !template) return;
+    const row = root.querySelector(`[data-manager-output-row="${CSS.escape(String(outputId))}"]`);
+    const payload = {};
+    row?.querySelectorAll('select').forEach((select, index) => {
+      const names = ['overall_score', 'similarity_score', 'detail_quality', 'usage_priority'];
+      payload[names[index]] = select.value;
+    });
+    const response = await fetch(template.replace('__OUTPUT_ID__', encodeURIComponent(outputId)), {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || Object.values(data.errors || {})?.flat?.()?.[0] || 'نمره مدیر ذخیره نشد.');
+    if (data.experiment) {
+      applyExperimentPayload(data.experiment);
+      renderManagerScoreTable();
+    }
+  }
+
+  window.updateAiManagerScore = function (modelId, key, value, isPersistedOutput = false) {
     if (!managerScores[modelId]) managerScores[modelId] = {};
     managerScores[modelId][key] = value;
     renderCalculationTable();
+    if (isPersistedOutput) {
+      const status = document.getElementById('ai-model-lab-calculation-status');
+      if (status) status.textContent = 'در حال ذخیره نمره مدیر...';
+      saveManagerScore(modelId, key, value).catch(error => {
+        if (status) status.textContent = error.message || 'نمره مدیر ذخیره نشد';
+      });
+    }
   };
 
   window.toggleAiModelLabDefaults = function (event) {
@@ -554,50 +700,134 @@
     button?.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
-  window.runAiModelLab = function () {
-    const count = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId).length;
+  function setLabLoading(active, message) {
+    const loading = document.getElementById('ai-model-lab-loading');
+    root.classList.toggle('is-running', active);
+    loading?.classList.toggle('hidden', !active);
+    const label = loading?.querySelector('span');
+    if (label && message) label.textContent = message;
+  }
+
+  function setLabTestedState(tested) {
+    const badge = root.querySelector('.ai-model-lab-tested');
+    if (!badge) return;
+    badge.classList.toggle('is-tested', tested);
+    badge.classList.toggle('is-untested', !tested);
+    badge.innerHTML = `<i class="fa-solid ${tested ? 'fa-circle-check' : 'fa-circle-xmark'}"></i> ${tested ? 'آزمایش شده' : 'آزمایش نشده'}`;
+  }
+
+  function selectedLabModelsPayload() {
+    return Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId).map(row => ({
+      id: Number(row.dataset.modelId),
+      provider: row.querySelector('.ai-model-lab-provider')?.value || '',
+      quality: row.querySelector('.ai-model-lab-quality')?.value || '720',
+      size: row.querySelector('.ai-model-lab-size')?.value || '4:5',
+      preserve_face: row.querySelector('.ai-model-lab-preserve-face')?.checked !== false,
+    }));
+  }
+
+  function applyExperimentPayload(experiment) {
+    currentExperiment = experiment || null;
+    labRunReady = ['completed', 'partially_failed', 'evaluated', 'finalized'].includes(currentExperiment?.status || '');
+    if (currentExperiment?.input) {
+      const input = currentExperiment.input;
+      root.querySelectorAll('[data-lab-input-output]').forEach(image => { if (input.url) image.src = input.url; });
+      const values = {
+        dimensions: input.width && input.height ? faNumber(input.width) + ' × ' + faNumber(input.height) : '—',
+        ratio: formatRatio(input.ratio),
+        size: formatBytes(input.size),
+        type: input.format || '—',
+        color: input.color || '—',
+      };
+      Object.entries(values).forEach(([key, value]) => {
+        const target = root.querySelector('[data-lab-input-meta="' + key + '"]');
+        if (target) target.textContent = value;
+      });
+    }
+    const outputStatus = document.getElementById('ai-model-lab-output-status');
+    const calculationStatus = document.getElementById('ai-model-lab-calculation-status');
+    if (outputStatus) outputStatus.textContent = currentExperiment?.status_label || 'در حال اجرا';
+    if (calculationStatus) calculationStatus.textContent = currentExperiment?.status_label || 'در حال اجرا';
+    setLabTestedState(labRunReady);
+    renderLabModelOutputs();
+    renderCalculationTable();
+    renderManagerScoreTable();
+  }
+
+  async function pollLabStatus(url) {
+    window.clearTimeout(labRunPollTimer);
+    try {
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'وضعیت آزمایش دریافت نشد.');
+      applyExperimentPayload(data);
+      if (['queued', 'processing'].includes(data.status)) {
+        labRunPollTimer = window.setTimeout(() => pollLabStatus(url), 2500);
+      } else {
+        setLabLoading(false);
+      }
+    } catch (error) {
+      setLabLoading(false);
+      const status = document.getElementById('ai-model-lab-output-status');
+      if (status) status.textContent = error.message || 'خطا در دریافت وضعیت';
+    }
+  }
+
+  window.runAiModelLab = async function () {
+    const selectedModels = selectedLabModelsPayload();
+    const count = selectedModels.length;
     const status = document.getElementById('ai-model-lab-output-status');
     const calculationStatus = document.getElementById('ai-model-lab-calculation-status');
+    const runUrl = root.dataset.runUrl || '';
     if (count < 1) {
       if (status) status.textContent = 'حداقل یک مدل انتخاب کنید';
       if (calculationStatus) calculationStatus.textContent = 'حداقل یک مدل انتخاب کنید';
       return;
     }
+    if (!runUrl) {
+      if (status) status.textContent = 'ابتدا محصول را ثبت کنید، سپس آزمایش اجرا می‌شود';
+      if (calculationStatus) calculationStatus.textContent = 'محصول هنوز ذخیره نشده است';
+      return;
+    }
+    const selectedInput = labInputItems.find(item => item.selected) || labInputItems[0];
     labRunReady = false;
+    currentExperiment = null;
     if (status) status.textContent = 'در حال ساخت خروجی‌ها...';
     if (calculationStatus) calculationStatus.textContent = 'در حال آماده‌سازی گزارش';
+    setLabLoading(true, 'در حال ارسال عکس به مدل‌های انتخاب‌شده...');
     renderCalculationTable();
-    window.setTimeout(() => {
-      if (status) status.textContent = 'خروجی‌های آزمایش آماده شد';
-      if (calculationStatus) calculationStatus.textContent = 'آماده ارزیابی';
-      renderCalculationTable();
-    }, 650);
+    try {
+      const formData = new FormData();
+      formData.append('models', JSON.stringify(selectedModels));
+      if (selectedInput?.file) formData.append('input_image', selectedInput.file, selectedInput.name || 'lab-input.png');
+      if (selectedInput?.path) formData.append('input_path', selectedInput.path);
+      const response = await fetch(runUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+        credentials: 'same-origin',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'اجرای آزمایش شروع نشد.');
+      applyExperimentPayload(data.experiment);
+      pollLabStatus(data.status_url);
+    } catch (error) {
+      setLabLoading(false);
+      if (status) status.textContent = error.message || 'خطا در اجرای آزمایش';
+      if (calculationStatus) calculationStatus.textContent = 'آزمایش ناموفق بود';
+    }
   };
 
   window.evaluateAiModelLab = function () {
-    const count = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId).length;
     const status = document.getElementById('ai-model-lab-output-status');
     const calculationStatus = document.getElementById('ai-model-lab-calculation-status');
-    if (count < 3) {
-      if (status) status.textContent = 'برای اولویت‌بندی حداقل ۳ مدل انتخاب کنید';
-      if (calculationStatus) calculationStatus.textContent = 'برای رتبه‌بندی کافی نیست';
-      return;
-    }
-    labRunReady = false;
-    if (status) status.textContent = 'در حال ارزیابی خروجی‌ها...';
-    if (calculationStatus) calculationStatus.textContent = 'مدل ارزیاب در حال مقایسه است';
+    if (status) status.textContent = 'ارزیابی فعلاً فعال نیست';
+    if (calculationStatus) calculationStatus.textContent = 'مدل ارزیاب در این مرحله خالی است';
     renderCalculationTable();
-    window.setTimeout(() => {
-      labRunReady = true;
-      if (status) status.textContent = 'ارزیابی خروجی‌ها تکمیل شد';
-      if (calculationStatus) {
-        calculationStatus.textContent = 'رتبه‌بندی آماده است';
-        calculationStatus.classList.add('is-ready');
-      }
-      const reportStatus = root.querySelector('[data-lab-summary="report-status"]');
-      if (reportStatus) reportStatus.textContent = 'ارزیابی‌شده';
-      renderCalculationTable();
-    }, 650);
   };
 
   function chooseModelInRow(row, model) {
@@ -613,6 +843,9 @@
   }
 
   window.resetAiModelLab = function () {
+    currentExperiment = null;
+    window.clearTimeout(labRunPollTimer);
+    setLabLoading(false);
     const rows = Array.from(root.querySelectorAll('.ai-model-lab-row'));
     rows.forEach(row => row.querySelector('.ai-model-lab-remove')?.click());
     managerScores = {};
@@ -625,6 +858,9 @@
   };
 
   window.applyAiModelLabDefaults = function (profile = 'professional-face') {
+    currentExperiment = null;
+    window.clearTimeout(labRunPollTimer);
+    setLabLoading(false);
     const profileIndexes = {
       'professional-face': [0, 1, 2],
       'normal-face': [0, 1],
@@ -769,8 +1005,8 @@
       const values = {
         dimensions: faNumber(width) + ' × ' + faNumber(height),
         ratio: ratioLabel,
-        size: file ? (file.size / 1024).toFixed(1) + ' کیلوبایت' : '۳۲۰ کیلوبایت',
-        type: file ? (file.type.split('/')[1] || 'image').toUpperCase() : 'JPEG',
+        size: file ? formatBytes(file.size) : formatBytes(selected.size),
+        type: file ? (file.type.split('/')[1] || 'image').toUpperCase() : (selected.mime ? String(selected.mime).split('/').pop().toUpperCase() : '—'),
         color: 'RGB',
         time: file ? new Date(file.lastModified || Date.now()).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }) : '۱۲:۴۸',
         selection: 'آماده'
@@ -787,6 +1023,43 @@
     syncStepOneInputImages();
     updateLabInputOutput();
   }
+
+  async function loadLabProductImages(productId) {
+    const template = root.dataset.productImagesTemplate || '';
+    if (!productId || !template) return;
+    try {
+      const response = await fetch(template.replace('__PRODUCT_ID__', encodeURIComponent(productId)), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'تصاویر محصول دریافت نشد.');
+      labInputItems = labInputItems.filter(item => item.source !== 'product');
+      (Array.isArray(data.images) ? data.images : []).forEach((image, index) => {
+        labInputItems.push({
+          id: 'product-' + productId + '-' + index,
+          url: image.url,
+          path: image.path,
+          name: 'تصویر محصول ' + (index + 1),
+          source: 'product',
+          selected: index === 0 && !labInputItems.some(item => item.selected),
+          width: image.width,
+          height: image.height,
+          size: image.size,
+          mime: image.mime,
+        });
+      });
+      renderLabInputImages();
+      refreshOutputPreview();
+    } catch (error) {
+      const status = document.getElementById('ai-model-lab-output-status');
+      if (status) status.textContent = error.message || 'تصاویر محصول دریافت نشد.';
+    }
+  }
+
+  window.setAiModelLabProduct = function (productId) {
+    const template = root.dataset.runTemplate || '';
+    root.dataset.runUrl = productId && template ? template.replace('__PRODUCT_ID__', encodeURIComponent(productId)) : '';
+    root.querySelector('[data-lab-record]')?.setAttribute('data-product-id', productId || '');
+    loadLabProductImages(productId);
+  };
 
   document.getElementById('ai-model-lab-upload-input')?.addEventListener('change', function () {
     const files = Array.from(this.files || []);
