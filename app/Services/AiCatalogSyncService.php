@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AiModel;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
