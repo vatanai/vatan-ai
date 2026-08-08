@@ -11,6 +11,17 @@ use RuntimeException;
 
 class AiCatalogSyncService
 {
+    private const REPLICATE_VATAN_PRIORITY_MODELS = [
+        'black-forest-labs/flux-2-max',
+        'black-forest-labs/flux-2-pro',
+        'google/nano-banana-2',
+        'bytedance/seedream-4.5',
+        'black-forest-labs/flux-kontext-pro',
+        'google/nano-banana',
+        'openai/gpt-image-1.5',
+        'ideogram-ai/ideogram-v3-turbo',
+    ];
+
     private ?array $availableWorkflowColumns = null;
 
     public function __construct(private AiProviderCredentials $credentials)
@@ -114,13 +125,32 @@ class AiCatalogSyncService
         $skipped = 0;
         $failed = 0;
 
-        foreach ((array) $collection->json('models', []) as $summary) {
+        $summaries = $this->replicateCollectionSummaries(
+            (array) $collection->json('models', []),
+            $collectionSlug,
+            $credentials['timeout']
+        );
+
+        foreach ($summaries as $summary) {
             try {
                 $remote = $this->hydrateReplicateModel($summary, $baseUrl, $credentials['api_key'], $credentials['timeout']);
                 $classification = $this->classifyReplicate($remote);
-                if ($classification === null || $classification['modality'] !== 'image') {
-                    $skipped++;
-                    continue;
+                if ($classification === null) {
+                    $classification = [
+                        'modality' => 'image',
+                        'task_type' => 'text_to_image',
+                        'supports_face_identity' => false,
+                        'supports_audio' => false,
+                        'supports_video_input' => false,
+                    ];
+                }
+
+                // تمام مواردی که خود Replicate در Collection «Generate images»
+                // نمایش می‌دهد، مدل تصویری‌اند؛ نام provider بعضی مدل‌ها (مثل
+                // wan-video/*-image) نباید آن‌ها را به اشتباه ویدیویی کند.
+                $classification['modality'] = 'image';
+                if (!in_array($classification['task_type'] ?? null, ['text_to_image', 'image_to_image'], true)) {
+                    $classification['task_type'] = 'text_to_image';
                 }
 
                 $data = $this->replicateData($remote, $classification);
@@ -149,6 +179,52 @@ class AiCatalogSyncService
             'failed' => $failed,
             'collection' => $collectionSlug,
         ];
+    }
+
+    /**
+     * پاسخ API Collection در حال حاضر بخشی از مدل‌های صفحه را بازمی‌گرداند.
+     * صفحهٔ رسمی همان Collection منبع کامل‌تری از لینک‌های مدل است؛ هر دو
+     * منبع را ترکیب می‌کنیم و سپس جزئیات معتبر هر مدل را از API می‌گیریم.
+     */
+    private function replicateCollectionSummaries(array $apiModels, string $collectionSlug, int $timeout): array
+    {
+        $summaries = [];
+        $add = function (array $model) use (&$summaries): void {
+            $owner = trim((string) ($model['owner'] ?? ''));
+            $name = trim((string) ($model['name'] ?? ''));
+            if ($owner !== '' && $name !== '') {
+                $summaries[strtolower($owner . '/' . $name)] = $model;
+            }
+        };
+
+        foreach ($apiModels as $model) {
+            $add((array) $model);
+        }
+
+        try {
+            $page = Http::accept('text/html')
+                ->connectTimeout(15)
+                ->timeout(min(60, max(15, $timeout)))
+                ->get('https://replicate.com/collections/' . rawurlencode($collectionSlug));
+
+            if ($page->successful() && preg_match_all('/href="\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)"/', $page->body(), $matches, PREG_SET_ORDER)) {
+                foreach ($matches as $match) {
+                    $add(['owner' => $match[1], 'name' => $match[2]]);
+                }
+            }
+        } catch (\Throwable $error) {
+            Log::warning('Replicate collection page could not be read; API results will be used.', [
+                'collection' => $collectionSlug,
+                'message' => $error->getMessage(),
+            ]);
+        }
+
+        foreach (self::REPLICATE_VATAN_PRIORITY_MODELS as $modelId) {
+            [$owner, $name] = array_pad(explode('/', $modelId, 2), 2, '');
+            $add(['owner' => $owner, 'name' => $name]);
+        }
+
+        return array_values($summaries);
     }
 
     private function hydrateReplicateModel(array $summary, string $baseUrl, string $apiKey, int $timeout): array
