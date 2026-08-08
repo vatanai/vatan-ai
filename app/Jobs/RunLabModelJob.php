@@ -20,7 +20,7 @@ class RunLabModelJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
-    public int $timeout = 300;
+    public int $timeout = 600;
 
     public function __construct(public int $runId) {}
 

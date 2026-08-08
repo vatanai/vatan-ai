@@ -57,21 +57,21 @@ return [
         'api_key' => env('FAL_API_KEY', env('FAL_KEY')),
         'base_url' => env('FAL_BASE_URL', 'https://queue.fal.run'),
         'platform_base_url' => env('FAL_PLATFORM_BASE_URL', 'https://api.fal.ai'),
-        'timeout' => (int) env('FAL_TIMEOUT', env('AI_PROVIDER_TIMEOUT', 180)),
+        'timeout' => (int) env('FAL_TIMEOUT', env('AI_PROVIDER_TIMEOUT', 600)),
         'max_retries' => (int) env('FAL_MAX_RETRIES', env('AI_PROVIDER_MAX_RETRIES', 2)),
     ],
 
     'replicate' => [
         'api_token' => env('REPLICATE_API_TOKEN'),
         'base_url' => env('REPLICATE_BASE_URL', 'https://api.replicate.com/v1'),
-        'timeout' => (int) env('REPLICATE_TIMEOUT', env('AI_PROVIDER_TIMEOUT', 180)),
+        'timeout' => (int) env('REPLICATE_TIMEOUT', env('AI_PROVIDER_TIMEOUT', 600)),
         'max_retries' => (int) env('REPLICATE_MAX_RETRIES', env('AI_PROVIDER_MAX_RETRIES', 2)),
     ],
 
     'ai' => [
         'webhook_base_url' => env('AI_WEBHOOK_BASE_URL'),
         'webhook_secret' => env('AI_WEBHOOK_SECRET'),
-        'timeout' => (int) env('AI_PROVIDER_TIMEOUT', 180),
+        'timeout' => (int) env('AI_PROVIDER_TIMEOUT', 600),
         'max_retries' => (int) env('AI_PROVIDER_MAX_RETRIES', 2),
         'catalog_sync_on_migrate' => (bool) env('AI_CATALOG_SYNC_ON_MIGRATE', true),
     ],
