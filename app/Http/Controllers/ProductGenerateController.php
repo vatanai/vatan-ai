@@ -360,15 +360,10 @@ class ProductGenerateController extends Controller
                 $reservedCredit = $totalCreditCost;
             }
 
-            // پیامک خرید موفق نباید در صورت اختلال سرویس پیامک، روند ساخت محصول را متوقف کند.
+            // پیامک سفارش فقط بعد از تولید موفق خروجی ارسال می‌شود. ارسال پیامک
+            // در ابتدای پردازش، در صورت تنظیم اشتباه قالب‌ها، باعث پیامک پلن می‌شد.
             if ($user?->phone) {
-                $freshUser = $user->fresh();
-                app(SmsEventService::class)->send('purchase_success', $user->phone, [
-                    'name'=>$user->name, 'phone'=>$user->phone, 'order_number'=>$order->order_number,
-                    'product_name'=>$product->name_fa ?? $product->name ?? '', 'amount'=>(string)$totalCreditCost,
-                    'balance'=>(string)($freshUser->tokens ?? 0),
-                ]);
-                app(SmsEventService::class)->notifyLowCredit($freshUser);
+                app(SmsEventService::class)->notifyLowCredit($user->fresh());
             }
 
             $extraPayload = [];
