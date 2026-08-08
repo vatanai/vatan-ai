@@ -298,7 +298,10 @@ class AiCatalogSyncService
         $properties = $this->schemaProperties($schema);
         $blob = strtolower(json_encode($remote, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
         $referenceFields = $this->replicateReferenceFields($properties);
-        $supportsImage = !empty($referenceFields) || (bool) preg_match('/image|photo|picture|frame|reference/', $blob);
+        // وجود واژهٔ «image» در توضیح یا خروجیِ مدل، به معنی پذیرش عکس
+        // ورودی نیست. فقط فیلدهای واقعی schema برای عکس مرجع، مدل را
+        // image-to-image می‌کنند تا در آزمایشگاه مدل نامناسب انتخاب نشود.
+        $supportsImage = !empty($referenceFields);
         $faceIdentity = $classification['supports_face_identity'];
         $requiredInputs = (array) (data_get($schema, 'components.schemas.Input.required') ?: data_get($schema, 'required') ?: []);
         $requiredReferenceCount = count(array_intersect($requiredInputs, $referenceFields));
@@ -397,7 +400,7 @@ class AiCatalogSyncService
     private function replicateReferenceFields(array $properties): array
     {
         return collect(array_keys($properties))
-            ->filter(fn (string $field) => (bool) preg_match('/(^|_)(image|images|photo|picture|reference|references|subject|source)(_|$)/i', $field))
+            ->filter(fn (string $field) => (bool) preg_match('/(^|_)(image|images|photo|picture|reference|references|subject|source|frame|frames)(_|$)/i', $field))
             ->values()
             ->all();
     }
