@@ -62,20 +62,20 @@ class SmsEventService
     private function dispatch(SmsTemplate $template, string $phone, string $body, array $data, string $type): bool
     {
         if ($template->provider_method === 'shared') {
-            $allowedTemplateIds = (array) config("sms_events.shared_template_ids.{$template->event_key}", []);
+            $approvedTemplate = (array) config("sms_events.approved_shared_templates.{$template->event_key}", []);
             $providerTemplateId = trim((string) $template->provider_template_id);
-            if ($allowedTemplateIds !== [] && !in_array($providerTemplateId, array_map('strval', $allowedTemplateIds), true)) {
-                Log::error('SMS shared template mismatch blocked', [
+            if (($approvedTemplate['provider_template_id'] ?? null) !== $providerTemplateId) {
+                Log::error('SMS shared template is not approved for event', [
                     'event' => $template->event_key,
                     'template_id' => $template->id,
                     'provider_template_id' => $providerTemplateId,
-                    'allowed_template_ids' => $allowedTemplateIds,
+                    'approved_template_id' => $approvedTemplate['provider_template_id'] ?? null,
                     'type' => $type,
                 ]);
                 return false;
             }
 
-            $variables = $template->provider_variables ?: config("sms_events.events.{$template->event_key}.variables", []);
+            $variables = $template->provider_variables ?: ($approvedTemplate['variables'] ?? config("sms_events.events.{$template->event_key}.variables", []));
             $values = collect($variables)->map(fn ($variable) => $data[$variable] ?? config("sms_events.samples.{$variable}", ''))->all();
             $this->gateway->sendShared($phone, $values, (string) $template->provider_template_id, $body, $type);
             return true;

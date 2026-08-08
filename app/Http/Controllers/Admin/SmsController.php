@@ -319,6 +319,21 @@ class SmsController extends Controller
         $providerVariables = $data['provider_variables'] ?? [];
         if (array_diff($providerVariables, $allowed)) throw ValidationException::withMessages(['provider_variables'=>'ترتیب متغیرهای خدماتی معتبر نیست.']);
         $data['provider_variables'] = $data['provider_method'] === 'shared' ? array_values(array_unique($providerVariables)) : null;
+        if ($data['provider_method'] === 'shared') {
+            $approved = (array) config("sms_events.approved_shared_templates.{$data['event_key']}", []);
+            if (($approved['provider_template_id'] ?? null) !== $data['provider_template_id']) {
+                throw ValidationException::withMessages([
+                    'provider_template_id' => 'برای این رویداد، فقط الگوی خدماتی تأییدشده قابل انتخاب است.',
+                ]);
+            }
+            $approvedVariables = $approved['variables'] ?? [];
+            if ($data['provider_variables'] !== [] && $data['provider_variables'] !== $approvedVariables) {
+                throw ValidationException::withMessages([
+                    'provider_variables' => 'ترتیب متغیرهای این الگوی خدماتی باید مطابق الگوی تأییدشده باشد.',
+                ]);
+            }
+            $data['provider_variables'] = $approvedVariables;
+        }
         if ($data['provider_method'] !== 'shared') {
             $data['provider_template_id'] = null;
             $data['provider_approval_status'] = 'not_applicable';

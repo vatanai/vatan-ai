@@ -21,19 +21,22 @@ return [
         'ai_balance_low' => ['label' => 'هشدار شارژ هوش مصنوعی', 'group' => 'هشدار مدیران', 'variables' => ['provider_name', 'balance', 'threshold']],
         'custom' => ['label' => 'رویداد سفارشی', 'group' => 'سفارشی', 'variables' => ['name', 'phone']],
     ],
-    'shared_template_ids' => [
-        'otp_code' => ['502328', '506694'],
-        'login_success' => ['504170'],
-        'registration_success' => ['504187', '506692'],
-        'plan_purchase_success' => ['506695'],
-        'plan_purchase_failed' => ['506696'],
-        'credit_low' => ['504178'],
-        'order_completed' => ['504179'],
-        'purchase_success' => ['504181'],
-        'refund_success' => ['504185'],
-        'admin_login' => ['504173'],
-        'sms_balance_low' => ['504174'],
-        'ai_balance_low' => ['504174'],
+    // تنها الگوهای خدماتی که برای هر رویداد تأیید شده‌اند. این فهرست
+    // «قرارداد ارسال» است: پنل مدیریت فقط می‌تواند یکی از این نگاشت‌های
+    // تأییدشده را ذخیره کند و سرویس ارسال نیز همان قرارداد را اجرا می‌کند.
+    'approved_shared_templates' => [
+        'otp_code' => ['provider_template_id' => '506694', 'variables' => ['code']],
+        'login_success' => ['provider_template_id' => '504170', 'variables' => ['name', 'login_time']],
+        'registration_success' => ['provider_template_id' => '506692', 'variables' => ['name']],
+        'plan_purchase_success' => ['provider_template_id' => '506695', 'variables' => ['name', 'plan_name']],
+        'plan_purchase_failed' => ['provider_template_id' => '506696', 'variables' => ['name', 'plan_name']],
+        'credit_low' => ['provider_template_id' => '504178', 'variables' => ['name', 'balance']],
+        'order_completed' => ['provider_template_id' => '504179', 'variables' => ['name', 'order_number']],
+        'purchase_success' => ['provider_template_id' => '504181', 'variables' => ['name', 'order_number', 'balance']],
+        'refund_success' => ['provider_template_id' => '504185', 'variables' => ['name', 'amount', 'order_number', 'balance']],
+        'admin_login' => ['provider_template_id' => '504173', 'variables' => ['admin_name', 'login_time', 'ip']],
+        'sms_balance_low' => ['provider_template_id' => '504174', 'variables' => ['provider_name', 'balance', 'threshold']],
+        'ai_balance_low' => ['provider_template_id' => '504174', 'variables' => ['provider_name', 'balance', 'threshold']],
     ],
     'samples' => [
         'name' => 'محمد رضایی', 'phone' => '09123456789', 'login_time' => '۱۴۰۵/۰۴/۳۰ - ۱۰:۳۰',
