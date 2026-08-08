@@ -248,6 +248,7 @@ class AiCatalogSyncService
         $supportsVideoInput = $category === 'video-to-video' || $this->hasInputProperty($properties, '/video|frame|motion/');
 
         return [
+            'provider' => 'fal',
             'name' => (string) ($metadata['display_name'] ?? $endpointId),
             'external_model_id' => $endpointId,
             'external_version' => null,
@@ -303,6 +304,7 @@ class AiCatalogSyncService
         $requiredReferenceCount = count(array_intersect($requiredInputs, $referenceFields));
 
         return [
+            'provider' => 'replicate',
             'name' => (string) ($remote['name'] ?? $modelId),
             'external_model_id' => $modelId,
             'external_version' => (string) ($latest['id'] ?? ''),
