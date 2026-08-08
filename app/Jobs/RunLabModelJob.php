@@ -120,6 +120,7 @@ class RunLabModelJob implements ShouldQueue
             $scoringCost = $this->scoreOutputs($run, $openRouter);
 
             $usage = (array) ($result['usage'] ?? []);
+            $reportedTokens = data_get($usage, 'total_tokens', data_get($usage, 'tokens'));
             $actualCost = (float) ($usage['cost'] ?? $run->estimated_cost_usd) + $scoringCost;
             $durationMs = (int) round((microtime(true) - $started) * 1000);
             $rateToman = (float) $run->exchange_rate_irr / 10;
@@ -128,12 +129,15 @@ class RunLabModelJob implements ShouldQueue
                 'actual_cost_usd' => $actualCost,
                 'actual_cost_toman' => $actualCost * $rateToman,
                 'build_seconds' => max(1, (int) round($durationMs / 1000)),
-                'tokens_used' => (int) ($usage['total_tokens'] ?? $usage['tokens'] ?? 0),
+                // همه‌ی providerهای تصویر (از جمله Replicate) توکن گزارش نمی‌کنند.
+                // مقدار null یعنی «گزارش نشده» و با صفرِ واقعی اشتباه گرفته نمی‌شود.
+                'tokens_used' => is_numeric($reportedTokens) ? (int) $reportedTokens : null,
                 'provider_response' => array_filter([
                     'id' => $result['id'] ?? null,
                     'model' => $result['model'] ?? $run->model_id,
                     'created' => $result['created'] ?? null,
                     'usage' => $usage,
+                    'provider_metadata' => $result['provider_metadata'] ?? [],
                 ], fn ($value) => $value !== null && $value !== []),
                 'completed_at' => now(),
                 'duration_ms' => $durationMs,
@@ -148,7 +152,7 @@ class RunLabModelJob implements ShouldQueue
             ])->save();
         }
 
-        $this->refreshExperiment($run->experiment_id);
+        $this->refreshExperiment($run->lab_experiment_id);
     }
 
     private function refreshExperiment(int $experimentId): void

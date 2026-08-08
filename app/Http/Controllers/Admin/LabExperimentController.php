@@ -124,6 +124,16 @@ class LabExperimentController extends Controller
             return response()->json(['message' => 'یکی از مدل‌های انتخاب‌شده فعال یا تصویری نیست.'], 422);
         }
 
+        // آزمایش مقایسه‌ای فقط وقتی معتبر است که همه‌ی مدل‌ها همان تصویر
+        // ورودی را بپذیرند؛ مدل متنی، خروجی تصادفی و غیرقابل‌مقایسه می‌دهد.
+        $incompatibleModels = $models->reject(fn (AiModel $model) => $this->acceptsLabReference($model));
+        if ($incompatibleModels->isNotEmpty()) {
+            $names = $incompatibleModels->map(fn (AiModel $model) => $model->name ?: $model->externalModelId())->implode('، ');
+            return response()->json([
+                'message' => "مدل‌های {$names} ورودی تصویر را پشتیبانی نمی‌کنند و برای آزمایش مقایسه‌ای قابل استفاده نیستند.",
+            ], 422);
+        }
+
         $inputImage = $this->resolveQuickRunInputImage($request, $product);
         if (!$inputImage) {
             return response()->json(['message' => 'برای اجرای آزمایش، یک عکس ورودی لازم است.'], 422);
@@ -133,8 +143,7 @@ class LabExperimentController extends Controller
         $rateIrr = (float) ($rate['rate'] ?? 0);
         $rateToman = $rateIrr / 10;
         $estimatedUsd = collect($payloadModels)->sum(fn ($item) => (float) ($models->get((int) ($item['id'] ?? 0))?->cost_per_generation_usd ?? 0));
-        $basePrompt = trim((string) $this->promptBuilder->build($product, [], false));
-        if ($basePrompt === '') $basePrompt = trim((string) $product->prompt_template) ?: 'Create a high quality image.';
+        $basePrompt = $this->buildLabPrompt($product, false);
         $negativePrompt = trim((string) ($product->negative_prompt ?? '')) ?: null;
 
         $experiment = DB::transaction(function () use ($request, $product, $payloadModels, $models, $inputImage, $rateIrr, $rateToman, $estimatedUsd, $basePrompt, $negativePrompt) {
@@ -185,8 +194,7 @@ class LabExperimentController extends Controller
                 $size = in_array((string) ($item['size'] ?? ''), ['4:5', '9:16', '3:4', '1:1', '2:3', '16:9', '3:2'], true) ? (string) $item['size'] : '4:5';
                 $preserveFace = filter_var($item['preserve_face'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
                 $preserveFace = $preserveFace ?? true;
-                $prompt = trim((string) $this->promptBuilder->build($product, [], $preserveFace));
-                if ($prompt === '') $prompt = $basePrompt;
+                $prompt = $this->buildLabPrompt($product, $preserveFace);
                 $cost = (float) $model->cost_per_generation_usd;
                 $experiment->runs()->create([
                     'ai_model_id' => $model->id,
@@ -670,6 +678,48 @@ class LabExperimentController extends Controller
         $catalog = collect($this->imageCatalog($product));
         $image = $requestedPath !== '' ? $catalog->firstWhere('path', $requestedPath) : $catalog->first();
         return $image ? $this->storedImageMeta($image['path'], 'product', basename($image['path'])) : null;
+    }
+
+    /**
+     * در آزمایشگاه تمام مدل‌ها باید قادر به مصرف یک تصویر مرجع مشترک باشند.
+     * صرفاً تصویری‌بودن خروجی مدل کافی نیست؛ مدل باید یک فیلد ورودی تصویر
+     * شناخته‌شده نیز در schema خودش داشته باشد.
+     */
+    private function acceptsLabReference(AiModel $model): bool
+    {
+        if (! $model->supports_image_input) {
+            return false;
+        }
+
+        $capabilities = (array) ($model->capability_config ?? []);
+        $allowed = (array) data_get($capabilities, 'allowed_inputs', []);
+        if (empty($allowed)) {
+            $allowed = array_keys((array) data_get($model->input_schema, 'properties', []));
+        }
+
+        $referenceFields = array_merge(
+            (array) data_get($capabilities, 'reference_fields', []),
+            ['image_url', 'image_urls', 'image', 'images', 'reference_image', 'reference_images', 'input_image', 'input_images']
+        );
+
+        return ! empty(array_intersect($allowed, $referenceFields));
+    }
+
+    /**
+     * پرامپت استاندارد آزمایش: تمام مدل‌ها یک دستور محصول و یک قرارداد صریح
+     * برای استفاده از تصویر مرجع دریافت می‌کنند تا خروجی‌ها قابل مقایسه بمانند.
+     */
+    private function buildLabPrompt(Product $product, bool $preserveFace): string
+    {
+        $productPrompt = trim((string) $this->promptBuilder->build($product, [], $preserveFace));
+        if ($productPrompt === '') {
+            $productPrompt = trim((string) $product->prompt_template) ?: 'Create a high quality image.';
+        }
+
+        return implode("\n\n", [
+            'Use the supplied reference image as the exact subject source for this generation. Recreate the scene described below with that same person or object as the subject. Do not ignore the reference image, do not replace the subject with a random person or object, and keep the reference subject recognizable in the final image.',
+            $productPrompt,
+        ]);
     }
 
     private function storedImageMeta(string $path, string $source, ?string $name = null): array

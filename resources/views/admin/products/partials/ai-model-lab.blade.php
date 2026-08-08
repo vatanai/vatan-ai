@@ -17,6 +17,11 @@
   ];
   $labModels = collect($aiModels)->map(function ($model) use ($labProviderLabels, $labProviderEnglishLabels) {
     $provider = $model->provider ?? 'openrouter';
+    $capabilities = (array) ($model->capability_config ?? []);
+    $allowedInputs = (array) data_get($capabilities, 'allowed_inputs', []);
+    if (empty($allowedInputs)) $allowedInputs = array_keys((array) data_get($model->input_schema, 'properties', []));
+    $referenceFields = array_merge((array) data_get($capabilities, 'reference_fields', []), ['image_url', 'image_urls', 'image', 'images', 'reference_image', 'reference_images', 'input_image', 'input_images']);
+    $supportsReference = (bool) $model->supports_image_input && !empty(array_intersect($allowedInputs, $referenceFields));
     return [
       'id' => (string) $model->id,
       'modelId' => (string) $model->openrouter_model_id,
@@ -30,8 +35,9 @@
       'providerLabel' => $labProviderLabels[$provider] ?? ($model->provider_name ?? $provider),
       'providerEnglishLabel' => $labProviderEnglishLabels[$provider] ?? ($model->provider_name ?? $provider),
       'costUsd' => $model->cost_per_generation_usd !== null ? (float) $model->cost_per_generation_usd : null,
+      'supportsReference' => $supportsReference,
     ];
-  })->values();
+  })->filter(fn ($model) => $model['supportsReference'])->values();
   $labProviders = $labModels->groupBy('provider')->map(function ($models, $provider) use ($labProviderLabels, $labProviderEnglishLabels) {
     return [
       'value' => $provider,
@@ -69,7 +75,7 @@
     <div class="ai-model-lab-drawer-head">
       <div>
         <div class="ai-model-lab-drawer-title"><i class="fa-solid fa-sliders"></i> مدل‌های مورد آزمایش <span class="ai-model-lab-count" id="ai-model-lab-count">۰ مدل</span></div>
-        <div class="ai-model-lab-drawer-help">ابتدا پرووایدر را انتخاب کنید؛ سپس مدل‌های همان پرووایدر نمایش داده می‌شوند.</div>
+        <div class="ai-model-lab-drawer-help">ابتدا پرووایدر را انتخاب کنید؛ فقط مدل‌های سازگار با تصویر ورودی برای مقایسه نمایش داده می‌شوند.</div>
       </div>
       <div class="ai-model-lab-toolbar">
         <div class="ai-model-lab-evaluation-box">
@@ -381,7 +387,10 @@
     return bytes < 1024 * 1024 ? Math.max(1, Math.round(bytes / 1024)).toLocaleString('fa-IR') + ' کیلوبایت' : (bytes / (1024 * 1024)).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) + ' مگابایت';
   };
   const formatRatio = value => value ? Number(value).toLocaleString('fa-IR', { maximumFractionDigits: 3 }) : '—';
-  const formatMoney = value => Number(value || 0).toLocaleString('fa-IR');
+  const formatMoney = value => Math.round(Number(value || 0)).toLocaleString('fa-IR');
+  const formatTokens = value => value === null || value === undefined || value === ''
+    ? 'گزارش نشده'
+    : Number(value).toLocaleString('fa-IR');
 
   function providerMarkup() {
     return '<option value="">انتخاب پرووایدر</option>' + providers.map(provider =>
@@ -436,7 +445,7 @@
               <div><strong class="ai-model-lab-money-stack"><span dir="ltr"><em>دلار</em><b>${dollar}</b></span><span dir="rtl"><em>تومان</em><b>${toman}</b></span></strong></div>
               <div><strong><span>ابعاد: ${esc(outputMeta.dimensions || '—')}</span><span>زمان ساخت: ${run.seconds ?? '—'} ثانیه</span></strong></div>
               <div><strong><span>کیفیت: ${esc(quality)}</span><span>سایز: ${esc(size)}</span></strong></div>
-              <div><strong><span>توکن: ${run.tokens ? Number(run.tokens).toLocaleString('fa-IR') : '—'}</span><span>تلاش مجدد: ${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</span></strong></div>
+              <div><strong><span>توکن: ${formatTokens(run.tokens)}</span><span>تلاش مجدد: ${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</span></strong></div>
               <div><strong><span>فرمت: ${esc(outputMeta.format || '—')}</span><span>حفظ چهره: ${run.preserve_face ? 'فعال' : 'خاموش'}</span></strong></div>
             </div>
           </article>`;
@@ -506,7 +515,7 @@
           <td dir="ltr">${Number(run.cost_usd || 0).toFixed(4)}</td>
           <td dir="rtl">${formatMoney(run.cost_toman || 0)}</td>
           <td dir="ltr">${run.seconds ?? '—'}</td>
-          <td dir="ltr">${run.tokens ? Number(run.tokens).toLocaleString('fa-IR') : '—'}</td>
+          <td dir="ltr">${formatTokens(run.tokens)}</td>
           <td>${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</td>
           <td class="lab-score">—</td>
           <td class="lab-manager-score">${esc(manager.overall || '—')}</td>
@@ -749,6 +758,10 @@
     if (outputStatus) outputStatus.textContent = currentExperiment?.status_label || 'در حال اجرا';
     if (calculationStatus) calculationStatus.textContent = currentExperiment?.status_label || 'در حال اجرا';
     setLabTestedState(labRunReady);
+    if (!['queued', 'processing'].includes(currentExperiment?.status || '')) {
+      window.clearTimeout(labRunPollTimer);
+      setLabLoading(false);
+    }
     renderLabModelOutputs();
     renderCalculationTable();
     renderManagerScoreTable();
