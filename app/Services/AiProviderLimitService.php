@@ -14,9 +14,10 @@ class AiProviderLimitService
     public const DEFAULTS = [
         'enabled' => false,
         'window_minutes' => 60,
-        'max_requests' => 1,
+        // مقدار صفر یعنی سقف اعمال نمی‌شود. محدودسازی فقط باید با سقف صریح مدیر فعال شود.
+        'max_requests' => 0,
         'max_cost_usd' => 0.0,
-        'max_concurrent' => 1,
+        'max_concurrent' => 0,
         'max_outputs' => 1,
     ];
 

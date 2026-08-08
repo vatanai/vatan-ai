@@ -218,6 +218,8 @@
       window.location.href = root.dataset.loginUrl; return;
     }
     const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]'); const result = root.querySelector('[data-result]');
+    // خطای اجرای قبلی نباید نتیجه‌ی موفقِ اجرای جدید را مخفی کند.
+    alertText.textContent = ''; alertBox.hidden = true;
     setStageTab('upload');
     empty.hidden = true; result.hidden = true; progress.hidden = false;
     const bar = progress.querySelector('.cw-progress-track i'); const text = progress.querySelector('[data-progress-text]');
@@ -254,6 +256,7 @@
         strip.appendChild(button);
       });
       result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${Number(images.length).toLocaleString('fa-IR')} خروجی آماده شد`;
+      alertText.textContent = ''; alertBox.hidden = true;
       bar.style.width = '100%'; progress.hidden = true; result.hidden = false; revealOutputTab();
     } catch (error) {
       progress.hidden = true; empty.hidden = false; setStageTab('upload'); alertText.textContent = error.message; alertBox.hidden = false;
