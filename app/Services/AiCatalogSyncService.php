@@ -85,44 +85,95 @@ class AiCatalogSyncService
 
     public function syncReplicate(): array
     {
+        return $this->syncReplicateCollection('text-to-image');
+    }
+
+    /**
+     * فهرست یک Collection رسمی Replicate را با schema زنده‌ی هر مدل در
+     * کاتالوگ وطن ثبت می‌کند. مدل‌های ویدیویی یا غیرتصویری Collection عمداً
+     * وارد این کاتالوگ نمی‌شوند؛ این مسیر فقط text-to-image و image-to-image است.
+     */
+    public function syncReplicateCollection(string $collectionSlug): array
+    {
         $credentials = $this->credentials->for('replicate');
         $this->ensureKey('replicate', $credentials['api_key']);
 
-        $next = rtrim($credentials['base_url'] ?: 'https://api.replicate.com/v1', '/') . '/models';
-        $created = 0;
-        $updated = 0;
-        $total = 0;
-        $pages = 0;
-        $maxPages = max(1, (int) env('AI_CATALOG_MAX_PAGES', 100));
+        $baseUrl = rtrim($credentials['base_url'] ?: 'https://api.replicate.com/v1', '/');
+        $collection = Http::withToken($credentials['api_key'])
+            ->connectTimeout(15)
+            ->timeout(min(60, max(15, (int) $credentials['timeout'])))
+            ->get($baseUrl . '/collections/' . rawurlencode($collectionSlug));
 
-        while ($next && $pages++ < $maxPages) {
-            $response = Http::withToken($credentials['api_key'])
-                ->connectTimeout(15)
-                ->timeout(min(60, max(15, (int) $credentials['timeout'])))
-                ->get($next, $pages === 1 ? [
-                    'limit' => 100,
-                    'sort_by' => 'latest_version_created_at',
-                    'sort_direction' => 'desc',
-                ] : []);
-
-            if ($response->failed()) {
-                throw new RuntimeException('Replicate catalog HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
-            }
-
-            foreach ((array) $response->json('results', []) as $remote) {
-                $classification = $this->classifyReplicate($remote);
-                if ($classification === null) continue;
-
-                [$wasCreated, $wasUpdated] = $this->upsertModel($this->replicateData($remote, $classification));
-                $created += $wasCreated;
-                $updated += $wasUpdated;
-                $total++;
-            }
-
-            $next = $response->json('next');
+        if ($collection->failed()) {
+            throw new RuntimeException('Replicate collection HTTP ' . $collection->status() . ': ' . Str::limit($collection->body(), 500));
         }
 
-        return ['created' => $created, 'updated' => $updated, 'total' => $total, 'pages' => $pages - 1];
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $failed = 0;
+
+        foreach ((array) $collection->json('models', []) as $summary) {
+            try {
+                $remote = $this->hydrateReplicateModel($summary, $baseUrl, $credentials['api_key'], $credentials['timeout']);
+                $classification = $this->classifyReplicate($remote);
+                if ($classification === null || $classification['modality'] !== 'image') {
+                    $skipped++;
+                    continue;
+                }
+
+                $data = $this->replicateData($remote, $classification);
+                $data['pricing_config'] = array_merge((array) $data['pricing_config'], [
+                    'collection' => $collectionSlug,
+                    'collection_source' => 'replicate-official',
+                ]);
+                [$wasCreated, $wasUpdated] = $this->upsertModel($data);
+                $created += $wasCreated;
+                $updated += $wasUpdated;
+            } catch (\Throwable $error) {
+                $failed++;
+                Log::warning('Replicate collection model sync was skipped', [
+                    'collection' => $collectionSlug,
+                    'model' => trim((string) data_get($summary, 'owner') . '/' . (string) data_get($summary, 'name'), '/'),
+                    'message' => $error->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'total' => $created + $updated,
+            'skipped' => $skipped,
+            'failed' => $failed,
+            'collection' => $collectionSlug,
+        ];
+    }
+
+    private function hydrateReplicateModel(array $summary, string $baseUrl, string $apiKey, int $timeout): array
+    {
+        $owner = trim((string) ($summary['owner'] ?? ''));
+        $name = trim((string) ($summary['name'] ?? ''));
+        if ($owner === '' || $name === '') {
+            throw new RuntimeException('شناسه‌ی مدل در پاسخ Collection معتبر نیست.');
+        }
+
+        // پاسخ Collection در بعضی نسخه‌های API schema کامل را ندارد؛ جزئیات
+        // مدل را می‌گیریم تا ورودی واقعی هر مدل در UI و Provider قابل استفاده باشد.
+        if (!empty(data_get($summary, 'latest_version.openapi_schema'))) {
+            return $summary;
+        }
+
+        $response = Http::withToken($apiKey)
+            ->connectTimeout(15)
+            ->timeout(min(60, max(15, $timeout)))
+            ->get($baseUrl . '/models/' . rawurlencode($owner) . '/' . rawurlencode($name));
+
+        if ($response->failed()) {
+            throw new RuntimeException('جزئیات مدل HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
+        }
+
+        return (array) $response->json();
     }
 
     private function ensureKey(string $provider, string $key): void
@@ -244,8 +295,11 @@ class AiCatalogSyncService
         $schema = (array) ($latest['openapi_schema'] ?? []);
         $properties = $this->schemaProperties($schema);
         $blob = strtolower(json_encode($remote, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
-        $supportsImage = $this->hasMediaInput($properties) || (bool) preg_match('/image|photo|picture|frame|reference/', $blob);
+        $referenceFields = $this->replicateReferenceFields($properties);
+        $supportsImage = !empty($referenceFields) || (bool) preg_match('/image|photo|picture|frame|reference/', $blob);
         $faceIdentity = $classification['supports_face_identity'];
+        $requiredInputs = (array) (data_get($schema, 'components.schemas.Input.required') ?: data_get($schema, 'required') ?: []);
+        $requiredReferenceCount = count(array_intersect($requiredInputs, $referenceFields));
 
         return [
             'name' => (string) ($remote['name'] ?? $modelId),
@@ -269,7 +323,9 @@ class AiCatalogSyncService
             'input_schema' => $schema ?: null,
             'capability_config' => [
                 'allowed_inputs' => array_values(array_unique(array_merge(['prompt'], array_keys($properties)))),
-                'supports_text_to_image' => $classification['task_type'] === 'text_to_image',
+                'reference_fields' => $referenceFields,
+                'required_reference_count' => $requiredReferenceCount,
+                'supports_text_to_image' => in_array('prompt', array_keys($properties), true),
                 'supports_image_to_image' => $supportsImage,
                 'supports_text_to_video' => $classification['task_type'] === 'text_to_video',
                 'task_type' => $classification['task_type'],
@@ -333,6 +389,14 @@ class AiCatalogSyncService
     private function hasMediaInput(array $properties): bool
     {
         return (bool) preg_match('/image|photo|picture|mask|reference|frame/', strtolower(implode(' ', array_keys($properties))));
+    }
+
+    private function replicateReferenceFields(array $properties): array
+    {
+        return collect(array_keys($properties))
+            ->filter(fn (string $field) => (bool) preg_match('/(^|_)(image|images|photo|picture|reference|references|subject|source)(_|$)/i', $field))
+            ->values()
+            ->all();
     }
 
     private function hasInputProperty(array $properties, string $pattern): bool

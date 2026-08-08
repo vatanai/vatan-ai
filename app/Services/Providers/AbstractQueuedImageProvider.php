@@ -276,6 +276,10 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
             $put('image_urls', $references);
             $put('image', $references[0]);
             $put('images', $references);
+            $put('input_image', $references[0]);
+            $put('input_images', $references);
+            $put('source_image', $references[0]);
+            $put('subject_image', $references[0]);
             $put('reference_image', $references[0]);
             $put('reference_images', $references);
         }

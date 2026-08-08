@@ -71,6 +71,7 @@ class ReplicateImageProvider extends AbstractQueuedImageProvider
         $input = parent::buildInput($model, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
         $capabilities = $this->getModelCapabilities($model);
         $allowed = array_values((array) ($capabilities['allowed_inputs'] ?? []));
+        $properties = (array) (data_get($model->input_schema, 'components.schemas.Input.properties') ?: data_get($model->input_schema, 'properties') ?: []);
         $references = $this->referenceUrls($extraPayload['input_references'] ?? $extraPayload['input'] ?? []);
         $requiredReferences = max(0, (int) ($capabilities['required_reference_count'] ?? 0));
 
@@ -84,7 +85,10 @@ class ReplicateImageProvider extends AbstractQueuedImageProvider
 
         foreach ((array) ($capabilities['reference_fields'] ?? []) as $index => $field) {
             if (isset($references[$index]) && in_array($field, $allowed, true)) {
-                $input[$field] = $references[$index];
+                $schema = (array) ($properties[$field] ?? []);
+                $input[$field] = ($schema['type'] ?? null) === 'array' || isset($schema['items'])
+                    ? $references
+                    : $references[$index];
             }
         }
 
