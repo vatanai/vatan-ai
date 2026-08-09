@@ -114,8 +114,8 @@
     <div class="flex flex-col gap-1.5">
       <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">تگ‌های جستجو <span class="text-[10px] font-normal text-[var(--text3)] mr-1">Enter بزنید</span> {!! $__help('tags', 'تگ‌های جستجو') !!}</label>
       <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-1.5 flex flex-wrap gap-1.5 items-center min-h-[42px] focus-within:border-[var(--accent)]" id="tags-wrap" onclick="document.getElementById('tags-raw').focus()">
-        @foreach ((old('tags', optional($duplicateFrom)->tags ?? [])) as $tag)
-          <span class="inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]">{{ $tag }}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()">×</button></span>
+        @foreach (collect(old('tags', optional($duplicateFrom)->tags ?? []))->map(fn ($tag) => trim((string) $tag))->filter()->unique(fn ($tag) => mb_strtolower($tag))->values() as $tag)
+          <span data-tag-chip class="inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]">{{ $tag }}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()" aria-label="حذف برچسب">×</button></span>
         @endforeach
         <input type="text" id="tags-raw" class="bg-transparent border-none outline-none text-xs text-[var(--text)] flex-1 min-w-[80px] text-right" placeholder="تگ بنویسید..." onkeydown="if(typeof addTag === 'function') addTag(event)">
       </div>

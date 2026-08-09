@@ -127,7 +127,7 @@ function refreshProductPreview() {
   var name = value('name_fa');
   var description = value('description_fa') || value('description_en');
   var categories = typeof selectedCategories !== 'undefined' ? selectedCategories.map(function(cat){ return cat.name; }) : [];
-  var tags = Array.from(document.querySelectorAll('#tags-wrap > span')).map(function(chip){ return chip.textContent.replace('×', '').trim(); }).filter(Boolean);
+  var tags = Array.from(document.querySelectorAll('#tags-wrap > [data-tag-chip]')).map(function(chip){ return chip.textContent.replace('×', '').trim(); }).filter(Boolean);
   var pricing = document.querySelector('[name="pricing_model"]:checked')?.value || '';
   var cost = value('credit_cost');
   var mainImages = productPreviewFiles('main-images-file');

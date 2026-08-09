@@ -55,7 +55,7 @@
 
   {{-- ===== گرید محتوا: خروجی موتور فید هوشمند — نسبت/رندوم/سبک از داشبورد کنترل می‌شود ===== --}}
   <section class="xp-grid-section">
-    <div class="xp-grid">
+    <div class="xp-grid" data-search-filtered="{{ $xQuery !== '' ? '1' : '0' }}">
       @forelse ($xTiles as $tile)
         <a href="{{ $tile['link'] ?? '#' }}" class="xp-tile {{ $tile['size'] }} {{ ($tile['type'] ?? 'product') === 'campaign' ? 'xp-tile--campaign' : '' }}" data-tile-size="{{ $tile['size'] }}" data-original-tile-size="{{ $tile['size'] }}" data-tile-type="{{ $tile['type'] ?? 'product' }}" data-allowed-sizes='@json($tile['allowed_sizes'] ?? [$tile['size']])'>
           @if($tile['video'])
@@ -575,6 +575,20 @@
     var originals = Array.prototype.slice.call(xpGrid.querySelectorAll('.xp-tile'));
     var remaining = originals.slice();
     if (!remaining.length) return;
+
+    /* جست‌وجو فقط نتایج واقعی را نشان می‌دهد؛ پر کردن خانه‌های خالی با clone
+       برای فید عادی مناسب است، اما در نتیجه‌ی جست‌وجو محصول را تکراری می‌کند. */
+    if (xpGrid.dataset.searchFiltered === '1') {
+      xpGrid.classList.remove('is-pattern-layout');
+      originals.forEach(function (tile) {
+        tile.style.display = '';
+        tile.style.removeProperty('grid-column');
+        tile.style.removeProperty('grid-row');
+        setTileSize(tile, tile.dataset.originalTileSize || 'size-1x1');
+      });
+      return;
+    }
+
     var cycle = responsiveCycle(selectedPattern, colCount);
     var cycleIndex = 0;
     var safetyLimit = remaining.length * 4 + 8;

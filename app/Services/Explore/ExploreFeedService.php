@@ -123,7 +123,20 @@ class ExploreFeedService
             $streamIndex++;
         }
 
-        $final = array_values(array_filter($final));
+        $seenProductIds = [];
+        $final = array_values(array_filter($final, function (array $tile) use (&$seenProductIds): bool {
+            if (($tile['type'] ?? null) !== 'product' || ! isset($tile['_product_id'])) {
+                return true;
+            }
+
+            $productId = (int) $tile['_product_id'];
+            if ($productId <= 0 || isset($seenProductIds[$productId])) {
+                return false;
+            }
+
+            $seenProductIds[$productId] = true;
+            return true;
+        }));
 
         return $this->assignTileSizes($final, $setting);
     }

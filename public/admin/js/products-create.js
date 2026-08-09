@@ -340,13 +340,31 @@ function addTag(e) {
   if (e.key !== 'Enter' && e.key !== ',') return;
   e.preventDefault();
   const inp = document.getElementById('tags-raw');
-  const v = inp.value.trim();
-  if (!v) return;
+  const wrap = document.getElementById('tags-wrap');
+  const v = inp?.value.trim().replace(/^#+/, '').trim();
+  if (!inp || !wrap || !v) return;
+
+  const key = v.toLocaleLowerCase();
+  const duplicate = Array.from(wrap.querySelectorAll('[data-tag-chip]'))
+    .some(chip => (chip.dataset.tagKey || chip.textContent.replace('×', '').trim().toLocaleLowerCase()) === key);
+  if (duplicate) {
+    inp.value = '';
+    return;
+  }
 
   const chip = document.createElement('span');
   chip.className = 'inline-flex items-center gap-1 bg-[var(--accent)]/12 border border-[var(--accent)]/25 rounded px-2 py-0.5 text-xs text-[var(--accent)]';
-  chip.innerHTML = `${v}<button type="button" class="text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1" onclick="this.parentElement.remove()">×</button>`;
-  document.getElementById('tags-wrap').insertBefore(chip, inp);
+  chip.dataset.tagChip = '';
+  chip.dataset.tagKey = key;
+  chip.appendChild(document.createTextNode(v));
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'text-[var(--text3)] hover:text-[var(--red)] font-bold mr-1';
+  remove.setAttribute('aria-label', 'حذف برچسب');
+  remove.textContent = '×';
+  remove.addEventListener('click', () => chip.remove());
+  chip.appendChild(remove);
+  wrap.insertBefore(chip, inp);
   inp.value = '';
 }
 
@@ -1340,7 +1358,7 @@ async function submitForm(statusValue) {
 
   document.getElementById('product-status').value = statusValue;
 
-  document.querySelectorAll('#tags-wrap span').forEach((chip, idx) => {
+  document.querySelectorAll('#tags-wrap [data-tag-chip]').forEach((chip, idx) => {
     const text = chip.textContent.replace('×', '').trim();
     if(text) form.appendChild(createHiddenInput(`tags[${idx}]`, text));
   });
