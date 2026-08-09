@@ -24,7 +24,7 @@
     </div>
 
     @if(session('success'))<div class="credit-alert success">{{ session('success') }}</div>@endif
-    @if($errors->any())<div class="credit-alert error">{{ $errors->first() }}</div>@endif
+    @if(isset($errors) && $errors->any())<div class="credit-alert error">{{ $errors->first() }}</div>@endif
 
     @php
       $creditBySlug = $accounts->keyBy('slug');
