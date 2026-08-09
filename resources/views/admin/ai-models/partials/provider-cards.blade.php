@@ -159,9 +159,13 @@
           </label>
           <div class="flex items-center gap-2">
             <button class="btn-pro btn-pro-primary" type="submit">ذخیره امن</button>
-            <button class="btn-pro btn-pro-ghost" type="submit" formaction="{{ route('admin.ai-models.test-provider') }}" formmethod="POST">بررسی اتصال</button>
           </div>
         </div>
+      </form>
+      <form method="POST" action="{{ route('admin.ai-models.test-provider') }}" class="flex justify-end mt-2">
+        @csrf
+        <input type="hidden" name="provider" value="{{ $provider }}">
+        <button class="btn-pro btn-pro-ghost" type="submit">بررسی اتصال</button>
       </form>
     </section>
   @endforeach
