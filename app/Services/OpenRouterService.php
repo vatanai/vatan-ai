@@ -256,6 +256,11 @@ class OpenRouterService implements AiImageProviderInterface
         unset($payload['negative_prompt'], $payload['strength'], $payload['input_fidelity']);
 
         if (str_starts_with($modelId, 'google/') && str_contains($modelId, 'image')) {
+            $resolution = (string) ($payload['resolution'] ?? '1K');
+            $payload['resolution'] = match ($resolution) {
+                '1080', '2K', '2160', '4K' => '2K',
+                default => '1K',
+            };
             unset(
                 $payload['quality'],
                 $payload['output_format'],
@@ -269,7 +274,7 @@ class OpenRouterService implements AiImageProviderInterface
 
         if (str_starts_with($modelId, 'openai/') && str_contains($modelId, 'image')) {
             $resolution = strtoupper((string) ($payload['resolution'] ?? '1K'));
-            $payload['quality'] = in_array($resolution, ['2K', '4K'], true) ? 'high' : 'medium';
+            $payload['quality'] = in_array($resolution, ['1080', '2K', '4K'], true) ? 'high' : 'medium';
             unset($payload['resolution'], $payload['seed'], $payload['output_format']);
 
             if (in_array($modelId, ['openai/gpt-image-1', 'openai/gpt-image-1-mini'], true)) {

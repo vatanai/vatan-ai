@@ -78,6 +78,10 @@ class ProductBuildSchema
             'estimated_time' => $product->estimated_time ? 'حدود ' . number_format((int) $product->estimated_time) . ' ثانیه' : 'حدود یک دقیقه',
             'output_count' => max(1, (int) ($product->output_count ?? 1)),
             'output_variants' => $product->outputVariantList(),
+            'output_aspect_ratios' => $product->allowedAspectRatioList(),
+            'default_output_aspect_ratio' => $product->defaultOutputAspectRatio(),
+            'output_resolutions' => $product->allowedResolutionList(),
+            'default_output_resolution' => $product->defaultOutputResolution(),
             'fields' => $this->fields($product),
             'download_track_url' => route('app.product.download', $product->slug),
             'generate_url' => route('app.create.generate', $product->route_slug),
@@ -92,7 +96,7 @@ class ProductBuildSchema
             'fields' => ['nullable', 'array'], 'uploads' => ['nullable', 'array'], 'variants' => ['nullable', 'array'],
             'output' => ['nullable', 'array'],
             'output.aspect_ratio' => ['nullable', Rule::in($product->allowedAspectRatioList())],
-            'output.quality' => ['nullable', Rule::in(['1K', '2K', '4K'])],
+            'output.quality' => ['nullable', Rule::in($product->allowedResolutionList())],
             'identity_preservation' => ['nullable', 'boolean'],
         ];
         foreach ($this->fields($product) as $field) {

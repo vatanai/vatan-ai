@@ -16,8 +16,13 @@
   // gender مثل radio یک ورودی پایه و تک‌انتخابی است. نبودن آن در این فهرست
   // باعث می‌شد تنظیمات و پرامپت‌های زن/مرد ذخیره شوند اما در صفحه ساخت دیده نشوند.
   $basicTypes = ['info','section','divider','image_upload','multi_image','textarea','prompt','text','number','radio','gender','select','multi_select','button_group'];
-  $outputTypes = ['strength','slider','color','switch','checkbox','style_preset','aspect_ratio','resolution'];
+  $outputTypes = ['strength','slider','color','switch','checkbox','style_preset'];
   $advancedTypes = ['negative_prompt','seed','file_upload'];
+  $ratioLabels = ['auto' => 'خودکار', '1:1' => 'مربع', '9:16' => '۹:۱۶', '16:9' => '۱۶:۹', '2:3' => '۲:۳', '3:2' => '۳:۲', '3:4' => '۳:۴ عمودی', '4:3' => '۴:۳'];
+  $outputRatios = array_values(array_filter((array) ($product['output_aspect_ratios'] ?? [])));
+  $outputResolutions = array_values(array_filter((array) ($product['output_resolutions'] ?? ['720', '1080'])));
+  $defaultRatio = (string) ($product['default_output_aspect_ratio'] ?? '3:4');
+  $defaultResolution = (string) ($product['default_output_resolution'] ?? '720');
 @endphp
 
 <div class="cw-page" dir="rtl" data-instance="{{ $instance }}" data-generate-url="{{ $product['generate_url'] ?? '' }}" data-download-track-url="{{ $product['download_track_url'] ?? '' }}" data-login-url="{{ $product['login_url'] ?? route('login', ['redirect' => request()->fullUrl()]) }}" data-authenticated="{{ ($product['is_authenticated'] ?? false) ? '1' : '0' }}" data-preview="{{ ($previewMode ?? false) ? '1' : '0' }}">
@@ -87,6 +92,32 @@
           @endforeach
         </div>
         <div class="cw-tab-panel" data-panel="output">
+          @if(count($outputRatios))
+            <div class="cw-field cw-output-options" data-output-options>
+              <label class="cw-label"><span>سایز خروجی</span><small>نسبت تصویر موردنظر را انتخاب کنید</small></label>
+              <div class="cw-ratios">
+                @foreach($outputRatios as $ratio)
+                  <label>
+                    <input type="radio" name="output[aspect_ratio]" value="{{ $ratio }}" {{ $ratio === $defaultRatio ? 'checked' : '' }}>
+                    <span><i style="--ratio:{{ $ratio === 'auto' ? '1/1' : str_replace(':', '/', $ratio) }}"></i><b>{{ $ratioLabels[$ratio] ?? $ratio }}</b><small>{{ $ratio }}</small></span>
+                  </label>
+                @endforeach
+              </div>
+            </div>
+          @endif
+          @if(count($outputResolutions))
+            <div class="cw-field cw-output-options" data-output-options>
+              <label class="cw-label"><span>کیفیت خروجی</span><small>کیفیت تصویر نهایی را انتخاب کنید</small></label>
+              <div class="cw-resolution">
+                @foreach($outputResolutions as $resolution)
+                  <label>
+                    <input type="radio" name="output[quality]" value="{{ $resolution }}" {{ $resolution === $defaultResolution ? 'checked' : '' }}>
+                    <span><b>{{ $resolution }}</b><small>{{ $resolution === '720' ? 'استاندارد' : 'بالاتر' }}</small></span>
+                  </label>
+                @endforeach
+              </div>
+            </div>
+          @endif
           @if(!empty($product['output_variants']))
             <div class="cw-field" data-field-type="output_variants">
               <label class="cw-label"><span>مدل‌های خروجی <b>*</b></span><small>یک یا چند خروجی را انتخاب کنید</small></label>

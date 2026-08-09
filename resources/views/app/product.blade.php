@@ -860,8 +860,9 @@ function triggerGeneration() {
   selectedVariantKeys.forEach(function (k) { fd.append('variants[]', k); });
 
   var ratio = document.querySelector('input[name="modal_ratio"]:checked');
-  fd.append('output[aspect_ratio]', ratio ? ratio.value : '1:1');
-  fd.append('output[quality]', '1K');
+  var quality = document.querySelector('input[name="modal_quality"]:checked');
+  fd.append('output[aspect_ratio]', ratio ? ratio.value : @json($product->defaultOutputAspectRatio()));
+  fd.append('output[quality]', quality ? quality.value : @json($product->defaultOutputResolution()));
 
   var overlay = document.getElementById('modalProgressOverlay');
   overlay.classList.remove('hidden');

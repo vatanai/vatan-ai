@@ -78,6 +78,7 @@ class Product extends Model
         'resolution',
         'aspect_ratio',
         'allowed_aspect_ratios',
+        'allowed_resolutions',
         'images_optimized_at',
         'delivery_method',
         'estimated_time',
@@ -123,6 +124,7 @@ class Product extends Model
         'provider_options'  => 'array',
         'tags'              => 'array',
         'allowed_aspect_ratios' => 'array',
+        'allowed_resolutions' => 'array',
         'images_optimized_at' => 'datetime',
         'is_featured'       => 'boolean',
         'is_new'            => 'boolean',
@@ -323,17 +325,35 @@ class Product extends Model
 
     public function allowedAspectRatioList(): array
     {
-        $allowed = ['1:1', '4:5', '3:4', '9:16', '16:9', '3:2', '2:3'];
-        $schemaField = collect((array) $this->input_schema)->first(
-            fn ($field) => is_array($field) && ($field['type'] ?? null) === 'aspect_ratio'
-        );
-        $schemaRatios = collect((array) ($schemaField['options'] ?? []))
-            ->pluck('value')->map(fn ($value) => (string) $value)->all();
-        $fromSchema = array_values(array_intersect($allowed, $schemaRatios));
-        if ($fromSchema !== []) return $fromSchema;
-
+        $allowed = self::supportedAspectRatios();
         $configured = array_values(array_intersect($allowed, array_map('strval', (array) $this->allowed_aspect_ratios)));
-        $legacy = in_array((string) $this->aspect_ratio, $allowed, true) ? (string) $this->aspect_ratio : '1:1';
-        return $configured ?: [$legacy];
+        if ($configured !== []) return $configured;
+
+        $legacy = in_array((string) $this->aspect_ratio, $allowed, true) ? (string) $this->aspect_ratio : '3:4';
+        return [$legacy];
+    }
+
+    public static function supportedAspectRatios(): array
+    {
+        return ['auto', '1:1', '9:16', '16:9', '2:3', '3:2', '3:4', '4:3'];
+    }
+
+    public function allowedResolutionList(): array
+    {
+        $allowed = ['720', '1080'];
+        $configured = array_values(array_intersect($allowed, array_map('strval', (array) $this->allowed_resolutions)));
+        return $configured ?: ['720', '1080'];
+    }
+
+    public function defaultOutputAspectRatio(): string
+    {
+        $configured = $this->allowedAspectRatioList();
+        return in_array('3:4', $configured, true) ? '3:4' : $configured[0];
+    }
+
+    public function defaultOutputResolution(): string
+    {
+        $configured = $this->allowedResolutionList();
+        return in_array('720', $configured, true) ? '720' : $configured[0];
     }
 }

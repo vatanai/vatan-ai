@@ -294,6 +294,10 @@ class ProductController extends Controller
             'base_likes_count' => 'nullable|integer|min:0|max:999999999',
             'new_min_credit_required' => 'nullable|integer|min:0',
             'new_max_run_per_user' => 'nullable|integer|min:1',
+            'allowed_aspect_ratios' => 'nullable|array',
+            'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
+            'allowed_resolutions' => 'nullable|array',
+            'allowed_resolutions.*' => ['string', Rule::in(['720', '1080'])],
             'new_price_custom_label' => 'nullable|string|max:100',
             'main_images' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:20'],
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
@@ -452,9 +456,18 @@ class ProductController extends Controller
         $product->output_type = $request->input('output_type') ?? 'image';
         $product->output_format = $request->input('output_format') ?? 'jpg';
         $product->output_count = $request->input('output_count') ?? 1;
-        $product->resolution = $request->input('resolution') ?? '1024×1024';
-        $product->allowed_aspect_ratios = $this->aspectRatiosFromSchema($product->input_schema, ['1:1']);
-        $product->aspect_ratio = $product->allowed_aspect_ratios[0];
+        $product->allowed_aspect_ratios = $this->normalizedAspectRatios(
+            $request->input('allowed_aspect_ratios', Product::supportedAspectRatios())
+        );
+        $product->aspect_ratio = in_array('3:4', $product->allowed_aspect_ratios, true)
+            ? '3:4'
+            : $product->allowed_aspect_ratios[0];
+        $product->allowed_resolutions = $this->normalizedResolutions(
+            $request->input('allowed_resolutions', ['720', '1080'])
+        );
+        $product->resolution = in_array('720', $product->allowed_resolutions, true)
+            ? '720'
+            : $product->allowed_resolutions[0];
         $product->delivery_method = $request->input('delivery_method') ?? 'instant';
         $product->estimated_time = $request->input('estimated_time') ?? 30;
         $product->price_tier = $request->input('price_tier') ?? 'standard';
@@ -595,6 +608,10 @@ class ProductController extends Controller
             'new_min_credit_required' => 'nullable|integer|min:0',
             'new_max_run_per_user' => 'nullable|integer|min:1',
             'new_price_custom_label' => 'nullable|string|max:100',
+            'allowed_aspect_ratios' => 'nullable|array',
+            'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
+            'allowed_resolutions' => 'nullable|array',
+            'allowed_resolutions.*' => ['string', Rule::in(['720', '1080'])],
             ...$this->inputSchemaRules(),
         ]);
         $this->validateAiProviderSelection($request);
@@ -718,11 +735,18 @@ class ProductController extends Controller
         $validated['fallback_models'] = $request->input('fallback_models', []);
         $validated['fallback_model_providers'] = $request->input('fallback_providers', []);
         $validated['input_schema'] = $validated['input_schema'] ?? [];
-        $validated['allowed_aspect_ratios'] = $this->aspectRatiosFromSchema(
-            $validated['input_schema'],
-            $product->allowedAspectRatioList()
+        $validated['allowed_aspect_ratios'] = $this->normalizedAspectRatios(
+            $request->input('allowed_aspect_ratios', $product->allowedAspectRatioList())
         );
-        $validated['aspect_ratio'] = $validated['allowed_aspect_ratios'][0];
+        $validated['aspect_ratio'] = in_array('3:4', $validated['allowed_aspect_ratios'], true)
+            ? '3:4'
+            : $validated['allowed_aspect_ratios'][0];
+        $validated['allowed_resolutions'] = $this->normalizedResolutions(
+            $request->input('allowed_resolutions', $product->allowedResolutionList())
+        );
+        $validated['resolution'] = in_array('720', $validated['allowed_resolutions'], true)
+            ? '720'
+            : $validated['allowed_resolutions'][0];
 
         $validated['slug'] = Str::slug($validated['slug']);
 
@@ -1338,11 +1362,18 @@ class ProductController extends Controller
         return $paths;
     }
 
-    private function normalizedAspectRatios(mixed $ratios): array
+    private function normalizedAspectRatios(mixed $ratios, array $fallback = ['3:4']): array
     {
-        $allowed = ['1:1', '4:5', '3:4', '9:16', '16:9', '3:2', '2:3'];
+        $allowed = Product::supportedAspectRatios();
         $selected = array_values(array_unique(array_intersect($allowed, array_map('strval', (array) $ratios))));
-        return $selected ?: ['1:1'];
+        return $selected ?: $this->normalizedAspectRatios($fallback, ['3:4']);
+    }
+
+    private function normalizedResolutions(mixed $resolutions): array
+    {
+        $allowed = ['720', '1080'];
+        $selected = array_values(array_unique(array_intersect($allowed, array_map('strval', (array) $resolutions))));
+        return $selected ?: ['720'];
     }
 
     private function aspectRatiosFromSchema(array $schema, array $fallback): array
@@ -1353,9 +1384,9 @@ class ProductController extends Controller
                 fn ($option) => is_array($option) ? ($option['value'] ?? null) : null,
                 (array) ($field['options'] ?? [])
             );
-            return $this->normalizedAspectRatios(array_filter($ratios));
+            return $this->normalizedAspectRatios(array_filter($ratios), $fallback);
         }
 
-        return $this->normalizedAspectRatios($fallback);
+        return $this->normalizedAspectRatios($fallback, $fallback);
     }
 }

@@ -36,13 +36,13 @@ class ProductGenerateController extends Controller
             $product = (new Product())->resolveRouteBinding($slug, 'route_slug');
             abort_unless($product && $product->status === 'active', 404);
         } else {
-            // لینک عمومی «بساز» همچنان یک محصول فعال پیش‌فرض برای شروع دارد.
-            $product = Product::where('status', 'active')->latest()->first();
+            // صفحه عمومی «بساز» بدون محصول اختصاصی همان رابط عمومی را نشان می‌دهد.
+            return view('app.create');
         }
 
-        return view('app.create', [
+        return view('app.create-product', [
             'product' => $product,
-            'buildProduct' => $product ? $schema->pageData($product) : null,
+            'buildProduct' => $schema->pageData($product),
         ]);
     }
 
@@ -297,11 +297,10 @@ class ProductGenerateController extends Controller
         }
 
         // ۵. مشخصات خروجی تصویر هوش مصنوعی
-        $schemaFields = collect($schema->fields($product));
-        $valueForType = fn (string $type) => (($field = $schemaFields->firstWhere('type', $type)) ? ($fieldValues[$field['id']] ?? null) : null);
-        $aspectRatio = $request->input('output.aspect_ratio', $valueForType('aspect_ratio') ?? $product->aspect_ratio ?? '1:1');
-        // حالت عادی همیشه Grade B / Medium و حفظ هویت همیشه Grade A / High است.
-        $quality = $identityRequested ? '2K' : '1K';
+        $aspectRatio = $request->input('output.aspect_ratio', $product->defaultOutputAspectRatio());
+        // کیفیت و نسبت تصویر از گزینه‌های فعال همان محصول می‌آیند؛ شِمای قدیمی
+        // فقط تنظیمات داخلی محصول را نگه می‌دارد و نباید انتخاب کاربر را بازنویسی کند.
+        $quality = (string) $request->input('output.quality', $product->defaultOutputResolution());
 
         $executionProduct = $product;
         if ($identityRequested && $product->identity_model) {

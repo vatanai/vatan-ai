@@ -44,17 +44,28 @@
                alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
         </div>
 
-        {{-- تنظیم نسبت تصویر --}}
+        {{-- تنظیمات خروجی --}}
         <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
-          <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mb-2">تنظیم نسبت تصویر خروجی:</p>
+          <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mb-2">سایز خروجی:</p>
           <div class="flex gap-1.5 flex-wrap">
-            @php $__ratioLabels = ['1:1'=>'مربع','4:5'=>'عمودی ۴:۵','3:4'=>'عمودی ۳:۴','2:3'=>'عمودی ۲:۳','9:16'=>'استوری','16:9'=>'افقی ۱۶:۹','3:2'=>'افقی ۳:۲']; @endphp
+            @php $__ratioLabels = ['auto'=>'خودکار','1:1'=>'مربع','4:3'=>'افقی ۴:۳','3:4'=>'عمودی ۳:۴','2:3'=>'عمودی ۲:۳','9:16'=>'استوری','16:9'=>'افقی ۱۶:۹','3:2'=>'افقی ۳:۲']; @endphp
             @foreach($product->allowedAspectRatioList() as $val)
             @php $lbl = $__ratioLabels[$val] ?? $val; @endphp
             <label class="cursor-pointer">
-              <input type="radio" name="modal_ratio" value="{{ $val }}" {{ $loop->first ? 'checked' : '' }} class="sr-only peer">
+              <input type="radio" name="modal_ratio" value="{{ $val }}" {{ $val === $product->defaultOutputAspectRatio() ? 'checked' : '' }} class="sr-only peer">
               <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
                 {{ $lbl }}
+              </span>
+            </label>
+            @endforeach
+          </div>
+          <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mt-3 mb-2">کیفیت خروجی:</p>
+          <div class="flex gap-1.5 flex-wrap">
+            @foreach($product->allowedResolutionList() as $val)
+            <label class="cursor-pointer">
+              <input type="radio" name="modal_quality" value="{{ $val }}" {{ $val === $product->defaultOutputResolution() ? 'checked' : '' }} class="sr-only peer">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
+                {{ $val }}
               </span>
             </label>
             @endforeach

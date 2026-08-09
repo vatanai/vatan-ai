@@ -102,8 +102,9 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
     Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
     Route::get('/products',     [ProductCatalogController::class, 'index'])->name('products.index');
-    // UI-only workspace؛ اتصال به محصول، توکن، API و دیتابیس عمداً در این مرحله فعال نیست.
-    Route::view('/create', 'app.create')->name('app.create');
+    // صفحه عمومی ساخت بدون محصول، و صفحه ساخت اختصاصی محصول از یک مسیر کنترل‌شده
+    // عبور می‌کنند تا تنظیمات خروجی ذخیره‌شده‌ی همان محصول به کاربر برسد.
+    Route::get('/create', [ProductGenerateController::class, 'create'])->name('app.create');
     Route::get('/create-preview', [ProductGenerateController::class, 'createPreview'])->name('app.create.preview');
     Route::view('/create-architecture', 'app.create-architecture')->name('app.create.architecture');
     Route::get('/create/{product:route_slug}', [ProductGenerateController::class, 'build'])->name('app.create.product');

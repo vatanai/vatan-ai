@@ -122,6 +122,64 @@
     </div>
   </div>
 
+  {{-- ── تنظیمات خروجی کاربر: سایز و کیفیت ── --}}
+  @php
+    $__outputSource = $duplicateFrom ?? ($product ?? null);
+    $__ratioOptions = [
+      'auto' => ['label' => 'خودکار', 'shape' => 'w-5 h-5'],
+      '1:1' => ['label' => '۱:۱', 'shape' => 'w-5 h-5'],
+      '9:16' => ['label' => '۹:۱۶', 'shape' => 'w-4 h-6'],
+      '16:9' => ['label' => '۱۶:۹', 'shape' => 'w-6 h-4'],
+      '2:3' => ['label' => '۲:۳', 'shape' => 'w-4 h-6'],
+      '3:2' => ['label' => '۳:۲', 'shape' => 'w-6 h-4'],
+      '3:4' => ['label' => '۳:۴', 'shape' => 'w-4 h-5'],
+      '4:3' => ['label' => '۴:۳', 'shape' => 'w-5 h-4'],
+    ];
+    $__enabledRatios = collect(old('allowed_aspect_ratios', $__outputSource?->allowedAspectRatioList() ?? array_keys($__ratioOptions)))
+      ->map(fn ($value) => (string) $value)->all();
+    $__enabledResolutions = collect(old('allowed_resolutions', $__outputSource?->allowedResolutionList() ?? ['720', '1080']))
+      ->map(fn ($value) => (string) $value)->all();
+  @endphp
+  <div class="border-t border-[var(--b1)] pt-5 mt-1">
+    <div class="mb-4">
+      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-sliders text-[var(--accent)]"></i> تنظیمات خروجی کاربر</div>
+      <div class="text-[10.5px] text-[var(--text3)] mt-1">گزینه‌های روشن در صفحه ساخت به کاربر نمایش داده می‌شوند؛ حالت پیش‌فرض سایز `۳:۴` و کیفیت `۷۲۰` است.</div>
+    </div>
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div class="text-[11px] font-bold text-[var(--text2)]"><i class="fa-solid fa-crop-simple text-[var(--accent)] ml-1.5"></i>سایزهای خروجی</div>
+          <span class="text-[9px] text-[var(--text3)]">چند گزینه‌ای</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          @foreach($__ratioOptions as $__ratio => $__ratioMeta)
+            <label class="output-option-card relative flex flex-col items-center justify-center gap-1.5 min-h-[76px] rounded-lg border border-[var(--b1)] bg-[var(--s2)] cursor-pointer transition-all hover:border-[var(--accent)] {{ in_array($__ratio, $__enabledRatios, true) ? 'is-enabled border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+              <input type="checkbox" name="allowed_aspect_ratios[]" value="{{ $__ratio }}" class="sr-only peer" {{ in_array($__ratio, $__enabledRatios, true) ? 'checked' : '' }}>
+              <span class="{{ $__ratioMeta['shape'] }} border-2 border-[var(--text3)] rounded-[4px] opacity-80 peer-checked:border-[var(--accent)]"></span>
+              <span class="text-[10px] font-bold text-[var(--text2)] peer-checked:text-[var(--accent)]">{{ $__ratioMeta['label'] }}</span>
+              <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-[var(--b2)] bg-[var(--s1)] text-transparent peer-checked:bg-[var(--green)] peer-checked:border-[var(--green)] peer-checked:text-white flex items-center justify-center text-[8px]"><i class="fa-solid fa-check"></i></span>
+            </label>
+          @endforeach
+        </div>
+      </div>
+      <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div class="text-[11px] font-bold text-[var(--text2)]"><i class="fa-solid fa-display text-[var(--accent)] ml-1.5"></i>کیفیت‌های خروجی</div>
+          <span class="text-[9px] text-[var(--text3)]">۷۲۰ و ۱۰۸۰</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          @foreach(['720' => 'استاندارد', '1080' => 'بالاتر'] as $__resolution => $__resolutionLabel)
+            <label class="output-option-card relative flex items-center justify-between gap-2 min-h-[76px] rounded-lg border border-[var(--b1)] bg-[var(--s2)] px-3 cursor-pointer transition-all hover:border-[var(--accent)] {{ in_array($__resolution, $__enabledResolutions, true) ? 'is-enabled border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+              <input type="checkbox" name="allowed_resolutions[]" value="{{ $__resolution }}" class="sr-only peer" {{ in_array($__resolution, $__enabledResolutions, true) ? 'checked' : '' }}>
+              <span class="flex flex-col gap-1"><b class="text-[13px] text-[var(--text)] peer-checked:text-[var(--accent)]">{{ $__resolution }}</b><small class="text-[9px] text-[var(--text3)]">{{ $__resolutionLabel }}</small></span>
+              <span class="w-5 h-5 rounded-md border border-[var(--b2)] bg-[var(--s1)] text-transparent peer-checked:bg-[var(--green)] peer-checked:border-[var(--green)] peer-checked:text-white flex items-center justify-center text-[9px]"><i class="fa-solid fa-check"></i></span>
+            </label>
+          @endforeach
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- ── اطلاعات داخلی مدیر (فعال و ذخیره‌شونده) ── --}}
   <div class="hidden border-t border-dashed border-[var(--b2)] pt-4" data-future-update="اطلاعات داخلی مدیر">
     <div class="text-[10.5px] font-bold text-[var(--text3)] mb-3 tracking-wide uppercase flex items-center gap-1.5"><i class="fa-solid fa-lock text-[10px]"></i> اطلاعات داخلی مدیر</div>

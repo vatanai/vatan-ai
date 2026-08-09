@@ -299,9 +299,24 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
     {
         $width = max(1, (int) ($model->default_width ?: 1024));
         $height = max(1, (int) ($model->default_height ?: 1024));
-        if (in_array($aspectRatio, ['9:16', '2:3', '3:4'], true)) return [$height, $width];
-        if (in_array($aspectRatio, ['16:9', '3:2', '4:3'], true)) return [$width, $height];
-        return [$width, $height];
+        if ($aspectRatio === 'auto' || !str_contains($aspectRatio, ':')) return [$width, $height];
+
+        [$ratioWidth, $ratioHeight] = array_pad(array_map('floatval', explode(':', $aspectRatio, 2)), 2, 1.0);
+        if ($ratioWidth <= 0 || $ratioHeight <= 0) return [$width, $height];
+
+        // طول ضلع بزرگ مدل حفظ می‌شود و ضلع دیگر از نسبت انتخاب‌شده به‌دست می‌آید؛
+        // سپس هر دو مقدار به مضرب ۸ گرد می‌شوند تا با محدودیت رایج مدل‌ها سازگار باشند.
+        $longSide = max($width, $height, 1024);
+        if ($ratioWidth >= $ratioHeight) {
+            $targetWidth = $longSide;
+            $targetHeight = $longSide * $ratioHeight / $ratioWidth;
+        } else {
+            $targetHeight = $longSide;
+            $targetWidth = $longSide * $ratioWidth / $ratioHeight;
+        }
+
+        $roundToEight = static fn (float $value): int => max(8, (int) (round($value / 8) * 8));
+        return [$roundToEight($targetWidth), $roundToEight($targetHeight)];
     }
 
     protected function legacyResponse(array $normalized): array
@@ -355,6 +370,9 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
     {
         $properties = (array) (data_get($model->input_schema, 'components.schemas.Input.properties') ?: data_get($model->input_schema, 'properties') ?: []);
         $supported = array_values(array_filter((array) data_get($properties, 'aspect_ratio.enum', []), 'is_string'));
+        if ($requested === 'auto') {
+            return in_array('auto', $supported, true) ? 'auto' : ($supported[0] ?? 'auto');
+        }
         if (!$supported || in_array($requested, $supported, true)) return $requested;
 
         [$requestedWidth, $requestedHeight] = array_pad(array_map('floatval', explode(':', $requested, 2)), 2, 1.0);

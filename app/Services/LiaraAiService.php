@@ -327,7 +327,7 @@ class LiaraAiService implements AiImageProviderInterface
     protected function resolveQuality(string $resolution): string
     {
         return match ($resolution) {
-            '4K', '2K' => 'high',
+            '1080', '4K', '2K' => 'high',
             '1K'       => 'medium',
             default    => 'medium',
         };
