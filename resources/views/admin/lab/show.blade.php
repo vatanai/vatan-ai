@@ -95,7 +95,7 @@
 
     <section class="content-card overflow-hidden mb-4">
       <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">جدول محاسبه دقیق</h2></div>
-      <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>محصول</th><th>کد گزارش</th><th>تعداد مدل</th><th>زمان کل</th><th>قیمت دلار</th><th>قیمت تومان</th><th>هزینه آزمایش دلار</th><th>هزینه آزمایش تومان</th><th>نمره نهایی</th></tr></thead><tbody><tr><td>{{ $experiment->product_name_snapshot ?: $experiment->product?->name_fa }}</td><td dir="ltr">{{ $experiment->report_code ?: '—' }}</td><td>{{ $experiment->models_count ?: $experiment->runs->count() }}</td><td>{{ $experiment->runs->sum('build_seconds') ?: ($experiment->runs->sum('duration_ms') ? number_format($experiment->runs->sum('duration_ms') / 1000, 2) : '—') }} ثانیه</td><td dir="ltr">${{ number_format((float)($experiment->total_cost_usd ?: $experiment->actual_cost_usd ?: $experiment->estimated_cost_usd), 4) }}</td><td>{{ number_format((float)($experiment->total_cost_toman ?: $experiment->actual_cost_toman ?: $experiment->estimated_cost_toman)) }}</td><td dir="ltr">${{ number_format((float)$experiment->lab_cost_usd, 4) }}</td><td>{{ number_format((float)$experiment->lab_cost_toman) }}</td><td>{{ $experiment->overall_score ? number_format((float)$experiment->overall_score, 1).' از ۱۰' : '—' }}</td></tr></tbody></table></div>
+      <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>محصول</th><th>کد گزارش</th><th>تعداد مدل</th><th>زمان کل</th><th>قیمت دلار</th><th>قیمت تومان</th><th>هزینه آزمایش دلار</th><th>هزینه آزمایش تومان</th><th>نمره نهایی</th></tr></thead><tbody><tr><td>{{ $experiment->product_name_snapshot ?: $experiment->product?->name_fa }}</td><td dir="ltr">{{ $experiment->report_code ?: '—' }}</td><td>{{ $experiment->models_count ?: $experiment->runs->count() }}</td><td>{{ $experiment->runs->sum('build_seconds') ?: ($experiment->runs->sum('duration_ms') ? number_format($experiment->runs->sum('duration_ms') / 1000, 2) : '—') }} ثانیه</td><td dir="ltr">{{ $experiment->effectiveCostUsd() > 0 ? '$'.number_format($experiment->effectiveCostUsd(), 4) : '—' }}</td><td>{{ $experiment->effectiveCostToman() > 0 ? number_format($experiment->effectiveCostToman()) : '—' }}</td><td dir="ltr">{{ (float)$experiment->lab_cost_usd > 0 ? '$'.number_format((float)$experiment->lab_cost_usd, 4) : '—' }}</td><td>{{ (float)$experiment->lab_cost_toman > 0 ? number_format((float)$experiment->lab_cost_toman) : '—' }}</td><td>{{ $experiment->overall_score ? number_format((float)$experiment->overall_score, 1).' از ۱۰' : '—' }}</td></tr></tbody></table></div>
     </section>
 
     <section class="content-card overflow-hidden mb-4">
@@ -135,8 +135,8 @@
       <div class="lab-output-model-grid">
         @forelse($experiment->runs as $run)
           @php
-            $runCost = (float) $run->actual_cost_usd ?: (float) $run->estimated_cost_usd;
-            $runToman = $runCost * $exchangeToman;
+            $runCost = (float) $run->actual_cost_usd > 0 ? (float) $run->actual_cost_usd : (float) $run->estimated_cost_usd;
+            $runToman = (float) $run->actual_cost_toman > 0 ? (float) $run->actual_cost_toman : ((float) $run->estimated_cost_toman > 0 ? (float) $run->estimated_cost_toman : $runCost * $exchangeToman);
           @endphp
           <article class="lab-result-model-card">
             <header class="lab-result-model-head">
@@ -156,8 +156,8 @@
 
             <div class="lab-result-meta-grid">
               <div><span>زمان اجرا</span><strong>{{ $run->duration_ms ? number_format($run->duration_ms / 1000, 1) . ' ثانیه' : '—' }}</strong></div>
-              <div><span>هزینه دلاری</span><strong dir="ltr">${{ number_format($runCost, 4) }}</strong></div>
-              <div><span>هزینه تومانی</span><strong>{{ number_format($runToman) }} تومان</strong></div>
+              <div><span>هزینه دلاری</span><strong dir="ltr">{{ $runCost > 0 ? '$'.number_format($runCost, 4) : '—' }}</strong></div>
+              <div><span>هزینه تومانی</span><strong>{{ $runToman > 0 ? number_format($runToman).' تومان' : '—' }}</strong></div>
               <div><span>تعداد خروجی</span><strong>{{ $run->outputs->count() }} تصویر</strong></div>
             </div>
           </article>

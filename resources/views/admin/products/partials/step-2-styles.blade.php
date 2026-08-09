@@ -14,8 +14,10 @@
 .model-picker-provider-row:hover,.model-picker-provider-row.is-selected { background:var(--primary-l); color:var(--text); }
 .model-picker-provider-row span:last-child { color:var(--text3); text-align:left; }
 .model-picker-empty { display:block; margin-top:5px; color:var(--red); font-size:10px; }
-.model-picker-model-menu { min-width:520px; right:auto; left:0; }
-.model-picker-model-head,.model-picker-model-row { display:grid; grid-template-columns:1.6fr 1.2fr .7fr; align-items:center; gap:8px; }
+.model-picker-filter { width:100%; min-height:40px; padding:9px 11px; border:1px solid var(--b1); border-radius:9px; outline:none; color:var(--text); background:var(--s1); font-family:inherit; font-size:10px; font-weight:700; cursor:pointer; }
+.model-picker-filter:hover,.model-picker-filter:focus { border-color:var(--accent); }
+.model-picker-model-menu { min-width:650px; right:auto; left:0; }
+.model-picker-model-head,.model-picker-model-row { display:grid; grid-template-columns:1.6fr 1fr 1fr .7fr; align-items:center; gap:8px; }
 .model-picker-model-head { padding:6px 8px; color:var(--text3); font-size:8.5px; font-weight:800; border-bottom:1px solid var(--b1); }
 .model-picker-model-row { width:100%; padding:9px 8px; border:0; border-bottom:1px solid var(--b1); background:transparent; color:var(--text2); font-size:9px; line-height:1.5; text-align:right; cursor:pointer; }
 .model-picker-model-row:last-child { border-bottom:0; }
@@ -25,7 +27,7 @@
 .model-picker-model-name b,.model-picker-model-name small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .model-picker-model-name small { color:var(--text3); font-size:8px; }
 .model-quality-grade { color:var(--warning); font-weight:800; white-space:nowrap; }
-@media (max-width:760px) { .model-picker-model-menu { min-width:0; width:calc(100vw - 54px); right:0; left:auto; } .model-picker-model-head,.model-picker-model-row { min-width:490px; } .model-picker-model-menu { overflow-x:auto; } }
+@media (max-width:760px) { .model-picker-model-menu { min-width:0; width:calc(100vw - 54px); right:0; left:auto; } .model-picker-model-head,.model-picker-model-row { min-width:620px; } .model-picker-model-menu { overflow-x:auto; } }
 
 /* ── دکمه‌های toggle provider در step-2 ── */
 .api-provider-btn {

@@ -160,6 +160,82 @@ class AiModel extends Model
         };
     }
 
+    /**
+     * کاربردهای پیشنهادی از مشخصات واقعی و شناسه‌ی عمومی مدل استخراج می‌شوند.
+     * این مقادیر ذخیره نمی‌شوند تا مدل‌های همگام‌سازی‌شده‌ی قدیمی هم بلافاصله
+     * در فیلترهای پنل و آزمایشگاه قابل استفاده باشند.
+     */
+    public function recommendedUseCaseKeys(): array
+    {
+        $task = (string) $this->task_type;
+        $source = strtolower(implode(' ', [
+            $this->externalModelId(),
+            (string) $this->name,
+            (string) $this->description,
+        ]));
+        $has = static fn (string $pattern): bool => (bool) preg_match($pattern, $source);
+        $keys = [];
+
+        if (in_array($task, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true)) {
+            $keys[] = 'video';
+        }
+        if ($this->supports_face_identity || $task === 'face_consistency' || $has('/instantid|instant-id|photomaker|facefusion|face.?id|identity|consistent.?face/')) {
+            $keys[] = 'identity';
+        }
+        if ($has('/portrait|headshot|selfie|face|character.?reference|person.?reference/')) {
+            $keys[] = 'portrait';
+        }
+        if ($has('/product|commercial|advertis|ecommerce|e-commerce|brand|mockup|packshot|catalog|seedream|flux|imagen|gpt.?image|nano.?banana|photon|lucid|bria|recraft|ideogram/')) {
+            $keys[] = 'business';
+        }
+        if ($has('/recraft|ideogram|logo|vector|svg|sticker|poster|typography|text.?render|graphic.?design/')) {
+            $keys[] = 'design';
+        }
+
+        if (empty($keys) && in_array($task, ['text_to_image', 'image_to_image', 'upscaling'], true)) {
+            $keys[] = 'creative';
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    public function recommendedUseCases(): array
+    {
+        $labels = [
+            'portrait' => 'چهره و پرتره',
+            'identity' => 'حفظ هویت چهره',
+            'business' => 'محصول و کسب‌وکار',
+            'design' => 'طراحی و متن',
+            'creative' => 'تصویرسازی خلاق',
+            'video' => 'ویدیو و موشن',
+        ];
+
+        return array_values(array_map(
+            static fn (string $key): string => $labels[$key] ?? $key,
+            $this->recommendedUseCaseKeys()
+        ));
+    }
+
+    public function primaryUseCaseLabel(): string
+    {
+        return $this->recommendedUseCases()[0] ?? 'کاربری عمومی';
+    }
+
+    /** قابلیت‌های قابل نمایش کنار مدل؛ فقط مواردی که واقعاً در کاتالوگ ثبت شده‌اند. */
+    public function capabilityLabels(): array
+    {
+        $labels = [$this->taskLabel()];
+
+        if ($this->supports_image_input) $labels[] = 'پذیرش عکس ورودی';
+        if ($this->supports_face_identity) $labels[] = 'حفظ هویت';
+        if ($this->supports_multiple_faces) $labels[] = 'چند چهره';
+        if ($this->supports_video_input) $labels[] = 'ورودی ویدیو';
+        if ($this->supports_audio) $labels[] = 'صوت';
+        if ($this->supports_webhook) $labels[] = 'وب‌هوک';
+
+        return array_values(array_unique($labels));
+    }
+
     /** نام فنی انگلیسی برای جدول‌های انتخاب مدل. */
     public function englishDisplayName(): string
     {

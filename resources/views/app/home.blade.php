@@ -1,15 +1,20 @@
 @extends('layouts.app')
 
+@section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'وطن AI')
+
 @section('content')
 <div class="home-page" dir="rtl">
 
   {{-- ===== SECTION 2: خوش‌آمدگویی هوشمند ===== --}}
-  <section class="home-greeting">
-    <p class="home-greeting-title">سلام، خوش اومدی</p>
-    <p class="home-greeting-sub">می‌خوای چی خلق کنی؟</p>
-  </section>
+  @if(!isset($sitePage) || $sitePage->content('show_page_title', true))
+    <section class="home-greeting">
+      <p class="home-greeting-title">{{ isset($sitePage) ? $sitePage->title : 'سلام، خوش اومدی' }}</p>
+      <p class="home-greeting-sub">{{ isset($sitePage) ? $sitePage->subtitle : 'می‌خوای چی خلق کنی؟' }}</p>
+    </section>
+  @endif
 
   {{-- ===== SECTION 3: جستجوی زنده محصولات + انتقال به کاتالوگ ===== --}}
+  @if(!isset($sitePage) || $sitePage->content('show_search', true))
   <section class="home-imagegen">
     <div class="ig-box" dir="rtl">
 
@@ -44,6 +49,7 @@
 
     </div>
   </section>
+  @endif
 
   {{-- ===== SECTION 4: Sectionهای داینامیک صفحه هوم (مدیریت از پنل ادمین → مدیریت صفحه هوم) ===== --}}
   @include('app.home-builder.partials.styles')

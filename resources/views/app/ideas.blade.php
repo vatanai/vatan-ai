@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'اکسپلور | وطن AI')
+
 @section('content')
 @php
   $xTiles = $tiles ?? [];
@@ -13,14 +15,17 @@
 
   {{-- ===== هدر: آیکون هوش مصنوعی + عنوان + توضیح + سرچ/فیلتر ===== --}}
   <section class="xp-header">
+    @if(!isset($sitePage) || $sitePage->content('show_page_title', true))
     <div class="xp-title-row">
       <span class="xp-title-icon">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
       </span>
-      <h1 class="xp-title">اکسپلور</h1>
+      <h1 class="xp-title">{{ isset($sitePage) ? $sitePage->title : 'اکسپلور' }}</h1>
     </div>
-    <p class="xp-subtitle">هزاران ایده و پرامپت آماده برای ساخت تصویر و ویدیوی حرفه‌ای با هوش مصنوعی</p>
+    <p class="xp-subtitle">{{ isset($sitePage) ? $sitePage->subtitle : 'هزاران ایده و پرامپت آماده برای ساخت تصویر و ویدیوی حرفه‌ای با هوش مصنوعی' }}</p>
+    @endif
 
+    @if(!isset($sitePage) || $sitePage->content('show_search', true))
     <form class="xp-search-row" action="{{ route('app.explore') }}" method="GET" role="search">
       <div class="xp-search-box">
         <button type="submit" class="xp-search-submit" aria-label="جستجو">
@@ -34,6 +39,7 @@
         @endif
       </div>
     </form>
+    @endif
   </section>
 
   {{-- دسته‌بندی‌ها و هشتگ‌ها مستقیماً از دیتابیس؛ دو ردیف مستقل و بی‌انتها در دسکتاپ --}}

@@ -1,13 +1,17 @@
 <div class="trends-page" dir="rtl">
   <header class="trends-header">
     <div class="trends-heading-row">
+      @if(!isset($sitePage) || $sitePage->content('show_page_title', true))
       <div>
         <span class="trends-eyebrow"><i class="fa-solid fa-arrow-trend-up"></i> انتخاب‌های محبوب وطن</span>
-        <h1 class="trends-title">ترندز</h1>
-        <p class="trends-subtitle">محبوب‌ترین سبک‌ها و ایده‌هایی که این روزها بیشتر دیده و استفاده می‌شوند.</p>
+        <h1 class="trends-title">{{ isset($sitePage) ? $sitePage->title : 'ترندز' }}</h1>
+        <p class="trends-subtitle">{{ isset($sitePage) ? $sitePage->subtitle : 'محبوب‌ترین سبک‌ها و ایده‌هایی که این روزها بیشتر دیده و استفاده می‌شوند.' }}</p>
       </div>
+      @endif
     </div>
-    @include('app.trends.partials.search')
+    @if(!isset($sitePage) || $sitePage->content('show_search', true))
+      @include('app.trends.partials.search')
+    @endif
   </header>
 
   <section class="trends-section trends-feed-section">

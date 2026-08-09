@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'پروفایل | وطن AI')
+
 @section('content')
 <div class="profile-page" dir="rtl">
 

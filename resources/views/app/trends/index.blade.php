@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page_title', 'ترندز | وطن AI')
+@section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'ترندز | وطن AI')
 
 @section('content')
   @include('app.trends.partials.page', [

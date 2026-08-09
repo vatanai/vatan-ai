@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\ServiceCreditController;
 use App\Http\Controllers\Admin\ReferralSettingController;
 use App\Http\Controllers\Admin\LabExperimentController;
+use App\Http\Controllers\Admin\SitePageController;
 use App\Http\Controllers\Admin\Explore\TrendController;
 use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
@@ -94,19 +95,21 @@ Route::get('/products', function () {
     return redirect('/app/products' . ($query ? '?' . $query : ''), 301);
 })->name('products.legacy');
 
-Route::prefix('app')->group(function () {
+Route::prefix('app')->middleware('site.page')->group(function () {
     Route::get('/',             fn() => redirect('/app/home'));
     Route::get('/home', [HomeController::class, 'index'])->name('app.home');
     Route::get('/home/search', [HomeController::class, 'search'])->name('app.home.search');
     Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
     Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
     Route::get('/products',     [ProductCatalogController::class, 'index'])->name('products.index');
-    Route::get('/create',       [ProductGenerateController::class, 'create'])->name('app.create');
+    // UI-only workspace؛ اتصال به محصول، توکن، API و دیتابیس عمداً در این مرحله فعال نیست.
+    Route::view('/create', 'app.create')->name('app.create');
     Route::get('/create-preview', [ProductGenerateController::class, 'createPreview'])->name('app.create.preview');
     Route::view('/create-architecture', 'app.create-architecture')->name('app.create.architecture');
     Route::get('/create/{product:route_slug}', [ProductGenerateController::class, 'build'])->name('app.create.product');
     Route::post('/create/{product:route_slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.create.generate');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
+    Route::view('/articles', 'app.articles')->name('app.articles');
     // لینک تستی صفحه محصول — به جدیدترین محصول فعال ری‌دایرکت می‌شود
     Route::get('/product-details', function () {
         $p = \App\Models\Product::where('status', 'active')->latest()->first();
@@ -162,6 +165,14 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::put('/service-credits/accounts/{account}', [ServiceCreditController::class, 'updateAccount'])->name('service-credits.accounts.update');
     Route::post('/service-credits/transactions', [ServiceCreditController::class, 'storeTransaction'])->name('service-credits.transactions.store');
     Route::post('/service-credits/refresh', [ServiceCreditController::class, 'refresh'])->name('service-credits.refresh');
+
+    // نمای کلی مدیریت صفحات سایت در داشبورد
+    Route::get('/pages', [SitePageController::class, 'index'])->name('pages.index');
+    Route::get('/content/pages', [SitePageController::class, 'index'])->name('content.pages');
+    Route::get('/pages/{sitePage}', [SitePageController::class, 'edit'])->name('pages.edit');
+    Route::put('/pages/{sitePage}', [SitePageController::class, 'update'])->name('pages.update');
+    Route::patch('/pages/{sitePage}/publish', [SitePageController::class, 'publish'])->name('pages.publish');
+    Route::post('/pages/{sitePage}/revisions/{revision}/restore', [SitePageController::class, 'restore'])->name('pages.revisions.restore');
 
     // مدیریت پرامپت‌ها
     Route::resource('prompts', AdminPromptController::class)->except(['show']);

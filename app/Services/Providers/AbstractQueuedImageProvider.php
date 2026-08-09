@@ -351,6 +351,29 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         return array_values(array_filter(array_merge([$primary], $list)));
     }
 
+    protected function compatibleAspectRatio(AiModel $model, string $requested): string
+    {
+        $properties = (array) (data_get($model->input_schema, 'components.schemas.Input.properties') ?: data_get($model->input_schema, 'properties') ?: []);
+        $supported = array_values(array_filter((array) data_get($properties, 'aspect_ratio.enum', []), 'is_string'));
+        if (!$supported || in_array($requested, $supported, true)) return $requested;
+
+        [$requestedWidth, $requestedHeight] = array_pad(array_map('floatval', explode(':', $requested, 2)), 2, 1.0);
+        $requestedRatio = $requestedHeight > 0 ? $requestedWidth / $requestedHeight : 1.0;
+        $best = $supported[0];
+        $bestDistance = INF;
+        foreach ($supported as $candidate) {
+            [$width, $height] = array_pad(array_map('floatval', explode(':', $candidate, 2)), 2, 1.0);
+            $ratio = $height > 0 ? $width / $height : 1.0;
+            $distance = abs(log(max(.0001, $requestedRatio) / max(.0001, $ratio)));
+            if ($distance < $bestDistance) {
+                $bestDistance = $distance;
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
     public function estimateCost(AiModel $model, array $payload = []): ?float
     {
         $pricing = is_array($model->pricing_config) ? $model->pricing_config : [];

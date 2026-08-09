@@ -49,7 +49,11 @@ class RunLabModelJob implements ShouldQueue
             }
 
             $extra = [];
-            if ($references) $extra['input_references'] = $references;
+            // مدل‌های عکس‌به‌عکس و هویت‌محور مرجع را دریافت می‌کنند؛ مدل‌های
+            // متن‌به‌عکس با همان پرامپت محصول و بدون ورودی ناسازگار اجرا می‌شوند.
+            if ($references && $run->aiModel?->supports_image_input) {
+                $extra['input_references'] = $references;
+            }
             if (($settings['seed'] ?? null) !== null && $settings['seed'] !== '') $extra['seed'] = (int) $settings['seed'];
             if ($run->experiment->negative_prompt) $extra['negative_prompt'] = $run->experiment->negative_prompt;
             $extra['preserve_face'] = (bool) $run->preserve_face;
@@ -121,7 +125,8 @@ class RunLabModelJob implements ShouldQueue
 
             $usage = (array) ($result['usage'] ?? []);
             $reportedTokens = data_get($usage, 'total_tokens', data_get($usage, 'tokens'));
-            $actualCost = (float) ($usage['cost'] ?? $run->estimated_cost_usd) + $scoringCost;
+            $generationCost = $this->resolveGenerationCost($run, $result, $usage);
+            $actualCost = $generationCost + $scoringCost;
             $durationMs = (int) round((microtime(true) - $started) * 1000);
             $rateToman = (float) $run->exchange_rate_irr / 10;
             $run->forceFill([
@@ -166,7 +171,7 @@ class RunLabModelJob implements ShouldQueue
                 ? ($runs->contains(fn ($run) => $run->status === 'failed') ? 'partially_failed' : 'completed')
                 : 'failed')
             : ($runs->contains(fn ($run) => $run->status === 'processing') ? 'processing' : 'queued');
-        $totalUsd = (float) $runs->sum(fn ($run) => (float) $run->actual_cost_usd);
+        $totalUsd = (float) $runs->sum(fn ($run) => $this->effectiveRunCost($run));
         $rateToman = (float) $experiment->exchange_rate_irr / 10;
         $experiment->forceFill([
             'status' => $status,
@@ -181,6 +186,30 @@ class RunLabModelJob implements ShouldQueue
             'tested_at' => $terminal ? now() : $experiment->tested_at,
             'report_status' => $terminal && $status !== 'failed' ? 'ready' : ($status === 'failed' ? 'failed' : 'draft'),
         ])->save();
+    }
+
+    private function resolveGenerationCost(LabRun $run, array $result, array $usage): float
+    {
+        foreach ([
+            data_get($usage, 'cost'),
+            data_get($usage, 'actual_cost_usd'),
+            data_get($result, 'actual_cost_usd'),
+            data_get($usage, 'estimated_cost_usd'),
+            data_get($result, 'estimated_cost_usd'),
+            $run->estimated_cost_usd,
+        ] as $candidate) {
+            if (is_numeric($candidate) && (float) $candidate > 0) {
+                return round((float) $candidate, 6);
+            }
+        }
+
+        return 0.0;
+    }
+
+    private function effectiveRunCost(LabRun $run): float
+    {
+        $actual = (float) $run->actual_cost_usd;
+        return $actual > 0 ? $actual : (float) $run->estimated_cost_usd;
     }
 
     private function scoreOutputs(LabRun $run, OpenRouterService $openRouter): float

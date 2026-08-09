@@ -1,23 +1,27 @@
 @extends('layouts.app')
 
-@section('page_title', ($product?->name_fa ?: $product?->name_en ?: 'بساز') . ' | وطن AI')
+@section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'بساز | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-workspace.css') }}?v={{ filemtime(public_path('css/create-workspace.css')) }}">
+  <link rel="stylesheet" href="{{ asset('css/create-ui.css') }}?v={{ filemtime(public_path('css/create-ui.css')) }}">
 @endpush
 
 @section('content')
-<div class="create-page-compare" dir="rtl">
-  @if($buildProduct)
-    <section class="create-section create-section--redesign" data-create-section="redesign" aria-label="صفحه‌ی بساز">
-      @include('app.partials.create-workspace', ['product' => $buildProduct, 'previewMode' => false, 'instance' => 'redesign'])
+<div class="vatan-create" dir="rtl" data-create-ui>
+  @include('app.partials.create-ui.header')
+
+  <main class="create-shell page-container">
+    <section class="create-workspace" aria-label="فضای ساخت">
+      @include('app.partials.create-ui.creator')
+      @include('app.partials.create-ui.preview')
     </section>
-  @else
-    <div class="create-empty-state">در حال حاضر محصول فعالی برای ساخت وجود ندارد.</div>
-  @endif
+
+    @include('app.partials.create-ui.chat')
+    @include('app.partials.create-ui.recent')
+  </main>
 </div>
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-workspace.js') }}?v={{ filemtime(public_path('js/create-workspace.js')) }}"></script>
+  <script src="{{ asset('js/create-ui.js') }}?v={{ filemtime(public_path('js/create-ui.js')) }}"></script>
 @endpush

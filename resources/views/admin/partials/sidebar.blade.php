@@ -109,13 +109,16 @@
 
     {{-- مدیریت صفحات --}}
     <div class="nav-item">
-      <div class="nav-link {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
+      <div class="nav-link {{ (request()->is('admin/pages*') || request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'active' : '' }}" onclick="toggleSub('explore-submenu', this)">
         <div class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
         <div class="nav-label">مدیریت صفحات</div>
-        <i class="fa-solid fa-chevron-down nav-chev {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}"></i>
+        <i class="fa-solid fa-chevron-down nav-chev {{ (request()->is('admin/pages*') || request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}"></i>
       </div>
-      <div class="submenu {{ (request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}" id="explore-submenu">
+      <div class="submenu {{ (request()->is('admin/pages*') || request()->is('admin/explore*') || request()->is('admin/home-builder*') || request()->is('admin/trends*') || request()->is('admin/content*')) ? 'open' : '' }}" id="explore-submenu">
         <div class="sub-track">
+          <a href="{{ route('admin.pages.index') }}" class="sub-item {{ request()->is('admin/pages') || request()->is('admin/content/pages') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">مدیریت صفحات سایت</div>
+          </a>
           <a href="{{ route('admin.explore.index') }}" class="sub-item {{ request()->is('admin/explore') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">مدیریت صفحه اکسپلور</div>
           </a>

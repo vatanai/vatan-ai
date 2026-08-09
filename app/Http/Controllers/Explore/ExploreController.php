@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Explore;
 use App\Http\Controllers\Controller;
 use App\Services\Explore\ExploreFeedService;
 use App\Services\Explore\TrendsService;
+use App\Services\SitePageService;
 use Illuminate\Http\Request;
 
 /**
@@ -12,14 +13,15 @@ use Illuminate\Http\Request;
  */
 class ExploreController extends Controller
 {
-    public function index(Request $request, ExploreFeedService $feed)
+    public function index(Request $request, ExploreFeedService $feed, SitePageService $pages)
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
         ]);
 
         $query = trim((string) ($validated['q'] ?? ''));
-        $tiles = $feed->buildFeed('explore', null, [
+        $page = $pages->byKey('explore');
+        $tiles = $feed->buildFeed('explore', (int) ($page?->content('items_per_page', 48) ?? 48), [
             'query' => $query,
             'new_product_ratio' => 45,
         ]);
@@ -36,9 +38,10 @@ class ExploreController extends Controller
      * Explore استفاده می‌کند، فقط با یک surface جدا ('trending') تا تنظیمات/سنجاق/بوست
      * این صفحه کاملاً مستقل از صفحه‌ی اکسپلور عمومی از پنل ادمین قابل کنترل باشد.
      */
-    public function trending(TrendsService $trends)
+    public function trending(TrendsService $trends, SitePageService $pages)
     {
-        $data = $trends->buildPage();
+        $page = $pages->byKey('trends');
+        $data = $trends->buildPage((int) ($page?->content('items_per_page', 24) ?? 24));
 
         return view('app.trends.index', $data);
     }

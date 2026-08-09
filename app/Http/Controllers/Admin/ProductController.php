@@ -214,7 +214,8 @@ class ProductController extends Controller
      */
     public function create(Request $request, ?Product $product = null)
     {
-        // فقط مدل‌های فعالِ providerهای روشن وارد گام دوم و گام‌های وابسته می‌شوند.
+        // تمام مدل‌های فعالِ عکس‌محور وارد گام دوم و آزمایشگاه می‌شوند؛ وضعیت
+        // روشن‌بودن provider فقط هنگام ذخیره یا اجرای واقعی کنترل می‌شود.
         $aiModels = $this->assignableAiModels()->get();
 
         $duplicateFrom = null;
@@ -1261,8 +1262,8 @@ class ProductController extends Controller
     private function assignableAiModels()
     {
         return AiModel::query()
-            ->whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])
             ->where('is_active', true)
+            ->where('output_modality', 'image')
             ->orderBy('provider')
             ->orderBy('name');
     }

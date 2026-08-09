@@ -100,7 +100,7 @@ class ReplicateImageProvider extends AbstractQueuedImageProvider
 
         // Flux نسبت تصویر را مستقیم می‌گیرد و width/height را نادیده می‌گیرد.
         if (in_array('aspect_ratio', $allowed, true)) {
-            $input['aspect_ratio'] = $aspectRatio;
+            $input['aspect_ratio'] = $this->compatibleAspectRatio($model, $aspectRatio);
         }
 
         // ابزارهای ارتقا و ویدیویی فقط تصویر را می‌گیرند و prompt عمومی

@@ -3,8 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>@yield('page_title', $title ?? 'وطن AI')</title>
+  <title>@yield('page_title', ($sitePage->meta_title ?? null) ?: ($sitePage->title ?? null) ?: ($title ?? 'وطن AI'))</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
+
+  @if(isset($sitePage))
+    <meta name="description" content="{{ $sitePage->meta_description ?: $sitePage->subtitle }}">
+    @if(!empty($sitePage->meta_keywords))<meta name="keywords" content="{{ implode(', ', $sitePage->meta_keywords) }}">@endif
+    <meta name="robots" content="{{ $sitePage->is_indexable ? 'index,follow' : 'noindex,nofollow' }}">
+    <link rel="canonical" href="{{ $sitePage->canonical_url ?: url()->current() }}">
+    <meta property="og:title" content="{{ $sitePage->meta_title ?: $sitePage->title }}">
+    <meta property="og:description" content="{{ $sitePage->meta_description ?: $sitePage->subtitle }}">
+    <meta property="og:url" content="{{ $sitePage->canonical_url ?: url()->current() }}">
+    <meta property="og:type" content="website">
+    @if($sitePage->og_image)<meta property="og:image" content="{{ url(Storage::disk('public')->url($sitePage->og_image)) }}">@endif
+    <meta name="twitter:card" content="{{ $sitePage->og_image ? 'summary_large_image' : 'summary' }}">
+    <meta name="twitter:title" content="{{ $sitePage->meta_title ?: $sitePage->title }}">
+    <meta name="twitter:description" content="{{ $sitePage->meta_description ?: $sitePage->subtitle }}">
+  @endif
 
   {{-- متاتگ‌های سئوی هر صفحه (description، Open Graph، Twitter، JSON-LD) از این استک تزریق می‌شوند --}}
   @stack('meta')
@@ -98,7 +113,10 @@
         }));
       }
 
+      var configuredPageTheme = @json(isset($sitePage) ? $sitePage->display('theme', 'system') : 'system');
+
       window.vatanGetThemeMode = function () {
+        if (configuredPageTheme === 'light' || configuredPageTheme === 'dark') return configuredPageTheme;
         return localStorage.getItem('vatan-theme') || 'dark';
       };
 
@@ -150,8 +168,14 @@
       'prompts.show',
       'privacy'
   );
+
+  if (isset($sitePage)) {
+      $showAppFooter = (bool) $sitePage->display('show_footer', $showAppFooter);
+  }
+
+  $managedPageLayout = isset($sitePage) ? $sitePage->display('layout_width', 'default') : 'default';
 @endphp
-<body id="top" @class(['vatan-app-shell' => $showAppFooter])>
+<body id="top" @class(['vatan-app-shell' => $showAppFooter, 'site-page-managed' => isset($sitePage), 'site-page-layout-' . $managedPageLayout => isset($sitePage)]) @if(isset($sitePage)) data-site-page="{{ $sitePage->key }}" data-site-page-version="{{ $sitePage->version }}" @endif>
 
   {{-- محتوای اصلی صفحات --}}
   <main>

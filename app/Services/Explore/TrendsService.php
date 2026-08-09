@@ -12,12 +12,12 @@ use Illuminate\Support\Collection;
 
 class TrendsService
 {
-    public function buildPage(): array
+    public function buildPage(int $limit = 24): array
     {
         return [
             'trendProducts' => $this->popularProducts(function (Builder $query) {
                 $query->where('is_trending', true);
-            }, 500)->map(fn (Product $product) => $this->card($product))->values(),
+            }, max(6, min(100, $limit)))->map(fn (Product $product) => $this->card($product))->values(),
             'trendBanners' => TrendBanner::query()
                 ->where('is_active', true)
                 ->orderBy('row_number')

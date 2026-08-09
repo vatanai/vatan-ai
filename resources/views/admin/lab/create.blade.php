@@ -25,9 +25,9 @@
     </form>
   </div>
 </main>
-@push('scripts')
+@section('scripts')
 <script>
 (() => { const form=document.getElementById('standalone-lab-form'), one=document.getElementById('standalone-step-one'), two=document.getElementById('standalone-step-two'), id=document.getElementById('standalone-product-id'); document.querySelectorAll('.standalone-product').forEach(b=>b.addEventListener('click',()=>{id.value=b.dataset.id;document.querySelectorAll('.standalone-product').forEach(x=>x.style.borderColor='var(--b1)');b.style.borderColor='var(--accent)';})); document.getElementById('standalone-product-search')?.addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.standalone-product').forEach(b=>b.classList.toggle('hidden',!b.dataset.search.toLowerCase().includes(q)));}); document.getElementById('standalone-next')?.addEventListener('click',()=>{if(!id.value){alert('ابتدا یک محصول را انتخاب کنید.');return;} window.setAiModelLabProduct?.(id.value); one.classList.add('hidden');two.classList.remove('hidden');}); document.getElementById('standalone-back')?.addEventListener('click',()=>{two.classList.add('hidden');one.classList.remove('hidden');}); form?.addEventListener('submit',()=>{ if(!id.value) return; }); })();
 </script>
-@endpush
+@endsection
 @endsection

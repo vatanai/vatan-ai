@@ -18,9 +18,8 @@
   <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase flex items-center gap-1.5">مدل اصلی — اولویت یک <span class="text-[var(--red)]">*</span><span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">اولین مدل برای ساخت خروجی است. سه کارت پیشنهادی، جدیدترین خانواده مدل‌های تصویری ChatGPT را در اولویت قرار می‌دهند؛ همچنان می‌توانید هر مدل فعال دیگری را از جست‌وجو انتخاب کنید.</span></span></div>
   <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5 mb-4">
     @php
-      // وضعیت روشن/خاموش providerها را از کلید مرکزی می‌خوانیم؛ همان فلگی
-      // که در پنل «مدیریت مدل‌های هوش مصنوعی» توسط ادمین تنظیم می‌شود.
-      // اگر provider خاموش باشد، دکمه انتخاب آن اینجا نمایش داده نمی‌شود.
+      // وضعیت روشن/خاموش providerها برای تعیین انتخاب اولیه خوانده می‌شود؛
+      // کاتالوگ همه‌ی providerها نمایش داده می‌شود و کنترل اجرا سمت سرور است.
       $providerStatus = \App\Support\ProviderStatus::all();
       $curPrimaryModel = old('primary_model', optional($duplicateFrom)->primary_model);
       $curSavedProvider = old('ai_provider', optional($duplicateFrom)->ai_provider);
@@ -43,8 +42,22 @@
 
     @php
       $providerEnglishLabels = ['liara' => 'Liara AI', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'];
+      $taskTypeLabels = [
+        'text_to_image' => 'متن به عکس',
+        'image_to_image' => 'عکس به عکس',
+        'text_to_video' => 'متن به ویدیو',
+        'image_to_video' => 'عکس به ویدیو',
+        'video_to_video' => 'ویدیو به ویدیو',
+        'face_consistency' => 'حفظ هویت چهره',
+        'face_animation' => 'متحرک‌سازی چهره',
+        'upscaling' => 'افزایش کیفیت',
+      ];
+      $useCaseLabels = [
+        'portrait' => 'چهره و پرتره', 'identity' => 'حفظ هویت چهره', 'business' => 'محصول و کسب‌وکار',
+        'design' => 'طراحی و متن', 'creative' => 'تصویرسازی خلاق', 'video' => 'ویدیو و موشن',
+      ];
       $availableProviders = collect($providerLabels)->filter(function ($label, $key) use ($providerStatus, $aiModels) {
-        return ($providerStatus[$key] ?? false) && $aiModels->contains(fn ($model) => ($model->provider ?? 'openrouter') === $key);
+        return $aiModels->contains(fn ($model) => ($model->provider ?? 'openrouter') === $key);
       });
     @endphp
 
@@ -69,6 +82,31 @@
       @if($availableProviders->isEmpty())
         <span class="model-picker-empty"><i class="fa-solid fa-triangle-exclamation ml-1"></i>هیچ پرووایدر فعالی با مدل قابل‌استفاده وجود ندارد.</span>
       @endif
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+      <label class="model-picker-field">
+        <span class="model-picker-label">نوع مدل</span>
+        <select id="primary-model-task-filter" class="model-picker-filter" onchange="onPrimaryModelFilterChange()">
+          <option value="all">همه نوع‌ها</option>
+          @foreach($taskTypeLabels as $taskType => $taskLabel)
+            @if($aiModels->contains(fn ($model) => $model->task_type === $taskType))
+              <option value="{{ $taskType }}">{{ $taskLabel }}</option>
+            @endif
+          @endforeach
+        </select>
+      </label>
+      <label class="model-picker-field">
+        <span class="model-picker-label">بهترین گزینه برای</span>
+        <select id="primary-model-use-case-filter" class="model-picker-filter" onchange="onPrimaryModelFilterChange()">
+          <option value="all">همه کاربردها</option>
+          @foreach($useCaseLabels as $useCase => $useCaseLabel)
+            @if($aiModels->contains(fn ($model) => in_array($useCase, $model->recommendedUseCaseKeys(), true)))
+              <option value="{{ $useCase }}">{{ $useCaseLabel }}</option>
+            @endif
+          @endforeach
+        </select>
+      </label>
     </div>
 
     {{-- Select مدل اصلی — آپشن‌ها فیلتر می‌شوند بر اساس provider --}}
@@ -99,15 +137,16 @@
           <i class="fa-solid fa-chevron-down"></i>
         </button>
         <div id="primary-model-menu" class="model-picker-menu model-picker-model-menu hidden" role="listbox">
-          <div class="model-picker-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>کاربری</span><span>گرید</span></div>
+          <div class="model-picker-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>نوع مدل</span><span>بهترین برای</span><span>گرید</span></div>
           <div id="primary-model-options">
             @foreach ($aiModels as $model)
               @php
                 $modelProvider = $model->provider ?? 'openrouter';
               @endphp
-              <button type="button" class="model-picker-model-row {{ $curPrimaryModel === $model->openrouter_model_id && (!$curSavedProvider || $curSavedProvider === $modelProvider) ? 'is-selected' : '' }}" data-model-provider="{{ $modelProvider }}" data-model-id="{{ $model->openrouter_model_id }}" onclick="selectPrimaryModelFromPicker(this)">
+              <button type="button" class="model-picker-model-row {{ $curPrimaryModel === $model->openrouter_model_id && (!$curSavedProvider || $curSavedProvider === $modelProvider) ? 'is-selected' : '' }}" data-model-provider="{{ $modelProvider }}" data-model-id="{{ $model->openrouter_model_id }}" data-model-task="{{ $model->task_type }}" data-model-use-cases="{{ implode(',', $model->recommendedUseCaseKeys()) }}" onclick="selectPrimaryModelFromPicker(this)">
                 <span class="model-picker-model-name"><b>{{ $model->name }}</b><small dir="ltr">{{ $model->externalModelId() }}</small></span>
                 <span>{{ $model->taskLabel() }}</span>
+                <span>{{ $model->primaryUseCaseLabel() }}</span>
                 <span class="model-quality-grade">{{ $model->qualityGradeLabel() }}</span>
               </button>
             @endforeach
@@ -123,6 +162,11 @@
                 data-provider="{{ $model->provider_name }}"
                 data-api-provider="{{ $model->provider ?? 'openrouter' }}"
                 data-output-modality="{{ $model->output_modality }}"
+                data-task-label="{{ $model->taskLabel() }}"
+                data-use-case-label="{{ $model->primaryUseCaseLabel() }}"
+                data-capabilities="{{ implode('، ', $model->capabilityLabels()) }}"
+                data-model-task="{{ $model->task_type }}"
+                data-model-use-cases="{{ implode(',', $model->recommendedUseCaseKeys()) }}"
                 {{ $curPrimaryModel == $model->openrouter_model_id
                     && (!$curSavedProvider || $curSavedProvider === ($model->provider ?? 'openrouter'))
                     ? 'selected' : '' }}>
@@ -136,10 +180,10 @@
       <div class="flex items-center gap-2 flex-wrap">
         <div class="text-xs font-bold text-[var(--text)]" id="model-info-name">—</div>
         <span class="text-[10px] font-mono text-[var(--accent)] bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded px-1.5 py-0.5" id="model-info-provider">—</span>
-        <span class="text-[10px] text-[var(--text3)]">نوع مدل:</span>
         <span id="model-info-media" class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-image ml-1"></i>عکس</span>
-        <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-eye ml-1"></i>Vision</span>
-        <span class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5"><i class="fa-solid fa-font ml-1"></i>Text</span>
+        <span id="model-info-task" class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5">—</span>
+        <span id="model-info-use-case" class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5">—</span>
+        <span id="model-info-capabilities" class="text-[10px] bg-[var(--b1)] text-[var(--text2)] rounded px-1.5 py-0.5">—</span>
       </div>
     </div>
     </div>

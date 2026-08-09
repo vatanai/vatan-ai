@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
+        $middleware->alias([
+            'site.page' => \App\Http\Middleware\ApplySitePageSettings::class,
+        ]);
+
         $middleware->validateCsrfTokens(except: ['webhooks/ai/*']);
 
         // مدیریت هوشمند هدایت کاربران مهمان (احراز هویت نشده) بر اساس آدرس درخواست

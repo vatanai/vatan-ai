@@ -44,8 +44,8 @@ class LabExperimentController extends Controller
             'completedExperiments' => (int) LabExperiment::whereIn('status', ['completed', 'evaluated', 'finalized'])->count(),
             'failedExperiments' => (int) LabExperiment::whereIn('status', ['failed', 'partially_failed'])->count(),
             'totalOutputs' => (int) DB::table('lab_run_outputs')->where('status', 'completed')->count(),
-            'totalCostUsd' => (float) LabExperiment::sum(DB::raw('COALESCE(total_cost_usd, actual_cost_usd, estimated_cost_usd)')),
-            'totalCostToman' => (float) LabExperiment::sum(DB::raw('COALESCE(total_cost_toman, actual_cost_toman, estimated_cost_toman)')),
+            'totalCostUsd' => (float) LabExperiment::with('runs')->get()->sum(fn (LabExperiment $experiment) => $experiment->effectiveCostUsd()),
+            'totalCostToman' => (float) LabExperiment::with('runs')->get()->sum(fn (LabExperiment $experiment) => $experiment->effectiveCostToman()),
         ]);
     }
 
@@ -124,16 +124,6 @@ class LabExperimentController extends Controller
             return response()->json(['message' => 'یکی از مدل‌های انتخاب‌شده فعال یا تصویری نیست.'], 422);
         }
 
-        // آزمایش مقایسه‌ای فقط وقتی معتبر است که همه‌ی مدل‌ها همان تصویر
-        // ورودی را بپذیرند؛ مدل متنی، خروجی تصادفی و غیرقابل‌مقایسه می‌دهد.
-        $incompatibleModels = $models->reject(fn (AiModel $model) => $this->acceptsLabReference($model));
-        if ($incompatibleModels->isNotEmpty()) {
-            $names = $incompatibleModels->map(fn (AiModel $model) => $model->name ?: $model->externalModelId())->implode('، ');
-            return response()->json([
-                'message' => "مدل‌های {$names} ورودی تصویر را پشتیبانی نمی‌کنند و برای آزمایش مقایسه‌ای قابل استفاده نیستند.",
-            ], 422);
-        }
-
         $inputImage = $this->resolveQuickRunInputImage($request, $product);
         if (!$inputImage) {
             return response()->json(['message' => 'برای اجرای آزمایش، یک عکس ورودی لازم است.'], 422);
@@ -194,7 +184,7 @@ class LabExperimentController extends Controller
                 $size = in_array((string) ($item['size'] ?? ''), ['4:5', '9:16', '3:4', '1:1', '2:3', '16:9', '3:2'], true) ? (string) $item['size'] : '4:5';
                 $preserveFace = filter_var($item['preserve_face'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
                 $preserveFace = $preserveFace ?? true;
-                $prompt = $this->buildLabPrompt($product, $preserveFace);
+                $prompt = $this->buildLabPrompt($product, $preserveFace, (bool) $model->supports_image_input);
                 $cost = (float) $model->cost_per_generation_usd;
                 $experiment->runs()->create([
                     'ai_model_id' => $model->id,
@@ -642,7 +632,7 @@ class LabExperimentController extends Controller
             'totalExperiments' => $experiments->count(),
             'completedExperiments' => (clone $experiments)->where('status', 'completed')->count(),
             'failedRuns' => (clone $runs)->where('status', 'failed')->count(),
-            'totalCostUsd' => (float) $runs->sum('actual_cost_usd'),
+            'totalCostUsd' => (float) $experiments->with('runs')->get()->sum(fn (LabExperiment $experiment) => $experiment->effectiveCostUsd()),
             'exchange' => $this->exchangeRate->usdToIrr(),
         ]);
     }
@@ -681,39 +671,18 @@ class LabExperimentController extends Controller
     }
 
     /**
-     * در آزمایشگاه تمام مدل‌ها باید قادر به مصرف یک تصویر مرجع مشترک باشند.
-     * صرفاً تصویری‌بودن خروجی مدل کافی نیست؛ مدل باید یک فیلد ورودی تصویر
-     * شناخته‌شده نیز در schema خودش داشته باشد.
-     */
-    private function acceptsLabReference(AiModel $model): bool
-    {
-        if (! $model->supports_image_input) {
-            return false;
-        }
-
-        $capabilities = (array) ($model->capability_config ?? []);
-        $allowed = (array) data_get($capabilities, 'allowed_inputs', []);
-        if (empty($allowed)) {
-            $allowed = array_keys((array) data_get($model->input_schema, 'properties', []));
-        }
-
-        $referenceFields = array_merge(
-            (array) data_get($capabilities, 'reference_fields', []),
-            ['image_url', 'image_urls', 'image', 'images', 'reference_image', 'reference_images', 'input_image', 'input_images']
-        );
-
-        return ! empty(array_intersect($allowed, $referenceFields));
-    }
-
-    /**
      * پرامپت استاندارد آزمایش: تمام مدل‌ها یک دستور محصول و یک قرارداد صریح
      * برای استفاده از تصویر مرجع دریافت می‌کنند تا خروجی‌ها قابل مقایسه بمانند.
      */
-    private function buildLabPrompt(Product $product, bool $preserveFace): string
+    private function buildLabPrompt(Product $product, bool $preserveFace, bool $hasReference = true): string
     {
         $productPrompt = trim((string) $this->promptBuilder->build($product, [], $preserveFace));
         if ($productPrompt === '') {
             $productPrompt = trim((string) $product->prompt_template) ?: 'Create a high quality image.';
+        }
+
+        if (! $hasReference) {
+            return $productPrompt;
         }
 
         return implode("\n\n", [
@@ -857,6 +826,9 @@ class LabExperimentController extends Controller
     private function experimentPayload(LabExperiment $experiment): array
     {
         $experiment->loadMissing(['product', 'images', 'runs.aiModel', 'runs.outputs.scores', 'runs.outputs.managerScore']);
+        $runCosts = $experiment->runs->mapWithKeys(fn (LabRun $run) => [$run->id => $this->effectiveRunCosts($run)]);
+        $totalCost = $runCosts->sum('usd');
+        $totalToman = $runCosts->sum('toman');
         return [
             'id' => $experiment->id,
             'uuid' => $experiment->uuid,
@@ -868,13 +840,24 @@ class LabExperimentController extends Controller
             'input' => ['path' => $experiment->input_image_path, 'url' => $experiment->input_image_path ? asset('storage/' . $experiment->input_image_path) : null, 'width' => $experiment->input_image_width, 'height' => $experiment->input_image_height, 'ratio' => $experiment->input_image_ratio, 'size' => $experiment->input_image_size, 'format' => $experiment->input_image_format, 'color' => $experiment->input_image_color],
             'models_count' => (int) ($experiment->models_count ?: $experiment->runs->count()),
             'evaluator' => ['model_id' => $experiment->evaluator_model_id, 'provider' => $experiment->evaluator_provider],
-            'cost' => ['usd' => (float) ($experiment->total_cost_usd ?? $experiment->actual_cost_usd ?? $experiment->estimated_cost_usd), 'toman' => (float) ($experiment->total_cost_toman ?? $experiment->actual_cost_toman ?? $experiment->estimated_cost_toman), 'lab_usd' => (float) $experiment->lab_cost_usd, 'lab_toman' => (float) $experiment->lab_cost_toman],
+            'cost' => ['usd' => $totalCost > 0 ? (float) $totalCost : (float) ($experiment->total_cost_usd ?: $experiment->estimated_cost_usd), 'toman' => $totalToman > 0 ? (float) $totalToman : (float) ($experiment->total_cost_toman ?: $experiment->estimated_cost_toman), 'lab_usd' => (float) $experiment->lab_cost_usd, 'lab_toman' => (float) $experiment->lab_cost_toman],
             'overall_score' => $experiment->overall_score,
             'tested_at' => optional($experiment->tested_at ?: $experiment->completed_at)->toIso8601String(),
             'runs' => $experiment->runs->map(function (LabRun $run) {
-                return ['id' => $run->id, 'model_id' => $run->model_id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'status' => $run->status, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'tokens' => $run->tokens_used, 'retry_count' => (int) $run->retry_count, 'cost_usd' => (float) ($run->actual_cost_usd ?? $run->estimated_cost_usd), 'cost_toman' => (float) ($run->actual_cost_toman ?? $run->estimated_cost_toman), 'score' => null, 'rank' => $run->final_score !== null ? $run->rank : null, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'meta' => ['dimensions' => $output->width && $output->height ? $output->width . ' × ' . $output->height : null, 'width' => $output->width, 'height' => $output->height, 'ratio' => $output->ratio, 'size' => $output->size, 'format' => $output->mime_type ? strtoupper(Str::after($output->mime_type, '/')) : null, 'mime' => $output->mime_type, 'color' => $output->color_profile], 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => []])->values()];
+                $cost = $this->effectiveRunCosts($run);
+                return ['id' => $run->id, 'model_id' => $run->model_id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'status' => $run->status, 'status_label' => $run->status_label, 'error_message' => $run->error_message, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'tokens' => $run->tokens_used, 'retry_count' => (int) $run->retry_count, 'max_retries' => (int) $run->max_retries, 'cost_usd' => $cost['usd'], 'cost_toman' => $cost['toman'], 'score' => null, 'rank' => $run->final_score !== null ? $run->rank : null, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'meta' => ['dimensions' => $output->width && $output->height ? $output->width . ' × ' . $output->height : null, 'width' => $output->width, 'height' => $output->height, 'ratio' => $output->ratio, 'size' => $output->size, 'format' => $output->mime_type ? strtoupper(Str::after($output->mime_type, '/')) : null, 'mime' => $output->mime_type, 'color' => $output->color_profile], 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => []])->values()];
             })->values(),
         ];
+    }
+
+    private function effectiveRunCosts(LabRun $run): array
+    {
+        $usd = (float) $run->actual_cost_usd > 0 ? (float) $run->actual_cost_usd : (float) $run->estimated_cost_usd;
+        $toman = (float) $run->actual_cost_toman > 0
+            ? (float) $run->actual_cost_toman
+            : ((float) $run->estimated_cost_toman > 0 ? (float) $run->estimated_cost_toman : $usd * ((float) $run->exchange_rate_irr / 10));
+
+        return ['usd' => $usd, 'toman' => $toman];
     }
 
     private function audit(LabExperiment $experiment, Request $request, string $action, array $metadata = []): void

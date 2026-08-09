@@ -37,6 +37,33 @@ class LabExperiment extends Model
         'applied_at' => 'datetime',
     ];
 
+    public function effectiveCostUsd(): float
+    {
+        if ($this->relationLoaded('runs') && $this->runs->isNotEmpty()) {
+            return (float) $this->runs->sum(fn (LabRun $run) => (float) $run->actual_cost_usd > 0 ? (float) $run->actual_cost_usd : (float) $run->estimated_cost_usd);
+        }
+
+        return (float) $this->total_cost_usd > 0
+            ? (float) $this->total_cost_usd
+            : ((float) $this->actual_cost_usd > 0 ? (float) $this->actual_cost_usd : (float) $this->estimated_cost_usd);
+    }
+
+    public function effectiveCostToman(): float
+    {
+        if ($this->relationLoaded('runs') && $this->runs->isNotEmpty()) {
+            return (float) $this->runs->sum(function (LabRun $run) {
+                if ((float) $run->actual_cost_toman > 0) return (float) $run->actual_cost_toman;
+                if ((float) $run->estimated_cost_toman > 0) return (float) $run->estimated_cost_toman;
+                $usd = (float) $run->actual_cost_usd > 0 ? (float) $run->actual_cost_usd : (float) $run->estimated_cost_usd;
+                return $usd * ((float) $run->exchange_rate_irr / 10);
+            });
+        }
+
+        return (float) $this->total_cost_toman > 0
+            ? (float) $this->total_cost_toman
+            : ((float) $this->actual_cost_toman > 0 ? (float) $this->actual_cost_toman : (float) $this->estimated_cost_toman);
+    }
+
     protected static function booted(): void
     {
         static::creating(function (self $experiment) {

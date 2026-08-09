@@ -25,10 +25,46 @@ function updateApiProviderPicker(provider) {
   });
 }
 
-function renderPrimaryModelPicker(provider) {
+function primaryModelFilterValues() {
+  return {
+    provider: __currentApiProvider || 'all',
+    task: document.getElementById('primary-model-task-filter')?.value || 'all',
+    useCase: document.getElementById('primary-model-use-case-filter')?.value || 'all',
+  };
+}
+
+function modelMatchesPrimaryFilters(provider, task, useCase, modelProvider, modelTask, modelUseCases) {
+  const providerOk = provider === 'all' || provider === modelProvider;
+  const taskOk = task === 'all' || task === modelTask;
+  const useCases = String(modelUseCases || '').split(',').filter(Boolean);
+  const useCaseOk = useCase === 'all' || useCases.includes(useCase);
+  return providerOk && taskOk && useCaseOk;
+}
+
+function renderPrimaryModelPicker() {
+  const filters = primaryModelFilterValues();
   document.querySelectorAll('#primary-model-options .model-picker-model-row').forEach(function (row) {
-    row.classList.toggle('hidden', provider !== 'all' && row.dataset.modelProvider !== provider);
+    const visible = modelMatchesPrimaryFilters(filters.provider, filters.task, filters.useCase, row.dataset.modelProvider, row.dataset.modelTask, row.dataset.modelUseCases);
+    row.classList.toggle('hidden', !visible);
   });
+  const primarySel = document.getElementById('primary-model-select');
+  if (!primarySel) return;
+  let needsReset = false;
+  Array.from(primarySel.options).forEach(function (opt) {
+    if (!opt.value) return;
+    const visible = modelMatchesPrimaryFilters(filters.provider, filters.task, filters.useCase, opt.getAttribute('data-api-provider') || 'openrouter', opt.getAttribute('data-model-task') || '', opt.getAttribute('data-model-use-cases') || '');
+    opt.hidden = !visible;
+    opt.disabled = !visible;
+    if (!visible && opt.selected) needsReset = true;
+  });
+  if (needsReset) {
+    primarySel.value = '';
+    onPrimaryModelChange();
+  }
+}
+
+function onPrimaryModelFilterChange() {
+  renderPrimaryModelPicker();
 }
 
 function selectApiProvider(provider) {
@@ -72,7 +108,7 @@ function onPrimaryModelChange() {
     providerInput.value = selectedProvider;
     __currentApiProvider = selectedProvider;
     updateApiProviderPicker(selectedProvider);
-    renderPrimaryModelPicker(selectedProvider);
+    renderPrimaryModelPicker();
   }
 
   const pickerLabel = document.getElementById('primary-model-picker-label');
@@ -92,6 +128,12 @@ function onPrimaryModelChange() {
   }[media] || {icon: 'fa-image', label: 'عکس'};
   const mediaEl = document.getElementById('model-info-media');
   if (mediaEl) mediaEl.innerHTML = '<i class="fa-solid ' + mediaMeta.icon + ' ml-1"></i>' + mediaMeta.label;
+  const taskEl = document.getElementById('model-info-task');
+  if (taskEl) taskEl.textContent = opt.getAttribute('data-task-label') || '—';
+  const useCaseEl = document.getElementById('model-info-use-case');
+  if (useCaseEl) useCaseEl.textContent = 'بهترین برای: ' + (opt.getAttribute('data-use-case-label') || 'کاربری عمومی');
+  const capabilitiesEl = document.getElementById('model-info-capabilities');
+  if (capabilitiesEl) capabilitiesEl.textContent = opt.getAttribute('data-capabilities') || 'قابلیت ثبت نشده';
   card.classList.remove('hidden');
 }
 function clearRecommendedModelSelection() {
@@ -149,27 +191,8 @@ function onApiProviderChange(provider) {
   const activeBtn = document.getElementById('lbl-api-' + provider);
   if (activeBtn) activeBtn.classList.add('active-provider');
   updateApiProviderPicker(provider);
-  renderPrimaryModelPicker(provider);
+  renderPrimaryModelPicker();
   document.getElementById('recommended-openrouter-models')?.classList.toggle('hidden', provider !== 'openrouter');
-
-  // فیلتر آپشن‌های select مدل اصلی
-  const primarySel = document.getElementById('primary-model-select');
-  if (primarySel) {
-    let needReset = false;
-    Array.from(primarySel.options).forEach(opt => {
-      if (!opt.value) return; // آپشن placeholder رو نگه دار
-      const ap = opt.getAttribute('data-api-provider') || 'openrouter';
-      const match = (provider === 'all' || ap === provider);
-      opt.hidden   = !match;
-      opt.disabled = !match;
-      if (!match && opt.selected) { opt.selected = false; needReset = true; }
-    });
-
-    if (needReset) {
-      primarySel.value = '';
-      onPrimaryModelChange();
-    }
-  }
 
   // مدل‌های جایگزین مستقل از سرویس مدل اصلی هستند؛ مدیر می‌تواند برای
   // failover یک مدل لیارا و یک مدل OpenRouter را هم‌زمان انتخاب کند.

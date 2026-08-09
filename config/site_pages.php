@@ -1,0 +1,60 @@
+<?php
+
+return [
+    'pages' => [
+        'home' => [
+            'name_fa' => 'صفحه هوم',
+            'name_en' => 'Home',
+            'route_names' => ['app.home'],
+            'path' => '/app/home',
+            'icon' => 'fa-house',
+            'description' => 'سکشن‌ها، بنرها و چیدمان صفحه اصلی اپ',
+            'advanced_route' => 'admin.home-builder.index',
+        ],
+        'explore' => [
+            'name_fa' => 'صفحه اکسپلور',
+            'name_en' => 'Explore',
+            'route_names' => ['app.explore'],
+            'path' => '/app/explore',
+            'icon' => 'fa-compass',
+            'description' => 'چیدمان فید، کمپین‌ها، محصولات سنجاق‌شده و بوست',
+            'advanced_route' => 'admin.explore.index',
+        ],
+        'trends' => [
+            'name_fa' => 'صفحه ترند',
+            'name_en' => 'Trends',
+            'route_names' => ['app.trends'],
+            'path' => '/app/trends',
+            'icon' => 'fa-arrow-trend-up',
+            'description' => 'محصولات ترند، بنرها و مناسبت‌های فعال',
+            'advanced_route' => 'admin.trends.index',
+        ],
+        'create' => [
+            'name_fa' => 'صفحه ساخت',
+            'name_en' => 'Create',
+            'route_names' => ['app.create', 'app.create.preview', 'app.create.architecture', 'app.create.product'],
+            'path' => '/app/create',
+            'icon' => 'fa-wand-magic-sparkles',
+            'description' => 'محصولات قابل ساخت و رابط تولید تصویر کاربران',
+            'advanced_route' => 'admin.products',
+        ],
+        'profile' => [
+            'name_fa' => 'صفحه پروفایل',
+            'name_en' => 'Profile',
+            'route_names' => ['app.profile'],
+            'path' => '/app/profile',
+            'icon' => 'fa-user',
+            'description' => 'اطلاعات حساب، گالری و فعالیت‌های کاربر',
+            'advanced_route' => null,
+        ],
+        'articles' => [
+            'name_fa' => 'صفحه مقالات',
+            'name_en' => 'Articles',
+            'route_names' => ['app.articles'],
+            'path' => '/app/articles',
+            'icon' => 'fa-newspaper',
+            'description' => 'فهرست مقالات، دسته‌بندی محتوا و صفحه جزئیات',
+            'advanced_route' => null,
+        ],
+    ],
+];
