@@ -101,7 +101,26 @@
     <section class="content-card overflow-hidden mb-4">
       <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">نمره مدیر سایت</h2><p class="text-[10px] mt-1" style="color:var(--text-soft);">نمره، شباهت، کیفیت جزئیات و اولویت استفاده هر خروجی را ثبت کنید؛ اطلاعات بلافاصله در جدول محاسبه دقیق ذخیره می‌شود.</p></div>
       <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>مدل</th><th>نمره ۱ تا ۱۰</th><th>شباهت</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>ثبت</th></tr></thead><tbody>
-      @foreach($experiment->runs as $run) @foreach($run->outputs as $output) @php($manager = $output->managerScore)<tr><td>{{ $run->alias ?: $run->model_id }}</td><td colspan="4"><form method="POST" action="{{ route('admin.lab.outputs.manager-score', $output) }}" class="flex gap-2 flex-wrap">@csrf<input class="input-pro" style="width:82px" type="number" min="1" max="10" name="overall_score" value="{{ $manager?->overall_score }}" placeholder="۱–۱۰"><select class="input-pro" name="similarity_score"><option value="">شباهت</option>@foreach(['خیلی کم','کم','متوسط','زیاد','خیلی زیاد'] as $v)<option @selected($manager?->similarity_score === $v)>{{ $v }}</option>@endforeach</select><select class="input-pro" name="detail_quality"><option value="">جزئیات</option>@foreach(['ضعیف','قابل قبول','خوب','عالی'] as $v)<option @selected($manager?->detail_quality === $v)>{{ $v }}</option>@endforeach</select><input class="input-pro" style="width:90px" type="number" min="1" max="{{ max(1, $experiment->runs->count()) }}" name="usage_priority" value="{{ $manager?->usage_priority }}" placeholder="اولویت"></form></td><td><button class="btn-pro btn-pro-primary" type="submit" form="manager-score-{{ $output->id }}">ذخیره</button></td></tr>@endforeach @endforeach
+      @foreach($experiment->runs as $run)
+        @foreach($run->outputs as $output)
+          @php
+            $manager = $output->managerScore;
+          @endphp
+          <tr>
+            <td>{{ $run->alias ?: $run->model_id }}</td>
+            <td colspan="4">
+              <form id="manager-score-{{ $output->id }}" method="POST" action="{{ route('admin.lab.outputs.manager-score', $output) }}" class="flex gap-2 flex-wrap">
+                @csrf
+                <input class="input-pro" style="width:82px" type="number" min="1" max="10" name="overall_score" value="{{ $manager?->overall_score }}" placeholder="۱–۱۰">
+                <select class="input-pro" name="similarity_score"><option value="">شباهت</option>@foreach(['خیلی کم','کم','متوسط','زیاد','خیلی زیاد'] as $v)<option @selected($manager?->similarity_score === $v)>{{ $v }}</option>@endforeach</select>
+                <select class="input-pro" name="detail_quality"><option value="">جزئیات</option>@foreach(['ضعیف','قابل قبول','خوب','عالی'] as $v)<option @selected($manager?->detail_quality === $v)>{{ $v }}</option>@endforeach</select>
+                <input class="input-pro" style="width:90px" type="number" min="1" max="{{ max(1, $experiment->runs->count()) }}" name="usage_priority" value="{{ $manager?->usage_priority }}" placeholder="اولویت">
+              </form>
+            </td>
+            <td><button class="btn-pro btn-pro-primary" type="submit" form="manager-score-{{ $output->id }}">ذخیره</button></td>
+          </tr>
+        @endforeach
+      @endforeach
       </tbody></table></div>
     </section>
 

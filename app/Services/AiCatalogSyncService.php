@@ -50,7 +50,6 @@ class AiCatalogSyncService
     public function syncFal(): array
     {
         $credentials = $this->credentials->for('fal');
-        $this->ensureKey('fal', $credentials['api_key']);
 
         $categories = ['text-to-image', 'image-to-image', 'text-to-video', 'image-to-video', 'video-to-video'];
         $seen = [];
@@ -63,15 +62,21 @@ class AiCatalogSyncService
                 $query = [
                     'category' => $category,
                     'status' => 'active',
-                    'limit' => 100,
+                    // Fal.ai همراه با OpenAPI کامل، حداکثر ۱۰ مدل در هر صفحه
+                    // می‌پذیرد؛ pagination تمام مدل‌های هر دسته را پوشش می‌دهد.
+                    'limit' => 10,
                     'expand' => 'openapi-3.0',
                 ];
                 if ($cursor) $query['cursor'] = $cursor;
 
-                $response = Http::withHeaders(['Authorization' => 'Key ' . $credentials['api_key']])
+                $client = Http::acceptJson()
                     ->connectTimeout(15)
-                    ->timeout(min(60, max(15, (int) $credentials['timeout'])))
-                    ->get(rtrim(config('services.fal.platform_base_url', 'https://api.fal.ai'), '/') . '/v1/models', $query);
+                    ->timeout(min(60, max(15, (int) $credentials['timeout'])));
+                if (filled($credentials['api_key'])) {
+                    $client = $client->withToken($credentials['api_key'], 'Key');
+                }
+
+                $response = $client->get(rtrim(config('services.fal.platform_base_url', 'https://api.fal.ai'), '/') . '/v1/models', $query);
 
                 if ($response->failed()) {
                     throw new RuntimeException('Fal.ai catalog HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
@@ -108,16 +113,25 @@ class AiCatalogSyncService
     public function syncReplicateCollection(string $collectionSlug): array
     {
         $credentials = $this->credentials->for('replicate');
-        $this->ensureKey('replicate', $credentials['api_key']);
-
         $baseUrl = rtrim($credentials['base_url'] ?: 'https://api.replicate.com/v1', '/');
-        $collection = Http::withToken($credentials['api_key'])
-            ->connectTimeout(15)
-            ->timeout(min(60, max(15, (int) $credentials['timeout'])))
-            ->get($baseUrl . '/collections/' . rawurlencode($collectionSlug));
+        $apiModels = [];
 
-        if ($collection->failed()) {
-            throw new RuntimeException('Replicate collection HTTP ' . $collection->status() . ': ' . Str::limit($collection->body(), 500));
+        // API رسمی Replicate برای دریافت schema به کلید نیاز دارد، اما خودِ
+        // صفحهٔ عمومی Collection و صفحهٔ هر مدل، schema قابل‌نمایش را دارند.
+        // این fallback اجازه می‌دهد کاتالوگ داشبورد حتی در محیط توسعه‌ای که
+        // کلید خصوصی ذخیره نشده نیز کامل بماند؛ اجرای واقعی مدل همچنان فقط
+        // با کلید provider مجاز است.
+        if (filled($credentials['api_key'])) {
+            $collection = Http::withToken($credentials['api_key'])
+                ->connectTimeout(15)
+                ->timeout(min(60, max(15, (int) $credentials['timeout'])))
+                ->get($baseUrl . '/collections/' . rawurlencode($collectionSlug));
+
+            if ($collection->failed()) {
+                throw new RuntimeException('Replicate collection HTTP ' . $collection->status() . ': ' . Str::limit($collection->body(), 500));
+            }
+
+            $apiModels = (array) $collection->json('models', []);
         }
 
         $created = 0;
@@ -126,7 +140,7 @@ class AiCatalogSyncService
         $failed = 0;
 
         $summaries = $this->replicateCollectionSummaries(
-            (array) $collection->json('models', []),
+            $apiModels,
             $collectionSlug,
             $credentials['timeout']
         );
@@ -241,16 +255,67 @@ class AiCatalogSyncService
             return $summary;
         }
 
-        $response = Http::withToken($apiKey)
-            ->connectTimeout(15)
-            ->timeout(min(60, max(15, $timeout)))
-            ->get($baseUrl . '/models/' . rawurlencode($owner) . '/' . rawurlencode($name));
+        if (filled($apiKey)) {
+            $response = Http::withToken($apiKey)
+                ->connectTimeout(15)
+                ->timeout(min(60, max(15, $timeout)))
+                ->get($baseUrl . '/models/' . rawurlencode($owner) . '/' . rawurlencode($name));
 
-        if ($response->failed()) {
+            if ($response->successful()) {
+                return (array) $response->json();
+            }
+
             throw new RuntimeException('جزئیات مدل HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
         }
 
-        return (array) $response->json();
+        return $this->hydratePublicReplicateModel($owner, $name, $timeout);
+    }
+
+    /**
+     * صفحهٔ عمومی مدل‌های Replicate شامل یک script JSON با schema نمایش‌داده‌شده
+     * است. این مسیر فقط برای کاتالوگ توسعه‌ایِ بدون کلید استفاده می‌شود.
+     */
+    private function hydratePublicReplicateModel(string $owner, string $name, int $timeout): array
+    {
+        $response = Http::accept('text/html')
+            ->connectTimeout(15)
+            ->timeout(min(60, max(15, $timeout)))
+            ->get('https://replicate.com/' . rawurlencode($owner) . '/' . rawurlencode($name));
+
+        if ($response->failed()) {
+            throw new RuntimeException('صفحهٔ عمومی مدل HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
+        }
+
+        $model = [];
+        $version = [];
+        if (preg_match_all('/<script[^>]*type="application\/json"[^>]*>(.*?)<\/script>/is', $response->body(), $matches)) {
+            foreach ($matches[1] as $json) {
+                $payload = json_decode(html_entity_decode($json, ENT_QUOTES | ENT_HTML5, 'UTF-8'), true);
+                if (!is_array($payload)) continue;
+
+                $candidate = (array) ($payload['model'] ?? []);
+                if (($candidate['owner'] ?? null) === $owner && ($candidate['name'] ?? null) === $name) {
+                    $model = $candidate;
+                }
+
+                $candidateVersion = (array) ($payload['version'] ?? []);
+                if (!empty(data_get($candidateVersion, '_extras.dereferenced_openapi_schema'))) {
+                    $version = $candidateVersion;
+                }
+            }
+        }
+
+        $schema = (array) data_get($version, '_extras.dereferenced_openapi_schema', []);
+        if (empty($model) || empty($schema)) {
+            throw new RuntimeException("schema عمومی مدل {$owner}/{$name} در دسترس نیست.");
+        }
+
+        $model['latest_version'] = [
+            'id' => (string) (data_get($model, 'latest_version.id') ?: ($version['id'] ?? '')),
+            'openapi_schema' => $schema,
+        ];
+
+        return $model;
     }
 
     private function ensureKey(string $provider, string $key): void

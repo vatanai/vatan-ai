@@ -1,16 +1,12 @@
 <?php
 
-use App\Services\AiCatalogSyncService;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('ai_models')) {
-            app(AiCatalogSyncService::class)->syncReplicateCollection('text-to-image');
-        }
+        // همگام‌سازی provider یک عملیات اجرایی است، نه migration دیتابیس.
     }
 
     public function down(): void

@@ -1,20 +1,14 @@
 <?php
 
-use App\Services\AiCatalogSyncService;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('ai_models')) {
-            return;
-        }
-
-        // این Collection منبع رسمی مدل‌های text-to-image و image-to-image
-        // انتخاب‌شده‌ی Replicate است. سرویس، schema زنده‌ی هر مدل را نیز ثبت می‌کند.
-        app(AiCatalogSyncService::class)->syncReplicateCollection('text-to-image');
+        // تماس با provider خارجی نباید بخشی از migration باشد؛ نبود کلید یا
+        // اختلال شبکه نباید deploy و migrationهای دیتابیس را متوقف کند.
+        // همگام‌سازی از طریق ai:sync-catalog یا دکمهٔ داشبورد اجرا می‌شود.
     }
 
     public function down(): void
