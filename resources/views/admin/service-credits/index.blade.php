@@ -26,11 +26,27 @@
     @if(session('success'))<div class="credit-alert success">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="credit-alert error">{{ $errors->first() }}</div>@endif
 
+    @php
+      $creditBySlug = $accounts->keyBy('slug');
+      $providerCards = [
+        ['slug' => 'cloudiva', 'name' => 'Cloudiva', 'icon' => 'fa-cloud'],
+        ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
+        ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
+        ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
+        ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
+      ];
+    @endphp
     <div class="credit-grid">
-      <div class="credit-summary"><div class="credit-summary-label">ارزش کل موجودی</div><div class="credit-summary-value">{{ number_format($totals['balance_irr'] / 10) }}</div><div class="credit-summary-meta">تومان — همه سرویس‌های فعال</div></div>
-      <div class="credit-summary"><div class="credit-summary-label">مصرف امروز</div><div class="credit-summary-value">{{ number_format($totals['today_irr'] / 10) }}</div><div class="credit-summary-meta">تومان تا این لحظه</div></div>
-      <div class="credit-summary"><div class="credit-summary-label">مصرف این ماه</div><div class="credit-summary-value">{{ number_format($totals['month_irr'] / 10) }}</div><div class="credit-summary-meta">تومان از ابتدای ماه</div></div>
-      <div class="credit-summary credit-rate"><div class="credit-summary-label">دلار آنلاین</div><div class="credit-summary-value">{{ $exchange['rate'] > 0 ? number_format($exchange['rate'] / 10) : '—' }}</div><div class="credit-summary-meta">تومان · {{ $exchange['source'] }} · {{ $exchange['online'] ? 'آنلاین' : 'پشتیبان' }}</div></div>
+      <div class="credit-summary credit-rate"><div class="credit-summary-label">قیمت روز دلار</div><div class="credit-summary-value">{{ $exchange['rate'] > 0 ? number_format($exchange['rate'] / 10) : '—' }}</div><div class="credit-summary-meta">تومان · {{ $exchange['source'] }} · {{ $exchange['online'] ? 'آنلاین' : 'پشتیبان' }}</div></div>
+      @foreach($providerCards as $providerCard)
+        @php($creditAccount = $creditBySlug->get($providerCard['slug']))
+        <a class="credit-summary credit-provider-summary" href="{{ route('admin.service-credits.index') }}">
+          <div class="credit-provider-summary-head"><span>{{ $providerCard['name'] }}</span><span class="credit-provider-mark"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span></div>
+          <div class="credit-provider-usd">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
+          <div class="credit-provider-toman">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی ثبت نشده' }}</div>
+          <div class="credit-summary-meta">{{ $creditAccount?->status_label ?? 'حساب ساخته نشده' }}</div>
+        </a>
+      @endforeach
     </div>
 
     <div class="credit-accounts">
@@ -38,14 +54,14 @@
         <article class="credit-card {{ $account->is_low ? 'low' : '' }}">
           <div class="credit-card-head">
             <div class="credit-service">
-              <div class="credit-logo"><i class="fa-solid {{ $account->slug === 'openrouter' ? 'fa-route' : ($account->slug === 'liara' ? 'fa-cloud' : 'fa-wallet') }}"></i></div>
-              <div><div class="credit-name">{{ $account->name }}</div><div class="credit-status {{ $account->is_online ? 'online' : '' }}"><span class="credit-dot"></span>{{ $account->is_online ? 'متصل و آنلاین' : 'ثبت دستی' }}</div></div>
+              <div class="credit-logo"><i class="fa-solid {{ ['openrouter' => 'fa-route', 'liara' => 'fa-cloud-arrow-up', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud'][$account->slug] ?? 'fa-wallet' }}"></i></div>
+              <div><div class="credit-name">{{ $account->name }}</div><div class="credit-status {{ $account->is_online ? 'online' : '' }}"><span class="credit-dot"></span>{{ $account->status_label }}</div></div>
             </div>
             <button class="credit-btn" type="button" data-open-modal="edit-{{ $account->id }}"><i class="fa-solid fa-sliders"></i></button>
           </div>
           <div class="credit-balance-label">موجودی قابل استفاده</div>
           <div class="credit-balance">{{ $account->currency === 'USD' ? '$'.number_format($account->display_balance, 2) : number_format($account->display_balance / 10).' تومان' }}</div>
-          @if($account->currency === 'USD')<div class="credit-balance-irr">{{ number_format($account->balance_irr / 10) }} تومان با نرخ روز</div>@endif
+          <div class="credit-balance-irr">{{ $account->balance_usd !== null ? '$'.number_format((float) $account->balance_usd, 4) : '—' }} · {{ number_format((float) $account->balance_toman) }} تومان با نرخ روز</div>
           <div class="credit-metrics">
             <div class="credit-metric"><span>{{ $account->usage_is_estimate ? 'برآورد امروز' : 'مصرف امروز' }}</span><strong>{{ $account->currency === 'USD' ? '$'.number_format($account->today_usage, 4) : number_format($account->today_usage / 10).' ت' }}</strong></div>
             <div class="credit-metric"><span>{{ $account->usage_is_estimate ? 'برآورد ماهانه' : 'مصرف ماه' }}</span><strong>{{ $account->currency === 'USD' ? '$'.number_format($account->month_usage, 4) : number_format($account->month_usage / 10).' ت' }}</strong></div>
@@ -78,11 +94,11 @@
 
     <section class="credit-panel">
       <div class="credit-panel-title">آخرین تراکنش‌ها</div>
-      <div class="credit-table-wrap"><table class="credit-table"><thead><tr><th>سرویس</th><th>نوع</th><th>مبلغ</th><th>زمان</th><th>مرجع</th><th>توضیح</th></tr></thead><tbody>
+      <div class="credit-table-wrap"><table class="credit-table"><thead><tr><th>سرویس</th><th>نوع</th><th>مبلغ اصلی</th><th>معادل دلار</th><th>معادل تومان</th><th>تاریخ شمسی</th><th>تاریخ میلادی</th><th>مرجع</th><th>توضیح</th></tr></thead><tbody>
         @forelse($transactions as $transaction)<tr>
           <td>{{ $transaction->account?->name }}</td><td><span class="credit-badge {{ $transaction->type }}">{{ ['charge'=>'شارژ','usage'=>'مصرف','refund'=>'بازگشت','adjustment'=>'اصلاح'][$transaction->type] ?? $transaction->type }}</span> @if(str_starts_with((string)$transaction->reference, 'auto-sync-'))<span class="credit-badge">آنلاین خودکار</span>@endif</td>
-          <td>{{ number_format((float)$transaction->amount, 4) }} {{ $transaction->account?->currency }}</td><td>{{ $transaction->occurred_at?->format('Y/m/d H:i') }}</td><td>{{ $transaction->reference ?: '—' }}</td><td>{{ $transaction->note ?: '—' }}</td>
-        </tr>@empty<tr><td colspan="6">هنوز تراکنشی ثبت نشده است.</td></tr>@endforelse
+          <td>{{ number_format((float) $transaction->amount, 6) }} {{ $transaction->account?->currency }}</td><td>{{ $transaction->amount_usd !== null ? '$'.number_format((float) $transaction->amount_usd, 6) : '—' }}</td><td>{{ number_format((float) $transaction->amount_toman) }} تومان</td><td>{{ \App\Support\Jalali::formatNumeric($transaction->occurred_at) }}</td><td>{{ $transaction->occurred_at?->timezone(config('app.display_timezone', 'Asia/Tehran'))->format('Y/m/d H:i') ?? '—' }}</td><td>{{ $transaction->reference ?: '—' }}</td><td>{{ $transaction->note ?: '—' }}</td>
+        </tr>@empty<tr><td colspan="9">هنوز تراکنشی ثبت نشده است.</td></tr>@endforelse
       </tbody></table></div>
     </section>
   </div>

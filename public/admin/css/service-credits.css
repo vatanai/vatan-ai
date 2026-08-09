@@ -7,13 +7,19 @@
 .credit-btn{height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-main);padding:0 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none}
 .credit-btn:hover{border-color:var(--primary);color:var(--primary)}
 .credit-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--accent)}
-.credit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.credit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .credit-summary,.credit-card,.credit-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-card)}
 .credit-summary{padding:17px}
 .credit-summary-label{font-size:11px;color:var(--text-soft);margin-bottom:7px}
 .credit-summary-value{font-size:23px;font-weight:800;color:var(--text-h)}
 .credit-summary-meta{font-size:10px;color:var(--text-soft);margin-top:5px}
 .credit-rate{border-color:var(--primary)}
+.credit-provider-summary{display:block;text-decoration:none;transition:border-color .15s ease,transform .15s ease}
+.credit-provider-summary:hover{border-color:var(--primary);transform:translateY(-1px)}
+.credit-provider-summary-head{display:flex;align-items:center;justify-content:space-between;color:var(--text-soft);font-size:11px;font-weight:800;margin-bottom:8px}
+.credit-provider-mark{width:28px;height:28px;border-radius:8px;background:var(--primary-l);color:var(--primary);display:inline-flex;align-items:center;justify-content:center}
+.credit-provider-usd{font-size:19px;line-height:1.2;font-weight:900;color:var(--text-h)}
+.credit-provider-toman{font-size:11px;font-weight:800;color:var(--text-main);margin-top:4px}
 .credit-accounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
 .credit-card{padding:18px;position:relative;overflow:hidden}
 .credit-card:before{content:"";position:absolute;top:0;right:0;width:4px;height:100%;background:var(--primary)}

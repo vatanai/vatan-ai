@@ -21,11 +21,13 @@ class ServiceCreditSynchronizer
 
         Cache::forget('finance.openrouter_credits');
         Cache::forget('finance.liara_credits');
+        Cache::forget('finance.fal_credits');
+        Cache::forget('finance.replicate_credits');
         $accounts = $this->overview->get()['accounts'];
         $result = ['synced' => 0, 'transactions_created' => 0, 'changes' => []];
 
         foreach ($accounts as $liveAccount) {
-            if (!$liveAccount->is_online) continue;
+            if (!$liveAccount->is_online || !$liveAccount->balance_is_live) continue;
 
             $change = DB::transaction(function () use ($liveAccount) {
                 $account = ServiceCreditAccount::query()->lockForUpdate()->findOrFail($liveAccount->id);

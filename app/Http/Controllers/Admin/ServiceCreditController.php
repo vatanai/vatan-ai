@@ -22,7 +22,17 @@ class ServiceCreditController extends Controller
     {
         $synchronizer->sync();
         $data = $overview->get();
-        $transactions = ServiceCreditTransaction::with('account')->latest('occurred_at')->limit(40)->get();
+        $rate = (float) ($data['exchange']['rate'] ?? 0);
+        $transactions = ServiceCreditTransaction::with('account')->latest('occurred_at')->limit(40)->get()
+            ->map(function (ServiceCreditTransaction $transaction) use ($rate) {
+                $amount = (float) $transaction->amount;
+                $currency = $transaction->account?->currency;
+                $amountUsd = $currency === 'USD' ? $amount : ($rate > 0 ? $amount / $rate : null);
+                $amountToman = $currency === 'USD' ? $amount * $rate / 10 : $amount / 10;
+                $transaction->setAttribute('amount_usd', $amountUsd);
+                $transaction->setAttribute('amount_toman', $amountToman);
+                return $transaction;
+            });
         return view('admin.service-credits.index', [...$data, 'transactions' => $transactions]);
     }
 
@@ -51,8 +61,9 @@ class ServiceCreditController extends Controller
         ]);
         $data['show_on_dashboard'] = $request->boolean('show_on_dashboard');
         $account->update($data);
-        Cache::forget('finance.openrouter_credits');
-        Cache::forget('finance.liara_credits');
+        foreach (['openrouter', 'liara', 'fal', 'replicate'] as $provider) {
+            Cache::forget('finance.' . $provider . '_credits');
+        }
         return back()->with('success', 'تنظیمات اکانت ذخیره شد.');
     }
 

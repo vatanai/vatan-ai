@@ -13,22 +13,37 @@
         <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:1px;">اعتبار و مصرف سرویس‌ها</div>
         <a href="{{ route('admin.service-credits.index') }}" style="font-size:11px;color:var(--primary);text-decoration:none;">مدیریت کامل ←</a>
       </div>
-      <div class="grid grid-cols-4 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:14px;">
-        @foreach($creditOverview['accounts'] as $creditAccount)
+      @php
+        $creditBySlug = $creditOverview['accounts']->keyBy('slug');
+        $providerCards = [
+          ['slug' => 'cloudiva', 'name' => 'Cloudiva', 'icon' => 'fa-cloud'],
+          ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
+          ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
+          ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
+          ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
+        ];
+      @endphp
+      <div class="grid grid-cols-3 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div style="background:var(--input-bg);border:1px solid var(--primary);border-radius:10px;padding:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:var(--text-soft);">قیمت روز دلار</span>
+            <i class="fa-solid fa-dollar-sign" style="color:var(--primary);"></i>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ ($creditOverview['exchange']['rate'] ?? 0) > 0 ? number_format($creditOverview['exchange']['rate'] / 10).' تومان' : 'ناموجود' }}</div>
+          <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditOverview['exchange']['source'] ?? 'نرخ پشتیبان' }} · {{ ($creditOverview['exchange']['online'] ?? false) ? 'آنلاین' : 'پشتیبان' }}</div>
+        </div>
+        @foreach($providerCards as $providerCard)
+          @php($creditAccount = $creditBySlug->get($providerCard['slug']))
           <a href="{{ route('admin.service-credits.index') }}" style="text-decoration:none;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:14px;display:block;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-              <span style="font-size:11px;font-weight:700;color:var(--text-soft);">{{ $creditAccount->name }}</span>
-              <i class="fa-solid {{ $creditAccount->slug === 'openrouter' ? 'fa-route' : ($creditAccount->slug === 'liara' ? 'fa-cloud' : 'fa-wallet') }}" style="color:var(--primary);"></i>
+              <span style="font-size:11px;font-weight:700;color:var(--text-soft);">{{ $providerCard['name'] }}</span>
+              <span style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--primary-l);color:var(--primary);"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span>
             </div>
-            <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ $creditAccount->currency === 'USD' ? '$'.number_format($creditAccount->display_balance, 2) : number_format($creditAccount->display_balance / 10).' تومان' }}</div>
-            <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditAccount->usage_is_estimate ? 'برآورد امروز' : 'مصرف امروز' }}: {{ number_format($creditAccount->today_usage_irr / 10) }} تومان</div>
+            <div style="font-size:18px;font-weight:800;color:var(--text-h);">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-main);margin-top:3px;">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی ثبت نشده' }}</div>
+            <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditAccount?->status_label ?? 'حساب ساخته نشده' }}</div>
           </a>
         @endforeach
-        <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:14px;">
-          <div style="font-size:11px;font-weight:700;color:var(--text-soft);margin-bottom:8px;">نرخ آنلاین دلار</div>
-          <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ ($creditOverview['exchange']['rate'] ?? 0) > 0 ? number_format($creditOverview['exchange']['rate'] / 10).' تومان' : 'ناموجود' }}</div>
-          <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditOverview['exchange']['source'] ?? '' }}</div>
-        </div>
       </div>
       @endif
 

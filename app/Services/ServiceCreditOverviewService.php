@@ -11,7 +11,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ServiceCreditOverviewService
 {
-    public function __construct(private ExchangeRateService $exchangeRate) {}
+    public function __construct(
+        private ExchangeRateService $exchangeRate,
+        private AiProviderCredentials $credentials,
+    ) {}
 
     public function get(bool $dashboardOnly = false): array
     {
@@ -48,20 +51,37 @@ class ServiceCreditOverviewService
             $live = $this->liaraCredits();
             $todayUsage = (float) ($live['today_usage'] ?? 0);
             $monthUsage = (float) ($live['month_usage'] ?? 0);
+        } elseif ($account->sync_driver === 'fal') {
+            $live = $this->falCredits();
+        } elseif ($account->sync_driver === 'replicate') {
+            $live = $this->replicateCredits();
         }
 
-        $balance = $live['balance'] ?? (float) $account->manual_balance;
+        $balance = array_key_exists('balance', (array) $live) && $live['balance'] !== null
+            ? (float) $live['balance']
+            : (float) $account->manual_balance;
+        $balanceIsLive = (bool) ($live['balance_is_live'] ?? false);
         $account->setAttribute('display_balance', $balance);
         $account->setAttribute('today_usage', $todayUsage);
         $account->setAttribute('month_usage', $monthUsage);
         $account->setAttribute('total_usage', $live['total_usage'] ?? (float) $account->transactions()->where('type', 'usage')->sum('amount'));
         $account->setAttribute('is_online', (bool) ($live['online'] ?? false));
+        $account->setAttribute('balance_is_live', $balanceIsLive);
+        $account->setAttribute('status_label', $live['online'] ?? false
+            ? ($balanceIsLive ? 'متصل و آنلاین' : 'متصل؛ موجودی دستی')
+            : 'ثبت دستی');
         $account->setAttribute('sync_error', $live['error'] ?? null);
         $account->setAttribute('usage_is_estimate', (bool) ($live['usage_is_estimate'] ?? false));
         $account->setAttribute('hourly_usage', (float) ($live['hourly_usage'] ?? 0));
         $account->setAttribute('balance_irr', $account->currency === 'USD' ? $balance * $rate : $balance);
         $account->setAttribute('today_usage_irr', $account->currency === 'USD' ? $todayUsage * $rate : $todayUsage);
         $account->setAttribute('month_usage_irr', $account->currency === 'USD' ? $monthUsage * $rate : $monthUsage);
+        $account->setAttribute('balance_usd', $account->currency === 'USD'
+            ? $balance
+            : ($rate > 0 ? $balance / $rate : null));
+        $account->setAttribute('balance_toman', ($account->currency === 'USD' ? $balance * $rate : $balance) / 10);
+        $account->setAttribute('today_usage_toman', $account->today_usage_irr / 10);
+        $account->setAttribute('month_usage_toman', $account->month_usage_irr / 10);
         $account->setAttribute('is_low', (float) $account->low_balance_threshold > 0 && $balance <= (float) $account->low_balance_threshold);
         return $account;
     }
@@ -99,6 +119,7 @@ class ServiceCreditOverviewService
                     }
                     return [
                         'online' => true,
+                        'balance_is_live' => true,
                         'balance' => max(0, $purchased - $used),
                         'total_usage' => $used,
                         'today_usage' => (float) data_get($keyResponse, 'data.usage_daily', 0)
@@ -136,6 +157,7 @@ class ServiceCreditOverviewService
 
                 return [
                     'online' => true,
+                    'balance_is_live' => true,
                     'balance' => $balanceIrr,
                     'today_usage' => $hourlyIrr * $elapsedToday,
                     'month_usage' => $monthlyIrr,
@@ -149,10 +171,79 @@ class ServiceCreditOverviewService
         });
     }
 
+    private function falCredits(): array
+    {
+        return Cache::remember('finance.fal_credits', now()->addMinutes(3), function () {
+            $key = $this->credentials->for('fal')['api_key'];
+            if (!$key) return ['online' => false, 'error' => 'کلید Fal.ai تنظیم نشده است'];
+
+            try {
+                $response = Http::withHeaders(['Authorization' => 'Key ' . $key])
+                    ->acceptJson()
+                    ->timeout(12)
+                    ->get(rtrim((string) config('services.fal.platform_base_url', 'https://api.fal.ai'), '/') . '/v1/account/billing', [
+                        'expand' => 'credits',
+                    ]);
+
+                if ($response->status() === 403) {
+                    return [
+                        'online' => true,
+                        'balance_is_live' => false,
+                        'error' => 'اتصال برقرار است؛ کلید Fal.ai مجوز خواندن صورتحساب ندارد',
+                    ];
+                }
+
+                $response->throw();
+                $response = $response->json();
+
+                $balance = data_get($response, 'credits.current_balance');
+                if ($balance === null) {
+                    return ['online' => true, 'balance_is_live' => false, 'error' => 'موجودی اعتبار از پاسخ Fal.ai قابل خواندن نیست'];
+                }
+
+                return [
+                    'online' => true,
+                    'balance_is_live' => true,
+                    'balance' => (float) $balance,
+                ];
+            } catch (\Throwable $e) {
+                report($e);
+                return ['online' => false, 'error' => 'دریافت آنلاین موجودی Fal.ai ناموفق بود'];
+            }
+        });
+    }
+
+    private function replicateCredits(): array
+    {
+        return Cache::remember('finance.replicate_credits', now()->addMinutes(3), function () {
+            $credentials = $this->credentials->for('replicate');
+            if (!$credentials['api_key']) return ['online' => false, 'error' => 'توکن Replicate تنظیم نشده است'];
+
+            try {
+                Http::withToken($credentials['api_key'])
+                    ->acceptJson()
+                    ->timeout(12)
+                    ->get(rtrim($credentials['base_url'], '/') . '/account')
+                    ->throw();
+
+                return [
+                    'online' => true,
+                    'balance_is_live' => false,
+                    'error' => 'اتصال برقرار است؛ API رسمی Replicate موجودی مالی را اعلام نمی‌کند',
+                ];
+            } catch (\Throwable $e) {
+                report($e);
+                return ['online' => false, 'error' => 'دریافت اطلاعات حساب Replicate ناموفق بود'];
+            }
+        });
+    }
+
     private function totals(Collection $accounts): array
     {
         return [
             'balance_irr' => $accounts->sum('balance_irr'),
+            'balance_usd' => $accounts->sum(fn ($account) => (float) ($account->balance_usd ?? 0)),
+            'balance_toman' => $accounts->sum('balance_toman'),
             'today_irr' => $accounts->sum('today_usage_irr'),
             'month_irr' => $accounts->sum('month_usage_irr'),
             'low_count' => $accounts->where('is_low', true)->count(),
@@ -161,6 +252,13 @@ class ServiceCreditOverviewService
 
     private function emptyTotals(): array
     {
-        return ['balance_irr' => 0, 'today_irr' => 0, 'month_irr' => 0, 'low_count' => 0];
+        return [
+            'balance_irr' => 0,
+            'balance_usd' => 0,
+            'balance_toman' => 0,
+            'today_irr' => 0,
+            'month_irr' => 0,
+            'low_count' => 0,
+        ];
     }
 }
