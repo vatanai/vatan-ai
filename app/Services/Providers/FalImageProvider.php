@@ -3,6 +3,7 @@
 namespace App\Services\Providers;
 
 use App\Models\AiModel;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -31,9 +32,12 @@ class FalImageProvider extends AbstractQueuedImageProvider
             $url .= '?fal_webhook=' . rawurlencode($webhookUrl);
         }
 
+        $connectTimeout = max(30, min(90, (int) ($credentials['timeout'] ?: 600)));
+        $requestTimeout = max(120, (int) ($credentials['timeout'] ?: 600));
         $response = Http::withHeaders($this->requestHeaders())
-            ->connectTimeout(15)
-            ->timeout($credentials['timeout'])
+            ->retry(2, 1000, fn ($exception) => $exception instanceof ConnectionException)
+            ->connectTimeout($connectTimeout)
+            ->timeout($requestTimeout)
             ->post($url, $input);
 
         if ($response->failed()) {
@@ -48,7 +52,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
         $credentials = $this->credentials->for('fal');
         $base = rtrim($credentials['base_url'] ?: 'https://queue.fal.run', '/');
         $response = Http::withHeaders($this->requestHeaders())
-            ->timeout($credentials['timeout'])
+            ->timeout(max(30, (int) ($credentials['timeout'] ?: 600)))
             ->get($base . '/' . ltrim($model->externalModelId(), '/') . '/requests/' . rawurlencode($requestId) . '/status');
 
         if ($response->failed()) {
@@ -58,7 +62,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
         $status = (array) $response->json();
         if (($status['status'] ?? null) === 'COMPLETED' && !empty($status['response_url'])) {
             $result = Http::withHeaders($this->requestHeaders())
-                ->timeout($credentials['timeout'])
+                ->timeout(max(30, (int) ($credentials['timeout'] ?: 600)))
                 ->get($base . '/' . ltrim($model->externalModelId(), '/') . '/requests/' . rawurlencode($requestId));
             if ($result->successful()) {
                 $status['result'] = $result->json();
@@ -73,7 +77,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
         $credentials = $this->credentials->for('fal');
         $base = rtrim($credentials['base_url'] ?: 'https://queue.fal.run', '/');
         $response = Http::withHeaders($this->requestHeaders())
-            ->timeout($credentials['timeout'])
+            ->timeout(max(30, (int) ($credentials['timeout'] ?: 600)))
             ->put($base . '/' . ltrim($model->externalModelId(), '/') . '/requests/' . rawurlencode($requestId) . '/cancel');
 
         if ($response->failed() && $response->status() !== 400) {
@@ -110,16 +114,20 @@ class FalImageProvider extends AbstractQueuedImageProvider
         }
 
         $requestId = (string) ($payload['request_id'] ?? $payload['gateway_request_id'] ?? '');
+        $billingEvent = null;
+        if ($normalizedStatus === 'completed' && $requestId !== '') {
+            $billingEvent = app(\App\Services\FalAiBillingService::class)->billingEvent($requestId);
+        }
         return [
             'provider' => 'fal',
             'external_request_id' => $requestId,
             'status' => $normalizedStatus,
             'output_urls' => $items,
             'estimated_cost_usd' => $this->estimateCost($model),
-            'actual_cost_usd' => null,
+            'actual_cost_usd' => is_numeric($billingEvent['cost_total'] ?? null) ? (float) $billingEvent['cost_total'] : null,
             'error_code' => $payload['error_type'] ?? null,
             'error_message' => $payload['error'] ?? null,
-            'provider_metadata' => $payload,
+            'provider_metadata' => array_filter(['response' => $payload, 'billing_event' => $billingEvent], fn ($value) => $value !== null),
         ];
     }
 

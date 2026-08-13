@@ -23,6 +23,7 @@ class LabExperimentController extends Controller
     public function __construct(
         private readonly ExchangeRateService $exchangeRate,
         private readonly ProductPromptBuilder $promptBuilder,
+        private readonly \App\Services\ProviderPricingService $pricing,
     ) {}
 
     public function index(Request $request)
@@ -124,6 +125,23 @@ class LabExperimentController extends Controller
             return response()->json(['message' => 'یکی از مدل‌های انتخاب‌شده فعال یا تصویری نیست.'], 422);
         }
 
+        foreach ($payloadModels as $index => $item) {
+            $model = $models->get((int) ($item['id'] ?? 0));
+            $provider = trim((string) ($item['provider'] ?? ''));
+            $purpose = $this->normalizeLabPurpose($item['purpose'] ?? 'all');
+            if ($provider !== '' && $provider !== $model->provider) {
+                return response()->json(['message' => 'پرووایدر و مدل انتخاب‌شده با هم مطابقت ندارند.'], 422);
+            }
+            if ($purpose === null) {
+                return response()->json(['message' => 'فیلتر کاربرد مدل معتبر نیست.'], 422);
+            }
+            if (!$this->modelMatchesLabPurpose($model, $purpose)) {
+                return response()->json(['message' => 'مدل انتخاب‌شده با فیلتر کاربرد انتخابی هم‌خوانی ندارد.'], 422);
+            }
+            $payloadModels[$index]['provider'] = $model->provider;
+            $payloadModels[$index]['purpose'] = $purpose;
+        }
+
         $inputImage = $this->resolveQuickRunInputImage($request, $product);
         if (!$inputImage) {
             return response()->json(['message' => 'برای اجرای آزمایش، یک عکس ورودی لازم است.'], 422);
@@ -132,11 +150,17 @@ class LabExperimentController extends Controller
         $rate = $this->exchangeRate->usdToIrr();
         $rateIrr = (float) ($rate['rate'] ?? 0);
         $rateToman = $rateIrr / 10;
-        $estimatedUsd = collect($payloadModels)->sum(fn ($item) => (float) ($models->get((int) ($item['id'] ?? 0))?->cost_per_generation_usd ?? 0));
+        $estimatedUsd = collect($payloadModels)->sum(function ($item) use ($models) {
+            $model = $models->get((int) ($item['id'] ?? 0));
+            return $model ? $this->numericPrice($this->pricing->estimate($model, 1, false)['usd'] ?? null) : 0.0;
+        });
+        $facePromptEn = trim((string) $request->input('face_prompt_en', ''));
+        $facePromptFa = trim((string) $request->input('face_prompt_fa', ''));
         $basePrompt = $this->buildLabPrompt($product, false);
         $negativePrompt = trim((string) ($product->negative_prompt ?? '')) ?: null;
 
-        $experiment = DB::transaction(function () use ($request, $product, $payloadModels, $models, $inputImage, $rateIrr, $rateToman, $estimatedUsd, $basePrompt, $negativePrompt) {
+        try {
+            $experiment = DB::transaction(function () use ($request, $product, $payloadModels, $models, $inputImage, $rateIrr, $rateToman, $estimatedUsd, $basePrompt, $negativePrompt, $facePromptEn, $facePromptFa) {
             $experiment = LabExperiment::create([
                 'product_id' => $product->id,
                 'admin_id' => $request->user('admin')?->id,
@@ -144,7 +168,7 @@ class LabExperimentController extends Controller
                 'status' => 'queued',
                 'prompt_snapshot' => $basePrompt,
                 'negative_prompt' => $negativePrompt,
-                'settings' => ['count' => 1, 'source' => 'product_step_lab', 'scoring_model' => '', 'evaluator_enabled' => false],
+                'settings' => ['count' => 1, 'source' => 'product_step_lab', 'scoring_model' => '', 'evaluator_enabled' => false, 'face_prompt_en' => $facePromptEn, 'face_prompt_fa' => $facePromptFa, 'model_purposes' => collect($payloadModels)->mapWithKeys(fn ($item) => [(string) ($item['id'] ?? '') => $item['purpose'] ?? 'all'])->all()],
                 'estimated_cost_usd' => $estimatedUsd,
                 'estimated_cost_irr' => $estimatedUsd * $rateIrr,
                 'estimated_cost_toman' => $estimatedUsd * $rateToman,
@@ -182,10 +206,12 @@ class LabExperimentController extends Controller
                 if (!$model) continue;
                 $quality = in_array((string) ($item['quality'] ?? ''), ['480', '720', '1080', '1440', '2160'], true) ? (string) $item['quality'] : '720';
                 $size = in_array((string) ($item['size'] ?? ''), ['4:5', '9:16', '3:4', '1:1', '2:3', '16:9', '3:2'], true) ? (string) $item['size'] : '4:5';
-                $preserveFace = filter_var($item['preserve_face'] ?? true, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
-                $preserveFace = $preserveFace ?? true;
-                $prompt = $this->buildLabPrompt($product, $preserveFace, (bool) $model->supports_image_input);
-                $cost = (float) $model->cost_per_generation_usd;
+                $preserveFace = filter_var($item['preserve_face'] ?? false, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+                $preserveFace = $preserveFace ?? false;
+                $prompt = $this->buildLabPrompt($product, $preserveFace, (bool) $model->supports_image_input, $facePromptEn);
+                $pricing = $this->pricing->estimate($model, 1, false);
+                $rawCost = $pricing['usd'] ?? null;
+                $cost = $this->numericPrice($rawCost);
                 $experiment->runs()->create([
                     'ai_model_id' => $model->id,
                     'model_id' => $model->openrouter_model_id,
@@ -200,7 +226,7 @@ class LabExperimentController extends Controller
                     'status' => 'queued',
                     'prompt_snapshot' => $prompt,
                     'model_snapshot' => $model->toArray(),
-                    'parameters' => ['count' => 1, 'resolution' => $quality, 'aspect_ratio' => $size, 'grade_resolution' => $quality, 'grade_aspect_ratio' => $size, 'preserve_face' => $preserveFace, 'scoring_model' => '', 'evaluator_enabled' => false],
+                    'parameters' => ['count' => 1, 'resolution' => $quality, 'aspect_ratio' => $size, 'grade_resolution' => $quality, 'grade_aspect_ratio' => $size, 'preserve_face' => $preserveFace, 'face_prompt_en' => $facePromptEn, 'face_prompt_fa' => $facePromptFa, 'model_purpose' => $item['purpose'] ?? 'all', 'pricing_available' => is_numeric($rawCost) && (float) $rawCost > 0, 'pricing_source' => $pricing['source'] ?? null, 'pricing_unit' => $pricing['unit'] ?? null, 'scoring_model' => '', 'evaluator_enabled' => false],
                     'estimated_cost_usd' => $cost,
                     'estimated_cost_toman' => $cost * $rateToman,
                     'quality' => $quality,
@@ -211,8 +237,15 @@ class LabExperimentController extends Controller
             }
 
             $this->audit($experiment, $request, 'quick_created', ['models_count' => count($payloadModels), 'input_source' => $inputImage['source']]);
-            return $experiment;
-        });
+                return $experiment;
+            });
+        } catch (\Throwable $error) {
+            report($error);
+
+            return response()->json([
+                'message' => 'ثبت آزمایش انجام نشد. لطفاً دوباره تلاش کنید.',
+            ], 500);
+        }
 
         foreach ($experiment->runs as $run) RunLabModelJob::dispatch($run->id);
 
@@ -235,8 +268,11 @@ class LabExperimentController extends Controller
             $request->merge([
                 'images' => $inputPath ? [$inputPath] : [],
                 'models' => collect(data_get($payload, 'models', []))->pluck('id')->filter()->values()->all(),
+                'model_purposes' => collect(data_get($payload, 'models', []))->mapWithKeys(fn ($item) => [(string) data_get($item, 'id') => data_get($item, 'purpose', 'all')])->all(),
                 'count' => 1, 'resolution' => data_get($payload, 'models.0.quality', '720'), 'aspect_ratio' => data_get($payload, 'models.0.size', '4:5'),
                 'scoring_model' => data_get($payload, 'evaluator', 'openai/gpt-4o-mini'),
+                'face_prompt_en' => data_get($payload, 'face_prompt_en', ''),
+                'face_prompt_fa' => data_get($payload, 'face_prompt_fa', ''),
             ]);
         }
         $data = $request->validate([
@@ -245,6 +281,8 @@ class LabExperimentController extends Controller
             'images.*' => ['required', 'string', 'max:500'],
             'models' => ['nullable', 'array', 'max:8'],
             'models.*' => ['integer', 'distinct', 'exists:ai_models,id'],
+            'model_purposes' => ['nullable', 'array'],
+            'model_purposes.*' => ['nullable', 'string', 'max:40'],
             'grades' => ['nullable', 'array'],
             'grades.*.primary_model' => ['nullable', 'integer', 'exists:ai_models,id'],
             'grades.*.fallback_models' => ['nullable', 'array', 'max:7'],
@@ -254,6 +292,8 @@ class LabExperimentController extends Controller
             'title' => ['nullable', 'string', 'max:180'],
             'prompt_override' => ['nullable', 'string', 'max:12000'],
             'negative_prompt' => ['nullable', 'string', 'max:4000'],
+            'face_prompt_en' => ['nullable', 'string', 'max:12000'],
+            'face_prompt_fa' => ['nullable', 'string', 'max:12000'],
             'count' => ['required', 'integer', 'min:1', 'max:4'],
             'resolution' => ['required', 'string', 'max:10'],
             'aspect_ratio' => ['required', 'string', 'max:10'],
@@ -281,17 +321,30 @@ class LabExperimentController extends Controller
             return back()->withInput()->withErrors(['models' => 'یکی از مدل‌های انتخاب‌شده فعال یا تصویری نیست.']);
         }
 
+        foreach ((array) ($data['model_purposes'] ?? []) as $modelId => $purpose) {
+            $normalizedPurpose = $this->normalizeLabPurpose($purpose);
+            $model = $models->get((int) $modelId);
+            if ($normalizedPurpose === null || ($model && !$this->modelMatchesLabPurpose($model, $normalizedPurpose))) {
+                return back()->withInput()->withErrors(['model_purposes' => 'کاربرد انتخاب‌شده با یکی از مدل‌ها هم‌خوانی ندارد.']);
+            }
+        }
+
         $rate = $this->exchangeRate->usdToIrr();
-        $prompt = trim((string) ($data['prompt_override'] ?: $this->promptBuilder->build($product, [])));
+        $facePromptEn = trim((string) ($data['face_prompt_en'] ?? ''));
+        $facePromptFa = trim((string) ($data['face_prompt_fa'] ?? ''));
+        $modelPurposes = collect((array) ($data['model_purposes'] ?? []))->mapWithKeys(function ($purpose, $modelId) {
+            return [(string) $modelId => $this->normalizeLabPurpose($purpose) ?: 'all'];
+        })->all();
+        $prompt = trim((string) ($data['prompt_override'] ?: $this->buildLabPrompt($product, false, true, $facePromptEn)));
         if ($prompt === '') $prompt = trim((string) $product->prompt_template);
         $negativePrompt = trim((string) ($data['negative_prompt'] ?? $product->negative_prompt ?? '')) ?: null;
         $count = (int) $data['count'];
         $estimatedUsd = collect($gradeDefinitions)->flatMap(fn ($grade) => $grade['model_ids'])
             ->map(fn ($modelId) => $models->get($modelId))
             ->filter()
-            ->sum(fn (AiModel $model) => (float) $model->cost_per_generation_usd * $count);
+            ->sum(fn (AiModel $model) => $this->numericPrice($this->pricing->estimate($model, $count, false)['usd'] ?? null));
 
-        $experiment = DB::transaction(function () use ($request, $data, $product, $selectedImages, $models, $rate, $prompt, $negativePrompt, $count, $estimatedUsd, $gradeDefinitions, $effectiveModelIds) {
+        $experiment = DB::transaction(function () use ($request, $data, $product, $selectedImages, $models, $rate, $prompt, $negativePrompt, $count, $estimatedUsd, $gradeDefinitions, $effectiveModelIds, $facePromptEn, $facePromptFa, $modelPurposes) {
             $baseSettings = [
                 'count' => $count,
                 'resolution' => $data['resolution'],
@@ -302,6 +355,9 @@ class LabExperimentController extends Controller
                 'product_categories' => $this->productCategoryIds($product),
                 'product_category_names' => $product->categories->pluck('name_fa')->filter()->values()->all(),
                 'grades' => $gradeDefinitions,
+                'face_prompt_en' => $facePromptEn,
+                'face_prompt_fa' => $facePromptFa,
+                'model_purposes' => $modelPurposes,
             ];
             $experiment = LabExperiment::create([
                 'product_id' => $product->id,
@@ -337,6 +393,7 @@ class LabExperimentController extends Controller
             foreach ($gradeDefinitions as $gradeKey => $grade) {
                 foreach ($grade['model_ids'] as $attemptOrder => $modelId) {
                     $model = $models->get($modelId);
+                    $modelPrice = $this->pricing->estimate($model, $count, false);
                     $run = $experiment->runs()->create([
                         'ai_model_id' => $model->id,
                         'model_id' => $model->openrouter_model_id,
@@ -356,10 +413,16 @@ class LabExperimentController extends Controller
                             'grade_label' => $grade['label'],
                             'grade_resolution' => $grade['resolution'],
                             'grade_aspect_ratio' => $grade['aspect_ratio'],
+                            'preserve_face' => false,
+                            'face_prompt_en' => $facePromptEn,
+                            'face_prompt_fa' => $facePromptFa,
+                            'model_purpose' => $modelPurposes[(string) $model->id] ?? 'all',
+                            'pricing_source' => $modelPrice['source'] ?? null,
+                            'pricing_unit' => $modelPrice['unit'] ?? null,
                         ]),
-                        'estimated_cost_usd' => (float) $model->cost_per_generation_usd * $count,
-                        'estimated_cost_toman' => (float) $model->cost_per_generation_usd * $count * (float) ($rate['rate'] ?? 0) / 10,
-                        'quality' => $grade['resolution'], 'size' => $grade['aspect_ratio'], 'preserve_face' => true,
+                        'estimated_cost_usd' => $this->numericPrice($modelPrice['usd'] ?? null),
+                        'estimated_cost_toman' => $this->numericPrice($modelPrice['usd'] ?? null) * (float) ($rate['rate'] ?? 0) / 10,
+                        'quality' => $grade['resolution'], 'size' => $grade['aspect_ratio'], 'preserve_face' => false,
                         'exchange_rate_irr' => $experiment->exchange_rate_irr,
                     ]);
                     RunLabModelJob::dispatch($run->id);
@@ -462,7 +525,7 @@ class LabExperimentController extends Controller
                 foreach ($runs as $sourceRun) {
                     $model = $sourceRun->aiModel;
                     if (!$model || !$model->is_active || $model->output_modality !== 'image') continue;
-                    $cost = (float) $model->cost_per_generation_usd * (int) data_get($settings, 'count', 1);
+                    $cost = $this->numericPrice($this->pricing->estimate($model, (int) data_get($settings, 'count', 1), false)['usd'] ?? null);
                     $estimatedUsd += $cost;
                     $new->runs()->create([
                         'ai_model_id' => $model->id,
@@ -563,6 +626,9 @@ class LabExperimentController extends Controller
             'detail_quality' => ['nullable', 'string', 'max:24'],
             'usage_priority' => ['nullable', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:4000'],
+            'quality_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'identity_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sample_match_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $experiment = $output->loadMissing('run.experiment.runs.outputs.managerScore')->run->experiment;
@@ -600,6 +666,13 @@ class LabExperimentController extends Controller
                 'rated_at' => now(),
             ]
         );
+
+        $output->run->forceFill([
+            'quality_score' => $data['quality_score'] ?? $output->run->quality_score,
+            'identity_score' => $data['identity_score'] ?? $output->run->identity_score,
+            'sample_match_score' => $data['sample_match_score'] ?? $output->run->sample_match_score,
+            'notes' => $data['notes'] ?? $output->run->notes,
+        ])->save();
 
         if (array_key_exists('overall_score', $data)) {
             $output->forceFill([
@@ -674,11 +747,18 @@ class LabExperimentController extends Controller
      * پرامپت استاندارد آزمایش: تمام مدل‌ها یک دستور محصول و یک قرارداد صریح
      * برای استفاده از تصویر مرجع دریافت می‌کنند تا خروجی‌ها قابل مقایسه بمانند.
      */
-    private function buildLabPrompt(Product $product, bool $preserveFace, bool $hasReference = true): string
+    private function buildLabPrompt(Product $product, bool $preserveFace, bool $hasReference = true, ?string $facePromptEn = null): string
     {
-        $productPrompt = trim((string) $this->promptBuilder->build($product, [], $preserveFace));
+        // هویت چهره فقط وقتی به پرامپت اضافه می‌شود که مدیر تیک «حفظ چهره» را روشن کرده باشد.
+        $productPrompt = trim((string) $this->promptBuilder->build($product, [], false));
         if ($productPrompt === '') {
             $productPrompt = trim((string) $product->prompt_template) ?: 'Create a high quality image.';
+        }
+
+        if ($preserveFace) {
+            $identityPrompt = trim((string) ($facePromptEn ?: $product->identity_instructions ?: ProductPromptBuilder::defaultIdentityInstructions()));
+            if ($identityPrompt !== '') $productPrompt = implode("\n\n", [$productPrompt, $identityPrompt]);
+            if ($product->preserve_body) $productPrompt .= ' Preserve the same body shape and proportions.';
         }
 
         if (! $hasReference) {
@@ -689,6 +769,28 @@ class LabExperimentController extends Controller
             'Use the supplied reference image as the exact subject source for this generation. Recreate the scene described below with that same person or object as the subject. Do not ignore the reference image, do not replace the subject with a random person or object, and keep the reference subject recognizable in the final image.',
             $productPrompt,
         ]);
+    }
+
+    private function normalizeLabPurpose(mixed $purpose): ?string
+    {
+        $purpose = trim((string) $purpose);
+        if ($purpose === 'all') return 'all';
+        [$type, $key] = array_pad(explode(':', $purpose, 2), 2, null);
+        $allowed = [
+            'category' => ['popular', 'identity', 'economic'],
+            'usecase' => ['portrait', 'identity', 'business', 'design', 'creative'],
+        ];
+        if (isset($allowed[$type]) && in_array($key, $allowed[$type], true)) return $purpose;
+        return null;
+    }
+
+    private function modelMatchesLabPurpose(AiModel $model, string $purpose): bool
+    {
+        if ($purpose === 'all') return true;
+        [$type, $key] = array_pad(explode(':', $purpose, 2), 2, null);
+        return $type === 'category'
+            ? in_array($key, array_map('strval', (array) $model->lab_categories), true)
+            : $type === 'usecase' && in_array($key, $model->recommendedUseCaseKeys(), true);
     }
 
     private function storedImageMeta(string $path, string $source, ?string $name = null): array
@@ -845,7 +947,7 @@ class LabExperimentController extends Controller
             'tested_at' => optional($experiment->tested_at ?: $experiment->completed_at)->toIso8601String(),
             'runs' => $experiment->runs->map(function (LabRun $run) {
                 $cost = $this->effectiveRunCosts($run);
-                return ['id' => $run->id, 'model_id' => $run->model_id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'status' => $run->status, 'status_label' => $run->status_label, 'error_message' => $run->error_message, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'tokens' => $run->tokens_used, 'retry_count' => (int) $run->retry_count, 'max_retries' => (int) $run->max_retries, 'cost_usd' => $cost['usd'], 'cost_toman' => $cost['toman'], 'score' => null, 'rank' => $run->final_score !== null ? $run->rank : null, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'meta' => ['dimensions' => $output->width && $output->height ? $output->width . ' × ' . $output->height : null, 'width' => $output->width, 'height' => $output->height, 'ratio' => $output->ratio, 'size' => $output->size, 'format' => $output->mime_type ? strtoupper(Str::after($output->mime_type, '/')) : null, 'mime' => $output->mime_type, 'color' => $output->color_profile], 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => []])->values()];
+                return ['id' => $run->id, 'model_id' => $run->model_id, 'model' => $run->model_name_snapshot ?: $run->alias ?: $run->model_id, 'provider' => $run->provider_name_snapshot ?: $run->provider, 'purpose' => data_get($run->parameters, 'model_purpose', 'all'), 'pricing_source' => data_get($run->parameters, 'pricing_source'), 'pricing_unit' => data_get($run->parameters, 'pricing_unit'), 'status' => $run->status, 'status_label' => $run->status_label, 'error_message' => $run->error_message, 'quality' => $run->quality, 'size' => $run->size, 'preserve_face' => (bool) $run->preserve_face, 'seconds' => $run->build_seconds !== null ? (float) $run->build_seconds : ($run->duration_ms !== null ? round($run->duration_ms / 1000, 2) : null), 'latency_ms' => $run->latency_ms ?: $run->duration_ms, 'tokens' => $run->tokens_used, 'retry_count' => (int) $run->retry_count, 'max_retries' => (int) $run->max_retries, 'cost' => (float) ($run->cost ?: $cost['usd']), 'cost_usd' => $cost['usd'], 'cost_toman' => $cost['toman'], 'quality_score' => $run->quality_score, 'identity_score' => $run->identity_score, 'sample_match_score' => $run->sample_match_score, 'notes' => $run->notes, 'score' => null, 'rank' => $run->final_score !== null ? $run->rank : null, 'outputs' => $run->outputs->map(fn ($output) => ['id' => $output->id, 'url' => $output->url, 'meta' => ['dimensions' => $output->width && $output->height ? $output->width . ' × ' . $output->height : null, 'width' => $output->width, 'height' => $output->height, 'ratio' => $output->ratio, 'size' => $output->size, 'format' => $output->mime_type ? strtoupper(Str::after($output->mime_type, '/')) : null, 'mime' => $output->mime_type, 'color' => $output->color_profile], 'manager' => $output->managerScore ? ['overall' => $output->managerScore->overall_score, 'similarity' => $output->managerScore->similarity_score, 'detail' => $output->managerScore->detail_quality, 'priority' => $output->managerScore->usage_priority, 'notes' => $output->managerScore->notes] : null, 'ai_scores' => []])->values()];
             })->values(),
         ];
     }
@@ -858,6 +960,11 @@ class LabExperimentController extends Controller
             : ((float) $run->estimated_cost_toman > 0 ? (float) $run->estimated_cost_toman : $usd * ((float) $run->exchange_rate_irr / 10));
 
         return ['usd' => $usd, 'toman' => $toman];
+    }
+
+    private function numericPrice(mixed $value): float
+    {
+        return is_numeric($value) && (float) $value > 0 ? round((float) $value, 6) : 0.0;
     }
 
     private function audit(LabExperiment $experiment, Request $request, string $action, array $metadata = []): void

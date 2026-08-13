@@ -33,7 +33,8 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*')
+                || ($request->isMethod('post') && $request->is('admin/lab/*')),
         );
 
         // ═══ ترمیم خودکار کش خرابِ Blade ═══
@@ -48,6 +49,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // در فایل blade است، نه کش قدیمی — و پارامتر __viewcache_recovered=1 در آدرس از
         // حلقه‌ی بی‌نهایت جلوگیری می‌کند.
         $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->expectsJson() || ($request->isMethod('post') && $request->is('admin/lab/*'))) {
+                report($e);
+
+                return response()->json([
+                    'message' => 'اجرای آزمایش به‌دلیل یک خطای داخلی شروع نشد. لطفاً دوباره تلاش کنید.',
+                ], 500);
+            }
+
             $root = $e;
             while ($root->getPrevious()) {
                 $root = $root->getPrevious();

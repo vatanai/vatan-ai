@@ -243,6 +243,37 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         $defaults = is_array($defaults) ? $defaults : (json_decode((string) $defaults, true) ?: []);
         $input = [];
 
+        // بعضی catalogها قابلیت «عکس ورودی» را ثبت می‌کنند، اما فیلد مرجع را
+        // داخل allowed_inputs نگه نمی‌دارند. فیلدهای مرجع را از schema هم پیدا
+        // می‌کنیم تا مدل‌های image-to-image واقعاً تصویر انتخابی را دریافت کنند.
+        $properties = (array) (
+            data_get($model->input_schema, 'components.schemas.Input.properties')
+            ?: data_get($model->input_schema, 'properties')
+            ?: []
+        );
+        $referenceKeys = ['image_url', 'image_urls', 'image', 'images', 'input_image', 'input_images', 'source_image', 'subject_image', 'reference_image', 'reference_images'];
+        $schemaReferenceKeys = array_values(array_intersect($referenceKeys, array_keys($properties)));
+        if ($model->supports_image_input && $this->provider() === 'fal' && $schemaReferenceKeys === [] && empty($capabilities['reference_fields'])) {
+            $schemaReferenceKeys = str_contains(strtolower((string) $model->externalModelId()), '/edit')
+                ? ['image_urls']
+                : ['image_url'];
+        }
+        // بعضی رکوردهای قدیمی capability_config ناقص دارند، درحالی‌که schema
+        // خود مدل فیلدهایی مثل aspect_ratio را اعلام کرده است. برای جلوگیری از
+        // ارسال ناقص ورودی، کنترل‌های استانداردی که واقعاً در schema هستند را
+        // نیز مجاز می‌کنیم.
+        $schemaControls = array_values(array_intersect([
+            'aspect_ratio', 'quality', 'resolution', 'image_size', 'num_images',
+            'number_of_images', 'num_outputs', 'output_format', 'input_fidelity',
+            'background', 'moderation',
+        ], array_keys($properties)));
+        $allowed = array_values(array_unique(array_merge(
+            $allowed,
+            (array) ($capabilities['reference_fields'] ?? []),
+            $schemaReferenceKeys,
+            $schemaControls,
+        )));
+
         foreach ($defaults as $key => $value) {
             if (in_array($key, $allowed, true)) {
                 $input[$key] = $value;
@@ -375,13 +406,11 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         }
         if (!$supported || in_array($requested, $supported, true)) return $requested;
 
-        [$requestedWidth, $requestedHeight] = array_pad(array_map('floatval', explode(':', $requested, 2)), 2, 1.0);
-        $requestedRatio = $requestedHeight > 0 ? $requestedWidth / $requestedHeight : 1.0;
+        $requestedRatio = $this->aspectRatioValue($requested);
         $best = $supported[0];
         $bestDistance = INF;
         foreach ($supported as $candidate) {
-            [$width, $height] = array_pad(array_map('floatval', explode(':', $candidate, 2)), 2, 1.0);
-            $ratio = $height > 0 ? $width / $height : 1.0;
+            $ratio = $this->aspectRatioValue($candidate);
             $distance = abs(log(max(.0001, $requestedRatio) / max(.0001, $ratio)));
             if ($distance < $bestDistance) {
                 $bestDistance = $distance;
@@ -392,11 +421,23 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         return $best;
     }
 
+    private function aspectRatioValue(string $value): float
+    {
+        $value = trim(strtolower($value));
+        if (str_contains($value, ':')) {
+            [$width, $height] = array_pad(array_map('floatval', explode(':', $value, 2)), 2, 1.0);
+        } elseif (str_contains($value, 'x')) {
+            [$width, $height] = array_pad(array_map('floatval', explode('x', $value, 2)), 2, 1.0);
+        } else {
+            return 1.0;
+        }
+
+        return $height > 0 && $width > 0 ? $width / $height : 1.0;
+    }
+
     public function estimateCost(AiModel $model, array $payload = []): ?float
     {
-        $pricing = is_array($model->pricing_config) ? $model->pricing_config : [];
-        $unitPrice = $pricing['unit_price'] ?? $pricing['price'] ?? $model->cost_per_generation_usd;
-        if (!is_numeric($unitPrice)) return null;
-        return round((float) $unitPrice * max(1, (int) ($payload['n'] ?? 1)), 6);
+        return app(\App\Services\ProviderPricingService::class)
+            ->estimate($model, max(1, (int) ($payload['n'] ?? 1)))['usd'];
     }
 }

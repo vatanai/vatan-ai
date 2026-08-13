@@ -3,6 +3,8 @@
   $labSampleImage = asset('assets/img/images.jpg');
   $labExchangeRateToman = (float) data_get($exchange ?? [], 'rate', 0) / 10;
   $labTested = (bool) ($labTested ?? false);
+  $labFacePromptEn = trim((string) ($product?->identity_instructions ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructions()));
+  $labFacePromptFa = trim((string) ($product?->identity_instructions_fa ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructionsFa()));
   $labProviderLabels = [
     'liara' => 'لیارا',
     'openrouter' => 'OpenRouter',
@@ -38,10 +40,16 @@
       'provider' => $provider,
       'providerLabel' => $labProviderLabels[$provider] ?? ($model->provider_name ?? $provider),
       'providerEnglishLabel' => $labProviderEnglishLabels[$provider] ?? ($model->provider_name ?? $provider),
-      'costUsd' => $model->cost_per_generation_usd !== null ? (float) $model->cost_per_generation_usd : null,
+      'costUsd' => data_get($model->lab_pricing, 'usd') !== null ? (float) data_get($model->lab_pricing, 'usd') : null,
+      'costSource' => data_get($model->lab_pricing, 'source', 'قیمت گزارش نشده'),
       'supportsReference' => $supportsReference,
+      'labCategories' => array_values(array_filter(array_map('strval', (array) ($model->lab_categories ?? [])))),
+      'labPriority' => (int) ($model->lab_priority ?? 999),
+      'featuredInLab' => (bool) ($model->featured_in_lab ?? false),
+      'labStatus' => $model->lab_status ?: 'active',
+      'labDescription' => $model->lab_description ?: $model->description,
     ];
-  })->values();
+  })->sortBy('labPriority')->values();
   $labProviders = $labModels->groupBy('provider')->map(function ($models, $provider) use ($labProviderLabels, $labProviderEnglishLabels) {
     return [
       'value' => $provider,
@@ -51,7 +59,7 @@
   })->values();
 @endphp
 
-@php($labVersion = $labVersion ?? 'V12')
+@php($labVersion = $labVersion ?? 'V13')
 <section class="ai-model-lab" id="ai-model-lab" aria-labelledby="ai-model-lab-title" data-run-url="{{ $product ? route('admin.lab.products.quick-run', $product) : '' }}" data-run-template="{{ route('admin.lab.products.quick-run', ['product' => '__PRODUCT_ID__']) }}" data-product-images-template="{{ route('admin.lab.products.images', ['product' => '__PRODUCT_ID__']) }}" data-manager-score-template="{{ route('admin.lab.outputs.manager-score', ['output' => '__OUTPUT_ID__']) }}">
   <div class="ai-model-lab-header">
     <div class="ai-model-lab-heading">
@@ -78,20 +86,9 @@
     <div class="ai-model-lab-drawer-head">
       <div>
         <div class="ai-model-lab-drawer-title"><i class="fa-solid fa-sliders"></i> مدل‌های مورد آزمایش <span class="ai-model-lab-count" id="ai-model-lab-count">۰ مدل</span></div>
-        <div class="ai-model-lab-drawer-help">پرووایدر، نوع مدل و کاربرد را انتخاب کنید؛ مدل‌های ویدیویی فعلاً در این آزمایشگاه نمایش داده نمی‌شوند.</div>
+        <div class="ai-model-lab-drawer-help">پرووایدر، کاربرد و مدل را انتخاب کنید؛ مدل‌های ویدیویی فعلاً در این آزمایشگاه نمایش داده نمی‌شوند.</div>
       </div>
       <div class="ai-model-lab-toolbar">
-        <div class="ai-model-lab-evaluation-box">
-          <span class="ai-model-lab-evaluation-label">مدل ارزیاب:</span>
-          <select id="ai-model-lab-evaluator" class="ai-model-lab-evaluator" aria-label="مدل هوش مصنوعی ارزیاب">
-            <option value="gpt-4o-mini">GPT-4o mini</option>
-            @foreach($labModels as $labModel)
-              <option value="catalog-{{ $labModel['id'] }}">{{ $labModel['persianName'] }} · {{ $labModel['englishName'] }} · {{ $labModel['providerLabel'] }}</option>
-            @endforeach
-          </select>
-          <button type="button" class="ai-model-lab-evaluate" onclick="evaluateAiModelLab()"><i class="fa-solid fa-ranking-star"></i> ارزیابی</button>
-          <button type="button" class="ai-model-lab-evaluate ai-model-lab-evaluate-settings" aria-label="تنظیمات ارزیابی" title="تنظیمات"><i class="fa-solid fa-gear"></i></button>
-        </div>
         <div class="ai-model-lab-action-group">
           <button type="button" class="ai-model-lab-toolbar-item ai-model-lab-reset" onclick="resetAiModelLab()"><i class="fa-solid fa-rotate-left"></i> ریست تنظیمات</button>
           <div class="ai-model-lab-defaults-shell">
@@ -100,6 +97,22 @@
               <button type="button" data-default-profile="professional-face" onclick="applyAiModelLabDefaults('professional-face')">مدل حرفه‌ای چهره</button>
               <button type="button" data-default-profile="normal-face" onclick="applyAiModelLabDefaults('normal-face')">مدل معمولی چهره</button>
               <button type="button" data-default-profile="business" onclick="applyAiModelLabDefaults('business')">مدل کسب و کار</button>
+            </div>
+          </div>
+          <div class="ai-model-lab-settings-menu-shell">
+            <button type="button" class="ai-model-lab-settings-menu-toggle" aria-label="تنظیمات" aria-expanded="false" onclick="toggleAiModelLabSettingsMenu(event)"><i class="fa-solid fa-gear"></i></button>
+            <div class="ai-model-lab-settings-menu hidden" id="ai-model-lab-settings-menu" role="menu">
+              <div class="ai-model-lab-settings-evaluator">
+                <span>مدل ارزیاب</span>
+                <select id="ai-model-lab-evaluator" class="ai-model-lab-evaluator" aria-label="مدل هوش مصنوعی ارزیاب">
+                  <option value="gpt-4o-mini">GPT-4o mini</option>
+                  @foreach($labModels as $labModel)
+                    <option value="catalog-{{ $labModel['id'] }}">{{ $labModel['persianName'] }} · {{ $labModel['englishName'] }} · {{ $labModel['providerLabel'] }}</option>
+                  @endforeach
+                </select>
+                <button type="button" class="ai-model-lab-evaluate" onclick="evaluateAiModelLab()"><i class="fa-solid fa-ranking-star"></i> ارزیابی</button>
+              </div>
+              <button type="button" onclick="openAiModelLabFacePrompt(event)"><i class="fa-solid fa-language"></i> پرامپت حفظ چهره</button>
             </div>
           </div>
           <button type="button" class="ai-model-lab-run" onclick="runAiModelLab()"><i class="fa-solid fa-play"></i> آزمایش کن</button>
@@ -167,15 +180,15 @@
         <div class="ai-model-lab-manager-score-help">برای هر خروجی، نمره و اولویت استفاده را انتخاب کنید؛ همه مقادیر بلافاصله در جدول محاسبه دقیق ثبت می‌شوند.</div>
         <div class="ai-model-lab-table-wrap">
           <table class="ai-model-lab-manager-table">
-            <thead><tr><th>خروجی مدل</th><th>نمره کلی (۱ تا ۱۰)</th><th>شباهت به مرجع</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th></tr></thead>
-            <tbody id="ai-model-lab-manager-score-rows"><tr><td colspan="5" class="ai-model-lab-table-empty">پس از انتخاب مدل، گزینه‌های نمره‌دهی اینجا نمایش داده می‌شوند.</td></tr></tbody>
+            <thead><tr><th>خروجی مدل</th><th>نمره کلی (۱ تا ۱۰)</th><th>شباهت کیفی</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>کیفیت %</th><th>هویت %</th><th>تطبیق نمونه %</th><th>یادداشت</th></tr></thead>
+            <tbody id="ai-model-lab-manager-score-rows"><tr><td colspan="9" class="ai-model-lab-table-empty">پس از انتخاب مدل، گزینه‌های نمره‌دهی اینجا نمایش داده می‌شوند.</td></tr></tbody>
           </table>
         </div>
       </section>
       <div class="ai-model-lab-table-wrap">
         <table class="ai-model-lab-calculation-table" data-report-table="ai-lab-results">
           <thead>
-            <tr><th>مدل</th><th>پرووایدر</th><th>کیفیت / سایز</th><th>حفظ چهره</th><th>دلار</th><th>تومان</th><th>زمان ساخت (ثانیه)</th><th>توکن</th><th>تلاش مجدد</th><th>امتیاز ارزیاب</th><th>نمره مدیر</th><th>شباهت مدیر</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>اولویت ارزیابی</th></tr>
+            <tr><th>مدل</th><th>پرووایدر</th><th>کیفیت / سایز</th><th>حفظ چهره</th><th>دلار</th><th>تومان</th><th>زمان ساخت (ثانیه)</th><th>اعتبار</th><th>تلاش مجدد</th><th>امتیاز ارزیاب</th><th>نمره مدیر</th><th>شباهت مدیر</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>اولویت ارزیابی</th></tr>
           </thead>
           <tbody id="ai-model-lab-calculation-rows"></tbody>
           <tfoot>
@@ -190,6 +203,32 @@
     </section>
   </div>
 </section>
+
+<div class="ai-model-lab-face-modal hidden" id="ai-model-lab-face-modal" role="dialog" aria-modal="true" aria-labelledby="ai-model-lab-face-modal-title">
+  <div class="ai-model-lab-face-modal-card">
+    <div class="ai-model-lab-face-modal-head">
+      <div>
+        <h3 id="ai-model-lab-face-modal-title">پرامپت حفظ چهره</h3>
+        <p>هر کدام را ویرایش کنید تا متن مقابل به‌صورت خودکار ترجمه شود.</p>
+      </div>
+      <button type="button" class="ai-model-lab-face-modal-close" aria-label="بستن" onclick="closeAiModelLabFacePrompt()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ai-model-lab-face-modal-fields">
+      <label class="ai-model-lab-face-prompt-field" dir="ltr">
+        <span>English</span>
+        <textarea id="ai-model-lab-face-prompt-en" rows="9">{{ $labFacePromptEn }}</textarea>
+      </label>
+      <label class="ai-model-lab-face-prompt-field" dir="rtl">
+        <span>فارسی</span>
+        <textarea id="ai-model-lab-face-prompt-fa" rows="9">{{ $labFacePromptFa }}</textarea>
+      </label>
+    </div>
+    <div class="ai-model-lab-face-translation-state" id="ai-model-lab-face-translation-state">ترجمه‌ی خودکار با تغییر هر کدام از دو متن انجام می‌شود.</div>
+    <div class="ai-model-lab-face-modal-actions">
+      <button type="button" class="ai-model-lab-face-modal-save" onclick="closeAiModelLabFacePrompt()"><i class="fa-solid fa-check"></i> ذخیره تنظیمات</button>
+    </div>
+  </div>
+</div>
 
 <style>
   #ai-model-lab { position:relative; overflow:hidden; border:1px solid var(--b1); border-radius:14px; background:var(--s2); }
@@ -212,13 +251,44 @@
   #ai-model-lab .ai-model-lab-chevron { color:var(--text3); font-size:9px; transition:transform .18s ease; }
   #ai-model-lab .ai-model-lab-toggle[aria-expanded="true"] .ai-model-lab-chevron { transform:rotate(180deg); }
   #ai-model-lab .ai-model-lab-version { padding:2px 5px; border-radius:5px; color:var(--text3); background:var(--input-bg); font-size:8.8px; font-weight:800; }
-  #ai-model-lab .ai-model-lab-drawer { padding:0 18px 16px; border-top:1px solid var(--b1); }
+  #ai-model-lab .ai-model-lab-drawer { padding:0 18px 16px; border-top:1px solid var(--b1); direction:rtl; }
+  #ai-model-lab .ai-model-lab-settings-menu-shell { position:relative; }
+  #ai-model-lab .ai-model-lab-settings-menu-toggle { display:inline-flex; align-items:center; justify-content:center; width:37px; height:37px; padding:0; border:1px solid var(--b1); border-radius:7px; color:var(--text3); background:var(--s1); font-family:inherit; font-size:11px; cursor:pointer; }
+  #ai-model-lab .ai-model-lab-settings-menu-toggle:hover, #ai-model-lab .ai-model-lab-settings-menu-toggle[aria-expanded="true"] { border-color:var(--accent); color:var(--accent); background:var(--primary-l); }
+  #ai-model-lab .ai-model-lab-settings-menu { position:absolute; z-index:60; top:calc(100% + 6px); right:0; min-width:270px; padding:5px; border:1px solid var(--b1); border-radius:8px; background:var(--s2); box-shadow:var(--shadow-card); }
+  #ai-model-lab .ai-model-lab-settings-evaluator { display:flex; align-items:center; gap:6px; padding:6px; border-bottom:1px solid var(--b1); }
+  #ai-model-lab .ai-model-lab-settings-evaluator > span { color:var(--text3); font-size:8.5px; font-weight:800; white-space:nowrap; }
+  #ai-model-lab .ai-model-lab-settings-evaluator .ai-model-lab-evaluator { min-width:0; flex:1; width:auto; }
+  #ai-model-lab .ai-model-lab-settings-evaluator .ai-model-lab-evaluate { min-width:70px; width:auto; height:29px; padding:0 8px; font-size:8.5px; }
+  #ai-model-lab .ai-model-lab-settings-menu button { display:flex; align-items:center; gap:7px; width:100%; padding:8px; border:0; border-bottom:1px solid var(--b1); color:var(--text2); background:transparent; font-family:inherit; font-size:9px; text-align:right; cursor:pointer; }
+  #ai-model-lab .ai-model-lab-settings-menu button:last-child { border-bottom:0; }
+  #ai-model-lab .ai-model-lab-settings-menu button:hover { color:var(--text); background:var(--primary-l); }
+  #ai-model-lab .ai-model-lab-settings-menu > button { display:flex; align-items:center; gap:7px; width:100%; padding:8px; border:0; border-bottom:1px solid var(--b1); color:var(--text2); background:transparent; font-family:inherit; font-size:9px; text-align:right; cursor:pointer; }
   #ai-model-lab .ai-model-lab-drawer-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0 12px; }
   #ai-model-lab .ai-model-lab-drawer-title { display:flex; align-items:center; gap:7px; color:var(--text2); font-size:11px; font-weight:800; }
   #ai-model-lab .ai-model-lab-drawer-title i { color:var(--accent); }
   #ai-model-lab .ai-model-lab-drawer-help { margin-top:4px; color:var(--text3); font-size:10px; }
   #ai-model-lab .ai-model-lab-count { display:inline-flex; align-items:center; margin-right:4px; padding:4px 8px; border-radius:999px; color:var(--accent); background:var(--primary-l); font-size:10px; font-weight:800; vertical-align:middle; }
   #ai-model-lab .ai-model-lab-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:wrap; }
+  #ai-model-lab .ai-model-lab-category-select { display:flex; align-items:center; gap:6px; min-height:37px; padding:3px 7px; border:1px solid var(--b1); border-radius:8px; color:var(--text3); background:var(--s1); font-size:8.5px; font-weight:800; white-space:nowrap; }
+  #ai-model-lab .ai-model-lab-category-select select { width:auto; min-width:126px; height:28px; padding:0 7px; border:0; color:var(--text); background:transparent; font-family:inherit; font-size:9px; font-weight:800; outline:none; }
+  #ai-model-lab .ai-model-lab-category-select select:focus { color:var(--accent); }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-category-select,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field { min-width:0; }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field { display:flex; flex-direction:column; align-items:stretch; gap:6px; min-width:0; }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > span:first-child { color:var(--text3); font-size:9.5px; font-weight:700; }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > select,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-model-trigger,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-checkbox-control { width:100%; min-width:0; box-sizing:border-box; }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > select,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-model-trigger,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-checkbox-control { height:37px; }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > select,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-model-trigger { padding-inline:9px; border:1px solid var(--b1); border-radius:8px; color:var(--text); background:var(--s2); }
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > select:hover,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-field > select:focus,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-model-trigger:hover,
+  #ai-model-lab .ai-model-lab-row .ai-model-lab-model-trigger:focus { border-color:var(--accent); color:var(--text); }
   #ai-model-lab .ai-model-lab-evaluator-control { display:flex; align-items:center; gap:5px; min-height:28px; }
   #ai-model-lab .ai-model-lab-evaluator-control > span { color:var(--text3); font-size:8px; font-weight:800; white-space:nowrap; }
   #ai-model-lab .ai-model-lab-toolbar-item { display:inline-flex; align-items:center; gap:5px; min-height:28px; padding:4px 7px; border:1px solid var(--b1); border-radius:7px; color:var(--text3); background:var(--s1); font-family:inherit; font-size:8.5px; font-weight:700; white-space:nowrap; }
@@ -250,7 +320,8 @@
   #ai-model-lab .ai-model-lab-loading { position:absolute; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; gap:9px; min-height:260px; color:var(--text); background:color-mix(in srgb, var(--s2) 82%, transparent); font-size:12px; font-weight:900; }
   #ai-model-lab .ai-model-lab-loading.hidden { display:none; }
   #ai-model-lab .ai-model-lab-rows { display:grid; gap:9px; }
-  #ai-model-lab .ai-model-lab-row { display:grid; grid-template-columns:minmax(125px, .75fr) minmax(120px, .72fr) minmax(135px, .82fr) minmax(210px, 1.4fr) minmax(110px, .62fr) minmax(110px, .66fr) minmax(95px, .5fr) 32px; align-items:end; gap:9px; padding:12px; border:1px solid var(--b1); border-radius:11px; background:var(--s1); }
+  #ai-model-lab .ai-model-lab-row { position:relative; display:grid; grid-template-columns:minmax(0, 1.728fr) minmax(0, 1fr) minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) minmax(0, .85fr); align-items:end; gap:9px; width:100%; min-width:0; box-sizing:border-box; padding:12px 12px 12px 54px; border:1px solid var(--b1); border-radius:11px; background:var(--s1); direction:rtl; }
+  #ai-model-lab .ai-model-lab-row > * { min-width:0; }
   #ai-model-lab .ai-model-lab-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
   #ai-model-lab .ai-model-lab-field > span { color:var(--text3); font-size:9.5px; font-weight:700; }
   #ai-model-lab .ai-model-lab-preserve-field { align-self:stretch; }
@@ -260,7 +331,7 @@
   #ai-model-lab select { width:100%; height:37px; min-width:0; padding:0 9px; border:1px solid var(--b1); border-radius:8px; outline:none; color:var(--text); background:var(--s2); font-family:inherit; font-size:10.5px; cursor:pointer; }
   #ai-model-lab select:hover, #ai-model-lab select:focus { border-color:var(--accent); }
   #ai-model-lab select:disabled { opacity:.45; cursor:not-allowed; }
-  #ai-model-lab .ai-model-lab-model-shell { position:relative; }
+  #ai-model-lab .ai-model-lab-model-shell { position:relative; min-width:0; }
   #ai-model-lab .ai-model-lab-model-trigger { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; height:37px; padding:0 9px; border:1px solid var(--b1); border-radius:8px; color:var(--text); background:var(--s2); font-family:inherit; font-size:10.5px; text-align:right; cursor:pointer; }
   #ai-model-lab .ai-model-lab-model-trigger:hover, #ai-model-lab .ai-model-lab-model-trigger:focus { border-color:var(--accent); outline:none; }
   #ai-model-lab .ai-model-lab-model-trigger:disabled { opacity:.45; cursor:not-allowed; }
@@ -278,7 +349,7 @@
   #ai-model-lab .ai-model-lab-model-option > span:nth-child(2) b { color:var(--text2); font-weight:800; }
   #ai-model-lab .ai-model-lab-model-option > span:nth-child(2) small { overflow:hidden; color:var(--text3); font-size:7.5px; text-overflow:ellipsis; white-space:nowrap; }
   #ai-model-lab .ai-model-lab-model-option .model-quality-grade { color:var(--warning); font-weight:800; white-space:nowrap; }
-  #ai-model-lab .ai-model-lab-remove { width:32px; height:32px; border:1px solid var(--b1); border-radius:8px; color:var(--text3); background:transparent; cursor:pointer; transition:all .18s ease; }
+  #ai-model-lab .ai-model-lab-remove { position:absolute; left:12px; bottom:12px; display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; padding:0; border:1px solid var(--b1); border-radius:8px; color:var(--text3); background:transparent; cursor:pointer; transition:all .18s ease; }
   #ai-model-lab .ai-model-lab-remove:hover { border-color:var(--danger); color:var(--danger); background:var(--danger-l); }
   #ai-model-lab .ai-model-lab-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:11px; }
   #ai-model-lab .ai-model-lab-add { display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 11px; border:1px solid var(--primary-m); border-radius:8px; color:var(--primary); background:var(--primary-l); font-size:10px; font-weight:800; cursor:pointer; }
@@ -362,15 +433,34 @@
   #ai-model-lab .ai-model-lab-manager-score-title { display:flex; align-items:center; gap:6px; color:var(--text2); font-size:10px; font-weight:900; }
   #ai-model-lab .ai-model-lab-manager-score-title i { color:var(--accent); }
   #ai-model-lab .ai-model-lab-manager-score-help { margin:4px 0 8px; color:var(--text3); font-size:8.5px; }
+  #ai-model-lab .ai-model-lab-metric-input { width:78px; min-height:29px; padding:4px 6px; border:1px solid var(--b1); border-radius:6px; color:var(--text); background:var(--s2); font-family:inherit; font-size:9px; }
+  #ai-model-lab .ai-model-lab-note-input { width:120px; }
   #ai-model-lab .ai-model-lab-manager-table { width:100%; min-width:700px; border-collapse:collapse; color:var(--text2); background:var(--s1); font-size:8.5px; }
   #ai-model-lab .ai-model-lab-manager-table th, #ai-model-lab .ai-model-lab-manager-table td { padding:7px; border:1px solid var(--b1); text-align:right; white-space:nowrap; background:var(--s1); }
   #ai-model-lab .ai-model-lab-manager-table th { color:var(--text3); background:var(--s1); font-size:8px; font-weight:800; }
   #ai-model-lab .ai-model-lab-manager-table td:first-child { color:var(--text); font-weight:800; }
   #ai-model-lab .ai-model-lab-manager-table select { width:100%; min-width:118px; height:28px; padding:0 6px; font-size:8.5px; }
   #ai-model-lab .ai-model-lab-manager-table tr:last-child td { border-bottom:1px solid var(--b1); }
+  .ai-model-lab-face-modal { position:fixed; z-index:200; inset:0; display:flex; align-items:center; justify-content:center; padding:20px; background:color-mix(in srgb, var(--primary) 28%, transparent); }
+  .ai-model-lab-face-modal.hidden { display:none; }
+  .ai-model-lab-face-modal-card { width:min(860px, 100%); max-height:min(90vh, 760px); overflow:auto; padding:18px; border:1px solid var(--b1); border-radius:14px; background:var(--s2); box-shadow:var(--shadow-card); direction:rtl; }
+  .ai-model-lab-face-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .ai-model-lab-face-modal-head h3 { color:var(--text); font-size:14px; }
+  .ai-model-lab-face-modal-head p { color:var(--text3); font-size:10px; }
+  .ai-model-lab-face-modal-close { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border:1px solid var(--b1); border-radius:7px; color:var(--text3); background:var(--s1); cursor:pointer; }
+  .ai-model-lab-face-modal-close:hover { border-color:var(--danger); color:var(--danger); }
+  .ai-model-lab-face-modal-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; direction:rtl; }
+  .ai-model-lab-face-prompt-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .ai-model-lab-face-prompt-field > span { color:var(--text2); font-size:10px; font-weight:800; }
+  .ai-model-lab-face-prompt-field textarea { width:100%; min-height:210px; resize:vertical; padding:10px; border:1px solid var(--b1); border-radius:9px; outline:none; color:var(--text); background:var(--s1); font-family:inherit; font-size:10px; line-height:1.8; }
+  .ai-model-lab-face-prompt-field textarea:focus { border-color:var(--accent); }
+  .ai-model-lab-face-translation-state { margin-top:9px; color:var(--text3); font-size:9px; }
+  .ai-model-lab-face-modal-actions { display:flex; justify-content:flex-start; margin-top:14px; }
+  .ai-model-lab-face-modal-save { display:inline-flex; align-items:center; gap:6px; min-height:33px; padding:0 12px; border:1px solid var(--green); border-radius:8px; color:var(--green); background:var(--green-l); font-family:inherit; font-size:10px; font-weight:800; cursor:pointer; }
+  .ai-model-lab-face-modal-save:hover { color:var(--s2); background:var(--green); }
   @media (min-width:981px) { #ai-model-lab .ai-model-lab-toolbar { flex-wrap:nowrap; } }
-  @media (max-width: 980px) { #ai-model-lab .ai-model-lab-row { grid-template-columns:repeat(2, minmax(0, 1fr)); } #ai-model-lab .ai-model-lab-remove { align-self:center; } }
-  @media (max-width: 640px) { #ai-model-lab .ai-model-lab-header, #ai-model-lab .ai-model-lab-drawer-head, #ai-model-lab .ai-model-lab-footer, #ai-model-lab .ai-model-lab-input-heading, #ai-model-lab .ai-model-lab-output-heading, #ai-model-lab .ai-model-lab-calculation-head { align-items:flex-start; flex-direction:column; } #ai-model-lab .ai-model-lab-header-actions { align-self:stretch; justify-content:center; } #ai-model-lab .ai-model-lab-toolbar { justify-content:flex-start; width:100%; } #ai-model-lab .ai-model-lab-evaluation-box { width:100%; } #ai-model-lab .ai-model-lab-evaluator { min-width:0; flex:1; } #ai-model-lab .ai-model-lab-toggle { align-self:stretch; width:100%; min-width:0; justify-content:center; } #ai-model-lab .ai-model-lab-row { grid-template-columns:1fr; } #ai-model-lab .ai-model-lab-remove { width:100%; } #ai-model-lab .ai-model-lab-output-grid { grid-template-columns:1fr; } #ai-model-lab .ai-model-lab-output-model-cards-wrap { grid-column:auto; } #ai-model-lab .ai-model-lab-output-model-cards { grid-template-columns:1fr; } #ai-model-lab .ai-model-lab-input-meta { grid-template-columns:repeat(2, minmax(0, 1fr)); } #ai-model-lab .ai-model-lab-model-menu { min-width:0; width:calc(100vw - 80px); } }
+  @media (max-width: 980px) { #ai-model-lab .ai-model-lab-row { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { #ai-model-lab .ai-model-lab-header, #ai-model-lab .ai-model-lab-drawer-head, #ai-model-lab .ai-model-lab-footer, #ai-model-lab .ai-model-lab-input-heading, #ai-model-lab .ai-model-lab-output-heading, #ai-model-lab .ai-model-lab-calculation-head { align-items:flex-start; flex-direction:column; } #ai-model-lab .ai-model-lab-header-actions { align-self:stretch; justify-content:center; } #ai-model-lab .ai-model-lab-toolbar { justify-content:flex-start; width:100%; } #ai-model-lab .ai-model-lab-toggle { align-self:stretch; width:100%; min-width:0; justify-content:center; } #ai-model-lab .ai-model-lab-row { grid-template-columns:1fr; padding:12px 12px 12px 54px; } #ai-model-lab .ai-model-lab-output-grid { grid-template-columns:1fr; } #ai-model-lab .ai-model-lab-output-model-cards-wrap { grid-column:auto; } #ai-model-lab .ai-model-lab-output-model-cards { grid-template-columns:1fr; } #ai-model-lab .ai-model-lab-input-meta { grid-template-columns:repeat(2, minmax(0, 1fr)); } #ai-model-lab .ai-model-lab-model-menu { min-width:0; width:calc(100vw - 80px); } .ai-model-lab-face-modal-fields { grid-template-columns:1fr; } }
 </style>
 
 <script>
@@ -384,6 +474,7 @@
   const sampleImage = @json($labSampleImage);
   const placeholderImage = @json(asset('assets/img/vatan-logo.svg'));
   const exchangeRateToman = Number(@json($labExchangeRateToman)) || 0;
+  const facePromptTranslationUrl = @json(route('admin.products.translate_identity_prompt'));
   const ordinalNames = ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم'];
   const qualityOptions = [
     ['480', '۴۸۰'], ['720', '۷۲۰'], ['1080', '۱۰۸۰'], ['1440', '۱۴۴۰'], ['2160', '۲۱۶۰']
@@ -392,15 +483,11 @@
     ['4:5', '۴:۵ · عمودی'], ['9:16', '۹:۱۶ · استوری'], ['3:4', '۳:۴ · عمودی'],
     ['1:1', '۱:۱ · مربعی'], ['2:3', '۲:۳ · عمودی'], ['16:9', '۱۶:۹ · افقی'], ['3:2', '۳:۲ · افقی']
   ];
-  const taskTypeLabels = {
-    text_to_image: 'متن به عکس', image_to_image: 'عکس به عکس', text_to_video: 'متن به ویدیو',
-    image_to_video: 'عکس به ویدیو', video_to_video: 'ویدیو به ویدیو', face_consistency: 'حفظ هویت چهره',
-    face_animation: 'متحرک‌سازی چهره', upscaling: 'افزایش کیفیت',
-  };
   const useCaseLabels = {
     portrait: 'چهره و پرتره', identity: 'حفظ هویت چهره', business: 'محصول و کسب‌وکار',
     design: 'طراحی و متن', creative: 'تصویرسازی خلاق', video: 'ویدیو و موشن',
   };
+  const labCategoryLabels = { popular: 'پرکاربردترین', identity: 'بیشترین شباهت', economic: 'اقتصادی', vip: 'VIP', experimental: 'آزمایشی', all: 'همه مدل‌ها' };
   let rowIndex = 0;
   let labRunReady = false;
   let managerScores = {};
@@ -451,28 +538,37 @@
     return `<option value="">${placeholder}</option>` + options.map(option => `<option value="${esc(option[0])}" ${option[0] === selectedValue ? 'selected' : ''}>${esc(option[1])}</option>`).join('');
   }
 
-  function taskMarkup() {
-    const existing = [...new Set(models.map(model => model.taskType).filter(Boolean))];
-    return '<option value="all">همه نوع‌ها</option>' + existing.map(task =>
-      `<option value="${esc(task)}">${esc(taskTypeLabels[task] || task)}</option>`
-    ).join('');
+  const labPurposeOptions = [
+    ['all', 'همه مدل‌ها'],
+    ['category:popular', 'پرکاربردترین'], ['category:identity', 'بیشترین شباهت'],
+    ['category:economic', 'اقتصادی'],
+    ['usecase:portrait', 'چهره و پرتره'], ['usecase:identity', 'حفظ هویت چهره'],
+    ['usecase:business', 'محصول و کسب‌وکار'], ['usecase:design', 'طراحی و متن'],
+    ['usecase:creative', 'تصویرسازی خلاق'],
+  ];
+
+  function labPurposeMarkup() {
+    return labPurposeOptions.map(option => `<option value="${esc(option[0])}">${esc(option[1])}</option>`).join('');
   }
 
-  function useCaseMarkup() {
-    const existing = [...new Set(models.flatMap(model => model.useCases || []).filter(Boolean))];
-    return '<option value="all">همه کاربردها</option>' + existing.map(useCase =>
-      `<option value="${esc(useCase)}">${esc(useCaseLabels[useCase] || useCase)}</option>`
-    ).join('');
+  function modelMatchesPurpose(model, purpose = 'all') {
+    if (!purpose || purpose === 'all') return true;
+    const [type, key] = String(purpose).split(':');
+    return type === 'category'
+      ? (model.labCategories || []).includes(key)
+      : type === 'usecase'
+        ? (model.useCases || []).includes(key)
+        : false;
   }
 
-  function modelMenuMarkup(provider, task = 'all', useCase = 'all') {
+  function modelMenuMarkup(provider, purpose = 'all') {
     const filtered = models.filter(model => model.provider === provider
-      && (task === 'all' || model.taskType === task)
-      && (useCase === 'all' || (model.useCases || []).includes(useCase)));
+      && modelMatchesPurpose(model, purpose))
+      .sort((a, b) => Number(a.labPriority || 999) - Number(b.labPriority || 999));
     if (!filtered.length) return '<div class="text-[10px] text-[var(--text3)] text-center py-3">مدل سازگار با این فیلترها پیدا نشد.</div>';
-    return '<div class="ai-model-lab-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>نوع و قابلیت</span><span>بهترین برای</span><span>گرید</span></div>' +
+    return '<div class="ai-model-lab-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>قابلیت</span><span>بهترین برای</span><span>گرید</span></div>' +
       '<div class="ai-model-lab-model-options">' + filtered.map(model =>
-        `<button type="button" class="ai-model-lab-model-option" data-model-key="${esc(model.id)}"><span><b>${esc(model.persianName)}</b><small dir="ltr">${esc(model.englishName)}</small></span><span><b>${esc(model.usage)}</b><small>${esc((model.capabilities || []).slice(1, 3).join(' · ') || 'قابلیت پایه')}</small></span><span>${esc(model.primaryUseCase || 'کاربری عمومی')}</span><span class="model-quality-grade">${esc(model.grade)}</span></button>`
+        `<button type="button" class="ai-model-lab-model-option" data-model-key="${esc(model.id)}" title="${esc(model.labDescription || '')}"><span><b>${esc(model.persianName)}</b><small dir="ltr">${esc(model.englishName)}</small></span><span><b>${esc(model.usage)}</b><small>${esc((model.capabilities || []).slice(1, 3).join(' · ') || 'قابلیت پایه')}</small></span><span>${esc(model.primaryUseCase || 'کاربری عمومی')}<small>${esc(model.labStatus === 'experimental' ? 'آزمایشی' : (labCategoryLabels[(model.labCategories || [])[0]] || ''))}</small></span><span class="model-quality-grade">${esc(model.grade)}</span></button>`
       ).join('') + '</div>';
   }
 
@@ -512,7 +608,9 @@
               <div><strong class="ai-model-lab-money-stack"><span dir="ltr"><em>دلار</em><b>${dollar}</b></span><span dir="rtl"><em>تومان</em><b>${toman}</b></span></strong></div>
               <div><strong><span>ابعاد: ${esc(outputMeta.dimensions || '—')}</span><span>زمان ساخت: ${run.seconds ?? '—'} ثانیه</span></strong></div>
               <div><strong><span>کیفیت: ${esc(quality)}</span><span>سایز: ${esc(size)}</span></strong></div>
-              <div><strong><span>توکن: ${formatTokens(run.tokens)}</span><span>تلاش مجدد: ${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</span></strong></div>
+              <div><strong><span>امتیاز کیفیت: ${run.quality_score ?? '—'}</span><span>شباهت هویت: ${run.identity_score ?? '—'}</span></strong></div>
+              <div><strong><span>تطبیق نمونه: ${run.sample_match_score ?? '—'}</span><span>یادداشت: ${esc(run.notes || '—')}</span></strong></div>
+              <div><strong><span>اعتبار: ${formatTokens(run.tokens)}</span><span>تلاش مجدد: ${Number(run.retry_count || 0).toLocaleString('fa-IR')} بار</span></strong></div>
               <div><strong><span>فرمت: ${esc(outputMeta.format || '—')}</span><span>حفظ چهره: ${run.preserve_face ? 'فعال' : 'خاموش'}</span></strong></div>
             </div>
           </article>`;
@@ -530,8 +628,8 @@
       const costUsd = selectedModel?.costUsd !== null && selectedModel?.costUsd !== undefined ? Number(selectedModel.costUsd) : 0;
       const dollar = formatUsd(costUsd);
       const toman = exchangeRateToman > 0 && costUsd > 0 ? Math.round(costUsd * exchangeRateToman).toLocaleString('fa-IR') : '—';
-      const tokens = index === 0 ? '۱٬۲۸۰' : '۱٬۸۴۰';
-      const buildSeconds = 48 + (index * 13);
+      const tokens = '—';
+      const buildSeconds = '—';
       const preserveFace = row.querySelector('.ai-model-lab-preserve-face')?.checked ? 'فعال' : 'خاموش';
       return `
         <article class="ai-model-lab-output-card ai-model-lab-model-output-card">
@@ -543,9 +641,9 @@
           <div class="ai-model-lab-output-meta">
             <div><strong><span>مدل: <b dir="ltr">${esc(englishName)}</b></span><span>نسخه: ${version}</span></strong></div>
           <div><strong class="ai-model-lab-money-stack"><span dir="ltr"><em>دلار</em><b>${dollar}</b></span><span dir="rtl"><em>تومان</em><b>${toman}</b></span></strong></div>
-            <div><strong><span>تاریخ: ۱۴۰۴/۰۴/۲۲</span><span>زمان ساخت: ${buildSeconds} ثانیه</span></strong></div>
+            <div><strong><span>تاریخ: —</span><span>زمان ساخت: ${buildSeconds}</span></strong></div>
             <div><strong><span>کیفیت: ${esc(quality)}</span><span>سایز: ${esc(size)}</span></strong></div>
-            <div><strong><span>توکن: ${tokens}</span><span>تلاش مجدد: ۰ بار</span></strong></div>
+            <div><strong><span>اعتبار: ${tokens}</span><span>تلاش مجدد: —</span></strong></div>
             <div><strong><span>Seed: تصادفی</span><span>حفظ چهره: ${preserveFace}</span></strong></div>
           </div>
         </article>`;
@@ -633,8 +731,8 @@
         <td dir="ltr">${formatUsd(costUsd)}</td>
         <td dir="rtl">${costToman}</td>
         <td dir="ltr">${seconds}</td>
-        <td dir="ltr">${index === 0 ? '۱٬۲۸۰' : '۱٬۸۴۰'}</td>
-        <td>۰ بار</td>
+        <td dir="ltr">—</td>
+        <td>—</td>
         <td class="lab-score">${score}</td>
         <td class="lab-manager-score" data-lab-manager-score="${esc(model?.id || '')}">${esc(manager.overall || '—')}</td>
         <td data-lab-manager-field="similarity">${esc(manager.similarity || '—')}</td>
@@ -654,7 +752,7 @@
         return { run, output, index, manager: output.manager || {} };
       }).filter(item => item.output?.id);
       if (!realRows.length) {
-        table.innerHTML = '<tr><td colspan="5" class="ai-model-lab-table-empty">بعد از آماده شدن خروجی‌ها، نمره مدیر سایت اینجا ذخیره می‌شود.</td></tr>';
+        table.innerHTML = '<tr><td colspan="9" class="ai-model-lab-table-empty">بعد از آماده شدن خروجی‌ها، نمره مدیر سایت اینجا ذخیره می‌شود.</td></tr>';
         return;
       }
       const selectOptions = (values, selected, label = value => value) => '<option value="">انتخاب</option>' + values.map(value => {
@@ -670,12 +768,16 @@
         <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'similarity', this.value, true)">${selectOptions(qualitativeValues, manager.similarity)}</select></td>
         <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'detail', this.value, true)">${selectOptions(qualitativeValues, manager.detail)}</select></td>
         <td><select onchange="updateAiManagerScore('${esc(output.id)}', 'priority', this.value, true)">${selectOptions(priorityValues, manager.priority, value => 'اولویت ' + faNumber(value))}</select></td>
+        <td><input class="ai-model-lab-metric-input" type="number" min="0" max="100" step="0.01" data-run-metric="quality_score" value="${esc(run.quality_score ?? '')}" onchange="saveAiRunMetric('${esc(output.id)}', this)"></td>
+        <td><input class="ai-model-lab-metric-input" type="number" min="0" max="100" step="0.01" data-run-metric="identity_score" value="${esc(run.identity_score ?? '')}" onchange="saveAiRunMetric('${esc(output.id)}', this)"></td>
+        <td><input class="ai-model-lab-metric-input" type="number" min="0" max="100" step="0.01" data-run-metric="sample_match_score" value="${esc(run.sample_match_score ?? '')}" onchange="saveAiRunMetric('${esc(output.id)}', this)"></td>
+        <td><input class="ai-model-lab-metric-input ai-model-lab-note-input" type="text" data-run-metric="notes" value="${esc(run.notes ?? '')}" onchange="saveAiRunMetric('${esc(output.id)}', this)"></td>
       </tr>`).join('');
       return;
     }
     const rows = Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId);
     if (!rows.length) {
-      table.innerHTML = '<tr><td colspan="5" class="ai-model-lab-table-empty">پس از انتخاب مدل، گزینه‌های نمره‌دهی اینجا نمایش داده می‌شوند.</td></tr>';
+      table.innerHTML = '<tr><td colspan="9" class="ai-model-lab-table-empty">پس از انتخاب مدل، گزینه‌های نمره‌دهی اینجا نمایش داده می‌شوند.</td></tr>';
       return;
     }
     const selectOptions = (values, selected, label = value => value) => '<option value="">انتخاب</option>' + values.map(value => {
@@ -695,6 +797,7 @@
         <td><select onchange="updateAiManagerScore('${esc(model?.id || '')}', 'similarity', this.value)">${selectOptions(qualitativeValues, score.similarity)}</select></td>
         <td><select onchange="updateAiManagerScore('${esc(model?.id || '')}', 'detail', this.value)">${selectOptions(qualitativeValues, score.detail)}</select></td>
         <td><select onchange="updateAiManagerScore('${esc(model?.id || '')}', 'priority', this.value)">${selectOptions(priorityValues, selectedPriority, value => 'اولویت ' + faNumber(value))}</select></td>
+        <td>—</td><td>—</td><td>—</td><td>پس از اجرا</td>
       </tr>`;
     }).join('');
   }
@@ -736,6 +839,9 @@
       const names = ['overall_score', 'similarity_score', 'detail_quality', 'usage_priority'];
       payload[names[index]] = select.value;
     });
+    row?.querySelectorAll('[data-run-metric]').forEach((input) => {
+      payload[input.dataset.runMetric] = input.value;
+    });
     const response = await fetch(template.replace('__OUTPUT_ID__', encodeURIComponent(outputId)), {
       method: 'POST',
       headers: {
@@ -747,7 +853,7 @@
       body: JSON.stringify(payload),
       credentials: 'same-origin',
     });
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || Object.values(data.errors || {})?.flat?.()?.[0] || 'نمره مدیر ذخیره نشد.');
     if (data.experiment) {
       applyExperimentPayload(data.experiment);
@@ -768,6 +874,15 @@
     }
   };
 
+  window.saveAiRunMetric = async function (outputId, input) {
+    if (!input) return;
+    try {
+      await saveManagerScore(outputId, input.dataset.runMetric, input.value);
+    } catch (error) {
+      setLabOutputError(error.message || 'متریک ذخیره نشد.');
+    }
+  };
+
   window.toggleAiModelLabDefaults = function (event) {
     event?.stopPropagation();
     const menu = document.getElementById('ai-model-lab-defaults-menu');
@@ -777,6 +892,62 @@
     menu.classList.toggle('hidden', !open);
     button?.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
+
+  window.toggleAiModelLabSettingsMenu = function (event) {
+    event?.stopPropagation();
+    const menu = document.getElementById('ai-model-lab-settings-menu');
+    const button = event?.currentTarget || root.querySelector('.ai-model-lab-settings-menu-toggle');
+    if (!menu) return;
+    const open = menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !open);
+    button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  window.openAiModelLabFacePrompt = function (event) {
+    event?.stopPropagation();
+    document.getElementById('ai-model-lab-settings-menu')?.classList.add('hidden');
+    root.querySelector('.ai-model-lab-settings-menu-toggle')?.setAttribute('aria-expanded', 'false');
+    document.getElementById('ai-model-lab-face-modal')?.classList.remove('hidden');
+  };
+
+  window.closeAiModelLabFacePrompt = function () {
+    document.getElementById('ai-model-lab-face-modal')?.classList.add('hidden');
+  };
+
+  let facePromptTranslationTimer = null;
+  let facePromptTranslationSource = null;
+  async function translateFacePrompt(text, direction) {
+    const state = document.getElementById('ai-model-lab-face-translation-state');
+    if (!text.trim()) return;
+    if (state) state.textContent = 'در حال ترجمه…';
+    try {
+      const response = await fetch(facePromptTranslationUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ text, direction }),
+        credentials: 'same-origin',
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'ترجمه انجام نشد.');
+      const target = direction === 'fa-to-en' ? document.getElementById('ai-model-lab-face-prompt-en') : document.getElementById('ai-model-lab-face-prompt-fa');
+      if (target && facePromptTranslationSource === direction) target.value = data.translation || '';
+      if (state) state.textContent = 'ترجمه‌ی خودکار به‌روز شد.';
+    } catch (error) {
+      if (state) state.textContent = 'ترجمه خودکار انجام نشد؛ متن را دوباره بررسی کنید.';
+    }
+  }
+
+  function bindFacePromptTranslation(sourceId, direction) {
+    document.getElementById(sourceId)?.addEventListener('input', function () {
+      clearTimeout(facePromptTranslationTimer);
+      const text = this.value.trim();
+      if (!text) return;
+      facePromptTranslationSource = direction;
+      facePromptTranslationTimer = window.setTimeout(() => translateFacePrompt(text, direction), 800);
+    });
+  }
+  bindFacePromptTranslation('ai-model-lab-face-prompt-en', 'en-to-fa');
+  bindFacePromptTranslation('ai-model-lab-face-prompt-fa', 'fa-to-en');
 
   function setLabLoading(active, message) {
     const loading = document.getElementById('ai-model-lab-loading');
@@ -798,9 +969,10 @@
     return Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId).map(row => ({
       id: Number(row.dataset.modelId),
       provider: row.querySelector('.ai-model-lab-provider')?.value || '',
+      purpose: row.querySelector('.ai-model-lab-purpose')?.value || 'all',
       quality: row.querySelector('.ai-model-lab-quality')?.value || '720',
       size: row.querySelector('.ai-model-lab-size')?.value || '4:5',
-      preserve_face: row.querySelector('.ai-model-lab-preserve-face')?.checked !== false,
+      preserve_face: row.querySelector('.ai-model-lab-preserve-face')?.checked === true,
     }));
   }
 
@@ -859,7 +1031,7 @@
     }
     try {
       const response = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'وضعیت آزمایش دریافت نشد.');
       applyExperimentPayload(data);
       if (['queued', 'processing'].includes(data.status)) {
@@ -903,6 +1075,8 @@
     try {
       const formData = new FormData();
       formData.append('models', JSON.stringify(selectedModels));
+      formData.append('face_prompt_en', document.getElementById('ai-model-lab-face-prompt-en')?.value || '');
+      formData.append('face_prompt_fa', document.getElementById('ai-model-lab-face-prompt-fa')?.value || '');
       if (selectedInput?.file) formData.append('input_image', selectedInput.file, selectedInput.name || 'lab-input.png');
       if (selectedInput?.path) formData.append('input_path', selectedInput.path);
       const response = await fetch(runUrl, {
@@ -915,7 +1089,7 @@
         body: formData,
         credentials: 'same-origin',
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || 'اجرای آزمایش شروع نشد.');
       applyExperimentPayload(data.experiment);
       pollLabStatus(data.status_url);
@@ -995,12 +1169,8 @@
         <select class="ai-model-lab-provider" aria-label="پرووایدر مدل">${providerMarkup()}</select>
       </label>
       <label class="ai-model-lab-field">
-        <span>نوع مدل</span>
-        <select class="ai-model-lab-task" aria-label="نوع مدل">${taskMarkup()}</select>
-      </label>
-      <label class="ai-model-lab-field">
         <span>بهترین برای</span>
-        <select class="ai-model-lab-use-case" aria-label="کاربرد پیشنهادی مدل">${useCaseMarkup()}</select>
+        <select class="ai-model-lab-purpose" aria-label="بهترین کاربرد مدل">${labPurposeMarkup()}</select>
       </label>
       <div class="ai-model-lab-field">
         <span>مدل هوش مصنوعی</span>
@@ -1011,7 +1181,7 @@
       </div>
       <label class="ai-model-lab-field">
         <span>کیفیت خروجی</span>
-        <select class="ai-model-lab-quality" aria-label="کیفیت خروجی">${optionMarkup(qualityOptions, 'انتخاب کیفیت', '480')}</select>
+        <select class="ai-model-lab-quality" aria-label="کیفیت خروجی">${optionMarkup(qualityOptions, 'انتخاب کیفیت', '720')}</select>
       </label>
       <label class="ai-model-lab-field">
         <span>سایز خروجی</span>
@@ -1019,27 +1189,25 @@
       </label>
       <label class="ai-model-lab-field ai-model-lab-preserve-field">
         <span>حفظ چهره</span>
-        <span class="ai-model-lab-checkbox-control"><input class="ai-model-lab-preserve-face" type="checkbox" checked aria-label="حفظ چهره"><b>فعال</b></span>
+          <span class="ai-model-lab-checkbox-control"><input class="ai-model-lab-preserve-face" type="checkbox" aria-label="حفظ چهره"><b>خاموش</b></span>
       </label>
       <button type="button" class="ai-model-lab-remove" aria-label="حذف مدل" title="حذف مدل"><i class="fa-solid fa-trash-can"></i></button>
     `;
     root.querySelector('#ai-model-lab-rows').appendChild(row);
     const providerSelect = row.querySelector('.ai-model-lab-provider');
-    const taskSelect = row.querySelector('.ai-model-lab-task');
-    const useCaseSelect = row.querySelector('.ai-model-lab-use-case');
+    const purposeSelect = row.querySelector('.ai-model-lab-purpose');
     const modelTrigger = row.querySelector('.ai-model-lab-model-trigger');
     const modelMenu = row.querySelector('.ai-model-lab-model-menu');
     const refreshModelChoices = function () {
       row.dataset.modelId = '';
       modelTrigger.querySelector('span').textContent = providerSelect.value ? 'انتخاب مدل هوش مصنوعی' : 'ابتدا پرووایدر را انتخاب کنید';
       modelTrigger.disabled = !providerSelect.value;
-      modelMenu.innerHTML = providerSelect.value ? modelMenuMarkup(providerSelect.value, taskSelect.value, useCaseSelect.value) : '';
+      modelMenu.innerHTML = providerSelect.value ? modelMenuMarkup(providerSelect.value, purposeSelect.value) : '';
       modelMenu.classList.add('hidden');
       refreshOutputPreview(row);
     };
     providerSelect.addEventListener('change', refreshModelChoices);
-    taskSelect.addEventListener('change', refreshModelChoices);
-    useCaseSelect.addEventListener('change', refreshModelChoices);
+    purposeSelect.addEventListener('change', refreshModelChoices);
     modelTrigger.addEventListener('click', function () {
       if (this.disabled) return;
       const willOpen = modelMenu.classList.contains('hidden');
@@ -1069,10 +1237,10 @@
       const rows = root.querySelectorAll('.ai-model-lab-row');
       if (rows.length === 1) {
         row.querySelectorAll('select').forEach(select => { select.selectedIndex = 0; });
-        row.querySelector('.ai-model-lab-quality').value = '480';
+        row.querySelector('.ai-model-lab-quality').value = '720';
         row.querySelector('.ai-model-lab-size').value = '4:5';
-        row.querySelector('.ai-model-lab-preserve-face').checked = true;
-        row.querySelector('.ai-model-lab-preserve-field b').textContent = 'فعال';
+        row.querySelector('.ai-model-lab-preserve-face').checked = false;
+        row.querySelector('.ai-model-lab-preserve-field b').textContent = 'خاموش';
         row.dataset.modelId = '';
         modelTrigger.querySelector('span').textContent = 'ابتدا پرووایدر را انتخاب کنید';
         modelTrigger.disabled = true;
@@ -1199,7 +1367,13 @@
       document.getElementById('ai-model-lab-defaults-menu')?.classList.add('hidden');
       document.querySelector('#ai-model-lab .ai-model-lab-defaults-shell > button')?.setAttribute('aria-expanded', 'false');
     }
+    if (!event.target.closest('#ai-model-lab .ai-model-lab-settings-menu-shell')) {
+      document.getElementById('ai-model-lab-settings-menu')?.classList.add('hidden');
+      document.querySelector('#ai-model-lab .ai-model-lab-settings-menu-toggle')?.setAttribute('aria-expanded', 'false');
+    }
+    if (event.target === document.getElementById('ai-model-lab-face-modal')) closeAiModelLabFacePrompt();
   });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeAiModelLabFacePrompt(); });
 
   window.toggleAiModelLab = function () {
     const toggle = document.getElementById('ai-model-lab-toggle');
@@ -1219,8 +1393,10 @@
       evaluator: document.getElementById('ai-model-lab-evaluator')?.value || 'gpt-4o-mini',
       input: (labInputItems.find(item => item.selected) || labInputItems[0] || {}),
       models: Array.from(root.querySelectorAll('.ai-model-lab-row')).filter(row => row.dataset.modelId).map(row => ({
-        id: Number(row.dataset.modelId), provider: row.querySelector('.ai-model-lab-provider')?.value || '', quality: row.querySelector('.ai-model-lab-quality')?.value || '720', size: row.querySelector('.ai-model-lab-size')?.value || '4:5', preserve_face: row.querySelector('.ai-model-lab-preserve-face')?.checked !== false,
+        id: Number(row.dataset.modelId), provider: row.querySelector('.ai-model-lab-provider')?.value || '', purpose: row.querySelector('.ai-model-lab-purpose')?.value || 'all', quality: row.querySelector('.ai-model-lab-quality')?.value || '720', size: row.querySelector('.ai-model-lab-size')?.value || '4:5', preserve_face: row.querySelector('.ai-model-lab-preserve-face')?.checked === true,
       })),
+      face_prompt_en: document.getElementById('ai-model-lab-face-prompt-en')?.value || '',
+      face_prompt_fa: document.getElementById('ai-model-lab-face-prompt-fa')?.value || '',
       manager_scores: managerScores,
     };
     const field = hostForm.querySelector('input[name="ai_lab_payload"]');
