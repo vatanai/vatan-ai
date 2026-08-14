@@ -8,12 +8,14 @@ use App\Models\Generation;
 use App\Models\Product;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ServiceCreditSynchronizer;
+use App\Services\ServiceCreditTransactionReport;
 
 class DashboardController extends Controller
 {
     public function index(
         ServiceCreditOverviewService $creditOverview,
         ServiceCreditSynchronizer $creditSynchronizer,
+        ServiceCreditTransactionReport $transactionReport,
         $section = null
     )
     {
@@ -28,6 +30,8 @@ class DashboardController extends Controller
         }
 
         $creditSynchronizer->sync();
+        $creditData = $creditOverview->get(true);
+        $creditTransactions = $transactionReport->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
 
         return view('admin.dashboard', [
             'stats'    => $stats,
@@ -36,7 +40,8 @@ class DashboardController extends Controller
             'cats'     => [],
             'models'   => [],
             'actions'  => [],
-            'creditOverview' => $creditOverview->get(true),
+            'creditOverview' => $creditData,
+            'creditTransactions' => $creditTransactions,
         ]);
     }
 }

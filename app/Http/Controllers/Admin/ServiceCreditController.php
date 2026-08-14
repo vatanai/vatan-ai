@@ -7,6 +7,7 @@ use App\Models\ServiceCreditAccount;
 use App\Models\ServiceCreditTransaction;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ServiceCreditSynchronizer;
+use App\Services\ServiceCreditTransactionReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -17,23 +18,15 @@ class ServiceCreditController extends Controller
 {
     public function index(
         ServiceCreditOverviewService $overview,
-        ServiceCreditSynchronizer $synchronizer
+        ServiceCreditSynchronizer $synchronizer,
+        ServiceCreditTransactionReport $transactionReport,
+        Request $request
     ): View
     {
         $synchronizer->sync();
         $data = $overview->get();
-        $rate = (float) ($data['exchange']['rate'] ?? 0);
-        $transactions = ServiceCreditTransaction::with('account')->latest('occurred_at')->limit(40)->get()
-            ->map(function (ServiceCreditTransaction $transaction) use ($rate) {
-                $amount = (float) $transaction->amount;
-                $currency = $transaction->account?->currency;
-                $amountUsd = $currency === 'USD' ? $amount : ($rate > 0 ? $amount / $rate : null);
-                $amountToman = $currency === 'USD' ? $amount * $rate / 10 : $amount / 10;
-                $transaction->setAttribute('amount_usd', $amountUsd);
-                $transaction->setAttribute('amount_toman', $amountToman);
-                return $transaction;
-            });
-        return view('admin.service-credits.index', [...$data, 'transactions' => $transactions]);
+        $report = $transactionReport->build($request);
+        return view('admin.service-credits.index', [...$data, ...$report]);
     }
 
     public function storeAccount(Request $request): RedirectResponse

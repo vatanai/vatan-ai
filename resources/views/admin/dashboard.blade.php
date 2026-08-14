@@ -3,6 +3,10 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/admin.css') }}">
+<style>
+  body:has(#dashboard-page) .sidebar,
+  body:has(#dashboard-page) .mini-rail { box-shadow: none; }
+</style>
 @endpush
 
 @section('content')

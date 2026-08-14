@@ -40,6 +40,7 @@ class Order extends Model
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class); }
     public function discount(): BelongsTo { return $this->belongsTo(Discount::class); }
+    public function providerRequests(): HasMany { return $this->hasMany(AiProviderRequest::class); }
     public function events(): HasMany { return $this->hasMany(OrderEvent::class)->latest(); }
 
     public function recordEvent(string $type, string $title, ?string $description = null, array $metadata = []): OrderEvent

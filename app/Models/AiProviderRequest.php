@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AiProviderRequest extends Model
 {
@@ -21,5 +22,10 @@ class AiProviderRequest extends Model
     public function aiModel()
     {
         return $this->belongsTo(AiModel::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

@@ -107,7 +107,7 @@ class ProductGenerateController extends Controller
                 ['value'=>'classic','label'=>'کلاسیک','image'=>asset('assets/img/gemini-vintage-boys-man-with-flowers-ai-photo-editing-prompt-ud1t53g9cf.webp')],
             ]],
             ['id' => 'ratio', 'type' => 'aspect_ratio', 'label' => 'نسبت تصویر', 'value' => '4:5', 'options' => [['value'=>'1:1','label'=>'۱:۱'],['value'=>'4:5','label'=>'۴:۵'],['value'=>'9:16','label'=>'۹:۱۶'],['value'=>'16:9','label'=>'۱۶:۹']]],
-            ['id' => 'resolution', 'type' => 'resolution', 'label' => 'کیفیت خروجی', 'value' => '2K', 'options' => [['value'=>'1K','label'=>'1K','meta'=>'استاندارد'],['value'=>'2K','label'=>'2K','meta'=>'پیشنهادی'],['value'=>'4K','label'=>'4K','meta'=>'+ ۶ توکن']]],
+            ['id' => 'resolution', 'type' => 'resolution', 'label' => 'کیفیت خروجی', 'value' => '2K', 'options' => [['value'=>'1K','label'=>'1K','meta'=>'استاندارد'],['value'=>'2K','label'=>'2K','meta'=>'پیشنهادی'],['value'=>'4K','label'=>'4K','meta'=>'+ ۶ اعتبار']]],
             ['id' => 'negative', 'type' => 'negative_prompt', 'label' => 'موارد ناخواسته', 'placeholder' => 'مثلاً: عینک، نوشته، تاری...'],
             ['id' => 'seed', 'type' => 'seed', 'label' => 'Seed', 'placeholder' => 'تصادفی'],
             ['id' => 'source_file', 'type' => 'file_upload', 'label' => 'فایل مرجع تکمیلی', 'help' => 'اختیاری'],
@@ -169,7 +169,7 @@ class ProductGenerateController extends Controller
             + ($identityRequested ? max(0, (int) $product->identity_credit_cost) : 0);
 
         // ۰. مدل‌های خروجی چندگانه (Output Variants) — اگر محصول واریانت دارد،
-        // کاربر باید حداقل یکی را انتخاب کرده باشد و هزینه توکن در تعداد انتخاب ضرب می‌شود.
+        // کاربر باید حداقل یکی را انتخاب کرده باشد و هزینه اعتبار در تعداد انتخاب ضرب می‌شود.
         $variantList = $product->outputVariantList();
         $selectedVariants = [];
         if (!empty($variantList)) {
@@ -217,12 +217,12 @@ class ProductGenerateController extends Controller
             $totalCreditCost = max(0, $originalCreditCost - $discountCredits);
         }
 
-        // ۱. بررسی اعتبار توکن کاربر (بر اساس جمع کل مدل‌های انتخاب‌شده)
+        // ۱. بررسی موجودی اعتبار کاربر (بر اساس جمع کل مدل‌های انتخاب‌شده)
         if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
             if (!$user || $user->tokens < $totalCreditCost) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'توکن‌های شما کافی نیست.',
+                    'message' => 'اعتبارهای شما کافی نیست.',
                 ], 402);
             }
         }
@@ -263,6 +263,14 @@ class ProductGenerateController extends Controller
         // ۳. ساخت پرامپت نهایی: system_prompt + قالب (با جایگذاری متغیرها) + دستور حفظ هویت
         $finalPrompt = $promptBuilder->build($product, $fieldValues, $identityRequested);
 
+        // مقدار فیلدهای اختیاری را بر اساس نوع فیلد پیدا می‌کنیم. این closure
+        // باید قبل از ساخت payload provider تعریف شود؛ در غیر این صورت هر
+        // محصولی که به فیلد منفی، seed یا strength برسد با خطای PHP متوقف می‌شود.
+        $valueForType = function (string $type) use ($schema, $product, $fieldValues) {
+            $field = collect($schema->fields($product))->firstWhere('type', $type);
+            return $field ? data_get($fieldValues, $field['id']) : null;
+        };
+
         // ۴. پردازش و ذخیره‌سازی عکس‌های آپلودی کاربر
         $base64Images  = [];
         $uploadedPaths = [];
@@ -297,10 +305,21 @@ class ProductGenerateController extends Controller
         }
 
         // ۵. مشخصات خروجی تصویر هوش مصنوعی
-        $aspectRatio = $request->input('output.aspect_ratio', $product->defaultOutputAspectRatio());
         // کیفیت و نسبت تصویر از گزینه‌های فعال همان محصول می‌آیند؛ شِمای قدیمی
         // فقط تنظیمات داخلی محصول را نگه می‌دارد و نباید انتخاب کاربر را بازنویسی کند.
-        $quality = (string) $request->input('output.quality', $product->defaultOutputResolution());
+        // مقدار خالی نیز باید به کیفیت استاندارد محصول برگردد تا کلیک مستقیم روی
+        // «بساز» هیچ‌وقت درخواست تولید بدون کیفیت نفرستد.
+        $allowedAspectRatios = $product->allowedAspectRatioList();
+        $requestedAspectRatio = (string) $request->input('output.aspect_ratio', '');
+        $aspectRatio = in_array($requestedAspectRatio, $allowedAspectRatios, true)
+            ? $requestedAspectRatio
+            : $product->defaultOutputAspectRatio();
+
+        $allowedResolutions = $product->allowedResolutionList();
+        $requestedQuality = (string) $request->input('output.quality', '');
+        $quality = in_array($requestedQuality, $allowedResolutions, true)
+            ? $requestedQuality
+            : $product->defaultOutputResolution();
 
         $executionProduct = $product;
         if ($identityRequested && $product->identity_model) {
@@ -353,8 +372,8 @@ class ProductGenerateController extends Controller
                         'processing_status' => 'stopped',
                         'error_message' => 'موجودی اعتبار هنگام رزرو نهایی کافی نبود.',
                     ]);
-                    $order->recordEvent('payment_failed', 'رزرو اعتبار ناموفق بود', 'موجودی کاربر هم‌زمان با ثبت سفارش تغییر کرده است.');
-                    return response()->json(['success' => false, 'message' => 'توکن‌های شما کافی نیست.'], 402);
+                        $order->recordEvent('payment_failed', 'رزرو اعتبار ناموفق بود', 'موجودی کاربر هم‌زمان با ثبت سفارش تغییر کرده است.');
+                        return response()->json(['success' => false, 'message' => 'اعتبارهای شما کافی نیست.'], 402);
                 }
                 $reservedCredit = $totalCreditCost;
             }
@@ -535,7 +554,7 @@ class ProductGenerateController extends Controller
                 'remaining_tokens' => $user ? $user->fresh()->tokens : 0,
             ]);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             if ($reservedCredit > 0 && $user) {
                 $user->increment('tokens', $reservedCredit);
             }
@@ -551,7 +570,18 @@ class ProductGenerateController extends Controller
                 ]);
                 $order->recordEvent('failed', 'پردازش ناموفق بود', $e->getMessage());
             }
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            $providerFailure = str_contains(strtolower($e->getMessage()), 'provider')
+                || str_contains(strtolower($e->getMessage()), 'fal.ai')
+                || str_contains(strtolower($e->getMessage()), 'replicate')
+                || str_contains(strtolower($e->getMessage()), 'timeout')
+                || str_contains(strtolower($e->getMessage()), 'cURL');
+            return response()->json([
+                'success' => false,
+                'message' => $providerFailure
+                    ? 'مدل انتخاب‌شده در زمان مقرر پاسخ نداد. اگر مدل جایگزین برای محصول ثبت شده باشد، سیستم آن را هم امتحان کرده است؛ لطفاً چند لحظه بعد دوباره تلاش کنید.'
+                    : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.',
+                'error_code' => $providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED',
+            ], $providerFailure ? 503 : 422);
         }
     }
 

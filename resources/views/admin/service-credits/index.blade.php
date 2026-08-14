@@ -71,6 +71,7 @@
           <div class="credit-progress"><span style="width:{{ $usagePercent }}%"></span></div>
           <div class="credit-summary-meta">{{ number_format($usagePercent, 1) }}٪ از اعتبار در دسترس این دوره مصرف شده</div>
           @if($account->usage_is_estimate)<div class="credit-summary-meta">هزینه جاری ساعتی: {{ number_format($account->hourly_usage / 10) }} تومان — محاسبه آنلاین براساس منابع فعال Liara</div>@endif
+          @if($account->usage_source)<div class="credit-summary-meta">منبع مصرف: {{ $account->usage_source }}</div>@endif
           @if($account->is_low)<div class="credit-warning"><i class="fa-solid fa-triangle-exclamation"></i> موجودی از حد هشدار کمتر شده است</div>@endif
           @if($account->sync_error)<div class="credit-warning">{{ $account->sync_error }}</div>@endif
         </article>
@@ -92,14 +93,54 @@
       @endforelse
     </div>
 
-    <section class="credit-panel">
-      <div class="credit-panel-title">آخرین تراکنش‌ها</div>
-      <div class="credit-table-wrap"><table class="credit-table"><thead><tr><th>سرویس</th><th>نوع</th><th>مبلغ اصلی</th><th>معادل دلار</th><th>معادل تومان</th><th>تاریخ شمسی</th><th>تاریخ میلادی</th><th>مرجع</th><th>توضیح</th></tr></thead><tbody>
-        @forelse($transactions as $transaction)<tr>
-          <td>{{ $transaction->account?->name }}</td><td><span class="credit-badge {{ $transaction->type }}">{{ ['charge'=>'شارژ','usage'=>'مصرف','refund'=>'بازگشت','adjustment'=>'اصلاح'][$transaction->type] ?? $transaction->type }}</span> @if(str_starts_with((string)$transaction->reference, 'auto-sync-'))<span class="credit-badge">آنلاین خودکار</span>@endif</td>
-          <td>{{ number_format((float) $transaction->amount, 6) }} {{ $transaction->account?->currency }}</td><td>{{ $transaction->amount_usd !== null ? '$'.number_format((float) $transaction->amount_usd, 6) : '—' }}</td><td>{{ number_format((float) $transaction->amount_toman) }} تومان</td><td>{{ \App\Support\Jalali::formatNumeric($transaction->occurred_at) }}</td><td>{{ $transaction->occurred_at?->timezone(config('app.display_timezone', 'Asia/Tehran'))->format('Y/m/d H:i') ?? '—' }}</td><td>{{ $transaction->reference ?: '—' }}</td><td>{{ $transaction->note ?: '—' }}</td>
-        </tr>@empty<tr><td colspan="9">هنوز تراکنشی ثبت نشده است.</td></tr>@endforelse
+    <section class="credit-panel credit-transactions-panel">
+      <div class="credit-panel-heading">
+        <div>
+          <div class="credit-panel-title">گزارش جامع مصرف و تراکنش‌ها</div>
+          <div class="credit-panel-caption">اجرای واقعی کاربر، آزمایشگاه، سفارش و تغییرات موجودی سرویس‌ها در یک گزارش قابل پیگیری</div>
+        </div>
+        <span class="credit-live-label"><span class="credit-dot"></span> داده زنده</span>
+      </div>
+
+      <div class="credit-report-summary">
+        <div class="credit-report-stat"><span>کل رخدادها</span><strong>{{ number_format($summary['count']) }}</strong></div>
+        <div class="credit-report-stat success"><span>موفق</span><strong>{{ number_format($summary['success']) }}</strong></div>
+        <div class="credit-report-stat danger"><span>ناموفق</span><strong>{{ number_format($summary['failed']) }}</strong></div>
+        <div class="credit-report-stat"><span>هزینه دلاری</span><strong>${{ number_format($summary['usd'], 6) }}</strong></div>
+        <div class="credit-report-stat"><span>هزینه تومانی</span><strong>{{ number_format($summary['toman']) }} تومان</strong></div>
+      </div>
+
+      <form method="GET" action="{{ route('admin.service-credits.index') }}" class="credit-report-filters">
+        <div class="credit-field credit-filter-search"><label for="credit-report-q">جست‌وجو</label><div class="credit-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="credit-report-q" name="q" value="{{ request('q') }}" placeholder="کاربر، محصول، سفارش، مدل یا شناسه درخواست"></div></div>
+        <div class="credit-field"><label>منبع</label><select name="source"><option value="">همه منابع</option>@foreach($sourceOptions as $key => $label)<option value="{{ $key }}" @selected(request('source') === $key)>{{ $label }}</option>@endforeach</select></div>
+        <div class="credit-field"><label>پرووایدر</label><select name="provider"><option value="">همه پرووایدرها</option>@foreach($providers as $provider)<option value="{{ $provider['key'] }}" @selected(request('provider') === $provider['key'])>{{ $provider['label'] }}</option>@endforeach</select></div>
+        <div class="credit-field"><label>وضعیت</label><select name="status"><option value="">همه وضعیت‌ها</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>@endforeach</select></div>
+        <div class="credit-field"><label>از تاریخ</label><input type="date" name="date_from" value="{{ request('date_from') }}"></div>
+        <div class="credit-field"><label>تا تاریخ</label><input type="date" name="date_to" value="{{ request('date_to') }}"></div>
+        <div class="credit-filter-actions"><button class="credit-btn primary" type="submit"><i class="fa-solid fa-filter"></i> اعمال فیلتر</button><a class="credit-btn" href="{{ route('admin.service-credits.index') }}">پاک‌کردن</a></div>
+      </form>
+
+      <div class="credit-table-wrap"><table class="credit-table credit-report-table"><thead><tr>
+        <th>زمان / منبع</th><th>اجراکننده</th><th>محصول</th><th>پرووایدر و مدل</th><th>وضعیت</th><th>خروجی</th><th>هزینه</th><th>جزئیات</th>
+      </tr></thead><tbody>
+        @forelse($transactions as $transaction)
+          @php($statusClass = in_array($transaction['status_key'], ['completed','charge','refund'], true) ? 'success' : (in_array($transaction['status_key'], ['failed','usage'], true) ? 'danger' : 'warning'))
+          <tr class="credit-report-row">
+            <td><div class="credit-source-cell"><span class="credit-source-icon {{ $transaction['source_key'] }}"><i class="fa-solid {{ $transaction['source_key'] === 'lab' ? 'fa-flask' : ($transaction['source_key'] === 'user' ? 'fa-user' : ($transaction['source_key'] === 'ledger' ? 'fa-wallet' : 'fa-receipt')) }}"></i></span><div><strong>{{ $transaction['source_label'] }}</strong><small>{{ $transaction['date_jalali'] }}</small><small>{{ $transaction['date_gregorian'] }}</small></div></div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['actor_label'] }}</strong><small>{{ $transaction['user_name'] }}</small><small>{{ $transaction['user_contact'] }}</small></div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['product_name'] }}</strong>@if($transaction['order_number'])<small>{{ $transaction['order_number'] }}</small>@elseif($transaction['reference'] !== '—')<small>{{ $transaction['reference'] }}</small>@endif</div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['provider'] }}</strong><small>{{ $transaction['model'] }}</small>@if($transaction['latency_seconds'] !== null)<small>{{ number_format($transaction['latency_seconds'], 1) }} ثانیه · {{ $transaction['retries'] ?? 0 }} تلاش</small>@endif</div></td>
+            <td><span class="credit-status-badge {{ $statusClass }}"><span></span>{{ $transaction['status_label'] }}</span>@if($transaction['error'])<small class="credit-error-text" title="{{ $transaction['error'] }}"><i class="fa-solid fa-circle-exclamation"></i> خطا</small>@endif</td>
+            <td>@if(count($transaction['output_urls']))<div class="credit-output-cell"><a href="{{ $transaction['output_urls'][0] }}" target="_blank" rel="noopener"><img src="{{ $transaction['output_urls'][0] }}" alt="خروجی"></a><span>{{ count($transaction['output_urls']) }} فایل</span></div>@else<span class="credit-muted">بدون خروجی</span>@endif</td>
+            <td><div class="credit-cost-cell">@if($transaction['amount_usd'] !== null)<strong>${{ number_format($transaction['amount_usd'], 6) }}</strong><small>{{ number_format($transaction['amount_toman']) }} تومان</small>@elseif($transaction['credits'] !== null)<strong>{{ number_format($transaction['credits']) }} اعتبار</strong><small>هزینه provider ثبت نشده</small>@else<span class="credit-muted">—</span>@endif</div></td>
+            <td>@if($transaction['detail_url'])<a class="credit-detail-link" href="{{ $transaction['detail_url'] }}" target="_blank">مشاهده <i class="fa-solid fa-arrow-up-left-from-circle"></i></a>@else<span class="credit-muted">—</span>@endif</td>
+          </tr>
+          @if($transaction['note'])<tr class="credit-report-note"><td colspan="8"><i class="fa-solid fa-circle-info"></i> {{ $transaction['note'] }}</td></tr>@endif
+        @empty
+          <tr><td colspan="8" class="credit-empty-state"><i class="fa-solid fa-receipt"></i><strong>رکوردی با این فیلتر پیدا نشد.</strong><span>با پاک‌کردن فیلترها یا اجرای یک تولید جدید، گزارش اینجا نمایش داده می‌شود.</span></td></tr>
+        @endforelse
       </tbody></table></div>
+      @if($transactions->hasPages())<div class="credit-report-pagination">{{ $transactions->onEachSide(1)->links() }}</div>@endif
     </section>
   </div>
 </main>
