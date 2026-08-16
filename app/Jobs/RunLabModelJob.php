@@ -4,6 +4,8 @@ namespace App\Jobs;
 
 use App\Models\LabExperiment;
 use App\Models\LabRun;
+use App\Models\ServiceCreditAccount;
+use App\Services\FalAiBillingService;
 use App\Services\AiProviderRouter;
 use App\Services\OpenRouterService;
 use Illuminate\Bus\Queueable;
@@ -20,7 +22,7 @@ class RunLabModelJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 1;
-    public int $timeout = 600;
+    public int $timeout = 900;
 
     public function __construct(public int $runId) {}
 
@@ -126,12 +128,14 @@ class RunLabModelJob implements ShouldQueue
             $usage = (array) ($result['usage'] ?? []);
             $reportedTokens = data_get($usage, 'total_tokens', data_get($usage, 'tokens'));
             $generationCost = $this->resolveGenerationCost($run, $result, $usage);
+            $this->recordFalBilling($run, $result);
             $actualCost = $generationCost + $scoringCost;
             $durationMs = (int) round((microtime(true) - $started) * 1000);
             $rateToman = (float) $run->exchange_rate_irr / 10;
             $run->forceFill([
                 'status' => 'completed',
                 'actual_cost_usd' => $actualCost,
+                'cost' => $actualCost,
                 'actual_cost_toman' => $actualCost * $rateToman,
                 'build_seconds' => max(1, (int) round($durationMs / 1000)),
                 // همه‌ی providerهای تصویر (از جمله Replicate) توکن گزارش نمی‌کنند.
@@ -146,6 +150,7 @@ class RunLabModelJob implements ShouldQueue
                 ], fn ($value) => $value !== null && $value !== []),
                 'completed_at' => now(),
                 'duration_ms' => $durationMs,
+                'latency_ms' => $durationMs,
             ])->save();
         } catch (\Throwable $error) {
             $run->forceFill([
@@ -154,8 +159,23 @@ class RunLabModelJob implements ShouldQueue
                 'completed_at' => now(),
                 'build_seconds' => max(1, (int) round((microtime(true) - $started))),
                 'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'latency_ms' => (int) round((microtime(true) - $started) * 1000),
             ])->save();
         }
+
+        $this->refreshExperiment($run->lab_experiment_id);
+    }
+
+    public function failed(?\Throwable $exception): void
+    {
+        $run = LabRun::find($this->runId);
+        if (!$run || in_array($run->status, ['completed', 'failed', 'cancelled'], true)) return;
+
+        $run->forceFill([
+            'status' => 'failed',
+            'error_message' => Str::limit($exception?->getMessage() ?: 'پردازش آزمایش توسط worker متوقف شد.', 1000, ''),
+            'completed_at' => now(),
+        ])->save();
 
         $this->refreshExperiment($run->lab_experiment_id);
     }
@@ -204,6 +224,15 @@ class RunLabModelJob implements ShouldQueue
         }
 
         return 0.0;
+    }
+
+    private function recordFalBilling(LabRun $run, array $result): void
+    {
+        if ($run->provider !== 'fal') return;
+        $event = data_get($result, 'provider_metadata.provider_metadata.billing_event');
+        if (!is_array($event)) return;
+        $account = ServiceCreditAccount::query()->where('slug', 'fal')->where('is_active', true)->first();
+        if ($account) app(FalAiBillingService::class)->recordBillingEvent($account, $event);
     }
 
     private function effectiveRunCost(LabRun $run): float

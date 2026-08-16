@@ -152,7 +152,13 @@ class LabExperimentController extends Controller
         $rateToman = $rateIrr / 10;
         $estimatedUsd = collect($payloadModels)->sum(function ($item) use ($models) {
             $model = $models->get((int) ($item['id'] ?? 0));
-            return $model ? $this->numericPrice($this->pricing->estimate($model, 1, false)['usd'] ?? null) : 0.0;
+            if (!$model) return 0.0;
+            $resolution = (string) ($item['quality'] ?? '720');
+            $aspectRatio = (string) ($item['size'] ?? '4:5');
+            return $this->numericPrice($this->pricing->estimate($model, 1, true, [
+                'resolution' => $resolution,
+                'aspect_ratio' => $aspectRatio,
+            ])['usd'] ?? null);
         });
         $facePromptEn = trim((string) $request->input('face_prompt_en', ''));
         $facePromptFa = trim((string) $request->input('face_prompt_fa', ''));
@@ -209,7 +215,10 @@ class LabExperimentController extends Controller
                 $preserveFace = filter_var($item['preserve_face'] ?? false, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
                 $preserveFace = $preserveFace ?? false;
                 $prompt = $this->buildLabPrompt($product, $preserveFace, (bool) $model->supports_image_input, $facePromptEn);
-                $pricing = $this->pricing->estimate($model, 1, false);
+                $pricing = $this->pricing->estimate($model, 1, true, [
+                    'resolution' => $quality,
+                    'aspect_ratio' => $size,
+                ]);
                 $rawCost = $pricing['usd'] ?? null;
                 $cost = $this->numericPrice($rawCost);
                 $experiment->runs()->create([
@@ -247,7 +256,7 @@ class LabExperimentController extends Controller
             ], 500);
         }
 
-        foreach ($experiment->runs as $run) RunLabModelJob::dispatch($run->id);
+        foreach ($experiment->runs as $run) RunLabModelJob::dispatch($run->id)->afterCommit();
 
         return response()->json([
             'ok' => true,
@@ -339,10 +348,16 @@ class LabExperimentController extends Controller
         if ($prompt === '') $prompt = trim((string) $product->prompt_template);
         $negativePrompt = trim((string) ($data['negative_prompt'] ?? $product->negative_prompt ?? '')) ?: null;
         $count = (int) $data['count'];
-        $estimatedUsd = collect($gradeDefinitions)->flatMap(fn ($grade) => $grade['model_ids'])
-            ->map(fn ($modelId) => $models->get($modelId))
-            ->filter()
-            ->sum(fn (AiModel $model) => $this->numericPrice($this->pricing->estimate($model, $count, false)['usd'] ?? null));
+        $estimatedUsd = collect($gradeDefinitions)->sum(function (array $grade) use ($models, $count): float {
+            return collect($grade['model_ids'])->sum(function ($modelId) use ($models, $count, $grade): float {
+                $model = $models->get($modelId);
+                if (!$model) return 0.0;
+                return $this->numericPrice($this->pricing->estimate($model, $count, true, [
+                    'resolution' => $grade['resolution'],
+                    'aspect_ratio' => $grade['aspect_ratio'],
+                ])['usd'] ?? null);
+            });
+        });
 
         $experiment = DB::transaction(function () use ($request, $data, $product, $selectedImages, $models, $rate, $prompt, $negativePrompt, $count, $estimatedUsd, $gradeDefinitions, $effectiveModelIds, $facePromptEn, $facePromptFa, $modelPurposes) {
             $baseSettings = [
@@ -393,7 +408,10 @@ class LabExperimentController extends Controller
             foreach ($gradeDefinitions as $gradeKey => $grade) {
                 foreach ($grade['model_ids'] as $attemptOrder => $modelId) {
                     $model = $models->get($modelId);
-                    $modelPrice = $this->pricing->estimate($model, $count, false);
+                    $modelPrice = $this->pricing->estimate($model, $count, true, [
+                        'resolution' => $grade['resolution'],
+                        'aspect_ratio' => $grade['aspect_ratio'],
+                    ]);
                     $run = $experiment->runs()->create([
                         'ai_model_id' => $model->id,
                         'model_id' => $model->openrouter_model_id,
@@ -425,7 +443,7 @@ class LabExperimentController extends Controller
                         'quality' => $grade['resolution'], 'size' => $grade['aspect_ratio'], 'preserve_face' => false,
                         'exchange_rate_irr' => $experiment->exchange_rate_irr,
                     ]);
-                    RunLabModelJob::dispatch($run->id);
+                    RunLabModelJob::dispatch($run->id)->afterCommit();
                 }
             }
 
@@ -525,7 +543,10 @@ class LabExperimentController extends Controller
                 foreach ($runs as $sourceRun) {
                     $model = $sourceRun->aiModel;
                     if (!$model || !$model->is_active || $model->output_modality !== 'image') continue;
-                    $cost = $this->numericPrice($this->pricing->estimate($model, (int) data_get($settings, 'count', 1), false)['usd'] ?? null);
+                    $cost = $this->numericPrice($this->pricing->estimate($model, (int) data_get($settings, 'count', 1), true, [
+                        'resolution' => data_get($sourceRun->parameters, 'grade_resolution', data_get($settings, 'resolution', '720')),
+                        'aspect_ratio' => data_get($sourceRun->parameters, 'grade_aspect_ratio', data_get($settings, 'aspect_ratio', '4:5')),
+                    ])['usd'] ?? null);
                     $estimatedUsd += $cost;
                     $new->runs()->create([
                         'ai_model_id' => $model->id,
@@ -546,7 +567,7 @@ class LabExperimentController extends Controller
             }
             }
             $new->update(['estimated_cost_usd' => $estimatedUsd, 'estimated_cost_irr' => $estimatedUsd * (float) ($rate['rate'] ?? $experiment->exchange_rate_irr)]);
-            foreach ($new->runs as $run) RunLabModelJob::dispatch($run->id);
+            foreach ($new->runs as $run) RunLabModelJob::dispatch($run->id)->afterCommit();
             $this->audit($new, $request, 'duplicated', ['parent_experiment_id' => $experiment->id]);
             return $new;
         });
@@ -594,7 +615,7 @@ class LabExperimentController extends Controller
             return back()->with('error', 'این اجرا قابل تلاش مجدد نیست یا سقف تلاش‌ها پر شده است.');
         }
         $run->forceFill(['status' => 'queued', 'retry_count' => $run->retry_count + 1, 'error_message' => null, 'completed_at' => null])->save();
-        RunLabModelJob::dispatch($run->id);
+        RunLabModelJob::dispatch($run->id)->afterCommit();
         $this->audit($run->experiment, $request, 'retry', ['run_id' => $run->id, 'retry_count' => $run->retry_count]);
         return back()->with('success', 'اجرا دوباره در صف قرار گرفت.');
     }

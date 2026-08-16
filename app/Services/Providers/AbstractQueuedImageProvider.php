@@ -289,6 +289,18 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         };
 
         $put('prompt', $prompt);
+        // مقدار کیفیت/رزولوشن باید با نام فیلد واقعی مدل ارسال شود. برخی
+        // مدل‌های Replicate مقدار را با «1K/2K/4K» می‌گیرند، درحالی‌که فرم
+        // محصول برای کاربر «480/720/1080/1440/2160» نمایش می‌دهد.
+        $normalizedResolution = match (strtoupper((string) $resolution)) {
+            '480', '720', '1080' => '1K',
+            '1440' => '2K',
+            '2160' => '4K',
+            default => $resolution,
+        };
+        $put('resolution', $normalizedResolution);
+        $put('quality', $extraPayload['quality'] ?? $normalizedResolution);
+        $put('aspect_ratio', $this->compatibleAspectRatio($model, $aspectRatio));
         $put('negative_prompt', $extraPayload['negative_prompt'] ?? null);
         $put('seed', isset($extraPayload['seed']) ? (int) $extraPayload['seed'] : null);
         $put('steps', isset($extraPayload['steps']) ? (int) $extraPayload['steps'] : null);
@@ -438,6 +450,6 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
     public function estimateCost(AiModel $model, array $payload = []): ?float
     {
         return app(\App\Services\ProviderPricingService::class)
-            ->estimate($model, max(1, (int) ($payload['n'] ?? 1)))['usd'];
+            ->estimate($model, max(1, (int) ($payload['n'] ?? 1)), true, $payload)['usd'];
     }
 }

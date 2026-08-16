@@ -32,13 +32,24 @@ class FalImageProvider extends AbstractQueuedImageProvider
             $url .= '?fal_webhook=' . rawurlencode($webhookUrl);
         }
 
-        $connectTimeout = max(30, min(90, (int) ($credentials['timeout'] ?: 600)));
-        $requestTimeout = max(120, (int) ($credentials['timeout'] ?: 600));
-        $response = Http::withHeaders($this->requestHeaders())
-            ->retry(2, 1000, fn ($exception) => $exception instanceof ConnectionException)
-            ->connectTimeout($connectTimeout)
-            ->timeout($requestTimeout)
-            ->post($url, $input);
+        // Timeout اتصال باید کوتاه‌تر از timeout کل باشد؛ در غیر این صورت
+        // قطعی شبکه‌ی سرور تا ۹۰ ثانیه به‌صورت «آزمایش بدون خروجی» دیده می‌شود.
+        // صف Fal درخواست را نگه می‌دارد و بعد از submit نیازی به اتصال باز
+        // طولانی نداریم.
+        $connectTimeout = max(8, min(15, (int) ($credentials['timeout'] ?: 600)));
+        $requestTimeout = max(60, (int) ($credentials['timeout'] ?: 600));
+        try {
+            $response = Http::withHeaders($this->requestHeaders())
+                ->retry(2, 1000, fn ($exception) => $exception instanceof ConnectionException)
+                ->connectTimeout($connectTimeout)
+                ->timeout($requestTimeout)
+                ->post($url, $input);
+        } catch (ConnectionException $error) {
+            throw new RuntimeException(
+                'سرور برنامه نتوانست به صف Fal.ai متصل شود. دسترسی خروجی HTTPS به queue.fal.run را در کلودیوا بررسی کنید.',
+                previous: $error
+            );
+        }
 
         if ($response->failed()) {
             throw new RuntimeException('Fal.ai HTTP ' . $response->status() . ': ' . $response->body());
@@ -52,6 +63,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
         $credentials = $this->credentials->for('fal');
         $base = rtrim($credentials['base_url'] ?: 'https://queue.fal.run', '/');
         $response = Http::withHeaders($this->requestHeaders())
+            ->connectTimeout(10)
             ->timeout(max(30, (int) ($credentials['timeout'] ?: 600)))
             ->get($base . '/' . ltrim($model->externalModelId(), '/') . '/requests/' . rawurlencode($requestId) . '/status');
 

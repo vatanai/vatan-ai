@@ -8,7 +8,7 @@ class ProviderPricingService
 {
     public function __construct(private FalAiBillingService $falBilling) {}
 
-    public function estimate(AiModel $model, int $count = 1, bool $allowLiveLookup = true): array
+    public function estimate(AiModel $model, int $count = 1, bool $allowLiveLookup = true, array $payload = []): array
     {
         $count = max(1, $count);
         // صفحه‌ی ثبت محصول صدها مدل را برای انتخاب در آزمایشگاه آماده می‌کند.
@@ -19,6 +19,19 @@ class ProviderPricingService
             $live = $this->falBilling->pricing((string) $model->externalModelId());
             if (($live['available'] ?? false) === true) {
                 return ['usd' => round((float) $live['unit_price'] * $count, 6), 'source' => $live['source'], 'unit' => $live['unit'], 'endpoint_id' => $live['endpoint_id']];
+            }
+        }
+
+        if ($allowLiveLookup && $model->provider === 'replicate') {
+            $live = app(ReplicatePricingService::class)->estimate($model, $payload, $count);
+            if (($live['available'] ?? false) === true) {
+                return [
+                    'usd' => $live['usd'],
+                    'source' => $live['source'],
+                    'unit' => $live['unit'],
+                    'unit_price' => $live['unit_price'],
+                    'resolution' => $live['resolution'],
+                ];
             }
         }
 

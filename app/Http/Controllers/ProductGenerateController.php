@@ -453,7 +453,17 @@ class ProductGenerateController extends Controller
 
                     // ۶. ذخیره همه تصاویر پاسخ (نه فقط اولین تصویر آرایه data)
                     $items = !empty($result['data']) && is_array($result['data']) ? $result['data'] : [$result];
-                    $perImageApiCost = ((float) ($result['usage']['cost'] ?? 0)) / max(1, count($items));
+                    // Replicate مبلغ را در پاسخ prediction برنمی‌گرداند؛ روتر
+                    // قیمت snapshot‌شده‌ی رسمی مدل را در estimated_cost_usd
+                    // قرار می‌دهد. Fal نیز در صورت آماده‌بودن billing event
+                    // actual_cost_usd را برمی‌گرداند.
+                    $totalApiCost = (float) (
+                        $result['usage']['actual_cost_usd']
+                        ?? $result['usage']['estimated_cost_usd']
+                        ?? $result['usage']['cost']
+                        ?? 0
+                    );
+                    $perImageApiCost = $totalApiCost / max(1, count($items));
                     foreach ($items as $item) {
                         $singleResult = isset($item['b64_json']) || isset($item['url']) ? ['data' => [$item]] : $item;
                         $imageUrl  = $this->saveGeneratedImage($singleResult);
