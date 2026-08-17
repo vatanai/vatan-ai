@@ -13,23 +13,23 @@ use Illuminate\Http\Request;
  */
 class ExploreController extends Controller
 {
-    public function index(Request $request, ExploreFeedService $feed, SitePageService $pages)
+    public function index(Request $request, ExploreFeedService $feed)
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
         ]);
 
         $query = trim((string) ($validated['q'] ?? ''));
-        $page = $pages->byKey('explore');
-        $tiles = $feed->buildFeed('explore', (int) ($page?->content('items_per_page', 48) ?? 48), [
+        // اکسپلور کاتالوگ کامل است؛ محدودیت «تعداد در صفحه» باعث می‌شد فقط
+        // ۲۴ محصول از بیش از صد محصول سایت به فرانت برسد و گرید مجبور به تکرار شود.
+        $tiles = $feed->buildFeed('explore', null, [
             'query' => $query,
             'new_product_ratio' => 45,
         ]);
         $termRows = $feed->discoverableTerms();
         $layoutStyle = $feed->activeLayoutStyle('explore');
-        $layoutPatterns = \App\Models\FeedSetting::DISPLAY_PATTERNS;
 
-        return view('app.ideas', compact('tiles', 'termRows', 'query', 'layoutStyle', 'layoutPatterns'));
+        return view('app.ideas', compact('tiles', 'termRows', 'query', 'layoutStyle'));
     }
 
     /**

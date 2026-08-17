@@ -8,7 +8,6 @@
   $xTermRows = $termRows ?? [[], []];
   $xQuery = $query ?? '';
   $xLayoutStyle = $layoutStyle ?? 'excel_11';
-  $xLayoutPatterns = $layoutPatterns ?? \App\Models\FeedSetting::DISPLAY_PATTERNS;
 @endphp
 
 <div class="explore-page" dir="rtl">
@@ -61,7 +60,7 @@
 
   {{-- ===== گرید محتوا: خروجی موتور فید هوشمند — نسبت/رندوم/سبک از داشبورد کنترل می‌شود ===== --}}
   <section class="xp-grid-section">
-    <div class="xp-grid" data-search-filtered="{{ $xQuery !== '' ? '1' : '0' }}">
+    <div class="xp-grid">
       @forelse ($xTiles as $tile)
         <a href="{{ $tile['link'] ?? '#' }}" class="xp-tile {{ $tile['size'] }} {{ ($tile['type'] ?? 'product') === 'campaign' ? 'xp-tile--campaign' : '' }}" data-tile-size="{{ $tile['size'] }}" data-original-tile-size="{{ $tile['size'] }}" data-tile-type="{{ $tile['type'] ?? 'product' }}" data-allowed-sizes='@json($tile['allowed_sizes'] ?? [$tile['size']])'>
           @if($tile['video'])
@@ -478,13 +477,6 @@
 
   var tileSizeClasses = ['size-1x1', 'size-wide', 'size-tall', 'size-big'];
   var selectedPattern = @json($xLayoutStyle);
-  var patternDefinitions = @json($xLayoutPatterns);
-  var dimensions = {
-    'size-1x1': [1, 1],
-    'size-wide': [2, 1],
-    'size-tall': [1, 2],
-    'size-big': [2, 2]
-  };
 
   function setTileSize(tile, size) {
     tileSizeClasses.forEach(function (className) { tile.classList.remove(className); });
@@ -492,213 +484,45 @@
     tile.dataset.tileSize = size;
   }
 
-  function occupy(map, size, row, col) {
-    var dim = dimensions[size] || dimensions['size-1x1'];
-    for (var r = row; r < row + dim[1]; r++) {
-      for (var c = col; c < col + dim[0]; c++) map[r + ':' + c] = true;
-    }
-  }
-
-  function completeCycle(cols, rows, anchors) {
-    var occupied = {};
-    var slots = anchors.map(function (anchor) {
-      occupy(occupied, anchor[0], anchor[1], anchor[2]);
-      return anchor.slice();
-    });
-    for (var row = 1; row <= rows; row++) {
-      for (var col = 1; col <= cols; col++) {
-        if (!occupied[row + ':' + col]) slots.push(['size-1x1', row, col]);
-      }
-    }
-    return slots.sort(function (a, b) { return a[1] - b[1] || a[2] - b[2]; });
-  }
-
-  function canPlaceAnchor(map, size, row, col, cols, rows) {
-    var dim = dimensions[size];
-    if (!dim || col + dim[0] - 1 > cols || row + dim[1] - 1 > rows) return false;
-    for (var r = row - 1; r <= row + dim[1]; r++) {
-      for (var c = col - 1; c <= col + dim[0]; c++) {
-        if (r >= 1 && c >= 1 && r <= rows && c <= cols && map[r + ':' + c]) return false;
-      }
-    }
-    return true;
-  }
-
-  /* روی موبایل مختصات نمونه‌ها عیناً استفاده می‌شود. برای تبلت و دسکتاپ،
-     توالی همان سبک با تعداد ستون دستگاه بازچینی می‌شود و بین هر دو کاشی غیر ۱×۱
-     دست‌کم یک سلول فاصله می‌ماند. */
-  function responsiveCycle(style, cols) {
-    var definition = patternDefinitions[style] || patternDefinitions.excel_11;
-    if (cols === 3) return {
-      rows: definition.rows,
-      slots: completeCycle(cols, definition.rows, definition.anchors)
+  function patternSizePriority(size) {
+    var priorities = {
+      excel_11:  { 'size-wide': 1, 'size-tall': 2, 'size-big': 3, 'size-1x1': 4 },
+      balanced:  { 'size-big': 1, 'size-tall': 2, 'size-wide': 2, 'size-1x1': 4 },
+      vertical:  { 'size-tall': 1, 'size-big': 2, 'size-wide': 3, 'size-1x1': 4 },
+      banner:    { 'size-wide': 1, 'size-big': 2, 'size-tall': 3, 'size-1x1': 4 }
     };
-
-    var rows = cols === 4 ? 12 : (cols === 5 ? 10 : 8);
-    var occupied = {};
-    var anchors = [];
-    var sequence = definition.anchors.map(function (anchor) { return anchor[0]; });
-    var styleOffset = ['excel_11', 'balanced', 'vertical', 'banner'].indexOf(style);
-    if (styleOffset < 0) styleOffset = 0;
-
-    sequence.forEach(function (size, index) {
-      var placed = false;
-      for (var row = 1; row <= rows && !placed; row++) {
-        var start = ((index * 2 + row + styleOffset) % cols) + 1;
-        for (var step = 0; step < cols && !placed; step++) {
-          var col = ((start - 1 + step) % cols) + 1;
-          if (!canPlaceAnchor(occupied, size, row, col, cols, rows)) continue;
-          anchors.push([size, row, col]);
-          occupy(occupied, size, row, col);
-          placed = true;
-        }
-      }
-    });
-
-    return { rows: rows, slots: completeCycle(cols, rows, anchors) };
-  }
-
-  function allowedSizes(tile) {
-    try {
-      var parsed = JSON.parse(tile.dataset.allowedSizes || '[]');
-      return Array.isArray(parsed) && parsed.length ? parsed : [tile.dataset.originalTileSize || 'size-1x1'];
-    } catch (error) {
-      return [tile.dataset.originalTileSize || 'size-1x1'];
-    }
-  }
-
-  function placeTile(tile, size, row, col) {
-    var dim = dimensions[size] || dimensions['size-1x1'];
-    setTileSize(tile, size);
-    tile.style.display = '';
-    tile.style.gridColumn = col + ' / span ' + dim[0];
-    tile.style.gridRow = row + ' / span ' + dim[1];
+    var selected = priorities[selectedPattern] || priorities.excel_11;
+    return selected[size] || 4;
   }
 
   function applyPatternLayout(colCount) {
     if (!xpGrid) return;
     xpGrid.querySelectorAll('[data-repeat-fill]').forEach(function (tile) { tile.remove(); });
     var originals = Array.prototype.slice.call(xpGrid.querySelectorAll('.xp-tile'));
-    var remaining = originals.slice();
-    if (!remaining.length) return;
+    if (!originals.length) return;
 
-    /* جست‌وجو فقط نتایج واقعی را نشان می‌دهد؛ پر کردن خانه‌های خالی با clone
-       برای فید عادی مناسب است، اما در نتیجه‌ی جست‌وجو محصول را تکراری می‌کند. */
-    if (xpGrid.dataset.searchFiltered === '1') {
-      xpGrid.classList.remove('is-pattern-layout');
-      originals.forEach(function (tile) {
-        tile.style.display = '';
-        tile.style.removeProperty('grid-column');
-        tile.style.removeProperty('grid-row');
-        setTileSize(tile, tile.dataset.originalTileSize || 'size-1x1');
-      });
-      return;
-    }
-
-    var cycle = responsiveCycle(selectedPattern, colCount);
-    var cycleIndex = 0;
-    var safetyLimit = remaining.length * 4 + 8;
-    var cycleStates = [];
-
-    xpGrid.classList.add('is-pattern-layout');
-    originals.forEach(function (tile) {
-      tile.style.display = 'none';
+    /* چیدمان متراکم مرورگر با موجودی واقعی محصولات سازگار می‌شود. مختصات ثابت
+       قدیمی برای هر چرخه تعداد زیادی کارت ۱×۱ فرض می‌کرد و وقتی محصولات فقط
+       قاب عمودی/بزرگ داشتند، وسط گرید حفره یا cloneهای فراوان می‌ساخت. */
+    xpGrid.classList.remove('is-pattern-layout');
+    xpGrid.dataset.layoutStyle = selectedPattern;
+    originals.forEach(function (tile, index) {
+      tile.style.display = '';
       tile.style.removeProperty('grid-column');
       tile.style.removeProperty('grid-row');
-    });
-
-    while (remaining.length && cycleIndex < safetyLimit) {
-      var rowOffset = cycleIndex * cycle.rows;
-      var assignedThisCycle = 0;
-      var occupied = {};
-
-      cycle.slots.forEach(function (slot) {
-        var size = slot[0];
-        var matchingIndex = remaining.findIndex(function (tile) {
-          return allowedSizes(tile).indexOf(size) !== -1;
-        });
-        if (matchingIndex === -1 && size !== 'size-1x1') {
-          var dim = dimensions[size];
-          for (var localRow = 0; localRow < dim[1]; localRow++) {
-            for (var localCol = 0; localCol < dim[0]; localCol++) {
-              var smallIndex = remaining.findIndex(function (tile) {
-                return allowedSizes(tile).indexOf('size-1x1') !== -1;
-              });
-              if (smallIndex === -1) continue;
-              var smallTile = remaining.splice(smallIndex, 1)[0];
-              placeTile(smallTile, 'size-1x1', slot[1] + rowOffset + localRow, slot[2] + localCol);
-              occupy(occupied, 'size-1x1', slot[1] + localRow, slot[2] + localCol);
-              assignedThisCycle++;
-            }
-          }
-          return;
-        }
-        if (matchingIndex === -1) return;
-        var tile = remaining.splice(matchingIndex, 1)[0];
-        placeTile(tile, size, slot[1] + rowOffset, slot[2]);
-        occupy(occupied, size, slot[1], slot[2]);
-        assignedThisCycle++;
-      });
-
-      if (!assignedThisCycle) break;
-      cycleStates.push({ index: cycleIndex, occupied: occupied });
-      cycleIndex++;
-    }
-
-    /* ابتدا همه محصولات واقعی چیده می‌شوند. سپس فقط سلول‌های خالی چرخه‌های
-       استفاده‌شده با نسخه تکراری محصول سازگار پر می‌شوند؛ کمپین‌ها تکرار نمی‌شوند. */
-    var fillSources = originals.filter(function (tile) { return tile.dataset.tileType === 'product'; });
-    var sourceCursor = {};
-    function nextFillSource(size) {
-      var compatible = fillSources.filter(function (tile) { return allowedSizes(tile).indexOf(size) !== -1; });
-      if (!compatible.length) return null;
-      var cursor = sourceCursor[size] || 0;
-      sourceCursor[size] = cursor + 1;
-      return compatible[cursor % compatible.length];
-    }
-    function placeClone(source, size, row, col, occupied) {
-      if (!source) return false;
-      var clone = source.cloneNode(true);
-      clone.setAttribute('data-repeat-fill', 'true');
-      clone.removeAttribute('id');
-      placeTile(clone, size, row, col);
-      xpGrid.appendChild(clone);
-      occupy(occupied, size, row - (Math.floor((row - 1) / cycle.rows) * cycle.rows), col);
-      return true;
-    }
-
-    cycleStates.forEach(function (state) {
-      var rowOffset = state.index * cycle.rows;
-      cycle.slots.forEach(function (slot) {
-        var size = slot[0];
-        var dim = dimensions[size] || dimensions['size-1x1'];
-        var emptyCells = [];
-        for (var localRow = 0; localRow < dim[1]; localRow++) {
-          for (var localCol = 0; localCol < dim[0]; localCol++) {
-            var cellRow = slot[1] + localRow;
-            var cellCol = slot[2] + localCol;
-            if (!state.occupied[cellRow + ':' + cellCol]) emptyCells.push([cellRow, cellCol]);
-          }
-        }
-        if (!emptyCells.length) return;
-
-        if (emptyCells.length === dim[0] * dim[1]) {
-          var matchingSource = nextFillSource(size);
-          if (placeClone(matchingSource, size, slot[1] + rowOffset, slot[2], state.occupied)) return;
-        }
-
-        emptyCells.forEach(function (cell) {
-          placeClone(nextFillSource('size-1x1'), 'size-1x1', cell[0] + rowOffset, cell[1], state.occupied);
-        });
-      });
+      var originalSize = tile.dataset.originalTileSize || 'size-1x1';
+      /* محصولات اول فید (به‌خصوص محصولات جدید) بالای صفحه می‌مانند. بعد از
+         آن قاب‌های بزرگ‌تر زودتر چیده می‌شوند و ۱×۱ها حفره‌های باقی‌مانده را پر می‌کنند. */
+      tile.style.order = index < colCount ? String(index) : String((patternSizePriority(originalSize) * 1000) + index);
+      setTileSize(tile, originalSize);
     });
   }
 
   function syncGridUnit() {
     if (!xpGrid) return;
     var cs = getComputedStyle(xpGrid);
-    // مختصات صریح چرخه ممکن است ستون ضمنی بسازد؛ بنابراین تعداد ستون را از
-    // همان breakpointهای CSS می‌خوانیم، نه از gridTemplateColumns محاسبه‌شده.
+    // تعداد ستون دقیقاً از همان breakpointهای CSS گرفته می‌شود تا اولویت
+    // محصولات ابتدای فید در موبایل، تبلت و دسکتاپ ثابت و قابل پیش‌بینی بماند.
     var colCount = window.matchMedia('(min-width: 1280px)').matches ? 6
       : (window.matchMedia('(min-width: 1024px)').matches ? 5
         : (window.matchMedia('(min-width: 768px)').matches ? 4 : 3));
