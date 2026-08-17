@@ -201,7 +201,9 @@
   @php
     $savedFallbacks = (array) old('fallback_models', optional($duplicateFrom)->fallback_models ?? []);
     $savedFallbackProviders = (array) old('fallback_providers', optional($duplicateFrom)->fallback_model_providers ?? []);
-    $fallbackEnabled = (bool) old('fallback_enabled', ($product || $duplicateFrom) ? !empty($savedFallbacks) : true);
+    // مدل جایگزین اختیاری است؛ برای محصول جدید خاموش شروع می‌شود تا مدیر
+    // فقط وقتی واقعاً مدل دوم می‌خواهد آن را فعال و انتخاب کند.
+    $fallbackEnabled = (bool) old('fallback_enabled', ($product || $duplicateFrom) ? !empty($savedFallbacks) : false);
     if (empty($savedFallbacks)) {
       $savedFallbacks = ['openai/gpt-image-1-mini'];
       $savedFallbackProviders = ['openrouter'];
