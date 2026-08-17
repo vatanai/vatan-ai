@@ -89,9 +89,9 @@
         <th>کد محصول</th>
         <th style="text-align:center;">دسته‌بندی</th>
         <th style="text-align:center;"><span class="block">ویژگی‌ها</span><span class="block">هوش مصنوعی</span></th>
-        <th style="text-align:center;"><span class="block">توکن</span><span class="block">قیمت</span></th>
+        <th style="text-align:center;"><span class="block">اعتبار</span><span class="block">قیمت</span></th>
         <th style="text-align:center;"><span class="block">تعداد اجرا</span><span class="block">تعداد لایک</span></th>
-        <th style="text-align:center;"><span class="block">زمان اجرا</span><span class="block">توکن مصرفی</span></th>
+        <th style="text-align:center;"><span class="block">زمان اجرا</span><span class="block">اعتبار مصرفی</span></th>
         <th style="text-align:center;">بهینه سازی آزمایش</th>
         <th style="text-align:center;"><span class="block">وضعیت</span><span class="block">لینک</span></th>
         <th>آخرین ویرایش</th>
@@ -177,7 +177,7 @@
             </div>
           </td>
 
-          <td data-label="توکن / قیمت" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
+          <td data-label="اعتبار / قیمت" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
             @php
               $labExperiment = $product->latestLabExperiment;
               $modelCostUsd = $assignedAiModel?->cost_per_generation_usd;
@@ -189,8 +189,8 @@
                 ? (float) ($labExperiment->total_cost_toman ?: $labExperiment->actual_cost_toman ?: $labExperiment->estimated_cost_toman)
                 : ($modelCostIrr !== null ? (float) $modelCostIrr / 10 : null);
             @endphp
-            <div class="product-price-stack" title="توکن محصول و قیمت ثبت‌شده در آخرین آزمایش">
-              <span><small>توکن</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost)) }}</b></span>
+            <div class="product-price-stack" title="اعتبار محصول و قیمت ثبت‌شده در آخرین آزمایش">
+              <span><small>اعتبار</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost)) }}</b></span>
               <span dir="ltr"><small>دلار</small><b>{{ $priceUsd !== null ? '$' . number_format($priceUsd, 4) : '—' }}</b></span>
               <span><small>تومان</small><b>{{ $priceToman !== null ? number_format($priceToman) : '—' }}</b></span>
             </div>
@@ -218,7 +218,7 @@
             </div>
           </td>
 
-          <td data-label="زمان اجرا / توکن مصرفی" style="text-align:center;">
+          <td data-label="زمان اجرا / اعتبار مصرفی" style="text-align:center;">
             @php
               $labRuns = $labExperiment?->runs ?? collect();
               $labRunForStats = $labRuns->firstWhere('is_selected', true)
@@ -233,8 +233,8 @@
             @endphp
             <div class="product-run-token-stack flex flex-col items-center justify-center gap-1.5">
               <div><span>زمان اجرا</span><strong>{{ $labBuildSeconds !== null ? number_format($labBuildSeconds, 1) . ' ثانیه' : '—' }}</strong></div>
-              <div><span>توکن مصرفی</span><strong>{{ $labRunTokens !== null ? number_format((int) $labRunTokens) : '—' }}</strong></div>
-              <div><span>مجموع توکن</span><strong>{{ number_format($totalUserTokens) }}</strong></div>
+              <div><span>اعتبار مصرفی</span><strong>{{ $labRunTokens !== null ? number_format((int) $labRunTokens) : '—' }}</strong></div>
+              <div><span>مجموع اعتبار</span><strong>{{ number_format($totalUserTokens) }}</strong></div>
             </div>
           </td>
 
@@ -391,13 +391,24 @@
       </div>
       <button type="button" class="icon-action-btn" onclick="closeProductAiModelDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div>
         <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">سرویس</label>
         <select id="product-ai-provider-select" class="input-pro w-full" onchange="renderProductAiModelOptions()"></select>
       </div>
       <div>
-        <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">مدل</label>
+        <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">نوع مدل</label>
+        <select id="product-ai-task-select" class="input-pro w-full" onchange="renderProductAiModelOptions()">
+          <option value="product_image">متن + عکس → عکس</option>
+          <option value="text_to_image">متن به عکس</option>
+          <option value="image_to_image">عکس به عکس</option>
+          <option value="face_consistency">حفظ هویت چهره</option>
+          <option value="all">همه مدل‌های منتخب</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[11px] font-bold block mb-1.5" style="color:var(--text-soft);">جست‌وجوی مدل</label>
+        <input id="product-ai-model-search" class="input-pro w-full" type="search" placeholder="نام یا شناسه مدل..." oninput="renderProductAiModelOptions()" autocomplete="off">
         <select id="product-ai-model-select" class="hidden" onchange="saveProductAiModelSelection()"></select>
       </div>
     </div>
@@ -423,7 +434,10 @@ $assignableAiModelsForJs = ($assignableAiModels ?? collect())->map(fn ($model) =
     'provider' => $model->provider,
     'providerFa' => ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
     'providerEn' => ['liara' => 'Liara AI', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
-    'usage' => $model->taskLabel(),
+    'usage' => $model->productWorkflowLabel(),
+    'workflow' => $model->supportsProductImageWorkflow() ? 'product_image' : $model->task_type,
+    'task' => $model->task_type,
+    'useCases' => $model->recommendedUseCaseKeys(),
     'grade' => $model->qualityGradeLabel(),
     'plan' => $model->liara_plan,
   ])->values()->all();
@@ -500,7 +514,7 @@ window.PRODUCT_MATCHING_IDS = @json($matchingProductIds ?? []);
     <div class="flex items-center gap-2">
       <input id="product-bulk-credit-dialog-input" type="number" min="0" max="1000000" step="1" required
              class="input-pro w-full" style="height:44px;" inputmode="numeric" value="10" placeholder="مثلاً ۱۰">
-      <span class="text-[11px] whitespace-nowrap" style="color:var(--text-soft);">توکن</span>
+      <span class="text-[11px] whitespace-nowrap" style="color:var(--text-soft);">اعتبار</span>
     </div>
     <label for="product-bulk-credit-dialog-note" class="block text-[11.5px] font-bold mt-4 mb-2">توضیح تغییر <span class="font-normal" style="color:var(--text-soft);">(اختیاری)</span></label>
     <input id="product-bulk-credit-dialog-note" type="text" maxlength="255" class="input-pro w-full" style="height:44px;" placeholder="مثلاً یکسان‌سازی قیمت محصولات عکس">
@@ -649,7 +663,7 @@ document.getElementById('product-bulk-credit-dialog-form')?.addEventListener('su
   var value = String(document.getElementById('product-bulk-credit-dialog-input').value).trim();
   var errorBox = document.getElementById('product-bulk-credit-dialog-error');
   if (!/^\d+$/.test(value) || Number(value) > 1000000) {
-    errorBox.textContent = 'هزینه‌ی توکن باید یک عدد صحیح بین صفر تا ۱٬۰۰۰٬۰۰۰ باشد.';
+    errorBox.textContent = 'هزینه‌ی اعتبار باید یک عدد صحیح بین صفر تا ۱٬۰۰۰٬۰۰۰ باشد.';
     errorBox.classList.remove('hidden');
     return;
   }

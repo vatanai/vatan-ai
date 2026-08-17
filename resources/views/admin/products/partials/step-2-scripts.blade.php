@@ -28,23 +28,32 @@ function updateApiProviderPicker(provider) {
 function primaryModelFilterValues() {
   return {
     provider: __currentApiProvider || 'all',
-    task: document.getElementById('primary-model-task-filter')?.value || 'all',
-    useCase: document.getElementById('primary-model-use-case-filter')?.value || 'all',
+    purpose: document.getElementById('primary-model-purpose-filter')?.value || 'all',
+    task: document.getElementById('primary-model-task-filter')?.value || 'product_image',
+    search: (document.getElementById('primary-model-search')?.value || '').trim().toLowerCase(),
   };
 }
 
-function modelMatchesPrimaryFilters(provider, task, useCase, modelProvider, modelTask, modelUseCases) {
+function modelMatchesPrimaryFilters(provider, purpose, task, search, modelProvider, modelTask, modelWorkflow, modelUseCases, modelSearch) {
   const providerOk = provider === 'all' || provider === modelProvider;
-  const taskOk = task === 'all' || task === modelTask;
+  const taskOk = task === 'all' || (task === 'product_image' ? modelWorkflow === 'product_image' : modelTask === task);
   const useCases = String(modelUseCases || '').split(',').filter(Boolean);
-  const useCaseOk = useCase === 'all' || useCases.includes(useCase);
-  return providerOk && taskOk && useCaseOk;
+  const purposeMap = {
+    face: ['portrait', 'identity'],
+    business: ['business'],
+    design: ['design'],
+    creative: ['creative'],
+  };
+  const purposeOk = purpose === 'all' || (purposeMap[purpose] || []).some(key => useCases.includes(key));
+  const haystack = String(modelSearch || '').toLowerCase();
+  const searchOk = !search || haystack.includes(search);
+  return providerOk && taskOk && purposeOk && searchOk;
 }
 
 function renderPrimaryModelPicker() {
   const filters = primaryModelFilterValues();
   document.querySelectorAll('#primary-model-options .model-picker-model-row').forEach(function (row) {
-    const visible = modelMatchesPrimaryFilters(filters.provider, filters.task, filters.useCase, row.dataset.modelProvider, row.dataset.modelTask, row.dataset.modelUseCases);
+    const visible = modelMatchesPrimaryFilters(filters.provider, filters.purpose, filters.task, filters.search, row.dataset.modelProvider, row.dataset.modelTask, row.dataset.modelWorkflow, row.dataset.modelUseCases, row.dataset.modelSearch);
     row.classList.toggle('hidden', !visible);
   });
   const primarySel = document.getElementById('primary-model-select');
@@ -52,7 +61,7 @@ function renderPrimaryModelPicker() {
   let needsReset = false;
   Array.from(primarySel.options).forEach(function (opt) {
     if (!opt.value) return;
-    const visible = modelMatchesPrimaryFilters(filters.provider, filters.task, filters.useCase, opt.getAttribute('data-api-provider') || 'openrouter', opt.getAttribute('data-model-task') || '', opt.getAttribute('data-model-use-cases') || '');
+    const visible = modelMatchesPrimaryFilters(filters.provider, filters.purpose, filters.task, filters.search, opt.getAttribute('data-api-provider') || 'openrouter', opt.getAttribute('data-model-task') || '', opt.getAttribute('data-model-workflow') || opt.getAttribute('data-model-task') || '', opt.getAttribute('data-model-use-cases') || '', (opt.getAttribute('data-name') || '') + ' ' + (opt.value || '') + ' ' + (opt.textContent || ''));
     opt.hidden = !visible;
     opt.disabled = !visible;
     if (!visible && opt.selected) needsReset = true;
@@ -65,6 +74,50 @@ function renderPrimaryModelPicker() {
 
 function onPrimaryModelFilterChange() {
   renderPrimaryModelPicker();
+}
+
+function toggleFallbackConfiguration() {
+  const enabled = document.getElementById('fallback-enabled')?.checked;
+  const box = document.getElementById('fallback-configuration');
+  box?.classList.toggle('hidden', !enabled);
+  document.querySelectorAll('#fallback-configuration input, #fallback-configuration select').forEach((control) => {
+    control.disabled = !enabled;
+  });
+}
+
+function toggleFallbackModelMenu() {
+  const menu = document.getElementById('fallback-model-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('hidden') === false;
+  document.getElementById('fallback-model-picker-button')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) renderFallbackModelPicker();
+}
+
+function renderFallbackModelPicker() {
+  const provider = document.getElementById('fallback-provider-filter')?.value || 'all';
+  const task = document.getElementById('fallback-task-filter')?.value || 'product_image';
+  const query = (document.getElementById('fallback-model-search')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('#fallback-model-options .model-picker-model-row').forEach(function (row) {
+    const taskOk = task === 'all' || (task === 'product_image' ? row.dataset.fallbackWorkflow === 'product_image' : row.dataset.fallbackTask === task);
+    const providerOk = provider === 'all' || row.dataset.fallbackProvider === provider;
+    const searchOk = !query || (row.dataset.fallbackSearch || '').toLowerCase().includes(query);
+    row.classList.toggle('hidden', !(taskOk && providerOk && searchOk));
+  });
+}
+
+function selectFallbackModelFromPicker(row) {
+  if (!row) return;
+  const modelId = row.dataset.fallbackId || '';
+  const provider = row.dataset.fallbackProvider || '';
+  const modelInput = document.getElementById('fallback-model-input');
+  const providerInput = document.getElementById('fallback-provider-input');
+  if (modelInput) modelInput.value = modelId;
+  if (providerInput) providerInput.value = provider;
+  const label = document.getElementById('fallback-model-picker-label');
+  if (label) label.textContent = row.querySelector('.model-picker-model-name b')?.textContent || modelId;
+  document.querySelectorAll('#fallback-model-options .model-picker-model-row').forEach((item) => item.classList.toggle('is-selected', item === row));
+  document.getElementById('fallback-model-menu')?.classList.add('hidden');
+  document.getElementById('fallback-model-picker-button')?.setAttribute('aria-expanded', 'false');
 }
 
 function selectApiProvider(provider) {
@@ -158,6 +211,8 @@ function selectRecommendedModel(modelId) {
   if (fallback && automaticFallbacks[modelId]) {
     setFallbackSelection(fallback, automaticFallbacks[modelId], primaryProvider);
     if (typeof refreshSearchable === 'function') refreshSearchable(fallback);
+  } else if (automaticFallbacks[modelId]) {
+    setFallbackModelById(automaticFallbacks[modelId], primaryProvider);
   }
 }
 
@@ -177,6 +232,11 @@ function setFallbackSelection(select, modelId, provider) {
   select.selectedIndex = fallbackIndex;
   syncFallbackProvider(select);
   select.dispatchEvent(new Event('change', {bubbles:true}));
+}
+
+function setFallbackModelById(modelId, provider) {
+  const row = [...document.querySelectorAll('#fallback-model-options .model-picker-model-row')].find((item) => item.dataset.fallbackId === modelId && (!provider || item.dataset.fallbackProvider === provider));
+  if (row) selectFallbackModelFromPicker(row);
 }
 
 /* ══════ فیلتر Provider — همه‌ی سرویس‌های فعال ══════ */
@@ -375,7 +435,7 @@ function onPromptInput() {
   autoResizePrompt();
   syncPromptScroll();
   document.getElementById('prompt-char-count').textContent = ta.value.length + ' کاراکتر';
-  document.getElementById('prompt-token-estimate').textContent = '~' + Math.ceil(ta.value.length / 4) + ' توکن (تخمینی)';
+  document.getElementById('prompt-token-estimate').textContent = '~' + Math.ceil(ta.value.length / 4) + ' اعتبار (تخمینی)';
   const matches = ta.value.match(/\{[a-zA-Z0-9_]+\}/g) || [];
   document.getElementById('prompt-vars-detected').textContent = matches.length + ' متغیر شناسایی شد';
 }
@@ -484,15 +544,16 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('primary-model-menu')?.classList.add('hidden');
       document.getElementById('primary-model-picker-button')?.setAttribute('aria-expanded', 'false');
     }
+    if (!event.target.closest('#fallback-model-picker-shell')) {
+      document.getElementById('fallback-model-menu')?.classList.add('hidden');
+      document.getElementById('fallback-model-picker-button')?.setAttribute('aria-expanded', 'false');
+    }
   });
   clearRecommendedModelSelection();
   onPrimaryModelChange();
   clearRecommendedModelSelection();
-  document.querySelectorAll('#fallback-list .fallback-row').forEach(row => wireFallbackDrag(row));
-  document.querySelectorAll('#fallback-list .fallback-select-item').forEach(select => {
-    select.addEventListener('change', () => syncFallbackProvider(select));
-    syncFallbackProvider(select);
-  });
+  toggleFallbackConfiguration();
+  renderFallbackModelPicker();
   onPromptInput();
   // اجرای اولیه فیلتر provider
   onApiProviderChange(typeof __currentApiProvider !== 'undefined' ? __currentApiProvider : 'openrouter');

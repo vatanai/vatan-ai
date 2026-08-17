@@ -171,7 +171,12 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
             : null;
         $estimatedCost = $this->estimateCost($model, $payload);
         $outputs = max(1, (int) ($payload['n'] ?? 1));
-        $reservation = $this->limits->reserve($model, $estimatedCost, $outputs);
+        $reservation = $this->limits->reserve(
+            $model,
+            $estimatedCost,
+            $outputs,
+            is_numeric($payload['order_id'] ?? null) ? (int) $payload['order_id'] : null
+        );
 
         try {
             $remote = $this->submitRemote($model, $input, $webhookUrl ?: $configuredWebhook);
@@ -222,16 +227,47 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         $timeout = max(5, (int) ($payload['timeout'] ?? $this->credentials->for($this->provider())['timeout']));
         $deadline = microtime(true) + $timeout;
 
-        do {
-            $status = $this->getGenerationStatus($model, $requestId);
-            if (in_array($status['status'], ['completed', 'failed', 'canceled'], true)) {
-                $this->persistNormalizedRequest($model, $status, $requestId);
-                return $status;
-            }
-            usleep(750000);
-        } while (microtime(true) < $deadline);
+        try {
+            do {
+                $status = $this->getGenerationStatus($model, $requestId);
+                if (in_array($status['status'], ['completed', 'failed', 'canceled'], true)) {
+                    $this->persistNormalizedRequest($model, $status, $requestId);
+                    return $status;
+                }
+                usleep(750000);
+            } while (microtime(true) < $deadline);
+        } catch (\Throwable $error) {
+            $this->markRequestAsFailed($requestId, $error->getMessage(), 'provider_status_error');
+            throw $error;
+        }
 
-        throw new RuntimeException("زمان انتظار provider {$this->provider()} تمام شد. شناسه درخواست: {$requestId}");
+        $message = "زمان انتظار provider {$this->provider()} تمام شد. شناسه درخواست: {$requestId}";
+        $this->markRequestAsFailed($requestId, $message, 'provider_timeout');
+        try {
+            // لغو درخواست صف‌شده از هزینه‌ی ادامه‌دار بعد از خطای کاربر جلوگیری می‌کند.
+            $this->cancelRemote($model, $requestId);
+        } catch (\Throwable $cancelError) {
+            Log::warning('AI provider request could not be cancelled after timeout', [
+                'provider' => $this->provider(),
+                'request_id' => $requestId,
+                'error' => $cancelError->getMessage(),
+            ]);
+        }
+
+        throw new RuntimeException($message);
+    }
+
+    protected function markRequestAsFailed(string $requestId, string $message, string $errorCode): void
+    {
+        AiProviderRequest::query()
+            ->where('provider', $this->provider())
+            ->where('external_request_id', $requestId)
+            ->update([
+                'status' => 'failed',
+                'error_code' => $errorCode,
+                'error_message' => \Illuminate\Support\Str::limit($message, 1000, ''),
+                'completed_at' => now(),
+            ]);
     }
 
     protected function buildInput(AiModel $model, string $prompt, string $resolution, string $aspectRatio, int $count, array $extraPayload): array
@@ -416,7 +452,20 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         if ($requested === 'auto') {
             return in_array('auto', $supported, true) ? 'auto' : ($supported[0] ?? 'auto');
         }
-        if (!$supported || in_array($requested, $supported, true)) return $requested;
+        if (!$supported) {
+            // رابط کاربری نسبت‌های متداولی مثل ۴:۵ را هم می‌پذیرد، اما بعضی
+            // مدل‌ها فقط نسبت‌های استاندارد خودشان را قبول می‌کنند. وقتی
+            // schema مدل در کاتالوگ ناقص است، نزدیک‌ترین مقدار قراردادی را
+            // بفرست تا درخواست با خطای 422 متوقف نشود.
+            return match ($requested) {
+                '4:5' => '3:4',
+                '5:4' => '4:3',
+                '4:6', '2:3' => '2:3',
+                '6:4', '3:2' => '3:2',
+                default => $requested,
+            };
+        }
+        if (in_array($requested, $supported, true)) return $requested;
 
         $requestedRatio = $this->aspectRatioValue($requested);
         $best = $supported[0];

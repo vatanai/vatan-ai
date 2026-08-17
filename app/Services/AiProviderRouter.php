@@ -36,8 +36,8 @@ class AiProviderRouter
     public function __construct(
         protected OpenRouterService $openRouter,
         protected LiaraAiService    $liara,
-        protected \App\Services\Providers\FalImageProvider $fal,
-        protected \App\Services\Providers\ReplicateImageProvider $replicate
+        protected ?\App\Services\Providers\FalImageProvider $fal = null,
+        protected ?\App\Services\Providers\ReplicateImageProvider $replicate = null
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -71,8 +71,8 @@ class AiProviderRouter
     {
         return match ($provider) {
             'liara' => $this->liara,
-            'fal' => $this->fal,
-            'replicate' => $this->replicate,
+            'fal' => $this->fal ?: throw new Exception('سرویس Fal.ai در روتر ثبت نشده است.'),
+            'replicate' => $this->replicate ?: throw new Exception('سرویس Replicate در روتر ثبت نشده است.'),
             default => $this->openRouter,
         };
     }

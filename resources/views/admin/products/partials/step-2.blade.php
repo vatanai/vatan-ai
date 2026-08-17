@@ -84,28 +84,34 @@
       @endif
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+    {{-- فیلترهای مدل در یک کنترل واحد: دسته‌بندی کاربردی + جست‌وجوی نام مدل --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
       <label class="model-picker-field">
         <span class="model-picker-label">نوع مدل</span>
         <select id="primary-model-task-filter" class="model-picker-filter" onchange="onPrimaryModelFilterChange()">
-          <option value="all">همه نوع‌ها</option>
-          @foreach($taskTypeLabels as $taskType => $taskLabel)
-            @if($aiModels->contains(fn ($model) => $model->task_type === $taskType))
-              <option value="{{ $taskType }}">{{ $taskLabel }}</option>
-            @endif
-          @endforeach
+          <option value="product_image">متن + عکس → عکس</option>
+          <option value="text_to_image">متن به عکس</option>
+          <option value="image_to_image">عکس به عکس</option>
+          <option value="face_consistency">حفظ هویت چهره</option>
+          <option value="all">همه مدل‌های منتخب</option>
         </select>
       </label>
       <label class="model-picker-field">
-        <span class="model-picker-label">بهترین گزینه برای</span>
-        <select id="primary-model-use-case-filter" class="model-picker-filter" onchange="onPrimaryModelFilterChange()">
-          <option value="all">همه کاربردها</option>
-          @foreach($useCaseLabels as $useCase => $useCaseLabel)
-            @if($aiModels->contains(fn ($model) => in_array($useCase, $model->recommendedUseCaseKeys(), true)))
-              <option value="{{ $useCase }}">{{ $useCaseLabel }}</option>
-            @endif
-          @endforeach
+        <span class="model-picker-label">دسته‌بندی کاربردی مدل</span>
+        <select id="primary-model-purpose-filter" class="model-picker-filter" onchange="onPrimaryModelFilterChange()">
+          <option value="all">همه مدل‌ها</option>
+          <option value="face">چهره و حفظ هویت</option>
+          <option value="business">محصول و کسب‌وکار</option>
+          <option value="design">طراحی و متن</option>
+          <option value="creative">خلاق و عمومی</option>
         </select>
+      </label>
+      <label class="model-picker-field md:col-span-1">
+        <span class="model-picker-label">جست‌وجوی مدل</span>
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text3)] text-[10px]"></i>
+          <input type="search" id="primary-model-search" class="model-picker-filter pr-8" placeholder="نام فارسی، نام انگلیسی یا شناسه مدل..." oninput="onPrimaryModelFilterChange()" autocomplete="off">
+        </div>
       </label>
     </div>
 
@@ -137,16 +143,15 @@
           <i class="fa-solid fa-chevron-down"></i>
         </button>
         <div id="primary-model-menu" class="model-picker-menu model-picker-model-menu hidden" role="listbox">
-          <div class="model-picker-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>نوع مدل</span><span>بهترین برای</span><span>گرید</span></div>
+          <div class="model-picker-model-head"><span>مدل</span><span>کاربرد اصلی</span><span>گرید</span></div>
           <div id="primary-model-options">
             @foreach ($aiModels as $model)
               @php
                 $modelProvider = $model->provider ?? 'openrouter';
               @endphp
-              <button type="button" class="model-picker-model-row {{ $curPrimaryModel === $model->openrouter_model_id && (!$curSavedProvider || $curSavedProvider === $modelProvider) ? 'is-selected' : '' }}" data-model-provider="{{ $modelProvider }}" data-model-id="{{ $model->openrouter_model_id }}" data-model-task="{{ $model->task_type }}" data-model-use-cases="{{ implode(',', $model->recommendedUseCaseKeys()) }}" onclick="selectPrimaryModelFromPicker(this)">
+              <button type="button" class="model-picker-model-row {{ $curPrimaryModel === $model->openrouter_model_id && (!$curSavedProvider || $curSavedProvider === $modelProvider) ? 'is-selected' : '' }}" data-model-provider="{{ $modelProvider }}" data-model-id="{{ $model->openrouter_model_id }}" data-model-task="{{ $model->task_type }}" data-model-workflow="{{ $model->supportsProductImageWorkflow() ? 'product_image' : $model->task_type }}" data-model-use-cases="{{ implode(',', $model->recommendedUseCaseKeys()) }}" data-model-priority="{{ (int) ($model->lab_priority ?? 999) }}" data-model-search="{{ strtolower($model->name . ' ' . $model->externalModelId() . ' ' . $model->provider_name) }}" onclick="selectPrimaryModelFromPicker(this)">
                 <span class="model-picker-model-name"><b>{{ $model->name }}</b><small dir="ltr">{{ $model->externalModelId() }}</small></span>
-                <span>{{ $model->taskLabel() }}</span>
-                <span>{{ $model->primaryUseCaseLabel() }}</span>
+                <span>{{ $model->productWorkflowLabel() }}</span>
                 <span class="model-quality-grade">{{ $model->qualityGradeLabel() }}</span>
               </button>
             @endforeach
@@ -162,7 +167,8 @@
                 data-provider="{{ $model->provider_name }}"
                 data-api-provider="{{ $model->provider ?? 'openrouter' }}"
                 data-output-modality="{{ $model->output_modality }}"
-                data-task-label="{{ $model->taskLabel() }}"
+                data-task-label="{{ $model->productWorkflowLabel() }}"
+                data-model-workflow="{{ $model->supportsProductImageWorkflow() ? 'product_image' : $model->task_type }}"
                 data-use-case-label="{{ $model->primaryUseCaseLabel() }}"
                 data-capabilities="{{ implode('، ', $model->capabilityLabels()) }}"
                 data-model-task="{{ $model->task_type }}"
@@ -192,39 +198,124 @@
     <input type="hidden" name="pipeline_type" value="image_editing">
   </div>
 
-  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase flex items-center gap-1.5">مدل جایگزین — اولویت دو <span class="text-[var(--red)]">*</span><span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">در انتخاب کارت‌های پیشنهادی، یک مدل متفاوت و یک رده پایین‌تر خودکار انتخاب می‌شود. انتخاب دستی هر دو مدل نیز امکان‌پذیر است، اما مدل دوم نباید با مدل اصلی یکسان باشد.</span></span></div>
-  <p class="text-[10.5px] text-[var(--text3)] mb-2.5 leading-relaxed">
-    اگر مدل اصلی پاسخ نداد، سیستم به ترتیبی که اینجا چیده‌اید سراغ مدل بعدی می‌رود. برای تغییر ترتیب، ردیف را با آیکون کنار آن بکشید.
-  </p>
   @php
-    $configuredFallbacks = old('fallback_models', optional($duplicateFrom)->fallback_models ?? []);
-    $configuredFallbackProviders = old('fallback_providers', optional($duplicateFrom)->fallback_model_providers ?? []);
-    if (empty($configuredFallbacks)) {
-      $configuredFallbacks = ['openai/gpt-image-1-mini'];
-      $configuredFallbackProviders = [$curApiProvider];
+    $savedFallbacks = (array) old('fallback_models', optional($duplicateFrom)->fallback_models ?? []);
+    $savedFallbackProviders = (array) old('fallback_providers', optional($duplicateFrom)->fallback_model_providers ?? []);
+    $fallbackEnabled = (bool) old('fallback_enabled', ($product || $duplicateFrom) ? !empty($savedFallbacks) : true);
+    if (empty($savedFallbacks)) {
+      $savedFallbacks = ['openai/gpt-image-1-mini'];
+      $savedFallbackProviders = ['openrouter'];
     }
+    $selectedFallbackId = (string) ($savedFallbacks[0] ?? '');
+    $selectedFallbackProvider = (string) ($savedFallbackProviders[0] ?? 'openrouter');
+    $selectedFallback = $aiModels->first(fn ($model) => $model->openrouter_model_id === $selectedFallbackId && ($model->provider ?? '') === $selectedFallbackProvider);
   @endphp
-  <div id="fallback-list" class="space-y-2 md:w-1/2 md:ml-auto">
-    @foreach ($configuredFallbacks as $i => $fbModelId)
-      <div class="fallback-row bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3 flex items-center gap-3" id="fb-preload-{{ $i }}">
-        <i class="fa-solid fa-grip-vertical text-[var(--text3)] cursor-grab shrink-0 fb-drag-handle hidden md:block" title="برای تغییر اولویت بکشید"></i>
-        <div class="flex md:hidden flex-col gap-0.5 shrink-0">
-          <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'up')" aria-label="جابه‌جایی به بالا"><i class="fa-solid fa-caret-up"></i></button>
-          <button type="button" class="w-5 h-4 flex items-center justify-center text-[var(--text3)] bg-[var(--text)]/5 rounded" onclick="moveFallbackRow(this,'down')" aria-label="جابه‌جایی به پایین"><i class="fa-solid fa-caret-down"></i></button>
-        </div>
-        <span class="fb-priority text-[10px] font-mono text-[var(--text3)] w-14 shrink-0">اولویت {{ $i + 2 }}</span>
-        <select name="fallback_models[]" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)] flex-1 fallback-select-item" data-searchable>
-          @foreach ($aiModels as $model)
-            <option value="{{ $model->openrouter_model_id }}"
-                    data-api-provider="{{ $model->provider ?? 'openrouter' }}"
-                    {{ $model->openrouter_model_id === $fbModelId && ($configuredFallbackProviders[$i] ?? null) === ($model->provider ?? 'openrouter') ? 'selected' : '' }}>{{ $model->name }} ({{ $model->provider_name }})</option>
+  <div class="text-[11px] font-bold text-[var(--text3)] mb-2 tracking-wider uppercase flex items-center gap-1.5">مدل جایگزین — اولویت دو <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:250px;">اگر مدل اصلی خطا بدهد، این مدل به‌صورت خودکار اجرا می‌شود. این گزینه اختیاری است.</span></span></div>
+  <label class="fallback-toggle-card mb-3">
+    <span><b>فعال‌سازی مدل جایگزین</b><small>در صورت خطای مدل اول، مدل دوم اجرا شود.</small></span>
+    <input type="checkbox" name="fallback_enabled" id="fallback-enabled" value="1" @checked($fallbackEnabled) onchange="toggleFallbackConfiguration()">
+    <i></i>
+  </label>
+  <div id="fallback-configuration" class="fallback-configuration {{ $fallbackEnabled ? '' : 'hidden' }}">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
+      <label class="model-picker-field">
+        <span class="model-picker-label">پرووایدر مدل دوم</span>
+        <select id="fallback-provider-filter" class="model-picker-filter" onchange="renderFallbackModelPicker()">
+          @foreach($availableProviders as $providerKey => $providerLabel)
+            <option value="{{ $providerKey }}" @selected($selectedFallbackProvider === $providerKey)>{{ $providerLabel }}</option>
           @endforeach
         </select>
-        <input type="hidden" name="fallback_providers[]" class="fallback-provider-input" value="{{ $configuredFallbackProviders[$i] ?? $curApiProvider }}">
+      </label>
+      <label class="model-picker-field">
+        <span class="model-picker-label">نوع مدل</span>
+        <select id="fallback-task-filter" class="model-picker-filter" onchange="renderFallbackModelPicker()">
+          <option value="product_image">متن + عکس → عکس</option>
+          <option value="text_to_image">متن به عکس</option>
+          <option value="image_to_image">عکس به عکس</option>
+          <option value="face_consistency">حفظ هویت چهره</option>
+          <option value="all">همه مدل‌های منتخب</option>
+        </select>
+      </label>
+      <label class="model-picker-field">
+        <span class="model-picker-label">جست‌وجوی مدل دوم</span>
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text3)] text-[10px]"></i>
+          <input type="search" id="fallback-model-search" class="model-picker-filter pr-8" placeholder="نام یا شناسه مدل..." autocomplete="off" oninput="renderFallbackModelPicker()">
+        </div>
+      </label>
+    </div>
+    <div class="model-picker-shell" id="fallback-model-picker-shell">
+      <button type="button" id="fallback-model-picker-button" class="model-picker-trigger" onclick="toggleFallbackModelMenu()" aria-haspopup="listbox" aria-expanded="false">
+        <span id="fallback-model-picker-label">{{ $selectedFallback?->name ?: 'انتخاب مدل جایگزین' }}</span><i class="fa-solid fa-chevron-down"></i>
+      </button>
+      <div id="fallback-model-menu" class="model-picker-menu model-picker-model-menu hidden" role="listbox">
+        <div class="model-picker-model-head"><span>مدل</span><span>کاربرد اصلی</span><span>گرید</span></div>
+        <div id="fallback-model-options">
+          @foreach ($aiModels as $model)
+            @php $modelProvider = $model->provider ?? 'openrouter'; @endphp
+            <button type="button" class="model-picker-model-row {{ $selectedFallbackId === $model->openrouter_model_id && $selectedFallbackProvider === $modelProvider ? 'is-selected' : '' }}" data-fallback-provider="{{ $modelProvider }}" data-fallback-id="{{ $model->openrouter_model_id }}" data-fallback-task="{{ $model->task_type }}" data-fallback-workflow="{{ $model->supportsProductImageWorkflow() ? 'product_image' : $model->task_type }}" data-fallback-use-cases="{{ implode(',', $model->recommendedUseCaseKeys()) }}" data-fallback-search="{{ strtolower($model->name . ' ' . $model->externalModelId() . ' ' . $model->provider_name) }}" onclick="selectFallbackModelFromPicker(this)">
+              <span class="model-picker-model-name"><b>{{ $model->name }}</b><small dir="ltr">{{ $model->externalModelId() }}</small></span><span>{{ $model->productWorkflowLabel() }}</span><span class="model-quality-grade">{{ $model->qualityGradeLabel() }}</span>
+            </button>
+          @endforeach
+        </div>
       </div>
-    @endforeach
+    </div>
+    <input type="hidden" name="fallback_models[]" id="fallback-model-input" value="{{ $selectedFallbackId }}">
+    <input type="hidden" name="fallback_providers[]" id="fallback-provider-input" value="{{ $selectedFallbackProvider }}">
   </div>
 </div>
+
+{{-- پیکربندی سه سطح خروجی؛ فقط تنظیمات ذخیره می‌شود و به اجرای واقعی تولید دست نمی‌زند. --}}
+@php
+  $modelConfiguration = old('model_configuration', optional($duplicateFrom)->model_configuration ?? []);
+  $modelConfigurationLevels = [
+    'standard' => ['label' => 'Standard', 'description' => 'انتخاب پیش‌فرض برای بیشتر کاربران'],
+    'premium' => ['label' => 'Premium / VIP', 'description' => 'خروجی با اولویت کیفیت بالاتر'],
+    'fallback' => ['label' => 'Fallback', 'description' => 'مدل جایگزین هنگام خطای مدل اصلی'],
+  ];
+@endphp
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5 mt-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-layer-group text-[var(--accent)]"></i> تنظیمات سطح خروجی</div>
+    <div class="text-[10.5px] text-[var(--text3)] mt-1">برای هر محصول مدل سطح عادی، VIP و جایگزین را مشخص کنید. اتصال به تولید در این مرحله فعال نمی‌شود.</div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    @foreach($modelConfigurationLevels as $level => $levelMeta)
+      @php
+        $configuredLevel = (array) data_get($modelConfiguration, $level, []);
+        $configuredModel = data_get($configuredLevel, 'model_id');
+        $configuredProvider = data_get($configuredLevel, 'provider');
+      @endphp
+      <label class="flex flex-col gap-1.5">
+        <span class="text-[11px] font-bold text-[var(--text2)]">{{ $levelMeta['label'] }}</span>
+        <span class="text-[9px] text-[var(--text3)]">{{ $levelMeta['description'] }}</span>
+        <select name="model_configuration[{{ $level }}][model_id]" class="model-configuration-select bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)]" data-model-configuration-select>
+          <option value="">بدون انتخاب</option>
+          @foreach($aiModels as $model)
+            <option value="{{ $model->openrouter_model_id }}" data-provider="{{ $model->provider ?? 'openrouter' }}" @selected($configuredModel === $model->openrouter_model_id && (!$configuredProvider || $configuredProvider === ($model->provider ?? 'openrouter')))>{{ $model->name }} · {{ $model->provider_name }}</option>
+          @endforeach
+        </select>
+        <input type="hidden" name="model_configuration[{{ $level }}][provider]" value="{{ $configuredProvider }}" data-model-configuration-provider>
+      </label>
+    @endforeach
+  </div>
+  <label class="flex flex-col gap-1.5 mt-4 md:w-1/3">
+    <span class="text-[11px] font-bold text-[var(--text2)]">حداکثر تغییر مدل / Retry</span>
+    <span class="text-[9px] text-[var(--text3)]">مقدار مجاز بین صفر تا دو بار است.</span>
+    <input type="number" name="model_configuration[max_retries]" min="0" max="2" value="{{ data_get($modelConfiguration, 'max_retries', 2) }}" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2 text-xs text-[var(--text)]">
+  </label>
+</div>
+<script>
+  document.querySelectorAll('[data-model-configuration-select]').forEach(function (select) {
+    var syncProvider = function () {
+      var option = select.selectedOptions[0];
+      var provider = select.closest('label')?.querySelector('[data-model-configuration-provider]');
+      if (provider) provider.value = option?.dataset.provider || '';
+    };
+    select.addEventListener('change', syncProvider);
+    syncProvider();
+  });
+</script>
 
 {{-- ═══════════════════ Card ۲ — تنظیمات پرامپت ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
@@ -270,7 +361,7 @@
     <div class="flex items-center justify-between flex-wrap gap-2 text-[10px] text-[var(--text3)]">
       <div class="flex items-center gap-3 flex-wrap">
         <span id="prompt-char-count">0 کاراکتر</span>
-        <span id="prompt-token-estimate">~0 توکن (تخمینی)</span>
+        <span id="prompt-token-estimate">~0 اعتبار (تخمینی)</span>
         <span id="prompt-vars-detected">۰ متغیر شناسایی شد</span>
       </div>
     </div>
@@ -362,7 +453,7 @@
           <div class="text-[11px] text-[var(--text)] mt-0.5" id="stat-duration">—</div>
         </div>
         <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">
-          <div class="text-[9px] text-[var(--text3)] flex items-center gap-1 flex-wrap">Token Usage {!! $newBadge !!}</div>
+          <div class="text-[9px] text-[var(--text3)] flex items-center gap-1 flex-wrap">مصرف اعتبار {!! $newBadge !!}</div>
           <div class="text-[11px] text-[var(--text3)] mt-0.5">—</div>
         </div>
         <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2">

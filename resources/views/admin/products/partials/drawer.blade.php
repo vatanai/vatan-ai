@@ -516,8 +516,15 @@
 
   function renderProductAiModelOptions() {
     const provider = document.getElementById('product-ai-provider-select')?.value || '';
+    const task = document.getElementById('product-ai-task-select')?.value || 'product_image';
+    const search = (document.getElementById('product-ai-model-search')?.value || '').trim().toLowerCase();
     const modelSelect = document.getElementById('product-ai-model-select');
-    const models = productAiModels().filter(function (model) { return provider === 'all' || model.provider === provider; });
+    const models = productAiModels().filter(function (model) {
+      const providerOk = provider === 'all' || model.provider === provider;
+      const taskOk = task === 'all' || (task === 'product_image' ? model.workflow === 'product_image' : model.task === task);
+      const haystack = [model.name, model.englishName, model.id, model.providerFa, model.providerEn].join(' ').toLowerCase();
+      return providerOk && taskOk && (!search || haystack.includes(search));
+    });
     modelSelect.innerHTML = '<option value="">یک مدل انتخاب کنید...</option>' + models.map(function (model) {
       const plan = model.provider === 'liara' && model.plan ? ' — ' + model.plan : '';
       return '<option value="' + pmEsc(model.id) + '">' + pmEsc(model.name) + plan + '</option>';

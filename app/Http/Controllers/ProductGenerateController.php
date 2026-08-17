@@ -385,6 +385,9 @@ class ProductGenerateController extends Controller
             }
 
             $extraPayload = [];
+            // اتصال مستقیم مصرف provider به سفارش کاربر؛ گزارش اعتبار سرویس‌ها
+            // از همین رابطه نام کاربر، محصول، سفارش و هزینه را نمایش می‌دهد.
+            $extraPayload['order_id'] = $order?->id;
             if (!empty($base64Images)) {
                 $extraPayload['input_references'] = array_map(fn($b64) => [
                     'type'      => 'image_url',

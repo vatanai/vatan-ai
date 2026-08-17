@@ -14,6 +14,7 @@ use App\Models\ProductCreditLog;
 use App\Services\ProductImageOptimizer;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
+use App\Services\ProviderPricingService;
 use App\Support\ProviderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -28,12 +29,19 @@ class ProductController extends Controller
     public function __construct(
         private readonly ProductImageOptimizer $imageOptimizer,
         private readonly ExchangeRateService $exchangeRate,
+        private readonly ProviderPricingService $pricing,
     ) {}
 
     public function translateIdentityPrompt(Request $request, OpenRouterService $openRouter)
     {
-        $data = $request->validate(['text' => ['required', 'string', 'max:12000']]);
-        return response()->json(['translation' => $openRouter->translateToPersian($data['text'])]);
+        $data = $request->validate([
+            'text' => ['required', 'string', 'max:12000'],
+            'direction' => ['nullable', 'in:en-to-fa,fa-to-en'],
+        ]);
+        $translation = ($data['direction'] ?? 'en-to-fa') === 'fa-to-en'
+            ? $openRouter->translateToEnglish($data['text'])
+            : $openRouter->translateToPersian($data['text']);
+        return response()->json(['translation' => $translation]);
     }
     /**
      * نمایش لیست محصولات با جستجو، فیلترهای پیشرفته، مرتب‌سازی و صفحه‌بندی
@@ -217,6 +225,9 @@ class ProductController extends Controller
         // تمام مدل‌های فعالِ عکس‌محور وارد گام دوم و آزمایشگاه می‌شوند؛ وضعیت
         // روشن‌بودن provider فقط هنگام ذخیره یا اجرای واقعی کنترل می‌شود.
         $aiModels = $this->assignableAiModels()->get();
+        // قیمت‌های زنده برای ۵۰۰+ مدل Fal.ai نباید هنگام بازشدن فرم واکشی شوند؛
+        // این اطلاعات هنگام اجرای واقعی آزمایش/تولید از سرویس قیمت‌گذاری خوانده می‌شود.
+        $aiModels->each(fn (AiModel $model) => $model->setAttribute('lab_pricing', $this->pricing->estimate($model, 1, false)));
 
         $duplicateFrom = null;
         if ($request->filled('duplicate')) {
@@ -275,8 +286,20 @@ class ProductController extends Controller
             'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'fallback_providers' => 'nullable|array',
             'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
-            'fallback_models' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:5'],
+            'fallback_enabled' => ['nullable', 'boolean'],
+            'fallback_models' => [Rule::requiredIf($isPublishing && $request->boolean('fallback_enabled')), 'nullable', 'array', 'min:1', 'max:5'],
             'fallback_models.*' => ['string'],
+            'model_configuration' => 'nullable|array',
+            'model_configuration.max_retries' => 'nullable|integer|min:0|max:2',
+            'model_configuration.standard' => 'nullable|array',
+            'model_configuration.standard.model_id' => 'nullable|string|max:255',
+            'model_configuration.standard.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.premium' => 'nullable|array',
+            'model_configuration.premium.model_id' => 'nullable|string|max:255',
+            'model_configuration.premium.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.fallback' => 'nullable|array',
+            'model_configuration.fallback.model_id' => 'nullable|string|max:255',
+            'model_configuration.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
             'identity_preservation' => ['required', 'boolean'],
             'identity_model' => ['nullable', 'string'],
@@ -297,7 +320,7 @@ class ProductController extends Controller
             'allowed_aspect_ratios' => 'nullable|array',
             'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
             'allowed_resolutions' => 'nullable|array',
-            'allowed_resolutions.*' => ['string', Rule::in(['720', '1080'])],
+            'allowed_resolutions.*' => ['string', Rule::in(Product::supportedOutputResolutions())],
             'new_price_custom_label' => 'nullable|string|max:100',
             'main_images' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:20'],
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
@@ -387,8 +410,10 @@ class ProductController extends Controller
         $product->primary_model = $fallbackModel?->openrouter_model_id
             ?? 'stabilityai/stable-diffusion-3';
         $product->ai_provider = $fallbackModel?->provider ?? 'openrouter';
-        $product->fallback_models = $request->input('fallback_models', []);
-        $product->fallback_model_providers = $request->input('fallback_providers', []);
+        $fallbackEnabled = $request->boolean('fallback_enabled');
+        $product->fallback_models = $fallbackEnabled ? $request->input('fallback_models', []) : [];
+        $product->fallback_model_providers = $fallbackEnabled ? $request->input('fallback_providers', []) : [];
+        $product->model_configuration = $this->normalizeModelConfiguration($request->input('model_configuration', []));
         $product->prompt_template = $request->input('prompt_template') ?? 'A high tech digital art illustration of {prompt}';
         $product->input_schema = $validated['input_schema'] ?? [];
         $product->timeout = $request->input('timeout') ?? 60;
@@ -463,7 +488,7 @@ class ProductController extends Controller
             ? '3:4'
             : $product->allowed_aspect_ratios[0];
         $product->allowed_resolutions = $this->normalizedResolutions(
-            $request->input('allowed_resolutions', ['720', '1080'])
+            $request->input('allowed_resolutions', Product::DEFAULT_OUTPUT_RESOLUTIONS)
         );
         $product->resolution = in_array('720', $product->allowed_resolutions, true)
             ? '720'
@@ -549,8 +574,20 @@ class ProductController extends Controller
             'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'fallback_providers' => 'nullable|array',
             'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
-            'fallback_models' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:5'],
+            'fallback_enabled' => ['nullable', 'boolean'],
+            'fallback_models' => [Rule::requiredIf($isPublishing && $request->boolean('fallback_enabled')), 'nullable', 'array', 'min:1', 'max:5'],
             'fallback_models.*' => ['string'],
+            'model_configuration' => 'nullable|array',
+            'model_configuration.max_retries' => 'nullable|integer|min:0|max:2',
+            'model_configuration.standard' => 'nullable|array',
+            'model_configuration.standard.model_id' => 'nullable|string|max:255',
+            'model_configuration.standard.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.premium' => 'nullable|array',
+            'model_configuration.premium.model_id' => 'nullable|string|max:255',
+            'model_configuration.premium.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.fallback' => 'nullable|array',
+            'model_configuration.fallback.model_id' => 'nullable|string|max:255',
+            'model_configuration.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
             'system_prompt' => 'nullable|string',
             'negative_prompt' => 'nullable|string',
@@ -611,7 +648,7 @@ class ProductController extends Controller
             'allowed_aspect_ratios' => 'nullable|array',
             'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
             'allowed_resolutions' => 'nullable|array',
-            'allowed_resolutions.*' => ['string', Rule::in(['720', '1080'])],
+            'allowed_resolutions.*' => ['string', Rule::in(Product::supportedOutputResolutions())],
             ...$this->inputSchemaRules(),
         ]);
         $this->validateAiProviderSelection($request);
@@ -732,8 +769,13 @@ class ProductController extends Controller
         $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
         // مدل‌های جایگزین و فیلدهای ورودی پویا — قبلاً اصلاً در به‌روزرسانی مقداردهی نمی‌شدند
         // (فقط در store() ثبت می‌شدند)، در نتیجه ویرایش این دو مورد هیچ‌وقت واقعاً ذخیره نمی‌شد
-        $validated['fallback_models'] = $request->input('fallback_models', []);
-        $validated['fallback_model_providers'] = $request->input('fallback_providers', []);
+        $fallbackEnabled = $request->boolean('fallback_enabled');
+        $validated['fallback_models'] = $fallbackEnabled ? $request->input('fallback_models', []) : [];
+        $validated['fallback_model_providers'] = $fallbackEnabled ? $request->input('fallback_providers', []) : [];
+        $validated['model_configuration'] = $this->normalizeModelConfiguration(
+            $request->input('model_configuration', []),
+            (array) ($product->model_configuration ?? [])
+        );
         $validated['input_schema'] = $validated['input_schema'] ?? [];
         $validated['allowed_aspect_ratios'] = $this->normalizedAspectRatios(
             $request->input('allowed_aspect_ratios', $product->allowedAspectRatioList())
@@ -1234,6 +1276,15 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->exists();
 
+        if (!$request->boolean('fallback_enabled')) {
+            if (!$primaryIsValid) {
+                throw ValidationException::withMessages([
+                    'primary_model' => 'مدل اصلی باید متعلق به سرویس انتخاب‌شده و فعال باشد.',
+                ]);
+            }
+            return;
+        }
+
         $fallbacks = array_values(array_filter((array) $request->input('fallback_models', [])));
         $fallbackProviders = array_values((array) $request->input('fallback_providers', []));
         $fallbacksAreValid = count($fallbacks) === count($fallbackProviders);
@@ -1288,6 +1339,12 @@ class ProductController extends Controller
         return AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'image')
+            // فقط مدل‌های منتخب و مناسب جریان واقعی محصول نمایش داده شوند؛
+            // کاتالوگ خام Fal.ai به‌تنهایی بیش از ۵۰۰ رکورد دارد و برای مدیر کاربردی نیست.
+            ->where('featured_in_lab', true)
+            ->where('supports_image_input', true)
+            ->whereIn('task_type', ['text_to_image', 'image_to_image', 'face_consistency'])
+            ->orderBy('lab_priority')
             ->orderBy('provider')
             ->orderBy('name');
     }
@@ -1362,6 +1419,27 @@ class ProductController extends Controller
         return $paths;
     }
 
+    private function normalizeModelConfiguration(array $configuration, array $fallback = []): array
+    {
+        $levels = ['standard', 'premium', 'fallback'];
+        $normalized = [
+            'max_retries' => min(2, max(0, (int) data_get($configuration, 'max_retries', data_get($fallback, 'max_retries', 2)))),
+        ];
+
+        foreach ($levels as $level) {
+            $value = (array) data_get($configuration, $level, data_get($fallback, $level, []));
+            $modelId = trim((string) ($value['model_id'] ?? ''));
+            $provider = trim((string) ($value['provider'] ?? ''));
+            if ($modelId === '') {
+                $normalized[$level] = ['model_id' => null, 'provider' => $provider ?: null];
+                continue;
+            }
+            $normalized[$level] = ['model_id' => $modelId, 'provider' => $provider ?: null];
+        }
+
+        return $normalized;
+    }
+
     private function normalizedAspectRatios(mixed $ratios, array $fallback = ['3:4']): array
     {
         $allowed = Product::supportedAspectRatios();
@@ -1371,9 +1449,13 @@ class ProductController extends Controller
 
     private function normalizedResolutions(mixed $resolutions): array
     {
-        $allowed = ['720', '1080'];
-        $selected = array_values(array_unique(array_intersect($allowed, array_map('strval', (array) $resolutions))));
-        return $selected ?: ['720'];
+        $allowed = Product::supportedOutputResolutions();
+        $selected = array_map('strval', (array) $resolutions);
+
+        return array_values(array_intersect(
+            $allowed,
+            array_unique(array_merge(Product::DEFAULT_OUTPUT_RESOLUTIONS, $selected))
+        ));
     }
 
     private function aspectRatiosFromSchema(array $schema, array $fallback): array

@@ -61,13 +61,13 @@ class AiProviderLimitService
         ];
     }
 
-    public function reserve(AiModel $model, ?float $estimatedCost, int $outputs = 1): AiProviderRequest
+    public function reserve(AiModel $model, ?float $estimatedCost, int $outputs = 1, ?int $orderId = null): AiProviderRequest
     {
         $provider = strtolower((string) $model->provider);
         $outputs = max(1, $outputs);
         $estimatedCost = $estimatedCost !== null ? max(0, round($estimatedCost, 6)) : null;
 
-        return DB::transaction(function () use ($provider, $model, $estimatedCost, $outputs) {
+        return DB::transaction(function () use ($provider, $model, $estimatedCost, $outputs, $orderId) {
             // با قفل ردیف تنظیمات، دو درخواست هم‌زمان نمی‌توانند از یک سقف عبور کنند.
             $setting = AiProviderSetting::query()->firstOrCreate(['provider' => $provider]);
             $setting = AiProviderSetting::query()->whereKey($setting->id)->lockForUpdate()->first();
@@ -80,6 +80,7 @@ class AiProviderLimitService
             return AiProviderRequest::create([
                 'provider' => $provider,
                 'ai_model_id' => $model->id,
+                'order_id' => $orderId,
                 'external_request_id' => 'local-reservation:' . Str::uuid(),
                 'status' => 'reserved',
                 'estimated_cost_usd' => $estimatedCost,

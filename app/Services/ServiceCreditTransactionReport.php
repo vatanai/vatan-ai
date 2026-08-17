@@ -164,7 +164,6 @@ class ServiceCreditTransactionReport
         }
 
         $providerRequests = AiProviderRequest::with(['order.user', 'order.product', 'aiModel'])
-            ->whereNotNull('order_id')
             ->when($from, fn ($query) => $query->where('ai_provider_requests.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('ai_provider_requests.created_at', '<=', $to))
             ->latest('ai_provider_requests.created_at')->limit(700)->get();
@@ -185,7 +184,8 @@ class ServiceCreditTransactionReport
                 'product_id' => $order?->product_id, 'order_number' => $order?->order_number,
                 'amount_usd' => $usd, 'amount_toman' => $usd !== null && $rateIrr > 0 ? $usd * $rateIrr / 10 : null,
                 'credits' => $order?->final_credits, 'occurred_at' => $providerRequest->completed_at ?: $providerRequest->submitted_at ?: $providerRequest->created_at,
-                'reference' => $providerRequest->external_request_id, 'note' => null,
+                'reference' => $providerRequest->external_request_id,
+                'note' => $order ? null : 'درخواست قدیمی provider بدون سفارش متصل؛ برای تکمیل جزئیات، از این پس order_id ثبت می‌شود.',
                 'error' => $providerRequest->error_message, 'output_urls' => (array) $providerRequest->output_urls,
                 'latency_seconds' => $providerRequest->submitted_at && $providerRequest->completed_at ? round($providerRequest->submitted_at->diffInMilliseconds($providerRequest->completed_at) / 1000, 1) : null,
                 'retries' => $order?->attempts, 'is_success' => $providerRequest->status === 'completed',

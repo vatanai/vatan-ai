@@ -79,6 +79,11 @@ class AiModel extends Model
         'input_schema',
         'capability_config',
         'recommended_category_ids',
+        'lab_categories',
+        'lab_priority',
+        'featured_in_lab',
+        'lab_status',
+        'lab_description',
         'pricing_config',
         'pricing_type',
         'commercial_use',
@@ -109,6 +114,11 @@ class AiModel extends Model
         'input_schema' => 'array',
         'capability_config' => 'array',
         'recommended_category_ids' => 'array',
+        'lab_categories' => 'array',
+        'lab_priority' => 'integer',
+        'featured_in_lab' => 'boolean',
+        'lab_status' => 'string',
+        'lab_description' => 'string',
         'pricing_config' => 'array',
         'supports_webhook' => 'boolean',
         'commercial_use' => 'boolean',
@@ -118,6 +128,23 @@ class AiModel extends Model
     public function externalModelId(): string
     {
         return (string) ($this->external_model_id ?: $this->openrouter_model_id);
+    }
+
+    public function labCategoryLabels(): array
+    {
+        $labels = [
+            'popular' => 'پرکاربردترین',
+            'identity' => 'بیشترین شباهت',
+            'economic' => 'اقتصادی',
+            'vip' => 'VIP',
+            'experimental' => 'آزمایشی',
+        ];
+
+        return collect((array) $this->lab_categories)
+            ->map(fn ($category) => $labels[(string) $category] ?? (string) $category)
+            ->filter()
+            ->values()
+            ->all();
     }
 
     public function capability(string $key, mixed $default = null): mixed
@@ -219,6 +246,29 @@ class AiModel extends Model
     public function primaryUseCaseLabel(): string
     {
         return $this->recommendedUseCases()[0] ?? 'کاربری عمومی';
+    }
+
+    /**
+     * مدل مناسب جریان اصلی وطن: پرامپت + تصویر مرجع را دریافت می‌کند و تصویر می‌سازد.
+     * این معیار عمداً از task_type خام مستقل است، چون بعضی providerها مدل‌های edit
+     * را به‌عنوان image_to_image ثبت می‌کنند اما قابلیت واقعی متن به تصویر را هم دارند.
+     */
+    public function supportsProductImageWorkflow(): bool
+    {
+        $capabilities = is_array($this->capability_config) ? $this->capability_config : [];
+        return $this->output_modality === 'image'
+            && $this->is_active
+            && (bool) $this->supports_image_input
+            && ($this->task_type === 'text_to_image'
+                || $this->task_type === 'image_to_image'
+                || $this->task_type === 'face_consistency')
+            && (bool) data_get($capabilities, 'supports_text_to_image', true);
+    }
+
+    public function productWorkflowLabel(): string
+    {
+        if ($this->supportsProductImageWorkflow()) return 'متن + عکس → عکس';
+        return $this->taskLabel();
     }
 
     /** قابلیت‌های قابل نمایش کنار مدل؛ فقط مواردی که واقعاً در کاتالوگ ثبت شده‌اند. */
