@@ -12,7 +12,7 @@ class ReplicatePricingServiceTest extends TestCase
 {
     public function test_reads_resolution_tier_from_official_replicate_model_page(): void
     {
-        Cache::forget('replicate.pricing.tiers.' . sha1('google/nano-banana-pro'));
+        Cache::forget('replicate.pricing.tiers.v2.' . sha1('google/nano-banana-pro'));
         Http::fake([
             'https://replicate.com/google/nano-banana-pro' => Http::response(
                 '<script type="application/json">' . json_encode([
@@ -40,7 +40,7 @@ class ReplicatePricingServiceTest extends TestCase
 
     public function test_normalizes_form_quality_to_replicate_resolution(): void
     {
-        Cache::forget('replicate.pricing.tiers.' . sha1('google/nano-banana-pro'));
+        Cache::forget('replicate.pricing.tiers.v2.' . sha1('google/nano-banana-pro'));
         Http::fake([
             'https://replicate.com/google/nano-banana-pro' => Http::response(
                 '<script type="application/json">' . json_encode([
@@ -62,5 +62,39 @@ class ReplicatePricingServiceTest extends TestCase
 
         $this->assertSame(0.3, $result['usd']);
         $this->assertSame('1K', $result['resolution']);
+    }
+
+    public function test_converts_per_thousand_price_to_single_output_price(): void
+    {
+        Cache::forget('replicate.pricing.tiers.v2.' . sha1('black-forest-labs/flux-schnell'));
+        Http::fake([
+            'https://replicate.com/black-forest-labs/flux-schnell' => Http::response(
+                '<script type="application/json">' . json_encode([
+                    'billingConfig' => [
+                        'current_tiers' => [
+                            [
+                                'criteria' => [],
+                                'prices' => [[
+                                    'price' => '$3',
+                                    'title' => 'per thousand output images',
+                                    'metric_display' => 'output image',
+                                ]],
+                            ],
+                        ],
+                    ],
+                ]) . '</script>'
+            ),
+        ]);
+
+        $model = new AiModel([
+            'provider' => 'replicate',
+            'external_model_id' => 'black-forest-labs/flux-schnell',
+        ]);
+
+        $result = app(ProviderPricingService::class)->estimate($model, 1, true);
+
+        $this->assertSame(0.003, $result['usd']);
+        $this->assertSame(0.003, $result['unit_price']);
+        $this->assertSame('output image', $result['unit']);
     }
 }

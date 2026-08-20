@@ -24,7 +24,7 @@ class ReplicatePricingService
         }
 
         $tiers = Cache::remember(
-            'replicate.pricing.tiers.' . sha1($modelId),
+            'replicate.pricing.tiers.v2.' . sha1($modelId),
             now()->addHours(6),
             fn () => $this->fetchTiers($modelId)
         );
@@ -109,17 +109,34 @@ class ReplicatePricingService
 
     private function priceFromTier(array $tier): ?array
     {
-        $price = data_get($tier, 'prices.0.price');
+        $priceData = (array) data_get($tier, 'prices.0', []);
+        $price = $priceData['price'] ?? null;
         if (!is_string($price) && !is_numeric($price)) return null;
 
         $numeric = (float) preg_replace('/[^0-9.]/', '', (string) $price);
         if ($numeric <= 0) return null;
 
+        // Replicate بعضی مدل‌ها را به‌صورت «۳ دلار برای هزار تصویر» اعلام
+        // می‌کند. قیمت ثبت‌شده در هر اجرا باید قیمت یک خروجی باشد، نه مقدار
+        // بسته‌ی هزار‌تایی؛ در غیر این صورت هزینه‌ی FLUX Schnell هزار برابر
+        // بیشتر از قیمت رسمی نمایش داده می‌شود.
+        $billingText = strtolower(implode(' ', array_filter([
+            (string) ($priceData['title'] ?? ''),
+            (string) ($priceData['description'] ?? ''),
+            (string) data_get($tier, 'description', ''),
+        ])));
+        $divisor = match (true) {
+            preg_match('/(?:per|\/)\s*(?:one\s+)?(?:thousand|1[\s,]?000)\b/i', $billingText) === 1 => 1000,
+            preg_match('/(?:per|\/)\s*(?:one\s+)?million\b/i', $billingText) === 1 => 1_000_000,
+            preg_match('/(?:per|\/)\s*(?:one\s+)?billion\b/i', $billingText) === 1 => 1_000_000_000,
+            default => 1,
+        };
+
         $resolution = data_get($tier, 'criteria.0.value');
         return [
             'resolution' => $this->normalizeResolution($resolution) ?: 'default',
-            'unit_price' => $numeric,
-            'unit' => data_get($tier, 'prices.0.metric_display', 'unit'),
+            'unit_price' => round($numeric / $divisor, 12),
+            'unit' => $priceData['metric_display'] ?? 'unit',
         ];
     }
 
