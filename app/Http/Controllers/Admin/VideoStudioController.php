@@ -9,8 +9,10 @@ use App\Models\ProductTestRun;
 use App\Models\VideoHookInspiration;
 use App\Models\VideoStudioJob;
 use App\Models\VideoStudioSetting;
+use App\Models\VideoStudioSource;
 use App\Support\Jalali;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -105,6 +107,9 @@ class VideoStudioController extends Controller
         $hookInspirations = Schema::hasTable('video_hook_inspirations')
             ? VideoHookInspiration::query()->with('product')->where('is_active', true)->latest()->limit(12)->get()
             : collect();
+        $sources = Schema::hasTable('video_studio_sources')
+            ? VideoStudioSource::query()->where('is_active', true)->latest()->get()
+            : collect();
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
@@ -151,6 +156,7 @@ class VideoStudioController extends Controller
             'productImages' => $productImages,
             'settings' => $settings,
             'hookInspirations' => $hookInspirations,
+            'sources' => $sources,
             'jobs' => $jobs,
             'completedVideoCounts' => $completedVideoCounts,
             'pendingVideoCounts' => $pendingVideoCounts,
@@ -248,6 +254,33 @@ class VideoStudioController extends Controller
         return back()->with('success', 'هوک از کتابخانه حذف شد.');
     }
 
+    public function storeSource(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160'],
+            'type' => ['required', Rule::in(['music', 'video'])],
+            'source_url' => ['nullable', 'url', 'max:2048'],
+            'source_file' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,mp4,mov,webm', 'max:102400'],
+        ]);
+        if ($request->hasFile('source_file')) {
+            $data['source_url'] = asset('storage/' . ltrim($request->file('source_file')->store('video-studio/library', 'public'), '/'));
+        }
+        if (blank($data['source_url'] ?? null)) {
+            return back()->withErrors(['source_url' => 'برای منبع، لینک یا فایل انتخاب کنید.']);
+        }
+        unset($data['source_file']);
+        VideoStudioSource::create($data);
+
+        return back()->with('success', 'منبع صدا به کتابخانه اضافه شد.');
+    }
+
+    public function destroySource(VideoStudioSource $source)
+    {
+        $source->delete();
+
+        return back()->with('success', 'منبع از کتابخانه حذف شد.');
+    }
+
     public function createJob(Request $request)
     {
         $data = $request->validate([
@@ -265,6 +298,7 @@ class VideoStudioController extends Controller
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
             'build_now' => ['nullable', 'boolean'],
+            'source_library_id' => ['nullable', 'integer', 'exists:video_studio_sources,id'],
         ]);
 
         if ($request->hasFile('source_file')) {
@@ -275,6 +309,11 @@ class VideoStudioController extends Controller
             if ($profileText !== '') {
                 $data['prompt_profile'] = $profileText;
             }
+        }
+        if (!empty($data['source_library_id'])) {
+            $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
+            $data['source_mode'] = $librarySource->type;
+            $data['source_url'] = $librarySource->source_url;
         }
         if (in_array($data['source_mode'], ['upload', 'music', 'video'], true) && blank($data['source_url'])) {
             return back()
@@ -321,6 +360,7 @@ class VideoStudioController extends Controller
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'source_fingerprint' => $sourceFingerprint,
                 'build_now' => $buildNow,
+                'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
             ],
         ]));
 
@@ -449,6 +489,12 @@ class VideoStudioController extends Controller
                 'status_secret' => (string) config('services.n8n.video_studio_status_secret', ''),
             ]);
             if ($response->successful()) {
+                if (!empty($payload['source_library_id'])) {
+                    VideoStudioSource::query()->whereKey((int) $payload['source_library_id'])->update([
+                        'used_count' => DB::raw('used_count + 1'),
+                        'last_used_at' => now(),
+                    ]);
+                }
                 $job->update(['status' => 'processing', 'n8n_execution_id' => (string) ($response->json('execution_id') ?? '')]);
             } else {
                 $job->update(['status' => 'failed', 'error_message' => 'پاسخ نامعتبر از ورکفلو دریافت شد.']);

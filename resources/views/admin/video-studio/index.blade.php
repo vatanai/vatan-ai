@@ -92,7 +92,7 @@
               <div class="studio-option"><input id="source-{{ $mode }}" type="radio" name="source_mode" value="{{ $mode }}" @checked(($settings->source_mode ?? 'auto') === $mode)><label for="source-{{ $mode }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}</label></div>
             @endforeach
           </div><small id="source-help">منبع انتخابی بعد از اتصال به ورکفلو، هنگام ساخت استفاده می‌شود.</small></div>
-          <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">می‌توانی لینک بدهی یا فایل موزیک/ویدیوی منبع را مستقیم انتخاب کنی.</small></div>
+          <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><select class="studio-select" id="source-library" name="source_library_id"><option value="">بدون انتخاب از کتابخانه</option>@foreach($sources as $source)<option value="{{ $source->id }}" data-source-type="{{ $source->type }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیوی منبع' : 'موزیک' }} · {{ $source->used_count }} استفاده</option>@endforeach</select><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">می‌توانی یک منبع از کتابخانه انتخاب کنی یا لینک/فایل تازه بدهی.</small></div>
           <div class="studio-field"><label>قاب خروجی</label><div class="studio-options">
             @foreach(['9:16'=>['fa-mobile-screen-button','استوری عمودی'],'1:1'=>['fa-square','مربع'],'4:5'=>['fa-image','پست عمودی'],'16:9'=>['fa-display','افقی']] as $ratio=>$option)
               <div class="studio-option"><input id="ratio-{{ str_replace(':','-',$ratio) }}" type="radio" name="aspect_ratio" value="{{ $ratio }}" @checked(($settings->aspect_ratio ?? '9:16') === $ratio)><label for="ratio-{{ str_replace(':','-',$ratio) }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}<span dir="ltr">{{ $ratio }}</span></label></div>
@@ -132,6 +132,18 @@
             <div class="studio-empty">هنوز ایده‌ای ثبت نشده است. چند هوک موفق خودت را اینجا اضافه کن تا هوش مصنوعی از ساختارشان الهام بگیرد.</div>
           @endforelse
         </div>
+      </section>
+
+      <section class="studio-card studio-panel">
+        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-music"></i> کتابخانهٔ صدا و ویدیو</div><div class="studio-panel-meta">منابع قابل استفادهٔ مجدد</div></div>
+        <form class="studio-form" method="POST" action="{{ route('admin.video-studio.sources.store') }}" enctype="multipart/form-data" style="margin-bottom:14px">
+          @csrf
+          <div class="studio-field"><label>نام منبع</label><input class="studio-input" name="name" required placeholder="مثلاً: موزیک ترند تابستانی"></div>
+          <div class="studio-options" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="studio-option"><input id="source-library-music" type="radio" name="type" value="music" checked><label for="source-library-music"><i class="fa-solid fa-music"></i>موزیک</label></div><div class="studio-option"><input id="source-library-video" type="radio" name="type" value="video"><label for="source-library-video"><i class="fa-solid fa-film"></i>ویدیوی منبع</label></div></div>
+          <input class="studio-input" type="url" name="source_url" placeholder="لینک مستقیم فایل (اختیاری)"><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm">
+          <button class="studio-btn" type="submit"><i class="fa-solid fa-plus"></i> افزودن منبع</button>
+        </form>
+        <div class="studio-hook-list">@forelse($sources as $source)<div class="studio-hook"><div class="studio-hook-top"><div class="studio-hook-title">{{ $source->name }}</div><form method="POST" action="{{ route('admin.video-studio.sources.destroy', $source) }}">@csrf @method('DELETE')<button class="studio-link-btn" type="submit" title="حذف"><i class="fa-solid fa-trash"></i></button></form></div><div class="studio-hook-tags">{{ $source->type === 'video' ? 'ویدیوی منبع' : 'موزیک' }} · {{ $source->used_count }} بار استفاده</div></div>@empty<div class="studio-empty">هنوز منبعی ثبت نشده است.</div>@endforelse</div>
       </section>
     </div>
 
@@ -260,6 +272,7 @@
   const sourceHelp = document.getElementById('source-help');
   const sourceUrlField = document.getElementById('source-url-field');
   const sourceUrl = document.getElementById('source-url');
+  const sourceLibrary = document.getElementById('source-library');
   const keywordToggle = document.getElementById('auto-keyword-toggle');
   const keywordSettings = document.getElementById('keyword-settings');
   const hookToggle = document.querySelector('input[name="auto_generate_hook"][type="checkbox"]');
@@ -289,6 +302,10 @@
     if (keywordSettings) keywordSettings.classList.toggle('is-hidden', !!keywordToggle?.checked);
   }
   document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', updateStudioControls));
+  sourceLibrary?.addEventListener('change', () => {
+    const type = sourceLibrary.options[sourceLibrary.selectedIndex]?.dataset.sourceType;
+    if (type) document.querySelector(`input[name="source_mode"][value="${type}"]`)?.click();
+  });
   keywordToggle?.addEventListener('change', updateStudioControls);
   hookToggle?.addEventListener('change', updateStudioControls);
   captionToggle?.addEventListener('change', updateStudioControls);
