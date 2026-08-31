@@ -386,8 +386,8 @@
     previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; if (previewPanel) previewPanel.classList.remove('is-hidden'); if (previewStatus) previewStatus.textContent = 'در حال دریافت سه پیشنهاد از هوش مصنوعی...';
     try {
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '', 'Accept': 'application/json' }, body: new FormData(studioForm) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message || 'تولید پیش‌نمایش ناموفق بود.');
+      const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
+      if (!response.ok) throw new Error(payload.message || ('پاسخ سرور: ' + response.status));
       renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options);
       if (previewStatus) previewStatus.textContent = 'سه گزینه آماده شد؛ متن انتخاب‌شده را می‌توانی ویرایش کنی و سپس سفارش ساخت را بفرستی.';
     } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; }
