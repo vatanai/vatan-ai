@@ -12,6 +12,7 @@ class VideoStudioSetting extends Model
         'auto_generate_hook', 'auto_generate_caption', 'auto_generate_keyword',
         'hook_guidelines', 'caption_guidelines', 'keyword', 'dm_template',
         'hook_text', 'caption_text', 'prompt_profile',
+        'instagram_prompt', 'telegram_prompt',
         'font_family', 'aspect_ratio',
     ];
 

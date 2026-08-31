@@ -104,6 +104,9 @@ class VideoStudioController extends Controller
                 $settings->prompt_profile = trim((string) file_get_contents($defaultPromptPath));
             }
         }
+        if (blank($settings->instagram_prompt)) {
+            $settings->instagram_prompt = $settings->prompt_profile;
+        }
         $hookInspirations = Schema::hasTable('video_hook_inspirations')
             ? VideoHookInspiration::query()->with('product')->where('is_active', true)->latest()->limit(12)->get()
             : collect();
@@ -186,6 +189,8 @@ class VideoStudioController extends Controller
             'hook_text' => ['nullable', 'string', 'max:1000'],
             'caption_text' => ['nullable', 'string', 'max:5000'],
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
+            'instagram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_prompt' => ['nullable', 'string', 'max:30000'],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -294,6 +299,8 @@ class VideoStudioController extends Controller
             'hook_text' => ['nullable', 'string', 'max:1000'],
             'caption_text' => ['nullable', 'string', 'max:5000'],
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
+            'instagram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_prompt' => ['nullable', 'string', 'max:30000'],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -309,6 +316,9 @@ class VideoStudioController extends Controller
             if ($profileText !== '') {
                 $data['prompt_profile'] = $profileText;
             }
+        }
+        if (blank($data['instagram_prompt'] ?? null) && filled($data['prompt_profile'] ?? null)) {
+            $data['instagram_prompt'] = $data['prompt_profile'];
         }
         if (!empty($data['source_library_id'])) {
             $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
@@ -358,6 +368,8 @@ class VideoStudioController extends Controller
                 'hook_guidelines' => (string) $request->input('hook_guidelines', ''),
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
+                'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
+                'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
                 'source_fingerprint' => $sourceFingerprint,
                 'build_now' => $buildNow,
                 'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
@@ -439,6 +451,11 @@ class VideoStudioController extends Controller
         $autoCaption = (bool) ($payload['auto_generate_caption'] ?? false);
         $autoKeyword = (bool) ($payload['auto_generate_keyword'] ?? false);
         $promptProfile = trim((string) ($payload['prompt_profile'] ?? ''));
+        $channel = (string) ($payload['channel'] ?? 'instagram');
+        $channelPrompt = trim((string) ($payload[$channel . '_prompt'] ?? ''));
+        if ($channelPrompt !== '') {
+            $promptProfile = $channelPrompt;
+        }
         $hookGuidelines = trim((string) ($payload['hook_guidelines'] ?? ''));
         $captionGuidelines = trim((string) ($payload['caption_guidelines'] ?? ''));
         if ($promptProfile !== '') {
