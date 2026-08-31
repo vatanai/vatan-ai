@@ -96,6 +96,12 @@ class VideoStudioController extends Controller
             'font_family' => 'B_Yekan',
             'aspect_ratio' => '9:16',
         ]);
+        if (blank($settings->prompt_profile)) {
+            $defaultPromptPath = resource_path('prompts/instagram-video.md');
+            if (is_file($defaultPromptPath)) {
+                $settings->prompt_profile = trim((string) file_get_contents($defaultPromptPath));
+            }
+        }
         $hookInspirations = Schema::hasTable('video_hook_inspirations')
             ? VideoHookInspiration::query()->with('product')->where('is_active', true)->latest()->limit(12)->get()
             : collect();
@@ -165,6 +171,8 @@ class VideoStudioController extends Controller
             'caption_guidelines' => ['nullable', 'string', 'max:5000'],
             'hook_text' => ['nullable', 'string', 'max:1000'],
             'caption_text' => ['nullable', 'string', 'max:5000'],
+            'prompt_profile' => ['nullable', 'string', 'max:30000'],
+            'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
             'font_family' => ['required', 'in:B_Yekan'],
@@ -175,6 +183,13 @@ class VideoStudioController extends Controller
         $productLink = route('app.product', ['product' => $product->route_slug]);
 
         $productId = $data['product_id'] ?? null;
+        if ($request->hasFile('prompt_file')) {
+            $profileText = trim((string) file_get_contents($request->file('prompt_file')->getRealPath()));
+            if ($profileText !== '') {
+                $data['prompt_profile'] = $profileText;
+            }
+        }
+        unset($data['prompt_file']);
         $setting = VideoStudioSetting::query()
             ->where('product_id', $productId)
             ->first();
@@ -225,6 +240,8 @@ class VideoStudioController extends Controller
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
             'hook_text' => ['nullable', 'string', 'max:1000'],
             'caption_text' => ['nullable', 'string', 'max:5000'],
+            'prompt_profile' => ['nullable', 'string', 'max:30000'],
+            'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
         ]);
@@ -232,12 +249,19 @@ class VideoStudioController extends Controller
         if ($request->hasFile('source_file')) {
             $data['source_url'] = asset('storage/' . ltrim($request->file('source_file')->store('video-studio/sources', 'public'), '/'));
         }
+        if ($request->hasFile('prompt_file')) {
+            $profileText = trim((string) file_get_contents($request->file('prompt_file')->getRealPath()));
+            if ($profileText !== '') {
+                $data['prompt_profile'] = $profileText;
+            }
+        }
         if (in_array($data['source_mode'], ['upload', 'music', 'video'], true) && blank($data['source_url'])) {
             return back()
                 ->withErrors(['source_file' => 'برای این منبع، حتماً فایل یا لینک جدید انتخاب کنید؛ منبع قبلی دوباره استفاده نمی‌شود.'])
                 ->withInput();
         }
         unset($data['source_file']);
+        unset($data['prompt_file']);
         $autoHook = $request->boolean('auto_generate_hook');
         $autoCaption = $request->boolean('auto_generate_caption');
         $autoKeyword = $request->boolean('auto_generate_keyword');
@@ -272,6 +296,7 @@ class VideoStudioController extends Controller
                 'auto_generate_keyword' => $autoKeyword,
                 'hook_guidelines' => (string) $request->input('hook_guidelines', ''),
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
+                'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'source_fingerprint' => $sourceFingerprint,
             ],
         ]));
@@ -346,6 +371,13 @@ class VideoStudioController extends Controller
         $autoHook = (bool) ($payload['auto_generate_hook'] ?? false);
         $autoCaption = (bool) ($payload['auto_generate_caption'] ?? false);
         $autoKeyword = (bool) ($payload['auto_generate_keyword'] ?? false);
+        $promptProfile = trim((string) ($payload['prompt_profile'] ?? ''));
+        $hookGuidelines = trim((string) ($payload['hook_guidelines'] ?? ''));
+        $captionGuidelines = trim((string) ($payload['caption_guidelines'] ?? ''));
+        if ($promptProfile !== '') {
+            $hookGuidelines = trim($promptProfile . "\n\n" . $hookGuidelines);
+            $captionGuidelines = trim($promptProfile . "\n\n" . $captionGuidelines);
+        }
         try {
             $response = Http::retry(3, 300)->timeout(20)->post($webhook, [
                 'job_id' => $job->id,
@@ -363,8 +395,9 @@ class VideoStudioController extends Controller
                 'auto_generate_hook' => $autoHook,
                 'auto_generate_caption' => $autoCaption,
                 'auto_generate_keyword' => $autoKeyword,
-                'hook_guidelines' => (string) ($payload['hook_guidelines'] ?? ''),
-                'caption_guidelines' => (string) ($payload['caption_guidelines'] ?? ''),
+                'hook_guidelines' => $hookGuidelines,
+                'caption_guidelines' => $captionGuidelines,
+                'prompt_profile' => $promptProfile,
                 'revision_request' => (string) ($payload['revision_request'] ?? ''),
                 'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
                 'callback_url' => rtrim((string) config('services.n8n.video_studio_callback_base_url', ''), '/')
