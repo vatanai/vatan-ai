@@ -108,6 +108,12 @@ class VideoStudioController extends Controller
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
+        $completedVideoCounts = Schema::hasTable('video_studio_jobs')
+            ? VideoStudioJob::query()->where('status', 'completed')->selectRaw('product_id, COUNT(*) AS total')->groupBy('product_id')->pluck('total', 'product_id')->mapWithKeys(fn ($count, $id): array => [(int) $id => (int) $count])->all()
+            : [];
+        $pendingVideoCounts = Schema::hasTable('video_studio_jobs')
+            ? VideoStudioJob::query()->whereIn('status', ['queued', 'processing'])->selectRaw('product_id, COUNT(*) AS total')->groupBy('product_id')->pluck('total', 'product_id')->mapWithKeys(fn ($count, $id): array => [(int) $id => (int) $count])->all()
+            : [];
         $producedProducts = $jobs
             ->filter(fn (VideoStudioJob $job): bool => in_array((string) $job->status, ['queued', 'processing', 'completed'], true))
             ->unique('product_id')
@@ -146,6 +152,8 @@ class VideoStudioController extends Controller
             'settings' => $settings,
             'hookInspirations' => $hookInspirations,
             'jobs' => $jobs,
+            'completedVideoCounts' => $completedVideoCounts,
+            'pendingVideoCounts' => $pendingVideoCounts,
             'producedProducts' => $producedProducts,
             'daily' => $daily,
             'dataSources' => [
