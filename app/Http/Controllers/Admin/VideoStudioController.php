@@ -221,6 +221,18 @@ class VideoStudioController extends Controller
         return back()->with('success', 'هوک به کتابخانه ایده‌ها اضافه شد.');
     }
 
+    public function updateHook(Request $request, VideoHookInspiration $hook)
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'hook_text' => ['required', 'string', 'max:1000'],
+            'tags' => ['nullable', 'string', 'max:500'],
+        ]);
+        $hook->update($data);
+
+        return back()->with('success', 'هوک ویرایش شد.');
+    }
+
     public function destroyHook(VideoHookInspiration $hook)
     {
         $hook->delete();
@@ -244,6 +256,7 @@ class VideoStudioController extends Controller
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
+            'build_now' => ['nullable', 'boolean'],
         ]);
 
         if ($request->hasFile('source_file')) {
@@ -265,6 +278,7 @@ class VideoStudioController extends Controller
         $autoHook = $request->boolean('auto_generate_hook');
         $autoCaption = $request->boolean('auto_generate_caption');
         $autoKeyword = $request->boolean('auto_generate_keyword');
+        $buildNow = $request->boolean('build_now');
         if ($autoHook) $data['hook_text'] = null;
         if ($autoCaption) $data['caption_text'] = null;
         if ($autoKeyword) $data['keyword'] = null;
@@ -298,13 +312,18 @@ class VideoStudioController extends Controller
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'source_fingerprint' => $sourceFingerprint,
+                'build_now' => $buildNow,
             ],
         ]));
 
-        $this->dispatchJobToWorkflow($job);
+        if ($buildNow) {
+            $this->dispatchJobToWorkflow($job);
+        }
 
         return redirect()->route('admin.products.dashboard', ['product_id' => $job->product_id])
-            ->with('success', $job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد. اتصال اجرای خودکار هنوز تنظیم نشده است.');
+            ->with('success', $buildNow
+                ? ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد. اتصال اجرای خودکار هنوز تنظیم نشده است.')
+                : 'تنظیمات در لیست ساخت ذخیره شد و هنوز ویدیو ساخته نمی‌شود.');
     }
 
     public function retryJob(VideoStudioJob $job)
