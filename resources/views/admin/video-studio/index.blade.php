@@ -154,12 +154,16 @@
     <section class="studio-card studio-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف ساخت ویدیو</div><div class="studio-panel-meta">آخرین ۲۰ سفارش</div></div>
       @if($jobs->isNotEmpty())
+        <form id="studio-bulk-form" method="POST" action="{{ route('admin.video-studio.jobs.bulk') }}" onsubmit="return confirm('عملیات روی سفارش‌های انتخاب‌شده انجام شود؟')">
+          @csrf
+          <div class="studio-job-actions" style="margin-bottom:10px"><button class="studio-btn" type="submit" name="action" value="retry"><i class="fa-solid fa-rotate"></i> ساخت مجدد انتخاب‌شده‌ها</button><button class="studio-btn" type="submit" name="action" value="delete"><i class="fa-solid fa-trash"></i> حذف انتخاب‌شده‌ها</button><small class="studio-muted">برای مدیریت گروهی، کنار هر سفارش را تیک بزنید.</small></div>
+        </form>
         <div class="studio-queue">
           @foreach($jobs as $job)
             @php($jobStatus = (string) $job->status)
             @php($jobLabel = ['queued' => 'در صف', 'processing' => 'در حال ساخت', 'completed' => 'تکمیل‌شده', 'failed' => 'ناموفق'][$jobStatus] ?? $jobStatus)
             <div class="studio-job">
-              <div class="studio-job-main"><div class="studio-job-title">{{ $job->product?->name_fa ?? 'محصول حذف‌شده' }}</div><div class="studio-job-meta">{{ $job->source_mode === 'video' ? 'ویدیوی منبع' : ($job->source_mode === 'music' ? 'فایل موزیک' : 'منبع خودکار') }} · قاب {{ $job->aspect_ratio }} · {{ \App\Support\Jalali::formatNumeric($job->created_at) }}</div></div>
+              <div class="studio-job-main"><label class="studio-check"><input form="studio-bulk-form" type="checkbox" name="job_ids[]" value="{{ $job->id }}"><span></span></label><div><div class="studio-job-title">{{ $job->product?->name_fa ?? 'محصول حذف‌شده' }}</div><div class="studio-job-meta">{{ $job->source_mode === 'video' ? 'ویدیوی منبع' : ($job->source_mode === 'music' ? 'فایل موزیک' : 'منبع خودکار') }} · قاب {{ $job->aspect_ratio }} · {{ \App\Support\Jalali::formatNumeric($job->created_at) }}</div></div></div>
               <div class="studio-job-status {{ in_array($jobStatus, ['queued','processing','completed','failed'], true) ? $jobStatus : 'queued' }}">{{ $jobLabel }}</div>
               <div class="studio-muted">#{{ $job->id }}</div>
               <div class="studio-job-actions"><button type="button" class="studio-job-edit-toggle" data-job-editor-toggle="{{ $job->id }}"><i class="fa-solid fa-pen-to-square"></i> ویرایش</button>@if($jobStatus === 'failed')<form method="POST" action="{{ route('admin.video-studio.jobs.retry', $job) }}">@csrf<button class="studio-link-btn" type="submit" title="ساخت مجدد"><i class="fa-solid fa-rotate-left"></i></button></form>@endif</div>

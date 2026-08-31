@@ -287,6 +287,28 @@ class VideoStudioController extends Controller
         return back()->with('success', 'اصلاحیه به هوش مصنوعی ارسال شد و ساخت مجدد آغاز می‌شود.');
     }
 
+    public function bulkAction(Request $request)
+    {
+        $data = $request->validate([
+            'action' => ['required', Rule::in(['delete', 'retry'])],
+            'job_ids' => ['required', 'array', 'min:1', 'max:50'],
+            'job_ids.*' => ['integer', 'exists:video_studio_jobs,id'],
+        ]);
+
+        $jobs = VideoStudioJob::query()->whereIn('id', $data['job_ids'])->get();
+        if ($data['action'] === 'delete') {
+            $jobs->each->delete();
+            return back()->with('success', 'سفارش‌های انتخاب‌شده از صف حذف شدند.');
+        }
+
+        $jobs->each(function (VideoStudioJob $job): void {
+            $job->update(['status' => 'queued', 'error_message' => null, 'started_at' => null, 'completed_at' => null]);
+            $this->dispatchJobToWorkflow($job->fresh());
+        });
+
+        return back()->with('success', 'سفارش‌های انتخاب‌شده برای ساخت مجدد ارسال شدند.');
+    }
+
     private function dispatchJobToWorkflow(VideoStudioJob $job): void
     {
         $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
