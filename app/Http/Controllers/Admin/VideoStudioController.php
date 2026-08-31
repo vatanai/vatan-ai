@@ -252,41 +252,7 @@ class VideoStudioController extends Controller
             ],
         ]));
 
-        $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
-        if ($webhook !== '') {
-            try {
-                $response = Http::retry(3, 300)->timeout(20)->post($webhook, [
-                    'job_id' => $job->id,
-                    'product_id' => $job->product_id,
-                    'product_name' => (string) $product->name_fa,
-                    'product_link' => $productLink,
-                    'source_mode' => $job->source_mode,
-                    'source_url' => $job->source_url,
-                    'selected_images' => $job->selected_images,
-                    'aspect_ratio' => $job->aspect_ratio,
-                    'hook_text' => $job->hook_text,
-                    'caption_text' => $job->caption_text,
-                    'keyword' => $job->keyword,
-                    'dm_template' => $job->dm_template,
-                    'auto_generate_hook' => $autoHook,
-                    'auto_generate_caption' => $autoCaption,
-                    'auto_generate_keyword' => $autoKeyword,
-                    'hook_guidelines' => $job->payload['hook_guidelines'] ?? '',
-                    'caption_guidelines' => $job->payload['caption_guidelines'] ?? '',
-                    'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
-                    'callback_url' => rtrim((string) config('services.n8n.video_studio_callback_base_url', ''), '/')
-                        . ((string) config('services.n8n.video_studio_callback_base_url', '') !== '' ? '/webhooks/video-studio/' . $job->id . '/status' : route('webhooks.video-studio.status', ['job' => $job->id])),
-                    'status_secret' => (string) config('services.n8n.video_studio_status_secret', ''),
-                ]);
-                if ($response->successful()) {
-                    $job->update(['status' => 'processing', 'n8n_execution_id' => (string) ($response->json('execution_id') ?? '')]);
-                } else {
-                    $job->update(['status' => 'failed', 'error_message' => 'پاسخ نامعتبر از ورکفلو دریافت شد.']);
-                }
-            } catch (\Throwable $e) {
-                $job->update(['status' => 'failed', 'error_message' => 'اتصال به ورکفلو برقرار نشد.']);
-            }
-        }
+        $this->dispatchJobToWorkflow($job);
 
         return redirect()->route('admin.products.dashboard', ['product_id' => $job->product_id])
             ->with('success', $job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد. اتصال اجرای خودکار هنوز تنظیم نشده است.');
@@ -295,8 +261,78 @@ class VideoStudioController extends Controller
     public function retryJob(VideoStudioJob $job)
     {
         $job->update(['status' => 'queued', 'error_message' => null, 'started_at' => null, 'completed_at' => null]);
+        $this->dispatchJobToWorkflow($job);
 
-        return back()->with('success', 'سفارش دوباره در صف ساخت قرار گرفت.');
+        return back()->with('success', 'سفارش برای ساخت مجدد به ورکفلو ارسال شد.');
+    }
+
+    public function reviseJob(Request $request, VideoStudioJob $job)
+    {
+        $data = $request->validate([
+            'revision_request' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $payload = is_array($job->payload) ? $job->payload : [];
+        $payload['revision_request'] = trim($data['revision_request']);
+        $payload['revision_at'] = now()->toIso8601String();
+        $job->update([
+            'status' => 'queued',
+            'error_message' => null,
+            'started_at' => null,
+            'completed_at' => null,
+            'payload' => $payload,
+        ]);
+        $this->dispatchJobToWorkflow($job->fresh());
+
+        return back()->with('success', 'اصلاحیه به هوش مصنوعی ارسال شد و ساخت مجدد آغاز می‌شود.');
+    }
+
+    private function dispatchJobToWorkflow(VideoStudioJob $job): void
+    {
+        $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
+        if ($webhook === '') {
+            $job->update(['status' => 'failed', 'error_message' => 'اتصال ورکفلو تنظیم نشده است.']);
+            return;
+        }
+
+        $product = $job->product ?: Product::query()->find($job->product_id);
+        $payload = is_array($job->payload) ? $job->payload : [];
+        $autoHook = (bool) ($payload['auto_generate_hook'] ?? false);
+        $autoCaption = (bool) ($payload['auto_generate_caption'] ?? false);
+        $autoKeyword = (bool) ($payload['auto_generate_keyword'] ?? false);
+        try {
+            $response = Http::retry(3, 300)->timeout(20)->post($webhook, [
+                'job_id' => $job->id,
+                'product_id' => $job->product_id,
+                'product_name' => (string) ($product?->name_fa ?? 'محصول'),
+                'product_link' => $product ? route('app.product', ['product' => $product->route_slug]) : '',
+                'source_mode' => $job->source_mode,
+                'source_url' => $job->source_url,
+                'selected_images' => $job->selected_images,
+                'aspect_ratio' => $job->aspect_ratio,
+                'hook_text' => $job->hook_text,
+                'caption_text' => $job->caption_text,
+                'keyword' => $job->keyword,
+                'dm_template' => $job->dm_template,
+                'auto_generate_hook' => $autoHook,
+                'auto_generate_caption' => $autoCaption,
+                'auto_generate_keyword' => $autoKeyword,
+                'hook_guidelines' => (string) ($payload['hook_guidelines'] ?? ''),
+                'caption_guidelines' => (string) ($payload['caption_guidelines'] ?? ''),
+                'revision_request' => (string) ($payload['revision_request'] ?? ''),
+                'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
+                'callback_url' => rtrim((string) config('services.n8n.video_studio_callback_base_url', ''), '/')
+                    . ((string) config('services.n8n.video_studio_callback_base_url', '') !== '' ? '/webhooks/video-studio/' . $job->id . '/status' : route('webhooks.video-studio.status', ['job' => $job->id])),
+                'status_secret' => (string) config('services.n8n.video_studio_status_secret', ''),
+            ]);
+            if ($response->successful()) {
+                $job->update(['status' => 'processing', 'n8n_execution_id' => (string) ($response->json('execution_id') ?? '')]);
+            } else {
+                $job->update(['status' => 'failed', 'error_message' => 'پاسخ نامعتبر از ورکفلو دریافت شد.']);
+            }
+        } catch (\Throwable $e) {
+            $job->update(['status' => 'failed', 'error_message' => 'اتصال به ورکفلو برقرار نشد.']);
+        }
     }
 
     /**
