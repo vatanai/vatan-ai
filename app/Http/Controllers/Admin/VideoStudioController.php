@@ -378,6 +378,23 @@ class VideoStudioController extends Controller
             $hookGuidelines = trim($promptProfile . "\n\n" . $hookGuidelines);
             $captionGuidelines = trim($promptProfile . "\n\n" . $captionGuidelines);
         }
+        if (Schema::hasTable('video_hook_inspirations')) {
+            $library = VideoHookInspiration::query()
+                ->where('is_active', true)
+                ->latest()
+                ->limit(12)
+                ->get(['title', 'hook_text', 'tags'])
+                ->map(fn (VideoHookInspiration $item): string => trim(implode(' | ', array_filter([
+                    (string) $item->title,
+                    (string) $item->hook_text,
+                    is_array($item->tags) ? implode('، ', $item->tags) : (string) $item->tags,
+                ]))))
+                ->filter()
+                ->implode("\n");
+            if ($library !== '') {
+                $hookGuidelines = trim($hookGuidelines . "\n\nنمونه‌های تأییدشدهٔ کتابخانهٔ هوک؛ فقط از ساختارشان الهام بگیر و متن را برای محصول فعلی بازنویسی کن:\n" . $library);
+            }
+        }
         try {
             $response = Http::retry(3, 300)->timeout(20)->post($webhook, [
                 'job_id' => $job->id,
