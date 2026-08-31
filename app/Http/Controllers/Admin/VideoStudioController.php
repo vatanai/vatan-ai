@@ -232,6 +232,11 @@ class VideoStudioController extends Controller
         if ($request->hasFile('source_file')) {
             $data['source_url'] = asset('storage/' . ltrim($request->file('source_file')->store('video-studio/sources', 'public'), '/'));
         }
+        if (in_array($data['source_mode'], ['upload', 'music', 'video'], true) && blank($data['source_url'])) {
+            return back()
+                ->withErrors(['source_file' => 'برای این منبع، حتماً فایل یا لینک جدید انتخاب کنید؛ منبع قبلی دوباره استفاده نمی‌شود.'])
+                ->withInput();
+        }
         unset($data['source_file']);
         $autoHook = $request->boolean('auto_generate_hook');
         $autoCaption = $request->boolean('auto_generate_caption');
@@ -239,6 +244,24 @@ class VideoStudioController extends Controller
         if ($autoHook) $data['hook_text'] = null;
         if ($autoCaption) $data['caption_text'] = null;
         if ($autoKeyword) $data['keyword'] = null;
+        $sourceFingerprint = hash('sha256', json_encode([
+            'product_id' => (int) $data['product_id'],
+            'source_mode' => (string) $data['source_mode'],
+            'source_url' => (string) ($data['source_url'] ?? ''),
+            'selected_images' => array_values($data['selected_images'] ?? []),
+            'aspect_ratio' => (string) $data['aspect_ratio'],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $recentDuplicate = VideoStudioJob::query()
+            ->whereIn('status', ['queued', 'processing'])
+            ->latest('id')
+            ->limit(50)
+            ->get()
+            ->first(fn (VideoStudioJob $candidate): bool => (string) data_get($candidate->payload, 'source_fingerprint') === $sourceFingerprint);
+        if ($recentDuplicate) {
+            return redirect()
+                ->route('admin.products.dashboard', ['product_id' => $recentDuplicate->product_id])
+                ->with('warning', "این ترکیب محصول و منبع از قبل در صف است (#{$recentDuplicate->id}) و دوباره ارسال نشد.");
+        }
         $job = VideoStudioJob::create(array_merge($data, [
             'admin_id' => auth('admin')->id(),
             'status' => 'queued',
@@ -249,6 +272,7 @@ class VideoStudioController extends Controller
                 'auto_generate_keyword' => $autoKeyword,
                 'hook_guidelines' => (string) $request->input('hook_guidelines', ''),
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
+                'source_fingerprint' => $sourceFingerprint,
             ],
         ]));
 

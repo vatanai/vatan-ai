@@ -154,7 +154,7 @@
     <section class="studio-card studio-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف ساخت ویدیو</div><div class="studio-panel-meta">آخرین ۲۰ سفارش</div></div>
       @if($jobs->isNotEmpty())
-        <form id="studio-bulk-form" method="POST" action="{{ route('admin.video-studio.jobs.bulk') }}" onsubmit="return confirm('عملیات روی سفارش‌های انتخاب‌شده انجام شود؟')">
+        <form id="studio-bulk-form" method="POST" action="{{ route('admin.video-studio.jobs.bulk') }}">
           @csrf
           <div class="studio-job-actions" style="margin-bottom:10px"><button class="studio-btn" type="submit" name="action" value="retry"><i class="fa-solid fa-rotate"></i> ساخت مجدد انتخاب‌شده‌ها</button><button class="studio-btn" type="submit" name="action" value="delete"><i class="fa-solid fa-trash"></i> حذف انتخاب‌شده‌ها</button><small class="studio-muted">برای مدیریت گروهی، کنار هر سفارش را تیک بزنید.</small></div>
         </form>
