@@ -276,7 +276,12 @@ class VideoStudioController extends Controller
             }
 
             $body = $response->json();
-            $raw = data_get($body, 'text') ?? data_get($body, 'output') ?? data_get($body, 'response') ?? data_get($body, 'result') ?? $body;
+            $raw = data_get($body, 'content.0.text')
+                ?? data_get($body, 'text')
+                ?? data_get($body, 'output')
+                ?? data_get($body, 'response')
+                ?? data_get($body, 'result')
+                ?? $body;
             if (is_array($raw)) {
                 $options = $raw;
             } else {
