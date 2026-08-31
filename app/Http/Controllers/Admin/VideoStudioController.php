@@ -325,6 +325,22 @@ class VideoStudioController extends Controller
             $data['source_mode'] = $librarySource->type;
             $data['source_url'] = $librarySource->source_url;
         }
+        // در حالت خودکار، منبعی از کتابخانه که کمترین مصرف را دارد انتخاب می‌کنیم
+        // تا هر سفارش از یک منبع قبلی تکراری استفاده نکند و گردش منابع قابل ردیابی بماند.
+        if (($data['source_mode'] ?? null) === 'auto'
+            && empty($data['source_library_id'])
+            && Schema::hasTable('video_studio_sources')) {
+            $librarySource = VideoStudioSource::query()
+                ->where('is_active', true)
+                ->orderBy('used_count')
+                ->orderBy('id')
+                ->first();
+            if ($librarySource) {
+                $data['source_library_id'] = $librarySource->id;
+                $data['source_mode'] = $librarySource->type;
+                $data['source_url'] = $librarySource->source_url;
+            }
+        }
         if (in_array($data['source_mode'], ['upload', 'music', 'video'], true) && blank($data['source_url'])) {
             return back()
                 ->withErrors(['source_file' => 'برای این منبع، حتماً فایل یا لینک جدید انتخاب کنید؛ منبع قبلی دوباره استفاده نمی‌شود.'])
