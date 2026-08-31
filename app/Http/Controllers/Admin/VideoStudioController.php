@@ -10,6 +10,7 @@ use App\Models\VideoHookInspiration;
 use App\Models\VideoStudioJob;
 use App\Models\VideoStudioSetting;
 use App\Models\VideoStudioSource;
+use App\Models\VideoStudioFont;
 use App\Support\Jalali;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +114,11 @@ class VideoStudioController extends Controller
         $sources = Schema::hasTable('video_studio_sources')
             ? VideoStudioSource::query()->where('is_active', true)->latest()->get()
             : collect();
+        $fonts = Schema::hasTable('video_studio_fonts')
+            ? VideoStudioFont::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get()
+            : collect([
+                new VideoStudioFont(['name' => 'یکان', 'slug' => 'B_Yekan', 'file_path' => 'fonts/B_Yekan.ttf', 'is_default' => true]),
+            ]);
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
@@ -160,6 +166,7 @@ class VideoStudioController extends Controller
             'settings' => $settings,
             'hookInspirations' => $hookInspirations,
             'sources' => $sources,
+            'fonts' => $fonts,
             'jobs' => $jobs,
             'completedVideoCounts' => $completedVideoCounts,
             'pendingVideoCounts' => $pendingVideoCounts,
@@ -194,7 +201,9 @@ class VideoStudioController extends Controller
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
-            'font_family' => ['required', 'in:B_Yekan'],
+            'font_family' => ['required', Schema::hasTable('video_studio_fonts')
+                ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
+                : Rule::in(['B_Yekan'])],
             'aspect_ratio' => ['required', 'in:9:16,1:1,4:5,16:9'],
         ]);
 
@@ -216,7 +225,8 @@ class VideoStudioController extends Controller
         $setting->fill($data);
         $setting->product_id = $productId;
         $setting->auto_enabled = $request->boolean('auto_enabled');
-        $setting->approval_required = $request->boolean('approval_required', true);
+        // تأیید انسانی فعلاً از مسیر تولید حذف شده و خروجی مستقیماً آمادهٔ ارسال است.
+        $setting->approval_required = false;
         $setting->auto_generate_hook = $request->boolean('auto_generate_hook');
         $setting->auto_generate_caption = $request->boolean('auto_generate_caption');
         $setting->auto_generate_keyword = $request->boolean('auto_generate_keyword');
@@ -225,6 +235,85 @@ class VideoStudioController extends Controller
         return redirect()
             ->route('admin.products.dashboard', $productId ? ['product_id' => $productId] : [])
             ->with('success', 'تنظیمات ساخت ویدیو ذخیره شد.');
+    }
+
+    public function previewContent(Request $request)
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'hook_guidelines' => ['nullable', 'string', 'max:5000'],
+            'caption_guidelines' => ['nullable', 'string', 'max:5000'],
+            'instagram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
+        ]);
+
+        $product = Product::query()->findOrFail((int) $data['product_id']);
+        $webhook = trim((string) config('services.n8n.video_studio_preview_webhook', env('N8N_VIDEO_STUDIO_PREVIEW_WEBHOOK', '')));
+        if ($webhook === '') {
+            $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
+            $webhook = preg_replace('~/video-studio-create(?:$|\?)~', '/video-studio-preview', $webhook) ?: $webhook;
+        }
+        if ($webhook === '') {
+            return response()->json(['message' => 'اتصال پیش‌نمایش ورکفلو تنظیم نشده است.'], 422);
+        }
+
+        $channel = (string) ($data['channel'] ?? 'instagram');
+        $prompt = trim((string) ($data[$channel . '_prompt'] ?? $data['instagram_prompt'] ?? ''));
+        try {
+            $response = Http::retry(3, 300)->timeout(45)->post($webhook, [
+                'preview_only' => true,
+                'channel' => $channel,
+                'product_id' => $product->id,
+                'product_name' => (string) $product->name_fa,
+                'product_link' => route('app.product', ['product' => $product->route_slug]),
+                'hook_guidelines' => (string) ($data['hook_guidelines'] ?? ''),
+                'caption_guidelines' => (string) ($data['caption_guidelines'] ?? ''),
+                'prompt_profile' => $prompt,
+            ]);
+            if (!$response->successful()) {
+                return response()->json(['message' => 'مدل هوش مصنوعی پاسخ معتبر نداد.'], 502);
+            }
+
+            $body = $response->json();
+            $raw = data_get($body, 'text') ?? data_get($body, 'output') ?? data_get($body, 'response') ?? data_get($body, 'result') ?? $body;
+            if (is_array($raw)) {
+                $options = $raw;
+            } else {
+                $clean = trim((string) $raw);
+                $clean = preg_replace('/^```(?:json)?\s*|\s*```$/u', '', $clean) ?: $clean;
+                $options = json_decode($clean, true);
+            }
+            if (!is_array($options)) {
+                return response()->json(['message' => 'خروجی مدل قابل تبدیل به پیشنهادهای محتوا نبود.'], 502);
+            }
+
+            $normalize = static function (string $key) use ($options): array {
+                $value = $options[$key . '_options'] ?? $options[$key] ?? [];
+                $value = is_array($value) ? $value : [$value];
+                $value = array_values(array_filter(array_map(static fn ($item): string => trim((string) $item), $value)));
+                return array_slice(array_pad($value, 3, $value[0] ?? ''), 0, 3);
+            };
+            $hooks = $normalize('hook');
+            $captions = $normalize('caption');
+            $keywords = $normalize('keyword');
+            if (count(array_filter(array_merge($hooks, $captions, $keywords))) === 0) {
+                return response()->json(['message' => 'پیشنهادی از مدل دریافت نشد.'], 502);
+            }
+
+            return response()->json([
+                'hook_options' => $hooks,
+                'caption_options' => $captions,
+                'keyword_options' => $keywords,
+                'hook' => $hooks[0] ?? '',
+                'caption' => $captions[0] ?? '',
+                'keyword' => $keywords[0] ?? '',
+                'dm_template' => trim((string) ($options['dm_template'] ?? '')),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['message' => 'ارتباط با مدل هوش مصنوعی ناموفق بود.'], 502);
+        }
     }
 
     public function storeHook(Request $request)
@@ -306,6 +395,9 @@ class VideoStudioController extends Controller
             'dm_template' => ['nullable', 'string', 'max:5000'],
             'build_now' => ['nullable', 'boolean'],
             'source_library_id' => ['nullable', 'integer', 'exists:video_studio_sources,id'],
+            'preview_hook' => ['nullable', 'string', 'max:1000'],
+            'preview_caption' => ['nullable', 'string', 'max:5000'],
+            'preview_keyword' => ['nullable', 'string', 'max:80'],
         ]);
 
         if ($request->hasFile('source_file')) {
@@ -351,6 +443,18 @@ class VideoStudioController extends Controller
         $autoHook = $request->boolean('auto_generate_hook');
         $autoCaption = $request->boolean('auto_generate_caption');
         $autoKeyword = $request->boolean('auto_generate_keyword');
+        if (filled($data['preview_hook'] ?? null)) {
+            $data['hook_text'] = trim((string) $data['preview_hook']);
+            $autoHook = false;
+        }
+        if (filled($data['preview_caption'] ?? null)) {
+            $data['caption_text'] = trim((string) $data['preview_caption']);
+            $autoCaption = false;
+        }
+        if (filled($data['preview_keyword'] ?? null)) {
+            $data['keyword'] = trim((string) $data['preview_keyword']);
+            $autoKeyword = false;
+        }
         $buildNow = $request->boolean('build_now');
         if ($autoHook) $data['hook_text'] = null;
         if ($autoCaption) $data['caption_text'] = null;
@@ -389,6 +493,7 @@ class VideoStudioController extends Controller
                 'source_fingerprint' => $sourceFingerprint,
                 'build_now' => $buildNow,
                 'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
+                'preview_selected' => filled($data['preview_hook'] ?? null) || filled($data['preview_caption'] ?? null) || filled($data['preview_keyword'] ?? null),
             ],
         ]));
 
