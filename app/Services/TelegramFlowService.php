@@ -196,6 +196,7 @@ class TelegramFlowService
         return $this->contentMessage($chatId, 'registration_done', $variables, [
             ['text' => 'ساخت با همین محصول', 'callback_data' => 'build:' . ($click?->launch_token ?? '')],
             ['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'],
+            $this->plansButton(),
         ]);
     }
 
@@ -229,7 +230,7 @@ class TelegramFlowService
         return $this->message($chatId, $this->content->text('build_ready'), [[
             'text' => 'ساخت محصول در وطن',
             'web_app' => ['url' => $url],
-        ]]) + [
+        ], $this->plansButton()]) + [
             'launch_token' => $click->launch_token,
             'url' => $url,
             'product_key' => $click->product_key,
@@ -249,7 +250,7 @@ class TelegramFlowService
         return $this->message($chatId, $this->content->text('all_products_ready'), [[
             'text' => 'نمایش قالب‌ها در وطن',
             'web_app' => ['url' => $url],
-        ]]) + [
+        ], $this->plansButton()]) + [
             'url' => $url,
             'user_id' => $telegramUser->user_id,
         ];
@@ -305,10 +306,18 @@ class TelegramFlowService
         return $this->contentMessage($chatId, 'product_selected', $variables, $fallbackButtons, $media);
     }
 
-    private function miniAppUrl(?string $launchToken, bool $all = false): string
+    private function plansButton(): array
+    {
+        return [
+            'text' => 'مشاهده و خرید پلن',
+            'web_app' => ['url' => $this->miniAppUrl(null, true, 'plans')],
+        ];
+    }
+
+    private function miniAppUrl(?string $launchToken, bool $all = false, ?string $target = null): string
     {
         $base = trim((string) (ReferralSetting::current()->telegram_mini_app_url ?: config('services.telegram.mini_app_url') ?: route('telegram.mini-app')));
-        $query = array_filter(['launch' => $launchToken, 'all' => $all ? '1' : null]);
+        $query = array_filter(['launch' => $launchToken, 'all' => $all ? '1' : null, 'target' => $target]);
         return $base . ($query ? '?' . http_build_query($query) : '');
     }
 
@@ -335,7 +344,7 @@ class TelegramFlowService
     private function homeButtons(TelegramUser $telegramUser): array
     {
         return $telegramUser->user_id
-            ? [['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products']]
+            ? [['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'], $this->plansButton()]
             : [['text' => 'ثبت‌نام برای شروع', 'callback_data' => 'register']];
     }
 

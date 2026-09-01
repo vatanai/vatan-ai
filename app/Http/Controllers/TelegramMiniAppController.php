@@ -25,11 +25,14 @@ class TelegramMiniAppController extends Controller
     {
         $launchToken = trim((string) $request->query('launch', '')) ?: null;
         $all = $request->boolean('all');
+        $target = $request->query('target') === 'plans' ? 'plans' : null;
         $click = $launchToken ? TelegramProductClick::query()->with('product')->where('launch_token', $launchToken)->first() : null;
         $product = $click?->product;
-        $fallbackUrl = $all || ! $product
+        $fallbackUrl = $target === 'plans'
+            ? route('pricing.index')
+            : ($all || ! $product
             ? route('app.home')
-            : route('app.create', ['product' => $product->route_slug]);
+            : route('app.create', ['product' => $product->route_slug]));
 
         return view('telegram.mini-app', [
             'launchToken' => $launchToken,
@@ -61,6 +64,7 @@ class TelegramMiniAppController extends Controller
 
             $launchToken = trim((string) $request->input('launch_token')) ?: null;
             $all = $request->boolean('all');
+            $target = $request->input('target') === 'plans' ? 'plans' : null;
             $click = $launchToken
                 ? TelegramProductClick::query()
                     ->with('product')
@@ -82,9 +86,11 @@ class TelegramMiniAppController extends Controller
             ]);
             if ($click) $click->forceFill(['opened_at' => now()])->save();
 
-            $redirect = $all || ! $click?->product
-                ? route('app.home')
-                : route('app.create', ['product' => $click->product->route_slug]);
+            $redirect = $target === 'plans'
+                ? route('pricing.index')
+                : ($all || ! $click?->product
+                    ? route('app.home')
+                    : route('app.create', ['product' => $click->product->route_slug]));
 
             return response()->json([
                 'ok' => true,
