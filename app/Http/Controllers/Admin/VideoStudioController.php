@@ -643,6 +643,10 @@ class VideoStudioController extends Controller
         $promptProfile = trim((string) ($payload['prompt_profile'] ?? ''));
         $channel = (string) ($payload['channel'] ?? 'instagram');
         $channelPrompt = trim((string) ($payload[$channel . '_prompt'] ?? ''));
+        $fontFamily = (string) ($payload['font_family'] ?? 'B_Yekan');
+        $font = Schema::hasTable('video_studio_fonts')
+            ? VideoStudioFont::query()->where('is_active', true)->where('slug', $fontFamily)->first()
+            : null;
         if ($channelPrompt !== '') {
             $promptProfile = $channelPrompt;
         }
@@ -679,7 +683,8 @@ class VideoStudioController extends Controller
                 'source_url' => $job->source_url,
                 'selected_images' => $job->selected_images,
                 'aspect_ratio' => $job->aspect_ratio,
-                'font_family' => (string) ($job->payload['font_family'] ?? ''),
+                'font_family' => $fontFamily,
+                'font_file_url' => $font?->file_path ? asset(ltrim((string) $font->file_path, '/')) : '',
                 'hook_text' => $job->hook_text,
                 'caption_text' => $job->caption_text,
                 'keyword' => $job->keyword,
