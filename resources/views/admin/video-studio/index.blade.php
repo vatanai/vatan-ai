@@ -84,6 +84,15 @@
   }
   @media(max-width:999px){#studio-settings-form{display:grid;grid-template-columns:1fr;gap:13px}#studio-settings-form>*{grid-column:1!important;grid-row:auto!important}}
   @media(max-width:760px){.studio-telegram-button-row{grid-template-columns:1fr 1fr}.studio-telegram-button-remove{grid-column:1/-1;width:100%}}
+  /* Telegram message bubble grows with its content; the channel background continues below it. */
+  #source-options{width:75%;max-width:240px}
+  #aspect-ratio-field .studio-options{width:50%;max-width:150px}
+  #aspect-ratio-field .studio-option label{width:100%;box-sizing:border-box}
+  .studio-phone-chat{min-height:720px;background-color:var(--primary-l);background-image:radial-gradient(circle at 18% 20%,color-mix(in srgb,var(--primary) 10%,transparent) 0 2px,transparent 3px),radial-gradient(circle at 72% 65%,color-mix(in srgb,var(--primary) 8%,transparent) 0 1px,transparent 3px);background-size:28px 28px,38px 38px}
+  .studio-phone-post{height:auto;min-height:0;overflow:visible}
+  .studio-phone-buttons{width:94%;max-width:94%;margin:8px auto 0;box-sizing:border-box}
+  .studio-phone-buttons:empty{display:none}
+  @media(max-width:999px){#source-options,#aspect-ratio-field .studio-options{width:100%;max-width:none}}
 </style>
 @endpush
 
@@ -167,7 +176,7 @@
       <section class="studio-card studio-panel studio-telegram-live" id="telegram-live-preview">
         <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-brands fa-telegram"></i> نمایش در کانال</div><div class="studio-panel-meta">پیش‌نمایش زندهٔ خروجی تلگرام</div></div>
         <div class="studio-telegram-preview-grid">
-          <div class="studio-phone" aria-label="پیش‌نمایش پیام تلگرام"><div class="studio-phone-notch"></div><div class="studio-phone-head"><div class="studio-phone-avatar"><i class="fa-brands fa-telegram"></i></div><span>کانال وطن</span></div><div class="studio-phone-chat"><div class="studio-phone-post"><div class="studio-phone-media" id="telegram-preview-media">@forelse($productImages as $image)<img src="{{ $image['url'] }}" alt="تصویر محصول">@empty<div class="studio-empty">تصویر محصول</div>@endforelse</div><div class="studio-phone-caption" id="telegram-preview-caption">{{ $settings->caption_text ?: ($selectedProduct?->name_fa ?? 'متن کپشن تلگرام') }}</div><div class="studio-phone-buttons" id="telegram-preview-buttons"></div></div></div></div>
+          <div class="studio-phone" aria-label="پیش‌نمایش پیام تلگرام"><div class="studio-phone-notch"></div><div class="studio-phone-head"><div class="studio-phone-avatar"><i class="fa-brands fa-telegram"></i></div><span>کانال وطن</span></div><div class="studio-phone-chat"><div class="studio-phone-post"><div class="studio-phone-media" id="telegram-preview-media">@forelse($productImages as $image)<img src="{{ $image['url'] }}" alt="تصویر محصول">@empty<div class="studio-empty">تصویر محصول</div>@endforelse</div><div class="studio-phone-caption" id="telegram-preview-caption">{{ $settings->caption_text ?: ($selectedProduct?->name_fa ?? 'متن کپشن تلگرام') }}</div></div><div class="studio-phone-buttons" id="telegram-preview-buttons"></div></div></div>
           <div class="studio-telegram-preview-note"><strong>نمایش واقعی پیام کانال</strong><br>تصویرها، کپشن و دکمه‌های انتخاب‌شده را هم‌زمان می‌بینی. هر تغییر بلافاصله در قاب گوشی اعمال می‌شود.<div class="studio-telegram-caption-editor"><label for="telegram-caption-editor">کپشن تلگرام</label><textarea class="studio-textarea" id="telegram-caption-editor" placeholder="کپشن اختصاصی کانال تلگرام...">{{ old('telegram_caption_text', $settings->telegram_caption_text ?? $settings->caption_text ?? ($selectedProduct?->name_fa ?? 'متن کپشن تلگرام')) }}</textarea></div><div class="studio-telegram-live-actions"><button class="studio-btn" type="button" id="open-telegram-settings"><i class="fa-solid fa-sliders"></i> تنظیم کپشن و دکمه‌ها</button></div></div>
         </div>
       </section>
@@ -413,7 +422,7 @@
     if (captionTarget) captionTarget.textContent = caption;
     const target = document.getElementById('telegram-preview-buttons');
     if (!target) return;
-    const post = target.closest('.studio-phone-post');
+    const post = target.closest('.studio-phone-chat')?.querySelector('.studio-phone-post');
     let comments = post?.querySelector('.studio-phone-comments');
     if (post && !comments) { comments = document.createElement('div'); comments.className = 'studio-phone-comments'; comments.innerHTML = '<span>💬</span> دیدگاه‌ها'; post.appendChild(comments); }
     target.replaceChildren();
