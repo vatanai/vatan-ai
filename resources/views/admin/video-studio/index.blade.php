@@ -297,11 +297,31 @@
           @foreach($jobs as $job)
             @php($jobStatus = (string) $job->status)
             @php($jobLabel = ['queued' => 'در صف', 'processing' => 'در حال ساخت', 'completed' => 'تکمیل‌شده', 'failed' => 'ناموفق'][$jobStatus] ?? $jobStatus)
+            @php
+              $jobEditorConfig = [
+                'job_id' => $job->id,
+                'product_id' => $job->product_id,
+                'source_mode' => $job->source_mode,
+                'source_url' => $job->source_url,
+                'source_library_id' => data_get($job->payload, 'source_library_id'),
+                'selected_images' => implode("\n", (array) $job->selected_images),
+                'aspect_ratio' => $job->aspect_ratio,
+                'font_family' => data_get($job->payload, 'font_family', 'B_Yekan'),
+                'hook_text' => $job->hook_text,
+                'caption_text' => $job->caption_text,
+                'keyword' => $job->keyword,
+                'dm_template' => $job->dm_template,
+                'instagram_prompt' => data_get($job->payload, 'instagram_prompt', ''),
+                'telegram_prompt' => data_get($job->payload, 'telegram_prompt', ''),
+                'telegram_caption_text' => data_get($job->payload, 'telegram_caption_text', ''),
+                'telegram_buttons' => data_get($job->payload, 'telegram_buttons', []),
+              ];
+            @endphp
             <div class="studio-job">
               <div class="studio-job-main"><label class="studio-check"><input form="studio-bulk-form" type="checkbox" name="job_ids[]" value="{{ $job->id }}"><span></span></label><div><div class="studio-job-title">{{ $job->product?->name_fa ?? 'محصول حذف‌شده' }}</div><div class="studio-job-meta">{{ $job->source_mode === 'video' ? 'ویدیوی منبع' : ($job->source_mode === 'music' ? 'فایل موزیک' : 'منبع خودکار') }} · قاب {{ $job->aspect_ratio }} · {{ \App\Support\Jalali::formatNumeric($job->created_at) }}</div>@if($job->error_message)<div class="studio-error" style="margin-top:6px">{{ $job->error_message }}</div>@endif</div></div>
               <div class="studio-job-status {{ in_array($jobStatus, ['queued','processing','completed','failed'], true) ? $jobStatus : 'queued' }}">{{ $jobLabel }}</div>
               <div class="studio-muted">#{{ $job->id }}</div>
-              <div class="studio-job-actions"><button type="button" class="studio-job-edit-toggle" data-job-edit='@json(['job_id' => $job->id, 'product_id' => $job->product_id, 'source_mode' => $job->source_mode, 'source_url' => $job->source_url, 'source_library_id' => data_get($job->payload, 'source_library_id'), 'selected_images' => implode("\n", (array) $job->selected_images), 'aspect_ratio' => $job->aspect_ratio, 'font_family' => data_get($job->payload, 'font_family', 'B_Yekan'), 'hook_text' => $job->hook_text, 'caption_text' => $job->caption_text, 'keyword' => $job->keyword, 'dm_template' => $job->dm_template, 'instagram_prompt' => data_get($job->payload, 'instagram_prompt', ''), 'telegram_prompt' => data_get($job->payload, 'telegram_prompt', ''), 'telegram_caption_text' => data_get($job->payload, 'telegram_caption_text', ''), 'telegram_buttons' => data_get($job->payload, 'telegram_buttons', [])], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)'><i class="fa-solid fa-pen-to-square"></i> ویرایش کامل</button>@if(in_array($jobStatus, ['queued','failed'], true))<form method="POST" action="{{ route('admin.video-studio.jobs.retry', $job) }}">@csrf<button class="studio-link-btn" type="submit" title="{{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}"><i class="fa-solid {{ $jobStatus === 'queued' ? 'fa-play' : 'fa-rotate-left' }}"></i> {{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}</button></form>@endif</div>
+              <div class="studio-job-actions"><button type="button" class="studio-job-edit-toggle" data-job-edit="{{ e(json_encode($jobEditorConfig, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)) }}"><i class="fa-solid fa-pen-to-square"></i> ویرایش کامل</button>@if(in_array($jobStatus, ['queued','failed'], true))<form method="POST" action="{{ route('admin.video-studio.jobs.retry', $job) }}">@csrf<button class="studio-link-btn" type="submit" title="{{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}"><i class="fa-solid {{ $jobStatus === 'queued' ? 'fa-play' : 'fa-rotate-left' }}"></i> {{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}</button></form>@endif</div>
               <div class="studio-job-editor is-hidden" id="studio-job-editor-{{ $job->id }}"><small>اصلاحیه را محاوره‌ای بنویس؛ هوش مصنوعی آن را روی همین سفارش اعمال می‌کند.</small><form method="POST" action="{{ route('admin.video-studio.jobs.revise', $job) }}" class="studio-form">@csrf<textarea class="studio-textarea" name="revision_request" required placeholder="مثلاً: هوک کوتاه‌تر و هیجان‌انگیزتر شود، هر دو تصویر استفاده شوند و کپشن دوستانه‌تر باشد."></textarea><div class="studio-job-actions"><button class="studio-btn primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> ارسال اصلاحیه و ساخت مجدد</button>@if($job->video_url)<a class="studio-btn" href="{{ $job->video_url }}" target="_blank" rel="noopener"><i class="fa-solid fa-video"></i> مشاهده خروجی</a>@endif</div></form></div>
             </div>
           @endforeach
