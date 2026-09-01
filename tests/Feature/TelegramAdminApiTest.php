@@ -42,10 +42,16 @@ class TelegramAdminApiTest extends TestCase
             $table->id(); $table->unsignedBigInteger('campaign_id'); $table->unsignedBigInteger('telegram_user_id'); $table->timestamp('sent_at')->nullable();
             $table->string('delivery_status')->default('pending'); $table->timestamps();
         });
+        Schema::create('telegram_segments', function (Blueprint $table): void {
+            $table->id(); $table->unsignedBigInteger('created_by')->nullable(); $table->string('name');
+            $table->json('definition'); $table->unsignedInteger('user_count')->default(0); $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('telegram_segments');
         Schema::dropIfExists('telegram_campaign_logs');
         Schema::dropIfExists('telegram_campaigns');
         Schema::dropIfExists('telegram_product_clicks');
@@ -109,5 +115,68 @@ class TelegramAdminApiTest extends TestCase
 
         $this->actingAs($admin, 'admin')->getJson('/api/campaigns?status=draft')
             ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.status', 'draft');
+    }
+
+    public function test_admin_can_save_segment_from_filters_and_count_matching_users(): void
+    {
+        $admin = Admin::query()->create(['name' => 'مدیر سگمنت', 'email' => 'telegram-segment@example.test', 'role' => 'leader', 'is_active' => true]);
+        TelegramUser::query()->create([
+            'telegram_id' => 901004,
+            'first_name' => 'فعال',
+            'last_active_at' => now()->subDays(2),
+            'is_blocked' => false,
+        ]);
+        TelegramUser::query()->create([
+            'telegram_id' => 901005,
+            'first_name' => 'قدیمی',
+            'last_active_at' => now()->subDays(12),
+            'is_blocked' => false,
+        ]);
+        TelegramUser::query()->create([
+            'telegram_id' => 901006,
+            'first_name' => 'مسدود',
+            'last_active_at' => now()->subDays(2),
+            'is_blocked' => true,
+        ]);
+
+        $response = $this->actingAs($admin, 'admin')->post('/admin/telegram/segments', [
+            'name' => 'کاربران فعال هفت روز اخیر',
+            'definition' => json_encode(['active_days' => 7], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('telegram_segments', [
+            'name' => 'کاربران فعال هفت روز اخیر',
+            'user_count' => 1,
+        ]);
+    }
+
+    public function test_segment_definition_rejects_invalid_values_and_does_not_create_a_segment(): void
+    {
+        $admin = Admin::query()->create(['name' => 'مدیر اعتبارسنجی', 'email' => 'telegram-segment-validation@example.test', 'role' => 'leader', 'is_active' => true]);
+
+        $this->actingAs($admin, 'admin')->from('/admin/telegram/users')->post('/admin/telegram/segments', [
+            'name' => 'سگمنت نامعتبر',
+            'definition' => json_encode(['active_days' => 0], JSON_UNESCAPED_UNICODE),
+        ])->assertRedirect('/admin/telegram/users');
+
+        $this->assertDatabaseMissing('telegram_segments', ['name' => 'سگمنت نامعتبر']);
+    }
+
+    public function test_admin_can_open_the_telegram_users_page_with_saved_segment_area(): void
+    {
+        $admin = Admin::query()->create(['name' => 'مدیر صفحه', 'email' => 'telegram-users-page@example.test', 'role' => 'leader', 'is_active' => true]);
+        \App\Models\TelegramSegment::query()->create([
+            'created_by' => $admin->id,
+            'name' => 'سگمنت تست صفحه',
+            'definition' => ['active_days' => 7],
+            'user_count' => 0,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin, 'admin')->get('/admin/telegram/users')
+            ->assertOk()
+            ->assertSee('سگمنت‌های ذخیره‌شده')
+            ->assertSee('سگمنت تست صفحه');
     }
 }

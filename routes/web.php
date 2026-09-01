@@ -160,6 +160,23 @@ Route::middleware('guest:admin')->group(function () {
 
 // ─── Admin Panel Area (Protected) ────────────────────────
 Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
+    Route::prefix('telegram')->name('telegram.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'index'])->name('index');
+        Route::get('/users', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'users'])->name('users');
+        Route::get('/users/{telegramUser}', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'show'])->name('users.show');
+        Route::post('/segments', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'storeSegment'])->name('segments.store');
+        Route::delete('/segments/{telegramSegment}', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'destroySegment'])->name('segments.destroy');
+        Route::patch('/users/{telegramUser}', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'update'])->name('users.update');
+        Route::patch('/users/{telegramUser}/archive', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'archive'])->name('users.archive');
+        Route::post('/users/{telegramUser}/credit', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'adjustCredit'])->name('users.credit');
+        Route::get('/content', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'content'])->name('content');
+        Route::post('/content', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'storeContent'])->name('content.store');
+        Route::put('/content/{telegramBotContent}', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'updateContent'])->name('content.update');
+        Route::delete('/content/{telegramBotContent}', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'destroyContent'])->name('content.destroy');
+        Route::get('/campaigns', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'campaigns'])->name('campaigns');
+        Route::post('/campaigns', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'storeCampaign'])->name('campaigns.store');
+        Route::post('/campaigns/{telegramCampaign}/prepare', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'prepareCampaign'])->name('campaigns.prepare');
+    });
 // مسیرهای کامل CRUD دسته‌بندی
     Route::resource('categories', CategoryController::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
