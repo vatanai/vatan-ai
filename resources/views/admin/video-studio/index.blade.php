@@ -63,6 +63,27 @@
   @media(max-width:1100px){.studio-font-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
   @media(max-width:650px){.studio-font-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
   .studio-phone-chat{min-height:720px}.studio-phone-post{min-height:660px}
+  /* Final layout pass: compact source/ratio controls and keep Telegram preview inside its card. */
+  .studio-telegram-caption-editor{display:none!important}
+  .studio-telegram-preview-note{width:100%;max-width:760px;box-sizing:border-box;margin-inline:auto;overflow:hidden}
+  .studio-telegram-caption-smart,.studio-telegram-buttons{width:min(100%,760px);max-width:100%;box-sizing:border-box;margin-inline:auto}
+  .studio-telegram-button-row{grid-template-columns:minmax(0,1.05fr) minmax(0,1.6fr) minmax(90px,.8fr) 30px;min-width:0}
+  .studio-telegram-button-row>*{min-width:0;max-width:100%;box-sizing:border-box}
+  #source-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #source-options .studio-option label{min-height:50px;padding:6px;font-size:10px}
+  #aspect-ratio-field .studio-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  #aspect-ratio-field .studio-option label{min-height:0;aspect-ratio:1/1;padding:4px;font-size:9px}
+  #aspect-ratio-field .studio-option label i{display:none}
+  #aspect-ratio-field .studio-option label span{font-size:9px}
+  @media(min-width:1000px){
+    #studio-settings-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    #studio-settings-form>*{grid-column:1/-1}
+    #studio-settings-form>#source-mode-field{grid-column:1;grid-row:4}
+    #studio-settings-form>#source-url-field{grid-column:1/-1;grid-row:5}
+    #studio-settings-form>#aspect-ratio-field{grid-column:2;grid-row:4}
+  }
+  @media(max-width:999px){#studio-settings-form{display:grid;grid-template-columns:1fr;gap:13px}#studio-settings-form>*{grid-column:1!important;grid-row:auto!important}}
+  @media(max-width:760px){.studio-telegram-button-row{grid-template-columns:1fr 1fr}.studio-telegram-button-remove{grid-column:1/-1;width:100%}}
 </style>
 @endpush
 
@@ -106,13 +127,13 @@
           @endif
           <div class="studio-field"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
-          <div class="studio-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
+          <div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
             @foreach(['auto'=>['fa-wand-magic-sparkles','خودکار'],'upload'=>['fa-file-audio','فایل مستقیم'],'music'=>['fa-music','فایل موزیک'],'video'=>['fa-film','ویدیوی منبع']] as $mode=>$option)
               <div class="studio-option"><input id="source-{{ $mode }}" type="radio" name="source_mode" value="{{ $mode }}" @checked(($settings->source_mode ?? 'auto') === $mode)><label for="source-{{ $mode }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}</label></div>
             @endforeach
           </div><small id="source-help">منبع انتخابی بعد از اتصال به ورکفلو، هنگام ساخت استفاده می‌شود.</small></div>
           <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><select class="studio-select" id="source-library" name="source_library_id"><option value="">بدون انتخاب از کتابخانه</option>@foreach($sources as $source)<option value="{{ $source->id }}" data-source-type="{{ $source->type }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیوی منبع' : 'موزیک' }} · {{ $source->used_count }} استفاده</option>@endforeach</select><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">می‌توانی یک منبع از کتابخانه انتخاب کنی یا لینک/فایل تازه بدهی.</small></div>
-          <div class="studio-field"><label>قاب خروجی</label><div class="studio-options">
+          <div class="studio-field" id="aspect-ratio-field"><label>قاب خروجی</label><div class="studio-options">
             @foreach(['9:16'=>['fa-mobile-screen-button','استوری عمودی'],'1:1'=>['fa-square','مربع'],'4:5'=>['fa-image','پست عمودی'],'16:9'=>['fa-display','افقی']] as $ratio=>$option)
               <div class="studio-option"><input id="ratio-{{ str_replace(':','-',$ratio) }}" type="radio" name="aspect_ratio" value="{{ $ratio }}" @checked(($settings->aspect_ratio ?? '9:16') === $ratio)><label for="ratio-{{ str_replace(':','-',$ratio) }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}<span dir="ltr">{{ $ratio }}</span></label></div>
             @endforeach
@@ -461,7 +482,7 @@
   const telegramNote = document.querySelector('.studio-telegram-preview-note');
   if (telegramNote && !telegramCaptionHolder) {
     const smart = document.createElement('div'); smart.className = 'studio-telegram-caption-smart';
-    smart.innerHTML = '<div class="studio-telegram-caption-smart-head"><label><input id="telegram-auto-caption" type="checkbox" checked> ساخت کپشن تلگرام با هوش مصنوعی</label><button class="studio-regenerate" type="button" data-regenerate-telegram>ساخت مجدد</button></div><small class="studio-preview-status">سه پیشنهاد کپشن برای کانال تلگرام را ببین و یکی را انتخاب کن.</small><div class="studio-preview-options" data-telegram-caption-options></div>';
+    smart.innerHTML = '<div class="studio-telegram-caption-smart-head"><label><input id="telegram-auto-caption" type="checkbox" checked> ساخت کپشن تلگرام با هوش مصنوعی</label><button class="studio-regenerate" type="button" data-regenerate-telegram>ساخت مجدد</button></div><small class="studio-preview-status">دو پیشنهاد کپشن برای کانال تلگرام را ببین و یکی را انتخاب کن.</small><div class="studio-preview-options" data-telegram-caption-options></div>';
     const editor = telegramNote.querySelector('.studio-telegram-caption-editor'); telegramNote.insertBefore(smart, editor || telegramNote.firstChild);
     telegramCaptionHolder = smart.querySelector('[data-telegram-caption-options]'); telegramCaptionToggle = smart.querySelector('#telegram-auto-caption');
   }
