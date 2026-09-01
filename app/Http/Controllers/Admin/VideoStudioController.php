@@ -422,6 +422,7 @@ class VideoStudioController extends Controller
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
             'instagram_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
             'telegram_buttons_enabled' => ['nullable', 'boolean'],
             'telegram_button_label' => ['nullable', 'array', 'max:8'],
             'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
@@ -535,6 +536,7 @@ class VideoStudioController extends Controller
                 'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
                 'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
                 'telegram_buttons' => $telegramButtons,
+                'channel' => (string) ($data['channel'] ?? 'instagram'),
                 'source_fingerprint' => $sourceFingerprint,
                 'build_now' => $buildNow,
                 'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
@@ -651,7 +653,7 @@ class VideoStudioController extends Controller
         $promptProfile = trim((string) ($payload['prompt_profile'] ?? ''));
         $channel = (string) ($payload['channel'] ?? 'instagram');
         $channelPrompt = trim((string) ($payload[$channel . '_prompt'] ?? ''));
-        $fontFamily = (string) ($payload['font_family'] ?? 'B_Yekan');
+        $fontFamily = (string) ($payload['font_family'] ?? 'Modam');
         $font = Schema::hasTable('video_studio_fonts')
             ? VideoStudioFont::query()->where('is_active', true)->where('slug', $fontFamily)->first()
             : null;
@@ -703,6 +705,15 @@ class VideoStudioController extends Controller
                 'hook_guidelines' => $hookGuidelines,
                 'caption_guidelines' => $captionGuidelines,
                 'prompt_profile' => $promptProfile,
+                'instagram_prompt' => (string) ($payload['instagram_prompt'] ?? ''),
+                'telegram_prompt' => (string) ($payload['telegram_prompt'] ?? ''),
+                'telegram_buttons' => is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
+                'telegram_topics' => [
+                    'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
+                    'instagram_thread_id' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', ''),
+                    'telegram_thread_id' => (string) config('services.n8n.video_studio_telegram_channel_thread_id', ''),
+                    'music_thread_id' => (string) config('services.n8n.video_studio_telegram_music_thread_id', ''),
+                ],
                 'revision_request' => (string) ($payload['revision_request'] ?? ''),
                 'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
                 'callback_url' => rtrim((string) config('services.n8n.video_studio_callback_base_url', ''), '/')

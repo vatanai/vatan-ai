@@ -45,12 +45,13 @@ return [
         'timeout' => env('OPENROUTER_TIMEOUT', 60),
     ],
 
-    'liara' => [
-        'api_key'  => env('LIARA_AI_API_KEY'),
-        'base_url' => env('LIARA_AI_BASE_URL', 'https://ai.liara.ir/api/v1'),
-        'timeout'  => (int) env('LIARA_AI_TIMEOUT', 120),
-        'account_api_token' => env('LIARA_API_TOKEN'),
-        'account_api_url' => env('LIARA_ACCOUNT_API_URL', 'https://api.liara.ir'),
+    'zarinpal' => [
+        'merchant_id' => env('ZARINPAL_MERCHANT_ID', env('ZIBAL_MERCHANT')),
+        'request_url' => env('ZARINPAL_REQUEST_URL', 'https://api.zarinpal.com/pg/v4/payment/request.json'),
+        'verify_url' => env('ZARINPAL_VERIFY_URL', 'https://api.zarinpal.com/pg/v4/payment/verify.json'),
+        'start_url' => env('ZARINPAL_START_URL', 'https://www.zarinpal.com/pg/StartPay'),
+        'rial_multiplier' => (int) env('ZARINPAL_RIAL_MULTIPLIER', 10),
+        'timeout' => (int) env('ZARINPAL_TIMEOUT', 15),
     ],
 
     'fal' => [
@@ -74,6 +75,30 @@ return [
         'timeout' => (int) env('AI_PROVIDER_TIMEOUT', 600),
         'max_retries' => (int) env('AI_PROVIDER_MAX_RETRIES', 2),
         'catalog_sync_on_migrate' => (bool) env('AI_CATALOG_SYNC_ON_MIGRATE', true),
+    ],
+
+    'n8n' => [
+        'video_studio_webhook' => env('N8N_VIDEO_STUDIO_WEBHOOK_URL'),
+        'video_studio_status_secret' => env('N8N_VIDEO_STUDIO_STATUS_SECRET'),
+        'video_studio_telegram_chat_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHAT_ID'),
+        'video_studio_telegram_instagram_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_INSTAGRAM_THREAD_ID'),
+        'video_studio_telegram_channel_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHANNEL_THREAD_ID'),
+        'video_studio_telegram_music_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_MUSIC_THREAD_ID'),
+        'video_studio_callback_base_url' => env('N8N_VIDEO_STUDIO_CALLBACK_BASE_URL'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'channel_id' => env('TELEGRAM_CHANNEL_ID'),
+        'channel_username' => env('TELEGRAM_CHANNEL_USERNAME', 'ai_vatan'),
+        'channel_invite_url' => env('TELEGRAM_CHANNEL_INVITE_URL'),
+        'mini_app_url' => env('TELEGRAM_MINI_APP_URL'),
+        'init_data_max_age' => (int) env('TELEGRAM_INIT_DATA_MAX_AGE', 86400),
+        'otp_resend_seconds' => (int) env('TELEGRAM_OTP_RESEND_SECONDS', 60),
+        'broadcast_enabled' => (bool) env('TELEGRAM_BROADCAST_ENABLED', false),
+        'broadcast_rate_per_second' => (int) env('TELEGRAM_BROADCAST_RATE_PER_SECOND', 25),
     ],
 
     'melipayamak' => [
