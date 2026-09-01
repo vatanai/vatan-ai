@@ -1,0 +1,48 @@
+{
+  "name": "daily birthday check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "birthday-schedule",
+      "name": "Daily trigger (disabled)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { enabled: false, reason: 'ارسال تبریک تولد تا تأیید صریح مدیر غیرفعال است.', candidates: [] } }];"
+      },
+      "id": "birthday-guard",
+      "name": "Birthday sending guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300]
+    }
+  ],
+  "connections": {
+    "Daily trigger (disabled)": {
+      "main": [[{"node": "Birthday sending guard", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "daily-birthday-check-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

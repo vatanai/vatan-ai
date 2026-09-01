@@ -19,6 +19,12 @@ class TelegramCampaignService
             ->when(! empty($definition['product_id']), fn ($query) => $query->whereHas('productClicks', fn ($clicks) => $clicks->where('product_id', (int) $definition['product_id'])))
             ->when(! empty($definition['active_days']), fn ($query) => $query->where('last_active_at', '>=', now()->subDays(max(1, (int) $definition['active_days']))))
             ->when(! empty($definition['telegram_ids']), fn ($query) => $query->whereIn('telegram_id', array_map('intval', (array) $definition['telegram_ids'])))
+            ->when(array_key_exists('used_build', $definition), fn ($query) => $definition['used_build']
+                ? $query->whereHas('productClicks', fn ($clicks) => $clicks->whereNotNull('completed_at'))
+                : $query->whereDoesntHave('productClicks', fn ($clicks) => $clicks->whereNotNull('completed_at')))
+            ->when(! empty($definition['birth_month']), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereMonth('birth_date', (int) $definition['birth_month'])))
+            ->when(! empty($definition['builds_min']), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereRaw('(SELECT COUNT(*) FROM generated_images WHERE generated_images.user_id = users.id) >= ?', [(int) $definition['builds_min']])))
+            ->when(! empty($definition['builds_max']), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereRaw('(SELECT COUNT(*) FROM generated_images WHERE generated_images.user_id = users.id) <= ?', [(int) $definition['builds_max']])))
             ->when(! empty($definition['created_from']), fn ($query) => $query->whereDate('created_at', '>=', $definition['created_from']))
             ->when(! empty($definition['created_to']), fn ($query) => $query->whereDate('created_at', '<=', $definition['created_to']))
             ->orderBy('id');

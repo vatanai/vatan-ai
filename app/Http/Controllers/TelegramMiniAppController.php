@@ -76,6 +76,10 @@ class TelegramMiniAppController extends Controller
 
             Auth::login($telegramUser->user, true);
             $request->session()->regenerate();
+            $request->session()->put([
+                'telegram_mini_app_user_id' => $telegramUser->id,
+                'telegram_mini_app_launch_token' => $click?->launch_token,
+            ]);
             if ($click) $click->forceFill(['opened_at' => now()])->save();
 
             $redirect = $all || ! $click?->product

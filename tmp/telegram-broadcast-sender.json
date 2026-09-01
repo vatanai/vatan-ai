@@ -1,0 +1,69 @@
+{
+  "name": "telegram broadcast sender",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-broadcast-sender",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "broadcast-webhook",
+      "name": "Broadcast input",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "telegram-broadcast-sender"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first()?.json ?? {};\nconst ids = [...new Set((input.telegram_ids ?? []).map(Number).filter(Number.isInteger))];\nif (input.test_mode !== true || ids.length !== 1) {\n  throw new Error('ارسال عمومی خاموش است؛ تست فقط با test_mode=true و یک شناسه مجاز انجام می‌شود.');\n}\nconst text = String(input.text ?? '').trim();\nif (!text) throw new Error('متن پیام خالی است.');\nreturn ids.map((telegram_id) => ({ json: { telegram_id, text, parse_mode: input.parse_mode ?? 'HTML' } }));"
+      },
+      "id": "broadcast-guard",
+      "name": "Test-only guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.telegram_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "={{ $json.parse_mode }}"
+        }
+      },
+      "id": "broadcast-send",
+      "name": "Send test message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [800, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "qYFu6GmkqjA3Wl7M",
+          "name": "vatan ai - channel admin bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Broadcast input": {
+      "main": [[{"node": "Test-only guard", "type": "main", "index": 0}]]
+    },
+    "Test-only guard": {
+      "main": [[{"node": "Send test message", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "telegram-broadcast-sender-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "tags": []
+}

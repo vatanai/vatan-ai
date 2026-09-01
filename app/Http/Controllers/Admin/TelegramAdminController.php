@@ -257,7 +257,7 @@ class TelegramAdminController extends Controller
     private function userQuery(Request $request)
     {
         return TelegramUser::query()->with('user:id,name,last_name,phone,tokens')
-            ->withCount('productClicks')
+            ->withCount(['productClicks', 'productClicks as completed_builds_count' => fn ($clicks) => $clicks->whereNotNull('completed_at')])
             ->when($request->filled('q'), function ($query) use ($request): void {
                 $term = '%' . trim((string) $request->input('q')) . '%';
                 $query->where(fn ($q) => $q->where('telegram_id', (int) $request->input('q'))->orWhere('username', 'like', $term)->orWhere('first_name', 'like', $term)->orWhere('last_name', 'like', $term));
@@ -268,6 +268,11 @@ class TelegramAdminController extends Controller
             ->when($request->input('linked') === 'no', fn ($query) => $query->whereNull('user_id'))
             ->when($request->filled('source'), fn ($query) => $query->whereHas('productClicks', fn ($clicks) => $clicks->where('source', $request->input('source'))))
             ->when($request->filled('product_id'), fn ($query) => $query->whereHas('productClicks', fn ($clicks) => $clicks->where('product_id', (int) $request->input('product_id'))))
+            ->when($request->input('used_build') === 'yes', fn ($query) => $query->whereHas('productClicks', fn ($clicks) => $clicks->whereNotNull('completed_at')))
+            ->when($request->input('used_build') === 'no', fn ($query) => $query->whereDoesntHave('productClicks', fn ($clicks) => $clicks->whereNotNull('completed_at')))
+            ->when($request->filled('birth_month'), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereMonth('birth_date', (int) $request->input('birth_month'))))
+            ->when($request->filled('builds_min'), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereRaw('(SELECT COUNT(*) FROM generated_images WHERE generated_images.user_id = users.id) >= ?', [(int) $request->input('builds_min')])))
+            ->when($request->filled('builds_max'), fn ($query) => $query->whereHas('user', fn ($user) => $user->whereRaw('(SELECT COUNT(*) FROM generated_images WHERE generated_images.user_id = users.id) <= ?', [(int) $request->input('builds_max')])))
             ->when($request->filled('active_days'), fn ($query) => $query->where('last_active_at', '>=', now()->subDays(max(1, (int) $request->input('active_days')))))
             ->when($request->filled('created_from'), fn ($query) => $query->whereDate('created_at', '>=', $request->input('created_from')))
             ->when($request->filled('created_to'), fn ($query) => $query->whereDate('created_at', '<=', $request->input('created_to')))
@@ -287,6 +292,14 @@ class TelegramAdminController extends Controller
             'source' => trim((string) $request->input('source', '')) ?: null,
             'product_id' => $request->filled('product_id') ? (int) $request->input('product_id') : null,
             'active_days' => $request->filled('active_days') ? (int) $request->input('active_days') : null,
+            'used_build' => match ($request->input('used_build')) {
+                'yes' => true,
+                'no' => false,
+                default => null,
+            },
+            'birth_month' => $request->filled('birth_month') ? (int) $request->input('birth_month') : null,
+            'builds_min' => $request->filled('builds_min') ? (int) $request->input('builds_min') : null,
+            'builds_max' => $request->filled('builds_max') ? (int) $request->input('builds_max') : null,
             'created_from' => $request->input('created_from') ?: null,
             'created_to' => $request->input('created_to') ?: null,
         ], fn ($value): bool => $value !== null && $value !== '');
@@ -294,7 +307,7 @@ class TelegramAdminController extends Controller
 
     private function validateSegmentDefinition(array $definition): array
     {
-        $allowed = Arr::only($definition, ['linked', 'source', 'product_id', 'active_days', 'telegram_ids', 'created_from', 'created_to']);
+        $allowed = Arr::only($definition, ['linked', 'source', 'product_id', 'active_days', 'telegram_ids', 'used_build', 'birth_month', 'builds_min', 'builds_max', 'created_from', 'created_to']);
         validator($allowed, [
             'linked' => ['sometimes', 'boolean'],
             'source' => ['sometimes', 'string', 'max:120'],
@@ -302,6 +315,10 @@ class TelegramAdminController extends Controller
             'active_days' => ['sometimes', 'integer', 'min:1', 'max:3650'],
             'telegram_ids' => ['sometimes', 'array', 'max:1000'],
             'telegram_ids.*' => ['integer', 'min:1'],
+            'used_build' => ['sometimes', 'boolean'],
+            'birth_month' => ['sometimes', 'integer', 'min:1', 'max:12'],
+            'builds_min' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
+            'builds_max' => ['sometimes', 'integer', 'min:0', 'max:1000000'],
             'created_from' => ['sometimes', 'date'],
             'created_to' => ['sometimes', 'date'],
         ])->validate();
