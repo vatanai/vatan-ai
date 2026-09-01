@@ -470,6 +470,7 @@ class VideoStudioController extends Controller
             'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
             'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
             'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
+            'text_command' => ['nullable', 'string', 'max:5000'],
             'font_family' => ['required', Schema::hasTable('video_studio_fonts')
                 ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
                 : Rule::in(['B_Yekan'])],
@@ -625,6 +626,7 @@ class VideoStudioController extends Controller
                 'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
                 'transition' => (string) ($data['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
+                'text_command' => trim((string) ($data['text_command'] ?? '')),
             ],
         ]));
 
@@ -659,6 +661,7 @@ class VideoStudioController extends Controller
             'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
             'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
             'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
+            'text_command' => ['nullable', 'string', 'max:5000'],
             'font_family' => ['required', Schema::hasTable('video_studio_fonts')
                 ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
                 : Rule::in(['B_Yekan'])],
@@ -737,6 +740,7 @@ class VideoStudioController extends Controller
             'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
             'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
             'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
+            'text_command' => trim((string) ($data['text_command'] ?? data_get($payload, 'text_command', ''))),
             'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
             'source_fingerprint' => hash('sha256', json_encode([
                 'product_id' => (int) $data['product_id'],
@@ -747,7 +751,7 @@ class VideoStudioController extends Controller
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
             'build_now' => $buildNow,
         ]);
-        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['transition'], $data['transition_duration']);
+        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['transition'], $data['transition_duration'], $data['text_command']);
         $data['selected_images'] = $selectedImages ?: (array) $job->selected_images;
         $data['payload'] = $payload;
         if ($buildNow) {
@@ -942,6 +946,8 @@ class VideoStudioController extends Controller
                 'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
                 'transition' => (string) ($payload['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
+                'text_command' => (string) ($payload['text_command'] ?? ''),
+                'video_code' => method_exists($job, 'shortCode') ? $job->shortCode() : ('P' . strtoupper(base_convert((string) $job->id, 10, 36))),
                 'telegram_topics' => [
                     'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
                     'instagram_thread_id' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', ''),
