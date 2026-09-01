@@ -397,7 +397,7 @@
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formPayload });
       const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
-      if (!response.ok) throw new Error(payload.message || ('پاسخ سرور: ' + response.status));
+      if (!response.ok) throw new Error((payload.message ? payload.message + ' ' : '') + '(کد پاسخ ' + response.status + ')');
       renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options);
       if (previewStatus) previewStatus.textContent = 'سه گزینه آماده شد؛ متن انتخاب‌شده را می‌توانی ویرایش کنی و سپس سفارش ساخت را بفرستی.';
     } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; }
