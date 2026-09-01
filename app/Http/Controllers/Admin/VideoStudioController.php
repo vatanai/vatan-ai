@@ -97,7 +97,7 @@ class VideoStudioController extends Controller
             'auto_generate_hook' => true,
             'auto_generate_caption' => true,
             'auto_generate_keyword' => true,
-            'font_family' => 'Modam',
+            'font_family' => 'B_Yekan',
             'aspect_ratio' => '9:16',
         ]);
         if (blank($settings->prompt_profile)) {
@@ -656,7 +656,7 @@ class VideoStudioController extends Controller
         $promptProfile = trim((string) ($payload['prompt_profile'] ?? ''));
         $channel = (string) ($payload['channel'] ?? 'instagram');
         $channelPrompt = trim((string) ($payload[$channel . '_prompt'] ?? ''));
-        $fontFamily = (string) ($payload['font_family'] ?? 'Modam');
+        $fontFamily = (string) ($payload['font_family'] ?? 'B_Yekan');
         $font = Schema::hasTable('video_studio_fonts')
             ? VideoStudioFont::query()->where('is_active', true)->where('slug', $fontFamily)->first()
             : null;
