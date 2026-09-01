@@ -245,9 +245,11 @@
         <div class="studio-modal-tools"><input class="studio-input" id="product-picker-search" type="search" placeholder="جست‌وجوی نام یا شناسه محصول"><select class="studio-select" id="product-picker-sort"><option value="newest">جدیدترین</option><option value="oldest">قدیمی‌ترین</option><option value="name_asc">نام: الف تا ی</option><option value="name_desc">نام: ی تا الف</option></select></div>
         <div class="studio-product-list" id="product-picker-list">
           @foreach($products as $product)
-            @php($doneCount = (int) ($completedVideoCounts[(int) $product->id] ?? 0))
-            @php($pendingCount = (int) ($pendingVideoCounts[(int) $product->id] ?? 0))
-            @php($covered = $doneCount > 0 || $pendingCount > 0)
+            @php
+              $doneCount = (int) ($completedVideoCounts[(int) $product->id] ?? 0);
+              $pendingCount = (int) ($pendingVideoCounts[(int) $product->id] ?? 0);
+              $covered = $doneCount > 0 || $pendingCount > 0;
+            @endphp
             <button type="button" class="studio-product-choice {{ $covered ? 'is-covered' : '' }}" data-product-id="{{ $product->id }}" data-product-name="{{ $product->name_fa }}" data-product-search="{{ mb_strtolower($product->name_fa . ' ' . $product->slug . ' ' . $product->id) }}" data-product-order="{{ optional($product->created_at)->timestamp ?? 0 }}" data-completed-count="{{ $doneCount }}" data-pending-count="{{ $pendingCount }}">
               <span class="studio-product-choice-main"><span class="studio-product-choice-name">{{ $product->name_fa }}</span><span class="studio-product-choice-meta">شناسه {{ $product->id }} · {{ $product->slug }}</span></span>
               @if($doneCount > 0)<span class="studio-product-choice-status">{{ $doneCount }} ویدیو ساخته‌شده @if($pendingCount > 0)<small>+ {{ $pendingCount }} در صف</small>@endif</span>@elseif($pendingCount > 0)<span class="studio-product-choice-status" style="color:var(--warning)">{{ $pendingCount }} در صف ساخت</span>@else<span class="studio-product-choice-meta">آماده ساخت</span>@endif
@@ -295,8 +297,10 @@
         </form>
         <div class="studio-queue">
           @foreach($jobs as $job)
-            @php($jobStatus = (string) $job->status)
-            @php($jobLabel = ['queued' => 'در صف', 'processing' => 'در حال ساخت', 'completed' => 'تکمیل‌شده', 'failed' => 'ناموفق'][$jobStatus] ?? $jobStatus)
+            @php
+              $jobStatus = (string) $job->status;
+              $jobLabel = ['queued' => 'در صف', 'processing' => 'در حال ساخت', 'completed' => 'تکمیل‌شده', 'failed' => 'ناموفق'][$jobStatus] ?? $jobStatus;
+            @endphp
             @php
               $jobEditorConfig = [
                 'job_id' => $job->id,
@@ -336,7 +340,9 @@
       @if($producedProducts->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>آخرین وضعیت</th><th>شماره سفارش</th><th>تاریخ</th></tr></thead><tbody>
           @foreach($producedProducts as $produced)
-            @php($pStatus=(string)$produced->status)
+            @php
+              $pStatus = (string) $produced->status;
+            @endphp
             <tr><td class="studio-product">{{ $produced->product?->name_fa ?? 'محصول حذف‌شده' }}</td><td><span class="studio-badge {{ $pStatus === 'completed' ? 'success' : ($pStatus === 'failed' ? 'danger' : 'warning') }}">{{ $pStatus === 'completed' ? 'تکمیل‌شده' : ($pStatus === 'failed' ? 'ناموفق' : 'در صف/در حال ساخت') }}</span></td><td>#{{ $produced->id }}</td><td>{{ \App\Support\Jalali::formatNumeric($produced->created_at) }}</td></tr>
           @endforeach
         </tbody></table></div>
@@ -348,7 +354,9 @@
     <div class="studio-layout" id="studio-system-layout">
       <section class="studio-card studio-panel">
         <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-chart-column"></i> روند اجرای خط تولید</div><div class="studio-panel-meta">۱۴ روز اخیر</div></div>
-        @php($maxDaily = max(1, (int) $daily->max('count')))
+        @php
+          $maxDaily = max(1, (int) $daily->max('count'));
+        @endphp
         @if($daily->sum('count') > 0)
           <div class="studio-chart" aria-label="نمودار اجرای روزانه">
             @foreach($daily as $day)
@@ -379,8 +387,10 @@
       @if($latestVideos->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>وضعیت</th><th>مدت</th><th>کیفیت</th><th>تاریخ</th></tr></thead><tbody>
           @foreach($latestVideos as $video)
-            @php($status = (string) $video->status)
-            @php($statusClass = in_array($status, ['completed','success'], true) ? 'success' : (in_array($status, ['failed','error'], true) ? 'danger' : 'warning'))
+            @php
+              $status = (string) $video->status;
+              $statusClass = in_array($status, ['completed','success'], true) ? 'success' : (in_array($status, ['failed','error'], true) ? 'danger' : 'warning');
+            @endphp
             <tr><td><div class="studio-product">{{ $video->product?->name_fa ?? 'بدون محصول' }}</div><div class="studio-muted">#{{ $video->id }}</div></td><td><span class="studio-badge {{ $statusClass }}"><i class="fa-solid {{ $statusClass === 'success' ? 'fa-check' : ($statusClass === 'danger' ? 'fa-xmark' : 'fa-ellipsis') }}"></i>{{ $status === 'completed' ? 'موفق' : ($status === 'failed' || $status === 'error' ? 'ناموفق' : 'در حال پردازش') }}</span></td><td>{{ $video->duration_seconds ? $video->duration_seconds . ' ثانیه' : '—' }}</td><td>{{ $video->width && $video->height ? $video->width . '×' . $video->height : '—' }}</td><td>{{ \App\Support\Jalali::formatNumeric($video->created_at) }}</td></tr>
           @endforeach
         </tbody></table></div>
@@ -394,7 +404,9 @@
       @if($latestTests->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>مدل</th><th>وضعیت</th><th>زمان اجرا</th><th>تاریخ</th></tr></thead><tbody>
           @foreach($latestTests as $test)
-            @php($testStatus = (string) $test->status)
+            @php
+              $testStatus = (string) $test->status;
+            @endphp
             <tr><td class="studio-product">{{ $test->product?->name_fa ?? 'پیش‌نویس محصول' }}</td><td>{{ $test->model_id }}</td><td><span class="studio-badge {{ $testStatus === 'completed' ? 'success' : ($testStatus === 'failed' ? 'danger' : 'warning') }}">{{ $testStatus === 'completed' ? 'موفق' : ($testStatus === 'failed' ? 'ناموفق' : 'در حال اجرا') }}</span></td><td>{{ $test->duration_ms ? number_format($test->duration_ms / 1000, 1) . ' ثانیه' : '—' }}</td><td>{{ \App\Support\Jalali::formatNumeric($test->created_at) }}</td></tr>
           @endforeach
         </tbody></table></div>
