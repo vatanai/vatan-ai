@@ -7,6 +7,7 @@ use App\Models\TelegramProductClick;
 use App\Models\TelegramUser;
 use App\Models\ReferralSetting;
 use App\Support\PhoneNumber;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -259,9 +260,14 @@ class TelegramFlowService
         $productKey = trim((string) ($payload['product'] ?? ''));
         $product = null;
         if ($productKey !== '') {
-            $product = Product::query()->where('status', 'active')
-                ->where(fn ($query) => $query->where('route_slug', $productKey)->orWhere('slug', $productKey))
-                ->first();
+            $productQuery = Product::query()->where('status', 'active');
+            if (Schema::hasColumn('products', 'route_slug')) {
+                $productQuery->where(fn ($query) => $query->where('route_slug', $productKey)->orWhere('slug', $productKey));
+            } else {
+                $legacySlug = preg_replace('/^\d{6}-/u', '', $productKey) ?: $productKey;
+                $productQuery->where('slug', $legacySlug);
+            }
+            $product = $productQuery->first();
         }
         return $this->identity->recordProductClick($telegramUser, $product, [
             'product_key' => $productKey ?: null,
