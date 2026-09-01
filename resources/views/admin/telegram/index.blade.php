@@ -34,7 +34,7 @@
           @foreach($daily as $day)
             <div class="tg-bar-col" title="{{ $day['date'] }} — {{ number_format($day['starts']) }} ورود">
               <div class="tg-bar" style="height:{{ max(4, (int) round(($day['starts'] / $maxStarts) * 100)) }}%"></div>
-              <small>{{ IlluminateSupportCarbon::parse($day['date'])->format('m/d') }}</small>
+              <small>{{ \Carbon\Carbon::parse($day['date'])->format('m/d') }}</small>
             </div>
           @endforeach
         </div>
