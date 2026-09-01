@@ -153,6 +153,21 @@ class VideoStudioController extends Controller
             : collect();
         // حتی اگر دیتابیس تولید فونت‌ها را ناقص داشته باشد، گزینه‌های ارسالی مدیر حذف نمی‌شوند.
         $fonts = $fallbackFonts->concat($storedFonts)->unique('slug')->values();
+        if (Schema::hasTable('video_studio_jobs')) {
+            // اجرای عادی پایپ‌لاین کوتاه است؛ اگر callback برنگردد، سفارش نباید
+            // برای همیشه روی «در حال ساخت» بماند و باید دلیل قابل‌فهمی برای ساخت مجدد داشته باشد.
+            VideoStudioJob::query()
+                ->where('status', 'processing')
+                ->where('updated_at', '<', now()->subMinutes(15))
+                ->whereNull('video_url')
+                ->get()
+                ->each(function (VideoStudioJob $staleJob): void {
+                    $staleJob->update([
+                        'status' => 'failed',
+                        'error_message' => $staleJob->error_message ?: 'پردازش در زمان مقرر پاسخ نداد؛ منبع و تنظیمات را بررسی کنید و ساخت مجدد را بزنید.',
+                    ]);
+                });
+        }
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
