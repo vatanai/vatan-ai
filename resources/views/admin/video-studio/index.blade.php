@@ -401,6 +401,8 @@
     previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; if (previewPanel) previewPanel.classList.remove('is-hidden'); if (previewStatus) previewStatus.textContent = 'در حال دریافت سه پیشنهاد از هوش مصنوعی...';
     try {
       const formPayload = new FormData(studioForm);
+      // فرم ممکن است از حالت ویرایش با _method=PATCH باز شده باشد؛ پیش‌نمایش همیشه باید POST باشد.
+      formPayload.delete('_method');
       const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
       if (productId) formPayload.set('product_id', productId);
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
