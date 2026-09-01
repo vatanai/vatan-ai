@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-  .video-studio-page{background:var(--page-bg);min-height:calc(100vh - 68px);padding:24px;direction:rtl}
+  .video-studio-page{background:var(--page-bg);min-height:calc(100vh - 68px);padding:24px;direction:rtl;display:flex;flex-direction:column}
   .video-studio-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
   .video-studio-title{font-size:22px;font-weight:900;color:var(--text-h);letter-spacing:-.3px}
   .video-studio-subtitle{font-size:12px;color:var(--text-soft);margin-top:5px}
@@ -104,6 +104,11 @@
   .video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-layout{margin-bottom:16px!important}
   .video-studio-page>.studio-library-grid+*{margin-top:0}
   @media(max-width:999px){.studio-library-grid{grid-template-columns:1fr}}
+  .video-studio-head{order:1}.studio-grid{order:2}.studio-settings{order:3}#studio-queue-panel{order:4}#studio-produced-panel{order:5}#studio-system-layout{order:6}#studio-latest-videos-panel{order:7}#studio-latest-tests-panel{order:8}.studio-library-grid{order:9}.studio-modal{order:99}
+  .studio-telegram-live .studio-phone-chat{min-height:648px}
+  .studio-telegram-caption-smart{margin-top:4px;margin-bottom:0}.studio-telegram-buttons{margin-top:0;margin-bottom:8px}
+  #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
+  #aspect-ratio-field .studio-option label{max-width:62px;justify-self:center}
 </style>
 @endpush
 
@@ -245,7 +250,7 @@
       </div>
     </div>
 
-    <section class="studio-card studio-panel" style="margin-bottom:16px">
+    <section class="studio-card studio-panel" id="studio-queue-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف ساخت ویدیو</div><div class="studio-panel-meta">آخرین ۲۰ سفارش</div></div>
       @if($jobs->isNotEmpty())
         <form id="studio-bulk-form" method="POST" action="{{ route('admin.video-studio.jobs.bulk') }}">
@@ -270,7 +275,7 @@
       @endif
     </section>
 
-    <section class="studio-card studio-panel" style="margin-bottom:16px">
+    <section class="studio-card studio-panel" id="studio-produced-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-shield-check"></i> محصولات دارای سفارش ساخت</div><div class="studio-panel-meta">برای جلوگیری از ساخت تکراری</div></div>
       @if($producedProducts->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>آخرین وضعیت</th><th>شماره سفارش</th><th>تاریخ</th></tr></thead><tbody>
@@ -284,7 +289,7 @@
       @endif
     </section>
 
-    <div class="studio-layout">
+    <div class="studio-layout" id="studio-system-layout">
       <section class="studio-card studio-panel">
         <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-chart-column"></i> روند اجرای خط تولید</div><div class="studio-panel-meta">۱۴ روز اخیر</div></div>
         @php($maxDaily = max(1, (int) $daily->max('count')))
@@ -313,7 +318,7 @@
       </section>
     </div>
 
-    <section class="studio-card studio-panel" style="margin-bottom:16px">
+    <section class="studio-card studio-panel" id="studio-latest-videos-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> آخرین خروجی‌های ویدیو</div><div class="studio-panel-meta">دادهٔ زنده از دیتابیس</div></div>
       @if($latestVideos->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>وضعیت</th><th>مدت</th><th>کیفیت</th><th>تاریخ</th></tr></thead><tbody>
@@ -328,7 +333,7 @@
       @endif
     </section>
 
-    <section class="studio-card studio-panel">
+    <section class="studio-card studio-panel" id="studio-latest-tests-panel">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-vials"></i> آخرین آزمایش‌های محصول</div><a class="studio-panel-meta" href="{{ route('admin.product-tests.history') }}">مشاهده همه ←</a></div>
       @if($latestTests->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>مدل</th><th>وضعیت</th><th>زمان اجرا</th><th>تاریخ</th></tr></thead><tbody>
