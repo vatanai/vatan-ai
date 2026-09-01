@@ -109,6 +109,12 @@ class VideoStudioController extends Controller
         if (blank($settings->instagram_prompt)) {
             $settings->instagram_prompt = $settings->prompt_profile;
         }
+        if (blank($settings->telegram_prompt)) {
+            $defaultTelegramPromptPath = resource_path('prompts/telegram-video.md');
+            if (is_file($defaultTelegramPromptPath)) {
+                $settings->telegram_prompt = trim((string) file_get_contents($defaultTelegramPromptPath));
+            }
+        }
         $hookInspirations = Schema::hasTable('video_hook_inspirations')
             ? VideoHookInspiration::query()->with('product')->where('is_active', true)->latest()->limit(12)->get()
             : collect();
@@ -199,6 +205,13 @@ class VideoStudioController extends Controller
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
             'instagram_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_buttons_enabled' => ['nullable', 'boolean'],
+            'telegram_button_label' => ['nullable', 'array', 'max:8'],
+            'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
+            'telegram_button_url' => ['nullable', 'array', 'max:8'],
+            'telegram_button_url.*' => ['nullable', 'url', 'max:2048'],
+            'telegram_button_style' => ['nullable', 'array', 'max:8'],
+            'telegram_button_style.*' => ['nullable', Rule::in(['primary', 'success', 'danger'])],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -218,6 +231,8 @@ class VideoStudioController extends Controller
                 $data['prompt_profile'] = $profileText;
             }
         }
+        $data['telegram_buttons'] = $this->normalizeTelegramButtons($request);
+        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style']);
         unset($data['prompt_file']);
         $setting = VideoStudioSetting::query()
             ->where('product_id', $productId)
@@ -405,6 +420,13 @@ class VideoStudioController extends Controller
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
             'instagram_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_buttons_enabled' => ['nullable', 'boolean'],
+            'telegram_button_label' => ['nullable', 'array', 'max:8'],
+            'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
+            'telegram_button_url' => ['nullable', 'array', 'max:8'],
+            'telegram_button_url.*' => ['nullable', 'url', 'max:2048'],
+            'telegram_button_style' => ['nullable', 'array', 'max:8'],
+            'telegram_button_style.*' => ['nullable', Rule::in(['primary', 'success', 'danger'])],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -427,6 +449,8 @@ class VideoStudioController extends Controller
         if (blank($data['instagram_prompt'] ?? null) && filled($data['prompt_profile'] ?? null)) {
             $data['instagram_prompt'] = $data['prompt_profile'];
         }
+        $telegramButtons = $this->normalizeTelegramButtons($request);
+        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style']);
         if (!empty($data['source_library_id'])) {
             $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
             $data['source_mode'] = $librarySource->type;
@@ -506,6 +530,7 @@ class VideoStudioController extends Controller
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
                 'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
+                'telegram_buttons' => $telegramButtons,
                 'source_fingerprint' => $sourceFingerprint,
                 'build_now' => $buildNow,
                 'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
@@ -572,6 +597,34 @@ class VideoStudioController extends Controller
         });
 
         return back()->with('success', 'سفارش‌های انتخاب‌شده برای ساخت مجدد ارسال شدند.');
+    }
+
+    private function normalizeTelegramButtons(Request $request): array
+    {
+        if (!$request->boolean('telegram_buttons_enabled')) {
+            return [];
+        }
+
+        $labels = $request->input('telegram_button_label', []);
+        $urls = $request->input('telegram_button_url', []);
+        $styles = $request->input('telegram_button_style', []);
+        $buttons = [];
+        foreach ((array) $labels as $index => $label) {
+            $label = trim((string) $label);
+            $url = trim((string) ($urls[$index] ?? ''));
+            if ($label === '' || $url === '') {
+                continue;
+            }
+            $buttons[] = [
+                'label' => $label,
+                'url' => $url,
+                'style' => in_array(($styles[$index] ?? 'primary'), ['primary', 'success', 'danger'], true)
+                    ? (string) $styles[$index]
+                    : 'primary',
+            ];
+        }
+
+        return array_slice($buttons, 0, 8);
     }
 
     private function dispatchJobToWorkflow(VideoStudioJob $job): void

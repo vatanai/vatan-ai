@@ -13,6 +13,7 @@ class VideoStudioSetting extends Model
         'hook_guidelines', 'caption_guidelines', 'keyword', 'dm_template',
         'hook_text', 'caption_text', 'prompt_profile',
         'instagram_prompt', 'telegram_prompt',
+        'telegram_buttons',
         'font_family', 'aspect_ratio',
     ];
 
@@ -22,6 +23,7 @@ class VideoStudioSetting extends Model
         'auto_generate_hook' => 'boolean',
         'auto_generate_caption' => 'boolean',
         'auto_generate_keyword' => 'boolean',
+        'telegram_buttons' => 'array',
     ];
 
     public function product(): BelongsTo
