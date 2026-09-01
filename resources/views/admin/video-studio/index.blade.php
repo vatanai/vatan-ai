@@ -106,7 +106,7 @@
   @media(max-width:999px){.studio-library-grid{grid-template-columns:1fr}}
   .video-studio-head{order:1}.studio-grid{order:2}.studio-settings{order:3}#studio-system-layout{order:4}#studio-queue-panel{order:5}#studio-produced-panel{order:6}#studio-latest-videos-panel{order:7}#studio-latest-tests-panel{order:8}.studio-library-grid{order:9}.studio-modal{order:99}
   .studio-telegram-live .studio-phone-chat{min-height:648px}
-  .studio-telegram-caption-smart{margin-top:0;margin-bottom:0;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
+  .studio-telegram-caption-smart{margin-top:0;margin-bottom:16px;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
   #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
   #aspect-ratio-field .studio-option label{max-width:62px;justify-self:center}
 </style>
