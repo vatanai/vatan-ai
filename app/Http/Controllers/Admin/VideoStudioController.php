@@ -397,6 +397,9 @@ class VideoStudioController extends Controller
             'selected_images' => ['nullable', 'array', 'max:10'],
             'selected_images.*' => ['string', 'max:2048'],
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
+            'font_family' => ['required', Schema::hasTable('video_studio_fonts')
+                ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
+                : Rule::in(['B_Yekan'])],
             'hook_text' => ['nullable', 'string', 'max:1000'],
             'caption_text' => ['nullable', 'string', 'max:5000'],
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
@@ -499,6 +502,7 @@ class VideoStudioController extends Controller
                 'auto_generate_keyword' => $autoKeyword,
                 'hook_guidelines' => (string) $request->input('hook_guidelines', ''),
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
+                'font_family' => (string) ($data['font_family'] ?? 'B_Yekan'),
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
                 'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
@@ -622,6 +626,7 @@ class VideoStudioController extends Controller
                 'source_url' => $job->source_url,
                 'selected_images' => $job->selected_images,
                 'aspect_ratio' => $job->aspect_ratio,
+                'font_family' => (string) ($job->payload['font_family'] ?? ''),
                 'hook_text' => $job->hook_text,
                 'caption_text' => $job->caption_text,
                 'keyword' => $job->keyword,
