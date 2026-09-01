@@ -57,7 +57,8 @@
   .studio-font-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.studio-font-option{position:relative}.studio-font-option input{position:absolute;opacity:0;pointer-events:none}.studio-font-option label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:62px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);cursor:pointer;color:var(--text-main);text-align:center;transition:.2s}.studio-font-option label small{font-family:inherit;font-size:9px;color:var(--text-soft)}.studio-font-option input:checked+label{border-color:var(--primary);background:var(--primary-l);box-shadow:inset 0 0 0 1px var(--primary)}
   .studio-preview-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.studio-preview-option{position:relative;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--card-bg);cursor:pointer}.studio-preview-option.is-selected{border-color:var(--primary);background:var(--primary-l);box-shadow:inset 0 0 0 1px var(--primary)}.studio-preview-option-check{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;color:var(--text-soft);margin-bottom:5px}.studio-preview-option.is-selected .studio-preview-option-check{color:var(--success)}.studio-preview-option textarea{min-height:100px;padding:7px;font-size:10px;line-height:1.8}.studio-preview-option textarea[readonly]{cursor:pointer}.studio-preview-option textarea:not([readonly]){cursor:text}
   .studio-telegram-live{margin-bottom:16px}.studio-telegram-preview-grid{display:grid;grid-template-columns:minmax(240px,.65fr) minmax(0,1.35fr);gap:16px;align-items:center}.studio-phone{width:min(310px,100%);margin:auto;padding:10px;border:7px solid var(--text-h);border-radius:30px;background:var(--input-bg);box-shadow:var(--shadow-card)}.studio-phone-notch{width:90px;height:18px;margin:-2px auto 8px;border-radius:0 0 12px 12px;background:var(--text-h)}.studio-phone-head{display:flex;align-items:center;gap:8px;padding:8px 5px;border-bottom:1px solid var(--divider);font-size:11px;font-weight:900;color:var(--text-h)}.studio-phone-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--primary);color:var(--accent)}.studio-phone-chat{padding:12px 4px;min-height:300px;background:var(--page-bg)}.studio-phone-post{max-width:94%;margin-right:auto;padding:8px;border-radius:10px 10px 2px 10px;background:var(--card-bg);box-shadow:var(--shadow-card)}.studio-phone-media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.studio-phone-media img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}.studio-phone-caption{white-space:pre-wrap;font-size:10px;line-height:1.8;color:var(--text-main);margin-top:7px}.studio-phone-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:8px}.studio-phone-button{display:flex;align-items:center;justify-content:center;min-height:27px;padding:4px 6px;border-radius:6px;font-size:9px;font-weight:800;color:var(--accent);background:var(--primary);text-decoration:none;text-align:center}.studio-phone-button.success{background:var(--success)}.studio-phone-button.danger{background:var(--danger)}.studio-phone-button.full{grid-column:1/-1}.studio-telegram-preview-note{font-size:11px;color:var(--text-soft);line-height:2}.studio-telegram-preview-note strong{color:var(--text-h)}
-  .studio-smart-fields{display:grid;gap:12px}.studio-smart-field{display:grid;gap:7px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-smart-field>small{font-size:10px;color:var(--text-soft)}.studio-smart-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0!important;border:0!important;background:transparent!important;color:var(--text-h)!important;font-size:12px!important;font-weight:900!important;cursor:pointer}.studio-smart-toggle span{display:flex;align-items:center;gap:7px}.studio-smart-toggle span i{color:var(--primary)}.studio-smart-toggle input[type=checkbox]{accent-color:var(--primary);width:17px;height:17px}.studio-smart-field .studio-preview-options:empty{display:none}.studio-smart-field .studio-preview-options:not(:empty){margin-top:2px}.studio-preview-option:not(.is-selected) .studio-preview-option-check i{visibility:hidden}.studio-font-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.studio-font-option label{min-height:50px;padding:6px;font-size:10px}.studio-font-option label small{font-size:8px}.studio-telegram-caption-editor{display:grid;gap:6px;margin-top:12px}.studio-telegram-caption-editor label{font-size:11px;font-weight:900;color:var(--text-h)}.studio-telegram-caption-editor textarea{min-height:110px}.studio-telegram-live-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .studio-smart-fields{display:grid;gap:12px}.studio-smart-field{display:grid;gap:7px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-smart-field>small{font-size:10px;color:var(--text-soft)}.studio-smart-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0!important;border:0!important;background:transparent!important;color:var(--text-h)!important;font-size:12px!important;font-weight:900!important;cursor:pointer}.studio-smart-toggle span{display:flex;align-items:center;gap:7px}.studio-smart-toggle span i{color:var(--primary)}.studio-smart-toggle input[type=checkbox]{accent-color:var(--primary);width:17px;height:17px}.studio-smart-toggle-main{display:flex;align-items:center;gap:8px}.studio-regenerate{border:1px solid var(--border);background:var(--card-bg);color:var(--primary);border-radius:8px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap}.studio-regenerate:hover{border-color:var(--primary);background:var(--primary-l)}.studio-regenerate:disabled{opacity:.6;cursor:wait}.studio-smart-field .studio-preview-options{margin-top:2px;min-height:112px}.studio-preview-option.is-loading{opacity:.8;cursor:wait}.studio-preview-option.is-loading .studio-preview-option-check{color:var(--primary)}.studio-preview-option.is-loading textarea{background:var(--input-bg);color:var(--text-soft)}.studio-preview-option:not(.is-selected) .studio-preview-option-check i{visibility:hidden}.studio-font-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.studio-font-option label{min-height:50px;padding:6px;font-size:10px}.studio-font-option label small{font-size:8px}.studio-telegram-caption-smart{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-telegram-caption-smart-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.studio-telegram-caption-smart-head label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:900;color:var(--text-h)}.studio-telegram-caption-smart-head input{accent-color:var(--primary);width:16px;height:16px}.studio-telegram-caption-editor{display:grid;gap:6px;margin-top:12px}.studio-telegram-caption-editor label{font-size:11px;font-weight:900;color:var(--text-h)}.studio-telegram-caption-editor textarea{min-height:110px}.studio-telegram-live-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.studio-telegram-preview-note{display:block;max-width:720px;margin:0 auto}.studio-phone{width:min(372px,100%)}.studio-phone-chat{min-height:360px}.studio-phone-post{min-height:330px}.studio-telegram-preview-grid{grid-template-columns:1fr;align-items:start}
+  #open-prompt-mother{display:none}.studio-smart-fields{display:grid;gap:12px}.studio-smart-field{display:grid;gap:7px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-smart-field>small{font-size:10px;color:var(--text-soft)}.studio-smart-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0!important;border:0!important;background:transparent!important;color:var(--text-h)!important;font-size:12px!important;font-weight:900!important;cursor:pointer}.studio-smart-toggle span{display:flex;align-items:center;gap:7px}.studio-smart-toggle span i{color:var(--primary)}.studio-smart-toggle input[type=checkbox]{accent-color:var(--primary);width:17px;height:17px}.studio-smart-toggle-main{display:flex;align-items:center;gap:8px}.studio-regenerate{border:1px solid var(--border);background:var(--card-bg);color:var(--primary);border-radius:8px;padding:5px 8px;font-size:10px;font-weight:800;cursor:pointer;white-space:nowrap}.studio-regenerate:hover{border-color:var(--primary);background:var(--primary-l)}.studio-regenerate:disabled{opacity:.6;cursor:wait}.studio-smart-field .studio-preview-options{margin-top:2px;min-height:112px}.studio-preview-option.is-loading{opacity:.8;cursor:wait}.studio-preview-option.is-loading .studio-preview-option-check{color:var(--primary)}.studio-preview-option.is-loading textarea{background:var(--input-bg);color:var(--text-soft)}.studio-preview-option:not(.is-selected) .studio-preview-option-check i{visibility:hidden}.studio-font-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.studio-font-option label{min-height:50px;padding:6px;font-size:10px}.studio-font-option label small{font-size:8px}.studio-telegram-caption-smart{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-telegram-caption-smart-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.studio-telegram-caption-smart-head label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:900;color:var(--text-h)}.studio-telegram-caption-smart-head input{accent-color:var(--primary);width:16px;height:16px}.studio-telegram-caption-editor{display:grid;gap:6px;margin-top:12px}.studio-telegram-caption-editor label{font-size:11px;font-weight:900;color:var(--text-h)}.studio-telegram-caption-editor textarea{min-height:110px}.studio-telegram-live-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.studio-telegram-preview-note{display:block;max-width:720px;margin:0 auto}.studio-phone{width:min(372px,100%)}.studio-phone-chat{min-height:360px}.studio-phone-post{min-height:330px}.studio-telegram-preview-grid{grid-template-columns:1fr;align-items:start}
   @media(max-width:1100px){.studio-font-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
   @media(max-width:650px){.studio-font-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
@@ -78,6 +79,7 @@
       <div class="video-studio-actions">
         <a class="studio-btn" href="{{ route('admin.products') }}"><i class="fa-solid fa-box-open"></i> محصولات</a>
         <a class="studio-btn" href="https://docs.google.com/spreadsheets/d/1r44fnFeUL6ndq_XmVP0XNW6J16Kekz_6pBEnL_WHDa4/edit" target="_blank" rel="noopener"><i class="fa-solid fa-table-list"></i> گزارش شیت</a>
+        <button class="studio-btn" type="button" id="open-prompt-mother-top"><i class="fa-solid fa-wand-magic-sparkles"></i> تنظیم پرامپت اینستا و تلگرام</button>
         <a class="studio-btn primary" href="#studio-settings"><i class="fa-solid fa-clapperboard"></i> ساخت ویدیو</a>
       </div>
     </div>
@@ -115,26 +117,24 @@
           </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div>
           <div class="studio-smart-fields" aria-label="کنترل‌های هوشمند و پیشنهادهای متن">
             <div class="studio-smart-field">
-              <label class="studio-smart-toggle"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
+              <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
               <small>سه پیشنهاد هم‌زمان زیر همین گزینه نمایش داده می‌شود؛ اولی به‌صورت پیش‌فرض انتخاب است.</small>
               <div class="studio-preview-options" data-preview-tabs="hook"></div>
               <div class="studio-field studio-conditional" id="hook-manual"><label for="hook-text-manual">متن دستی هوک</label><div class="studio-manual-box"><input id="hook-text-manual" class="studio-input" name="hook_text" value="{{ old('hook_text', $settings->hook_text ?? '') }}" placeholder="با خاموش‌کردن هوش مصنوعی، متن را اینجا ویرایش کن."><small>با روشن‌بودن هوش مصنوعی، متن‌های پیشنهادی فقط خواندنی هستند.</small></div></div>
             </div>
             <div class="studio-smart-field">
-              <label class="studio-smart-toggle"><span><i class="fa-solid fa-pen-nib"></i> ساخت کپشن با هوش مصنوعی</span><input type="hidden" name="auto_generate_caption" value="0"><input type="checkbox" name="auto_generate_caption" value="1" @checked($settings->auto_generate_caption)></label>
+              <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-pen-nib"></i> ساخت کپشن با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="caption">ساخت مجدد</button></span><input type="hidden" name="auto_generate_caption" value="0"><input type="checkbox" name="auto_generate_caption" value="1" @checked($settings->auto_generate_caption)></label>
               <small>هر سه نسخه را ببین، یکی را انتخاب کن و در صورت خاموش‌کردن هوش مصنوعی ویرایشش کن.</small>
               <div class="studio-preview-options" data-preview-tabs="caption"></div>
               <div class="studio-field studio-conditional" id="caption-manual"><label for="caption-text-manual">متن دستی کپشن</label><div class="studio-manual-box"><textarea id="caption-text-manual" class="studio-textarea" name="caption_text" placeholder="با خاموش‌کردن هوش مصنوعی، کپشن را اینجا ویرایش کن.">{{ old('caption_text', $settings->caption_text ?? '') }}</textarea><small>متن انتخاب‌شده هنگام ساخت سفارش ارسال می‌شود.</small></div></div>
             </div>
             <div class="studio-smart-field">
-              <label class="studio-smart-toggle"><span><i class="fa-solid fa-key"></i> ساخت کلمهٔ کلیدی و پاسخ دایرکت</span><input type="hidden" name="auto_generate_keyword" value="0"><input id="auto-keyword-toggle" type="checkbox" name="auto_generate_keyword" value="1" @checked($settings->auto_generate_keyword)></label>
+              <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-key"></i> ساخت کلمهٔ کلیدی و پاسخ دایرکت</span><button class="studio-regenerate" type="button" data-regenerate-preview="keyword">ساخت مجدد</button></span><input type="hidden" name="auto_generate_keyword" value="0"><input id="auto-keyword-toggle" type="checkbox" name="auto_generate_keyword" value="1" @checked($settings->auto_generate_keyword)></label>
               <small>کلمهٔ کلیدی مناسب محصول و پاسخ دایرکت در سه پیشنهاد تولید می‌شود.</small>
               <div class="studio-preview-options" data-preview-tabs="keyword"></div>
               <div class="studio-field studio-conditional" id="keyword-settings"><label for="keyword">کلمهٔ کلیدی و متن پاسخ دایرکت دستی</label><div class="studio-manual-box"><input id="keyword" class="studio-input" name="keyword" value="{{ old('keyword', $settings->keyword) }}" placeholder="مثلاً: قیمت"><textarea class="studio-textarea" name="dm_template" placeholder="متن آماده پاسخ به کامنت یا دایرکت...">{{ old('dm_template', $settings->dm_template) }}</textarea><small>با خاموش‌کردن هوش مصنوعی، این دو مقدار دستی قابل ویرایش هستند.</small></div></div>
             </div>
           </div>
-          <div class="studio-field"><label for="hook-guidelines">نکات اختصاصی هوک</label><textarea id="hook-guidelines" class="studio-textarea" name="hook_guidelines" placeholder="مثلاً: کنجکاوی ایجاد کن، کوتاه و محاوره‌ای بنویس...">{{ old('hook_guidelines', $settings->hook_guidelines) }}</textarea></div>
-          <div class="studio-field"><label for="caption-guidelines">نکات اختصاصی کپشن</label><textarea id="caption-guidelines" class="studio-textarea" name="caption_guidelines" placeholder="لحن، طول، هشتگ‌ها و نکاتی که باید رعایت شود...">{{ old('caption_guidelines', $settings->caption_guidelines) }}</textarea></div>
           <div class="studio-field"><label>پروفایل‌های پرامپت مادر</label><input type="hidden" id="prompt-profile-fallback" name="prompt_profile" value="{{ old('prompt_profile', $settings->prompt_profile) }}"><button class="studio-btn" type="button" id="open-prompt-mother"><i class="fa-solid fa-wand-magic-sparkles"></i> تنظیم پرامپت اینستاگرام و تلگرام</button><input class="studio-input" type="file" name="prompt_file" accept=".txt,.md,text/plain,text/markdown"><small>پروفایل اینستاگرام برای ساخت فعلی استفاده می‌شود؛ پروفایل تلگرام برای مرحلهٔ انتشار کانال آماده و ذخیره می‌شود.</small><div class="studio-modal studio-modal-prompt" id="prompt-mother-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-mother-title"><div class="studio-modal-card"><div class="studio-modal-head"><div class="studio-modal-title" id="prompt-mother-title">پرامپت‌های مادر تولید محتوا</div><button class="studio-modal-close" type="button" id="close-prompt-mother" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div><div class="studio-prompt-grid"><div class="studio-prompt-channel"><h4><i class="fa-brands fa-instagram"></i> پرامپت اینستاگرام</h4><textarea class="studio-textarea" id="instagram-prompt" name="instagram_prompt" rows="14" placeholder="قواعد هوک، کپشن، کلمهٔ کلیدی و دایرکت اینستاگرام...">{{ old('instagram_prompt', $settings->instagram_prompt ?: $settings->prompt_profile) }}</textarea></div><div class="studio-prompt-channel"><h4><i class="fa-brands fa-telegram"></i> پرامپت تلگرام</h4><textarea class="studio-textarea" name="telegram_prompt" rows="14" placeholder="قواعد عنوان و کپشن اختصاصی کانال تلگرام...">{{ old('telegram_prompt', $settings->telegram_prompt) }}</textarea></div></div><div class="studio-telegram-buttons"><div class="studio-telegram-buttons-head"><div class="studio-telegram-buttons-title"><i class="fa-solid fa-link"></i> دکمه‌های لینک‌دار تلگرام</div><label class="studio-check"><input type="hidden" name="telegram_buttons_enabled" value="0"><input type="checkbox" name="telegram_buttons_enabled" value="1" @checked(is_array($settings->telegram_buttons ?? null) && count($settings->telegram_buttons) > 0)> فعال‌سازی برای خروجی تلگرام</label></div><div class="studio-telegram-button-list" id="telegram-button-list">@forelse((is_array($settings->telegram_buttons ?? null) ? $settings->telegram_buttons : []) as $telegramButton)<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" value="{{ $telegramButton['label'] ?? '' }}" placeholder="متن دکمه"><input class="studio-input" type="url" name="telegram_button_url[]" value="{{ $telegramButton['url'] ?? '' }}" placeholder="لینک مقصد"><select class="studio-select" name="telegram_button_style[]"><option value="primary" @selected(($telegramButton['style'] ?? 'primary') === 'primary')>آبی اصلی</option><option value="success" @selected(($telegramButton['style'] ?? '') === 'success')>سبز موفق</option><option value="danger" @selected(($telegramButton['style'] ?? '') === 'danger')>قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@empty<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" placeholder="متن دکمه، مثلاً مشاهده محصول"><input class="studio-input" type="url" name="telegram_button_url[]" placeholder="https://..."><select class="studio-select" name="telegram_button_style[]"><option value="primary">آبی اصلی</option><option value="success">سبز موفق</option><option value="danger">قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@endforelse</div><button class="studio-btn studio-telegram-button-add" type="button" id="add-telegram-button"><i class="fa-solid fa-plus"></i> افزودن دکمه</button><small class="studio-telegram-buttons-help">برای هر دکمه متن، لینک و سبک را انتخاب کن. تلگرام رنگ دلخواه آزاد را نمی‌پذیرد و فقط سبک‌های استاندارد را اعمال می‌کند.</small></div><div class="video-studio-actions" style="padding:0 16px 16px"><button class="studio-btn primary" type="button" id="save-prompt-mother"><i class="fa-solid fa-check"></i> ثبت پرامپت‌ها</button></div></div></div></div>
           <div class="studio-field"><div class="studio-preview-head"><label>پیش‌نمایش هوشمند قبل از ساخت</label><button class="studio-btn" type="button" id="generate-preview"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت ۳ پیشنهاد</button></div><small>با این دکمه، برای هر سه بخش پیشنهادهای تازه ساخته می‌شود و گزینهٔ اول خودکار انتخاب می‌ماند.</small><div class="studio-preview-status" id="preview-status">آمادهٔ دریافت پیشنهاد</div></div>
           <div class="video-studio-actions"><button class="studio-btn" type="button" onclick="submitStudioForm('{{ route('admin.video-studio.settings.update') }}','PATCH')"><i class="fa-solid fa-floppy-disk"></i> ذخیره تنظیمات</button><button class="studio-btn" type="button" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',false)"><i class="fa-solid fa-list"></i> ذخیره و افزودن به لیست</button><button id="queue-submit" class="studio-btn primary" type="button" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',true)"><i class="fa-solid fa-clapperboard"></i> افزودن به لیست و ساخت ویدیو</button></div>
@@ -341,9 +341,9 @@
     if (sourceHelp) sourceHelp.textContent = sourceDescriptions[selected] || sourceDescriptions.auto;
     if (sourceUrlField) sourceUrlField.style.display = selected === 'auto' ? 'none' : 'grid';
     if (sourceUrl) sourceUrl.placeholder = selected === 'video' ? 'لینک ویدیوی منبع' : 'لینک فایل صوتی یا موزیک';
-    if (hookManual) hookManual.classList.toggle('is-hidden', !!hookToggle?.checked || !!document.querySelector('[data-preview-tabs="hook"]:not(:empty)'));
-    if (captionManual) captionManual.classList.toggle('is-hidden', !!captionToggle?.checked || !!document.querySelector('[data-preview-tabs="caption"]:not(:empty)'));
-    if (keywordSettings) keywordSettings.classList.toggle('is-hidden', !!keywordToggle?.checked || !!document.querySelector('[data-preview-tabs="keyword"]:not(:empty)'));
+    if (hookManual) hookManual.classList.toggle('is-hidden', !!hookToggle?.checked);
+    if (captionManual) captionManual.classList.toggle('is-hidden', !!captionToggle?.checked);
+    if (keywordSettings) keywordSettings.classList.toggle('is-hidden', !!keywordToggle?.checked);
   }
   document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', updateStudioControls));
   sourceLibrary?.addEventListener('change', () => {
@@ -366,7 +366,7 @@
     studioForm.submit();
   }
   window.submitStudioForm = submitStudioForm;
-  document.getElementById('open-prompt-mother')?.addEventListener('click', () => promptMotherModal?.classList.add('is-open'));
+  document.querySelectorAll('#open-prompt-mother,#open-prompt-mother-top').forEach((button) => button.addEventListener('click', () => promptMotherModal?.classList.add('is-open')));
   document.getElementById('close-prompt-mother')?.addEventListener('click', () => promptMotherModal?.classList.remove('is-open'));
   document.getElementById('save-prompt-mother')?.addEventListener('click', () => { if (promptFallback && instagramPrompt) promptFallback.value = instagramPrompt.value; promptMotherModal?.classList.remove('is-open'); });
   const telegramButtonList = document.getElementById('telegram-button-list');
@@ -448,59 +448,104 @@
     editor?.classList.toggle('is-hidden');
   }));
   const previewButton = document.getElementById('generate-preview');
-  const previewPanel = document.getElementById('content-preview');
   const previewStatus = document.getElementById('preview-status');
   const previewHidden = { hook: document.getElementById('preview-hook'), caption: document.getElementById('preview-caption'), keyword: document.getElementById('preview-keyword') };
   const previewToggles = { hook: hookToggle, caption: captionToggle, keyword: keywordToggle };
+  let telegramCaptionHolder = document.querySelector('[data-telegram-caption-options]');
+  let telegramCaptionToggle = document.getElementById('telegram-auto-caption');
+  const telegramNote = document.querySelector('.studio-telegram-preview-note');
+  if (telegramNote && !telegramCaptionHolder) {
+    const smart = document.createElement('div'); smart.className = 'studio-telegram-caption-smart';
+    smart.innerHTML = '<div class="studio-telegram-caption-smart-head"><label><input id="telegram-auto-caption" type="checkbox" checked> ساخت کپشن تلگرام با هوش مصنوعی</label><button class="studio-regenerate" type="button" data-regenerate-telegram>ساخت مجدد</button></div><small class="studio-preview-status">سه پیشنهاد کپشن برای کانال تلگرام را ببین و یکی را انتخاب کن.</small><div class="studio-preview-options" data-telegram-caption-options></div>';
+    const editor = telegramNote.querySelector('.studio-telegram-caption-editor'); telegramNote.insertBefore(smart, editor || telegramNote.firstChild);
+    telegramCaptionHolder = smart.querySelector('[data-telegram-caption-options]'); telegramCaptionToggle = smart.querySelector('#telegram-auto-caption');
+  }
   function syncPreviewSelection(kind) {
     const holder = document.querySelector('[data-preview-tabs="' + kind + '"]');
     const selected = holder?.querySelector('.studio-preview-option.is-selected textarea');
     if (selected && previewHidden[kind]) previewHidden[kind].value = selected.value;
   }
   function updatePreviewEditability() {
-    Object.entries(previewToggles).forEach(([kind, toggle]) => {
-      const holder = document.querySelector('[data-preview-tabs="' + kind + '"]');
-      holder?.querySelectorAll('textarea').forEach((editor) => { editor.readOnly = !!toggle?.checked; });
-    });
+    Object.entries(previewToggles).forEach(([kind, toggle]) => document.querySelector('[data-preview-tabs="' + kind + '"]')?.querySelectorAll('textarea').forEach((editor) => { editor.readOnly = !!toggle?.checked; }));
+    telegramCaptionHolder?.querySelectorAll('textarea').forEach((editor) => { editor.readOnly = telegramCaptionToggle?.checked !== false; });
+  }
+  function renderLoadingOptions(kind, message = 'در حال آماده‌سازی...') {
+    const holder = document.querySelector('[data-preview-tabs="' + kind + '"]'); if (!holder) return;
+    holder.dataset.hasOptions = '0'; holder.replaceChildren();
+    for (let index = 0; index < 3; index++) {
+      const option = document.createElement('div'); option.className = 'studio-preview-option is-loading' + (index === 0 ? ' is-selected' : '');
+      const title = document.createElement('div'); title.className = 'studio-preview-option-check'; title.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> گزینه ' + (index + 1);
+      const editor = document.createElement('textarea'); editor.className = 'studio-textarea'; editor.placeholder = message; editor.value = '';
+      option.append(title, editor); holder.appendChild(option);
+    }
   }
   function renderPreviewTabs(kind, values) {
-    const holder = document.querySelector('[data-preview-tabs="' + kind + '"]');
-    if (!holder) return;
-    holder.replaceChildren();
-    (values || []).slice(0, 3).forEach((value, index) => {
+    const holder = document.querySelector('[data-preview-tabs="' + kind + '"]'); if (!holder) return;
+    const normalized = Array.isArray(values) ? values.slice(0, 3) : [];
+    while (normalized.length < 3) normalized.push(normalized[0] || '');
+    holder.dataset.hasOptions = '1'; holder.replaceChildren();
+    normalized.forEach((value, index) => {
       const option = document.createElement('div'); option.className = 'studio-preview-option' + (index === 0 ? ' is-selected' : ''); option.dataset.previewKind = kind;
       const title = document.createElement('div'); title.className = 'studio-preview-option-check'; title.innerHTML = '<i class="fa-solid fa-check"></i> گزینه ' + (index + 1);
-      const editor = document.createElement('textarea'); editor.className = 'studio-textarea'; editor.value = value; editor.readOnly = !!previewToggles[kind]?.checked;
-      editor.addEventListener('input', () => { if (option.classList.contains('is-selected') && previewHidden[kind]) previewHidden[kind].value = editor.value; });
+      const editor = document.createElement('textarea'); editor.className = 'studio-textarea'; editor.value = value || ''; editor.readOnly = !!previewToggles[kind]?.checked;
+      editor.addEventListener('input', () => { if (option.classList.contains('is-selected') && previewHidden[kind]) previewHidden[kind].value = editor.value; updateTelegramPreview(); });
       option.addEventListener('click', (event) => { if (event.target === editor && !editor.readOnly) return; holder.querySelectorAll('.studio-preview-option').forEach((item) => item.classList.remove('is-selected')); option.classList.add('is-selected'); syncPreviewSelection(kind); updateTelegramPreview(); });
-      option.append(title, editor); holder.appendChild(option);
-      if (index === 0 && previewHidden[kind]) previewHidden[kind].value = value;
+      option.append(title, editor); holder.appendChild(option); if (index === 0 && previewHidden[kind]) previewHidden[kind].value = value || '';
     });
-    updatePreviewEditability();
-    updateStudioControls();
-    updateTelegramPreview();
+    updatePreviewEditability(); updateStudioControls(); updateTelegramPreview();
   }
-  async function generatePreview() {
-    if (!studioForm || !previewButton) return;
+  function renderTelegramCaptionOptions(values) {
+    if (!telegramCaptionHolder) return;
+    const normalized = Array.isArray(values) ? values.slice(0, 3) : [];
+    while (normalized.length < 3) normalized.push(normalized[0] || '');
+    telegramCaptionHolder.dataset.hasOptions = '1'; telegramCaptionHolder.replaceChildren();
+    normalized.forEach((value, index) => {
+      const option = document.createElement('div'); option.className = 'studio-preview-option' + (index === 0 ? ' is-selected' : '');
+      const title = document.createElement('div'); title.className = 'studio-preview-option-check'; title.innerHTML = '<i class="fa-solid fa-check"></i> گزینه ' + (index + 1);
+      const editor = document.createElement('textarea'); editor.className = 'studio-textarea'; editor.value = value || ''; editor.readOnly = telegramCaptionToggle?.checked !== false;
+      editor.addEventListener('input', () => { if (option.classList.contains('is-selected')) { if (telegramCaptionEditor) telegramCaptionEditor.value = editor.value; updateTelegramPreview(); } });
+      option.addEventListener('click', (event) => { if (event.target === editor && !editor.readOnly) return; telegramCaptionHolder.querySelectorAll('.studio-preview-option').forEach((item) => item.classList.remove('is-selected')); option.classList.add('is-selected'); if (telegramCaptionEditor) telegramCaptionEditor.value = editor.value; updateTelegramPreview(); });
+      option.append(title, editor); telegramCaptionHolder.appendChild(option);
+    });
+    updatePreviewEditability(); updateTelegramPreview();
+  }
+  function renderTelegramLoadingOptions(message = 'بعد از انتخاب محصول، کپشن‌های پیشنهادی اینجا نمایش داده می‌شوند.') {
+    if (!telegramCaptionHolder) return;
+    telegramCaptionHolder.dataset.hasOptions = '0'; telegramCaptionHolder.replaceChildren();
+    for (let index = 0; index < 3; index++) {
+      const option = document.createElement('div'); option.className = 'studio-preview-option is-loading' + (index === 0 ? ' is-selected' : '');
+      const title = document.createElement('div'); title.className = 'studio-preview-option-check'; title.innerHTML = '<i class="fa-solid fa-spinner"></i> گزینه ' + (index + 1);
+      const editor = document.createElement('textarea'); editor.className = 'studio-textarea'; editor.placeholder = message; editor.value = '';
+      option.append(title, editor); telegramCaptionHolder.appendChild(option);
+    }
+  }
+  async function requestPreview(channel = 'instagram', kind = null) {
+    if (!studioForm) return;
+    const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
+    if (!productId) { if (previewStatus) previewStatus.textContent = 'ابتدا یک محصول انتخاب کن.'; return; }
     if (promptFallback && instagramPrompt) promptFallback.value = instagramPrompt.value;
-    previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; if (previewPanel) previewPanel.classList.remove('is-hidden'); if (previewStatus) previewStatus.textContent = 'در حال دریافت سه پیشنهاد از هوش مصنوعی...';
-    try {
-      const formPayload = new FormData(studioForm);
-      // فرم ممکن است از حالت ویرایش با _method=PATCH باز شده باشد؛ پیش‌نمایش همیشه باید POST باشد.
-      formPayload.delete('_method');
-      const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
-      if (productId) formPayload.set('product_id', productId);
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
-      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formPayload });
-      const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
-      if (!response.ok) throw new Error((payload.message ? payload.message + ' ' : '') + '(کد پاسخ ' + response.status + ')');
-      renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options);
-      if (previewStatus) previewStatus.textContent = 'سه گزینه آماده شد؛ متن انتخاب‌شده را می‌توانی ویرایش کنی و سپس سفارش ساخت را بفرستی.';
-    } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; }
-    previewButton.disabled = false; previewButton.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> ساخت ۳ پیشنهاد';
+    if (kind) renderLoadingOptions(kind); else ['hook', 'caption', 'keyword'].forEach((item) => renderLoadingOptions(item));
+    if (channel === 'telegram' && telegramCaptionHolder) { telegramCaptionHolder.dataset.hasOptions = '0'; telegramCaptionHolder.replaceChildren(); telegramCaptionHolder.innerHTML = '<div class="studio-preview-status"><i class="fa-solid fa-spinner fa-spin"></i> در حال تولید سه کپشن تلگرام...</div>'; }
+    if (previewStatus) previewStatus.textContent = 'در حال دریافت پیشنهادهای تازه از هوش مصنوعی...';
+    const formPayload = new FormData(studioForm); formPayload.delete('_method'); formPayload.set('product_id', productId); formPayload.set('channel', channel);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
+    const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formPayload });
+    const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
+    if (!response.ok) throw new Error((payload.message ? payload.message + ' ' : '') + '(کد پاسخ ' + response.status + ')');
+    if (channel === 'telegram') { renderTelegramCaptionOptions(payload.caption_options || payload.caption || payload.telegram_caption_options || []); }
+    else if (kind) renderPreviewTabs(kind, payload[kind + '_options']);
+    else { renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options); }
+    if (previewStatus) previewStatus.textContent = 'پیشنهادهای تازه آماده شد؛ گزینهٔ انتخاب‌شده قابل استفاده در سفارش ساخت است.';
   }
+  async function generatePreview() { if (!studioForm || !previewButton) return; previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; try { await requestPreview('instagram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; } finally { previewButton.disabled = false; previewButton.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> ساخت ۳ پیشنهاد'; } }
+  async function regenerateKind(kind) { const button = document.querySelector('[data-regenerate-preview="' + kind + '"]'); if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; } try { await requestPreview('instagram', kind); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'ساخت مجدد ناموفق بود.'; } finally { if (button) { button.disabled = false; button.textContent = 'ساخت مجدد'; } } }
   previewButton?.addEventListener('click', generatePreview);
+  document.querySelectorAll('[data-regenerate-preview]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); regenerateKind(button.dataset.regeneratePreview); }));
+  document.querySelector('[data-regenerate-telegram]')?.addEventListener('click', async (event) => { event.preventDefault(); const button = event.currentTarget; button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await requestPreview('telegram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'ساخت کپشن تلگرام ناموفق بود.'; } finally { button.disabled = false; button.textContent = 'ساخت مجدد'; } });
   Object.values(previewToggles).forEach((toggle) => toggle?.addEventListener('change', updatePreviewEditability));
+  telegramCaptionToggle?.addEventListener('change', updatePreviewEditability);
+  ['hook', 'caption', 'keyword'].forEach((kind) => renderLoadingOptions(kind, 'بعد از انتخاب محصول، پیشنهادها اینجا نمایش داده می‌شوند.'));
+  renderTelegramLoadingOptions();
   const originalSubmitStudioForm = submitStudioForm;
   window.submitStudioForm = function(action, method) { Object.keys(previewHidden).forEach(syncPreviewSelection); originalSubmitStudioForm(action, method, arguments[2]); };
   if (new URLSearchParams(window.location.search).get('preview') === '1' && previewButton) setTimeout(generatePreview, 450);
