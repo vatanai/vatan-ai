@@ -117,6 +117,22 @@
   .studio-telegram-caption-smart{margin-top:0;margin-bottom:16px;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
   #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
   #aspect-ratio-field .studio-option label{max-width:62px;justify-self:center}
+  .studio-step-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:13px}
+  .studio-step-tab{flex:1;min-width:140px;border:1px solid var(--border);border-radius:9px;background:var(--card-bg);color:var(--text-soft);padding:9px 10px;font:inherit;font-size:11px;font-weight:900;cursor:pointer;text-align:center;transition:.2s}
+  .studio-step-tab.is-active{border-color:var(--primary);background:var(--primary-l);color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+  .studio-step-panel.is-hidden{display:none!important}
+  .studio-platform-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;border:1px solid var(--border);border-radius:11px;background:var(--input-bg)}
+  .studio-platform-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card-bg);font-size:11px;font-weight:900;color:var(--text-main)}
+  .studio-platform-toggle input{accent-color:var(--primary);width:16px;height:16px}
+  .studio-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}
+  .studio-choice-row{display:flex;gap:7px;flex-wrap:wrap}.studio-choice{position:relative}.studio-choice input{position:absolute;opacity:0;pointer-events:none}.studio-choice label{display:flex;align-items:center;justify-content:center;min-height:38px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--card-bg);color:var(--text-soft);font-size:10px;font-weight:800;cursor:pointer}.studio-choice input:checked+label{border-color:var(--primary);background:var(--primary-l);color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
+  .studio-cta-box{display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}
+  .studio-source-library-btn{margin-top:6px;width:100%;justify-content:center}
+  .studio-source-library-list{display:grid;gap:8px;overflow:auto;padding:12px 16px 16px}.studio-source-library-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);cursor:pointer;text-align:right}.studio-source-library-item:hover{border-color:var(--primary);background:var(--primary-l)}.studio-source-library-item strong{font-size:11px;color:var(--text-h)}.studio-source-library-item small{display:block;color:var(--text-soft);font-size:9px;margin-top:3px}
+  .studio-font-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.studio-font-option label{min-height:54px;padding:5px;font-size:9px}.studio-font-option label small{font-size:8px}
+  #studio-produced-panel,#studio-latest-tests-panel{display:none}
+  @media(max-width:1100px){.studio-font-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  @media(max-width:650px){.studio-font-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.studio-platform-controls,.studio-design-grid{grid-template-columns:1fr}.studio-step-tab{min-width:100px}}
 </style>
 @endpush
 
@@ -154,24 +170,28 @@
         <form id="studio-settings-form" class="studio-form" data-product-id="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}" method="POST" action="{{ route('admin.video-studio.settings.update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="_method" id="studio-form-method" value="PATCH">
-          <div class="studio-field"><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-selected-product"><div><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button></div></div><small>با انتخاب محصول از پنجره‌ی جست‌وجو، تصاویر همان محصول پایین همین بخش نمایش داده می‌شود.</small></div>
+          <div class="studio-step-tabs" role="tablist" aria-label="گام‌های ساخت ویدیو"><button class="studio-step-tab is-active" type="button" data-studio-step-tab="1">۱. تنظیمات ویدیو</button><button class="studio-step-tab" type="button" data-studio-step-tab="2">۲. اینستاگرام</button><button class="studio-step-tab" type="button" data-studio-step-tab="3">۳. تلگرام</button></div>
+          <div class="studio-platform-controls studio-step-panel" data-studio-step="1"><label class="studio-platform-toggle"><span><i class="fa-brands fa-instagram"></i> خروجی اینستاگرام</span><input type="hidden" name="instagram_enabled" value="0"><input type="checkbox" name="instagram_enabled" value="1" checked></label><label class="studio-platform-toggle"><span><i class="fa-brands fa-telegram"></i> خروجی تلگرام</span><input type="hidden" name="telegram_enabled" value="0"><input type="checkbox" name="telegram_enabled" value="1" checked></label></div>
+          <div class="studio-field studio-step-panel" data-studio-step="1"><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-selected-product"><div><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button></div></div><small>با انتخاب محصول از پنجره‌ی جست‌وجو، تصاویر همان محصول پایین همین بخش نمایش داده می‌شود.</small></div>
           @if($selectedProduct)
-            <div class="studio-field"><label>تصاویر محصول برای ویدیو</label><div class="studio-images">@forelse($productImages as $image)<div class="studio-image-choice"><input id="studio-image-{{ $loop->index }}" type="checkbox" name="selected_images[]" value="{{ $image['url'] }}" checked><label for="studio-image-{{ $loop->index }}"><img src="{{ $image['url'] }}" alt="تصویر {{ $loop->iteration }}"></label></div>@empty<div class="studio-empty" style="grid-column:1/-1">برای این محصول تصویر قابل استفاده پیدا نشد.</div>@endforelse</div><small>تصویرهای انتخاب‌شده همراه سفارش ساخت به ورکفلو ارسال می‌شوند.</small></div>
+            <div class="studio-field studio-step-panel" data-studio-step="1"><label>تصاویر محصول برای ویدیو</label><div class="studio-images">@forelse($productImages as $image)<div class="studio-image-choice"><input id="studio-image-{{ $loop->index }}" type="checkbox" name="selected_images[]" value="{{ $image['url'] }}" checked><label for="studio-image-{{ $loop->index }}"><img src="{{ $image['url'] }}" alt="تصویر {{ $loop->iteration }}"></label></div>@empty<div class="studio-empty" style="grid-column:1/-1">برای این محصول تصویر قابل استفاده پیدا نشد.</div>@endforelse</div><small>تصویرهای انتخاب‌شده همراه سفارش ساخت به ورکفلو ارسال می‌شوند.</small></div>
           @endif
-          <div class="studio-field"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
+          <div class="studio-field studio-step-panel" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
-          <div class="studio-media-controls" id="studio-media-controls"><div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
+          <div class="studio-media-controls studio-step-panel" data-studio-step="1" id="studio-media-controls"><div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
             @foreach(['auto'=>['fa-wand-magic-sparkles','خودکار'],'upload'=>['fa-file-audio','فایل مستقیم'],'music'=>['fa-music','فایل موزیک'],'video'=>['fa-film','ویدیوی منبع']] as $mode=>$option)
               <div class="studio-option"><input id="source-{{ $mode }}" type="radio" name="source_mode" value="{{ $mode }}" @checked(($settings->source_mode ?? 'auto') === $mode)><label for="source-{{ $mode }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}</label></div>
             @endforeach
           </div><small id="source-help">منبع انتخابی بعد از اتصال به ورکفلو، هنگام ساخت استفاده می‌شود.</small></div>
-          <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><select class="studio-select" id="source-library" name="source_library_id"><option value="">بدون انتخاب از کتابخانه</option>@foreach($sources as $source)<option value="{{ $source->id }}" data-source-type="{{ $source->type }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیوی منبع' : 'موزیک' }} · {{ $source->used_count }} استفاده</option>@endforeach</select><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">می‌توانی یک منبع از کتابخانه انتخاب کنی یا لینک/فایل تازه بدهی.</small></div>
+          <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><input type="hidden" id="source-library" name="source_library_id" value=""><button class="studio-btn studio-source-library-btn" type="button" id="open-source-library"><i class="fa-solid fa-folder-open"></i> انتخاب از کتابخانهٔ صدا</button><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input id="source-file" class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">برای «فایل مستقیم»، «فایل موزیک» یا «ویدیوی منبع»، انتخاب فایل سیستم باز می‌شود.</small></div>
           <div class="studio-field" id="aspect-ratio-field"><label>قاب خروجی</label><div class="studio-options">
             @foreach(['9:16'=>['fa-mobile-screen-button','استوری عمودی'],'1:1'=>['fa-square','مربع'],'4:5'=>['fa-image','پست عمودی'],'16:9'=>['fa-display','افقی']] as $ratio=>$option)
               <div class="studio-option"><input id="ratio-{{ str_replace(':','-',$ratio) }}" type="radio" name="aspect_ratio" value="{{ $ratio }}" @checked(($settings->aspect_ratio ?? '9:16') === $ratio)><label for="ratio-{{ str_replace(':','-',$ratio) }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}<span dir="ltr">{{ $ratio }}</span></label></div>
             @endforeach
           </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div></div>
-          <div class="studio-smart-fields" aria-label="کنترل‌های هوشمند و پیشنهادهای متن">
+          <div class="studio-design-grid studio-step-panel" data-studio-step="1" aria-label="ظاهر ویدیو"><div class="studio-field"><label>ترنزیشن بین بخش‌ها</label><div class="studio-choice-row"><div class="studio-choice"><input id="transition-cut" type="radio" name="transition" value="cut" checked><label for="transition-cut">برش سریع</label></div><div class="studio-choice"><input id="transition-fade" type="radio" name="transition" value="fade"><label for="transition-fade">فید</label></div><div class="studio-choice"><input id="transition-blur" type="radio" name="transition" value="blur"><label for="transition-blur">بلور</label></div><div class="studio-choice"><input id="transition-slide" type="radio" name="transition" value="slide"><label for="transition-slide">لغزش</label></div></div></div><div class="studio-field"><label for="transition-duration">مدت ترنزیشن: <span id="transition-duration-value">۰٫۵</span> ثانیه</label><input id="transition-duration" type="range" name="transition_duration" min="0.2" max="1.5" step="0.1" value="0.5"></div></div>
+          <div class="studio-cta-box studio-step-panel" data-studio-step="1"><label class="studio-platform-toggle"><span><i class="fa-solid fa-bullhorn"></i> دعوت به اقدام در پایان ویدیو</span><input type="hidden" name="cta_enabled" value="0"><input id="cta-enabled" type="checkbox" name="cta_enabled" value="1" checked></label><div class="studio-preview-options" data-preview-tabs="cta"></div><input class="studio-input" id="cta-text" name="cta_text" placeholder="متن دعوت به اقدام (در صورت خاموش‌بودن هوش مصنوعی)" value=""><div class="studio-choice-row"><div class="studio-choice"><input id="cta-bg-primary" type="radio" name="cta_background" value="primary" checked><label for="cta-bg-primary">پس‌زمینه هماهنگ با هوک</label></div><div class="studio-choice"><input id="cta-bg-light" type="radio" name="cta_background" value="light"><label for="cta-bg-light">روشن</label></div><div class="studio-choice"><input id="cta-bg-dark" type="radio" name="cta_background" value="dark"><label for="cta-bg-dark">تیره</label></div></div></div>
+          <div class="studio-smart-fields studio-step-panel" data-studio-step="2" aria-label="کنترل‌های هوشمند و پیشنهادهای متن">
             <div class="studio-smart-field">
               <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
               <small>سه پیشنهاد هم‌زمان زیر همین گزینه نمایش داده می‌شود؛ اولی به‌صورت پیش‌فرض انتخاب است.</small>
@@ -191,9 +211,8 @@
               <div class="studio-field studio-conditional" id="keyword-settings"><label for="keyword">کلمهٔ کلیدی و متن پاسخ دایرکت دستی</label><div class="studio-manual-box"><input id="keyword" class="studio-input" name="keyword" value="{{ old('keyword', $settings->keyword) }}" placeholder="مثلاً: قیمت"><textarea class="studio-textarea" name="dm_template" placeholder="متن آماده پاسخ به کامنت یا دایرکت...">{{ old('dm_template', $settings->dm_template) }}</textarea><small>با خاموش‌کردن هوش مصنوعی، این دو مقدار دستی قابل ویرایش هستند.</small></div></div>
             </div>
           </div>
-          <div class="studio-field"><label>پروفایل‌های پرامپت مادر</label><input type="hidden" id="prompt-profile-fallback" name="prompt_profile" value="{{ old('prompt_profile', $settings->prompt_profile) }}"><button class="studio-btn" type="button" id="open-prompt-mother"><i class="fa-solid fa-wand-magic-sparkles"></i> تنظیم پرامپت اینستاگرام و تلگرام</button><input class="studio-input" type="file" name="prompt_file" accept=".txt,.md,text/plain,text/markdown"><small>پروفایل اینستاگرام برای ساخت فعلی استفاده می‌شود؛ پروفایل تلگرام برای مرحلهٔ انتشار کانال آماده و ذخیره می‌شود.</small><div class="studio-modal studio-modal-prompt" id="prompt-mother-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-mother-title"><div class="studio-modal-card"><div class="studio-modal-head"><div class="studio-modal-title" id="prompt-mother-title">پرامپت‌های مادر تولید محتوا</div><button class="studio-modal-close" type="button" id="close-prompt-mother" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div><div class="studio-prompt-grid"><div class="studio-prompt-channel"><h4><i class="fa-brands fa-instagram"></i> پرامپت اینستاگرام</h4><textarea class="studio-textarea" id="instagram-prompt" name="instagram_prompt" rows="14" placeholder="قواعد هوک، کپشن، کلمهٔ کلیدی و دایرکت اینستاگرام...">{{ old('instagram_prompt', $settings->instagram_prompt ?: $settings->prompt_profile) }}</textarea></div><div class="studio-prompt-channel"><h4><i class="fa-brands fa-telegram"></i> پرامپت تلگرام</h4><textarea class="studio-textarea" name="telegram_prompt" rows="14" placeholder="قواعد عنوان و کپشن اختصاصی کانال تلگرام...">{{ old('telegram_prompt', $settings->telegram_prompt) }}</textarea></div></div><div class="studio-telegram-buttons"><div class="studio-telegram-buttons-head"><div class="studio-telegram-buttons-title"><i class="fa-solid fa-link"></i> دکمه‌های لینک‌دار تلگرام</div><label class="studio-check"><input type="hidden" name="telegram_buttons_enabled" value="0"><input type="checkbox" name="telegram_buttons_enabled" value="1" @checked(is_array($settings->telegram_buttons ?? null) && count($settings->telegram_buttons) > 0)> فعال‌سازی برای خروجی تلگرام</label></div><div class="studio-telegram-button-list" id="telegram-button-list">@forelse((is_array($settings->telegram_buttons ?? null) ? $settings->telegram_buttons : []) as $telegramButton)<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" value="{{ $telegramButton['label'] ?? '' }}" placeholder="متن دکمه"><input class="studio-input" type="url" name="telegram_button_url[]" value="{{ $telegramButton['url'] ?? '' }}" placeholder="لینک مقصد"><select class="studio-select" name="telegram_button_style[]"><option value="primary" @selected(($telegramButton['style'] ?? 'primary') === 'primary')>آبی اصلی</option><option value="success" @selected(($telegramButton['style'] ?? '') === 'success')>سبز موفق</option><option value="danger" @selected(($telegramButton['style'] ?? '') === 'danger')>قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@empty<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" placeholder="متن دکمه، مثلاً مشاهده محصول"><input class="studio-input" type="url" name="telegram_button_url[]" placeholder="https://..."><select class="studio-select" name="telegram_button_style[]"><option value="primary">آبی اصلی</option><option value="success">سبز موفق</option><option value="danger">قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@endforelse</div><button class="studio-btn studio-telegram-button-add" type="button" id="add-telegram-button"><i class="fa-solid fa-plus"></i> افزودن دکمه</button><small class="studio-telegram-buttons-help">برای هر دکمه متن، لینک و سبک را انتخاب کن. تلگرام رنگ دلخواه آزاد را نمی‌پذیرد و فقط سبک‌های استاندارد را اعمال می‌کند.</small></div><div class="video-studio-actions" style="padding:0 16px 16px"><button class="studio-btn primary" type="button" id="save-prompt-mother"><i class="fa-solid fa-check"></i> ثبت پرامپت‌ها</button></div></div></div></div>
+          <div class="studio-field studio-step-panel" data-studio-step="2"><button class="studio-btn" type="button" id="open-prompt-mother"><i class="fa-solid fa-wand-magic-sparkles"></i> تنظیم پرامپت اینستا و تلگرام</button><input type="hidden" id="prompt-profile-fallback" name="prompt_profile" value="{{ old('prompt_profile', $settings->prompt_profile) }}"><div class="studio-modal studio-modal-prompt" id="prompt-mother-modal" role="dialog" aria-modal="true" aria-labelledby="prompt-mother-title"><div class="studio-modal-card"><div class="studio-modal-head"><div class="studio-modal-title" id="prompt-mother-title">پرامپت‌های مادر تولید محتوا</div><button class="studio-modal-close" type="button" id="close-prompt-mother" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div><div class="studio-prompt-grid"><div class="studio-prompt-channel"><h4><i class="fa-brands fa-instagram"></i> پرامپت اینستاگرام</h4><textarea class="studio-textarea" id="instagram-prompt" name="instagram_prompt" rows="14" placeholder="قواعد هوک، کپشن، کلمهٔ کلیدی و دایرکت اینستاگرام...">{{ old('instagram_prompt', $settings->instagram_prompt) }}</textarea></div><div class="studio-prompt-channel"><h4><i class="fa-brands fa-telegram"></i> پرامپت تلگرام</h4><textarea class="studio-textarea" name="telegram_prompt" rows="14" placeholder="قواعد عنوان و کپشن اختصاصی کانال تلگرام...">{{ old('telegram_prompt', $settings->telegram_prompt) }}</textarea></div></div><div class="studio-telegram-buttons"><div class="studio-telegram-buttons-head"><div class="studio-telegram-buttons-title"><i class="fa-solid fa-link"></i> دکمه‌های لینک‌دار تلگرام</div><label class="studio-check"><input type="hidden" name="telegram_buttons_enabled" value="0"><input type="checkbox" name="telegram_buttons_enabled" value="1" @checked(is_array($settings->telegram_buttons ?? null) && count($settings->telegram_buttons) > 0)> فعال‌سازی برای خروجی تلگرام</label></div><div class="studio-telegram-button-list" id="telegram-button-list">@forelse((is_array($settings->telegram_buttons ?? null) ? $settings->telegram_buttons : []) as $telegramButton)<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" value="{{ $telegramButton['label'] ?? '' }}" placeholder="متن دکمه"><input class="studio-input" type="url" name="telegram_button_url[]" value="{{ $telegramButton['url'] ?? '' }}" placeholder="لینک مقصد"><select class="studio-select" name="telegram_button_style[]"><option value="primary" @selected(($telegramButton['style'] ?? 'primary') === 'primary')>آبی اصلی</option><option value="success" @selected(($telegramButton['style'] ?? '') === 'success')>سبز موفق</option><option value="danger" @selected(($telegramButton['style'] ?? '') === 'danger')>قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@empty<div class="studio-telegram-button-row" data-telegram-button-row><input class="studio-input" name="telegram_button_label[]" placeholder="متن دکمه، مثلاً مشاهده محصول"><input class="studio-input" type="url" name="telegram_button_url[]" placeholder="https://..."><select class="studio-select" name="telegram_button_style[]"><option value="primary">آبی اصلی</option><option value="success">سبز موفق</option><option value="danger">قرمز هشدار</option></select><button class="studio-telegram-button-remove" type="button" data-remove-telegram-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button></div>@endforelse</div><button class="studio-btn studio-telegram-button-add" type="button" id="add-telegram-button"><i class="fa-solid fa-plus"></i> افزودن دکمه</button><small class="studio-telegram-buttons-help">دکمه‌ها فقط زمانی به خروجی تلگرام اضافه می‌شوند که خروجی تلگرام روشن باشد.</small></div><div class="video-studio-actions" style="padding:0 16px 16px"><button class="studio-btn primary" type="button" id="save-prompt-mother"><i class="fa-solid fa-check"></i> ثبت پرامپت‌ها</button></div></div></div></div></div>
           <div class="video-studio-actions"><button class="studio-btn" type="button" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',false)"><i class="fa-solid fa-list"></i> ذخیره و افزودن به لیست</button><button id="queue-submit" class="studio-btn primary" type="button" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',true)"><i class="fa-solid fa-clapperboard"></i> افزودن به لیست و ساخت ویدیو</button></div>
-          <small>گزینهٔ اول سفارش را فقط در صف ذخیره می‌کند؛ گزینهٔ دوم سفارش را در صف گذاشته و بلافاصله برای ساخت به ورکفلو می‌فرستد.</small>
         </form>
       </section>
 
@@ -260,6 +279,19 @@
       </div>
     </div>
 
+    <div class="studio-modal" id="source-library-modal" role="dialog" aria-modal="true" aria-labelledby="source-library-title">
+      <div class="studio-modal-card">
+        <div class="studio-modal-head"><div class="studio-modal-title" id="source-library-title">انتخاب منبع صدا یا ویدیو</div><button class="studio-modal-close" type="button" id="close-source-library" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="studio-source-library-list">
+          @forelse($sources as $source)
+            <button class="studio-source-library-item" type="button" data-source-library-choice="{{ $source->id }}" data-source-type="{{ $source->type }}" data-source-name="{{ $source->name }}"><span><strong>{{ $source->name }}</strong><small>{{ $source->type === 'video' ? 'ویدیوی منبع؛ استخراج صدا' : 'فایل موزیک' }} · {{ $source->used_count }} بار استفاده</small></span><i class="fa-solid fa-chevron-left"></i></button>
+          @empty
+            <div class="studio-empty">کتابخانه هنوز منبعی ندارد. از همین صفحه یک فایل صدا یا ویدیو اضافه کن.</div>
+          @endforelse
+        </div>
+      </div>
+    </div>
+
     <div class="studio-modal studio-job-edit-modal" id="job-edit-modal" role="dialog" aria-modal="true" aria-labelledby="job-edit-title">
       <div class="studio-modal-card">
         <div class="studio-modal-head"><div class="studio-modal-title" id="job-edit-title">ویرایش کامل سفارش</div><button class="studio-modal-close" type="button" id="close-job-edit" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div>
@@ -281,6 +313,9 @@
             <div class="studio-field full"><label for="job-edit-instagram-prompt">پرامپت اینستاگرام</label><textarea class="studio-textarea" id="job-edit-instagram-prompt" name="instagram_prompt" rows="4"></textarea></div>
             <div class="studio-field full"><label for="job-edit-telegram-prompt">پرامپت تلگرام</label><textarea class="studio-textarea" id="job-edit-telegram-prompt" name="telegram_prompt" rows="4"></textarea></div>
             <div class="studio-field full"><label for="job-edit-telegram-caption">کپشن تلگرام</label><textarea class="studio-textarea" id="job-edit-telegram-caption" name="telegram_caption_text" rows="4"></textarea></div>
+            <div class="studio-field"><label>خروجی‌ها</label><div class="studio-platform-controls"><label class="studio-platform-toggle"><span>اینستاگرام</span><input type="hidden" name="instagram_enabled" value="0"><input id="job-edit-instagram-enabled" type="checkbox" name="instagram_enabled" value="1"></label><label class="studio-platform-toggle"><span>تلگرام</span><input type="hidden" name="telegram_enabled" value="0"><input id="job-edit-telegram-enabled" type="checkbox" name="telegram_enabled" value="1"></label></div></div>
+            <div class="studio-field"><label>ظاهر ویدیو</label><div class="studio-choice-row"><select class="studio-select" id="job-edit-transition" name="transition"><option value="cut">برش سریع</option><option value="fade">فید</option><option value="blur">بلور</option><option value="slide">لغزش</option></select><input class="studio-input" id="job-edit-transition-duration" name="transition_duration" type="number" min="0.2" max="1.5" step="0.1" placeholder="مدت ترنزیشن"></div></div>
+            <div class="studio-field full"><label class="studio-platform-toggle"><span>دعوت به اقدام در پایان</span><input type="hidden" name="cta_enabled" value="0"><input id="job-edit-cta-enabled" type="checkbox" name="cta_enabled" value="1"></label><input class="studio-input" id="job-edit-cta-text" name="cta_text" placeholder="متن دعوت به اقدام"></div>
           </div>
           <div class="studio-telegram-buttons" style="margin:0"><div class="studio-telegram-buttons-head"><div class="studio-telegram-buttons-title"><i class="fa-solid fa-link"></i> دکمه‌های تلگرام</div><label class="studio-check"><input type="hidden" name="telegram_buttons_enabled" value="0"><input type="checkbox" id="job-edit-buttons-enabled" name="telegram_buttons_enabled" value="1"> فعال</label></div><div class="studio-telegram-button-list" id="job-edit-button-list"></div><button class="studio-btn studio-telegram-button-add" type="button" id="job-edit-add-button"><i class="fa-solid fa-plus"></i> افزودن دکمه</button></div>
         </form>
@@ -289,7 +324,7 @@
     </div>
 
     <section class="studio-card studio-panel" id="studio-queue-panel" style="margin-bottom:16px">
-      <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف ساخت ویدیو</div><div class="studio-panel-meta">آخرین ۲۰ سفارش</div></div>
+      <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف و سفارش‌های ساخت</div><div class="studio-panel-meta">آخرین ۲۰ سفارش · جلوگیری از تولید تکراری</div></div>
       @if($jobs->isNotEmpty())
         <form id="studio-bulk-form" method="POST" action="{{ route('admin.video-studio.jobs.bulk') }}">
           @csrf
@@ -319,6 +354,13 @@
                 'telegram_prompt' => data_get($job->payload, 'telegram_prompt', ''),
                 'telegram_caption_text' => data_get($job->payload, 'telegram_caption_text', ''),
                 'telegram_buttons' => data_get($job->payload, 'telegram_buttons', []),
+                'instagram_enabled' => (bool) data_get($job->payload, 'instagram_enabled', true),
+                'telegram_enabled' => (bool) data_get($job->payload, 'telegram_enabled', true),
+                'cta_enabled' => (bool) data_get($job->payload, 'cta_enabled', true),
+                'cta_text' => data_get($job->payload, 'cta_text', ''),
+                'cta_background' => data_get($job->payload, 'cta_background', 'primary'),
+                'transition' => data_get($job->payload, 'transition', 'cut'),
+                'transition_duration' => data_get($job->payload, 'transition_duration', 0.5),
               ];
             @endphp
             <div class="studio-job">
@@ -383,7 +425,7 @@
     </div>
 
     <section class="studio-card studio-panel" id="studio-latest-videos-panel" style="margin-bottom:16px">
-      <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-clock-rotate-left"></i> آخرین خروجی‌های ویدیو</div><div class="studio-panel-meta">دادهٔ زنده از دیتابیس</div></div>
+      <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-chart-column"></i> گزارش خروجی و آزمایش‌ها</div><div class="studio-panel-meta">آخرین خروجی‌ها و آزمایش‌های محصول</div></div>
       @if($latestVideos->isNotEmpty())
         <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>وضعیت</th><th>مدت</th><th>کیفیت</th><th>تاریخ</th></tr></thead><tbody>
           @foreach($latestVideos as $video)
@@ -396,6 +438,19 @@
         </tbody></table></div>
       @else
         <div class="studio-empty">هنوز خروجی ویدیویی در دیتابیس ثبت نشده است. ثبت‌های پایپ‌لاین تلگرام فعلاً در شیت گزارش ذخیره می‌شوند.</div>
+      @endif
+      <div class="studio-panel-head" style="margin-top:18px"><div class="studio-panel-title"><i class="fa-solid fa-vials"></i> آخرین آزمایش‌های محصول</div><a class="studio-panel-meta" href="{{ route('admin.product-tests.history') }}">مشاهده همه ←</a></div>
+      @if($latestTests->isNotEmpty())
+        <div class="studio-table-wrap"><table class="studio-table"><thead><tr><th>محصول</th><th>مدل</th><th>وضعیت</th><th>زمان اجرا</th><th>تاریخ</th></tr></thead><tbody>
+          @foreach($latestTests as $test)
+            @php
+              $testStatus = (string) $test->status;
+            @endphp
+            <tr><td class="studio-product">{{ $test->product?->name_fa ?? 'پیش‌نویس محصول' }}</td><td>{{ $test->model_id }}</td><td><span class="studio-badge {{ $testStatus === 'completed' ? 'success' : ($testStatus === 'failed' ? 'danger' : 'warning') }}">{{ $testStatus === 'completed' ? 'موفق' : ($testStatus === 'failed' ? 'ناموفق' : 'در حال اجرا') }}</span></td><td>{{ $test->duration_ms ? number_format($test->duration_ms / 1000, 1) . ' ثانیه' : '—' }}</td><td>{{ \App\Support\Jalali::formatNumeric($test->created_at) }}</td></tr>
+          @endforeach
+        </tbody></table></div>
+      @else
+        <div class="studio-empty">هنوز آزمایش محصولی ثبت نشده است.</div>
       @endif
     </section>
 
@@ -425,6 +480,8 @@
   const sourceUrlField = document.getElementById('source-url-field');
   const sourceUrl = document.getElementById('source-url');
   const sourceLibrary = document.getElementById('source-library');
+  const sourceFile = document.getElementById('source-file');
+  const sourceLibraryModal = document.getElementById('source-library-modal');
   const keywordToggle = document.getElementById('auto-keyword-toggle');
   const keywordSettings = document.getElementById('keyword-settings');
   const hookToggle = document.querySelector('input[name="auto_generate_hook"][type="checkbox"]');
@@ -456,17 +513,28 @@
   function updateStudioControls() {
     const selected = document.querySelector('input[name="source_mode"]:checked')?.value || 'auto';
     if (sourceHelp) sourceHelp.textContent = sourceDescriptions[selected] || sourceDescriptions.auto;
-    if (sourceUrlField) sourceUrlField.style.display = selected === 'auto' ? 'none' : 'grid';
+    if (sourceUrlField) sourceUrlField.style.display = 'grid';
     if (sourceUrl) sourceUrl.placeholder = selected === 'video' ? 'لینک ویدیوی منبع' : 'لینک فایل صوتی یا موزیک';
     if (hookManual) hookManual.classList.toggle('is-hidden', !!hookToggle?.checked);
     if (captionManual) captionManual.classList.toggle('is-hidden', !!captionToggle?.checked);
     if (keywordSettings) keywordSettings.classList.toggle('is-hidden', !!keywordToggle?.checked);
   }
   document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', updateStudioControls));
-  sourceLibrary?.addEventListener('change', () => {
-    const type = sourceLibrary.options[sourceLibrary.selectedIndex]?.dataset.sourceType;
-    if (type) document.querySelector(`input[name="source_mode"][value="${type}"]`)?.click();
-  });
+  let selectingLibrarySource = false;
+  document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', () => {
+    if (input.value !== 'auto' && !selectingLibrarySource) sourceFile?.click();
+  }));
+  document.getElementById('open-source-library')?.addEventListener('click', () => sourceLibraryModal?.classList.add('is-open'));
+  document.getElementById('close-source-library')?.addEventListener('click', () => sourceLibraryModal?.classList.remove('is-open'));
+  sourceLibraryModal?.addEventListener('click', (event) => { if (event.target === sourceLibraryModal) sourceLibraryModal.classList.remove('is-open'); });
+  sourceLibraryModal?.querySelectorAll('[data-source-library-choice]').forEach((choice) => choice.addEventListener('click', () => {
+    if (sourceLibrary) sourceLibrary.value = choice.dataset.sourceLibraryChoice || '';
+    selectingLibrarySource = true;
+    document.querySelector(`input[name="source_mode"][value="${choice.dataset.sourceType}"]`)?.click();
+    selectingLibrarySource = false;
+    const help = document.getElementById('source-url-help'); if (help) help.textContent = 'منبع انتخاب‌شده: ' + (choice.dataset.sourceName || 'کتابخانه');
+    sourceLibraryModal.classList.remove('is-open');
+  }));
   keywordToggle?.addEventListener('change', updateStudioControls);
   hookToggle?.addEventListener('change', updateStudioControls);
   captionToggle?.addEventListener('change', updateStudioControls);
@@ -478,6 +546,9 @@
     if (method === 'POST' && arguments[2] === true) {
       const sourceMode = document.querySelector('input[name="source_mode"]:checked')?.value || 'auto';
       const sourceFile = studioForm.querySelector('input[name="source_file"]');
+      const instagramEnabled = studioForm.querySelector('input[name="instagram_enabled"][type="checkbox"]')?.checked !== false;
+      const telegramEnabled = studioForm.querySelector('input[name="telegram_enabled"][type="checkbox"]')?.checked !== false;
+      if (!instagramEnabled && !telegramEnabled) { window.alert('حداقل یکی از خروجی‌های اینستاگرام یا تلگرام را روشن کن.'); return; }
       const hasLibrary = !!sourceLibrary?.value;
       const hasLink = !!sourceUrl?.value?.trim();
       const hasFile = !!sourceFile?.files?.length;
@@ -597,7 +668,8 @@
     if (!jobEditModal || !jobEditForm || !config) return;
     jobEditForm.action = '{{ route('admin.video-studio.jobs.settings.update', ['job' => '__JOB__']) }}'.replace('__JOB__', encodeURIComponent(config.job_id));
     const set = (id, value) => { const field = document.getElementById(id); if (field) field.value = value ?? ''; };
-    set('job-edit-product', config.product_id); set('job-edit-source-mode', config.source_mode || 'auto'); set('job-edit-source-library', config.source_library_id); set('job-edit-source-url', config.source_url); set('job-edit-images', config.selected_images || ''); set('job-edit-ratio', config.aspect_ratio || '9:16'); set('job-edit-font', config.font_family || 'B_Yekan'); set('job-edit-hook', config.hook_text); set('job-edit-caption', config.caption_text); set('job-edit-keyword', config.keyword); set('job-edit-dm', config.dm_template); set('job-edit-instagram-prompt', config.instagram_prompt); set('job-edit-telegram-prompt', config.telegram_prompt); set('job-edit-telegram-caption', config.telegram_caption_text);
+    set('job-edit-product', config.product_id); set('job-edit-source-mode', config.source_mode || 'auto'); set('job-edit-source-library', config.source_library_id); set('job-edit-source-url', config.source_url); set('job-edit-images', config.selected_images || ''); set('job-edit-ratio', config.aspect_ratio || '9:16'); set('job-edit-font', config.font_family || 'B_Yekan'); set('job-edit-hook', config.hook_text); set('job-edit-caption', config.caption_text); set('job-edit-keyword', config.keyword); set('job-edit-dm', config.dm_template); set('job-edit-instagram-prompt', config.instagram_prompt); set('job-edit-telegram-prompt', config.telegram_prompt); set('job-edit-telegram-caption', config.telegram_caption_text); set('job-edit-transition', config.transition || 'cut'); set('job-edit-transition-duration', config.transition_duration || 0.5); set('job-edit-cta-text', config.cta_text || '');
+    const setChecked = (id, value) => { const field = document.getElementById(id); if (field) field.checked = value !== false; }; setChecked('job-edit-instagram-enabled', config.instagram_enabled); setChecked('job-edit-telegram-enabled', config.telegram_enabled); setChecked('job-edit-cta-enabled', config.cta_enabled);
     if (jobEditButtonsEnabled) jobEditButtonsEnabled.checked = Array.isArray(config.telegram_buttons) && config.telegram_buttons.length > 0;
     if (jobEditButtonList) { jobEditButtonList.replaceChildren(); const buttons = Array.isArray(config.telegram_buttons) && config.telegram_buttons.length ? config.telegram_buttons : [{}]; buttons.forEach((button) => jobEditButtonList.appendChild(jobEditButtonRow(button))); }
     jobEditModal.classList.add('is-open');
@@ -610,8 +682,9 @@
   jobEditButtonList?.addEventListener('click', (event) => { const remove = event.target.closest('[data-remove-job-button]'); if (remove) remove.closest('[data-telegram-button-row]')?.remove(); });
   const previewButton = document.getElementById('generate-preview');
   const previewStatus = document.getElementById('preview-status');
-  const previewHidden = { hook: document.getElementById('preview-hook'), caption: document.getElementById('preview-caption'), keyword: document.getElementById('preview-keyword') };
-  const previewToggles = { hook: hookToggle, caption: captionToggle, keyword: keywordToggle };
+  const previewHidden = { hook: document.getElementById('preview-hook'), caption: document.getElementById('preview-caption'), keyword: document.getElementById('preview-keyword'), cta: document.getElementById('cta-text') };
+  const ctaToggle = document.getElementById('cta-enabled');
+  const previewToggles = { hook: hookToggle, caption: captionToggle, keyword: keywordToggle, cta: ctaToggle };
   let telegramCaptionHolder = document.querySelector('[data-telegram-caption-options]');
   let telegramCaptionToggle = document.getElementById('telegram-auto-caption');
   const telegramNote = document.querySelector('.studio-telegram-preview-note');
@@ -692,10 +765,11 @@
   async function requestPreview(channel = 'instagram', kind = null) {
     if (!studioForm) return;
     const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
-    if (!productId) { if (previewStatus) previewStatus.textContent = 'ابتدا یک محصول انتخاب کن.'; return; }
+    if (!productId) { window.alert('ابتدا یک محصول انتخاب کن، سپس ساخت مجدد را بزن.'); if (previewStatus) previewStatus.textContent = 'ابتدا یک محصول انتخاب کن.'; return; }
     if (promptFallback && instagramPrompt) promptFallback.value = instagramPrompt.value;
-    if (kind) renderLoadingOptions(kind); else ['hook', 'caption', 'keyword'].forEach((item) => renderLoadingOptions(item));
-    if (channel === 'telegram' && telegramCaptionHolder) { telegramCaptionHolder.dataset.hasOptions = '0'; telegramCaptionHolder.replaceChildren(); telegramCaptionHolder.innerHTML = '<div class="studio-preview-status"><i class="fa-solid fa-spinner fa-spin"></i> در حال تولید دو کپشن تلگرام...</div>'; }
+    if (channel === 'telegram') { renderTelegramLoadingOptions(); }
+    else if (kind) renderLoadingOptions(kind); else ['hook', 'caption', 'keyword', 'cta'].forEach((item) => renderLoadingOptions(item));
+    if (channel === 'telegram' && telegramCaptionHolder) { telegramCaptionHolder.dataset.hasOptions = '0'; telegramCaptionHolder.innerHTML = '<div class="studio-preview-status"><i class="fa-solid fa-spinner fa-spin"></i> در حال تولید دو کپشن تلگرام...</div>'; }
     if (previewStatus) previewStatus.textContent = 'در حال دریافت پیشنهادهای تازه از هوش مصنوعی...';
     const formPayload = new FormData(studioForm); formPayload.delete('_method'); formPayload.set('product_id', productId); formPayload.set('channel', channel);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
@@ -704,21 +778,29 @@
     if (!response.ok) throw new Error((payload.message ? payload.message + ' ' : '') + '(کد پاسخ ' + response.status + ')');
     if (channel === 'telegram') { renderTelegramCaptionOptions(payload.caption_options || payload.caption || payload.telegram_caption_options || []); }
     else if (kind) renderPreviewTabs(kind, payload[kind + '_options']);
-    else { renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options); }
+    else { renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options); renderPreviewTabs('cta', payload.cta_options); }
     if (previewStatus) previewStatus.textContent = 'پیشنهادهای تازه آماده شد؛ گزینهٔ انتخاب‌شده قابل استفاده در سفارش ساخت است.';
   }
-  async function generatePreview() { if (!studioForm || !previewButton) return; previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; try { await requestPreview('instagram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; } finally { previewButton.disabled = false; previewButton.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> ساخت ۳ پیشنهاد'; } }
+  async function generatePreview() { if (!studioForm) return; if (previewButton) { previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; } try { await requestPreview('instagram'); await requestPreview('telegram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'تولید پیش‌نمایش ناموفق بود.'; } finally { if (previewButton) { previewButton.disabled = false; previewButton.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> تولید خودکار محتوا'; } } }
   async function regenerateKind(kind) { const button = document.querySelector('[data-regenerate-preview="' + kind + '"]'); if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; } try { await requestPreview('instagram', kind); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'ساخت مجدد ناموفق بود.'; } finally { if (button) { button.disabled = false; button.textContent = 'ساخت مجدد'; } } }
   previewButton?.addEventListener('click', generatePreview);
   document.querySelectorAll('[data-regenerate-preview]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); regenerateKind(button.dataset.regeneratePreview); }));
   document.querySelector('[data-regenerate-telegram]')?.addEventListener('click', async (event) => { event.preventDefault(); const button = event.currentTarget; button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await requestPreview('telegram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'ساخت کپشن تلگرام ناموفق بود.'; } finally { button.disabled = false; button.textContent = 'ساخت مجدد'; } });
   Object.values(previewToggles).forEach((toggle) => toggle?.addEventListener('change', updatePreviewEditability));
   telegramCaptionToggle?.addEventListener('change', () => { updatePreviewEditability(); updateTelegramPreview(); });
-  ['hook', 'caption', 'keyword'].forEach((kind) => renderLoadingOptions(kind, 'بعد از انتخاب محصول، پیشنهادها اینجا نمایش داده می‌شوند.'));
+  ['hook', 'caption', 'keyword', 'cta'].forEach((kind) => renderLoadingOptions(kind, 'بعد از انتخاب محصول، پیشنهادها اینجا نمایش داده می‌شوند.'));
   renderTelegramLoadingOptions();
   const originalSubmitStudioForm = submitStudioForm;
   window.submitStudioForm = function(action, method) { Object.keys(previewHidden).forEach(syncPreviewSelection); originalSubmitStudioForm(action, method, arguments[2]); };
-  if (new URLSearchParams(window.location.search).get('preview') === '1' && previewButton) setTimeout(generatePreview, 450);
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') productPicker?.classList.remove('is-open'); });
+  if (studioProduct?.value || new URLSearchParams(window.location.search).get('product_id')) setTimeout(generatePreview, 450);
+  document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => tab.addEventListener('click', () => {
+    const step = tab.dataset.studioStepTab;
+    document.querySelectorAll('[data-studio-step-tab]').forEach((item) => item.classList.toggle('is-active', item === tab));
+    document.querySelectorAll('[data-studio-step]').forEach((panel) => panel.classList.toggle('is-hidden', panel.dataset.studioStep !== step));
+    if (step === '3') updateTelegramPreview();
+  }));
+  const transitionDuration = document.getElementById('transition-duration');
+  transitionDuration?.addEventListener('input', () => { const label = document.getElementById('transition-duration-value'); if (label) label.textContent = String(transitionDuration.value).replace('.', '٫'); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { productPicker?.classList.remove('is-open'); sourceLibraryModal?.classList.remove('is-open'); } });
 </script>
 @endsection

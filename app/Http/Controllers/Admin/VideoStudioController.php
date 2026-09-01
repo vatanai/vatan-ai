@@ -364,6 +364,10 @@ class VideoStudioController extends Controller
             $hooks = $normalize('hook');
             $captions = $normalize('caption');
             $keywords = $normalize('keyword');
+            $ctas = $normalize('cta');
+            if (count(array_filter($ctas)) === 0) {
+                $ctas = array_fill(0, 3, 'برای دیدن جزئیات این محصول، کپشن را بخوان و کلمهٔ کلیدی را کامنت کن.');
+            }
             if (count(array_filter(array_merge($hooks, $captions, $keywords))) === 0) {
                 return response()->json(['message' => 'پیشنهادی از مدل دریافت نشد.'], 502);
             }
@@ -372,9 +376,11 @@ class VideoStudioController extends Controller
                 'hook_options' => $hooks,
                 'caption_options' => $captions,
                 'keyword_options' => $keywords,
+                'cta_options' => $ctas,
                 'hook' => $hooks[0] ?? '',
                 'caption' => $captions[0] ?? '',
                 'keyword' => $keywords[0] ?? '',
+                'cta' => $ctas[0] ?? '',
                 'dm_template' => trim((string) ($options['dm_template'] ?? '')),
             ]);
         } catch (ValidationException $e) {
@@ -457,6 +463,13 @@ class VideoStudioController extends Controller
             'selected_images' => ['nullable', 'array', 'max:10'],
             'selected_images.*' => ['string', 'max:2048'],
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
+            'instagram_enabled' => ['nullable', 'boolean'],
+            'telegram_enabled' => ['nullable', 'boolean'],
+            'cta_enabled' => ['nullable', 'boolean'],
+            'cta_text' => ['nullable', 'string', 'max:1000'],
+            'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
+            'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
+            'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
             'font_family' => ['required', Schema::hasTable('video_studio_fonts')
                 ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
                 : Rule::in(['B_Yekan'])],
@@ -555,6 +568,11 @@ class VideoStudioController extends Controller
             $autoKeyword = false;
         }
         $buildNow = $request->boolean('build_now');
+        $instagramEnabled = $request->has('instagram_enabled') ? $request->boolean('instagram_enabled') : true;
+        $telegramEnabled = $request->has('telegram_enabled') ? $request->boolean('telegram_enabled') : true;
+        $platformError = (!$instagramEnabled && !$telegramEnabled)
+            ? 'حداقل یکی از خروجی‌های اینستاگرام یا تلگرام باید روشن باشد.'
+            : null;
         if ($autoHook) $data['hook_text'] = null;
         if ($autoCaption) $data['caption_text'] = null;
         if ($autoKeyword) $data['keyword'] = null;
@@ -580,8 +598,8 @@ class VideoStudioController extends Controller
             'admin_id' => auth('admin')->id(),
             // سفارش ساخت بدون منبع نباید در حالت «در حال ساخت» معلق بماند؛
             // همان ابتدا به‌عنوان ناموفق ثبت می‌شود تا دلیل آن در صف دیده شود.
-            'status' => $buildNow && $sourceError ? 'failed' : 'queued',
-            'error_message' => $buildNow && $sourceError ? $sourceError : null,
+            'status' => $buildNow && ($sourceError || $platformError) ? 'failed' : 'queued',
+            'error_message' => $buildNow ? ($sourceError ?: $platformError) : null,
             'payload' => [
                 'created_from' => 'video_studio_dashboard',
                 'auto_generate_hook' => $autoHook,
@@ -600,16 +618,23 @@ class VideoStudioController extends Controller
                 'build_now' => $buildNow,
                 'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
                 'preview_selected' => filled($data['preview_hook'] ?? null) || filled($data['preview_caption'] ?? null) || filled($data['preview_keyword'] ?? null),
+                'instagram_enabled' => $instagramEnabled,
+                'telegram_enabled' => $telegramEnabled,
+                'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : true,
+                'cta_text' => (string) ($data['cta_text'] ?? ''),
+                'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+                'transition' => (string) ($data['transition'] ?? 'cut'),
+                'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
             ],
         ]));
 
-        if ($buildNow && !$sourceError) {
+        if ($buildNow && !$sourceError && !$platformError) {
             $this->dispatchJobToWorkflow($job);
         }
 
         return redirect()->route('admin.products.dashboard', ['fresh' => 1])
             ->with('success', $buildNow
-                ? ($sourceError ? 'سفارش ثبت شد اما به‌دلیل نبودن منبع معتبر ناموفق علامت خورد؛ منبع را اصلاح و ساخت مجدد را بزنید.' : ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد.'))
+                ? (($sourceError || $platformError) ? 'سفارش ثبت شد اما پیش از ساخت ناموفق علامت خورد؛ تنظیمات را اصلاح و ساخت مجدد را بزنید.' : ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد.'))
                 : 'تنظیمات در لیست ساخت ذخیره شد و هنوز ویدیو ساخته نمی‌شود.');
     }
 
@@ -627,6 +652,13 @@ class VideoStudioController extends Controller
             'source_library_id' => ['nullable', 'integer', 'exists:video_studio_sources,id'],
             'selected_images_text' => ['nullable', 'string', 'max:20000'],
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
+            'instagram_enabled' => ['nullable', 'boolean'],
+            'telegram_enabled' => ['nullable', 'boolean'],
+            'cta_enabled' => ['nullable', 'boolean'],
+            'cta_text' => ['nullable', 'string', 'max:1000'],
+            'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
+            'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
+            'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
             'font_family' => ['required', Schema::hasTable('video_studio_fonts')
                 ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
                 : Rule::in(['B_Yekan'])],
@@ -687,12 +719,24 @@ class VideoStudioController extends Controller
         $buttons = $this->normalizeTelegramButtons($request);
         $payload = is_array($job->payload) ? $job->payload : [];
         $buildNow = $request->boolean('build_now');
+        $instagramEnabled = $request->has('instagram_enabled') ? $request->boolean('instagram_enabled') : (bool) data_get($payload, 'instagram_enabled', true);
+        $telegramEnabled = $request->has('telegram_enabled') ? $request->boolean('telegram_enabled') : (bool) data_get($payload, 'telegram_enabled', true);
+        $platformError = (!$instagramEnabled && !$telegramEnabled)
+            ? 'حداقل یکی از خروجی‌های اینستاگرام یا تلگرام باید روشن باشد.'
+            : null;
         $payload = array_merge($payload, [
             'font_family' => (string) $data['font_family'],
             'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
             'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
             'telegram_caption_text' => (string) ($data['telegram_caption_text'] ?? ''),
             'telegram_buttons' => $buttons,
+            'instagram_enabled' => $instagramEnabled,
+            'telegram_enabled' => $telegramEnabled,
+            'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : (bool) data_get($payload, 'cta_enabled', true),
+            'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
+            'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
+            'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
+            'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
             'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
             'source_fingerprint' => hash('sha256', json_encode([
                 'product_id' => (int) $data['product_id'],
@@ -703,23 +747,23 @@ class VideoStudioController extends Controller
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
             'build_now' => $buildNow,
         ]);
-        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now']);
+        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['transition'], $data['transition_duration']);
         $data['selected_images'] = $selectedImages ?: (array) $job->selected_images;
         $data['payload'] = $payload;
         if ($buildNow) {
-            $data['status'] = $sourceError ? 'failed' : 'queued';
-            $data['error_message'] = $sourceError;
+            $data['status'] = ($sourceError || $platformError) ? 'failed' : 'queued';
+            $data['error_message'] = $sourceError ?: $platformError;
             $data['started_at'] = null;
             $data['completed_at'] = null;
             $data['video_url'] = null;
         }
         $job->fill($data)->save();
-        if ($buildNow && !$sourceError) {
+        if ($buildNow && !$sourceError && !$platformError) {
             $this->dispatchJobToWorkflow($job->fresh());
         }
 
-        return back()->with($sourceError && $buildNow ? 'warning' : 'success', $sourceError && $buildNow
-            ? 'تنظیمات ذخیره شد اما به‌دلیل نبودن منبع معتبر، سفارش ناموفق ثبت شد.'
+        return back()->with(($sourceError || $platformError) && $buildNow ? 'warning' : 'success', ($sourceError || $platformError) && $buildNow
+            ? 'تنظیمات ذخیره شد اما پیش از ساخت، اعتبارسنجی ناموفق بود.'
             : ($buildNow ? 'تنظیمات ذخیره و ساخت مجدد آغاز شد.' : 'تنظیمات سفارش ذخیره شد.'));
     }
 
@@ -891,6 +935,13 @@ class VideoStudioController extends Controller
                 'telegram_prompt' => (string) ($payload['telegram_prompt'] ?? ''),
                 'telegram_caption_text' => (string) ($payload['telegram_caption_text'] ?? ''),
                 'telegram_buttons' => is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
+                'instagram_enabled' => (bool) ($payload['instagram_enabled'] ?? true),
+                'telegram_enabled' => (bool) ($payload['telegram_enabled'] ?? true),
+                'cta_enabled' => (bool) ($payload['cta_enabled'] ?? true),
+                'cta_text' => (string) ($payload['cta_text'] ?? ''),
+                'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
+                'transition' => (string) ($payload['transition'] ?? 'cut'),
+                'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
                 'telegram_topics' => [
                     'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
                     'instagram_thread_id' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', ''),
