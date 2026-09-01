@@ -45,8 +45,16 @@
   .studio-modal-prompt .studio-modal-card{width:min(860px,100%)}.studio-prompt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px;overflow:auto}.studio-prompt-channel{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--input-bg)}.studio-prompt-channel h4{font-size:12px;color:var(--text-h);margin:0 0 8px;display:flex;align-items:center;gap:7px}.studio-prompt-channel h4 i{color:var(--primary)}.studio-telegram-buttons{margin:0 16px 16px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}.studio-telegram-buttons-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.studio-telegram-buttons-title{font-size:12px;font-weight:900;color:var(--text-h)}.studio-telegram-button-list{display:grid;gap:7px}.studio-telegram-button-row{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(180px,1.4fr) 120px 30px;gap:7px;align-items:center}.studio-telegram-button-row .studio-input,.studio-telegram-button-row .studio-select{min-width:0}.studio-telegram-button-remove{width:30px;height:30px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--danger);cursor:pointer}.studio-telegram-button-add{margin-top:8px}.studio-telegram-buttons-help{display:block;font-size:10px;color:var(--text-soft);margin-top:8px}
   .studio-settings{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:16px}.studio-form{display:grid;gap:13px}.studio-field{display:grid;gap:6px}.studio-field label{font-size:11px;font-weight:800;color:var(--text-h)}.studio-field small{font-size:10px;color:var(--text-soft)}.studio-input,.studio-select,.studio-textarea{width:100%;border:1px solid var(--border);border-radius:9px;background:var(--input-bg);color:var(--text-main);font:inherit;font-size:11px;padding:10px 11px;outline:0}.studio-input:focus,.studio-select:focus,.studio-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-l)}.studio-textarea{min-height:82px;resize:vertical}.studio-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.studio-option{position:relative}.studio-option input{position:absolute;opacity:0;pointer-events:none}.studio-option label{display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:center;min-height:64px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);padding:8px;text-align:center;cursor:pointer;font-size:10px;color:var(--text-soft);transition:.2s}.studio-option label i{font-size:15px;color:var(--primary)}.studio-option input:checked+label{border-color:var(--primary);background:var(--primary-l);color:var(--text-h);box-shadow:inset 0 0 0 1px var(--primary)}.studio-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-check{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--input-bg);font-size:10px;color:var(--text-main);cursor:pointer}.studio-check input{accent-color:var(--primary);width:15px;height:15px}.studio-alert{padding:10px 12px;border-radius:9px;background:var(--success-l);color:var(--success);font-size:11px;font-weight:800;margin-bottom:15px}.studio-error{padding:8px 10px;border-radius:8px;background:var(--danger-l);color:var(--danger);font-size:10px}.studio-conditional.is-hidden{display:none}.studio-hook-list{display:grid;gap:8px;max-height:390px;overflow:auto}.studio-hook{padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg)}.studio-hook-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.studio-hook-title{font-size:11px;font-weight:900;color:var(--text-h)}.studio-hook-text{font-size:11px;color:var(--text-main);line-height:1.8;margin-top:6px}.studio-hook-tags{font-size:9px;color:var(--text-soft);margin-top:5px}.studio-link-btn{border:0;background:transparent;color:var(--danger);cursor:pointer;font-size:10px;padding:3px}
   .studio-conditional.is-hidden{display:none}.studio-images{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.studio-image-choice{position:relative}.studio-image-choice input{position:absolute;opacity:0}.studio-image-choice label{display:block;aspect-ratio:1;border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:pointer;background:var(--input-bg);transition:.2s}.studio-image-choice img{width:100%;height:100%;object-fit:cover}.studio-image-choice input:checked+label{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-l)}.studio-image-choice input:checked+label:after{content:'✓';position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--primary);color:var(--accent);font-size:12px;font-weight:900}.studio-queue{display:grid;gap:8px}.studio-job{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:12px;padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg)}.studio-job-main{min-width:0}.studio-job-title{font-size:11px;font-weight:900;color:var(--text-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.studio-job-meta{font-size:10px;color:var(--text-soft);margin-top:4px}.studio-job-status{font-size:10px;font-weight:800}.studio-job-status.queued{color:var(--warning)}.studio-job-status.processing{color:var(--info)}.studio-job-status.completed{color:var(--success)}.studio-job-status.failed{color:var(--danger)}.studio-job-actions{display:flex;align-items:center;gap:4px}.studio-job-edit-toggle{border:1px solid var(--border);background:var(--card-bg);color:var(--text-soft);border-radius:8px;padding:5px 8px;font-size:10px;cursor:pointer}.studio-job-edit-toggle:hover{border-color:var(--primary);color:var(--primary)}.studio-job-editor{grid-column:1/-1;display:grid;gap:8px;padding:10px;border-top:1px solid var(--divider);margin-top:2px}.studio-job-editor.is-hidden{display:none}.studio-job-editor textarea{min-height:66px}.studio-job-editor small{font-size:10px;color:var(--text-soft)}
+  .studio-job-edit-modal .studio-modal-card{width:min(900px,100%);max-height:92vh;overflow:auto}
+  .studio-job-edit-form{display:grid;gap:13px;padding:16px;overflow:auto}
+  .studio-job-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .studio-job-edit-grid .studio-field.full{grid-column:1/-1}
+  .studio-job-edit-actions{display:flex;justify-content:flex-start;gap:8px;padding:13px 16px;border-top:1px solid var(--divider);position:sticky;bottom:0;background:var(--card-bg)}
+  .studio-job-edit-actions button{cursor:pointer}
+  #job-edit-button-list .studio-telegram-button-row{grid-template-columns:minmax(110px,.8fr) minmax(160px,1.4fr) 110px 100px 30px}
+  .studio-job-edit-form .studio-textarea{min-height:72px}
   @media(max-width:1100px){.studio-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.studio-layout,.studio-settings{grid-template-columns:1fr}}
-  @media(max-width:650px){.video-studio-page{padding:15px}.studio-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.studio-kpi{min-height:108px;padding:12px}.studio-kpi-value{font-size:20px}.studio-health{grid-template-columns:1fr}.studio-prompt-grid{grid-template-columns:1fr}.video-studio-title{font-size:19px}}
+  @media(max-width:650px){.video-studio-page{padding:15px}.studio-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.studio-kpi{min-height:108px;padding:12px}.studio-kpi-value{font-size:20px}.studio-health{grid-template-columns:1fr}.studio-prompt-grid{grid-template-columns:1fr}.video-studio-title{font-size:19px}.studio-job-edit-grid{grid-template-columns:1fr}.studio-job-edit-grid .studio-field.full{grid-column:auto}}
   .studio-preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.studio-preview{display:grid;gap:12px;margin-top:9px;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--input-bg)}.studio-preview-block{display:grid;gap:7px}.studio-preview-label{font-size:10px;font-weight:900;color:var(--text-h)}.studio-preview-tabs{display:flex;gap:6px;flex-wrap:wrap}.studio-preview-tab{border:1px solid var(--border);background:var(--card-bg);color:var(--text-main);border-radius:8px;padding:6px 9px;font-size:10px;cursor:pointer;text-align:right}.studio-preview-tab.is-selected{border-color:var(--primary);background:var(--primary-l);color:var(--text-h);box-shadow:inset 0 0 0 1px var(--primary)}.studio-preview-tab i{color:var(--success);margin-left:4px}.studio-preview-status{font-size:10px;color:var(--text-soft)}
   @font-face{font-family:'B_Yekan';src:url('{{ asset('fonts/B_Yekan.ttf') }}') format('truetype');font-display:swap}
   @font-face{font-family:'Modam';src:url('{{ asset('fonts/video/Modam-Medium.ttf') }}') format('truetype');font-display:swap}
@@ -250,6 +258,34 @@
       </div>
     </div>
 
+    <div class="studio-modal studio-job-edit-modal" id="job-edit-modal" role="dialog" aria-modal="true" aria-labelledby="job-edit-title">
+      <div class="studio-modal-card">
+        <div class="studio-modal-head"><div class="studio-modal-title" id="job-edit-title">ویرایش کامل سفارش</div><button class="studio-modal-close" type="button" id="close-job-edit" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div>
+        <form id="job-edit-form" class="studio-job-edit-form" method="POST" enctype="multipart/form-data">
+          @csrf
+          <input type="hidden" name="_method" value="PATCH">
+          <div class="studio-job-edit-grid">
+            <div class="studio-field"><label for="job-edit-product">محصول</label><select class="studio-select" id="job-edit-product" name="product_id" required>@foreach($products as $product)<option value="{{ $product->id }}">{{ $product->name_fa }} · #{{ $product->id }}</option>@endforeach</select></div>
+            <div class="studio-field"><label for="job-edit-source-mode">نوع منبع</label><select class="studio-select" id="job-edit-source-mode" name="source_mode" required><option value="auto">خودکار از کتابخانه</option><option value="music">فایل موزیک</option><option value="video">ویدیوی منبع</option><option value="upload">فایل مستقیم</option></select></div>
+            <div class="studio-field"><label for="job-edit-source-library">منبع کتابخانه</label><select class="studio-select" id="job-edit-source-library" name="source_library_id"><option value="">بدون انتخاب</option>@foreach($sources as $source)<option value="{{ $source->id }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیو' : 'موزیک' }}</option>@endforeach</select></div>
+            <div class="studio-field"><label for="job-edit-source-url">لینک منبع</label><input class="studio-input" id="job-edit-source-url" type="url" name="source_url" placeholder="https://..."><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"></div>
+            <div class="studio-field full"><label for="job-edit-images">تصاویر انتخابی (هر لینک در یک خط)</label><textarea class="studio-textarea" id="job-edit-images" name="selected_images_text" rows="4" placeholder="https://..."></textarea></div>
+            <div class="studio-field"><label for="job-edit-ratio">قاب خروجی</label><select class="studio-select" id="job-edit-ratio" name="aspect_ratio"><option value="9:16">استوری عمودی · 9:16</option><option value="1:1">مربع · 1:1</option><option value="4:5">پست عمودی · 4:5</option><option value="16:9">افقی · 16:9</option></select></div>
+            <div class="studio-field"><label for="job-edit-font">فونت</label><select class="studio-select" id="job-edit-font" name="font_family">@foreach($fonts as $font)<option value="{{ $font->slug }}">{{ $font->name }}</option>@endforeach</select></div>
+            <div class="studio-field full"><label for="job-edit-hook">هوک</label><textarea class="studio-textarea" id="job-edit-hook" name="hook_text" rows="2"></textarea></div>
+            <div class="studio-field full"><label for="job-edit-caption">کپشن اینستاگرام</label><textarea class="studio-textarea" id="job-edit-caption" name="caption_text" rows="4"></textarea></div>
+            <div class="studio-field"><label for="job-edit-keyword">کلمه کلیدی</label><input class="studio-input" id="job-edit-keyword" name="keyword"></div>
+            <div class="studio-field"><label for="job-edit-dm">پاسخ دایرکت</label><textarea class="studio-textarea" id="job-edit-dm" name="dm_template" rows="2"></textarea></div>
+            <div class="studio-field full"><label for="job-edit-instagram-prompt">پرامپت اینستاگرام</label><textarea class="studio-textarea" id="job-edit-instagram-prompt" name="instagram_prompt" rows="4"></textarea></div>
+            <div class="studio-field full"><label for="job-edit-telegram-prompt">پرامپت تلگرام</label><textarea class="studio-textarea" id="job-edit-telegram-prompt" name="telegram_prompt" rows="4"></textarea></div>
+            <div class="studio-field full"><label for="job-edit-telegram-caption">کپشن تلگرام</label><textarea class="studio-textarea" id="job-edit-telegram-caption" name="telegram_caption_text" rows="4"></textarea></div>
+          </div>
+          <div class="studio-telegram-buttons" style="margin:0"><div class="studio-telegram-buttons-head"><div class="studio-telegram-buttons-title"><i class="fa-solid fa-link"></i> دکمه‌های تلگرام</div><label class="studio-check"><input type="hidden" name="telegram_buttons_enabled" value="0"><input type="checkbox" id="job-edit-buttons-enabled" name="telegram_buttons_enabled" value="1"> فعال</label></div><div class="studio-telegram-button-list" id="job-edit-button-list"></div><button class="studio-btn studio-telegram-button-add" type="button" id="job-edit-add-button"><i class="fa-solid fa-plus"></i> افزودن دکمه</button></div>
+        </form>
+        <div class="studio-job-edit-actions"><button class="studio-btn" type="submit" form="job-edit-form" name="build_now" value="0"><i class="fa-solid fa-floppy-disk"></i> ذخیره</button><button class="studio-btn primary" type="submit" form="job-edit-form" name="build_now" value="1"><i class="fa-solid fa-clapperboard"></i> ذخیره و ساخت مجدد</button></div>
+      </div>
+    </div>
+
     <section class="studio-card studio-panel" id="studio-queue-panel" style="margin-bottom:16px">
       <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-list-check"></i> صف ساخت ویدیو</div><div class="studio-panel-meta">آخرین ۲۰ سفارش</div></div>
       @if($jobs->isNotEmpty())
@@ -262,10 +298,10 @@
             @php($jobStatus = (string) $job->status)
             @php($jobLabel = ['queued' => 'در صف', 'processing' => 'در حال ساخت', 'completed' => 'تکمیل‌شده', 'failed' => 'ناموفق'][$jobStatus] ?? $jobStatus)
             <div class="studio-job">
-              <div class="studio-job-main"><label class="studio-check"><input form="studio-bulk-form" type="checkbox" name="job_ids[]" value="{{ $job->id }}"><span></span></label><div><div class="studio-job-title">{{ $job->product?->name_fa ?? 'محصول حذف‌شده' }}</div><div class="studio-job-meta">{{ $job->source_mode === 'video' ? 'ویدیوی منبع' : ($job->source_mode === 'music' ? 'فایل موزیک' : 'منبع خودکار') }} · قاب {{ $job->aspect_ratio }} · {{ \App\Support\Jalali::formatNumeric($job->created_at) }}</div></div></div>
+              <div class="studio-job-main"><label class="studio-check"><input form="studio-bulk-form" type="checkbox" name="job_ids[]" value="{{ $job->id }}"><span></span></label><div><div class="studio-job-title">{{ $job->product?->name_fa ?? 'محصول حذف‌شده' }}</div><div class="studio-job-meta">{{ $job->source_mode === 'video' ? 'ویدیوی منبع' : ($job->source_mode === 'music' ? 'فایل موزیک' : 'منبع خودکار') }} · قاب {{ $job->aspect_ratio }} · {{ \App\Support\Jalali::formatNumeric($job->created_at) }}</div>@if($job->error_message)<div class="studio-error" style="margin-top:6px">{{ $job->error_message }}</div>@endif</div></div>
               <div class="studio-job-status {{ in_array($jobStatus, ['queued','processing','completed','failed'], true) ? $jobStatus : 'queued' }}">{{ $jobLabel }}</div>
               <div class="studio-muted">#{{ $job->id }}</div>
-              <div class="studio-job-actions"><button type="button" class="studio-job-edit-toggle" data-job-editor-toggle="{{ $job->id }}"><i class="fa-solid fa-pen-to-square"></i> ویرایش</button>@if(in_array($jobStatus, ['queued','failed'], true))<form method="POST" action="{{ route('admin.video-studio.jobs.retry', $job) }}">@csrf<button class="studio-link-btn" type="submit" title="{{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}"><i class="fa-solid {{ $jobStatus === 'queued' ? 'fa-play' : 'fa-rotate-left' }}"></i> {{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}</button></form>@endif</div>
+              <div class="studio-job-actions"><button type="button" class="studio-job-edit-toggle" data-job-edit='@json(['job_id' => $job->id, 'product_id' => $job->product_id, 'source_mode' => $job->source_mode, 'source_url' => $job->source_url, 'source_library_id' => data_get($job->payload, 'source_library_id'), 'selected_images' => implode("\n", (array) $job->selected_images), 'aspect_ratio' => $job->aspect_ratio, 'font_family' => data_get($job->payload, 'font_family', 'B_Yekan'), 'hook_text' => $job->hook_text, 'caption_text' => $job->caption_text, 'keyword' => $job->keyword, 'dm_template' => $job->dm_template, 'instagram_prompt' => data_get($job->payload, 'instagram_prompt', ''), 'telegram_prompt' => data_get($job->payload, 'telegram_prompt', ''), 'telegram_caption_text' => data_get($job->payload, 'telegram_caption_text', ''), 'telegram_buttons' => data_get($job->payload, 'telegram_buttons', [])], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)'><i class="fa-solid fa-pen-to-square"></i> ویرایش کامل</button>@if(in_array($jobStatus, ['queued','failed'], true))<form method="POST" action="{{ route('admin.video-studio.jobs.retry', $job) }}">@csrf<button class="studio-link-btn" type="submit" title="{{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}"><i class="fa-solid {{ $jobStatus === 'queued' ? 'fa-play' : 'fa-rotate-left' }}"></i> {{ $jobStatus === 'queued' ? 'ساخت' : 'ساخت مجدد' }}</button></form>@endif</div>
               <div class="studio-job-editor is-hidden" id="studio-job-editor-{{ $job->id }}"><small>اصلاحیه را محاوره‌ای بنویس؛ هوش مصنوعی آن را روی همین سفارش اعمال می‌کند.</small><form method="POST" action="{{ route('admin.video-studio.jobs.revise', $job) }}" class="studio-form">@csrf<textarea class="studio-textarea" name="revision_request" required placeholder="مثلاً: هوک کوتاه‌تر و هیجان‌انگیزتر شود، هر دو تصویر استفاده شوند و کپشن دوستانه‌تر باشد."></textarea><div class="studio-job-actions"><button class="studio-btn primary" type="submit"><i class="fa-solid fa-wand-magic-sparkles"></i> ارسال اصلاحیه و ساخت مجدد</button>@if($job->video_url)<a class="studio-btn" href="{{ $job->video_url }}" target="_blank" rel="noopener"><i class="fa-solid fa-video"></i> مشاهده خروجی</a>@endif</div></form></div>
             </div>
           @endforeach
@@ -407,6 +443,19 @@
   function submitStudioForm(action, method) {
     if (!studioForm) return;
     if (promptFallback && instagramPrompt) promptFallback.value = instagramPrompt.value;
+    if (method === 'POST' && arguments[2] === true) {
+      const sourceMode = document.querySelector('input[name="source_mode"]:checked')?.value || 'auto';
+      const sourceFile = studioForm.querySelector('input[name="source_file"]');
+      const hasLibrary = !!sourceLibrary?.value;
+      const hasLink = !!sourceUrl?.value?.trim();
+      const hasFile = !!sourceFile?.files?.length;
+      if (!hasLibrary && !hasLink && !hasFile) {
+        window.alert(sourceMode === 'auto'
+          ? 'برای ساخت، یک منبع فعال از کتابخانه انتخاب کنید یا فایل/لینک منبع بدهید.'
+          : 'برای ساخت، فایل یا لینک منبع را انتخاب کنید.');
+        return;
+      }
+    }
     const queueButton = document.getElementById('queue-submit');
     studioForm.action = action;
     studioForm.method = 'POST';
@@ -497,10 +546,36 @@
     const selected = pool[Math.floor(Math.random() * pool.length)];
     window.location = '{{ route('admin.products.dashboard') }}?product_id=' + encodeURIComponent(selected.dataset.productId) + '&preview=1';
   });
-  document.querySelectorAll('[data-job-editor-toggle]').forEach((button) => button.addEventListener('click', () => {
-    const editor = document.getElementById('studio-job-editor-' + button.dataset.jobEditorToggle);
-    editor?.classList.toggle('is-hidden');
-  }));
+  const jobEditModal = document.getElementById('job-edit-modal');
+  const jobEditForm = document.getElementById('job-edit-form');
+  const jobEditButtonList = document.getElementById('job-edit-button-list');
+  const jobEditButtonsEnabled = document.getElementById('job-edit-buttons-enabled');
+  const jobEditButtonRow = (button = {}) => {
+    const row = document.createElement('div');
+    row.className = 'studio-telegram-button-row';
+    row.dataset.telegramButtonRow = '';
+    row.innerHTML = '<input class="studio-input" name="telegram_button_label[]" placeholder="متن دکمه"><input class="studio-input" type="url" name="telegram_button_url[]" placeholder="https://..."><select class="studio-select" name="telegram_button_style[]"><option value="primary">آبی اصلی</option><option value="success">سبز موفق</option><option value="danger">قرمز هشدار</option></select><select class="studio-select" name="telegram_button_width[]"><option value="full">عرض کامل</option><option value="half">نیم‌عرض</option></select><button class="studio-telegram-button-remove" type="button" data-remove-job-button aria-label="حذف دکمه"><i class="fa-solid fa-trash"></i></button>';
+    row.querySelector('[name="telegram_button_label[]"]').value = button.label || '';
+    row.querySelector('[name="telegram_button_url[]"]').value = button.url || '';
+    row.querySelector('[name="telegram_button_style[]"]').value = button.style || 'primary';
+    row.querySelector('[name="telegram_button_width[]"]').value = button.width || 'full';
+    return row;
+  };
+  function openJobEditor(config) {
+    if (!jobEditModal || !jobEditForm || !config) return;
+    jobEditForm.action = '{{ route('admin.video-studio.jobs.settings.update', ['job' => '__JOB__']) }}'.replace('__JOB__', encodeURIComponent(config.job_id));
+    const set = (id, value) => { const field = document.getElementById(id); if (field) field.value = value ?? ''; };
+    set('job-edit-product', config.product_id); set('job-edit-source-mode', config.source_mode || 'auto'); set('job-edit-source-library', config.source_library_id); set('job-edit-source-url', config.source_url); set('job-edit-images', config.selected_images || ''); set('job-edit-ratio', config.aspect_ratio || '9:16'); set('job-edit-font', config.font_family || 'B_Yekan'); set('job-edit-hook', config.hook_text); set('job-edit-caption', config.caption_text); set('job-edit-keyword', config.keyword); set('job-edit-dm', config.dm_template); set('job-edit-instagram-prompt', config.instagram_prompt); set('job-edit-telegram-prompt', config.telegram_prompt); set('job-edit-telegram-caption', config.telegram_caption_text);
+    if (jobEditButtonsEnabled) jobEditButtonsEnabled.checked = Array.isArray(config.telegram_buttons) && config.telegram_buttons.length > 0;
+    if (jobEditButtonList) { jobEditButtonList.replaceChildren(); const buttons = Array.isArray(config.telegram_buttons) && config.telegram_buttons.length ? config.telegram_buttons : [{}]; buttons.forEach((button) => jobEditButtonList.appendChild(jobEditButtonRow(button))); }
+    jobEditModal.classList.add('is-open');
+    document.getElementById('job-edit-hook')?.focus();
+  }
+  document.querySelectorAll('[data-job-edit]').forEach((button) => button.addEventListener('click', () => { try { openJobEditor(JSON.parse(button.dataset.jobEdit)); } catch (error) { console.error(error); } }));
+  document.getElementById('close-job-edit')?.addEventListener('click', () => jobEditModal?.classList.remove('is-open'));
+  jobEditModal?.addEventListener('click', (event) => { if (event.target === jobEditModal) jobEditModal.classList.remove('is-open'); });
+  document.getElementById('job-edit-add-button')?.addEventListener('click', () => { if (jobEditButtonList && jobEditButtonList.children.length < 8) jobEditButtonList.appendChild(jobEditButtonRow()); });
+  jobEditButtonList?.addEventListener('click', (event) => { const remove = event.target.closest('[data-remove-job-button]'); if (remove) remove.closest('[data-telegram-button-row]')?.remove(); });
   const previewButton = document.getElementById('generate-preview');
   const previewStatus = document.getElementById('preview-status');
   const previewHidden = { hook: document.getElementById('preview-hook'), caption: document.getElementById('preview-caption'), keyword: document.getElementById('preview-keyword') };

@@ -70,7 +70,12 @@ class VideoStudioController extends Controller
         });
         $products = $productsQuery
             ->get(['id', 'name_fa', 'slug', 'created_at']);
-        $selectedProductId = $request->integer('product_id') ?: null;
+        // بعد از ثبت سفارش، سازنده باید برای سفارش بعدی خالی شود تا تنظیمات سفارش قبلی
+        // ناخواسته دوباره ارسال نشود. انتخاب محصول فقط وقتی از URL خوانده می‌شود که
+        // صفحه در حالت تازه‌سازی سازنده نباشد.
+        $selectedProductId = $request->boolean('fresh')
+            ? null
+            : ($request->integer('product_id') ?: null);
         $selectedProduct = $selectedProductId ? Product::find($selectedProductId) : null;
         $productImages = collect($selectedProduct ? array_merge(
             [$selectedProduct->cover, $selectedProduct->thumbnail],
@@ -114,6 +119,19 @@ class VideoStudioController extends Controller
             if (is_file($defaultTelegramPromptPath)) {
                 $settings->telegram_prompt = trim((string) file_get_contents($defaultTelegramPromptPath));
             }
+        }
+        if ($request->boolean('fresh')) {
+            // صفحهٔ سازنده پس از ثبت سفارش باید برای سفارش بعدی کاملاً خنثی باشد؛
+            // مقادیر پرامپت مادر باقی می‌مانند اما محصول و منبع قبلی نه.
+            $settings->product_id = null;
+            $settings->source_mode = 'auto';
+            $settings->source_url = null;
+            $settings->hook_text = null;
+            $settings->caption_text = null;
+            $settings->telegram_caption_text = null;
+            $settings->keyword = null;
+            $settings->dm_template = null;
+            $settings->aspect_ratio = '9:16';
         }
         $hookInspirations = Schema::hasTable('video_hook_inspirations')
             ? VideoHookInspiration::query()->with('product')->where('is_active', true)->latest()->limit(12)->get()
@@ -467,6 +485,11 @@ class VideoStudioController extends Controller
         }
         $telegramButtons = $this->normalizeTelegramButtons($request);
         unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width']);
+        // مقدار لینکِ پنهان فرم نباید باعث استفادهٔ دوباره از منبع سفارش قبلی شود.
+        // در حالت خودکار فقط کتابخانهٔ فعال و معتبر مجاز است.
+        if (($data['source_mode'] ?? null) === 'auto' && empty($data['source_library_id'])) {
+            $data['source_url'] = null;
+        }
         if (!empty($data['source_library_id'])) {
             $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
             $data['source_mode'] = $librarySource->type;
@@ -479,6 +502,8 @@ class VideoStudioController extends Controller
             && Schema::hasTable('video_studio_sources')) {
             $librarySource = VideoStudioSource::query()
                 ->where('is_active', true)
+                ->whereNotNull('source_url')
+                ->where('source_url', '<>', '')
                 ->orderBy('used_count')
                 ->orderBy('id')
                 ->first();
@@ -487,6 +512,10 @@ class VideoStudioController extends Controller
                 $data['source_mode'] = $librarySource->type;
                 $data['source_url'] = $librarySource->source_url;
             }
+        }
+        $sourceError = null;
+        if (blank($data['source_url'])) {
+            $sourceError = 'منبع صوت یا ویدیو انتخاب نشده است. از کتابخانه یک منبع معتبر انتخاب کنید یا فایل/لینک جدید بدهید.';
         }
         if (in_array($data['source_mode'], ['upload', 'music', 'video'], true) && blank($data['source_url'])) {
             return back()
@@ -534,7 +563,10 @@ class VideoStudioController extends Controller
         }
         $job = VideoStudioJob::create(array_merge($data, [
             'admin_id' => auth('admin')->id(),
-            'status' => 'queued',
+            // سفارش ساخت بدون منبع نباید در حالت «در حال ساخت» معلق بماند؛
+            // همان ابتدا به‌عنوان ناموفق ثبت می‌شود تا دلیل آن در صف دیده شود.
+            'status' => $buildNow && $sourceError ? 'failed' : 'queued',
+            'error_message' => $buildNow && $sourceError ? $sourceError : null,
             'payload' => [
                 'created_from' => 'video_studio_dashboard',
                 'auto_generate_hook' => $autoHook,
@@ -556,18 +588,132 @@ class VideoStudioController extends Controller
             ],
         ]));
 
-        if ($buildNow) {
+        if ($buildNow && !$sourceError) {
             $this->dispatchJobToWorkflow($job);
         }
 
-        return redirect()->route('admin.products.dashboard', ['product_id' => $job->product_id])
+        return redirect()->route('admin.products.dashboard', ['fresh' => 1])
             ->with('success', $buildNow
-                ? ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد. اتصال اجرای خودکار هنوز تنظیم نشده است.')
+                ? ($sourceError ? 'سفارش ثبت شد اما به‌دلیل نبودن منبع معتبر ناموفق علامت خورد؛ منبع را اصلاح و ساخت مجدد را بزنید.' : ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد.'))
                 : 'تنظیمات در لیست ساخت ذخیره شد و هنوز ویدیو ساخته نمی‌شود.');
+    }
+
+    /**
+     * ویرایش کامل تنظیمات یک سفارش؛ ذخیرهٔ ساده خروجی قبلی را دست‌نخورده نگه می‌دارد
+     * و «ذخیره و ساخت مجدد» همان سفارش را با تنظیمات تازه به ورکفلو می‌فرستد.
+     */
+    public function updateJobSettings(Request $request, VideoStudioJob $job)
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'source_mode' => ['required', Rule::in(['auto', 'upload', 'music', 'video'])],
+            'source_url' => ['nullable', 'url', 'max:2048'],
+            'source_file' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,mp4,mov,webm', 'max:102400'],
+            'source_library_id' => ['nullable', 'integer', 'exists:video_studio_sources,id'],
+            'selected_images_text' => ['nullable', 'string', 'max:20000'],
+            'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
+            'font_family' => ['required', Schema::hasTable('video_studio_fonts')
+                ? Rule::exists('video_studio_fonts', 'slug')->where('is_active', true)
+                : Rule::in(['B_Yekan'])],
+            'hook_text' => ['nullable', 'string', 'max:1000'],
+            'caption_text' => ['nullable', 'string', 'max:5000'],
+            'keyword' => ['nullable', 'string', 'max:80'],
+            'dm_template' => ['nullable', 'string', 'max:5000'],
+            'telegram_caption_text' => ['nullable', 'string', 'max:5000'],
+            'instagram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'telegram_buttons_enabled' => ['nullable', 'boolean'],
+            'telegram_button_label' => ['nullable', 'array', 'max:8'],
+            'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
+            'telegram_button_url' => ['nullable', 'array', 'max:8'],
+            'telegram_button_url.*' => ['nullable', 'url', 'max:2048'],
+            'telegram_button_style' => ['nullable', 'array', 'max:8'],
+            'telegram_button_style.*' => ['nullable', Rule::in(['primary', 'success', 'danger'])],
+            'telegram_button_width' => ['nullable', 'array', 'max:8'],
+            'telegram_button_width.*' => ['nullable', Rule::in(['full', 'half'])],
+            'build_now' => ['nullable', 'boolean'],
+        ]);
+
+        if ($request->hasFile('source_file')) {
+            $data['source_url'] = asset('storage/' . ltrim($request->file('source_file')->store('video-studio/sources', 'public'), '/'));
+        }
+        if (!empty($data['source_library_id'])) {
+            $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
+            $data['source_mode'] = $librarySource->type;
+            $data['source_url'] = $librarySource->source_url;
+        }
+        if (($data['source_mode'] ?? null) === 'auto' && empty($data['source_library_id'])) {
+            $data['source_url'] = null;
+        }
+        if (($data['source_mode'] ?? null) === 'auto' && blank($data['source_url'])) {
+            $librarySource = VideoStudioSource::query()
+                ->where('is_active', true)
+                ->whereNotNull('source_url')
+                ->where('source_url', '<>', '')
+                ->orderBy('used_count')
+                ->orderBy('id')
+                ->first();
+            if ($librarySource) {
+                $data['source_library_id'] = $librarySource->id;
+                $data['source_mode'] = $librarySource->type;
+                $data['source_url'] = $librarySource->source_url;
+            }
+        }
+        $sourceError = blank($data['source_url'])
+            ? 'منبع صوت یا ویدیو معتبر انتخاب نشده است.'
+            : null;
+        $selectedImages = collect(preg_split('/\R/u', (string) ($data['selected_images_text'] ?? '')))
+            ->map(fn ($url): string => trim((string) $url))
+            ->filter()
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
+        $buttons = $this->normalizeTelegramButtons($request);
+        $payload = is_array($job->payload) ? $job->payload : [];
+        $buildNow = $request->boolean('build_now');
+        $payload = array_merge($payload, [
+            'font_family' => (string) $data['font_family'],
+            'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
+            'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
+            'telegram_caption_text' => (string) ($data['telegram_caption_text'] ?? ''),
+            'telegram_buttons' => $buttons,
+            'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
+            'source_fingerprint' => hash('sha256', json_encode([
+                'product_id' => (int) $data['product_id'],
+                'source_mode' => (string) $data['source_mode'],
+                'source_url' => (string) ($data['source_url'] ?? ''),
+                'selected_images' => $selectedImages,
+                'aspect_ratio' => (string) $data['aspect_ratio'],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
+            'build_now' => $buildNow,
+        ]);
+        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now']);
+        $data['selected_images'] = $selectedImages ?: (array) $job->selected_images;
+        $data['payload'] = $payload;
+        if ($buildNow) {
+            $data['status'] = $sourceError ? 'failed' : 'queued';
+            $data['error_message'] = $sourceError;
+            $data['started_at'] = null;
+            $data['completed_at'] = null;
+            $data['video_url'] = null;
+        }
+        $job->fill($data)->save();
+        if ($buildNow && !$sourceError) {
+            $this->dispatchJobToWorkflow($job->fresh());
+        }
+
+        return back()->with($sourceError && $buildNow ? 'warning' : 'success', $sourceError && $buildNow
+            ? 'تنظیمات ذخیره شد اما به‌دلیل نبودن منبع معتبر، سفارش ناموفق ثبت شد.'
+            : ($buildNow ? 'تنظیمات ذخیره و ساخت مجدد آغاز شد.' : 'تنظیمات سفارش ذخیره شد.'));
     }
 
     public function retryJob(VideoStudioJob $job)
     {
+        if (!$this->ensureJobSource($job)) {
+            $job->update(['status' => 'failed', 'error_message' => 'منبع صوت یا ویدیو برای این سفارش موجود نیست؛ ابتدا یک منبع معتبر انتخاب کنید.']);
+            return back()->withErrors(['source_file' => 'منبع این سفارش موجود نیست؛ از ویرایش کامل، فایل یا منبع کتابخانه را انتخاب کنید.']);
+        }
         $job->update(['status' => 'queued', 'error_message' => null, 'started_at' => null, 'completed_at' => null]);
         $this->dispatchJobToWorkflow($job);
 
@@ -610,6 +756,10 @@ class VideoStudioController extends Controller
         }
 
         $jobs->each(function (VideoStudioJob $job): void {
+            if (!$this->ensureJobSource($job)) {
+                $job->update(['status' => 'failed', 'error_message' => 'منبع صوت یا ویدیو برای این سفارش موجود نیست؛ ابتدا یک منبع معتبر انتخاب کنید.']);
+                return;
+            }
             $job->update(['status' => 'queued', 'error_message' => null, 'started_at' => null, 'completed_at' => null]);
             $this->dispatchJobToWorkflow($job->fresh());
         });
@@ -651,6 +801,11 @@ class VideoStudioController extends Controller
 
     private function dispatchJobToWorkflow(VideoStudioJob $job): void
     {
+        if (!$this->ensureJobSource($job)) {
+            $job->update(['status' => 'failed', 'error_message' => 'منبع صوت یا ویدیو برای این سفارش موجود نیست؛ ابتدا یک منبع معتبر انتخاب کنید.']);
+            return;
+        }
+        $job = $job->fresh();
         $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
         if ($webhook === '') {
             $job->update(['status' => 'failed', 'error_message' => 'اتصال ورکفلو تنظیم نشده است.']);
@@ -750,6 +905,36 @@ class VideoStudioController extends Controller
     }
 
     /**
+     * منبع معتبر را برای سفارش تضمین می‌کند و جلوی ارسال سفارش‌های بدون فایل به n8n را می‌گیرد.
+     */
+    private function ensureJobSource(VideoStudioJob $job): bool
+    {
+        if (filled($job->source_url)) {
+            return true;
+        }
+        if ((string) $job->source_mode !== 'auto' || !Schema::hasTable('video_studio_sources')) {
+            return false;
+        }
+        $source = VideoStudioSource::query()
+            ->where('is_active', true)
+            ->whereNotNull('source_url')
+            ->where('source_url', '<>', '')
+            ->orderBy('used_count')
+            ->orderBy('id')
+            ->first();
+        if (!$source) {
+            return false;
+        }
+        $payload = is_array($job->payload) ? $job->payload : [];
+        $payload['source_library_id'] = $source->id;
+        $job->source_mode = $source->type;
+        $job->source_url = $source->source_url;
+        $job->payload = $payload;
+        $job->save();
+        return true;
+    }
+
+    /**
      * دریافت وضعیت اجرای ورکفلو از `n8n`؛ این مسیر عمومی است اما با secret امضا می‌شود.
      */
     public function n8nStatus(Request $request, VideoStudioJob $job)
@@ -765,14 +950,20 @@ class VideoStudioController extends Controller
             'n8n_execution_id' => ['nullable', 'string', 'max:120'],
             'video_url' => ['nullable', 'url', 'max:2048'],
             'error_message' => ['nullable', 'string', 'max:5000'],
+            'error' => ['nullable', 'string', 'max:5000'],
+            'message' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $status = $data['status'];
+        $errorMessage = trim((string) ($data['error_message'] ?? $data['error'] ?? $data['message'] ?? ''));
+        if ($errorMessage !== '' && $status === 'processing') {
+            $status = 'failed';
+        }
         $job->update([
             'status' => $status,
             'n8n_execution_id' => $data['n8n_execution_id'] ?? $job->n8n_execution_id,
             'video_url' => $data['video_url'] ?? $job->video_url,
-            'error_message' => $data['error_message'] ?? null,
+            'error_message' => $errorMessage !== '' ? $errorMessage : ($status === 'failed' ? $job->error_message : null),
             'started_at' => in_array($status, ['processing', 'completed'], true) ? ($job->started_at ?: now()) : $job->started_at,
             'completed_at' => in_array($status, ['completed', 'failed'], true) ? now() : null,
         ]);

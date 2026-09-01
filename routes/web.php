@@ -26,17 +26,29 @@ use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\ServiceCreditController;
 use App\Http\Controllers\Admin\ReferralSettingController;
 use App\Http\Controllers\Admin\LabExperimentController;
+use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\SitePageController;
 use App\Http\Controllers\Admin\Explore\TrendController;
 use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
+use App\Http\Controllers\PublicHomeController;
+use App\Http\Controllers\GrowthTrackingController;
+use App\Http\Controllers\Admin\GrowthController;
+use App\Http\Controllers\Admin\GrowthDataSourceController;
+use App\Http\Controllers\Admin\GrowthUserController;
+use App\Http\Controllers\Admin\VideoStudioController;
+use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticleCommentController;
+use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
+use App\Http\Controllers\Admin\ArticleCategoryController as AdminArticleCategoryController;
+use App\Http\Controllers\Admin\ArticleCommentController as AdminArticleCommentController;
 use App\Http\Controllers\TelegramMiniAppController;
 use App\Http\Controllers\TelegramWebhookController;
 
 // ─── Root & Landing ──────────────────────────────────────
 // صفحه‌ی اصلی عمومی باید برای کاربر واردشده هم قابل مشاهده باشد؛
 // ورود به بخش کاربری از دکمه‌های داخل صفحه یا مسیرهای /app انجام می‌شود.
-Route::get('/', fn() => view('site.home'))->name('site.home.root');
+Route::get('/', [PublicHomeController::class, 'index'])->middleware('site.page')->name('site.home.root');
 Route::get('/site', fn() => redirect('/'));
 Route::get('/r/{code}', [ReferralController::class, 'visit'])
     ->where('code', '[A-Za-z0-9]{6,20}')
@@ -45,12 +57,35 @@ Route::get('/r/{code}/product/{product:route_slug}', [ReferralController::class,
     ->where('code', '[A-Za-z0-9]{6,20}')
     ->name('referral.product');
 
+// رهگیری رشد مستقل از سیستم دعوت: کلیک و بازشدن مقصد دو رویداد جدا هستند.
+Route::get('/g/{growthLink}', [GrowthTrackingController::class, 'redirect'])
+    ->where('growthLink', '[A-Za-z0-9_-]+')
+    ->middleware('throttle:300,1')
+    ->name('growth.redirect');
+Route::get('/growth/tracker.js', [GrowthTrackingController::class, 'trackerScript'])->name('growth.tracker');
+Route::get('/growth/track/page-open', [GrowthTrackingController::class, 'pageOpen'])
+    ->middleware('throttle:600,1')
+    ->name('growth.page-open');
+
 Route::prefix('site')->group(function () {
     Route::get('/pricing', [PlanSubscriptionController::class, 'index'])->name('pricing.index');
     Route::get('/about',   fn() => view('site.about'))->name('site.about');
 });
+Route::get('/site/payments/demo/result', [PlanSubscriptionController::class, 'demoResult'])->name('payments.demo');
 
 Route::get('/privacy', fn() => view('site.privacy'))->name('privacy');
+
+// ─── مرکز عمومی مقالات وطن ──────────────────────────────
+// تمام مسیرهای محتوایی خارج از /app هستند تا ساختار عمومی، اشتراک‌پذیر و سئویی داشته باشند.
+Route::get('/articles', [ArticleController::class, 'index'])->middleware('site.page')->name('articles.index');
+Route::get('/articles/category/{slug}', [ArticleController::class, 'category'])->name('articles.category');
+Route::get('/articles/author/{slug}', [ArticleController::class, 'author'])->name('articles.author');
+Route::get('/articles/feed.xml', [ArticleController::class, 'feed'])->name('articles.feed');
+Route::post('/articles/{article}/events', [ArticleController::class, 'track'])->middleware('throttle:120,1')->name('articles.events');
+Route::post('/articles/{article}/comments', [ArticleCommentController::class, 'store'])
+    ->middleware(['auth', 'throttle:5,1'])->name('articles.comments.store');
+Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
+Route::get('/sitemap.xml', [ArticleController::class, 'sitemap'])->name('sitemap');
 
 Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token()]))
     ->name('auth.csrf-token');
@@ -83,8 +118,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/auth/check-phone', [AuthController::class, 'checkPhone'])->name('auth.checkPhone');
     Route::post('/auth/send-otp', [AuthController::class, 'sendOtp'])->name('auth.otp.send');
     Route::post('/auth/verify-otp', [AuthController::class, 'verifyOtp'])->name('auth.otp.verify');
+    Route::post('/auth/unified/send-otp', [AuthController::class, 'sendUnifiedOtp'])->name('auth.unified.send');
+    Route::post('/auth/unified/verify-otp', [AuthController::class, 'verifyUnifiedOtp'])->name('auth.unified.verify');
+    Route::post('/auth/unified/register', [AuthController::class, 'registerUnified'])->name('auth.unified.register');
     
-    // ورود کاربران فقط با رمز یک‌بارمصرف انجام می‌شود.
+    // ورود با رمز ثابت؛ ورود پیامکی نیز به‌عنوان مسیر جایگزین در دسترس است.
+    Route::post('/auth/login-submit', [AuthController::class, 'loginSubmit'])->name('auth.login.submit');
     // ارسال نهایی فرم ثبت نام
     Route::post('/auth/register-submit', [AuthController::class, 'registerSubmit'])->name('auth.register.submit');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
@@ -98,12 +137,19 @@ Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
+    Route::delete('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'destroyFaceProfile'])->name('profile.face-profiles.destroy');
     Route::post('/app/product/{product:slug}/save', [SavedProductController::class, 'toggle'])->name('app.product.save');
     Route::post('/app/product/{product:slug}/like', [App\Http\Controllers\LikedProductController::class, 'toggle'])->name('app.product.like');
     Route::post('/app/product/{product:slug}/download', [App\Http\Controllers\ProductDownloadController::class, 'store'])->name('app.product.download');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::post('/pricing/fake-payment/{plan}', [PlanSubscriptionController::class, 'fakePayment'])->name('pricing.fakePayment');
+    Route::get('/site/pricing/{plan}/checkout', [PlanSubscriptionController::class, 'checkout'])->name('pricing.checkout');
+    Route::post('/site/pricing/{plan}/checkout', [PlanSubscriptionController::class, 'startPayment'])->name('pricing.start-payment');
+    Route::get('/site/payments/{purchase}/result', [PlanSubscriptionController::class, 'result'])->name('payments.result');
+    Route::get('/site/payments/{purchase}/receipt', [PlanSubscriptionController::class, 'receipt'])->name('payments.receipt');
 });
+
+Route::get('/site/payments/{purchase}/callback', [PlanSubscriptionController::class, 'callback'])->name('payments.callback');
 
 // ─── App Pages & Generation ──────────────────────────────
 // سازگاری با لینک‌های قدیمی سکشن‌ها و بوکمارک‌ها؛ پارامترهای فیلتر حفظ می‌شوند.
@@ -123,12 +169,112 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     // صفحه عمومی ساخت بدون محصول، و صفحه ساخت اختصاصی محصول از یک مسیر کنترل‌شده
     // عبور می‌کنند تا تنظیمات خروجی ذخیره‌شده‌ی همان محصول به کاربر برسد.
     Route::get('/create', [ProductGenerateController::class, 'create'])->name('app.create');
+    // استودیوی عمومی ساخت از تنظیمات دو محصول واقعی استفاده می‌کند و ارسال
+    // درخواست آن از همان مسیرهای ساخت تصویر و ویدیو عبور می‌کند.
+    Route::get('/create-studio/quote', [ProductGenerateController::class, 'studioQuote'])->name('app.create.studio.quote');
+    Route::get('/create-studio', [ProductGenerateController::class, 'createStudio'])->name('app.create.studio');
+    Route::get('/create-samples', function (\App\Services\ProductBuildSchema $schema) {
+        $product = \App\Models\Product::where('status', 'active')->latest()->first();
+
+        abort_unless($product, 404);
+
+        return view('app.create-samples', [
+            'product' => $product,
+            'buildProduct' => $schema->pageData($product),
+        ]);
+    })->name('app.create.samples');
+    Route::get('/create-product-preview', function (\Illuminate\Http\Request $request, \App\Services\ProductBuildSchema $schema) {
+        $slug = $request->query('product');
+        $product = $slug
+            ? (new \App\Models\Product())->resolveRouteBinding($slug, 'route_slug')
+            : \App\Models\Product::where('status', 'active')->latest()->first();
+
+        abort_unless($product && $product->status === 'active', 404);
+
+        return view('app.create-product-preview', [
+            'product' => $product,
+            'buildProduct' => $schema->pageData($product),
+        ]);
+    })->name('app.create.product.preview');
+    Route::get('/create-versions-compare', function (\Illuminate\Http\Request $request) {
+        $slug = $request->query('product', 'ai-fashion-portrait');
+        $product = (new \App\Models\Product())->resolveRouteBinding($slug, 'route_slug');
+        $product = $product && $product->status === 'active'
+            ? $product
+            : \App\Models\Product::where('status', 'active')->latest()->first();
+
+        abort_unless($product, 404);
+
+        return view('app.create-versions-compare', [
+            'product' => $product,
+            'productSlug' => $product->route_slug,
+        ]);
+    })->name('app.create.versions.compare');
+    Route::get('/create-versions-compare/{source}/{page}', function (string $source, string $page, \App\Services\ProductBuildSchema $schema, \Illuminate\Http\Request $request) {
+        abort_unless(in_array($source, ['backup-one', 'backup-two'], true), 404);
+        abort_unless(in_array($page, ['create', 'product'], true), 404);
+
+        $slug = $request->query('product', 'ai-fashion-portrait');
+        $product = (new \App\Models\Product())->resolveRouteBinding($slug, 'route_slug');
+        $product = $product && $product->status === 'active'
+            ? $product
+            : \App\Models\Product::where('status', 'active')->latest()->first();
+
+        abort_unless($product, 404);
+
+        return view('app.create-versions-compare-legacy', [
+            'product' => $schema->pageData($product),
+            'source' => $source,
+            'page' => $page,
+        ]);
+    })->where(['source' => 'backup-one|backup-two', 'page' => 'create|product'])->name('app.create.versions.compare.legacy');
     Route::get('/create-preview', [ProductGenerateController::class, 'createPreview'])->name('app.create.preview');
+    if (app()->environment('local')) {
+        Route::get('/create-loader-demo', function () {
+            $previewProduct = (object) [
+                'name_fa' => 'پیش‌نمایش لودر وطن',
+                'name_en' => 'Vatan Loader Preview',
+            ];
+            $buildProduct = [
+                'name' => 'پرتره سینمایی وطن',
+                'description' => 'پیش‌نمایش لوکال لودر صفحه ساخت؛ بدون ارسال درخواست و بدون مصرف اعتبار.',
+                'cover' => asset('icons/vatan-512.png'),
+                'cost' => 12,
+                'estimated_time' => 'حدود ۳۰ ثانیه',
+                'output_count' => 1,
+                'fields' => [],
+                'identity' => ['available' => false, 'extra_cost' => 0, 'max_images' => 3],
+                'output_variants' => [],
+                'output_aspect_ratios' => ['3:4', '1:1', '16:9'],
+                'output_resolutions' => ['720', '1080', '2K'],
+                'default_output_aspect_ratio' => '3:4',
+                'default_output_resolution' => '1080',
+                'main_quality_options' => [],
+                'show_output_quality_selector' => false,
+                'face_profiles' => [],
+                'generate_url' => '',
+                'download_track_url' => '',
+                'login_url' => route('login'),
+                'is_authenticated' => true,
+            ];
+
+            return view('app.create-product', compact('previewProduct', 'buildProduct'))
+                ->with('product', $previewProduct);
+        })->name('app.create.loader-demo');
+        Route::get('/create-loader-ad', function () {
+            return view('app.create-loader-ad');
+        })->name('app.create.loader-ad');
+    }
     Route::view('/create-architecture', 'app.create-architecture')->name('app.create.architecture');
     Route::get('/create/{product:route_slug}', [ProductGenerateController::class, 'build'])->name('app.create.product');
     Route::post('/create/{product:route_slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.create.generate');
+    Route::post('/video-products/{product:slug}/quote', [\App\Http\Controllers\VideoProductController::class, 'quote'])->middleware('auth')->name('app.video-product.quote');
+                Route::get('/video-generations/{generatedVideo}/status', [\App\Http\Controllers\VideoProductController::class, 'status'])
+        ->middleware('auth')
+        ->name('app.video-generation.status');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
-    Route::view('/articles', 'app.articles')->name('app.articles');
+    // سازگاری با نشانی قدیمی مقالات؛ آدرس اصلی و کانونیکال خارج از /app است.
+    Route::get('/articles', fn () => redirect()->route('articles.index', [], 301))->name('app.articles');
     // لینک تستی صفحه محصول — به جدیدترین محصول فعال ری‌دایرکت می‌شود
     Route::get('/product-details', function () {
         $p = \App\Models\Product::where('status', 'active')->latest()->first();
@@ -151,6 +297,8 @@ Route::get('/generation/{id}/status', [GenerationController::class, 'checkStatus
 // وب‌هوک‌های providerها عمومی هستند، اما قبل از پردازش با امضای رسمی provider بررسی می‌شوند.
 Route::post('/webhooks/ai/fal', [AiWebhookController::class, 'fal'])->name('webhooks.ai.fal');
 Route::post('/webhooks/ai/replicate', [AiWebhookController::class, 'replicate'])->name('webhooks.ai.replicate');
+Route::post('/webhooks/video-studio/{job}/status', [VideoStudioController::class, 'n8nStatus'])
+    ->name('webhooks.video-studio.status');
 
 // ─── Admin Authentication (Guest) ────────────────────────
 Route::middleware('guest:admin')->group(function () {
@@ -210,14 +358,42 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('/pages/{sitePage}/publish', [SitePageController::class, 'publish'])->name('pages.publish');
     Route::post('/pages/{sitePage}/revisions/{revision}/restore', [SitePageController::class, 'restore'])->name('pages.revisions.restore');
 
+    // مدیریت کامل مرکز مقالات
+    Route::get('/articles', [AdminArticleController::class, 'index'])->name('articles.index');
+    Route::get('/articles/analytics', [AdminArticleController::class, 'overviewAnalytics'])->name('articles.analytics-overview');
+    Route::get('/articles/create', [AdminArticleController::class, 'create'])->name('articles.create');
+    Route::post('/articles', [AdminArticleController::class, 'store'])->name('articles.store');
+    Route::post('/articles/bulk', [AdminArticleController::class, 'bulk'])->name('articles.bulk');
+    Route::get('/articles/{article}/edit', [AdminArticleController::class, 'edit'])->name('articles.edit');
+    Route::put('/articles/{article}', [AdminArticleController::class, 'update'])->name('articles.update');
+    Route::patch('/articles/{article}/archive', [AdminArticleController::class, 'archive'])->name('articles.archive');
+    Route::delete('/articles/{article}', [AdminArticleController::class, 'destroy'])->name('articles.destroy');
+    Route::patch('/articles/trash/{article}/restore', [AdminArticleController::class, 'restore'])->name('articles.restore');
+    Route::delete('/articles/trash/{article}/force', [AdminArticleController::class, 'forceDelete'])->name('articles.force-delete');
+    Route::get('/articles/{article}/analytics', [AdminArticleController::class, 'analytics'])->name('articles.analytics');
+    Route::post('/articles/{article}/revisions/{revision}/restore', [AdminArticleController::class, 'restoreRevision'])->name('articles.revisions.restore');
+
+    Route::get('/article-categories', [AdminArticleCategoryController::class, 'index'])->name('article-categories.index');
+    Route::post('/article-categories', [AdminArticleCategoryController::class, 'store'])->name('article-categories.store');
+    Route::put('/article-categories/{articleCategory}', [AdminArticleCategoryController::class, 'update'])->name('article-categories.update');
+    Route::delete('/article-categories/{articleCategory}', [AdminArticleCategoryController::class, 'destroy'])->name('article-categories.destroy');
+
+    Route::get('/article-comments', [AdminArticleCommentController::class, 'index'])->name('article-comments.index');
+    Route::patch('/article-comments/{comment}', [AdminArticleCommentController::class, 'update'])->name('article-comments.update');
+    Route::delete('/article-comments/{comment}', [AdminArticleCommentController::class, 'destroy'])->name('article-comments.destroy');
+
     // مدیریت پرامپت‌ها
     Route::resource('prompts', AdminPromptController::class)->except(['show']);
 
     // مدیریت کاربران (متصل شده به کنترلر ادمین در پوشه Admin)
     Route::get('/users',                [AdminUserController::class, 'index'])->name('users.index');
-Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserController::class, 'changeStatus'])->name('admin.users.changeStatus');
+    Route::get('/users/export',         [AdminUserController::class, 'export'])->name('users.export');
+    Route::post('/users/{id}/status', [AdminUserController::class, 'changeStatus'])->name('users.status');
+    Route::patch('/users/bulk-status', [AdminUserController::class, 'bulkChangeStatus'])->name('users.bulk-status');
     Route::post('/users/{id}/copy-password', [AdminUserController::class, 'copyPassword'])->name('users.copy-password');
     Route::patch('/users/{id}/customer-segment', [AdminUserController::class, 'changeCustomerSegment'])->name('users.customer-segment');
+    Route::patch('/users/bulk-plan', [AdminUserController::class, 'bulkChangePlan'])->name('users.bulk-plan');
+    Route::patch('/users/{id}/plan', [AdminUserController::class, 'changePlan'])->name('users.plan');
     Route::get('/users/all-logs',       [AdminUserController::class, 'allLogs'])->name('users.all_logs');
     Route::get('/users/all-activities', [AdminUserController::class, 'allActivities'])->name('users.all_activities');
     Route::get('/users/{id}/logs',      [AdminUserController::class, 'logs'])->name('users.logs');
@@ -227,14 +403,48 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     // توجه: مسیر ویرایش دیگر جدا نیست و کامل از پروژه حذف شده — ویرایش هم از همین صفحه «ثبت محصول»
     // با پارامتر اختیاری محصول انجام می‌شود (مثال: /admin/products/create/52)
     Route::get('/products', [ProductController::class, 'index'])->name('products');
+    Route::get('/products/videos/create/{product?}', [\App\Http\Controllers\Admin\VideoProductController::class, 'create'])->name('products.video.create');
+    Route::post('/products/videos', [\App\Http\Controllers\Admin\VideoProductController::class, 'store'])->name('products.video.store');
+    Route::put('/products/videos/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'update'])->name('products.video.update');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::post('/products/translate-identity-prompt', [ProductController::class, 'translateIdentityPrompt'])->name('products.translate_identity_prompt');
     Route::post('/products/{product}/optimize-images', [ProductController::class, 'optimizeImages'])->name('products.optimize_images');
     Route::patch('/products/{product}/credit', [ProductController::class, 'updateCredit'])->name('products.update_credit');
     Route::patch('/products/bulk-ai-model', [ProductController::class, 'bulkUpdateAiModel'])->name('products.bulk_update_ai_model');
+    Route::patch('/products/bulk-model-tier-preset', [ProductController::class, 'bulkApplyModelTierPreset'])->name('products.bulk_apply_model_tier_preset');
+    Route::patch('/products/bulk-model-quality-configuration', [ProductController::class, 'bulkUpdateModelQualityConfiguration'])->name('products.bulk_update_model_quality_configuration');
+    Route::patch('/products/bulk-quality-credit-preset', [ProductController::class, 'bulkApplyQualityCreditPreset'])->name('products.bulk_apply_quality_credit_preset');
+    Route::patch('/products/{product}/model-tier-preset', [ProductController::class, 'applyModelTierPreset'])->name('products.apply_model_tier_preset');
+    Route::patch('/products/{product}/quality-credit-preset', [ProductController::class, 'applyQualityCreditPreset'])->name('products.apply_quality_credit_preset');
+    Route::patch('/products/{product}/model-tier-configuration', [ProductController::class, 'updateModelTierConfiguration'])->name('products.update_model_tier_configuration');
+    Route::patch('/products/{product}/model-quality-configuration', [ProductController::class, 'updateModelQualityConfiguration'])->name('products.update_model_quality_configuration');
+    Route::patch('/model-tier-defaults/{modelTierDefault}', [\App\Http\Controllers\Admin\ModelTierDefaultController::class, 'update'])->name('model-tier-defaults.update');
+    Route::post('/model-quality-presets', [\App\Http\Controllers\Admin\ModelQualityPresetController::class, 'store'])->name('model-quality-presets.store');
+    Route::patch('/model-quality-presets/{modelQualityPreset}', [\App\Http\Controllers\Admin\ModelQualityPresetController::class, 'update'])->name('model-quality-presets.update');
+    Route::delete('/model-quality-presets/{modelQualityPreset}', [\App\Http\Controllers\Admin\ModelQualityPresetController::class, 'destroy'])->name('model-quality-presets.destroy');
+    Route::post('/product-credit-presets', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'store'])->name('product-credit-presets.store');
+    Route::patch('/product-credit-presets/{productCreditPreset}', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'update'])->name('product-credit-presets.update');
+    Route::delete('/product-credit-presets/{productCreditPreset}', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'destroy'])->name('product-credit-presets.destroy');
     Route::patch('/products/{product}/ai-model', [ProductController::class, 'updateAiModel'])->name('products.update_ai_model');
-    Route::get('/products/dashboard',  fn() => view('admin.products-dashboard'))->name('products.dashboard');
+    Route::get('/products/dashboard', [VideoStudioController::class, 'index'])->name('products.dashboard');
+    Route::get('/create-studio', [\App\Http\Controllers\Admin\CreateStudioController::class, 'index'])->name('create-studio.index');
+    Route::put('/create-studio/pricing-settings', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updatePricingSettings'])->name('create-studio.pricing-settings.update');
+    Route::post('/create-studio/cost-rules', [\App\Http\Controllers\Admin\CreateStudioController::class, 'storeCostRule'])->name('create-studio.cost-rules.store');
+    Route::put('/create-studio/cost-rules/{studioCostRule}', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updateCostRule'])->name('create-studio.cost-rules.update');
+    Route::delete('/create-studio/cost-rules/{studioCostRule}', [\App\Http\Controllers\Admin\CreateStudioController::class, 'destroyCostRule'])->name('create-studio.cost-rules.destroy');
+    Route::patch('/video-studio/settings', [VideoStudioController::class, 'updateSettings'])->name('video-studio.settings.update');
+    Route::post('/video-studio/preview', [VideoStudioController::class, 'previewContent'])->name('video-studio.preview');
+    Route::post('/video-studio/hooks', [VideoStudioController::class, 'storeHook'])->name('video-studio.hooks.store');
+    Route::patch('/video-studio/hooks/{hook}', [VideoStudioController::class, 'updateHook'])->name('video-studio.hooks.update');
+    Route::delete('/video-studio/hooks/{hook}', [VideoStudioController::class, 'destroyHook'])->name('video-studio.hooks.destroy');
+    Route::post('/video-studio/sources', [VideoStudioController::class, 'storeSource'])->name('video-studio.sources.store');
+    Route::delete('/video-studio/sources/{source}', [VideoStudioController::class, 'destroySource'])->name('video-studio.sources.destroy');
+    Route::post('/video-studio/jobs', [VideoStudioController::class, 'createJob'])->name('video-studio.jobs.store');
+    Route::patch('/video-studio/jobs/{job}/settings', [VideoStudioController::class, 'updateJobSettings'])->name('video-studio.jobs.settings.update');
+    Route::post('/video-studio/jobs/{job}/revise', [VideoStudioController::class, 'reviseJob'])->name('video-studio.jobs.revise');
+    Route::post('/video-studio/jobs/bulk', [VideoStudioController::class, 'bulkAction'])->name('video-studio.jobs.bulk');
+    Route::post('/video-studio/jobs/{job}/retry', [VideoStudioController::class, 'retryJob'])->name('video-studio.jobs.retry');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
@@ -246,10 +456,11 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::patch('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])->name('products.toggle_status');
     Route::post('/products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk_action');
 
-    // مدیریت مدل‌های هوش مصنوعی (OpenRouter + Liara)
+    // مدیریت مدل‌های هوش مصنوعی و providerهای فعال پروژه
     // کلید مرکزی روشن/خاموش provider — ابتدا ثبت می‌شود تا resource آن را نپوشاند.
     Route::post('ai-models/toggle-provider', [AiModelController::class, 'toggleProvider'])->name('ai-models.toggle-provider');
     Route::post('ai-models/{aiModel}/toggle', [AiModelController::class, 'toggleModel'])->name('ai-models.toggle-model');
+    Route::post('ai-models/{aiModel}/toggle-product-selection', [AiModelController::class, 'toggleProductSelection'])->name('ai-models.toggle-product-selection');
     Route::get('ai-models/providers', [AiModelController::class, 'providers'])->name('ai-models.providers');
     Route::get('ai-models/providers/create', [AiModelController::class, 'createProvider'])->name('ai-models.providers.create');
     Route::put('ai-models/provider-settings', [AiModelController::class, 'updateProviderSettings'])->name('ai-models.provider-settings');
@@ -296,6 +507,8 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/processing', [OrderController::class, 'processing'])->name('orders.processing');
     Route::get('/orders/failed', [OrderController::class, 'failed'])->name('orders.failed');
+    Route::get('/orders/plan-purchases', [OrderController::class, 'planPurchases'])->name('orders.plan-purchases');
+    Route::get('/orders/plan-purchases/export', [OrderController::class, 'exportPlanPurchases'])->name('orders.plan-purchases.export');
     Route::get('/orders/refunds', [OrderController::class, 'refunds'])->name('orders.refunds');
     Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -303,6 +516,27 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::patch('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
     Route::patch('/orders/{order}/note', [OrderController::class, 'note'])->name('orders.note');
+
+    // حسابداری مدیریتی فاز اول؛ جداول آن از سفارش و خرید اصلی جدا هستند.
+    Route::get('/finance/export', [\App\Http\Controllers\Admin\FinanceController::class, 'export'])->name('finance.export');
+    Route::get('/finance/purchase-cases', [\App\Http\Controllers\Admin\FinanceCaseController::class, 'index'])->name('finance.cases.index');
+    Route::post('/finance/purchase-cases/sync', [\App\Http\Controllers\Admin\FinanceCaseController::class, 'sync'])->name('finance.cases.sync');
+    Route::get('/finance/purchase-cases/{financeCase}', [\App\Http\Controllers\Admin\FinanceCaseController::class, 'show'])->name('finance.cases.show');
+    Route::patch('/finance/purchase-cases/{financeCase}', [\App\Http\Controllers\Admin\FinanceCaseController::class, 'update'])->name('finance.cases.update');
+    Route::get('/finance/plans/{plan}', [\App\Http\Controllers\Admin\FinanceController::class, 'plan'])->name('finance.plans.show');
+    Route::post('/finance/transactions', [\App\Http\Controllers\Admin\FinanceTransactionController::class, 'store'])->name('finance.transactions.store');
+    Route::put('/finance/transactions/{transaction}', [\App\Http\Controllers\Admin\FinanceTransactionController::class, 'update'])->name('finance.transactions.update');
+    Route::patch('/finance/transactions/{transaction}/approve', [\App\Http\Controllers\Admin\FinanceTransactionController::class, 'approve'])->name('finance.transactions.approve');
+    Route::delete('/finance/transactions/{transaction}', [\App\Http\Controllers\Admin\FinanceTransactionController::class, 'destroy'])->name('finance.transactions.destroy');
+    Route::post('/finance/exchange-rates', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'storeRate'])->name('finance.exchange-rates.store');
+    Route::post('/finance/cost-centers', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'storeCostCenter'])->name('finance.cost-centers.store');
+    Route::post('/finance/vendors', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'storeVendor'])->name('finance.vendors.store');
+    Route::post('/finance/payment-methods', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'storePaymentMethod'])->name('finance.payment-methods.store');
+    Route::put('/finance/settings', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'updateSettings'])->name('finance.settings.update');
+    Route::post('/finance/sync', [\App\Http\Controllers\Admin\FinanceReferenceController::class, 'sync'])->name('finance.sync');
+    Route::get('/finance/{section?}', [\App\Http\Controllers\Admin\FinanceController::class, 'show'])
+        ->where('section', 'overview|cases|transactions|expenses|income|plans|products|exchange-rates|cost-centers|reports|settings')
+        ->name('finance.show');
 
     Route::get('/discounts', [DiscountController::class, 'index'])->name('discounts.index');
 
@@ -329,8 +563,12 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::patch('/discounts/{discount}/toggle', [DiscountController::class, 'toggle'])->name('discounts.toggle');
     Route::delete('/discounts/{discount}', [DiscountController::class, 'destroy'])->name('discounts.destroy');
     Route::get('/analytics',        fn() => view('admin.analytics'))->name('analytics');
-    Route::get('/jobs',             fn() => view('admin.jobs'))->name('jobs');
-    Route::get('/payments',         fn() => view('admin.payments'))->name('payments');
+    Route::get('/jobs', [QueueController::class, 'index'])->name('jobs');
+    Route::get('/jobs/snapshot', [QueueController::class, 'snapshot'])->name('jobs.snapshot');
+    Route::post('/jobs/clear', [QueueController::class, 'clear'])->name('jobs.clear');
+    Route::post('/jobs/failed/{failedJob}/retry', [QueueController::class, 'retryFailed'])->name('jobs.failed.retry');
+    Route::delete('/jobs/failed/{failedJob}', [QueueController::class, 'forgetFailed'])->name('jobs.failed.forget');
+    Route::get('/payments',         fn() => redirect()->route('admin.orders.plan-purchases'))->name('payments');
     Route::get('/bloggers',         fn() => view('admin.bloggers'))->name('bloggers');
 
     // تنظیمات زیرسیستم‌ها
@@ -352,6 +590,9 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
         Route::patch('/rewards/{reward}/review', [ReferralSettingController::class, 'reviewReward'])->name('rewards.review');
     });
 
+    Route::get('/settings/new-user-gift', [ReferralSettingController::class, 'newUserGift'])->name('settings.new-user-gift');
+    Route::put('/settings/new-user-gift', [ReferralSettingController::class, 'updateNewUserGift'])->name('settings.new-user-gift.update');
+
     // سازگاری با نشانی قبلی؛ بخش همکاری در فروش اکنون منوی مستقل دارد.
     Route::get('/settings/referrals', [ReferralSettingController::class, 'index'])->name('settings.referrals');
     Route::put('/settings/referrals', [ReferralSettingController::class, 'update'])->name('settings.referrals.update');
@@ -359,6 +600,34 @@ Route::post('/users/{id}/status', [App\Http\Controllers\Admin\AdminUserControlle
     Route::patch('/settings/referrals/conversions/{conversion}/review', [ReferralSettingController::class, 'reviewConversion'])->name('settings.referrals.conversions.review');
     Route::patch('/settings/referrals/rewards/{reward}/review', [ReferralSettingController::class, 'reviewReward'])->name('settings.referrals.rewards.review');
     Route::get('/settings/system',           fn() => view('admin.settings.system'))->name('settings.system');
+
+    // ماژول مستقل رشد و جذب؛ تمام مسیرها و داده‌های آن از سایر بخش‌های داشبورد جدا هستند.
+    Route::prefix('growth')->name('growth.')->group(function () {
+        Route::get('/', [GrowthController::class, 'monitor'])->name('monitor');
+        Route::get('/monitor', [GrowthController::class, 'monitor'])->name('monitor.explicit');
+        Route::get('/overview', [GrowthController::class, 'overview'])->name('overview');
+        Route::get('/users', [GrowthUserController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [GrowthUserController::class, 'show'])->name('users.show');
+        Route::get('/channels/{channel?}', [GrowthController::class, 'channels'])->name('channels');
+        Route::get('/contents', [GrowthController::class, 'contents'])->name('contents');
+        Route::post('/contents', [GrowthController::class, 'storeContent'])->name('contents.store');
+        Route::patch('/contents/{growthContent}', [GrowthController::class, 'updateContent'])->name('contents.update');
+        Route::get('/links', [GrowthController::class, 'links'])->name('links.index');
+        Route::get('/links/create', [GrowthController::class, 'createLink'])->name('links.create');
+        Route::post('/links', [GrowthController::class, 'storeLink'])->name('links.store');
+        Route::get('/links/analytics/{growthLink?}', [GrowthController::class, 'linkAnalytics'])->name('links.analytics');
+        Route::get('/settings/data-sources', [GrowthDataSourceController::class, 'index'])->name('data-sources.index');
+        Route::post('/settings/data-sources', [GrowthDataSourceController::class, 'store'])->name('data-sources.store');
+        Route::put('/settings/data-sources/{growthDataSource}', [GrowthDataSourceController::class, 'update'])->name('data-sources.update');
+        Route::patch('/settings/data-sources/{growthDataSource}/toggle', [GrowthDataSourceController::class, 'toggle'])->name('data-sources.toggle');
+        Route::patch('/settings/data-sources/{growthDataSource}/clear-error', [GrowthDataSourceController::class, 'clearError'])->name('data-sources.clear-error');
+        Route::post('/settings/data-sources/{growthDataSource}/mappings', [GrowthDataSourceController::class, 'storeMapping'])->name('data-sources.mappings.store');
+        Route::delete('/settings/data-sources/{growthDataSource}/mappings/{growthDataMapping}', [GrowthDataSourceController::class, 'destroyMapping'])->name('data-sources.mappings.destroy');
+        Route::post('/settings/data-sources/import/csv', [GrowthDataSourceController::class, 'importCsv'])->name('data-sources.import.csv');
+        Route::get('/{section}', [GrowthController::class, 'section'])
+            ->where('section', 'attribution|products|sales|retention|reports|settings')
+            ->name('section');
+    });
 
     // صفحه‌ی جایگزین برای بخش‌هایی که هنوز فایل بک‌اند/روت ندارند
     Route::get('/{any}', fn ($any = null) => view('admin.coming-soon'))
@@ -374,5 +643,7 @@ Route::prefix('api/v1/admin')->name('admin.api.')->middleware('auth:admin')->gro
     Route::get('/users/{id}/token-history',  [AdminUserController::class, 'tokenHistory'])->name('users.token_history');
     Route::get('/users/{id}',                [AdminUserController::class, 'show'])->name('users.show');
     Route::post('/users/{id}/token',         [AdminUserController::class, 'updateToken'])->name('users.token.update');
+    Route::post('/users/bulk-token',         [AdminUserController::class, 'bulkUpdateToken'])->name('users.bulk_token.update');
+    Route::post('/token-history/{id}/sms',   [AdminUserController::class, 'resendTokenSms'])->name('token_history.sms');
     Route::get('/token-history',             [AdminUserController::class, 'globalTokenHistory'])->name('token_history');
 });
