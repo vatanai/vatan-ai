@@ -97,7 +97,7 @@ class VideoStudioController extends Controller
             'auto_generate_hook' => true,
             'auto_generate_caption' => true,
             'auto_generate_keyword' => true,
-            'font_family' => 'B_Yekan',
+            'font_family' => 'Modam',
             'aspect_ratio' => '9:16',
         ]);
         if (blank($settings->prompt_profile)) {
@@ -212,6 +212,8 @@ class VideoStudioController extends Controller
             'telegram_button_url.*' => ['nullable', 'url', 'max:2048'],
             'telegram_button_style' => ['nullable', 'array', 'max:8'],
             'telegram_button_style.*' => ['nullable', Rule::in(['primary', 'success', 'danger'])],
+            'telegram_button_width' => ['nullable', 'array', 'max:8'],
+            'telegram_button_width.*' => ['nullable', Rule::in(['full', 'half'])],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -232,7 +234,7 @@ class VideoStudioController extends Controller
             }
         }
         $data['telegram_buttons'] = $this->normalizeTelegramButtons($request);
-        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style']);
+        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width']);
         unset($data['prompt_file']);
         $setting = VideoStudioSetting::query()
             ->where('product_id', $productId)
@@ -427,6 +429,8 @@ class VideoStudioController extends Controller
             'telegram_button_url.*' => ['nullable', 'url', 'max:2048'],
             'telegram_button_style' => ['nullable', 'array', 'max:8'],
             'telegram_button_style.*' => ['nullable', Rule::in(['primary', 'success', 'danger'])],
+            'telegram_button_width' => ['nullable', 'array', 'max:8'],
+            'telegram_button_width.*' => ['nullable', Rule::in(['full', 'half'])],
             'prompt_file' => ['nullable', 'file', 'mimes:txt,md', 'max:512'],
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
@@ -450,7 +454,7 @@ class VideoStudioController extends Controller
             $data['instagram_prompt'] = $data['prompt_profile'];
         }
         $telegramButtons = $this->normalizeTelegramButtons($request);
-        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style']);
+        unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width']);
         if (!empty($data['source_library_id'])) {
             $librarySource = VideoStudioSource::query()->where('is_active', true)->findOrFail((int) $data['source_library_id']);
             $data['source_mode'] = $librarySource->type;
@@ -608,6 +612,7 @@ class VideoStudioController extends Controller
         $labels = $request->input('telegram_button_label', []);
         $urls = $request->input('telegram_button_url', []);
         $styles = $request->input('telegram_button_style', []);
+        $widths = $request->input('telegram_button_width', []);
         $buttons = [];
         foreach ((array) $labels as $index => $label) {
             $label = trim((string) $label);
@@ -621,6 +626,9 @@ class VideoStudioController extends Controller
                 'style' => in_array(($styles[$index] ?? 'primary'), ['primary', 'success', 'danger'], true)
                     ? (string) $styles[$index]
                     : 'primary',
+                'width' => in_array(($widths[$index] ?? 'full'), ['full', 'half'], true)
+                    ? (string) $widths[$index]
+                    : 'full',
             ];
         }
 
