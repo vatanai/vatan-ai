@@ -17,6 +17,7 @@ class TelegramFlowService
         private readonly TelegramIdentityService $identity,
         private readonly TelegramDeepLinkService $deepLinks,
         private readonly TelegramContentService $content,
+        private readonly TelegramMembershipService $membershipService,
     ) {
     }
 
@@ -101,14 +102,13 @@ class TelegramFlowService
         $settings = ReferralSetting::current();
         $membership = $input['is_channel_member'] ?? null;
         if ($settings->telegram_membership_required && $membership === null) {
-            return [
-                'ok' => true,
-                'type' => 'membership_check_required',
-                'chat_id' => $chatId,
-                'channel' => $settings->telegram_channel_username ?: config('services.telegram.channel_username'),
-                'telegram_id' => $telegramUser->telegram_id,
-                'launch_token' => $click?->launch_token,
-            ];
+            $membership = $this->membershipService->check(
+                (int) $telegramUser->telegram_id,
+                $settings->telegram_channel_id
+                    ?: $settings->telegram_channel_username
+                    ?: config('services.telegram.channel_id')
+                    ?: config('services.telegram.channel_username'),
+            );
         }
 
         if ($settings->telegram_membership_required && ! filter_var($membership, FILTER_VALIDATE_BOOLEAN)) {
@@ -224,13 +224,13 @@ class TelegramFlowService
         }
 
         $click->forceFill(['opened_at' => now()])->save();
-        return [
-            'ok' => true,
-            'type' => 'mini_app',
-            'chat_id' => $chatId,
-            'text' => $this->content->text('build_ready'),
+        $url = $this->miniAppUrl($click->launch_token);
+        return $this->message($chatId, $this->content->text('build_ready'), [[
+            'text' => 'ساخت محصول در وطن',
+            'web_app' => ['url' => $url],
+        ]]) + [
             'launch_token' => $click->launch_token,
-            'url' => $this->miniAppUrl($click->launch_token),
+            'url' => $url,
             'product_key' => $click->product_key,
             'user_id' => $telegramUser->user_id,
         ];
@@ -244,12 +244,12 @@ class TelegramFlowService
             ]);
         }
 
-        return [
-            'ok' => true,
-            'type' => 'mini_app',
-            'chat_id' => $chatId,
-            'text' => $this->content->text('all_products_ready'),
-            'url' => $this->miniAppUrl(null, true),
+        $url = $this->miniAppUrl(null, true);
+        return $this->message($chatId, $this->content->text('all_products_ready'), [[
+            'text' => 'نمایش قالب‌ها در وطن',
+            'web_app' => ['url' => $url],
+        ]]) + [
+            'url' => $url,
             'user_id' => $telegramUser->user_id,
         ];
     }
