@@ -394,7 +394,8 @@
       const formPayload = new FormData(studioForm);
       const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
       if (productId) formPayload.set('product_id', productId);
-      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '', 'Accept': 'application/json' }, body: formPayload });
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || '';
+      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: formPayload });
       const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
       if (!response.ok) throw new Error(payload.message || ('پاسخ سرور: ' + response.status));
       renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options);
