@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'site.page' => \App\Http\Middleware\ApplySitePageSettings::class,
         ]);
 
-        $middleware->validateCsrfTokens(except: ['webhooks/ai/*']);
+        $middleware->validateCsrfTokens(except: ['webhooks/ai/*', 'webhooks/video-studio/*']);
 
         // مدیریت هوشمند هدایت کاربران مهمان (احراز هویت نشده) بر اساس آدرس درخواست
         $middleware->redirectGuestsTo(function (Request $request) {
@@ -38,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         // ═══ ترمیم خودکار کش خرابِ Blade ═══
-        // روی هاست‌هایی مثل لیارا که «storage» روی یک دیسک دائمی مونت می‌شود، فایل‌های
+        // روی هاست‌هایی که «storage» روی یک دیسک دائمی مونت می‌شود، فایل‌های
         // کامپایل‌شده‌ی Blade (storage/framework/views) و/یا OPcache می‌توانند بین دیپلوی‌ها
         // قدیمی/ناهماهنگ با سورس فعلی بمانند و همین باعث خطای
         // "ParseError ... syntax error, unexpected token @" می‌شود، حتی وقتی خودِ فایل blade
@@ -49,11 +49,57 @@ return Application::configure(basePath: dirname(__DIR__))
         // در فایل blade است، نه کش قدیمی — و پارامتر __viewcache_recovered=1 در آدرس از
         // حلقه‌ی بی‌نهایت جلوگیری می‌کند.
         $exceptions->render(function (\Throwable $e, Request $request) {
-            if ($request->expectsJson() || ($request->isMethod('post') && $request->is('admin/lab/*'))) {
+            $isLabRequest = $request->is('admin/lab') || $request->is('admin/lab/*');
+            if ($isLabRequest) {
                 report($e);
 
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    $errors = $e->errors();
+                    return response()->json([
+                        'message' => collect($errors)->flatten()->filter()->first() ?: 'اطلاعات آزمایش کامل یا معتبر نیست.',
+                        'errors' => $errors,
+                        'error_code' => 'LAB_VALIDATION_FAILED',
+                    ], 422);
+                }
+
+                $message = match (true) {
+                    $e instanceof \Illuminate\Http\Client\ConnectionException => 'ارتباط با سرویس مدل یا سرویس نرخ ارز برقرار نشد؛ وضعیت اتصال را بررسی کنید.',
+                    $e instanceof \Illuminate\Http\Client\RequestException => 'سرویس مدل پاسخ معتبر نداد؛ مدل انتخابی یا تنظیمات سرویس را بررسی کنید.',
+                    $e instanceof \Illuminate\Database\QueryException => 'ذخیره اطلاعات آزمایش انجام نشد؛ ساختار پایگاه‌داده را بررسی کنید.',
+                    default => 'آزمایش شروع نشد؛ محصول، مدل و تصویر ورودی را بررسی کنید و دوباره تلاش کنید.',
+                };
+
                 return response()->json([
-                    'message' => 'اجرای آزمایش به‌دلیل یک خطای داخلی شروع نشد. لطفاً دوباره تلاش کنید.',
+                    'message' => $message,
+                    'error_code' => 'LAB_START_FAILED',
+                ], 500);
+            }
+
+            // خطای ذخیره‌ی محصول یا سایر درخواست‌های JSON نباید با متن آزمایشگاه
+            // نمایش داده شود؛ این همان چیزی بود که هشدار نامرتبط ایجاد می‌کرد.
+            if ($request->expectsJson()) {
+                report($e);
+                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                    return response()->json([
+                        'message' => 'برای انجام این کار ابتدا وارد حساب کاربری شوید.',
+                        'login_url' => route('login', ['redirect' => $request->fullUrl()]),
+                        'error_code' => 'AUTHENTICATION_REQUIRED',
+                    ], 401);
+                }
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    $errors = $e->errors();
+                    return response()->json([
+                        'message' => collect($errors)->flatten()->filter()->first() ?: 'اطلاعات واردشده معتبر نیست.',
+                        'errors' => $errors,
+                        'error_code' => 'REQUEST_VALIDATION_FAILED',
+                    ], 422);
+                }
+
+                return response()->json([
+                    'message' => $e instanceof \Illuminate\Database\QueryException
+                        ? 'ذخیره اطلاعات انجام نشد؛ لطفاً دوباره تلاش کنید.'
+                        : 'خطای داخلی ' . class_basename($e) . ': ' . \Illuminate\Support\Str::limit((string) $e->getMessage(), 180),
+                    'error_code' => 'REQUEST_FAILED',
                 ], 500);
             }
 
