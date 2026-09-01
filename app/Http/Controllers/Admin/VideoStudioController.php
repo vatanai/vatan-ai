@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class VideoStudioController extends Controller
 {
@@ -239,28 +240,29 @@ class VideoStudioController extends Controller
 
     public function previewContent(Request $request)
     {
-        $data = $request->validate([
-            'product_id' => ['required', 'integer', 'exists:products,id'],
-            'hook_guidelines' => ['nullable', 'string', 'max:5000'],
-            'caption_guidelines' => ['nullable', 'string', 'max:5000'],
-            'instagram_prompt' => ['nullable', 'string', 'max:30000'],
-            'telegram_prompt' => ['nullable', 'string', 'max:30000'],
-            'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
-        ]);
-
-        $product = Product::query()->findOrFail((int) $data['product_id']);
-        $webhook = trim((string) config('services.n8n.video_studio_preview_webhook', env('N8N_VIDEO_STUDIO_PREVIEW_WEBHOOK', '')));
-        if ($webhook === '') {
-            $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
-            $webhook = preg_replace('~/video-studio-create(?:$|\?)~', '/video-studio-preview', $webhook) ?: $webhook;
-        }
-        if ($webhook === '') {
-            return response()->json(['message' => 'اتصال پیش‌نمایش ورکفلو تنظیم نشده است.'], 422);
-        }
-
-        $channel = (string) ($data['channel'] ?? 'instagram');
-        $prompt = trim((string) ($data[$channel . '_prompt'] ?? $data['instagram_prompt'] ?? ''));
         try {
+            $data = $request->validate([
+                'product_id' => ['required', 'integer', 'exists:products,id'],
+                'hook_guidelines' => ['nullable', 'string', 'max:5000'],
+                'caption_guidelines' => ['nullable', 'string', 'max:5000'],
+                'instagram_prompt' => ['nullable', 'string', 'max:30000'],
+                'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+                'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
+            ]);
+            $product = Product::query()->find((int) $data['product_id']);
+            if (!$product) {
+                return response()->json(['message' => 'محصول انتخاب‌شده پیدا نشد؛ دوباره محصول را انتخاب کنید.'], 422);
+            }
+            $webhook = trim((string) config('services.n8n.video_studio_preview_webhook', env('N8N_VIDEO_STUDIO_PREVIEW_WEBHOOK', '')));
+            if ($webhook === '') {
+                $webhook = trim((string) config('services.n8n.video_studio_webhook', env('N8N_VIDEO_STUDIO_WEBHOOK_URL', '')));
+                $webhook = preg_replace('~/video-studio-create(?:$|\?)~', '/video-studio-preview', $webhook) ?: $webhook;
+            }
+            if ($webhook === '') {
+                return response()->json(['message' => 'اتصال پیش‌نمایش ورکفلو تنظیم نشده است.'], 422);
+            }
+            $channel = (string) ($data['channel'] ?? 'instagram');
+            $prompt = trim((string) ($data[$channel . '_prompt'] ?? $data['instagram_prompt'] ?? ''));
             $response = Http::retry(3, 300)->timeout(45)->post($webhook, [
                 'preview_only' => true,
                 'channel' => $channel,
@@ -315,6 +317,11 @@ class VideoStudioController extends Controller
                 'keyword' => $keywords[0] ?? '',
                 'dm_template' => trim((string) ($options['dm_template'] ?? '')),
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => collect($e->errors())->flatten()->filter()->first() ?: 'اطلاعات پیش‌نمایش کامل نیست.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Throwable $e) {
             report($e);
             return response()->json(['message' => 'ارتباط با مدل هوش مصنوعی ناموفق بود.'], 502);

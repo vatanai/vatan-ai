@@ -81,7 +81,7 @@
     <div class="studio-settings" style="margin-bottom:16px">
       <section class="studio-card studio-panel" id="studio-settings">
         <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-sliders"></i> تنظیمات ساخت</div><div class="studio-panel-meta">قابل تغییر برای هر محصول</div></div>
-        <form id="studio-settings-form" class="studio-form" method="POST" action="{{ route('admin.video-studio.settings.update') }}" enctype="multipart/form-data">
+        <form id="studio-settings-form" class="studio-form" data-product-id="{{ $selectedProductId ?? '' }}" method="POST" action="{{ route('admin.video-studio.settings.update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="_method" id="studio-form-method" value="PATCH">
           <div class="studio-field"><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProductId }}"><div class="studio-selected-product"><div><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button></div><small>با انتخاب محصول از پنجره‌ی جست‌وجو، تصاویر همان محصول پایین همین بخش نمایش داده می‌شود.</small></div>
@@ -391,7 +391,10 @@
     if (promptFallback && instagramPrompt) promptFallback.value = instagramPrompt.value;
     previewButton.disabled = true; previewButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال تولید...'; if (previewPanel) previewPanel.classList.remove('is-hidden'); if (previewStatus) previewStatus.textContent = 'در حال دریافت سه پیشنهاد از هوش مصنوعی...';
     try {
-      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '', 'Accept': 'application/json' }, body: new FormData(studioForm) });
+      const formPayload = new FormData(studioForm);
+      const productId = studioProduct?.value || studioForm.dataset.productId || new URLSearchParams(window.location.search).get('product_id') || '';
+      if (productId) formPayload.set('product_id', productId);
+      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || '', 'Accept': 'application/json' }, body: formPayload });
       const rawResponse = await response.text(); let payload = {}; try { payload = JSON.parse(rawResponse); } catch (parseError) { payload = {}; }
       if (!response.ok) throw new Error(payload.message || ('پاسخ سرور: ' + response.status));
       renderPreviewTabs('hook', payload.hook_options); renderPreviewTabs('caption', payload.caption_options); renderPreviewTabs('keyword', payload.keyword_options);
