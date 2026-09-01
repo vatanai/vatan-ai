@@ -63,6 +63,14 @@ Route::get('/telegram/mini-app', [TelegramMiniAppController::class, 'show'])
 Route::post('/api/telegram/mini-app/session', [TelegramMiniAppController::class, 'session'])
     ->name('telegram.mini-app.session');
 
+// APIهای CRM تلگرام فقط برای ادمین احراز هویت‌شده؛ ارسال کمپین در این فاز فعال نیست.
+Route::prefix('api')->name('telegram.api.')->middleware('auth:admin')->group(function () {
+    Route::get('/telegram-users', [\App\Http\Controllers\Admin\TelegramApiController::class, 'users'])->name('users.index');
+    Route::post('/telegram-users', [\App\Http\Controllers\Admin\TelegramApiController::class, 'storeUser'])->name('users.store');
+    Route::get('/campaigns', [\App\Http\Controllers\Admin\TelegramApiController::class, 'campaigns'])->name('campaigns.index');
+    Route::post('/campaigns', [\App\Http\Controllers\Admin\TelegramApiController::class, 'storeCampaign'])->name('campaigns.store');
+});
+
 // صفحات پروفایل برای مشاهده عمومی هستند؛ عملیات شخصی همچنان احراز هویت می‌خواهد.
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
