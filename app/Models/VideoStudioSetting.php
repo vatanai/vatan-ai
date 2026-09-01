@@ -11,7 +11,7 @@ class VideoStudioSetting extends Model
         'product_id', 'source_mode', 'source_url', 'auto_enabled', 'approval_required',
         'auto_generate_hook', 'auto_generate_caption', 'auto_generate_keyword',
         'hook_guidelines', 'caption_guidelines', 'keyword', 'dm_template',
-        'hook_text', 'caption_text', 'prompt_profile',
+        'hook_text', 'caption_text', 'telegram_caption_text', 'prompt_profile',
         'instagram_prompt', 'telegram_prompt',
         'telegram_buttons',
         'font_family', 'aspect_ratio',
