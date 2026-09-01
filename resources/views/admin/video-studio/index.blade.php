@@ -422,7 +422,7 @@
     const telegramOptionEditor = telegramCaptionHolder?.querySelector('.studio-preview-option.is-selected textarea');
     const fallbackCaption = document.querySelector('[name="caption_text"]')?.value || '';
     const caption = telegramOptionEditor?.value?.trim() || telegramCaptionEditor?.value?.trim() || captionEditor?.value || fallbackCaption || 'متن کپشن تلگرام';
-    if (telegramCaptionHidden) telegramCaptionHidden.value = caption;
+    if (telegramCaptionHidden) { telegramCaptionHidden.value = caption; telegramCaptionHidden.setAttribute('value', caption); }
     const captionTarget = document.getElementById('telegram-preview-caption');
     if (captionTarget) captionTarget.textContent = caption;
     const target = document.getElementById('telegram-preview-buttons');
