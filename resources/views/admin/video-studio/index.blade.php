@@ -93,6 +93,10 @@
   .studio-phone-buttons{width:94%;max-width:94%;margin:8px auto 0;box-sizing:border-box}
   .studio-phone-buttons:empty{display:none}
   @media(max-width:999px){#source-options,#aspect-ratio-field .studio-options{width:100%;max-width:none}}
+  .studio-media-controls{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);box-sizing:border-box}
+  .studio-media-controls>#source-url-field{grid-column:1/-1}
+  .studio-media-controls>.studio-field{min-width:0}
+  @media(max-width:999px){.studio-media-controls{grid-template-columns:1fr}.studio-media-controls>#source-url-field{grid-column:1}}
 </style>
 @endpush
 
@@ -136,7 +140,7 @@
           @endif
           <div class="studio-field"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
-          <div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
+          <div class="studio-media-controls" id="studio-media-controls"><div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
             @foreach(['auto'=>['fa-wand-magic-sparkles','خودکار'],'upload'=>['fa-file-audio','فایل مستقیم'],'music'=>['fa-music','فایل موزیک'],'video'=>['fa-film','ویدیوی منبع']] as $mode=>$option)
               <div class="studio-option"><input id="source-{{ $mode }}" type="radio" name="source_mode" value="{{ $mode }}" @checked(($settings->source_mode ?? 'auto') === $mode)><label for="source-{{ $mode }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}</label></div>
             @endforeach
@@ -146,7 +150,7 @@
             @foreach(['9:16'=>['fa-mobile-screen-button','استوری عمودی'],'1:1'=>['fa-square','مربع'],'4:5'=>['fa-image','پست عمودی'],'16:9'=>['fa-display','افقی']] as $ratio=>$option)
               <div class="studio-option"><input id="ratio-{{ str_replace(':','-',$ratio) }}" type="radio" name="aspect_ratio" value="{{ $ratio }}" @checked(($settings->aspect_ratio ?? '9:16') === $ratio)><label for="ratio-{{ str_replace(':','-',$ratio) }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}<span dir="ltr">{{ $ratio }}</span></label></div>
             @endforeach
-          </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div>
+          </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div></div>
           <div class="studio-smart-fields" aria-label="کنترل‌های هوشمند و پیشنهادهای متن">
             <div class="studio-smart-field">
               <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
@@ -415,8 +419,9 @@
   telegramButtonList?.addEventListener('click', (event) => { const remove = event.target.closest('[data-remove-telegram-button]'); if (remove) remove.closest('[data-telegram-button-row]')?.remove(); });
   function updateTelegramPreview() {
     const captionEditor = document.querySelector('[data-preview-tabs="caption"] .studio-preview-option.is-selected textarea');
+    const telegramOptionEditor = telegramCaptionHolder?.querySelector('.studio-preview-option.is-selected textarea');
     const fallbackCaption = document.querySelector('[name="caption_text"]')?.value || '';
-    const caption = telegramCaptionEditor?.value?.trim() || captionEditor?.value || fallbackCaption || 'متن کپشن تلگرام';
+    const caption = telegramOptionEditor?.value?.trim() || telegramCaptionEditor?.value?.trim() || captionEditor?.value || fallbackCaption || 'متن کپشن تلگرام';
     if (telegramCaptionHidden) telegramCaptionHidden.value = caption;
     const captionTarget = document.getElementById('telegram-preview-caption');
     if (captionTarget) captionTarget.textContent = caption;
@@ -435,7 +440,7 @@
       const button = document.createElement('a'); button.className = 'studio-phone-button ' + style + ' ' + width; button.href = url; button.target = '_blank'; button.rel = 'noopener'; button.textContent = label; target.appendChild(button);
     });
   }
-  document.addEventListener('input', (event) => { if (event.target.closest('#telegram-button-list,[data-preview-tabs="caption"],[name="caption_text"],#telegram-caption-editor')) updateTelegramPreview(); });
+  document.addEventListener('input', (event) => { if (event.target.closest('#telegram-button-list,[data-preview-tabs="caption"],[data-telegram-caption-options],[name="caption_text"],#telegram-caption-editor')) updateTelegramPreview(); });
   document.addEventListener('change', (event) => { if (event.target.closest('#telegram-button-list,[data-preview-tabs="caption"]')) updateTelegramPreview(); });
   setTimeout(updateTelegramPreview, 500);
 
@@ -587,7 +592,7 @@
   document.querySelectorAll('[data-regenerate-preview]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); regenerateKind(button.dataset.regeneratePreview); }));
   document.querySelector('[data-regenerate-telegram]')?.addEventListener('click', async (event) => { event.preventDefault(); const button = event.currentTarget; button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; try { await requestPreview('telegram'); } catch (error) { if (previewStatus) previewStatus.textContent = error.message || 'ساخت کپشن تلگرام ناموفق بود.'; } finally { button.disabled = false; button.textContent = 'ساخت مجدد'; } });
   Object.values(previewToggles).forEach((toggle) => toggle?.addEventListener('change', updatePreviewEditability));
-  telegramCaptionToggle?.addEventListener('change', updatePreviewEditability);
+  telegramCaptionToggle?.addEventListener('change', () => { updatePreviewEditability(); updateTelegramPreview(); });
   ['hook', 'caption', 'keyword'].forEach((kind) => renderLoadingOptions(kind, 'بعد از انتخاب محصول، پیشنهادها اینجا نمایش داده می‌شوند.'));
   renderTelegramLoadingOptions();
   const originalSubmitStudioForm = submitStudioForm;
