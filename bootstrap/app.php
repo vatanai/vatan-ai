@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'site.page' => \App\Http\Middleware\ApplySitePageSettings::class,
         ]);
 
-        $middleware->validateCsrfTokens(except: ['webhooks/ai/*', 'webhooks/video-studio/*']);
+        $middleware->validateCsrfTokens(except: ['webhooks/ai/*', 'webhooks/video-studio/*', 'webhooks/telegram']);
 
         // مدیریت هوشمند هدایت کاربران مهمان (احراز هویت نشده) بر اساس آدرس درخواست
         $middleware->redirectGuestsTo(function (Request $request) {

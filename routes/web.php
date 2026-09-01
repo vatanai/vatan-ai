@@ -30,6 +30,8 @@ use App\Http\Controllers\Admin\SitePageController;
 use App\Http\Controllers\Admin\Explore\TrendController;
 use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
+use App\Http\Controllers\TelegramMiniAppController;
+use App\Http\Controllers\TelegramWebhookController;
 
 // ─── Root & Landing ──────────────────────────────────────
 // صفحه‌ی اصلی عمومی باید برای کاربر واردشده هم قابل مشاهده باشد؛
@@ -52,6 +54,14 @@ Route::get('/privacy', fn() => view('site.privacy'))->name('privacy');
 
 Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token()]))
     ->name('auth.csrf-token');
+
+// ورودی بات در یک مسیر مستقل نگه داشته شده تا با احراز هویت و فرم‌های سایت تداخل نداشته باشد.
+Route::post('/webhooks/telegram', [TelegramWebhookController::class, 'update'])
+    ->name('telegram.webhook');
+Route::get('/telegram/mini-app', [TelegramMiniAppController::class, 'show'])
+    ->name('telegram.mini-app');
+Route::post('/api/telegram/mini-app/session', [TelegramMiniAppController::class, 'session'])
+    ->name('telegram.mini-app.session');
 
 // صفحات پروفایل برای مشاهده عمومی هستند؛ عملیات شخصی همچنان احراز هویت می‌خواهد.
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
