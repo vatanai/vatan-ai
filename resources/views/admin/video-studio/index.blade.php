@@ -97,6 +97,13 @@
   .studio-media-controls>#source-url-field{grid-column:1/-1}
   .studio-media-controls>.studio-field{min-width:0}
   @media(max-width:999px){.studio-media-controls{grid-template-columns:1fr}.studio-media-controls>#source-url-field{grid-column:1}}
+  .studio-settings{align-items:stretch}
+  .studio-settings>.studio-card{height:100%;box-sizing:border-box;margin-bottom:0!important}
+  .studio-library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
+  .studio-library-grid>.studio-card{min-width:0;height:100%;box-sizing:border-box;margin-bottom:0!important}
+  .video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-layout{margin-bottom:16px!important}
+  .video-studio-page>.studio-library-grid+*{margin-top:0}
+  @media(max-width:999px){.studio-library-grid{grid-template-columns:1fr}}
 </style>
 @endpush
 
@@ -186,6 +193,7 @@
       </section>
     </div>
 
+      <div class="studio-library-grid">
       <section class="studio-card studio-panel">
         <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-lightbulb"></i> کتابخانه هوک</div><div class="studio-panel-meta">ایده‌های قابل استفاده برای هوش مصنوعی</div></div>
         <form class="studio-form" method="POST" action="{{ route('admin.video-studio.hooks.store') }}" style="margin-bottom:14px">
@@ -216,6 +224,7 @@
         </form>
         <div class="studio-hook-list">@forelse($sources as $source)<div class="studio-hook"><div class="studio-hook-top"><div class="studio-hook-title">{{ $source->name }}</div><form method="POST" action="{{ route('admin.video-studio.sources.destroy', $source) }}">@csrf @method('DELETE')<button class="studio-link-btn" type="submit" title="حذف"><i class="fa-solid fa-trash"></i></button></form></div><div class="studio-hook-tags">{{ $source->type === 'video' ? 'ویدیوی منبع' : 'موزیک' }} · {{ $source->used_count }} بار استفاده</div></div>@empty<div class="studio-empty">هنوز منبعی ثبت نشده است.</div>@endforelse</div>
       </section>
+      </div>
 
     <div class="studio-modal" id="product-picker" role="dialog" aria-modal="true" aria-labelledby="product-picker-title">
       <div class="studio-modal-card">
