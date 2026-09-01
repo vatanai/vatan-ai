@@ -121,11 +121,20 @@ class VideoStudioController extends Controller
         $sources = Schema::hasTable('video_studio_sources')
             ? VideoStudioSource::query()->where('is_active', true)->latest()->get()
             : collect();
-        $fonts = Schema::hasTable('video_studio_fonts')
+        $fallbackFonts = collect([
+            new VideoStudioFont(['name' => 'یکان', 'slug' => 'B_Yekan', 'file_path' => 'fonts/B_Yekan.ttf', 'is_default' => true]),
+            new VideoStudioFont(['name' => 'ابر', 'slug' => 'Abar', 'file_path' => 'fonts/video/AbarMid-Regular.ttf', 'is_default' => false]),
+            new VideoStudioFont(['name' => 'ایران‌سنس', 'slug' => 'IRANSansX', 'file_path' => 'fonts/IRANSansXFaNum-RegularD4.ttf', 'is_default' => false]),
+            new VideoStudioFont(['name' => 'پیدا', 'slug' => 'Peyda', 'file_path' => 'fonts/video/Peyda-Medium.ttf', 'is_default' => false]),
+            new VideoStudioFont(['name' => 'دوران', 'slug' => 'Doran', 'file_path' => 'fonts/video/Doran-Regular.ttf', 'is_default' => false]),
+            new VideoStudioFont(['name' => 'مدام', 'slug' => 'Modam', 'file_path' => 'fonts/video/Modam-Medium.ttf', 'is_default' => false]),
+            new VideoStudioFont(['name' => 'یکان‌بخ', 'slug' => 'YekanBakh', 'file_path' => 'fonts/video/YekanBakh-Medium.ttf', 'is_default' => false]),
+        ]);
+        $storedFonts = Schema::hasTable('video_studio_fonts')
             ? VideoStudioFont::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get()
-            : collect([
-                new VideoStudioFont(['name' => 'یکان', 'slug' => 'B_Yekan', 'file_path' => 'fonts/B_Yekan.ttf', 'is_default' => true]),
-            ]);
+            : collect();
+        // حتی اگر دیتابیس تولید فونت‌ها را ناقص داشته باشد، گزینه‌های ارسالی مدیر حذف نمی‌شوند.
+        $fonts = $fallbackFonts->concat($storedFonts)->unique('slug')->values();
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
