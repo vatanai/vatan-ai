@@ -161,6 +161,7 @@
   #studio-produced-panel,#studio-latest-tests-panel{display:none}
   @media(max-width:1100px){.studio-font-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
   @media(max-width:650px){.studio-font-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.studio-platform-controls,.studio-design-grid{grid-template-columns:1fr}.studio-step-tab{min-width:100px}}
+  @media(max-width:650px){.studio-wizard-row{display:grid;grid-template-columns:1fr;gap:3px}.studio-wizard-connector{width:1px;height:9px;margin-right:24px}.studio-wizard-step{min-height:72px;padding:12px 10px}}
 </style>
 @endpush
 
