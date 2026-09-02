@@ -879,7 +879,7 @@
   document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => {
     const rememberStudioScroll = () => { studioTabScrollY = window.scrollY; };
     tab.addEventListener('pointerdown', rememberStudioScroll, { passive: true });
-    tab.addEventListener('mousedown', rememberStudioScroll, { passive: true });
+    tab.addEventListener('mousedown', (event) => { rememberStudioScroll(); event.preventDefault(); }, { passive: false });
     tab.addEventListener('click', () => {
       setStudioStep(tab.dataset.studioStepTab);
       const restoreStudioScroll = () => window.scrollTo(0, studioTabScrollY);
