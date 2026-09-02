@@ -313,6 +313,20 @@
     .studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
   }
   @media(max-width:699px){.studio-product-picker-layout{grid-template-columns:1fr}}
+  /* در عرض‌های متوسط هم چهار بخش باید یک ردیف واقعی باشند؛ فقط موبایل تک‌ستونه است. */
+  @media(min-width:651px){
+    #studio-settings-form{grid-template-columns:repeat(4,minmax(0,1fr));column-gap:10px;align-items:stretch}
+    #studio-settings-form>#font-family-field{grid-column:auto!important;align-self:stretch}
+    #studio-settings-form>#studio-media-controls:not(.is-hidden){display:contents!important}
+    #studio-media-controls>#source-mode-field,
+    #studio-media-controls>#aspect-ratio-field,
+    #studio-media-controls>#transition-field{grid-column:auto;align-self:stretch;height:100%;min-width:0}
+    #studio-media-controls .studio-option label,
+    #studio-media-controls .studio-choice label{width:calc(100% - 6px)!important;min-width:0!important;max-width:110px!important;box-sizing:border-box}
+    #studio-media-controls #transition-field .studio-choice label{width:calc(100% - 6px)!important;min-width:0!important;max-width:88px!important}
+    .studio-product-picker-layout{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+    .studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr))}
+  }
 </style>
 @endpush
 
