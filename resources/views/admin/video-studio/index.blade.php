@@ -298,6 +298,21 @@
     #font-family .studio-font-option label{width:90%;min-height:48px;height:48px;font-size:9px}
     #studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
   }
+  /* قرارداد صریح: در دسکتاپ چهار کارت واقعی، هم‌ردیف و مستقل هستند. */
+  @media(min-width:1000px){
+    #studio-settings-form{grid-template-columns:repeat(4,minmax(0,1fr));column-gap:12px;align-items:stretch}
+    #studio-settings-form>#font-family-field{grid-column:auto!important;align-self:stretch}
+    #studio-settings-form>#studio-media-controls:not(.is-hidden){display:contents!important}
+    #studio-media-controls>#source-mode-field,
+    #studio-media-controls>#aspect-ratio-field,
+    #studio-media-controls>#transition-field{grid-column:auto;align-self:stretch;height:100%}
+  }
+  /* بخش محصول تا عرض تبلت نیز دو ستونه می‌ماند: اطلاعات یک‌سوم، تصاویر دو‌سوم. */
+  @media(min-width:700px){
+    .studio-product-picker-layout{grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px}
+    .studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+  }
+  @media(max-width:699px){.studio-product-picker-layout{grid-template-columns:1fr}}
 </style>
 @endpush
 

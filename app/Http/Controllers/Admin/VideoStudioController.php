@@ -197,7 +197,7 @@ class VideoStudioController extends Controller
             ];
         });
 
-        return view('admin.video-studio.index', [
+        return response()->view('admin.video-studio.index', [
             'videoCount' => $videoCount,
             'completedCount' => $completedCount,
             'failedCount' => $failedCount,
@@ -226,7 +226,8 @@ class VideoStudioController extends Controller
                 'generated_videos' => $hasGeneratedVideos,
                 'product_test_runs' => $hasProductRuns,
             ],
-        ]);
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
     }
 
     public function updateSettings(Request $request)
