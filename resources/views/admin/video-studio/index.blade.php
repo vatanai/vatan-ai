@@ -113,6 +113,9 @@
   .video-studio-page>*,.video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid{min-width:0;max-width:100%;box-sizing:border-box}.video-studio-page>.video-studio-head{order:0}.video-studio-page>.studio-settings{order:1}.video-studio-page>#telegram-live-preview{order:2}.video-studio-page>#studio-system-layout{order:3}.video-studio-page>#studio-queue-panel{order:4}.video-studio-page>#studio-produced-panel{order:5}.video-studio-page>#studio-latest-videos-panel{order:6}.video-studio-page>#studio-latest-tests-panel{order:7}.video-studio-page>.studio-library-grid{order:8}.video-studio-page>.studio-grid{order:9}.video-studio-page>.studio-wizard-footer{order:10;width:100%;box-sizing:border-box}.studio-modal{order:99}
   .studio-telegram-live .studio-phone-chat{min-height:648px}
   .studio-telegram-caption-smart{margin-top:0;margin-bottom:16px;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
+  .video-studio-page{width:100%;box-sizing:border-box;overflow-x:clip}.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-grid,.video-studio-page>section{width:100%;box-sizing:border-box}
+  .studio-wizard{background:var(--card-bg);min-height:132px}.studio-wizard-step.is-active{background:transparent;box-shadow:none;border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
+  .studio-media-controls{padding:0;border:0;background:transparent;gap:16px}.studio-media-controls>#source-mode-field,.studio-media-controls>#aspect-ratio-field,.studio-media-controls>#transition-field{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);box-sizing:border-box;min-height:100%}.studio-media-controls .studio-options{width:100%;max-width:none}.studio-media-controls .studio-option label{width:110px;height:110px;min-height:110px;box-sizing:border-box;justify-self:center;aspect-ratio:1/1}.studio-media-controls #source-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #aspect-ratio-field .studio-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #aspect-ratio-field .studio-option label{max-width:110px}.studio-media-controls #transition-field .studio-choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #transition-field .studio-choice label{width:110px;height:110px;min-height:110px;padding:8px;box-sizing:border-box;justify-self:center}.studio-media-controls #transition-field{display:grid;grid-template-columns:1fr;align-content:start;gap:8px}.studio-media-controls #transition-field>label[for="transition-duration"]{margin-top:2px}
   #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
   #aspect-ratio-field .studio-option label{max-width:62px;justify-self:center}
   @media(min-width:1000px){
@@ -769,7 +772,7 @@
       option.addEventListener('click', (event) => { if (event.target === editor && !editor.readOnly) return; holder.querySelectorAll('.studio-preview-option').forEach((item) => item.classList.remove('is-selected')); option.classList.add('is-selected'); syncPreviewSelection(kind); updateTelegramPreview(); });
       option.append(title, editor); holder.appendChild(option); if (index === 0 && previewHidden[kind]) previewHidden[kind].value = value || '';
     });
-    updatePreviewEditability(); updateStudioControls(); updateTelegramPreview();
+    updatePreviewEditability(); updateStudioControls(); updateTelegramPreview(); setTimeout(stabilizeStudioSettingsHeight, 0);
   }
   function renderTelegramCaptionOptions(values) {
     if (!telegramCaptionHolder) return;
@@ -784,7 +787,7 @@
       option.addEventListener('click', (event) => { if (event.target === editor && !editor.readOnly) return; telegramCaptionHolder.querySelectorAll('.studio-preview-option').forEach((item) => item.classList.remove('is-selected')); option.classList.add('is-selected'); if (telegramCaptionEditor) telegramCaptionEditor.value = editor.value; updateTelegramPreview(); });
       option.append(title, editor); telegramCaptionHolder.appendChild(option);
     });
-    updatePreviewEditability(); updateTelegramPreview();
+    updatePreviewEditability(); updateTelegramPreview(); setTimeout(stabilizeStudioSettingsHeight, 0);
   }
   function renderTelegramLoadingOptions(message = 'بعد از انتخاب محصول، کپشن‌های پیشنهادی اینجا نمایش داده می‌شوند.') {
     if (!telegramCaptionHolder) return;
@@ -829,7 +832,22 @@
   if (studioProduct?.value || new URLSearchParams(window.location.search).get('product_id')) setTimeout(generatePreview, 450);
   let activeStudioStep = 1;
   const studioStepFa = (value) => String(value).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
-  function setStudioStep(step, shouldScroll = true) {
+  function stabilizeStudioSettingsHeight() {
+    const card = document.getElementById('studio-settings');
+    if (!card) return;
+    const panels = [...card.querySelectorAll('[data-studio-step]')];
+    if (!panels.length) return;
+    const previousMinHeight = card.style.minHeight;
+    card.style.minHeight = '0px';
+    let maxHeight = 0;
+    for (let step = 1; step <= 3; step += 1) {
+      panels.forEach((panel) => panel.classList.toggle('is-hidden', panel.dataset.studioStep !== String(step)));
+      maxHeight = Math.max(maxHeight, card.getBoundingClientRect().height);
+    }
+    panels.forEach((panel) => panel.classList.toggle('is-hidden', panel.dataset.studioStep !== String(activeStudioStep)));
+    card.style.minHeight = maxHeight > 0 ? Math.ceil(maxHeight) + 'px' : previousMinHeight;
+  }
+  function setStudioStep(step, shouldScroll = false) {
     activeStudioStep = Math.max(1, Math.min(3, Number(step) || 1));
     document.querySelectorAll('[data-studio-step]').forEach((panel) => panel.classList.toggle('is-hidden', panel.dataset.studioStep !== String(activeStudioStep)));
     document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => {
@@ -851,12 +869,14 @@
     const label = document.getElementById('studio-step-progress-label');
     if (label) label.textContent = 'گام ' + studioStepFa(activeStudioStep) + ' از ۳';
     if (activeStudioStep === 3) updateTelegramPreview();
-    if (shouldScroll) document.getElementById('studio-settings')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    stabilizeStudioSettingsHeight();
   }
   document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => tab.addEventListener('click', () => setStudioStep(tab.dataset.studioStepTab)));
   document.getElementById('studio-step-prev')?.addEventListener('click', () => setStudioStep(activeStudioStep - 1));
   document.getElementById('studio-step-next')?.addEventListener('click', () => setStudioStep(activeStudioStep + 1));
   setStudioStep(1, false);
+  stabilizeStudioSettingsHeight();
+  window.addEventListener('resize', stabilizeStudioSettingsHeight);
   const transitionDuration = document.getElementById('transition-duration');
   transitionDuration?.addEventListener('input', () => { const label = document.getElementById('transition-duration-value'); if (label) label.textContent = String(transitionDuration.value).replace('.', '٫'); });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { productPicker?.classList.remove('is-open'); sourceLibraryModal?.classList.remove('is-open'); } });
