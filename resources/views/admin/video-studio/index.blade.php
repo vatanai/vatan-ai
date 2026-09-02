@@ -525,6 +525,8 @@
   // در حالت راست‌به‌چپ، سایدبار ثابت نباید اسکرول افقی صفحهٔ استودیو را فعال کند.
   document.documentElement.style.overflowX = 'hidden';
   document.body.style.overflowX = 'hidden';
+  document.documentElement.style.overflowAnchor = 'none';
+  document.body.style.overflowAnchor = 'none';
   const sourceHelp = document.getElementById('source-help');
   const sourceUrl = document.getElementById('source-url');
   const sourceLibrary = document.getElementById('source-library');
@@ -886,7 +888,7 @@
   document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => {
     const rememberStudioScroll = () => { studioTabScrollY = window.scrollY; };
     tab.addEventListener('pointerdown', rememberStudioScroll, { passive: true });
-    tab.addEventListener('mousedown', (event) => { rememberStudioScroll(); event.preventDefault(); }, { passive: false });
+    tab.addEventListener('mousedown', (event) => { rememberStudioScroll(); event.preventDefault(); event.currentTarget.focus({ preventScroll: true }); }, { passive: false });
     tab.addEventListener('click', () => {
       setStudioStep(tab.dataset.studioStepTab);
       const restoreStudioScroll = () => window.scrollTo(0, studioTabScrollY);
