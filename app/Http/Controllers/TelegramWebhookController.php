@@ -41,6 +41,7 @@ class TelegramWebhookController extends Controller
             $this->interaction->answerCallbackQuery($normalized['callback_query_id'] ?? null);
             $response = $this->flow->handle($normalized);
             $this->interaction->deleteMessage($normalized['chat_id'] ?? null, $normalized['message_id'] ?? null);
+            $this->interaction->sendResponse($response);
 
             return response()->json($response);
         } catch (ValidationException $exception) {

@@ -6,6 +6,44 @@ use Illuminate\Support\Facades\Http;
 
 class TelegramInteractionService
 {
+    public function sendResponse(array $response): void
+    {
+        if (($response['type'] ?? null) !== 'send_message') {
+            return;
+        }
+
+        $chatId = $response['chat_id'] ?? null;
+        $text = (string) ($response['text'] ?? '');
+        if (! $chatId || $text === '') {
+            return;
+        }
+
+        $replyMarkup = $this->replyMarkup((array) ($response['buttons'] ?? []));
+        $media = (array) ($response['media'] ?? []);
+
+        if (($media['type'] ?? null) === 'photo' && ! empty($media['url'])) {
+            $payload = [
+                'chat_id' => $chatId,
+                'photo' => $media['url'],
+                'caption' => $text,
+            ];
+            if ($replyMarkup !== null) {
+                $payload['reply_markup'] = $replyMarkup;
+            }
+            $this->call('sendPhoto', $payload);
+            return;
+        }
+
+        $payload = [
+            'chat_id' => $chatId,
+            'text' => $text,
+        ];
+        if ($replyMarkup !== null) {
+            $payload['reply_markup'] = $replyMarkup;
+        }
+        $this->call('sendMessage', $payload);
+    }
+
     public function answerCallbackQuery(?string $callbackQueryId): void
     {
         if (! $callbackQueryId) {
@@ -44,5 +82,24 @@ class TelegramInteractionService
         } catch (\Throwable) {
             // پاسخ اصلی بات نباید به‌خاطر خطای جانبی تلگرام متوقف شود.
         }
+    }
+
+    private function replyMarkup(array $buttons): ?array
+    {
+        $buttons = array_values(array_filter($buttons, 'is_array'));
+        if ($buttons === []) {
+            return null;
+        }
+
+        $isReplyKeyboard = collect($buttons)->contains(fn (array $button): bool => (bool) ($button['request_contact'] ?? false));
+        $rows = array_map(static fn (array $button): array => [$button], $buttons);
+
+        return $isReplyKeyboard
+            ? [
+                'keyboard' => $rows,
+                'resize_keyboard' => true,
+                'one_time_keyboard' => true,
+            ]
+            : ['inline_keyboard' => $rows];
     }
 }
