@@ -113,7 +113,7 @@
   .video-studio-page>*,.video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid{min-width:0;max-width:100%;box-sizing:border-box}.video-studio-page>.video-studio-head{order:0}.video-studio-page>.studio-settings{order:1}.video-studio-page>#telegram-live-preview{order:2}.video-studio-page>#studio-system-layout{order:3}.video-studio-page>#studio-queue-panel{order:4}.video-studio-page>#studio-produced-panel{order:5}.video-studio-page>#studio-latest-videos-panel{order:6}.video-studio-page>#studio-latest-tests-panel{order:7}.video-studio-page>.studio-library-grid{order:8}.video-studio-page>.studio-grid{order:9}.video-studio-page>.studio-wizard-footer{order:10;width:100%;box-sizing:border-box}.studio-modal{order:99}
   .studio-telegram-live .studio-phone-chat{min-height:648px}
   .studio-telegram-caption-smart{margin-top:0;margin-bottom:16px;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
-  .video-studio-page{width:100%;box-sizing:border-box;overflow-x:clip}.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-grid,.video-studio-page>section{width:100%;box-sizing:border-box}
+  .video-studio-page{width:100%;box-sizing:border-box;overflow-x:clip;overflow-anchor:none}.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-grid,.video-studio-page>section{width:100%;box-sizing:border-box}.video-studio-page #studio-settings{overflow-anchor:none}
   .studio-wizard{background:var(--card-bg);min-height:132px}.studio-wizard-step.is-active{background:transparent;box-shadow:none;border-color:color-mix(in srgb,var(--primary) 35%,transparent)}
   .studio-media-controls{padding:0;border:0;background:transparent;gap:16px}.studio-media-controls>#source-mode-field,.studio-media-controls>#aspect-ratio-field,.studio-media-controls>#transition-field{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);box-sizing:border-box;min-height:100%}.studio-media-controls .studio-options{width:100%;max-width:none}.studio-media-controls .studio-option label{width:110px;height:110px;min-height:110px;box-sizing:border-box;justify-self:center;aspect-ratio:1/1}.studio-media-controls #source-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #aspect-ratio-field .studio-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #aspect-ratio-field .studio-option label{max-width:110px}.studio-media-controls #transition-field .studio-choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.studio-media-controls #transition-field .studio-choice label{width:110px;height:110px;min-height:110px;padding:8px;box-sizing:border-box;justify-self:center}.studio-media-controls #transition-field{display:grid;grid-template-columns:1fr;align-content:start;gap:8px}.studio-media-controls #transition-field>label[for="transition-duration"]{margin-top:2px}
   #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
@@ -877,10 +877,15 @@
   }
   let studioTabScrollY = window.scrollY;
   document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => {
-    tab.addEventListener('pointerdown', () => { studioTabScrollY = window.scrollY; }, { passive: true });
+    const rememberStudioScroll = () => { studioTabScrollY = window.scrollY; };
+    tab.addEventListener('pointerdown', rememberStudioScroll, { passive: true });
+    tab.addEventListener('mousedown', rememberStudioScroll, { passive: true });
     tab.addEventListener('click', () => {
       setStudioStep(tab.dataset.studioStepTab);
-      requestAnimationFrame(() => window.scrollTo({ top: studioTabScrollY, left: 0, behavior: 'auto' }));
+      const restoreStudioScroll = () => window.scrollTo(0, studioTabScrollY);
+      restoreStudioScroll();
+      requestAnimationFrame(restoreStudioScroll);
+      setTimeout(restoreStudioScroll, 80);
     });
   });
   document.getElementById('studio-step-prev')?.addEventListener('click', () => setStudioStep(activeStudioStep - 1));
