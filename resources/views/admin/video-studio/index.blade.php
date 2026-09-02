@@ -218,6 +218,60 @@
   .video-studio-page>.studio-library-grid{order:8}
   @media(min-width:1000px){#studio-settings-form{grid-auto-flow:row dense}#studio-settings-form>#font-family-field{grid-column:1!important}#studio-settings-form>#studio-media-controls{grid-column:2/span 3!important}}
   @media(max-width:650px){#studio-product-image-slots,.studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.studio-product-image-slots .studio-image-choice label,.studio-image-placeholder{font-size:8px}}
+  /* چیدمان نهایی گام اول: ستون فونت جدا، سه گروه رسانه‌ای خوانا و عرض ثابت */
+  @media(min-width:1000px){
+    #studio-settings-form{grid-template-columns:minmax(250px,.72fr) minmax(0,2.28fr);grid-auto-flow:row;align-items:start}
+    #studio-settings-form>.studio-wizard,
+    #studio-settings-form>.studio-platform-controls,
+    #studio-settings-form>.studio-product-field,
+    #studio-settings-form>.studio-smart-field,
+    #studio-settings-form>.studio-smart-fields,
+    #studio-settings-form>.studio-cta-box,
+    #studio-settings-form>.studio-text-command{grid-column:1/-1!important}
+    #studio-settings-form>#font-family-field{grid-column:1!important}
+    #studio-settings-form>#studio-media-controls{grid-column:2!important}
+    #font-family{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;justify-content:stretch}
+    #font-family .studio-font-option label{width:40%;min-width:64px;margin-inline:auto;min-height:64px;height:64px;padding:6px}
+  }
+  #studio-settings-form{row-gap:16px}
+  #studio-media-controls{padding:16px!important;gap:16px!important}
+  #studio-media-controls>#source-mode-field,
+  #studio-media-controls>#aspect-ratio-field,
+  #studio-media-controls>#transition-field{padding:16px!important;min-height:0!important}
+  #studio-media-controls .studio-option label,
+  #studio-media-controls .studio-choice label{width:110px!important;height:110px!important;min-width:110px;max-width:110px;min-height:110px!important;max-height:110px;padding:8px;font-size:10px;box-sizing:border-box}
+  #studio-media-controls .studio-option label i{font-size:16px}
+  #studio-media-controls #source-options,
+  #studio-media-controls #aspect-ratio-field .studio-options,
+  #studio-media-controls #transition-field .studio-choice-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;justify-items:center}
+  #studio-media-controls #transition-field .studio-choice-row{display:grid}
+  .studio-wizard{height:132px;min-height:132px!important;box-sizing:border-box}
+  .studio-wizard-row{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr) 28px minmax(0,1fr);width:100%;height:100%;align-items:stretch}
+  .studio-wizard-step{width:100%;height:100%;min-width:0;box-sizing:border-box;flex:none}
+  .studio-wizard-connector{width:28px;flex:0 0 28px;align-self:center}
+  .studio-product-picker-layout{display:grid;grid-template-columns:minmax(220px,.34fr) minmax(0,.66fr);gap:16px;align-items:stretch;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);box-sizing:border-box}
+  .studio-product-picker-info{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .studio-product-picker-info .studio-selected-product-actions{display:grid;grid-template-columns:1fr;gap:8px;order:1}
+  .studio-product-picker-info .studio-selected-product-actions .studio-btn{width:100%;justify-content:center}
+  .studio-product-picker-info .studio-selected-product{order:2;display:block}
+  .studio-product-image-slots{order:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;width:100%;align-content:start;min-width:0}
+  .studio-product-image-slots .studio-image-choice{min-width:0;display:flex;align-items:center;justify-content:center}
+  .studio-product-image-slots .studio-image-choice label,
+  .studio-product-image-slots .studio-image-placeholder{width:80%;aspect-ratio:1/1;min-width:0;display:flex;align-items:center;justify-content:center;border:2px solid var(--border);border-radius:9px;overflow:hidden;background:var(--input-bg);color:var(--text-soft);text-align:center;font-size:9px;box-sizing:border-box}
+  .studio-product-image-slots .studio-image-choice img{width:100%;height:100%;object-fit:cover}
+  .studio-image-placeholder{flex-direction:column;gap:4px;border-style:dashed}
+  .studio-image-placeholder i{font-size:16px;color:var(--primary)}
+  @media(max-width:999px){
+    .studio-wizard{height:auto;min-height:0!important}
+    .studio-wizard-row{display:grid;grid-template-columns:1fr;gap:3px;height:auto}
+    .studio-wizard-step{height:auto;min-height:72px}
+    .studio-wizard-connector{width:1px;height:9px;margin-right:24px}
+    .studio-product-picker-layout{grid-template-columns:1fr;gap:12px}
+    .studio-product-image-slots{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+    .studio-product-image-slots .studio-image-choice label,
+    .studio-product-image-slots .studio-image-placeholder{width:88%}
+  }
+  @media(max-width:650px){.studio-product-image-slots{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.studio-product-image-slots .studio-image-choice label,.studio-product-image-slots .studio-image-placeholder{font-size:8px;width:92%}}
 </style>
 @endpush
 
@@ -259,12 +313,12 @@
             </div>
           </div>
           <div class="studio-platform-controls studio-step-panel is-hidden" data-studio-step="2"><label class="studio-platform-toggle"><span><i class="fa-brands fa-instagram"></i> خروجی اینستاگرام</span><input type="hidden" name="instagram_enabled" value="0"><input type="checkbox" name="instagram_enabled" value="1" checked></label></div>
-          <div class="studio-field studio-step-panel studio-product-field" data-studio-step="1" data-product-field><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-selected-product"><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button></div><div class="studio-product-image-slots" aria-label="تصاویر محصول برای ویدیو">@for($slotIndex = 0; $slotIndex < 5; $slotIndex++)@php $slotImage = $productImages[$slotIndex] ?? null; @endphp<div class="studio-image-choice studio-image-slot">@if($slotImage)<input id="studio-image-{{ $slotIndex }}" type="checkbox" name="selected_images[]" value="{{ $slotImage['url'] }}" checked><label for="studio-image-{{ $slotIndex }}"><img src="{{ $slotImage['url'] }}" alt="تصویر {{ $slotIndex + 1 }}"></label>@else<div class="studio-image-placeholder"><i class="fa-regular fa-image"></i><span>تصویر {{ $slotIndex + 1 }}</span></div>@endif</div>@endfor</div><small>پنج جایگاه تصویر همیشه ثابت است؛ تصاویر موجود پس از انتخاب محصول به‌صورت پیش‌فرض انتخاب می‌شوند.</small></div>
-          <div class="studio-field studio-step-panel" id="font-family-field" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
+          <div class="studio-field studio-step-panel studio-product-field" data-studio-step="1" data-product-field><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-product-picker-layout"><div class="studio-product-picker-info"><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button></div><div class="studio-selected-product"><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div></div><div class="studio-product-image-slots" aria-label="تصاویر محصول برای ویدیو">@for($slotIndex = 0; $slotIndex < 4; $slotIndex++)@php $slotImage = $productImages[$slotIndex] ?? null; @endphp<div class="studio-image-choice studio-image-slot">@if($slotImage)<input id="studio-image-{{ $slotIndex }}" type="checkbox" name="selected_images[]" value="{{ $slotImage['url'] }}" checked><label for="studio-image-{{ $slotIndex }}"><img src="{{ $slotImage['url'] }}" alt="تصویر {{ $slotIndex + 1 }}"></label>@else<div class="studio-image-placeholder"><i class="fa-regular fa-image"></i><span>تصویر {{ $slotIndex + 1 }}</span></div>@endif</div>@endfor</div></div></div>
+          <div class="studio-field studio-step-panel" id="font-family-field" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
           <div class="studio-smart-field studio-step-panel" data-studio-step="1" aria-label="ساخت هوک">
             <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
-            <small>سه پیشنهاد هم‌زمان زیر همین گزینه نمایش داده می‌شود؛ اولی به‌صورت پیش‌فرض انتخاب است.</small>
+
             <div class="studio-preview-options" data-preview-tabs="hook"></div>
             <div class="studio-field studio-conditional" id="hook-manual"><label for="hook-text-manual">متن دستی هوک</label><div class="studio-manual-box"><input id="hook-text-manual" class="studio-input" name="hook_text" value="{{ old('hook_text', $settings->hook_text ?? '') }}" placeholder="با خاموش‌کردن هوش مصنوعی، متن را اینجا ویرایش کن."><small>با روشن‌بودن هوش مصنوعی، متن‌های پیشنهادی فقط خواندنی هستند.</small></div></div>
           </div>
