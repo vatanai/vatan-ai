@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TelegramEvent;
 use App\Services\TelegramFlowService;
+use App\Services\TelegramInteractionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class TelegramWebhookController extends Controller
 {
-    public function __construct(private readonly TelegramFlowService $flow)
+    public function __construct(
+        private readonly TelegramFlowService $flow,
+        private readonly TelegramInteractionService $interaction,
+    )
     {
     }
 
@@ -33,7 +37,12 @@ class TelegramWebhookController extends Controller
         }
 
         try {
-            return response()->json($this->flow->handle($this->normalize($payload)));
+            $normalized = $this->normalize($payload);
+            $this->interaction->answerCallbackQuery($normalized['callback_query_id'] ?? null);
+            $response = $this->flow->handle($normalized);
+            $this->interaction->deleteMessage($normalized['chat_id'] ?? null, $normalized['message_id'] ?? null);
+
+            return response()->json($response);
         } catch (ValidationException $exception) {
             return response()->json([
                 'ok' => false,
@@ -74,6 +83,8 @@ class TelegramWebhookController extends Controller
             'text' => $text,
             'start_payload' => $startPayload,
             'callback_data' => $callbackData ?: null,
+            'callback_query_id' => $callback['id'] ?? null,
+            'message_id' => $message['message_id'] ?? data_get($callback, 'message.message_id'),
             'contact' => $contact ?: null,
             'payload' => $payload,
         ], fn ($value) => $value !== null && $value !== '');

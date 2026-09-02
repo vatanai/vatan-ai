@@ -33,11 +33,15 @@ class TelegramMiniAppController extends Controller
             : ($all || ! $product
             ? route('app.home')
             : route('app.create', ['product' => $product->route_slug]));
+        $botUsername = trim((string) (\App\Models\ReferralSetting::current()->telegram_bot_username ?: config('services.telegram.bot_username', 'channel_vatanai_bot')));
+        $registrationUrl = $botUsername !== '' ? 'https://t.me/' . ltrim($botUsername, '@') : $fallbackUrl;
 
         return view('telegram.mini-app', [
             'launchToken' => $launchToken,
             'allProducts' => $all,
+            'target' => $target,
             'fallbackUrl' => $fallbackUrl,
+            'registrationUrl' => $registrationUrl,
         ]);
     }
 

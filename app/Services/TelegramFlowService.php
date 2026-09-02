@@ -206,6 +206,7 @@ class TelegramFlowService
             return $this->productMessage($chatId, $click, [
                 ['text' => 'ساخت با همین محصول', 'callback_data' => 'build:' . $click->launch_token],
                 ['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'],
+                $this->plansButton(),
             ]);
         }
 

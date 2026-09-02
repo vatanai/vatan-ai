@@ -32,6 +32,7 @@
     const message = document.getElementById('message');
     const loader = document.getElementById('loader');
     const fallback = document.getElementById('fallback');
+    const registrationUrl = @json($registrationUrl);
     const telegram = window.Telegram?.WebApp;
     const showFallback = (text) => {
         message.textContent = text;
@@ -58,7 +59,8 @@
             body: JSON.stringify({
                 init_data: telegram.initData,
                 launch_token: @json($launchToken),
-                all: @json($allProducts)
+                all: @json($allProducts),
+                target: @json($target)
             })
         }))
         .then(response => response.json().then(data => ({ ok: response.ok, data })))
@@ -66,7 +68,13 @@
             if (!result.ok || !result.data.redirect) throw new Error(result.data.message || 'ورود انجام نشد.');
             window.location.replace(result.data.redirect);
         })
-        .catch(error => showFallback(error.message || 'ورود به صفحه‌ی ساخت انجام نشد.'));
+        .catch(error => {
+            if (error?.message === 'ابتدا ثبت‌نام را در بات کامل کنید.') {
+                fallback.href = registrationUrl;
+                fallback.textContent = 'بازگشت به بات و ثبت‌نام';
+            }
+            showFallback(error.message || 'ورود به صفحه‌ی ساخت انجام نشد.');
+        });
 })();
 </script>
 </body>
