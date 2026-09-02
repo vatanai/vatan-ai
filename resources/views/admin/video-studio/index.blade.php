@@ -272,6 +272,32 @@
     .studio-product-image-slots .studio-image-placeholder{width:88%}
   }
   @media(max-width:650px){.studio-product-image-slots{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.studio-product-image-slots .studio-image-choice label,.studio-product-image-slots .studio-image-placeholder{font-size:8px;width:92%}}
+  /* ردیف رسانه و فونت: چهار کارت هم‌ارتفاع در یک ردیف دسکتاپ */
+  #font-family-field{padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);box-sizing:border-box}
+  #font-family-field>label{display:block;margin-bottom:10px}
+  #font-family .studio-font-option label small{display:none}
+  #font-family{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;justify-content:stretch}
+  #font-family .studio-font-option label{width:80%;min-width:0;min-height:51px;height:51px;margin-inline:auto;padding:5px;font-size:10px;box-sizing:border-box}
+  #studio-media-controls>#source-mode-field,
+  #studio-media-controls>#aspect-ratio-field,
+  #studio-media-controls>#transition-field{height:100%;box-sizing:border-box}
+  #studio-media-controls #transition-field .studio-choice label{width:88px!important;height:88px!important;min-width:88px;max-width:88px;min-height:88px!important;max-height:88px;font-size:9px}
+  @media(min-width:1000px){
+    #studio-settings-form{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:row;align-items:stretch}
+    #studio-settings-form>#font-family-field{grid-column:1!important;height:100%;min-height:0}
+    #studio-settings-form>#studio-media-controls{grid-column:2/-1!important;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:12px}
+    #studio-settings-form>#studio-media-controls>.studio-field{height:100%;min-height:0}
+    #studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+    #studio-product-image-slots .studio-image-choice label,
+    #studio-product-image-slots .studio-image-placeholder{width:80%}
+  }
+  @media(max-width:999px){
+    #studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+  }
+  @media(max-width:650px){
+    #font-family .studio-font-option label{width:90%;min-height:48px;height:48px;font-size:9px}
+    #studio-product-image-slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  }
 </style>
 @endpush
 
@@ -313,8 +339,8 @@
             </div>
           </div>
           <div class="studio-platform-controls studio-step-panel is-hidden" data-studio-step="2"><label class="studio-platform-toggle"><span><i class="fa-brands fa-instagram"></i> خروجی اینستاگرام</span><input type="hidden" name="instagram_enabled" value="0"><input type="checkbox" name="instagram_enabled" value="1" checked></label></div>
-          <div class="studio-field studio-step-panel studio-product-field" data-studio-step="1" data-product-field><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-product-picker-layout"><div class="studio-product-picker-info"><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button></div><div class="studio-selected-product"><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div></div><div class="studio-product-image-slots" aria-label="تصاویر محصول برای ویدیو">@for($slotIndex = 0; $slotIndex < 4; $slotIndex++)@php $slotImage = $productImages[$slotIndex] ?? null; @endphp<div class="studio-image-choice studio-image-slot">@if($slotImage)<input id="studio-image-{{ $slotIndex }}" type="checkbox" name="selected_images[]" value="{{ $slotImage['url'] }}" checked><label for="studio-image-{{ $slotIndex }}"><img src="{{ $slotImage['url'] }}" alt="تصویر {{ $slotIndex + 1 }}"></label>@else<div class="studio-image-placeholder"><i class="fa-regular fa-image"></i><span>تصویر {{ $slotIndex + 1 }}</span></div>@endif</div>@endfor</div></div></div>
-          <div class="studio-field studio-step-panel" id="font-family-field" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div></div>
+          <div class="studio-field studio-step-panel studio-product-field" data-studio-step="1" data-product-field><label>محصول هدف</label><input type="hidden" id="studio-product" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}"><div class="studio-product-picker-layout"><div class="studio-product-picker-info"><div class="studio-selected-product-actions"><button class="studio-btn" type="button" id="random-product-picker" title="اولویت با محصولاتی است که هنوز ویدیویی برایشان ساخته نشده"><i class="fa-solid fa-shuffle"></i> انتخاب تصادفی</button><button class="studio-btn" type="button" id="open-product-picker"><i class="fa-solid fa-magnifying-glass"></i> انتخاب محصول</button></div><div class="studio-selected-product"><div class="studio-selected-product-name">{{ $selectedProduct?->name_fa ?? 'تنظیمات پیش‌فرض همه محصولات' }}</div>@if($selectedProduct)<div class="studio-product-count"><i class="fa-solid fa-clapperboard"></i> {{ (int) ($completedVideoCounts[(int) $selectedProduct->id] ?? 0) }} ویدیو ساخته‌شده @if((int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) > 0)<span class="studio-product-count pending">+ {{ (int) ($pendingVideoCounts[(int) $selectedProduct->id] ?? 0) }} در صف</span>@endif</div>@endif</div></div><div class="studio-product-image-slots" aria-label="تصاویر محصول برای ویدیو">@for($slotIndex = 0; $slotIndex < 5; $slotIndex++)@php $slotImage = $productImages[$slotIndex] ?? null; @endphp<div class="studio-image-choice studio-image-slot">@if($slotImage)<input id="studio-image-{{ $slotIndex }}" type="checkbox" name="selected_images[]" value="{{ $slotImage['url'] }}" checked><label for="studio-image-{{ $slotIndex }}"><img src="{{ $slotImage['url'] }}" alt="تصویر {{ $slotIndex + 1 }}"></label>@else<div class="studio-image-placeholder"><i class="fa-regular fa-image"></i><span>تصویر {{ $slotIndex + 1 }}</span></div>@endif</div>@endfor</div></div></div>
+          <div class="studio-field studio-step-panel" id="font-family-field" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span></label></div>@endforeach</div></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
           <div class="studio-smart-field studio-step-panel" data-studio-step="1" aria-label="ساخت هوک">
             <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
