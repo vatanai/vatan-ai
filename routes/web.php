@@ -267,7 +267,9 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     }
     Route::view('/create-architecture', 'app.create-architecture')->name('app.create.architecture');
     Route::get('/create/{product:route_slug}', [ProductGenerateController::class, 'build'])->name('app.create.product');
-    Route::post('/create/{product:route_slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.create.generate');
+    Route::post('/create/{product:route_slug}/generate', [ProductGenerateController::class, 'generate'])
+        ->middleware(['auth', \App\Http\Middleware\MarkTelegramBuildCompleted::class])
+        ->name('app.create.generate');
     Route::post('/video-products/{product:slug}/quote', [\App\Http\Controllers\VideoProductController::class, 'quote'])->middleware('auth')->name('app.video-product.quote');
                 Route::get('/video-generations/{generatedVideo}/status', [\App\Http\Controllers\VideoProductController::class, 'status'])
         ->middleware('auth')
@@ -283,7 +285,9 @@ Route::prefix('app')->middleware('site.page')->group(function () {
             : redirect()->route('app.home');
     })->name('app.product-details');
     Route::get('/product/{product:route_slug}', [ProductGenerateController::class, 'show'])->name('app.product');
-    Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])->middleware('auth')->name('app.product.generate');
+    Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])
+        ->middleware(['auth', \App\Http\Middleware\MarkTelegramBuildCompleted::class])
+        ->name('app.product.generate');
 });
 
 Route::get('/category/{path?}', [ProductCatalogController::class, 'category'])
