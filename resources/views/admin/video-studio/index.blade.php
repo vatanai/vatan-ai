@@ -87,7 +87,6 @@
     #studio-settings-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
     #studio-settings-form>*{grid-column:1/-1}
     #studio-settings-form>#source-mode-field{grid-column:1;grid-row:4}
-    #studio-settings-form>#source-url-field{grid-column:1/-1;grid-row:5}
     #studio-settings-form>#aspect-ratio-field{grid-column:2;grid-row:4}
   }
   @media(max-width:999px){#studio-settings-form{display:grid;grid-template-columns:1fr;gap:13px}#studio-settings-form>*{grid-column:1!important;grid-row:auto!important}}
@@ -102,9 +101,8 @@
   .studio-phone-buttons:empty{display:none}
   @media(max-width:999px){#source-options,#aspect-ratio-field .studio-options{width:100%;max-width:none}}
   .studio-media-controls{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg);box-sizing:border-box}
-  .studio-media-controls>#source-url-field{grid-column:1/-1}
   .studio-media-controls>.studio-field{min-width:0}
-  @media(max-width:999px){.studio-media-controls{grid-template-columns:1fr}.studio-media-controls>#source-url-field{grid-column:1}}
+  @media(max-width:999px){.studio-media-controls{grid-template-columns:1fr}}
   .studio-settings{align-items:stretch}
   .studio-settings>.studio-card{height:100%;box-sizing:border-box;margin-bottom:0!important}
   .studio-library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px;align-items:stretch}
@@ -112,7 +110,7 @@
   .video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-library-grid,.video-studio-page>.studio-layout{margin-bottom:16px!important}
   .video-studio-page>.studio-library-grid+*{margin-top:0}
   @media(max-width:999px){.studio-library-grid{grid-template-columns:1fr}}
-  .video-studio-page>.video-studio-head{order:0}.video-studio-page>.studio-settings{order:1}.video-studio-page>#telegram-live-preview{order:2}.video-studio-page>.studio-build-actions{order:3;width:100%;box-sizing:border-box}.video-studio-page>.studio-wizard-footer{order:3;width:100%;box-sizing:border-box}.video-studio-page>.studio-grid{order:4}.video-studio-page>#studio-system-layout{order:5}.video-studio-page>#studio-queue-panel{order:6}.video-studio-page>#studio-produced-panel{order:7}.video-studio-page>#studio-latest-videos-panel{order:8}.video-studio-page>#studio-latest-tests-panel{order:9}.video-studio-page>.studio-library-grid{order:10}.studio-modal{order:99}
+  .video-studio-page>*,.video-studio-page>section,.video-studio-page>.studio-settings,.video-studio-page>.studio-layout,.video-studio-page>.studio-library-grid{min-width:0;max-width:100%;box-sizing:border-box}.video-studio-page>.video-studio-head{order:0}.video-studio-page>.studio-settings{order:1}.video-studio-page>#telegram-live-preview{order:2}.video-studio-page>#studio-system-layout{order:3}.video-studio-page>#studio-queue-panel{order:4}.video-studio-page>#studio-produced-panel{order:5}.video-studio-page>#studio-latest-videos-panel{order:6}.video-studio-page>#studio-latest-tests-panel{order:7}.video-studio-page>.studio-library-grid{order:8}.video-studio-page>.studio-grid{order:9}.video-studio-page>.studio-wizard-footer{order:10;width:100%;box-sizing:border-box}.studio-modal{order:99}
   .studio-telegram-live .studio-phone-chat{min-height:648px}
   .studio-telegram-caption-smart{margin-top:0;margin-bottom:16px;padding:16px}.studio-telegram-caption-smart .studio-preview-option textarea{min-height:126px}.studio-telegram-buttons{margin-top:0;margin-bottom:4px;padding:16px}.studio-telegram-buttons .studio-telegram-button-row{min-height:42px}
   #aspect-ratio-field .studio-options{grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:none}
@@ -124,6 +122,8 @@
     #telegram-live-preview .studio-telegram-preview-note{justify-self:stretch;text-align:right}
   }
   @media(max-width:650px){.studio-wizard-step{min-height:72px;padding:12px 10px}.studio-wizard-circle{width:40px;height:40px;flex-basis:40px;font-size:12px}}
+  @media(min-width:1000px){#studio-media-controls{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}#studio-media-controls>#source-mode-field,#studio-media-controls>#aspect-ratio-field,#studio-media-controls>#transition-field{grid-column:auto;min-width:0}#studio-media-controls #source-options,#studio-media-controls #aspect-ratio-field .studio-options{width:100%;max-width:none}#studio-media-controls #aspect-ratio-field .studio-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#studio-media-controls #aspect-ratio-field .studio-option label{max-width:none;width:100%;aspect-ratio:1/1}#studio-media-controls #transition-field .studio-choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}#studio-media-controls #transition-field .studio-choice label{width:100%;box-sizing:border-box}}
+  @media(max-width:999px){#studio-media-controls{grid-template-columns:1fr}#studio-media-controls #aspect-ratio-field .studio-options,#studio-media-controls #source-options{width:100%;max-width:none}#studio-media-controls #aspect-ratio-field .studio-options{grid-template-columns:repeat(2,minmax(0,1fr))}#studio-media-controls #transition-field .studio-choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}}
   .studio-step-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:13px}
   .studio-step-tab{flex:1;min-width:140px;border:1px solid var(--border);border-radius:9px;background:var(--card-bg);color:var(--text-soft);padding:9px 10px;font:inherit;font-size:11px;font-weight:900;cursor:pointer;text-align:center;transition:.2s}
   .studio-step-tab.is-active{border-color:var(--primary);background:var(--primary-l);color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
@@ -137,7 +137,7 @@
   .studio-wizard-circle{width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:0 0 30px;border:2px solid var(--border);border-radius:50%;color:var(--text-soft);font-size:11px;font-weight:900}
   .studio-wizard-step.is-active .studio-wizard-circle{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
   .studio-wizard-step.is-complete .studio-wizard-circle{border-color:var(--success);background:var(--success-l);color:var(--success)}
-  .studio-wizard-copy{min-width:0}.studio-wizard-label{font-size:10px;color:var(--text-soft);margin-bottom:2px}.studio-wizard-title{font-size:11px;font-weight:900;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.studio-wizard-desc{font-size:9px;color:var(--text-soft);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .studio-wizard-copy{display:grid;gap:3px;align-content:center;min-width:0}.studio-wizard-label{font-size:10px;line-height:1.5;color:var(--text-soft);margin-bottom:0}.studio-wizard-title{font-size:13px;line-height:1.65;font-weight:900;color:var(--text-main);white-space:normal;overflow:visible;text-overflow:clip}.studio-wizard-desc{font-size:10px;line-height:1.7;color:var(--text-soft);margin-top:1px;white-space:normal;overflow:visible;text-overflow:clip}
   .studio-wizard-step.is-active .studio-wizard-label,.studio-wizard-step.is-active .studio-wizard-title{color:var(--primary)}
   .studio-wizard-connector{width:22px;height:1px;flex:0 0 22px;background:var(--border);transition:.2s}.studio-wizard-connector.is-complete{background:color-mix(in srgb,var(--success) 55%,transparent)}
   .studio-wizard-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid var(--divider)}
@@ -173,12 +173,6 @@
         <div class="video-studio-title">تولید خودکار ویدیو</div>
         <div class="video-studio-subtitle">مدیریت محصولات، خروجی‌ها، خطاها و وضعیت پایپ‌لاین در یک نمای واحد</div>
       </div>
-      <div class="video-studio-actions">
-        <a class="studio-btn" href="{{ route('admin.products') }}"><i class="fa-solid fa-box-open"></i> محصولات</a>
-        <a class="studio-btn" href="https://docs.google.com/spreadsheets/d/1r44fnFeUL6ndq_XmVP0XNW6J16Kekz_6pBEnL_WHDa4/edit" target="_blank" rel="noopener"><i class="fa-solid fa-table-list"></i> گزارش شیت</a>
-        <button class="studio-btn" type="button" id="open-prompt-mother-top"><i class="fa-solid fa-wand-magic-sparkles"></i> تنظیم پرامپت اینستا و تلگرام</button>
-        <a class="studio-btn primary" href="#studio-settings"><i class="fa-solid fa-clapperboard"></i> ساخت ویدیو</a>
-      </div>
     </div>
 
     <div class="studio-grid">
@@ -191,7 +185,7 @@
 
     <div class="studio-settings" style="margin-bottom:16px">
       <section class="studio-card studio-panel" id="studio-settings">
-        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-sliders"></i> تنظیمات ساخت</div><div class="video-studio-actions studio-build-actions"><button class="studio-btn" type="button" form="studio-settings-form" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',false)"><i class="fa-solid fa-list"></i> ذخیره در لیست</button><button id="queue-submit" class="studio-btn primary" type="button" form="studio-settings-form" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',true)"><i class="fa-solid fa-clapperboard"></i> ذخیره در لیست و ارسال برای ساخت</button></div></div>
+        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-sliders"></i> تنظیمات ساخت ویدیو</div><div class="video-studio-actions studio-build-actions"><a class="studio-btn" href="https://docs.google.com/spreadsheets/d/1r44fnFeUL6ndq_XmVP0XNW6J16Kekz_6pBEnL_WHDa4/edit" target="_blank" rel="noopener"><i class="fa-solid fa-table-list"></i> اکسل گزارشات</a><button class="studio-btn" type="button" id="open-prompt-mother-top"><i class="fa-solid fa-wand-magic-sparkles"></i> پرامپت اینستاگرام و تلگرام</button><button class="studio-btn" type="button" form="studio-settings-form" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',false)"><i class="fa-solid fa-list"></i> ذخیره در لیست</button><button id="queue-submit" class="studio-btn primary" type="button" form="studio-settings-form" onclick="submitStudioForm('{{ route('admin.video-studio.jobs.store') }}','POST',true)"><i class="fa-solid fa-clapperboard"></i> ذخیره در لیست و ارسال برای ساخت</button></div></div>
         <form id="studio-settings-form" class="studio-form" data-product-id="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}" method="POST" action="{{ route('admin.video-studio.settings.update') }}" enctype="multipart/form-data">
           @csrf
           <input type="hidden" name="_method" id="studio-form-method" value="PATCH">
@@ -211,27 +205,27 @@
           @endif
           <div class="studio-field studio-step-panel" data-studio-step="1"><label>فونت نوشته‌های ویدیو</label><div class="studio-font-grid" id="font-family">@foreach($fonts as $font)<div class="studio-font-option"><input id="font-{{ $font->slug }}" type="radio" name="font_family" value="{{ $font->slug }}" @checked(($settings->font_family ?? 'B_Yekan') === $font->slug)><label for="font-{{ $font->slug }}" style="font-family:'{{ $font->slug }}'"><span>{{ $font->name }}</span><small>نمونه متن فارسی</small></label></div>@endforeach</div><small>یکان حالت پیش‌فرض است و برای هر سفارش قابل تغییر است.</small></div>
           <input type="hidden" name="build_now" id="build-now" value="0"><input type="hidden" name="preview_hook" id="preview-hook"><input type="hidden" name="preview_caption" id="preview-caption"><input type="hidden" name="preview_keyword" id="preview-keyword"><input type="hidden" name="telegram_caption_text" id="telegram-caption-hidden" value="{{ old('telegram_caption_text', $settings->telegram_caption_text ?? '') }}">
+          <div class="studio-smart-field studio-step-panel" data-studio-step="1" aria-label="ساخت هوک">
+            <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
+            <small>سه پیشنهاد هم‌زمان زیر همین گزینه نمایش داده می‌شود؛ اولی به‌صورت پیش‌فرض انتخاب است.</small>
+            <div class="studio-preview-options" data-preview-tabs="hook"></div>
+            <div class="studio-field studio-conditional" id="hook-manual"><label for="hook-text-manual">متن دستی هوک</label><div class="studio-manual-box"><input id="hook-text-manual" class="studio-input" name="hook_text" value="{{ old('hook_text', $settings->hook_text ?? '') }}" placeholder="با خاموش‌کردن هوش مصنوعی، متن را اینجا ویرایش کن."><small>با روشن‌بودن هوش مصنوعی، متن‌های پیشنهادی فقط خواندنی هستند.</small></div></div>
+          </div>
           <div class="studio-media-controls studio-step-panel" data-studio-step="1" id="studio-media-controls"><div class="studio-field" id="source-mode-field"><label>منبع صدا</label><div class="studio-options" id="source-options">
-            @foreach(['auto'=>['fa-wand-magic-sparkles','خودکار'],'upload'=>['fa-file-audio','فایل مستقیم'],'music'=>['fa-music','فایل موزیک'],'video'=>['fa-film','ویدیوی منبع']] as $mode=>$option)
+            @foreach(['auto'=>['fa-wand-magic-sparkles','خودکار'],'upload'=>['fa-box-archive','انتخاب از آرشیو'],'music'=>['fa-music','فایل موزیک'],'video'=>['fa-film','ویدیوی منبع']] as $mode=>$option)
               <div class="studio-option"><input id="source-{{ $mode }}" type="radio" name="source_mode" value="{{ $mode }}" @checked(($settings->source_mode ?? 'auto') === $mode)><label for="source-{{ $mode }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}</label></div>
             @endforeach
           </div><small id="source-help">منبع انتخابی بعد از اتصال به ورکفلو، هنگام ساخت استفاده می‌شود.</small></div>
-          <div class="studio-field" id="source-url-field"><label for="source-url">منبع صدا</label><input type="hidden" id="source-library" name="source_library_id" value=""><button class="studio-btn studio-source-library-btn" type="button" id="open-source-library"><i class="fa-solid fa-folder-open"></i> انتخاب از کتابخانهٔ صدا</button><input id="source-url" class="studio-input" type="url" name="source_url" value="{{ old('source_url', $settings->source_url) }}" placeholder="لینک فایل موزیک یا ویدیوی منبع"><input id="source-file" class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"><small id="source-url-help">برای «فایل مستقیم»، «فایل موزیک» یا «ویدیوی منبع»، انتخاب فایل سیستم باز می‌شود.</small></div>
           <div class="studio-field" id="aspect-ratio-field"><label>قاب خروجی</label><div class="studio-options">
             @foreach(['9:16'=>['fa-mobile-screen-button','استوری عمودی'],'1:1'=>['fa-square','مربع'],'4:5'=>['fa-image','پست عمودی'],'16:9'=>['fa-display','افقی']] as $ratio=>$option)
               <div class="studio-option"><input id="ratio-{{ str_replace(':','-',$ratio) }}" type="radio" name="aspect_ratio" value="{{ $ratio }}" @checked(($settings->aspect_ratio ?? '9:16') === $ratio)><label for="ratio-{{ str_replace(':','-',$ratio) }}"><i class="fa-solid {{ $option[0] }}"></i>{{ $option[1] }}<span dir="ltr">{{ $ratio }}</span></label></div>
             @endforeach
-          </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div></div>
-          <div class="studio-design-grid studio-step-panel" data-studio-step="1" aria-label="ظاهر ویدیو"><div class="studio-field"><label>ترنزیشن بین بخش‌ها</label><div class="studio-choice-row"><div class="studio-choice"><input id="transition-cut" type="radio" name="transition" value="cut" checked><label for="transition-cut">برش سریع</label></div><div class="studio-choice"><input id="transition-fade" type="radio" name="transition" value="fade"><label for="transition-fade">فید</label></div><div class="studio-choice"><input id="transition-blur" type="radio" name="transition" value="blur"><label for="transition-blur">بلور</label></div><div class="studio-choice"><input id="transition-slide" type="radio" name="transition" value="slide"><label for="transition-slide">لغزش</label></div></div></div><div class="studio-field"><label for="transition-duration">مدت ترنزیشن: <span id="transition-duration-value">۰٫۵</span> ثانیه</label><input id="transition-duration" type="range" name="transition_duration" min="0.2" max="1.5" step="0.1" value="0.5"></div></div>
+          </div><small>حالت پیش‌فرض استوری است و برای هر خروجی قابل تغییر است.</small></div>
+          <div class="studio-field studio-design-grid" id="transition-field" aria-label="ترنزیشن بین بخش‌ها"><label>ترنزیشن بین بخش‌ها</label><div class="studio-choice-row"><div class="studio-choice"><input id="transition-cut" type="radio" name="transition" value="cut" checked><label for="transition-cut">برش سریع</label></div><div class="studio-choice"><input id="transition-fade" type="radio" name="transition" value="fade"><label for="transition-fade">فید</label></div><div class="studio-choice"><input id="transition-blur" type="radio" name="transition" value="blur"><label for="transition-blur">بلور</label></div><div class="studio-choice"><input id="transition-slide" type="radio" name="transition" value="slide"><label for="transition-slide">لغزش</label></div></div><label for="transition-duration">مدت ترنزیشن: <span id="transition-duration-value">۰٫۵</span> ثانیه</label><input id="transition-duration" type="range" name="transition_duration" min="0.2" max="1.5" step="0.1" value="0.5"></div></div>
+          <input type="hidden" id="source-library" name="source_library_id" value=""><input type="hidden" id="source-url" name="source_url" value="{{ old('source_url', $settings->source_url) }}"><input id="source-file" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm" hidden>
           <div class="studio-cta-box studio-step-panel" data-studio-step="1"><label class="studio-platform-toggle"><span><i class="fa-solid fa-bullhorn"></i> دعوت به اقدام در پایان ویدیو</span><input type="hidden" name="cta_enabled" value="0"><input id="cta-enabled" type="checkbox" name="cta_enabled" value="1" checked></label><div class="studio-preview-options" data-preview-tabs="cta"></div><input class="studio-input" id="cta-text" name="cta_text" placeholder="متن دعوت به اقدام (در صورت خاموش‌بودن هوش مصنوعی)" value=""><div class="studio-choice-row"><div class="studio-choice"><input id="cta-bg-primary" type="radio" name="cta_background" value="primary" checked><label for="cta-bg-primary">پس‌زمینه هماهنگ با هوک</label></div><div class="studio-choice"><input id="cta-bg-light" type="radio" name="cta_background" value="light"><label for="cta-bg-light">روشن</label></div><div class="studio-choice"><input id="cta-bg-dark" type="radio" name="cta_background" value="dark"><label for="cta-bg-dark">تیره</label></div></div></div>
           <div class="studio-smart-fields studio-step-panel" data-studio-step="2" aria-label="کنترل‌های هوشمند و پیشنهادهای متن">
             <div class="studio-field"><label for="text-command">دستور متنی ساخت یا اصلاح</label><textarea class="studio-textarea" id="text-command" name="text_command" rows="3" placeholder="مثلاً: هوک را کوتاه‌تر و ضخیم‌تر کن، هر دو تصویر محصول را استفاده کن و مدت دعوت به اقدام را کمتر کن."></textarea><small>این متن همراه تنظیمات به ورکفلو ارسال می‌شود تا در ساخت یا بازسازی سفارش اعمال شود.</small></div>
-            <div class="studio-smart-field">
-              <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-bolt"></i> ساخت هوک با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="hook">ساخت مجدد</button></span><input type="hidden" name="auto_generate_hook" value="0"><input type="checkbox" name="auto_generate_hook" value="1" @checked($settings->auto_generate_hook)></label>
-              <small>سه پیشنهاد هم‌زمان زیر همین گزینه نمایش داده می‌شود؛ اولی به‌صورت پیش‌فرض انتخاب است.</small>
-              <div class="studio-preview-options" data-preview-tabs="hook"></div>
-              <div class="studio-field studio-conditional" id="hook-manual"><label for="hook-text-manual">متن دستی هوک</label><div class="studio-manual-box"><input id="hook-text-manual" class="studio-input" name="hook_text" value="{{ old('hook_text', $settings->hook_text ?? '') }}" placeholder="با خاموش‌کردن هوش مصنوعی، متن را اینجا ویرایش کن."><small>با روشن‌بودن هوش مصنوعی، متن‌های پیشنهادی فقط خواندنی هستند.</small></div></div>
-            </div>
             <div class="studio-smart-field">
               <label class="studio-smart-toggle"><span class="studio-smart-toggle-main"><span><i class="fa-solid fa-pen-nib"></i> ساخت کپشن با هوش مصنوعی</span><button class="studio-regenerate" type="button" data-regenerate-preview="caption">ساخت مجدد</button></span><input type="hidden" name="auto_generate_caption" value="0"><input type="checkbox" name="auto_generate_caption" value="1" @checked($settings->auto_generate_caption)></label>
               <small>هر سه نسخه را ببین، یکی را انتخاب کن و در صورت خاموش‌کردن هوش مصنوعی ویرایشش کن.</small>
@@ -266,7 +260,7 @@
 
       <div class="studio-library-grid">
       <section class="studio-card studio-panel">
-        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-lightbulb"></i> کتابخانه هوک</div><div class="studio-panel-meta">ایده‌های قابل استفاده برای هوش مصنوعی</div></div>
+        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-lightbulb"></i> آرشیو هوک</div><div class="studio-panel-meta">ایده‌های قابل استفاده برای هوش مصنوعی</div></div>
         <form class="studio-form" method="POST" action="{{ route('admin.video-studio.hooks.store') }}" style="margin-bottom:14px">
           @csrf
           <input type="hidden" name="product_id" value="{{ $selectedProduct?->id ?? (int) request()->query('product_id') }}">
@@ -285,7 +279,7 @@
       </section>
 
       <section class="studio-card studio-panel">
-        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-music"></i> کتابخانهٔ صدا و ویدیو</div><div class="studio-panel-meta">منابع قابل استفادهٔ مجدد</div></div>
+        <div class="studio-panel-head"><div class="studio-panel-title"><i class="fa-solid fa-music"></i> آرشیو صدا و ویدیو</div><div class="studio-panel-meta">منابع قابل استفادهٔ مجدد</div></div>
         <form class="studio-form" method="POST" action="{{ route('admin.video-studio.sources.store') }}" enctype="multipart/form-data" style="margin-bottom:14px">
           @csrf
           <div class="studio-field"><label>نام منبع</label><input class="studio-input" name="name" required placeholder="مثلاً: موزیک ترند تابستانی"></div>
@@ -320,12 +314,12 @@
 
     <div class="studio-modal" id="source-library-modal" role="dialog" aria-modal="true" aria-labelledby="source-library-title">
       <div class="studio-modal-card">
-        <div class="studio-modal-head"><div class="studio-modal-title" id="source-library-title">انتخاب منبع صدا یا ویدیو</div><button class="studio-modal-close" type="button" id="close-source-library" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="studio-modal-head"><div class="studio-modal-title" id="source-library-title">انتخاب از آرشیو صدا و ویدیو</div><button class="studio-modal-close" type="button" id="close-source-library" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button></div>
         <div class="studio-source-library-list">
           @forelse($sources as $source)
             <button class="studio-source-library-item" type="button" data-source-library-choice="{{ $source->id }}" data-source-type="{{ $source->type }}" data-source-name="{{ $source->name }}"><span><strong>{{ $source->name }}</strong><small>{{ $source->type === 'video' ? 'ویدیوی منبع؛ استخراج صدا' : 'فایل موزیک' }} · {{ $source->used_count }} بار استفاده</small></span><i class="fa-solid fa-chevron-left"></i></button>
           @empty
-            <div class="studio-empty">کتابخانه هنوز منبعی ندارد. از همین صفحه یک فایل صدا یا ویدیو اضافه کن.</div>
+            <div class="studio-empty">آرشیو هنوز منبعی ندارد. از همین صفحه یک فایل صدا یا ویدیو اضافه کن.</div>
           @endforelse
         </div>
       </div>
@@ -339,8 +333,8 @@
           <input type="hidden" name="_method" value="PATCH">
           <div class="studio-job-edit-grid">
             <div class="studio-field"><label for="job-edit-product">محصول</label><select class="studio-select" id="job-edit-product" name="product_id" required>@foreach($products as $product)<option value="{{ $product->id }}">{{ $product->name_fa }} · #{{ $product->id }}</option>@endforeach</select></div>
-            <div class="studio-field"><label for="job-edit-source-mode">نوع منبع</label><select class="studio-select" id="job-edit-source-mode" name="source_mode" required><option value="auto">خودکار از کتابخانه</option><option value="music">فایل موزیک</option><option value="video">ویدیوی منبع</option><option value="upload">فایل مستقیم</option></select></div>
-            <div class="studio-field"><label for="job-edit-source-library">منبع کتابخانه</label><select class="studio-select" id="job-edit-source-library" name="source_library_id"><option value="">بدون انتخاب</option>@foreach($sources as $source)<option value="{{ $source->id }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیو' : 'موزیک' }}</option>@endforeach</select></div>
+            <div class="studio-field"><label for="job-edit-source-mode">نوع منبع</label><select class="studio-select" id="job-edit-source-mode" name="source_mode" required><option value="auto">خودکار از آرشیو</option><option value="music">فایل موزیک</option><option value="video">ویدیوی منبع</option><option value="upload">انتخاب از آرشیو</option></select></div>
+            <div class="studio-field"><label for="job-edit-source-library">منبع آرشیو</label><select class="studio-select" id="job-edit-source-library" name="source_library_id"><option value="">بدون انتخاب</option>@foreach($sources as $source)<option value="{{ $source->id }}">{{ $source->name }} · {{ $source->type === 'video' ? 'ویدیو' : 'موزیک' }}</option>@endforeach</select></div>
             <div class="studio-field"><label for="job-edit-source-url">لینک منبع</label><input class="studio-input" id="job-edit-source-url" type="url" name="source_url" placeholder="https://..."><input class="studio-input" type="file" name="source_file" accept="audio/*,video/mp4,video/quicktime,video/webm"></div>
             <div class="studio-field full"><label for="job-edit-images">تصاویر انتخابی (هر لینک در یک خط)</label><textarea class="studio-textarea" id="job-edit-images" name="selected_images_text" rows="4" placeholder="https://..."></textarea></div>
             <div class="studio-field"><label for="job-edit-ratio">قاب خروجی</label><select class="studio-select" id="job-edit-ratio" name="aspect_ratio"><option value="9:16">استوری عمودی · 9:16</option><option value="1:1">مربع · 1:1</option><option value="4:5">پست عمودی · 4:5</option><option value="16:9">افقی · 16:9</option></select></div>
@@ -518,7 +512,6 @@
 <script>
   document.getElementById('breadcrumb')?.replaceChildren(document.createTextNode('تولید خودکار ویدیو'));
   const sourceHelp = document.getElementById('source-help');
-  const sourceUrlField = document.getElementById('source-url-field');
   const sourceUrl = document.getElementById('source-url');
   const sourceLibrary = document.getElementById('source-library');
   const sourceFile = document.getElementById('source-file');
@@ -547,14 +540,13 @@
   }
   const sourceDescriptions = {
     auto: 'ورکفلو بر اساس منبع موجود، بهترین گزینه را انتخاب می‌کند.',
-    upload: 'یک فایل مستقیم صوتی یا ویدیویی را با نشانی آن مشخص کنید.',
+    upload: 'یک منبع صوتی یا ویدیویی را از آرشیو انتخاب کنید.',
     music: 'فایل موزیک انتخابی شما روی ویدیوی محصول قرار می‌گیرد.',
     video: 'صدای ویدیوی منبع استخراج می‌شود و مدت خروجی با آن هماهنگ می‌ماند.'
   };
   function updateStudioControls() {
     const selected = document.querySelector('input[name="source_mode"]:checked')?.value || 'auto';
     if (sourceHelp) sourceHelp.textContent = sourceDescriptions[selected] || sourceDescriptions.auto;
-    if (sourceUrlField) sourceUrlField.style.display = 'grid';
     if (sourceUrl) sourceUrl.placeholder = selected === 'video' ? 'لینک ویدیوی منبع' : 'لینک فایل صوتی یا موزیک';
     if (hookManual) hookManual.classList.toggle('is-hidden', !!hookToggle?.checked);
     if (captionManual) captionManual.classList.toggle('is-hidden', !!captionToggle?.checked);
@@ -563,9 +555,10 @@
   document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', updateStudioControls));
   let selectingLibrarySource = false;
   document.querySelectorAll('input[name="source_mode"]').forEach((input) => input.addEventListener('change', () => {
-    if (input.value !== 'auto' && !selectingLibrarySource) sourceFile?.click();
+    if (selectingLibrarySource) return;
+    if (input.value === 'upload') { sourceLibraryModal?.classList.add('is-open'); return; }
+    if (input.value !== 'auto') sourceFile?.click();
   }));
-  document.getElementById('open-source-library')?.addEventListener('click', () => sourceLibraryModal?.classList.add('is-open'));
   document.getElementById('close-source-library')?.addEventListener('click', () => sourceLibraryModal?.classList.remove('is-open'));
   sourceLibraryModal?.addEventListener('click', (event) => { if (event.target === sourceLibraryModal) sourceLibraryModal.classList.remove('is-open'); });
   sourceLibraryModal?.querySelectorAll('[data-source-library-choice]').forEach((choice) => choice.addEventListener('click', () => {
@@ -573,7 +566,7 @@
     selectingLibrarySource = true;
     document.querySelector(`input[name="source_mode"][value="${choice.dataset.sourceType}"]`)?.click();
     selectingLibrarySource = false;
-    const help = document.getElementById('source-url-help'); if (help) help.textContent = 'منبع انتخاب‌شده: ' + (choice.dataset.sourceName || 'کتابخانه');
+    const help = document.getElementById('source-help'); if (help) help.textContent = 'منبع انتخاب‌شده از آرشیو: ' + (choice.dataset.sourceName || 'آرشیو');
     sourceLibraryModal.classList.remove('is-open');
   }));
   keywordToggle?.addEventListener('change', updateStudioControls);
@@ -595,7 +588,7 @@
       const hasFile = !!sourceFile?.files?.length;
       if (!hasLibrary && !hasLink && !hasFile) {
         window.alert(sourceMode === 'auto'
-          ? 'برای ساخت، یک منبع فعال از کتابخانه انتخاب کنید یا فایل/لینک منبع بدهید.'
+          ? 'برای ساخت، یک منبع فعال از آرشیو انتخاب کنید یا فایل/لینک منبع بدهید.'
           : 'برای ساخت، فایل یا لینک منبع را انتخاب کنید.');
         return;
       }
