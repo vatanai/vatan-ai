@@ -875,7 +875,14 @@
     if (activeStudioStep === 3) updateTelegramPreview();
     stabilizeStudioSettingsHeight();
   }
-  document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => tab.addEventListener('click', () => setStudioStep(tab.dataset.studioStepTab)));
+  let studioTabScrollY = window.scrollY;
+  document.querySelectorAll('[data-studio-step-tab]').forEach((tab) => {
+    tab.addEventListener('pointerdown', () => { studioTabScrollY = window.scrollY; }, { passive: true });
+    tab.addEventListener('click', () => {
+      setStudioStep(tab.dataset.studioStepTab);
+      requestAnimationFrame(() => window.scrollTo({ top: studioTabScrollY, left: 0, behavior: 'auto' }));
+    });
+  });
   document.getElementById('studio-step-prev')?.addEventListener('click', () => setStudioStep(activeStudioStep - 1));
   document.getElementById('studio-step-next')?.addEventListener('click', () => setStudioStep(activeStudioStep + 1));
   setStudioStep(1, false);
