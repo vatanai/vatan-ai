@@ -514,6 +514,9 @@
 @section('scripts')
 <script>
   document.getElementById('breadcrumb')?.replaceChildren(document.createTextNode('تولید خودکار ویدیو'));
+  // در حالت راست‌به‌چپ، سایدبار ثابت نباید اسکرول افقی صفحهٔ استودیو را فعال کند.
+  document.documentElement.style.overflowX = 'hidden';
+  document.body.style.overflowX = 'hidden';
   const sourceHelp = document.getElementById('source-help');
   const sourceUrl = document.getElementById('source-url');
   const sourceLibrary = document.getElementById('source-library');
