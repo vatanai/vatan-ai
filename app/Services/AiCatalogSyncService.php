@@ -18,7 +18,9 @@ class AiCatalogSyncService
         'bytedance/seedream-4.5',
         'black-forest-labs/flux-kontext-pro',
         'google/nano-banana',
+        'openai/gpt-image-1',
         'openai/gpt-image-1.5',
+        'openai/gpt-image-2',
         'ideogram-ai/ideogram-v3-turbo',
     ];
 
@@ -39,12 +41,53 @@ class AiCatalogSyncService
         if ($provider === 'all' || $provider === 'replicate') {
             $results['replicate'] = $this->syncReplicate();
         }
+        if ($provider === 'all' || $provider === 'openrouter') {
+            $results['openrouter'] = $this->syncOpenRouterVideos();
+        }
 
         if (!isset($results[$provider]) && $provider !== 'all') {
-            throw new RuntimeException('provider کاتالوگ معتبر نیست. فقط fal، replicate یا all مجاز است.');
+            throw new RuntimeException('provider کاتالوگ معتبر نیست. فقط fal، replicate، openrouter یا all مجاز است.');
         }
 
         return $results;
+    }
+
+    /**
+     * OpenRouter برای ویدیو یک کاتالوگ جدا از /models دارد. این همگام‌سازی
+     * متادیتای واقعی مدل، بازه‌ی زمانی، رزولوشن، تصویر فریم اول و قیمت هر
+     * ثانیه را وارد جدول عمومی ai_models می‌کند تا انتخاب مدل و محاسبه‌ی
+     * اعتبار از روی همان قرارداد زنده‌ی provider انجام شود.
+     */
+    public function syncOpenRouterVideos(): array
+    {
+        $credentials = $this->credentials->for('openrouter');
+        if (blank($credentials['api_key'])) {
+            return ['skipped' => true, 'reason' => 'کلید OpenRouter ثبت نشده است.', 'created' => 0, 'updated' => 0, 'total' => 0];
+        }
+
+        $response = Http::withToken($credentials['api_key'])
+            ->acceptJson()
+            ->connectTimeout(15)
+            ->timeout(min(60, max(15, (int) $credentials['timeout'])))
+            ->get(rtrim($credentials['base_url'] ?: 'https://openrouter.ai/api/v1', '/') . '/videos/models');
+
+        if ($response->failed()) {
+            throw new RuntimeException('OpenRouter video catalog HTTP ' . $response->status() . ': ' . Str::limit($response->body(), 500));
+        }
+
+        $created = 0;
+        $updated = 0;
+        $seen = [];
+        foreach ((array) $response->json('data', []) as $remote) {
+            $modelId = trim((string) ($remote['id'] ?? ''));
+            if ($modelId === '' || isset($seen[$modelId])) continue;
+            $seen[$modelId] = true;
+            [$wasCreated, $wasUpdated] = $this->upsertModel($this->openRouterVideoData($remote));
+            $created += $wasCreated;
+            $updated += $wasUpdated;
+        }
+
+        return ['created' => $created, 'updated' => $updated, 'total' => count($seen)];
     }
 
     public function syncFal(): array
@@ -326,6 +369,23 @@ class AiCatalogSyncService
     private function upsertModel(array $data): array
     {
         $data = $this->removeUnavailableWorkflowColumns($data);
+        $catalogProvider = (string) ($data['provider'] ?? '');
+        $catalogModality = (string) ($data['output_modality'] ?? '');
+        $catalogTask = (string) ($data['task_type'] ?? '');
+        $catalogModelId = strtolower((string) ($data['external_model_id'] ?? $data['openrouter_model_id'] ?? ''));
+        $isReplicateGptImage = $catalogProvider === 'replicate'
+            && (str_contains($catalogModelId, 'gpt') || str_contains(strtolower((string) ($data['name'] ?? '')), 'gpt'));
+
+        // همگام‌سازی بعدی نباید مدل‌های جدید متن‌به‌عکس را دوباره از گام دوم
+        // و آزمایشگاه پنهان کند. مدل‌های اصلی با migration اولویت می‌گیرند؛
+        // مدل‌های تازه با اولویت انتهای فهرست می‌آیند تا ترتیب curated حفظ شود.
+        if (in_array($catalogProvider, ['openrouter', 'fal', 'replicate'], true)
+            && $catalogModality === 'image'
+            && ($catalogTask === 'text_to_image' || $isReplicateGptImage)) {
+            $data['featured_in_lab'] = true;
+            $data['lab_priority'] = (int) ($data['lab_priority'] ?? 999);
+        }
+
         $model = AiModel::query()
             ->where('provider', $data['provider'])
             ->where(function ($query) use ($data) {
@@ -426,6 +486,103 @@ class AiCatalogSyncService
             'data_retention_notes' => 'اطلاعات و schema از کاتالوگ رسمی Fal.ai همگام شده است.',
             'last_verified_at' => now(),
             'description' => (string) ($metadata['description'] ?? "مدل {$endpointId} از Fal.ai؛ دسته‌بندی {$category}."),
+        ];
+    }
+
+    private function openRouterVideoData(array $remote): array
+    {
+        $modelId = trim((string) ($remote['id'] ?? ''));
+        $frameTypes = array_values(array_filter((array) ($remote['supported_frame_images'] ?? []), 'is_string'));
+        $taskType = $frameTypes !== [] ? 'image_to_video' : 'text_to_video';
+        $pricing = (array) ($remote['pricing_skus'] ?? []);
+        $resolutionTiers = [];
+
+        foreach ((array) ($remote['supported_resolutions'] ?? []) as $resolution) {
+            $resolution = (string) $resolution;
+            $candidates = [
+                'cents_per_video_output_second_' . strtolower($resolution),
+                'duration_seconds_' . strtolower($resolution),
+                'duration_seconds_' . strtoupper($resolution),
+                'text_to_video_duration_seconds_' . strtolower($resolution),
+                'image_to_video_duration_seconds_' . strtolower($resolution),
+            ];
+            foreach ($candidates as $key) {
+                if (is_numeric($pricing[$key] ?? null)) {
+                    $value = (float) $pricing[$key];
+                    if (str_starts_with($key, 'cents_')) $value /= 100;
+                    $resolutionTiers[$resolution] = $value;
+                    break;
+                }
+            }
+        }
+
+        if ($resolutionTiers === []) {
+            foreach (['duration_seconds', 'cents_per_second_output', 'cents_per_video_output_second_480p'] as $key) {
+                if (is_numeric($pricing[$key] ?? null)) {
+                    $value = (float) $pricing[$key];
+                    if (str_starts_with($key, 'cents_')) $value /= 100;
+                    $resolutionTiers['default'] = $value;
+                    break;
+                }
+            }
+        }
+
+        $qualityScore = match ($modelId) {
+            'x-ai/grok-imagine-video', 'x-ai/grok-imagine-video-1.5', 'alibaba/wan-3.0', 'alibaba/wan-3.0-prime' => 8.0,
+            default => null,
+        };
+
+        $capabilities = [
+            'supports_text_to_video' => true,
+            'supports_image_to_video' => $frameTypes !== [],
+            'supports_text_to_image' => false,
+            'allowed_inputs' => ['prompt', 'duration', 'resolution', 'aspect_ratio', 'generate_audio', 'seed', 'frame_images', 'input_references'],
+            'supported_durations' => array_values(array_map('intval', (array) ($remote['supported_durations'] ?? []))),
+            'supported_resolutions' => array_values(array_map('strval', (array) ($remote['supported_resolutions'] ?? []))),
+            'supported_aspect_ratios' => array_values(array_map('strval', (array) ($remote['supported_aspect_ratios'] ?? []))),
+            'supported_frame_images' => $frameTypes,
+        ];
+        if ($qualityScore !== null) $capabilities['quality_score'] = $qualityScore;
+
+        return [
+            'provider' => 'openrouter',
+            'name' => (string) ($remote['name'] ?? $modelId),
+            'external_model_id' => $modelId,
+            'external_version' => null,
+            'provider_name' => 'OpenRouter',
+            'output_modality' => 'video',
+            'task_type' => $taskType,
+            'supports_image_input' => $frameTypes !== [],
+            'supports_face_identity' => false,
+            'supports_multiple_faces' => false,
+            'supports_audio' => (bool) ($remote['generate_audio'] ?? false),
+            'supports_video_input' => false,
+            'cost_per_generation' => 0,
+            'cost_per_generation_usd' => $resolutionTiers['720p'] ?? $resolutionTiers['default'] ?? null,
+            'default_width' => 1280,
+            'default_height' => 720,
+            'max_resolution' => null,
+            'max_duration' => !empty($remote['supported_durations']) ? max(array_map('intval', (array) $remote['supported_durations'])) : null,
+            'default_parameters' => null,
+            'input_schema' => null,
+            'capability_config' => $capabilities,
+            'pricing_config' => [
+                'source' => 'openrouter.video.models',
+                'unit' => 'per_second',
+                'resolution_tiers' => $resolutionTiers,
+                'pricing_skus' => $pricing,
+                'supported_resolutions' => $remote['supported_resolutions'] ?? [],
+                'supported_durations' => $remote['supported_durations'] ?? [],
+                'supported_aspect_ratios' => $remote['supported_aspect_ratios'] ?? [],
+                'supported_frame_images' => $frameTypes,
+            ],
+            'pricing_type' => 'per_second',
+            'commercial_use' => null,
+            'supports_webhook' => true,
+            'terms_url' => 'https://openrouter.ai/' . $modelId,
+            'data_retention_notes' => 'اطلاعات مدل و قیمت از کاتالوگ رسمی ویدیوی OpenRouter همگام شده است.',
+            'last_verified_at' => now(),
+            'description' => (string) ($remote['description'] ?? "مدل {$modelId} از OpenRouter."),
         ];
     }
 

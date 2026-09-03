@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class AiModel extends Model
@@ -15,11 +16,36 @@ class AiModel extends Model
         $modelId = strtolower((string) $this->openrouter_model_id);
 
         $knownNames = [
+            'google/nano-banana' => 'NANO BANANA',
+            'google/nano-banana-2' => 'NANO BANANA 2',
+            'google/nano-banana-2-lite' => 'NANO BANANA 2 LITE',
+            'google/nano-banana-pro' => 'NANO BANANA PRO',
+            'black-forest-labs/flux-kontext-dev' => 'FLUX KONTEXT DEV',
+            'bytedance/seedream-4.5' => 'SEEDREAM 4.5',
+            'black-forest-labs/flux-kontext-pro' => 'FLUX KONTEXT PRO',
+            'qwen/qwen-image-edit' => 'QWEN IMAGE EDIT',
+            'fal-ai/nano-banana/edit' => 'NANO BANANA',
+            'fal-ai/nano-banana-2/edit' => 'NANO BANANA 2',
+            'fal-ai/nano-banana-pro/edit' => 'NANO BANANA PRO',
+            'fal-ai/flux-pro/kontext' => 'FLUX KONTEXT PRO',
+            'fal-ai/flux-kontext/dev' => 'FLUX KONTEXT DEV',
+            'fal-ai/flux/dev/image-to-image' => 'FLUX IMAGE TO IMAGE',
+            'fal-ai/qwen-image-edit' => 'QWEN IMAGE EDIT',
             'openai/gpt-image-1-mini' => 'GPT IM 1 MINI',
             'openai/gpt-image-1' => 'GPT IM 1',
             'openai/gpt-image-1.5' => 'GPT IM 1.5',
             'openai/gpt-image-2' => 'GPT IM 2',
+            'fal-ai/gpt-image-1.5/edit' => 'GPT IM 1.5 EDIT',
+            'openai/gpt-image-2/edit' => 'GPT IM 2 EDIT',
             'openai/gpt-5.4-image-2' => 'GPT 5.4 IM 2',
+            'bytedance-seed/seedream-5-0-lite' => 'SEEDREAM 5 LITE',
+            'qwen/qwen-image-3' => 'QWEN IMAGE 3',
+            'black-forest-labs/flux.2-klein-4b' => 'FLUX 2 KLEIN',
+            'bytedance-seed/seedream-5-0-pro' => 'SEEDREAM 5 PRO',
+            'qwen/qwen-image-3-pro' => 'QWEN IMAGE 3 PRO',
+            'black-forest-labs/flux.2-pro' => 'FLUX 2 PRO',
+            'black-forest-labs/flux.2-max' => 'FLUX 2 MAX',
+            'microsoft/mai-image-2.5-pro' => 'MAI IMAGE 2.5 PRO',
             'google/gemini-2.5-flash-image' => 'GEM 2.5 FL IM',
             'google/gemini-3-pro-image-preview' => 'GEM 3 PRO IM PREV',
             'google/gemini-3.1-flash-image' => 'GEM 3.1 FL IM',
@@ -45,7 +71,6 @@ class AiModel extends Model
                 ''
             );
         $providerPrefix = match ($this->provider) {
-            'liara' => 'LR',
             'fal' => 'FAL',
             'replicate' => 'REP',
             default => 'OR',
@@ -94,7 +119,6 @@ class AiModel extends Model
         'description',
         'is_active',
         'provider',
-        'liara_plan',
     ];
 
     protected $casts = [
@@ -123,6 +147,70 @@ class AiModel extends Model
         'supports_webhook' => 'boolean',
         'commercial_use' => 'boolean',
         'last_verified_at' => 'datetime',
+    ];
+
+    /**
+     * کاتالوگ واحد مدل‌های قابل انتخاب برای جریان محصول وطن:
+     * پرامپت → عکس، یا عکس مرجع + پرامپت → عکس خروجی.
+     *
+     * این scope باید منبع مشترک فرم ثبت محصول، تنظیم سریع محصولات و آزمایشگاه
+     * باشد تا تیک «نمایش در انتخاب محصول» دقیقاً روی همه‌ی این بخش‌ها اثر کند.
+     * روشن/خاموش بودن provider عمداً در این scope اعمال نمی‌شود؛ کاتالوگ باید
+     * providerهای دارای مدل را برای انتخاب و بررسی نشان دهد. کنترل سلامت، کلید
+     * و امکان اجرای واقعی در لایه‌ی provider router انجام می‌شود تا مدل Fal.ai
+     * یا OpenRouter به‌خاطر یک قطعی موقت از فرم و آزمایشگاه ناپدید نشود.
+     */
+    public function scopeSelectableForProduct(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('output_modality', 'image')
+            ->where('featured_in_lab', true)
+            // مدل‌های خالص «متن به عکس» ممکن است عکس ورودی نپذیرند؛ این مدل‌ها
+            // برای محصولاتی که فقط prompt می‌گیرند معتبرند و نباید به‌خاطر
+            // supports_image_input=false از فهرست انتخاب حذف شوند.
+            ->where(function (Builder $workflow): void {
+                $workflow
+                    ->where('task_type', 'text_to_image')
+                    ->orWhere(function (Builder $referenceWorkflow): void {
+                        $referenceWorkflow
+                            ->whereIn('task_type', ['image_to_image', 'face_consistency'])
+                            ->where('supports_image_input', true);
+                    });
+            })
+            ->orderBy('lab_priority')
+            ->orderBy('provider')
+            ->orderBy('name');
+    }
+
+    /**
+     * کاتالوگ مستقل مدل‌های محصول ویدیویی. عمداً از scope محصول عکس جدا است
+     * تا اضافه‌شدن مدل ویدیو هیچ اثری روی ویزارد و اجرای فعلی عکس نگذارد.
+     * فقط شش مدل اصلی نگه داشته می‌شوند؛ OpenRouter از صف رسمی ویدیوی خودش
+     * و دو مدل Fal برای سازگاری با محصولات قبلی استفاده می‌کنند.
+     */
+    public function scopeSelectableForVideoProduct(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('output_modality', 'video')
+            ->whereIn('openrouter_model_id', self::VIDEO_PRODUCT_MODEL_IDS)
+            ->whereIn('task_type', [
+                'text_to_video',
+                'image_to_video',
+                'video_to_video',
+                'face_animation',
+            ])
+            ->orderByRaw("CASE task_type WHEN 'image_to_video' THEN 0 WHEN 'text_to_video' THEN 1 WHEN 'face_animation' THEN 2 ELSE 3 END")
+            ->orderBy('provider')
+            ->orderBy('name');
+    }
+
+    /** کاتالوگ کوچک و تأییدشده‌ی فرم ویدیو؛ مدل‌های دیگر در آزمایشگاه می‌مانند. */
+    public const VIDEO_PRODUCT_MODEL_IDS = [
+        'kwaivgi/kling-v2.5-turbo', 'runwayml/gen-4-turbo', 'luma/dream-machine-2',
+        'fal-ai/wan/v2.2-5b/text-to-video/fast-wan', 'fal-ai/wan/v2.2-a14b/image-to-video/turbo',
+        'fal-ai/kling-video/v3/turbo/pro/image-to-video',
     ];
 
     public function externalModelId(): string
@@ -258,16 +346,18 @@ class AiModel extends Model
         $capabilities = is_array($this->capability_config) ? $this->capability_config : [];
         return $this->output_modality === 'image'
             && $this->is_active
-            && (bool) $this->supports_image_input
             && ($this->task_type === 'text_to_image'
                 || $this->task_type === 'image_to_image'
                 || $this->task_type === 'face_consistency')
+            && ($this->task_type === 'text_to_image' || (bool) $this->supports_image_input)
             && (bool) data_get($capabilities, 'supports_text_to_image', true);
     }
 
     public function productWorkflowLabel(): string
     {
-        if ($this->supportsProductImageWorkflow()) return 'متن + عکس → عکس';
+        if ($this->supportsProductImageWorkflow()) {
+            return $this->supports_image_input ? 'متن + عکس → عکس' : 'متن → عکس';
+        }
         return $this->taskLabel();
     }
 
@@ -320,6 +410,29 @@ class AiModel extends Model
     {
         $score = $this->qualityScore();
         return $score === null ? 'ثبت نشده' : rtrim(rtrim(number_format($score, 1), '0'), '.') . ' از ۱۰';
+    }
+
+    /**
+     * گرید عملیاتی مدل برای سیاست قیمت‌گذاری و اعتبار هدیه.
+     *
+     * گرید از امتیاز کیفی استخراج می‌شود تا با تغییر ارزیابی آزمایشگاه، سیاست
+     * اعتبار هدیه نیز بدون نگه‌داری یک مقدار تکراری در دیتابیس به‌روز بماند.
+     */
+    public function pricingGrade(): int
+    {
+        $score = $this->qualityScore();
+
+        if ($score !== null && $score >= 9.5) return 1;
+        if ($score !== null && $score >= 9.0) return 2;
+        if ($score !== null && $score >= 8.5) return 3;
+
+        return 4;
+    }
+
+    /** اعتبار هدیه فقط برای مدل‌های اقتصادی یا متعادل قابل مصرف است. */
+    public function allowsPromotionalCredits(): bool
+    {
+        return $this->pricingGrade() >= 3;
     }
 
     /**

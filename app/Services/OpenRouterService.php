@@ -7,6 +7,8 @@ use App\Models\Product;
 use App\Models\AiModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Exception;
 
 class OpenRouterService implements AiImageProviderInterface
@@ -38,6 +40,20 @@ class OpenRouterService implements AiImageProviderInterface
             'model' => 'openai/gpt-4o-mini',
             'messages' => [
                 ['role' => 'system', 'content' => 'Translate the user text accurately into natural Persian. Preserve technical meaning and placeholders. Return only the Persian translation.'],
+                ['role' => 'user', 'content' => $text],
+            ],
+            'temperature' => 0.1,
+        ], 30);
+        $response->throw();
+        return trim((string) data_get($response->json(), 'choices.0.message.content'));
+    }
+
+    public function translateToEnglish(string $text): string
+    {
+        $response = $this->postWithFailover('/chat/completions', [
+            'model' => 'openai/gpt-4o-mini',
+            'messages' => [
+                ['role' => 'system', 'content' => 'Translate the user text accurately into natural English for an image-generation prompt. Preserve technical meaning and placeholders. Return only the English translation.'],
                 ['role' => 'user', 'content' => $text],
             ],
             'temperature' => 0.1,
@@ -208,7 +224,14 @@ class OpenRouterService implements AiImageProviderInterface
         ], $extraPayload); // input_references و سایر پارامترها اینجا اضافه می‌شوند
         $payload = $this->normalizeImagePayload($modelId, $payload);
 
-        Log::info('OpenRouter: ارسال درخواست تولید تصویر', ['model' => $modelId, 'prompt_length' => strlen($prompt)]);
+        Log::info('OpenRouter: ارسال درخواست تولید تصویر', [
+            'model' => $modelId,
+            'requested_resolution' => $resolution,
+            'resolution' => $payload['resolution'] ?? null,
+            'quality' => $payload['quality'] ?? null,
+            'aspect_ratio' => $payload['aspect_ratio'] ?? null,
+            'prompt_length' => strlen($prompt),
+        ]);
 
         $response = $this->postWithFailover('/images', $payload, $this->defaultTimeout);
 
@@ -252,15 +275,46 @@ class OpenRouterService implements AiImageProviderInterface
         }
 
         // این موارد متعلق به APIهای قدیمی/سرویس‌های دیگرند و در OpenRouter
-        // Images API پارامتر عمومی محسوب نمی‌شوند.
-        unset($payload['negative_prompt'], $payload['strength'], $payload['input_fidelity']);
+        // Images API پارامتر عمومی محسوب نمی‌شوند. input_references استثناست:
+        // این همان نام رسمی OpenRouter برای عکس مرجع در image-to-image است.
+        unset(
+            $payload['negative_prompt'],
+            $payload['strength'],
+            $payload['input_fidelity'],
+            $payload['requested_output_resolution'],
+            $payload['requested_aspect_ratio'],
+            $payload['order_id'],
+            $payload['provider'],
+            $payload['timeout']
+        );
+
+        // مقدارهای قدیمی محصول مثل `png_url` نامعتبرند؛ Images API فقط
+        // فرمت خروجی واقعی را می‌پذیرد. قبل از رسیدن payload به هر خانواده
+        // مدل، این مقدار را به شکل رسمی و قابل‌قبول تبدیل می‌کنیم.
+        if (array_key_exists('output_format', $payload)) {
+            $format = strtolower(trim((string) $payload['output_format']));
+            $payload['output_format'] = match ($format) {
+                'png', 'png_url', 'png_base64', 'image/png' => 'png',
+                'jpg', 'jpeg', 'jpg_url', 'image/jpeg' => 'jpeg',
+                'webp', 'webp_url', 'image/webp' => 'webp',
+                'svg', 'image/svg+xml' => 'svg',
+                default => null,
+            };
+            if ($payload['output_format'] === null) unset($payload['output_format']);
+        }
 
         if (str_starts_with($modelId, 'google/') && str_contains($modelId, 'image')) {
-            $resolution = (string) ($payload['resolution'] ?? '1K');
-            $payload['resolution'] = match ($resolution) {
-                '1080', '2K', '2160', '4K' => '2K',
-                default => '1K',
-            };
+            // Gemini 2.5 فقط aspect_ratio، n و input_references را می‌پذیرد؛
+            // نسل‌های 3 و 3.1 علاوه بر آن resolution را هم قبول می‌کنند.
+            if ($modelId === 'google/gemini-2.5-flash-image') {
+                unset($payload['resolution']);
+            } else {
+                $resolution = strtoupper((string) ($payload['resolution'] ?? '1K'));
+                $payload['resolution'] = match ($resolution) {
+                    '1080', '1440', '2160', '2K', '4K' => '2K',
+                    default => '1K',
+                };
+            }
             unset(
                 $payload['quality'],
                 $payload['output_format'],
@@ -282,6 +336,38 @@ class OpenRouterService implements AiImageProviderInterface
             } elseif ($modelId === 'openai/gpt-5.4-image-2') {
                 unset($payload['aspect_ratio']);
             }
+        }
+
+        if (str_starts_with($modelId, 'black-forest-labs/flux.2-')) {
+            // خانواده FLUX 2 رزولوشن را از روی نسبت تصویر و اندازه‌ی خروجی
+            // provider تعیین می‌کند و resolution را در endpoint نمی‌پذیرد.
+            unset($payload['resolution'], $payload['quality'], $payload['background']);
+        }
+
+        if (str_starts_with($modelId, 'sourceful/riverflow-')) {
+            // Riverflow رزولوشن را به‌صورت 512/1K/2K/4K می‌پذیرد، نه
+            // مقادیر کسب‌وکاری 480/720/1080/2160 صفحه‌ی وطن.
+            $resolution = strtolower((string) ($payload['resolution'] ?? ''));
+            $payload['resolution'] = match ($resolution) {
+                '480', '480p', '512' => '512',
+                '720', '720p', '1k' => '1K',
+                '1080', '1080p', '2k' => '2K',
+                '2160', '2160p', '4k' => '4K',
+                default => $payload['resolution'] ?? '1K',
+            };
+        }
+
+        if (str_starts_with($modelId, 'microsoft/mai-image-')) {
+            // MAI Image 2.5 فقط aspect_ratio، n و input_references را اعلام
+            // کرده است؛ فیلدهای رزولوشن/فرمت عمومی نباید به آن ارسال شوند.
+            unset(
+                $payload['resolution'],
+                $payload['quality'],
+                $payload['output_format'],
+                $payload['background'],
+                $payload['output_compression'],
+                $payload['seed']
+            );
         }
 
         return $payload;
@@ -375,9 +461,73 @@ class OpenRouterService implements AiImageProviderInterface
         $models = $this->buildPriorityList($product->primary_model, $product->fallback_models);
         $timeout = $product->timeout ?: $this->defaultTimeout;
 
-        return $this->tryModelsInOrder($models, $timeout, function (string $modelId) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
+        $result = $this->tryModelsInOrder($models, $timeout, function (string $modelId) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
             return $this->generateImageFromPrompt($modelId, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
         });
+
+        $this->recordProductRequest(
+            (string) ($result['model'] ?? ''),
+            (array) ($result['data'] ?? []),
+            is_numeric($extraPayload['order_id'] ?? null) ? (int) $extraPayload['order_id'] : null,
+            (int) ($count ?: 1)
+        );
+
+        return $result;
+    }
+
+    /**
+     * مسیر /images هم مثل providerهای صف‌شونده باید در گزارش مالی یک درخواست
+     * استاندارد داشته باشد. پاسخ تصویر در raw_response ذخیره نمی‌شود تا
+     * base64 حجیم وارد دیتابیس نشود؛ مبلغ usage.cost دقیقاً نگه‌داری می‌شود.
+     */
+    protected function recordProductRequest(string $modelId, array $response, ?int $orderId, int $count): void
+    {
+        if (!$orderId || !Schema::hasTable('ai_provider_requests')) {
+            return;
+        }
+
+        try {
+            $usage = (array) ($response['usage'] ?? []);
+            $cost = is_numeric($usage['cost'] ?? null) ? (float) $usage['cost'] : null;
+            $model = AiModel::query()
+                ->where('provider', 'openrouter')
+                ->where(function ($query) use ($modelId): void {
+                    $query->where('openrouter_model_id', $modelId)
+                        ->orWhere('external_model_id', $modelId);
+                })
+                ->first();
+            $items = array_values(array_filter((array) ($response['data'] ?? []), 'is_array'));
+            $outputs = array_values(array_filter(array_map(
+                fn (array $item) => $item['url'] ?? null,
+                $items
+            )));
+
+            \App\Models\AiProviderRequest::create([
+                'provider' => 'openrouter',
+                'ai_model_id' => $model?->id,
+                'order_id' => $orderId,
+                'external_request_id' => 'openrouter-image-' . Str::uuid(),
+                'status' => 'completed',
+                'output_urls' => $outputs ?: ['count' => count($items) ?: $count],
+                'raw_response' => [
+                    'model' => $modelId,
+                    'usage' => $usage,
+                    'outputs_count' => count($items) ?: $count,
+                ],
+                'estimated_cost_usd' => $cost,
+                'actual_cost_usd' => $cost,
+                'submitted_at' => now(),
+                'completed_at' => now(),
+            ]);
+        } catch (\Throwable $error) {
+            // ثبت گزارش نباید خروجی موفق کاربر را خراب کند؛ خطا در لاگ می‌ماند
+            // تا در داشبورد سلامت داده قابل پیگیری باشد.
+            Log::error('OpenRouter: ثبت سوابق درخواست محصول ناموفق بود', [
+                'order_id' => $orderId,
+                'model' => $modelId,
+                'error' => $error->getMessage(),
+            ]);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -390,7 +540,8 @@ class OpenRouterService implements AiImageProviderInterface
             $prompt,
             $extraPayload['resolution']   ?? '1K',
             $extraPayload['aspect_ratio'] ?? '1:1',
-            $extraPayload['n']            ?? 1
+            $extraPayload['n']            ?? 1,
+            $extraPayload
         );
     }
 

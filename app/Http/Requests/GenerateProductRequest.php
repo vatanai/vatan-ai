@@ -13,7 +13,16 @@ class GenerateProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product');
-        return $product instanceof Product ? app(ProductBuildSchema::class)->rules($product) : [];
+        return $product instanceof Product
+            ? app(ProductBuildSchema::class)->rules($product) + [
+                'studio_prompt' => ['nullable', 'string', 'max:5000'],
+                'studio_negative_prompt' => ['nullable', 'string', 'max:2000'],
+                'studio_project_name' => ['nullable', 'string', 'max:120'],
+                'studio_model' => ['nullable', 'string', 'max:200'],
+                'studio_provider' => ['nullable', 'string', 'max:40'],
+                'output.count' => ['nullable', 'integer', 'min:1', 'max:6'],
+            ]
+            : [];
     }
 
     public function messages(): array

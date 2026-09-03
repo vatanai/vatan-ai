@@ -172,7 +172,12 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     // استودیوی عمومی ساخت از تنظیمات دو محصول واقعی استفاده می‌کند و ارسال
     // درخواست آن از همان مسیرهای ساخت تصویر و ویدیو عبور می‌کند.
     Route::get('/create-studio/quote', [ProductGenerateController::class, 'studioQuote'])->name('app.create.studio.quote');
-    Route::get('/create-studio', [ProductGenerateController::class, 'createStudio'])->name('app.create.studio');
+    Route::get('/create-studio', [\App\Http\Controllers\StudioWorkflowController::class, 'show'])->name('app.create.studio');
+    Route::get('/create-studio-workflows', [\App\Http\Controllers\StudioWorkflowController::class, 'show'])->name('app.create.studio.workflows');
+    Route::get('/create-studio-workflows/quote', [\App\Http\Controllers\StudioWorkflowController::class, 'quote'])->name('app.create.studio.workflows.quote');
+    Route::post('/create-studio-workflows/generate', [\App\Http\Controllers\StudioWorkflowController::class, 'generate'])
+        ->middleware('auth')
+        ->name('app.create.studio.workflows.generate');
     Route::get('/create-samples', function (\App\Services\ProductBuildSchema $schema) {
         $product = \App\Models\Product::where('status', 'active')->latest()->first();
 
@@ -303,6 +308,10 @@ Route::post('/webhooks/ai/fal', [AiWebhookController::class, 'fal'])->name('webh
 Route::post('/webhooks/ai/replicate', [AiWebhookController::class, 'replicate'])->name('webhooks.ai.replicate');
 Route::post('/webhooks/video-studio/{job}/status', [VideoStudioController::class, 'n8nStatus'])
     ->name('webhooks.video-studio.status');
+Route::get('/webhooks/meta', [\App\Http\Controllers\MarketingMetaWebhookController::class, 'verify'])
+    ->name('webhooks.meta.verify');
+Route::post('/webhooks/meta', [\App\Http\Controllers\MarketingMetaWebhookController::class, 'receive'])
+    ->name('webhooks.meta.receive');
 
 // ─── Admin Authentication (Guest) ────────────────────────
 Route::middleware('guest:admin')->group(function () {
@@ -432,6 +441,10 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::delete('/product-credit-presets/{productCreditPreset}', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'destroy'])->name('product-credit-presets.destroy');
     Route::patch('/products/{product}/ai-model', [ProductController::class, 'updateAiModel'])->name('products.update_ai_model');
     Route::get('/products/dashboard', [VideoStudioController::class, 'index'])->name('products.dashboard');
+    Route::get('/video-studio/experimental', [VideoStudioController::class, 'experimental'])->name('video-studio.experimental');
+    Route::post('/video-studio/experimental/presets', [VideoStudioController::class, 'storePreset'])->name('video-studio.experimental.presets.store');
+    Route::patch('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'renamePreset'])->name('video-studio.experimental.presets.rename');
+    Route::delete('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'destroyPreset'])->name('video-studio.experimental.presets.destroy');
     Route::get('/create-studio', [\App\Http\Controllers\Admin\CreateStudioController::class, 'index'])->name('create-studio.index');
     Route::put('/create-studio/pricing-settings', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updatePricingSettings'])->name('create-studio.pricing-settings.update');
     Route::post('/create-studio/cost-rules', [\App\Http\Controllers\Admin\CreateStudioController::class, 'storeCostRule'])->name('create-studio.cost-rules.store');
@@ -631,6 +644,28 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
         Route::get('/{section}', [GrowthController::class, 'section'])
             ->where('section', 'attribution|products|sales|retention|reports|settings')
             ->name('section');
+    });
+
+    // ماژول مستقل تکنولوژی مارکتینگ؛ نسخه‌ی توسعه‌پذیر مرکز رشد و اتوماسیون وطن.
+    // این مسیرها عمداً از ماژول فعلی رشد جدا هستند و در فاز اتصال، به همان داده‌ها و رویدادهای استاندارد متصل می‌شوند.
+    Route::prefix('marketing-technology')->name('marketing-technology.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'index'])->name('index');
+        Route::get('/content-calendar', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'contentCalendar'])->name('content-calendar');
+        Route::post('/content-calendar', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeContent'])->name('content-calendar.store');
+        Route::patch('/content-calendar/{marketingContent}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateContent'])->name('content-calendar.update');
+        Route::post('/content-calendar/{marketingContent}/queue', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'queueContent'])->name('content-calendar.queue');
+        Route::get('/scenarios', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'scenarios'])->name('scenarios');
+        Route::post('/scenarios', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeScenario'])->name('scenarios.store');
+        Route::patch('/scenarios/{marketingScenario}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateScenario'])->name('scenarios.update');
+        Route::get('/inbox', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'inbox'])->name('inbox');
+        Route::post('/logs/{marketingOperationRun}/retry', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'retryOperation'])->name('logs.retry');
+        Route::get('/reports', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'reports'])->name('reports');
+        Route::get('/costs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'costs'])->name('costs');
+        Route::post('/costs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeCost'])->name('costs.store');
+        Route::get('/integrations', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'integrations'])->name('integrations');
+        Route::post('/integrations/meta', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeMetaIntegration'])->name('integrations.meta.store');
+        Route::post('/integrations/meta/{marketingIntegration}/test', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'testMetaIntegration'])->name('integrations.meta.test');
+        Route::get('/logs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'logs'])->name('logs');
     });
 
     // صفحه‌ی جایگزین برای بخش‌هایی که هنوز فایل بک‌اند/روت ندارند

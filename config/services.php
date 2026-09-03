@@ -101,6 +101,14 @@ return [
         'broadcast_rate_per_second' => (int) env('TELEGRAM_BROADCAST_RATE_PER_SECOND', 25),
     ],
 
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN'),
+        'graph_url' => env('META_GRAPH_URL', 'https://graph.instagram.com'),
+        'graph_version' => env('META_GRAPH_VERSION', 'v24.0'),
+    ],
+
     'melipayamak' => [
         'api_key' => env('MELIPAYAMAK_API_KEY'),
         'base_url' => env('MELIPAYAMAK_BASE_URL', 'https://console.melipayamak.com/api'),

@@ -28,4 +28,9 @@ class AiProviderRequest extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    public function generatedVideo()
+    {
+        return $this->hasOne(GeneratedVideo::class);
+    }
 }

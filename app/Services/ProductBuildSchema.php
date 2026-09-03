@@ -5,11 +5,18 @@ namespace App\Services;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ProductBuildSchema
 {
+    /**
+     * این ورودی‌ها در تجربه‌ی فعلی ساخت محصول استفاده نمی‌شوند.
+     * از خود فرم، اعتبارسنجی و پرامپت حذف می‌شوند تا فیلد الزامی پنهان نماند.
+     */
+    private const EXCLUDED_CUSTOMER_FIELD_IDS = ['product_name', 'cta_text'];
+
     public function fields(Product $product): array
     {
         $fields = collect($product->input_schema ?? [])
@@ -17,7 +24,7 @@ class ProductBuildSchema
             // یک آیتم خراب نباید کل صفحه و دکمه نهایی ساخت را حذف کند.
             ->filter(fn ($field) => is_array($field))
             ->map(fn (array $field) => $this->normalizeField($field))
-            ->filter(fn (array $field) => $field['id'] !== '' && !$field['hidden'])
+            ->filter(fn (array $field) => $this->isCustomerFacingField($field))
             ->values();
 
         // سازگاری محصولات قدیمی: توکن‌های قالب پرامپت به فیلدهای پایه تبدیل می‌شوند.
@@ -51,7 +58,10 @@ class ProductBuildSchema
             ]));
         }
 
-        return $fields->all();
+        return $fields
+            ->filter(fn (array $field) => $this->isCustomerFacingField($field))
+            ->values()
+            ->all();
     }
 
     public function promptFields(Product $product): array
@@ -59,17 +69,34 @@ class ProductBuildSchema
         $raw = collect($product->input_schema ?? [])
             ->filter(fn ($field) => is_array($field))
             ->map(fn (array $field) => $this->normalizeField($field))
+            ->filter(fn (array $field) => $this->isCustomerFacingField($field))
             ->values();
         return $raw->isNotEmpty() ? $raw->all() : $this->fields($product);
     }
 
-    public function pageData(Product $product): array
+    public function pageData(Product $product, ?array $tierMeta = null, ?array $mainQualityOptions = null): array
     {
+        $user = auth()->user();
+        $faceProfiles = $user && Schema::hasTable('face_profiles')
+            ? $user->faceProfiles()->active()->latest()->get()->map(fn ($profile) => [
+                'id' => $profile->id,
+                'name' => $profile->name,
+                'cover_url' => $profile->coverUrl(),
+                'image_count' => count($profile->referenceImageEntries()),
+            ])->values()->all()
+            : [];
+
         return [
             'name' => $product->name_fa ?: $product->name_en,
             'description' => $product->description_fa ?: $product->description_en ?: 'تنظیمات را کامل کنید و خروجی اختصاصی خود را بسازید.',
             'cover' => $product->displayImageUrl(),
-            'cost' => (int) ($product->credit_cost ?? 0),
+            'cost' => $product->pricing_model === 'free' ? 0 : $product->qualityCreditCost('standard'),
+            'model_tier' => $tierMeta ?: ['key' => 'free', 'name' => 'رایگان', 'grade' => 4, 'description' => 'مدل اقتصادی برای شروع کار'],
+            'main_quality_options' => $mainQualityOptions ?: app(ModelTierService::class)->outputQualityOptions(auth()->user(), $product),
+            // انتخاب‌گر سه‌سطحی باید برای همه‌ی محصولات دیده شود. گزینه‌ی
+            // استاندارد و حرفه‌ای برای کاربر رایگان فعال هستند و فقط بهترین
+            // خروجی قفل می‌شود؛ اعتبارسنجی سمت سرور همین قانون را اعمال می‌کند.
+            'show_output_quality_selector' => true,
             'identity' => [
                 'available' => (bool) $product->identity_preservation,
                 'extra_cost' => max(0, (int) $product->identity_credit_cost),
@@ -81,30 +108,45 @@ class ProductBuildSchema
             'output_aspect_ratios' => $product->allowedAspectRatioList(),
             'default_output_aspect_ratio' => $product->defaultOutputAspectRatio(),
             'output_resolutions' => $product->allowedResolutionList(),
-            'default_output_resolution' => $product->defaultOutputResolution(),
+            'default_output_resolution' => $product->defaultOutputResolutionForUser(auth()->user()),
             'fields' => $this->fields($product),
             'download_track_url' => route('app.product.download', $product->slug),
             'generate_url' => route('app.create.generate', $product->route_slug),
             'login_url' => route('login', ['redirect' => request()->fullUrl()]),
             'is_authenticated' => auth()->check(),
+            'face_profiles' => $faceProfiles,
+            'profile_url' => route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']),
         ];
     }
 
     public function rules(Product $product): array
     {
+        $studioAspectRatios = $product->isVideoProduct() || !request()->routeIs('app.create.generate') || !request()->boolean('studio_mode')
+            ? $product->allowedAspectRatioList()
+            : Product::supportedAspectRatios();
         $rules = [
             'fields' => ['nullable', 'array'], 'uploads' => ['nullable', 'array'], 'variants' => ['nullable', 'array'],
             'output' => ['nullable', 'array'],
-            'output.aspect_ratio' => ['nullable', Rule::in($product->allowedAspectRatioList())],
-            'output.quality' => ['nullable', Rule::in($product->allowedResolutionList())],
+            'output.aspect_ratio' => ['nullable', Rule::in($studioAspectRatios)],
+            'output.quality' => ['nullable', Rule::in(array_values(array_unique(array_merge(
+                $product->allowedResolutionList(),
+                $product->isVideoProduct() ? [] : (request()->routeIs('app.create.generate') && request()->boolean('studio_mode') ? ['2160'] : [])
+            ))))],
+            'output.count' => ['nullable', 'integer', 'min:1', 'max:6'],
+            'output.main_quality' => ['nullable', Rule::in(array_keys(ModelTierService::OUTPUT_QUALITY_DEFINITIONS))],
             'identity_preservation' => ['nullable', 'boolean'],
+            'face_profile_id' => ['nullable', 'integer'],
         ];
+        $usesFaceProfile = $this->canUseFaceProfileFor($product);
         foreach ($this->fields($product) as $field) {
             if ($this->isLayout($field['type'])) continue;
             $required = $field['required'] && $this->isVisible($field, (array) request()->input('fields', [])) ? 'required' : 'nullable';
             $key = "fields.{$field['id']}";
 
             if (in_array($field['type'], ['image_upload', 'multi_image', 'file_upload'], true)) {
+                if ($usesFaceProfile && in_array($field['type'], ['image_upload', 'multi_image'], true)) {
+                    $required = 'nullable';
+                }
                 $uploadKey = "uploads.{$field['id']}";
                 $rules[$uploadKey] = [$required];
                 $maxKb = max(1, (int) ($field['max_size_mb'] ?: 10)) * 1024;
@@ -202,17 +244,27 @@ class ProductBuildSchema
                 'prompt' => (string) ($option['prompt'] ?? ''),
                 'credit' => $option['credit'] ?? 0,
                 'image' => $image,
-                'meta' => ((int) ($option['credit'] ?? 0) > 0) ? '+ ' . (int) $option['credit'] . ' توکن' : '',
+                'meta' => ((int) ($option['credit'] ?? 0) > 0) ? '+ ' . (int) $option['credit'] . ' اعتبار' : '',
             ];
         })->values()->all();
 
+        // بعضی محصولات قدیمی با کلیدهای `name` و `label_fa` ذخیره شده‌اند؛
+        // اینجا همه‌ی شکل‌های قدیمی و جدید را به یک قرارداد واحد تبدیل می‌کنیم
+        // تا اعتبارسنجی، پرامپت و استودیوی عمومی دقیقاً از یک داده استفاده کنند.
+        $fieldId = (string) ($field['field_id'] ?? $field['name'] ?? $field['id'] ?? '');
+        $label = (string) ($field['label_fa'] ?? $field['label'] ?? $field['name'] ?? $fieldId);
+        $requiredValue = $field['required'] ?? false;
+        $required = is_bool($requiredValue)
+            ? $requiredValue
+            : in_array(strtolower((string) $requiredValue), ['1', 'true', 'yes', 'on'], true);
+
         return [
-            'id' => (string) ($field['field_id'] ?? ''),
+            'id' => $fieldId,
             'type' => (string) ($field['type'] ?? 'text'),
-            'label' => (string) ($field['label_fa'] ?? ''),
+            'label' => $label,
             'help' => (string) ($field['description'] ?? $field['help_text'] ?? ''),
             'placeholder' => (string) ($field['placeholder'] ?? ''),
-            'required' => (string) ($field['required'] ?? '0') === '1' || ($field['required'] ?? false) === true,
+            'required' => $required,
             'hidden' => (string) ($field['hidden'] ?? '0') === '1' || ($field['hidden'] ?? false) === true,
             'value' => $field['default'] ?? '',
             'min' => $field['min'] ?? '', 'max' => $field['max'] ?? '', 'step' => $field['step'] ?? '',
@@ -224,7 +276,19 @@ class ProductBuildSchema
         ];
     }
 
+    private function isCustomerFacingField(array $field): bool
+    {
+        return $field['id'] !== ''
+            && ! $field['hidden']
+            && ! in_array($field['id'], self::EXCLUDED_CUSTOMER_FIELD_IDS, true);
+    }
+
     private function isLayout(string $type): bool { return in_array($type, ['section', 'divider', 'info'], true); }
+    private function canUseFaceProfileFor(Product $product): bool
+    {
+        return request()->filled('face_profile_id')
+            && ($product->identity_preservation || (int) $product->min_reference_images > 0 || in_array($product->subject_type, ['face', 'body'], true));
+    }
     private function hasValue(mixed $value): bool { return is_array($value) ? $value !== [] : !in_array($value, [null, '', false, '0', 0], true); }
     private function legacyLabel(string $token): string
     {

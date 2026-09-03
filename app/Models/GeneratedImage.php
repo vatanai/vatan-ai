@@ -11,6 +11,8 @@ class GeneratedImage extends Model
     protected $fillable = [
         'user_id',
         'product_id',
+        'order_id',
+        'ai_provider_request_id',
         'image_path',
         'user_prompt',
         'cost',
@@ -25,6 +27,16 @@ class GeneratedImage extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function providerRequest(): BelongsTo
+    {
+        return $this->belongsTo(AiProviderRequest::class, 'ai_provider_request_id');
     }
 
     /**

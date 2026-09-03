@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -12,10 +13,13 @@ class Order extends Model
         'order_number', 'user_id', 'product_id', 'discount_id', 'status',
         'payment_status', 'processing_status', 'original_credits',
         'discount_credits', 'final_credits', 'refunded_credits', 'discount_code',
+        'promotional_credits_used', 'paid_credits_used',
+        'promotional_credits_refunded', 'paid_credits_refunded',
         'payment_reference', 'ai_model', 'ai_provider', 'queue_duration_ms',
         'processing_duration_ms', 'attempts', 'input_payload', 'output_payload',
         'error_message', 'admin_note', 'source', 'paid_at', 'processing_started_at',
-        'completed_at', 'cancelled_at', 'refunded_at',
+        'completed_at', 'cancelled_at', 'refunded_at', 'plan_id', 'plan_name',
+        'model_tier_key', 'model_tier_name',
     ];
 
     protected $casts = [
@@ -40,8 +44,13 @@ class Order extends Model
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class); }
     public function discount(): BelongsTo { return $this->belongsTo(Discount::class); }
+    public function plan(): BelongsTo { return $this->belongsTo(Plan::class); }
     public function providerRequests(): HasMany { return $this->hasMany(AiProviderRequest::class); }
+    public function generatedVideos(): HasMany { return $this->hasMany(GeneratedVideo::class); }
     public function events(): HasMany { return $this->hasMany(OrderEvent::class)->latest(); }
+    public function financeSnapshot(): HasOne { return $this->hasOne(FinanceOrderSnapshot::class); }
+    public function creditAllocations(): HasMany { return $this->hasMany(FinanceCreditAllocation::class); }
+    public function financeEvents(): HasMany { return $this->hasMany(FinanceCaseEvent::class); }
 
     public function recordEvent(string $type, string $title, ?string $description = null, array $metadata = []): OrderEvent
     {

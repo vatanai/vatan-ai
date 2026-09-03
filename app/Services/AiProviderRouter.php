@@ -18,26 +18,24 @@ use Exception;
  *
  * نحوه عمل:
  * - بر اساس فیلد `provider` مدل انتخابی، درخواست را
- *   به LiaraAiService یا OpenRouterService هدایت می‌کند.
+ *   به OpenRouter یا providerهای تصویر هدایت می‌کند.
  * - OpenRouterService کاملاً دست‌نخورده باقی می‌ماند.
- * - LiaraAiService API لیارا را مدیریت می‌کند.
  *
  * نگه‌داری اضافه — کلید مرکزی ProviderStatus:
  * - اگر ادمین OpenRouter را از پنل «خاموش» کرده باشد،
  *   درخواست‌های تولید تصویر با شناسه‌های OpenRouter به‌طور
- *   هوشمند به معادل Liara تبدیل می‌شوند تا محصولات قدیمی
- *   نشکنند. اگر معادلی پیدا نشود، خطای واضح برمی‌گردد.
+ *   هوشمند به یک provider فعال با همان شناسه مدل منتقل می‌شوند.
  * - این تنها لایه‌ی روتر است که به این تنظیمات آگاه است؛
- *   OpenRouterService و LiaraAiService دست‌نخورده‌اند.
+ *   providerهای غیرفعال هیچ‌گاه فراخوانی نمی‌شوند.
  * ══════════════════════════════════════════════════════
  */
 class AiProviderRouter
 {
     public function __construct(
         protected OpenRouterService $openRouter,
-        protected LiaraAiService    $liara,
         protected ?\App\Services\Providers\FalImageProvider $fal = null,
-        protected ?\App\Services\Providers\ReplicateImageProvider $replicate = null
+        protected ?\App\Services\Providers\ReplicateImageProvider $replicate = null,
+        protected ?\App\Services\Providers\OpenRouterVideoProvider $openRouterVideo = null
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -70,11 +68,17 @@ class AiProviderRouter
     protected function serviceForProvider(string $provider): AiImageProviderInterface
     {
         return match ($provider) {
-            'liara' => $this->liara,
-            'fal' => $this->fal ?: throw new Exception('سرویس Fal.ai در روتر ثبت نشده است.'),
-            'replicate' => $this->replicate ?: throw new Exception('سرویس Replicate در روتر ثبت نشده است.'),
+            'fal' => $this->fal ?: app(\App\Services\Providers\FalImageProvider::class),
+            'replicate' => $this->replicate ?: app(\App\Services\Providers\ReplicateImageProvider::class),
             default => $this->openRouter,
         };
+    }
+
+    public function videoServiceFor(string $provider): AiImageProviderInterface
+    {
+        return $provider === 'openrouter'
+            ? ($this->openRouterVideo ?: app(\App\Services\Providers\OpenRouterVideoProvider::class))
+            : $this->serviceForProvider($provider);
     }
 
     protected function findModel(string $modelId, ?string $provider = null): ?AiModel
@@ -92,8 +96,6 @@ class AiProviderRouter
      * وقتی provider مدل خاموش است، سعی کن یک provider جایگزین فعال پیدا کنی.
      * اولویت: نگاشت مستقیم شناسه مدل به provider فعال (اگر مدلی با همان
      * openrouter_model_id در provider فعال وجود داشته باشد → همان سرویس)،
-     * سپس اگر Liara فعال است، سرویس Liara را برگردان (وابسته به این‌که
-     * مدل موجود در پرامپت واقعی روی Liara نیز پذیرفته شود).
      */
     protected function fallbackServiceFor(string $modelId, string $disabledProvider): ?object
     {
@@ -110,17 +112,6 @@ class AiProviderRouter
                 'to'       => $active->provider,
             ]);
             return $this->serviceForProvider($active->provider);
-        }
-
-        // ۲) اگر Liara تنها provider فعال باشد و شناسه مدل OpenAI/Google
-        //    قابل قبول برای Liara به نظر برسد، از Liara استفاده کن.
-        //    (Liara همان الگوی provider/model را می‌پذیرد)
-        if (ProviderStatus::isEnabled('liara') && !ProviderStatus::isEnabled('openrouter')) {
-            Log::info('AiProviderRouter: forced fallback to Liara (OpenRouter is disabled)', [
-                'model' => $modelId,
-                'from'  => $disabledProvider,
-            ]);
-            return $this->liara;
         }
 
         return null;
@@ -179,10 +170,28 @@ class AiProviderRouter
         $models = array_values(array_filter(array_merge([(string) $product->primary_model], (array) $product->fallback_models)));
         $providers = array_values(array_merge([(string) $product->ai_provider], (array) $product->fallback_model_providers));
         $lastError = null;
+        $disabledProviders = [];
+        $attemptedPaidProviders = [];
 
         foreach ($models as $index => $modelId) {
             $provider = $providers[$index] ?? $this->findModel($modelId)?->provider;
-            if (!$provider || !ProviderStatus::isEnabled($provider)) continue;
+            if (!$provider) continue;
+            if (!ProviderStatus::isEnabled($provider)) {
+                $disabledProviders[] = $provider;
+                continue;
+            }
+            // یک اقدام کاربر نباید چند endpoint از Fal را پشت‌سرهم شارژ کند.
+            // در صورت خطای Fal فقط provider دیگری می‌تواند fallback شود.
+            if ($provider === 'fal' && isset($attemptedPaidProviders[$provider])) {
+                Log::warning('AiProviderRouter: skipped repeated paid Fal fallback', [
+                    'product_id' => $product->id,
+                    'model' => $modelId,
+                ]);
+                continue;
+            }
+            if ($provider === 'fal') {
+                $attemptedPaidProviders[$provider] = true;
+            }
             $candidate = $product->replicate();
             $candidate->primary_model = $modelId;
             $candidate->ai_provider = $provider;
@@ -198,7 +207,20 @@ class AiProviderRouter
             }
         }
 
-        throw $lastError ?: new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
+        if ($lastError) throw $lastError;
+
+        if ($disabledProviders) {
+            $labels = collect($disabledProviders)->unique()->map(fn (string $provider): string => match ($provider) {
+                'fal' => 'Fal.ai',
+                'replicate' => 'Replicate',
+                'openrouter' => 'OpenRouter',
+                default => $provider,
+            })->implode('، ');
+
+            throw new Exception("مدل انتخاب‌شده از سرویس {$labels} است، اما این سرویس فعلاً در پنل غیرفعال است. پس از بررسی کلید و سلامت اتصال، provider را فعال کنید.");
+        }
+
+        throw new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
     }
 
     public function generateImageFromPrompt(

@@ -227,18 +227,49 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         $timeout = max(5, (int) ($payload['timeout'] ?? $this->credentials->for($this->provider())['timeout']));
         $deadline = microtime(true) + $timeout;
 
-        try {
-            do {
+        do {
+            try {
                 $status = $this->getGenerationStatus($model, $requestId);
                 if (in_array($status['status'], ['completed', 'failed', 'canceled'], true)) {
                     $this->persistNormalizedRequest($model, $status, $requestId);
                     return $status;
                 }
-                usleep(750000);
-            } while (microtime(true) < $deadline);
-        } catch (\Throwable $error) {
-            $this->markRequestAsFailed($requestId, $error->getMessage(), 'provider_status_error');
-            throw $error;
+            } catch (\Throwable $error) {
+                // خطای موقت شبکه/پاسخ ۵xx در مرحلهٔ status یا دریافت فایل
+                // نباید بلافاصله درخواست موفقِ در حال پردازش را ناموفق کند؛
+                // در غیر این صورت Fal ممکن است تصویر را بسازد و برنامه هم
+                // بدون تصویر، هزینهٔ واقعی آن را ثبت کند. polling تا پایان
+                // مهلت ادامه پیدا می‌کند و خطاهای قطعی همان لحظه ثبت می‌شوند.
+                if (!$this->isTransientProviderError($error) || microtime(true) >= $deadline) {
+                    $this->markRequestAsFailed($requestId, $error->getMessage(), 'provider_status_error');
+                    throw $error;
+                }
+
+                Log::warning('AI provider status temporarily unavailable; retrying', [
+                    'provider' => $this->provider(),
+                    'request_id' => $requestId,
+                    'message' => $error->getMessage(),
+                ]);
+            }
+
+            if (microtime(true) < $deadline) usleep(750000);
+        } while (microtime(true) < $deadline);
+
+        // یک بررسی نهایی قبل از لغو، race condition بین آخرین poll و اتمام
+        // واقعی صف را کم می‌کند؛ مخصوصاً وقتی endpoint نتیجه دیرتر در دسترس
+        // قرار می‌گیرد.
+        try {
+            $finalStatus = $this->getGenerationStatus($model, $requestId);
+            if (in_array($finalStatus['status'], ['completed', 'failed', 'canceled'], true)) {
+                $this->persistNormalizedRequest($model, $finalStatus, $requestId);
+                return $finalStatus;
+            }
+        } catch (\Throwable $finalError) {
+            Log::warning('AI provider final status check failed', [
+                'provider' => $this->provider(),
+                'request_id' => $requestId,
+                'message' => $finalError->getMessage(),
+            ]);
         }
 
         $message = "زمان انتظار provider {$this->provider()} تمام شد. شناسه درخواست: {$requestId}";
@@ -255,6 +286,17 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         }
 
         throw new RuntimeException($message);
+    }
+
+    protected function isTransientProviderError(\Throwable $error): bool
+    {
+        $message = strtolower($error->getMessage());
+
+        return str_contains($message, 'connection')
+            || str_contains($message, 'timed out')
+            || str_contains($message, 'timeout')
+            || str_contains($message, 'could not resolve')
+            || str_contains($message, 'http 5');
     }
 
     protected function markRequestAsFailed(string $requestId, string $message, string $errorCode): void
@@ -301,7 +343,7 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         $schemaControls = array_values(array_intersect([
             'aspect_ratio', 'quality', 'resolution', 'image_size', 'num_images',
             'number_of_images', 'num_outputs', 'output_format', 'input_fidelity',
-            'background', 'moderation',
+            'background', 'moderation', 'limit_generations',
         ], array_keys($properties)));
         $allowed = array_values(array_unique(array_merge(
             $allowed,
@@ -329,25 +371,59 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         // مدل‌های Replicate مقدار را با «1K/2K/4K» می‌گیرند، درحالی‌که فرم
         // محصول برای کاربر «480/720/1080/1440/2160» نمایش می‌دهد.
         $normalizedResolution = match (strtoupper((string) $resolution)) {
-            '480', '720', '1080' => '1K',
-            '1440' => '2K',
+            '480', '720' => '1K',
+            '1080', '1440' => '2K',
             '2160' => '4K',
             default => $resolution,
         };
-        $put('resolution', $normalizedResolution);
-        $put('quality', $extraPayload['quality'] ?? $normalizedResolution);
+        // Seedream 4.5 به‌جای resolution از size استفاده می‌کند و خروجی 1K
+        // ندارد؛ پایین‌ترین tier معتبر آن 2K است.
+        $resolutionValue = (($fieldMap['resolution'] ?? null) === 'size')
+            ? match ($normalizedResolution) {
+                '4K' => '4K',
+                default => '2K',
+            }
+            : $normalizedResolution;
+        $put('resolution', $resolutionValue);
+        // Replicate مدل GPT Image 2 کیفیت را به‌صورت enum می‌گیرد، نه
+        // رزولوشن عددی یا مقدار «1K/2K/4K». نگاشت را اینجا انجام می‌دهیم تا
+        // اجرای محصول و آزمایشگاه هر دو یک payload معتبر داشته باشند.
+        $quality = $extraPayload['quality'] ?? $normalizedResolution;
+        if ($model->provider === 'replicate' && $model->externalModelId() === 'openai/gpt-image-2') {
+            $quality = match (strtoupper((string) $quality)) {
+                '2160', '4K', 'HIGH' => 'high',
+                '1080', '1440', '2K', 'MEDIUM' => 'medium',
+                default => 'low',
+            };
+        }
+        // endpointهای ویرایش OpenAI در Fal.ai کیفیت را با enum می‌گیرند، نه
+        // مقدار ۱K/۲K/۴K. سطح کسب‌وکاری ۷۲۰ و ۱۰۸۰ متوسط و ۲۱۶۰ بالا است.
+        if ($model->provider === 'fal' && str_contains($model->externalModelId(), 'gpt-image-') && str_ends_with($model->externalModelId(), '/edit')) {
+            $quality = match (strtoupper((string) ($extraPayload['quality'] ?? $resolution))) {
+                '480' => 'low',
+                '2160', '4K', 'HIGH' => 'high',
+                default => 'medium',
+            };
+        }
+        $put('quality', $quality);
         $put('aspect_ratio', $this->compatibleAspectRatio($model, $aspectRatio));
         $put('negative_prompt', $extraPayload['negative_prompt'] ?? null);
         $put('seed', isset($extraPayload['seed']) ? (int) $extraPayload['seed'] : null);
         $put('steps', isset($extraPayload['steps']) ? (int) $extraPayload['steps'] : null);
         $put('guidance_scale', isset($extraPayload['guidance_scale']) ? (float) $extraPayload['guidance_scale'] : null);
         $put('num_images', max(1, min(10, $count)));
+        // endpointهایی که این فلگ را در schema اعلام می‌کنند اجازه ندارند
+        // بر اساس متن کاربر بیش از تعداد درخواستی خروجی پولی بسازند.
+        $put('limit_generations', true);
         $put('output_format', $extraPayload['output_format'] ?? null);
 
         [$width, $height] = $this->dimensionsFor($model, $aspectRatio);
         $put('width', $width);
         $put('height', $height);
-        $put('image_size', $extraPayload['image_size'] ?? null);
+        $put('image_size', $extraPayload['image_size'] ?? $this->compatibleImageSize($model, $aspectRatio));
+        $put('input_fidelity', $extraPayload['input_fidelity'] ?? (
+            $model->supports_face_identity && !empty($extraPayload['input_references']) ? 'high' : null
+        ));
 
         $references = $this->referenceUrls($extraPayload['input_references'] ?? $extraPayload['input'] ?? []);
         if ($references) {
@@ -447,6 +523,23 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
 
     protected function compatibleAspectRatio(AiModel $model, string $requested): string
     {
+        // Replicate's GPT Image 2 has an explicit allow-list. Do not trust a
+        // stale/partial catalog schema here: sending the UI default 4:5 to
+        // this endpoint causes a 422 and previously made the whole lab fail.
+        if ($model->provider === 'replicate' && $model->externalModelId() === 'openai/gpt-image-2') {
+            $supported = [
+                '1:1', '3:2', '2:3', '4:3', '3:4', '16:9', '9:16', 'auto',
+                '1024x1024', '1536x1024', '1024x1536', '1536x1152', '1152x1536',
+                '2048x2048', '2048x1152', '1152x2048', '3840x2160', '2160x3840',
+            ];
+            if (in_array($requested, $supported, true)) return $requested;
+            $requestedRatio = $this->aspectRatioValue($requested);
+            return collect($supported)
+                ->reject(fn (string $candidate) => $candidate === 'auto')
+                ->sortBy(fn (string $candidate) => abs(log(max(.0001, $requestedRatio) / max(.0001, $this->aspectRatioValue($candidate)))))
+                ->first() ?: '3:4';
+        }
+
         $properties = (array) (data_get($model->input_schema, 'components.schemas.Input.properties') ?: data_get($model->input_schema, 'properties') ?: []);
         $supported = array_values(array_filter((array) data_get($properties, 'aspect_ratio.enum', []), 'is_string'));
         if ($requested === 'auto') {
@@ -480,6 +573,20 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
         }
 
         return $best;
+    }
+
+    protected function compatibleImageSize(AiModel $model, string $requested): ?string
+    {
+        if ($model->provider !== 'fal' || !str_contains($model->externalModelId(), 'gpt-image-')) {
+            return null;
+        }
+
+        return match ($requested) {
+            '1:1' => '1024x1024',
+            '16:9', '3:2', '4:3' => '1536x1024',
+            '4:5', '3:4', '2:3', '9:16' => '1024x1536',
+            default => 'auto',
+        };
     }
 
     private function aspectRatioValue(string $value): float
