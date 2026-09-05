@@ -57,9 +57,35 @@
       <div><div class="v2-modern-hook-phone" aria-label="پیش‌نمایش زنده هوک"><div class="v2-modern-hook-screen" id="v2-modern-phone-screen"><div class="v2-modern-hook-live-text" id="v2-modern-phone-hook">{{ $settings->hook_text ?: 'یک انتخاب بهتر داشته باش' }}</div></div><img class="v2-modern-hook-frame" src="{{ asset('admin/images/video-studio/iphone-hook-frame.png') }}" alt="قاب آیفون پیش‌نمایش هوک"></div></div>
     </div>
   </section>
-  <section class="v2-modern-after-hook">
-    <div class="v2-modern-hook-cta"><div class="v2-modern-hook-cta-head"><strong><i class="fa-solid fa-bullhorn"></i> دعوت به اقدام</strong><span class="v2-note">بخش پایانی ویدیو</span></div><div class="v2-grid"><label class="v2-checkbox-label"><input type="checkbox" name="cta_enabled" value="1" checked> نمایش دعوت به اقدام</label><input class="v2-input" name="cta_text" placeholder="متن دعوت به اقدام..."><select class="v2-select" name="cta_background"><option value="primary">پس‌زمینه سبز وطن</option><option value="light">پس‌زمینه سفید</option><option value="dark">پس‌زمینه مشکی</option></select></div></div>
-    <div class="v2-modern-hook-command"><label for="v2-modern-text-command">دستور متنی ساخت یا اصلاح</label><textarea class="v2-textarea" id="v2-modern-text-command" name="text_command" rows="3" placeholder="اگر لازم است خروجی بعدی اصلاح شود، دستور را اینجا بنویسید..."></textarea></div>
+  <section class="v2-modern-cta-panel" aria-labelledby="v2-modern-cta-title">
+    <div class="v2-modern-hook-head"><strong id="v2-modern-cta-title">دعوت به اقدام <span dir="ltr">CTA</span></strong><span class="v2-note">این قاب، پایان ویدیو را با همان تنظیمات واقعی نشان می‌دهد.</span></div>
+    <div class="v2-modern-hook-layout">
+      <div class="v2-modern-hook-controls">
+        <div class="v2-modern-hook-choice">
+          <div class="v2-modern-hook-choice-head"><strong>متن و جزئیات پایان ویدیو</strong><label class="v2-checkbox-label"><input id="v2-modern-cta-enabled" type="checkbox" name="cta_enabled" value="1" checked> نمایش <span dir="ltr">CTA</span></label></div>
+          <div class="v2-field"><label for="v2-modern-cta-text">متن دعوت به اقدام</label><textarea class="v2-textarea" id="v2-modern-cta-text" name="cta_text" rows="3" placeholder="مثلاً برای دیدن جزئیات، همین حالا محصول را ببینید."></textarea></div>
+        </div>
+        <div class="v2-modern-hook-styles">
+          <div class="v2-modern-cta-background"><strong>پس‌زمینه دعوت به اقدام</strong><div class="v2-modern-color-list">
+            @foreach(['primary' => ['سبز وطن', 'var(--primary)'], 'light' => ['سفید', 'var(--card-bg)'], 'dark' => ['مشکی', 'var(--text-h)']] as $key => [$label, $cssValue])
+              <div class="v2-modern-color"><input type="radio" name="cta_background" id="v2-modern-cta-background-{{ $key }}" value="{{ $key }}" data-v2-cta-color-css="{{ $cssValue }}" @checked($key === 'primary')><label for="v2-modern-cta-background-{{ $key }}" title="{{ $label }}" style="--v2-color:{{ $cssValue }}"></label></div>
+            @endforeach
+          </div></div>
+          <div class="v2-modern-hook-ranges">
+            <div class="v2-modern-hook-range v2-modern-hook-duration"><label for="v2-modern-cta-duration">زمان <span dir="ltr">CTA</span></label><input id="v2-modern-cta-duration" type="range" name="cta_duration" min="0.1" max="5" step="0.1" value="2"><output id="v2-modern-cta-duration-output">۲ ثانیه</output><input id="v2-modern-cta-duration-mode" type="hidden" name="cta_duration_mode" value="manual"><button class="v2-mini-btn" id="v2-modern-cta-duration-auto" type="button" aria-pressed="false"><i class="fa-solid fa-wand-magic-sparkles"></i> خودکار</button></div>
+          </div>
+        </div>
+      </div>
+      <div><div class="v2-modern-hook-phone" aria-label="پیش‌نمایش زنده دعوت به اقدام"><div class="v2-modern-hook-screen v2-modern-cta-screen" id="v2-modern-cta-screen"><div class="v2-modern-hook-live-text" id="v2-modern-cta-preview">برای دیدن جزئیات، محصول را ببینید.</div></div><img class="v2-modern-hook-frame" src="{{ asset('admin/images/video-studio/iphone-hook-frame.png') }}" alt="قاب آیفون پیش‌نمایش دعوت به اقدام"></div></div>
+    </div>
+  </section>
+  <section class="v2-modern-hook-command"><label for="v2-modern-text-command">دستور متنی ساخت یا اصلاح</label><textarea class="v2-textarea" id="v2-modern-text-command" name="text_command" rows="3" placeholder="اگر لازم است خروجی بعدی اصلاح شود، دستور را اینجا بنویسید..."></textarea></section>
+  <section class="v2-modern-output-settings" aria-labelledby="v2-modern-output-title">
+    <div class="v2-modern-hook-head"><strong id="v2-modern-output-title">قاب خروجی و ترنزیشن</strong><span class="v2-note">حرکت بین هوک، تصاویر محصول و دعوت به اقدام</span></div>
+    <div class="v2-design-four v2-modern-output-grid">
+      <div class="v2-field"><label>قاب خروجی</label><div class="v2-choice-grid">@foreach(['9:16'=>'استوری عمودی','1:1'=>'مربع','4:5'=>'پست عمودی','16:9'=>'افقی'] as $key=>$label)<div class="v2-choice"><input type="radio" name="aspect_ratio" id="v2-ratio-{{ str_replace(':','-',$key) }}" value="{{ $key }}" @checked($key==='9:16')><label for="v2-ratio-{{ str_replace(':','-',$key) }}">{{ $label }}<small>{{ $key }}</small></label></div>@endforeach</div></div>
+      <div class="v2-field"><label>ترنزیشن بین بخش‌ها</label><div class="v2-transition-grid">@foreach(['cut'=>['برش سریع','cut'],'fade'=>['فید','fade'],'blur'=>['بلور','blur'],'slide'=>['لغزش','slide']] as $key=>$item)<div class="v2-transition"><input id="v2-transition-{{ $key }}" type="radio" name="transition" value="{{ $key }}" @checked($key==='fade')><label for="v2-transition-{{ $key }}"><span class="v2-transition-preview {{ $item[1] }}"></span>{{ $item[0] }}</label></div>@endforeach</div><input class="v2-input" id="v2-transition-duration" style="margin-top:9px" type="range" name="transition_duration" min="0.2" max="1.5" step="0.1" value="0.5"><div class="v2-note">مدت: <span id="v2-transition-label">۰٫۵</span> ثانیه</div></div>
+    </div>
   </section>
 </div>
 

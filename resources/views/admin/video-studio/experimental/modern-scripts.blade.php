@@ -6,7 +6,7 @@
   const toPersian = value => String(value).replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]);
   const legacyControls = [
     ...form.querySelectorAll('[data-v2-panel="1"] > .v2-hook-font-field,[data-v2-panel="1"] > .v2-hook-workspace,[data-v2-panel="1"] > .v2-cta-card,[data-v2-panel="1"] > .v2-grid'),
-    ...form.querySelectorAll('[data-v2-panel="3"] > .v2-platform-grid > .v2-platform--instagram,[data-v2-panel="3"] > .v2-platform-grid > .v2-platform--telegram'),
+    ...form.querySelectorAll('[data-v2-panel="2"] > .v2-platform-grid > .v2-platform--instagram,[data-v2-panel="2"] > .v2-platform-grid > .v2-platform--telegram'),
   ];
   legacyControls.forEach(section => section.querySelectorAll('input,select,textarea,button').forEach(control => { control.disabled = true; }));
   ['v2-hook-background-value', 'v2-hook-text-color-value'].forEach(id => {
@@ -75,6 +75,46 @@
   hookDuration?.addEventListener('input', () => { if (hookDurationMode) hookDurationMode.value = 'manual'; syncHookDuration(); });
   hookDurationAuto?.addEventListener('click', () => { if (hookDurationMode) hookDurationMode.value = hookDurationMode.value === 'auto' ? 'manual' : 'auto'; syncHookDuration(); });
   syncHookDuration();
+
+  const ctaEnabled = document.getElementById('v2-modern-cta-enabled');
+  const ctaText = document.getElementById('v2-modern-cta-text');
+  const ctaScreen = document.getElementById('v2-modern-cta-screen');
+  const ctaPreview = document.getElementById('v2-modern-cta-preview');
+  const syncCtaPreview = () => {
+    if (!ctaPreview || !ctaScreen) return;
+    const text = String(ctaText?.value || '').trim() || 'برای دیدن جزئیات، محصول را ببینید.';
+    const background = document.querySelector('input[name="cta_background"]:checked');
+    ctaPreview.textContent = text;
+    ctaScreen.style.setProperty('--v2-hook-bg', background?.dataset.v2CtaColorCss || 'var(--primary)');
+    ctaScreen.style.setProperty('--v2-hook-fg', 'var(--card-bg)');
+    ctaPreview.style.setProperty('font-family', `'${document.querySelector('input[name="font_family"]:checked')?.value || 'B_Yekan'}'`, 'important');
+    ctaPreview.style.fontWeight = String(fontWeight[hookWeight()] || 500);
+    ctaPreview.style.fontSize = `${Math.max(18, Math.min(42, Number(hookSize?.value || 36) * .8))}px`;
+    ctaScreen.style.opacity = ctaEnabled?.checked === false ? '.45' : '1';
+  };
+  ctaText?.addEventListener('input', syncCtaPreview);
+  ctaEnabled?.addEventListener('change', syncCtaPreview);
+  document.querySelectorAll('input[name="cta_background"],input[name="font_family"],input[name="hook_font_weight"]').forEach(input => input.addEventListener('change', syncCtaPreview));
+  hookSize?.addEventListener('input', syncCtaPreview);
+  syncCtaPreview();
+
+  const ctaDuration = document.getElementById('v2-modern-cta-duration');
+  const ctaDurationMode = document.getElementById('v2-modern-cta-duration-mode');
+  const ctaDurationOutput = document.getElementById('v2-modern-cta-duration-output');
+  const ctaDurationAuto = document.getElementById('v2-modern-cta-duration-auto');
+  const syncCtaDuration = () => {
+    if (ctaDurationMode && !['manual', 'auto'].includes(ctaDurationMode.value)) ctaDurationMode.value = 'manual';
+    const automatic = ctaDurationMode?.value === 'auto';
+    if (ctaDuration) ctaDuration.disabled = automatic;
+    if (ctaDurationAuto) ctaDurationAuto.setAttribute('aria-pressed', String(automatic));
+    if (ctaDurationOutput) ctaDurationOutput.textContent = automatic
+      ? 'خودکار'
+      : `${toPersian(Number(ctaDuration?.value || 2).toFixed(1).replace(/\.0$/, ''))} ثانیه`;
+  };
+  ctaDuration?.addEventListener('input', () => { if (ctaDurationMode) ctaDurationMode.value = 'manual'; syncCtaDuration(); });
+  ctaDurationAuto?.addEventListener('click', () => { if (ctaDurationMode) ctaDurationMode.value = ctaDurationMode.value === 'auto' ? 'manual' : 'auto'; syncCtaDuration(); });
+  form.addEventListener('v2:before-submit', () => { if (ctaDurationMode && !['manual', 'auto'].includes(ctaDurationMode.value)) ctaDurationMode.value = 'manual'; });
+  syncCtaDuration();
 
   const hookPromptModal = document.getElementById('v2-hook-prompt-modal');
   const openHookPrompt = () => hookPromptModal?.classList.add('is-open');
@@ -170,22 +210,79 @@
   const sourceSelect = document.getElementById('v2-source');
   const sourceFile = document.getElementById('v2-source-file');
   const sourceAudio = document.getElementById('v2-source-audio');
+  const sourcePlayer = document.getElementById('v2-source-player');
+  const sourcePlayerLabel = document.getElementById('v2-source-player-label');
+  const sourcePlayerStatus = document.getElementById('v2-source-player-status');
+  const sourcePlay = document.getElementById('v2-source-play');
+  const sourceStop = document.getElementById('v2-source-stop');
+  const sourceProgress = document.getElementById('v2-source-progress');
+  const sourceTime = document.getElementById('v2-source-time');
   let sourcePreviewUrl = '';
-  const setSourceAudio = url => {
+  const formatSourceTime = seconds => {
+    const value = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+    return `${toPersian(Math.floor(value / 60))}:${toPersian(String(value % 60).padStart(2, '0'))}`;
+  };
+  const syncSourceTimeline = () => {
+    const duration = Number.isFinite(sourceAudio?.duration) ? sourceAudio.duration : 0;
+    const currentTime = Number.isFinite(sourceAudio?.currentTime) ? sourceAudio.currentTime : 0;
+    if (sourceProgress) {
+      sourceProgress.disabled = duration <= 0;
+      sourceProgress.value = duration > 0 ? String((currentTime / duration) * 100) : '0';
+    }
+    if (sourceTime) sourceTime.textContent = `${formatSourceTime(currentTime)} / ${formatSourceTime(duration)}`;
+  };
+  const syncSourcePlayback = () => {
+    const playing = Boolean(sourceAudio?.src) && !sourceAudio.paused && !sourceAudio.ended;
+    if (sourcePlay) sourcePlay.innerHTML = playing
+      ? '<i class="fa-solid fa-pause"></i><span>مکث</span>'
+      : '<i class="fa-solid fa-play"></i><span>پخش</span>';
+    if (sourcePlayerStatus) sourcePlayerStatus.textContent = playing ? 'در حال پخش' : (sourceAudio?.src ? 'آمادهٔ پخش' : 'منبعی انتخاب نشده است');
+  };
+  const setSourceAudio = (url, label = 'پیش‌نمایش منبع') => {
     if (!sourceAudio) return;
     if (sourcePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(sourcePreviewUrl);
     sourcePreviewUrl = url || '';
     sourceAudio.pause();
     sourceAudio.removeAttribute('src');
-    if (!sourcePreviewUrl) { sourceAudio.hidden = true; sourceAudio.load(); return; }
-    sourceAudio.src = sourcePreviewUrl;
-    sourceAudio.hidden = false;
     sourceAudio.load();
+    if (sourcePlayer) sourcePlayer.hidden = !sourcePreviewUrl;
+    if (sourcePlayerLabel) sourcePlayerLabel.textContent = label;
+    if (!sourcePreviewUrl) { syncSourceTimeline(); syncSourcePlayback(); return; }
+    sourceAudio.src = sourcePreviewUrl;
+    sourceAudio.load();
+    if (sourcePlayerStatus) sourcePlayerStatus.textContent = 'در حال آماده‌سازی…';
+    syncSourceTimeline();
   };
-  sourceSelect?.addEventListener('change', () => setSourceAudio(sourceSelect.selectedOptions[0]?.dataset.sourceUrl || ''));
-  sourceFile?.addEventListener('change', () => setSourceAudio(sourceFile.files?.[0] ? URL.createObjectURL(sourceFile.files[0]) : ''));
+  sourceSelect?.addEventListener('change', () => {
+    const selected = sourceSelect.selectedOptions[0];
+    setSourceAudio(selected?.dataset.sourceUrl || '', selected?.textContent?.trim() || 'منبع آرشیو');
+  });
+  sourceFile?.addEventListener('change', () => {
+    const file = sourceFile.files?.[0];
+    setSourceAudio(file ? URL.createObjectURL(file) : '', file?.name || 'فایل دستگاه');
+  });
+  sourcePlay?.addEventListener('click', async () => {
+    if (!sourceAudio?.src) return;
+    if (sourceAudio.paused || sourceAudio.ended) {
+      try { await sourceAudio.play(); } catch (_) { if (sourcePlayerStatus) sourcePlayerStatus.textContent = 'پخش این منبع در مرورگر ممکن نیست.'; }
+    } else sourceAudio.pause();
+    syncSourcePlayback();
+  });
+  sourceStop?.addEventListener('click', () => { if (!sourceAudio) return; sourceAudio.pause(); sourceAudio.currentTime = 0; syncSourceTimeline(); syncSourcePlayback(); });
+  sourceProgress?.addEventListener('input', () => {
+    if (!sourceAudio || !Number.isFinite(sourceAudio.duration) || sourceAudio.duration <= 0) return;
+    sourceAudio.currentTime = (Number(sourceProgress.value) / 100) * sourceAudio.duration;
+    syncSourceTimeline();
+  });
+  sourceAudio?.addEventListener('loadedmetadata', () => { syncSourceTimeline(); syncSourcePlayback(); });
+  sourceAudio?.addEventListener('timeupdate', syncSourceTimeline);
+  sourceAudio?.addEventListener('play', syncSourcePlayback);
+  sourceAudio?.addEventListener('pause', syncSourcePlayback);
+  sourceAudio?.addEventListener('ended', () => { syncSourceTimeline(); syncSourcePlayback(); });
+  sourceAudio?.addEventListener('error', () => { if (sourcePlayerStatus) sourcePlayerStatus.textContent = 'پیش‌نمایش این منبع قابل پخش نیست.'; });
   window.addEventListener('beforeunload', () => { if (sourcePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(sourcePreviewUrl); });
-  setSourceAudio(sourceSelect?.selectedOptions[0]?.dataset.sourceUrl || '');
+  const initialSource = sourceSelect?.selectedOptions[0];
+  setSourceAudio(initialSource?.dataset.sourceUrl || '', initialSource?.textContent?.trim() || 'منبع آرشیو');
   const modernCaptionOption = (index, text, onSelect) => {
     const option = document.createElement('button'); option.type = 'button'; option.className = 'v2-modern-caption-option';
     const title = document.createElement('small'); title.textContent = `گزینه ${toPersian(index + 1)}`;
@@ -297,6 +394,8 @@
     syncHookColors();
     syncHookMetrics();
     syncHookDuration();
+    syncCtaPreview();
+    syncCtaDuration();
     syncSelectedImageOrder();
     updateInstagramPreview();
     updateTelegramPreview();
