@@ -104,7 +104,6 @@
       <div><div class="v2-modern-hook-phone" aria-label="پیش‌نمایش زنده دعوت به اقدام"><div class="v2-modern-hook-screen" id="v2-modern-cta-screen"><div class="v2-modern-hook-live-text" id="v2-modern-cta-preview">{{ old('cta_text', $settings->cta_text ?? 'برای دیدن جزئیات محصول، همین حالا اقدام کنید') }}</div></div><img class="v2-modern-hook-frame" src="{{ asset('admin/images/video-studio/iphone-hook-frame.png') }}" alt="قاب آیفون پیش‌نمایش دعوت به اقدام"></div></div>
     </div>
   </section>
-  <section class="v2-modern-hook-command"><label for="v2-modern-text-command">دستور متنی ساخت یا اصلاح</label><textarea class="v2-textarea" id="v2-modern-text-command" name="text_command" rows="3" placeholder="اگر لازم است خروجی بعدی اصلاح شود، دستور را اینجا بنویسید..."></textarea></section>
   <section class="v2-modern-output-settings" aria-labelledby="v2-modern-output-title">
     <div class="v2-modern-hook-head"><strong id="v2-modern-output-title">قاب خروجی و ترنزیشن</strong><span class="v2-note">حرکت بین هوک، تصاویر محصول و دعوت به اقدام</span></div>
     <div class="v2-design-four v2-modern-output-grid">
