@@ -32,9 +32,13 @@
         <div class="v2-modern-hook-styles">
           <div class="v2-modern-hook-color-groups">
             @foreach(['background' => 'رنگ پس‌زمینه هوک', 'text' => 'رنگ متن'] as $target => $label)
+              @php
+                $defaultColorKey = $target === 'background' ? 'primary' : 'light';
+                $hasDefaultColor = collect($hookColors[$target])->contains('key', $defaultColorKey);
+              @endphp
               <div class="v2-modern-hook-color-group"><strong>{{ $label }}</strong><div class="v2-modern-color-list" data-v2-modern-color-list="{{ $target }}">
                 @foreach($hookColors[$target] as $color)
-                  <div class="v2-modern-color"><input type="radio" name="{{ $target === 'background' ? 'hook_background' : 'hook_text_color' }}" id="v2-modern-{{ $target }}-{{ $color['key'] }}" value="{{ $color['key'] }}" data-v2-color-css="{{ $color['css_value'] }}" data-v2-color-render="{{ $color['render_value'] }}" @checked($color['key'] === ($target === 'background' ? 'primary' : 'light') || ($loop->first && !collect($hookColors[$target])->contains('key', $target === 'background' ? 'primary' : 'light'))><label for="v2-modern-{{ $target }}-{{ $color['key'] }}" title="{{ $color['name'] }}" style="--v2-color:{{ $color['css_value'] }}"></label></div>
+                  <div class="v2-modern-color"><input type="radio" name="{{ $target === 'background' ? 'hook_background' : 'hook_text_color' }}" id="v2-modern-{{ $target }}-{{ $color['key'] }}" value="{{ $color['key'] }}" data-v2-color-css="{{ $color['css_value'] }}" data-v2-color-render="{{ $color['render_value'] }}" @checked($color['key'] === $defaultColorKey || ($loop->first && ! $hasDefaultColor))><label for="v2-modern-{{ $target }}-{{ $color['key'] }}" title="{{ $color['name'] }}" style="--v2-color:{{ $color['css_value'] }}"></label></div>
                 @endforeach
                 <button class="v2-modern-color-add" type="button" data-v2-modern-open-colors="{{ $target }}" aria-label="مدیریت رنگ‌ها"><i class="fa-solid fa-plus"></i></button>
               </div></div>
