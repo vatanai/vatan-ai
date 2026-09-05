@@ -401,6 +401,8 @@
     inputName: target === 'background' ? 'hook_background' : target === 'text' ? 'hook_text_color' : target === 'cta_background' ? 'cta_background' : 'cta_text_color',
     title: target === 'background' ? 'مدیریت رنگ پس‌زمینه هوک' : target === 'text' ? 'مدیریت رنگ متن هوک' : target === 'cta_background' ? 'مدیریت رنگ پس‌زمینه CTA' : 'مدیریت رنگ متن CTA',
   });
+  const colorListTargets = target => (target === 'background' || target === 'cta_background') ? ['background', 'cta_background'] : ['text', 'cta_text'];
+  const colorApiPalette = target => colors[colorTargetMeta(target).apiTarget] || (colors[colorTargetMeta(target).apiTarget] = []);
   const colorModal = document.getElementById('v2-modern-color-modal'); const colorList = document.getElementById('v2-modern-color-manager-list');
   const colorName = document.getElementById('v2-modern-color-name'); const colorValue = document.getElementById('v2-modern-color-value');
   const renderColorManager = () => {
@@ -422,6 +424,25 @@
     const input = document.createElement('input'); input.type = 'radio'; input.name = meta.inputName; input.value = color.key; input.id = `v2-modern-${target}-${color.key}`; input.dataset.v2ColorCss = color.css_value; input.dataset.v2ColorRender = color.render_value;
     const label = document.createElement('label'); label.htmlFor = input.id; label.title = color.name; label.style.setProperty('--v2-color', color.css_value); input.addEventListener('change', target.startsWith('cta_') ? syncCtaColors : syncHookColors); wrapper.append(input, label); return wrapper;
   };
+  const upsertColorOption = (target, color) => {
+    const list = document.querySelector(`[data-v2-modern-color-list="${target}"]`);
+    if (!list) return;
+    const id = `v2-modern-${target}-${color.key}`;
+    const existing = document.getElementById(id);
+    if (existing) {
+      existing.value = color.key;
+      existing.dataset.v2ColorCss = color.css_value;
+      existing.dataset.v2ColorRender = color.render_value;
+      const label = existing.closest('.v2-modern-color')?.querySelector('label');
+      if (label) { label.title = color.name; label.style.setProperty('--v2-color', color.css_value); }
+      return;
+    }
+    const add = list.querySelector('[data-v2-modern-open-colors]');
+    list.insertBefore(colorOption(target, color), add || null);
+  };
+  const removeColorOptions = (target, key) => colorListTargets(target).forEach(listTarget => {
+    document.getElementById(`v2-modern-${listTarget}-${key}`)?.closest('.v2-modern-color')?.remove();
+  });
   const openColorManager = target => { colorTarget = target; renderColorManager(); colorModal?.classList.add('is-open'); };
   document.querySelectorAll('[data-v2-modern-open-colors]').forEach(button => button.addEventListener('click', () => openColorManager(button.dataset.v2ModernOpenColors)));
   const closeColorManager = () => colorModal?.classList.remove('is-open'); document.getElementById('v2-modern-close-colors')?.addEventListener('click', closeColorManager); colorModal?.addEventListener('click', event => { if (event.target === colorModal) closeColorManager(); });
@@ -431,9 +452,11 @@
     const button = event.currentTarget; button.disabled = true;
     try {
       const response = await fetch('{{ route('admin.video-studio.experimental.hook-colors.store') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, Accept: 'application/json' }, body: JSON.stringify({ target: meta.apiTarget, name: colorName.value.trim(), color_value: value }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ذخیره رنگ ناموفق بود.');
-      const previous = colors[meta.apiTarget].findIndex(color => color.key === data.color.key); if (previous >= 0) colors[meta.apiTarget][previous] = data.color; else colors[meta.apiTarget].push(data.color);
-      const list = document.querySelector(`[data-v2-modern-color-list="${colorTarget}"]`); const add = list.querySelector('[data-v2-modern-open-colors]'); const option = colorOption(colorTarget, data.color); list.insertBefore(option, add); option.querySelector('input').checked = true; syncHookColors(); syncCtaColors(); colorName.value = ''; renderColorManager();
+      const data = await response.json().catch(() => ({})); if (!response.ok || !data.color) throw new Error(data.message || `ذخیره رنگ ناموفق بود (${response.status}).`);
+      const palette = colorApiPalette(colorTarget); const previous = palette.findIndex(color => color.key === data.color.key); if (previous >= 0) palette[previous] = data.color; else palette.push(data.color);
+      colorListTargets(colorTarget).forEach(listTarget => upsertColorOption(listTarget, data.color));
+      document.getElementById(`v2-modern-${colorTarget}-${data.color.key}`)?.click();
+      syncHookColors(); syncCtaColors(); colorName.value = ''; renderColorManager();
     } catch (error) { window.alert(error.message || 'ذخیره رنگ ناموفق بود.'); }
     finally { button.disabled = false; }
   });
@@ -442,14 +465,18 @@
     const isCustom = button.dataset.v2ModernColorCustom === '1';
     const colorKey = button.dataset.v2ModernRemoveColor;
     const meta = colorTargetMeta(colorTarget);
-    const response = await fetch(isCustom
-      ? '{{ route('admin.video-studio.experimental.hook-colors.destroy', ['color' => '__COLOR__']) }}'.replace('__COLOR__', colorKey)
-      : '{{ route('admin.video-studio.experimental.hook-colors.defaults.destroy', ['target' => '__TARGET__', 'colorKey' => '__COLOR_KEY__']) }}'.replace('__TARGET__', meta.apiTarget).replace('__COLOR_KEY__', colorKey), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
-    if (!response.ok) { window.alert('حذف رنگ ناموفق بود.'); return; }
-    const key = isCustom ? `custom-${colorKey}` : colorKey; const selected = document.getElementById(`v2-modern-${colorTarget}-${key}`)?.checked;
-    colors[meta.apiTarget] = colors[meta.apiTarget].filter(color => color.key !== key); document.getElementById(`v2-modern-${colorTarget}-${key}`)?.closest('.v2-modern-color')?.remove();
-    if (selected) document.querySelector(`[data-v2-modern-color-list="${colorTarget}"] input`)?.click();
-    renderColorManager(); syncHookColors(); syncCtaColors();
+    const selected = document.getElementById(`v2-modern-${colorTarget}-${isCustom ? `custom-${colorKey}` : colorKey}`)?.checked;
+    try {
+      const response = await fetch(isCustom
+        ? '{{ route('admin.video-studio.experimental.hook-colors.destroy', ['color' => '__COLOR__']) }}'.replace('__COLOR__', colorKey)
+        : '{{ route('admin.video-studio.experimental.hook-colors.defaults.destroy', ['target' => '__TARGET__', 'colorKey' => '__COLOR_KEY__']) }}'.replace('__TARGET__', meta.apiTarget).replace('__COLOR_KEY__', colorKey), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.message || `حذف رنگ ناموفق بود (${response.status}).`); }
+      const key = isCustom ? `custom-${colorKey}` : colorKey;
+      colors[meta.apiTarget] = colorApiPalette(colorTarget).filter(color => color.key !== key);
+      removeColorOptions(colorTarget, key);
+      if (selected) document.querySelector(`[data-v2-modern-color-list="${colorTarget}"] input`)?.click();
+      renderColorManager(); syncHookColors(); syncCtaColors();
+    } catch (error) { window.alert(error.message || 'حذف رنگ ناموفق بود.'); }
   });
   form.addEventListener('v2:settings-applied', () => {
     syncHookText(hookManual?.value || hookValue?.value || '');
