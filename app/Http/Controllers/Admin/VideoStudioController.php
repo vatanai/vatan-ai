@@ -175,6 +175,7 @@ class VideoStudioController extends Controller
             : collect();
         // حتی اگر دیتابیس تولید فونت‌ها را ناقص داشته باشد، گزینه‌های ارسالی مدیر حذف نمی‌شوند.
         $fonts = $fallbackFonts->concat($storedFonts)->unique('slug')->values();
+        $fontWeightAssets = $this->videoStudioFontWeightAssets($fonts);
         if (Schema::hasTable('video_studio_jobs')) {
             // اجرای عادی پایپ‌لاین کوتاه است؛ اگر callback برنگردد، سفارش نباید
             // برای همیشه روی «در حال ساخت» بماند و باید دلیل قابل‌فهمی برای ساخت مجدد داشته باشد.
@@ -247,6 +248,7 @@ class VideoStudioController extends Controller
             'socialPrompts' => $socialPrompts,
             'hookColors' => $hookColors,
             'fonts' => $fonts,
+            'fontWeightAssets' => $fontWeightAssets,
             'jobs' => $jobs,
             'estimatedCosts' => $estimatedCosts,
             'completedVideoCounts' => $completedVideoCounts,
@@ -620,6 +622,8 @@ class VideoStudioController extends Controller
             'source_file' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg,mp4,mov,webm', 'max:102400'],
             'selected_images' => ['nullable', 'array', 'max:10'],
             'selected_images.*' => ['string', 'max:2048'],
+            'selected_image_order' => ['nullable', 'array', 'max:10'],
+            'selected_image_order.*' => ['string', 'max:2048'],
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
             'instagram_enabled' => ['nullable', 'boolean'],
             'telegram_enabled' => ['nullable', 'boolean'],
@@ -653,6 +657,8 @@ class VideoStudioController extends Controller
             'hook_font_weight' => ['nullable', 'integer', 'between:1,5'],
             'hook_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
             'hook_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
+            'hook_duration' => ['nullable', 'numeric', 'between:0.1,5'],
+            'hook_duration_mode' => ['nullable', Rule::in(['manual', 'auto'])],
             'hook_guidelines' => ['nullable', 'string', 'max:5000'],
             'hook_position' => ['nullable', Rule::in(['top', 'center', 'bottom', 'side'])],
             'cta_position' => ['nullable', Rule::in(['top', 'center', 'bottom', 'side'])],
@@ -692,6 +698,17 @@ class VideoStudioController extends Controller
             'parent_job_id' => ['nullable', 'integer', 'exists:video_studio_jobs,id'],
             'version' => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
+
+        // ترتیب انتخاب مدیر روی تصاویر، ترتیب نمایش پلان‌ها بعد از هوک است؛ این ترتیب
+        // از ترتیب اولیهٔ تصاویر محصول جدا نگه‌داری می‌شود تا دقیقاً به ورکفلو برسد.
+        $data['selected_images'] = collect($data['selected_image_order'] ?? $data['selected_images'] ?? [])
+            ->map(static fn ($image): string => trim((string) $image))
+            ->filter()
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
+        unset($data['selected_image_order']);
 
         if ($request->hasFile('source_file')) {
             $data['source_url'] = asset('storage/' . ltrim($request->file('source_file')->store('video-studio/sources', 'public'), '/'));
@@ -802,6 +819,8 @@ class VideoStudioController extends Controller
             'source_url' => (string) ($data['source_url'] ?? ''),
             'selected_images' => array_values($data['selected_images'] ?? []),
             'aspect_ratio' => (string) $data['aspect_ratio'],
+            'hook_duration' => (float) ($data['hook_duration'] ?? 2),
+            'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? 'manual'),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $recentDuplicate = VideoStudioJob::query()
             ->whereIn('status', ['queued', 'processing'])
@@ -870,6 +889,12 @@ class VideoStudioController extends Controller
                 'hook_font_weight' => (int) ($data['hook_font_weight'] ?? 3),
                 'hook_scale' => (float) ($data['hook_scale'] ?? 1),
                 'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
+                'hook_duration' => (float) ($data['hook_duration'] ?? 2),
+                'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? 'manual'),
+                'image_sequence' => collect($data['selected_images'] ?? [])
+                    ->values()
+                    ->map(static fn (string $url, int $index): array => ['url' => $url, 'order' => $index + 1])
+                    ->all(),
                 'hook_position' => (string) ($data['hook_position'] ?? 'center'),
                 'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($data['transition'] ?? 'cut'),
@@ -887,6 +912,8 @@ class VideoStudioController extends Controller
                     'hook_font_weight' => (int) ($data['hook_font_weight'] ?? 3),
                     'hook_scale' => (float) ($data['hook_scale'] ?? 1),
                     'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
+                    'hook_duration' => (float) ($data['hook_duration'] ?? 2),
+                    'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? 'manual'),
                     'hook_position' => (string) ($data['hook_position'] ?? 'center'),
                     'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
                     'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
@@ -1160,6 +1187,55 @@ class VideoStudioController extends Controller
     }
 
     /**
+     * فایل هر وزن واقعی فونت‌های منتخب ویدیو. برای فونت‌های افزوده‌شده توسط مدیر، همان فایل
+     * ثبت‌شده به‌عنوان وزن پایه استفاده می‌شود تا انتخاب فونت هرگز از کار نیفتد.
+     */
+    private function videoStudioFontWeightAssets(iterable $fonts): array
+    {
+        $assets = $this->videoStudioFontWeightAssetCatalog();
+
+        foreach ($fonts as $font) {
+            $slug = (string) ($font->slug ?? '');
+            if ($slug !== '' && !isset($assets[$slug]) && filled($font->file_path ?? null)) {
+                $assets[$slug] = [400 => (string) $font->file_path];
+            }
+        }
+
+        return $assets;
+    }
+
+    private function videoStudioFontWeightAssetCatalog(): array
+    {
+        return [
+            'B_Yekan' => [400 => 'fonts/B_Yekan.ttf'],
+            'Abar' => [300 => 'fonts/video/AbarMid-Regular.ttf', 400 => 'fonts/video/AbarMid-Regular.ttf', 500 => 'fonts/video/AbarMid-SemiBold.ttf', 700 => 'fonts/video/AbarMid-Bold.ttf', 900 => 'fonts/video/AbarMid-Black.ttf'],
+            'IRANSansX' => [300 => 'fonts/IRANSansXFaNum-LightD4.ttf', 400 => 'fonts/IRANSansXFaNum-RegularD4.ttf', 500 => 'fonts/IRANSansXFaNum-MediumD4.ttf', 700 => 'fonts/IRANSansXFaNum-BoldD4.ttf', 900 => 'fonts/IRANSansXFaNum-BlackD4.ttf'],
+            'Peyda' => [300 => 'fonts/video/peyda-light.ttf', 400 => 'fonts/video/Peyda-Medium.ttf', 500 => 'fonts/video/Peyda-Medium.ttf', 700 => 'fonts/video/Peyda-SemiBold.ttf', 900 => 'fonts/video/Peyda-Black.ttf'],
+            'Doran' => [300 => 'fonts/video/Doran-Light.ttf', 400 => 'fonts/video/Doran-Regular.ttf', 500 => 'fonts/video/Doran-Medium.ttf', 700 => 'fonts/video/Doran-Bold.ttf', 900 => 'fonts/video/Doran-ExtraBold.ttf'],
+            'Modam' => [300 => 'fonts/video/Modam-ExtraLight.ttf', 400 => 'fonts/video/Modam-Medium.ttf', 500 => 'fonts/video/Modam-Medium.ttf', 700 => 'fonts/video/Modam-SemiBold.ttf', 900 => 'fonts/video/Modam-Black.ttf'],
+            'YekanBakh' => [300 => 'fonts/video/YekanBakh-Light.ttf', 400 => 'fonts/YekanBakh-Regular.ttf', 500 => 'fonts/video/YekanBakh-Medium.ttf', 700 => 'fonts/video/YekanBakh-Bold.ttf', 900 => 'fonts/video/YekanBakh-Heavy.ttf'],
+        ];
+    }
+
+    private function hookFontWeightValue(int $weight): int
+    {
+        return [1 => 300, 2 => 400, 3 => 500, 4 => 700, 5 => 900][$weight] ?? 500;
+    }
+
+    private function videoStudioFontPathForWeight(string $family, int $weight, ?string $fallbackPath = null): ?string
+    {
+        $assets = $this->videoStudioFontWeightAssetCatalog()[$family] ?? [];
+        if ($assets === []) {
+            return $fallbackPath;
+        }
+
+        $availableWeights = array_keys($assets);
+        usort($availableWeights, static fn (int $left, int $right): int => abs($left - $weight) <=> abs($right - $weight));
+
+        return $assets[$availableWeights[0]] ?? $fallbackPath;
+    }
+
+    /**
      * رنگ‌های پایه از توکن‌های موجود پنل می‌آیند؛ رنگ سفارشی فقط برای همان مدیر نگه‌داری می‌شود.
      * مقدار render_value به ورکفلو داده می‌شود تا خروجی با پیش‌نمایش هم‌خوان بماند.
      */
@@ -1345,6 +1421,12 @@ class VideoStudioController extends Controller
         $font = Schema::hasTable('video_studio_fonts')
             ? VideoStudioFont::query()->where('is_active', true)->where('slug', $fontFamily)->first()
             : null;
+        $hookFontWeight = max(1, min(5, (int) ($payload['hook_font_weight'] ?? 3)));
+        $hookFontWeightValue = $this->hookFontWeightValue($hookFontWeight);
+        $fontFilePath = $this->videoStudioFontPathForWeight($fontFamily, $hookFontWeightValue, $font?->file_path);
+        $fontFileUrl = filled($fontFilePath)
+            ? (Str::startsWith($fontFilePath, ['http://', 'https://']) ? $fontFilePath : asset(ltrim($fontFilePath, '/')))
+            : '';
         if ($channelPrompt !== '') {
             $promptProfile = $channelPrompt;
         }
@@ -1382,7 +1464,8 @@ class VideoStudioController extends Controller
                 'selected_images' => $job->selected_images,
                 'aspect_ratio' => $job->aspect_ratio,
                 'font_family' => $fontFamily,
-                'font_file_url' => $font?->file_path ? asset(ltrim((string) $font->file_path, '/')) : '',
+                'font_file_url' => $fontFileUrl,
+                'hook_font_file_url' => $fontFileUrl,
                 'hook_text' => $job->hook_text,
                 'caption_text' => $job->caption_text,
                 'keyword' => $job->keyword,
@@ -1426,9 +1509,13 @@ class VideoStudioController extends Controller
                 'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
                 'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
                 'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
-                'hook_font_weight' => (int) ($payload['hook_font_weight'] ?? 3),
+                'hook_font_weight' => $hookFontWeight,
+                'hook_font_weight_value' => $hookFontWeightValue,
                 'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
                 'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
+                'hook_duration' => (float) ($payload['hook_duration'] ?? 2),
+                'hook_duration_mode' => (string) ($payload['hook_duration_mode'] ?? 'manual'),
+                'image_sequence' => is_array($payload['image_sequence'] ?? null) ? $payload['image_sequence'] : [],
                 'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
                 'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($payload['transition'] ?? 'cut'),
@@ -1441,9 +1528,14 @@ class VideoStudioController extends Controller
                     'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
                     'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
                     'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
-                    'hook_font_weight' => (int) ($payload['hook_font_weight'] ?? 3),
+                    'hook_font_weight' => $hookFontWeight,
+                    'hook_font_weight_value' => $hookFontWeightValue,
+                    'hook_font_file_url' => $fontFileUrl,
                     'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
                     'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
+                    'hook_duration' => (float) ($payload['hook_duration'] ?? 2),
+                    'hook_duration_mode' => (string) ($payload['hook_duration_mode'] ?? 'manual'),
+                    'image_sequence' => is_array($payload['image_sequence'] ?? null) ? $payload['image_sequence'] : [],
                     'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
                     'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
                     'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),

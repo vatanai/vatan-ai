@@ -49,11 +49,12 @@
             <div class="v2-modern-hook-range"><label for="v2-modern-hook-font-size">اندازه متن</label><input id="v2-modern-hook-font-size" type="range" name="hook_font_size" min="20" max="72" step="1" value="36"><output id="v2-modern-hook-font-size-output">۳۶</output></div>
             <div class="v2-modern-hook-range"><label for="v2-modern-hook-scale">زوم متن</label><input id="v2-modern-hook-scale" type="range" name="hook_scale" min="0.7" max="1.5" step="0.05" value="1"><output id="v2-modern-hook-scale-output">۱×</output></div>
             <div class="v2-modern-hook-range"><label for="v2-modern-hook-offset">موقعیت عمودی متن</label><input id="v2-modern-hook-offset" type="range" name="hook_vertical_offset" min="-45" max="45" step="1" value="0"><output id="v2-modern-hook-offset-output">۰٪</output></div>
+            <div class="v2-modern-hook-range v2-modern-hook-duration"><label for="v2-modern-hook-duration">زمان هوک</label><input id="v2-modern-hook-duration" type="range" name="hook_duration" min="0.1" max="5" step="0.1" value="2"><output id="v2-modern-hook-duration-output">۲ ثانیه</output><input id="v2-modern-hook-duration-mode" type="hidden" name="hook_duration_mode" value="manual"><button class="v2-mini-btn" id="v2-modern-hook-duration-auto" type="button" aria-pressed="false"><i class="fa-solid fa-wand-magic-sparkles"></i> خودکار</button></div>
           </div>
         </div>
 
       </div>
-      <div><div class="v2-modern-hook-phone" aria-label="پیش‌نمایش زنده هوک"><div class="v2-modern-hook-screen" id="v2-modern-phone-screen"><div class="v2-modern-hook-live-text" id="v2-modern-phone-hook">{{ $settings->hook_text ?: 'یک انتخاب بهتر داشته باش' }}</div></div><img class="v2-modern-hook-frame" src="{{ asset('admin/images/video-studio/iphone-hook-frame.png') }}" alt="قاب آیفون پیش‌نمایش هوک"></div><p class="v2-modern-hook-note">تغییر متن، فونت، رنگ، اندازه، زوم و موقعیت عمودی، همان لحظه در این قاب دیده می‌شود.</p></div>
+      <div><div class="v2-modern-hook-phone" aria-label="پیش‌نمایش زنده هوک"><div class="v2-modern-hook-screen" id="v2-modern-phone-screen"><div class="v2-modern-hook-live-text" id="v2-modern-phone-hook">{{ $settings->hook_text ?: 'یک انتخاب بهتر داشته باش' }}</div></div><img class="v2-modern-hook-frame" src="{{ asset('admin/images/video-studio/iphone-hook-frame.png') }}" alt="قاب آیفون پیش‌نمایش هوک"></div></div>
     </div>
   </section>
   <section class="v2-modern-after-hook">

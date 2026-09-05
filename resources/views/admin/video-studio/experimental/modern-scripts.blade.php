@@ -60,6 +60,22 @@
   [hookSize, hookScale, hookOffset].forEach(input => input?.addEventListener('input', syncHookMetrics));
   syncHookChoice(); syncHookColors(); syncHookMetrics();
 
+  const hookDuration = document.getElementById('v2-modern-hook-duration');
+  const hookDurationMode = document.getElementById('v2-modern-hook-duration-mode');
+  const hookDurationOutput = document.getElementById('v2-modern-hook-duration-output');
+  const hookDurationAuto = document.getElementById('v2-modern-hook-duration-auto');
+  const syncHookDuration = () => {
+    const automatic = hookDurationMode?.value === 'auto';
+    if (hookDuration) hookDuration.disabled = automatic;
+    if (hookDurationAuto) hookDurationAuto.setAttribute('aria-pressed', String(automatic));
+    if (hookDurationOutput) hookDurationOutput.textContent = automatic
+      ? 'خودکار'
+      : `${toPersian(Number(hookDuration?.value || 2).toFixed(1).replace(/\.0$/, ''))} ثانیه`;
+  };
+  hookDuration?.addEventListener('input', () => { if (hookDurationMode) hookDurationMode.value = 'manual'; syncHookDuration(); });
+  hookDurationAuto?.addEventListener('click', () => { if (hookDurationMode) hookDurationMode.value = hookDurationMode.value === 'auto' ? 'manual' : 'auto'; syncHookDuration(); });
+  syncHookDuration();
+
   const hookPromptModal = document.getElementById('v2-hook-prompt-modal');
   const openHookPrompt = () => hookPromptModal?.classList.add('is-open');
   document.getElementById('v2-modern-open-hook-prompt')?.addEventListener('click', openHookPrompt);
@@ -122,6 +138,54 @@
   });
   document.addEventListener('click', event => { if (productPicker && !productPicker.contains(event.target)) closeProductPicker(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeProductPicker(); });
+
+  const selectedImageInputs = [...form.querySelectorAll('[data-v2-image-input]')];
+  let selectedImageOrder = selectedImageInputs.filter(input => input.checked).map(input => input.value);
+  const syncSelectedImageOrder = () => {
+    selectedImageOrder = selectedImageOrder.filter(url => selectedImageInputs.some(input => input.checked && input.value === url));
+    selectedImageInputs.forEach(input => {
+      if (input.checked && !selectedImageOrder.includes(input.value)) selectedImageOrder.push(input.value);
+    });
+    selectedImageInputs.forEach(input => {
+      const priority = input.closest('[data-v2-image-card]')?.querySelector('[data-v2-image-priority]');
+      const index = selectedImageOrder.indexOf(input.value);
+      if (priority) priority.textContent = index >= 0 ? toPersian(index + 1) : '';
+    });
+    const grid = selectedImageInputs[0]?.closest('.v2-image-grid');
+    if (grid) {
+      const selectedCards = selectedImageOrder
+        .map(url => selectedImageInputs.find(input => input.checked && input.value === url)?.closest('[data-v2-image-card]'))
+        .filter(Boolean);
+      const unselectedCards = selectedImageInputs
+        .filter(input => !input.checked)
+        .map(input => input.closest('[data-v2-image-card]'))
+        .filter(Boolean);
+      [...selectedCards, ...unselectedCards].forEach(card => grid.appendChild(card));
+    }
+  };
+  selectedImageInputs.forEach(input => input.addEventListener('change', syncSelectedImageOrder));
+  form.addEventListener('v2:before-submit', syncSelectedImageOrder);
+  syncSelectedImageOrder();
+
+  const sourceSelect = document.getElementById('v2-source');
+  const sourceFile = document.getElementById('v2-source-file');
+  const sourceAudio = document.getElementById('v2-source-audio');
+  let sourcePreviewUrl = '';
+  const setSourceAudio = url => {
+    if (!sourceAudio) return;
+    if (sourcePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(sourcePreviewUrl);
+    sourcePreviewUrl = url || '';
+    sourceAudio.pause();
+    sourceAudio.removeAttribute('src');
+    if (!sourcePreviewUrl) { sourceAudio.hidden = true; sourceAudio.load(); return; }
+    sourceAudio.src = sourcePreviewUrl;
+    sourceAudio.hidden = false;
+    sourceAudio.load();
+  };
+  sourceSelect?.addEventListener('change', () => setSourceAudio(sourceSelect.selectedOptions[0]?.dataset.sourceUrl || ''));
+  sourceFile?.addEventListener('change', () => setSourceAudio(sourceFile.files?.[0] ? URL.createObjectURL(sourceFile.files[0]) : ''));
+  window.addEventListener('beforeunload', () => { if (sourcePreviewUrl.startsWith('blob:')) URL.revokeObjectURL(sourcePreviewUrl); });
+  setSourceAudio(sourceSelect?.selectedOptions[0]?.dataset.sourceUrl || '');
   const modernCaptionOption = (index, text, onSelect) => {
     const option = document.createElement('button'); option.type = 'button'; option.className = 'v2-modern-caption-option';
     const title = document.createElement('small'); title.textContent = `گزینه ${toPersian(index + 1)}`;
@@ -232,6 +296,8 @@
     syncHookText(hookManual?.value || hookValue?.value || '');
     syncHookColors();
     syncHookMetrics();
+    syncHookDuration();
+    syncSelectedImageOrder();
     updateInstagramPreview();
     updateTelegramPreview();
   });
