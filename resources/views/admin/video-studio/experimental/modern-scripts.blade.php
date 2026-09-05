@@ -44,16 +44,19 @@
   const hookSize = document.getElementById('v2-modern-hook-font-size');
   const hookScale = document.getElementById('v2-modern-hook-scale');
   const hookOffset = document.getElementById('v2-modern-hook-offset');
+  const hookWeight = () => document.querySelector('input[name="hook_font_weight"]:checked')?.value || '3';
+  const fontWeight = { 1: 300, 2: 400, 3: 500, 4: 700, 5: 900 };
   const syncHookMetrics = () => {
     hookPreview.style.setProperty('font-family', `'${document.querySelector('input[name="font_family"]:checked')?.value || 'B_Yekan'}'`, 'important');
     hookPreview.style.fontSize = `${hookSize?.value || 36}px`;
+    hookPreview.style.fontWeight = String(fontWeight[hookWeight()] || 500);
     hookPreview.style.setProperty('--v2-hook-scale', hookScale?.value || 1);
     hookPreview.style.setProperty('--v2-hook-offset', hookOffset?.value || 0);
     document.getElementById('v2-modern-hook-font-size-output').textContent = toPersian(hookSize?.value || 36);
     document.getElementById('v2-modern-hook-scale-output').textContent = `${toPersian(hookScale?.value || 1)}×`;
     document.getElementById('v2-modern-hook-offset-output').textContent = `${toPersian(hookOffset?.value || 0)}٪`;
   };
-  document.querySelectorAll('input[name="font_family"]').forEach(input => input.addEventListener('change', syncHookMetrics));
+  document.querySelectorAll('input[name="font_family"],input[name="hook_font_weight"]').forEach(input => input.addEventListener('change', syncHookMetrics));
   [hookSize, hookScale, hookOffset].forEach(input => input?.addEventListener('input', syncHookMetrics));
   syncHookChoice(); syncHookColors(); syncHookMetrics();
 
@@ -88,6 +91,37 @@
   });
 
   const product = document.getElementById('v2-product');
+  const productPicker = document.getElementById('v2-product-picker');
+  const productTrigger = document.getElementById('v2-product-trigger');
+  const productPopover = document.getElementById('v2-product-picker-popover');
+  const productSearch = document.getElementById('v2-product-search');
+  const productOptions = [...document.querySelectorAll('[data-v2-product-option]')];
+  const productEmpty = document.getElementById('v2-product-empty');
+  const closeProductPicker = () => { if (productPopover) productPopover.hidden = true; productTrigger?.setAttribute('aria-expanded', 'false'); };
+  const openProductPicker = () => { if (!productPopover) return; productPopover.hidden = false; productTrigger?.setAttribute('aria-expanded', 'true'); productSearch?.focus(); };
+  const selectProduct = option => {
+    if (!product || !option) return;
+    product.value = option.dataset.v2ProductId || '';
+    document.getElementById('v2-product-picked-label').textContent = option.dataset.v2ProductName || 'انتخاب محصول';
+    closeProductPicker();
+    product.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  productTrigger?.addEventListener('click', () => productPopover?.hidden ? openProductPicker() : closeProductPicker());
+  productSearch?.addEventListener('input', () => {
+    const query = productSearch.value.trim().toLocaleLowerCase('fa'); let visible = 0;
+    productOptions.forEach(option => { const matches = option.textContent.toLocaleLowerCase('fa').includes(query); option.hidden = !matches; if (matches) visible += 1; });
+    if (productEmpty) productEmpty.hidden = visible !== 0;
+  });
+  productOptions.forEach(option => option.addEventListener('click', () => selectProduct(option)));
+  document.getElementById('v2-product-random')?.addEventListener('click', () => {
+    const eligible = productOptions.filter(option => option.dataset.v2ProductId);
+    if (!eligible.length) { window.alert('محصول فعالی برای انتخاب تصادفی وجود ندارد.'); return; }
+    const lowestCount = Math.min(...eligible.map(option => Number(option.dataset.v2ProductCount || 0)));
+    const leastBuilt = eligible.filter(option => Number(option.dataset.v2ProductCount || 0) === lowestCount);
+    selectProduct(leastBuilt[Math.floor(Math.random() * leastBuilt.length)]);
+  });
+  document.addEventListener('click', event => { if (productPicker && !productPicker.contains(event.target)) closeProductPicker(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeProductPicker(); });
   const modernCaptionOption = (index, text, onSelect) => {
     const option = document.createElement('button'); option.type = 'button'; option.className = 'v2-modern-caption-option';
     const title = document.createElement('small'); title.textContent = `گزینه ${toPersian(index + 1)}`;
@@ -158,7 +192,7 @@
       const swatch = document.createElement('span'); swatch.className = 'v2-modern-managed-swatch'; swatch.style.setProperty('--v2-color', color.css_value);
       const label = document.createElement('span'); label.textContent = color.name;
       item.append(swatch, label);
-      if (color.is_custom) { const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'v2-modern-managed-remove'; remove.dataset.v2ModernRemoveColor = String(color.id); remove.setAttribute('aria-label', `حذف ${color.name}`); remove.innerHTML = '<i class="fa-solid fa-trash"></i>'; item.appendChild(remove); }
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'v2-modern-managed-remove'; remove.dataset.v2ModernRemoveColor = color.is_custom ? String(color.id) : color.key; remove.dataset.v2ModernColorCustom = color.is_custom ? '1' : '0'; remove.setAttribute('aria-label', `حذف ${color.name}`); remove.innerHTML = '<i class="fa-solid fa-trash"></i>'; item.appendChild(remove);
       colorList.appendChild(item);
     });
   };
@@ -183,9 +217,16 @@
   });
   colorList?.addEventListener('click', async event => {
     const button = event.target.closest('[data-v2-modern-remove-color]'); if (!button) return;
-    const response = await fetch('{{ route('admin.video-studio.experimental.hook-colors.destroy', ['color' => '__COLOR__']) }}'.replace('__COLOR__', button.dataset.v2ModernRemoveColor), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
+    const isCustom = button.dataset.v2ModernColorCustom === '1';
+    const colorKey = button.dataset.v2ModernRemoveColor;
+    const response = await fetch(isCustom
+      ? '{{ route('admin.video-studio.experimental.hook-colors.destroy', ['color' => '__COLOR__']) }}'.replace('__COLOR__', colorKey)
+      : '{{ route('admin.video-studio.experimental.hook-colors.defaults.destroy', ['target' => '__TARGET__', 'colorKey' => '__COLOR_KEY__']) }}'.replace('__TARGET__', colorTarget).replace('__COLOR_KEY__', colorKey), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
     if (!response.ok) { window.alert('حذف رنگ ناموفق بود.'); return; }
-    const key = `custom-${button.dataset.v2ModernRemoveColor}`; colors[colorTarget] = colors[colorTarget].filter(color => color.key !== key); document.getElementById(`v2-modern-${colorTarget}-${key}`)?.closest('.v2-modern-color')?.remove(); renderColorManager(); syncHookColors();
+    const key = isCustom ? `custom-${colorKey}` : colorKey; const selected = document.getElementById(`v2-modern-${colorTarget}-${key}`)?.checked;
+    colors[colorTarget] = colors[colorTarget].filter(color => color.key !== key); document.getElementById(`v2-modern-${colorTarget}-${key}`)?.closest('.v2-modern-color')?.remove();
+    if (selected) document.querySelector(`[data-v2-modern-color-list="${colorTarget}"] input`)?.click();
+    renderColorManager(); syncHookColors();
   });
   form.addEventListener('v2:settings-applied', () => {
     syncHookText(hookManual?.value || hookValue?.value || '');

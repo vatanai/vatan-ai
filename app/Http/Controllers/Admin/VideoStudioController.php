@@ -14,6 +14,7 @@ use App\Models\VideoStudioSetting;
 use App\Models\VideoStudioSource;
 use App\Models\VideoStudioFont;
 use App\Models\VideoStudioHookColor;
+use App\Models\VideoStudioHookColorPreference;
 use App\Models\VideoStudioPreset;
 use App\Models\VideoStudioSocialPrompt;
 use App\Support\Jalali;
@@ -359,6 +360,24 @@ class VideoStudioController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    public function destroyDefaultHookColor(Request $request, string $target, string $colorKey)
+    {
+        abort_unless(in_array($target, ['background', 'text'], true), 404);
+        abort_unless(collect($this->defaultHookColors($target))->contains('key', $colorKey), 404);
+        abort_unless(Schema::hasTable('video_studio_hook_color_preferences'), 404);
+
+        VideoStudioHookColorPreference::query()->updateOrCreate(
+            [
+                'admin_id' => auth('admin')->id(),
+                'target' => $target,
+                'color_key' => $colorKey,
+            ],
+            ['is_hidden' => true],
+        );
+
+        return response()->json(['deleted' => true]);
+    }
+
     public function updateSettings(Request $request)
     {
         $data = $request->validate([
@@ -631,6 +650,7 @@ class VideoStudioController extends Controller
                 }
             }],
             'hook_font_size' => ['nullable', 'numeric', 'between:20,72'],
+            'hook_font_weight' => ['nullable', 'integer', 'between:1,5'],
             'hook_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
             'hook_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
             'hook_guidelines' => ['nullable', 'string', 'max:5000'],
@@ -847,6 +867,7 @@ class VideoStudioController extends Controller
                 'hook_text_color' => (string) ($data['hook_text_color'] ?? 'light'),
                 'hook_text_color_value' => (string) ($data['hook_text_color_value'] ?? '#FFFFFF'),
                 'hook_font_size' => (float) ($data['hook_font_size'] ?? 36),
+                'hook_font_weight' => (int) ($data['hook_font_weight'] ?? 3),
                 'hook_scale' => (float) ($data['hook_scale'] ?? 1),
                 'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
                 'hook_position' => (string) ($data['hook_position'] ?? 'center'),
@@ -863,6 +884,7 @@ class VideoStudioController extends Controller
                     'hook_text_color' => (string) ($data['hook_text_color'] ?? 'light'),
                     'hook_text_color_value' => (string) ($data['hook_text_color_value'] ?? '#FFFFFF'),
                     'hook_font_size' => (float) ($data['hook_font_size'] ?? 36),
+                    'hook_font_weight' => (int) ($data['hook_font_weight'] ?? 3),
                     'hook_scale' => (float) ($data['hook_scale'] ?? 1),
                     'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
                     'hook_position' => (string) ($data['hook_position'] ?? 'center'),
@@ -1148,6 +1170,16 @@ class VideoStudioController extends Controller
             return $defaults;
         }
 
+        if (Schema::hasTable('video_studio_hook_color_preferences')) {
+            $hiddenKeys = VideoStudioHookColorPreference::query()
+                ->where('admin_id', auth('admin')->id())
+                ->where('target', $target)
+                ->where('is_hidden', true)
+                ->pluck('color_key')
+                ->all();
+            $defaults = array_values(array_filter($defaults, static fn (array $color): bool => !in_array($color['key'], $hiddenKeys, true)));
+        }
+
         $custom = VideoStudioHookColor::query()
             ->where('admin_id', auth('admin')->id())
             ->where('target', $target)
@@ -1394,6 +1426,7 @@ class VideoStudioController extends Controller
                 'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
                 'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
                 'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
+                'hook_font_weight' => (int) ($payload['hook_font_weight'] ?? 3),
                 'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
                 'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
                 'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
@@ -1408,6 +1441,7 @@ class VideoStudioController extends Controller
                     'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
                     'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
                     'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
+                    'hook_font_weight' => (int) ($payload['hook_font_weight'] ?? 3),
                     'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
                     'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
                     'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
