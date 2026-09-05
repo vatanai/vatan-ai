@@ -79,11 +79,15 @@ return [
 
     'n8n' => [
         'video_studio_webhook' => env('N8N_VIDEO_STUDIO_WEBHOOK_URL'),
+        'video_studio_preview_webhook' => env('N8N_VIDEO_STUDIO_PREVIEW_WEBHOOK'),
         'video_studio_status_secret' => env('N8N_VIDEO_STUDIO_STATUS_SECRET'),
         'video_studio_telegram_chat_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHAT_ID'),
         'video_studio_telegram_instagram_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_INSTAGRAM_THREAD_ID'),
         'video_studio_telegram_channel_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHANNEL_THREAD_ID'),
         'video_studio_telegram_music_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_MUSIC_THREAD_ID'),
+        'video_studio_telegram_linkedin_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_LINKEDIN_THREAD_ID', '29'),
+        'video_studio_telegram_aparat_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_APARAT_THREAD_ID', '31'),
+        'video_studio_telegram_youtube_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_YOUTUBE_THREAD_ID', '33'),
         'video_studio_callback_base_url' => env('N8N_VIDEO_STUDIO_CALLBACK_BASE_URL'),
     ],
 

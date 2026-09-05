@@ -445,6 +445,9 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('/video-studio/experimental/presets', [VideoStudioController::class, 'storePreset'])->name('video-studio.experimental.presets.store');
     Route::patch('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'renamePreset'])->name('video-studio.experimental.presets.rename');
     Route::delete('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'destroyPreset'])->name('video-studio.experimental.presets.destroy');
+    Route::post('/video-studio/experimental/social-prompts', [VideoStudioController::class, 'storeSocialPrompts'])->name('video-studio.experimental.social-prompts.store');
+    Route::post('/video-studio/experimental/hook-colors', [VideoStudioController::class, 'storeHookColor'])->name('video-studio.experimental.hook-colors.store');
+    Route::delete('/video-studio/experimental/hook-colors/{color}', [VideoStudioController::class, 'destroyHookColor'])->name('video-studio.experimental.hook-colors.destroy');
     Route::get('/create-studio', [\App\Http\Controllers\Admin\CreateStudioController::class, 'index'])->name('create-studio.index');
     Route::put('/create-studio/pricing-settings', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updatePricingSettings'])->name('create-studio.pricing-settings.update');
     Route::post('/create-studio/cost-rules', [\App\Http\Controllers\Admin\CreateStudioController::class, 'storeCostRule'])->name('create-studio.cost-rules.store');

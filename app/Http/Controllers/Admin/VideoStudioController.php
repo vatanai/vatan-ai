@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\GeneratedVideo;
+use App\Models\AiModel;
+use App\Models\FinanceExchangeRate;
 use App\Models\Product;
 use App\Models\ProductTestRun;
 use App\Models\VideoHookInspiration;
@@ -11,7 +13,11 @@ use App\Models\VideoStudioJob;
 use App\Models\VideoStudioSetting;
 use App\Models\VideoStudioSource;
 use App\Models\VideoStudioFont;
+use App\Models\VideoStudioHookColor;
+use App\Models\VideoStudioPreset;
+use App\Models\VideoStudioSocialPrompt;
 use App\Support\Jalali;
+use App\Services\StudioCostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -23,7 +29,7 @@ use Illuminate\Validation\ValidationException;
 
 class VideoStudioController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, string $view = 'admin.video-studio.index')
     {
         $hasGeneratedVideos = Schema::hasTable('generated_videos');
         $hasProductRuns = Schema::hasTable('product_test_runs');
@@ -139,6 +145,21 @@ class VideoStudioController extends Controller
         $sources = Schema::hasTable('video_studio_sources')
             ? VideoStudioSource::query()->where('is_active', true)->latest()->get()
             : collect();
+        $presets = Schema::hasTable('video_studio_presets')
+            ? VideoStudioPreset::query()->where(function ($query): void {
+                $query->whereNull('admin_id')->orWhere('admin_id', auth('admin')->id());
+            })->orderBy('name')->get(['id', 'name', 'settings'])
+            : collect();
+        $socialPrompts = Schema::hasTable('video_studio_social_prompts')
+            ? VideoStudioSocialPrompt::query()->where('admin_id', auth('admin')->id())->pluck('prompt', 'platform')->all()
+            : [];
+        $socialPrompts['instagram'] = (string) ($socialPrompts['instagram'] ?? $settings->instagram_prompt ?? '');
+        $socialPrompts['telegram'] = (string) ($socialPrompts['telegram'] ?? $settings->telegram_prompt ?? '');
+        $socialPrompts['hook'] = (string) ($socialPrompts['hook'] ?? $settings->hook_guidelines ?? '');
+        $hookColors = [
+            'background' => $this->hookColorOptions('background'),
+            'text' => $this->hookColorOptions('text'),
+        ];
         $fallbackFonts = collect([
             new VideoStudioFont(['name' => 'یکان', 'slug' => 'B_Yekan', 'file_path' => 'fonts/B_Yekan.ttf', 'is_default' => true]),
             new VideoStudioFont(['name' => 'ابر', 'slug' => 'Abar', 'file_path' => 'fonts/video/AbarMid-Regular.ttf', 'is_default' => false]),
@@ -171,6 +192,12 @@ class VideoStudioController extends Controller
         $jobs = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
             : collect();
+        $estimatedCosts = $jobs->mapWithKeys(function (VideoStudioJob $job): array {
+            $saved = data_get($job->payload, 'estimated_cost', []);
+            return [$job->id => is_array($saved) && $saved !== []
+                ? $saved
+                : $this->estimateVideoCost((int) $job->product_id, (string) $job->aspect_ratio)];
+        });
         $completedVideoCounts = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->where('status', 'completed')->selectRaw('product_id, COUNT(*) AS total')->groupBy('product_id')->pluck('total', 'product_id')->mapWithKeys(fn ($count, $id): array => [(int) $id => (int) $count])->all()
             : [];
@@ -197,7 +224,7 @@ class VideoStudioController extends Controller
             ];
         });
 
-        return response()->view('admin.video-studio.index', [
+        return response()->view($view, [
             'videoCount' => $videoCount,
             'completedCount' => $completedCount,
             'failedCount' => $failedCount,
@@ -215,8 +242,12 @@ class VideoStudioController extends Controller
             'settings' => $settings,
             'hookInspirations' => $hookInspirations,
             'sources' => $sources,
+            'presets' => $presets,
+            'socialPrompts' => $socialPrompts,
+            'hookColors' => $hookColors,
             'fonts' => $fonts,
             'jobs' => $jobs,
+            'estimatedCosts' => $estimatedCosts,
             'completedVideoCounts' => $completedVideoCounts,
             'pendingVideoCounts' => $pendingVideoCounts,
             'producedProducts' => $producedProducts,
@@ -226,8 +257,106 @@ class VideoStudioController extends Controller
                 'generated_videos' => $hasGeneratedVideos,
                 'product_test_runs' => $hasProductRuns,
             ],
+            'experimentalPage' => $view === 'admin.video-studio.experimental',
         ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache');
+    }
+
+    /**
+     * نسخهٔ تکثیرشدهٔ استودیو برای اجرای فازهای جدید، بدون تغییر رفتار صفحهٔ فعلی.
+     */
+    public function experimental(Request $request)
+    {
+        return $this->index($request, 'admin.video-studio.experimental');
+    }
+
+    public function storePreset(Request $request)
+    {
+        abort_unless(Schema::hasTable('video_studio_presets'), 404);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'settings' => ['required', 'array', 'max:80'],
+        ]);
+        $preset = VideoStudioPreset::query()->updateOrCreate(
+            ['admin_id' => auth('admin')->id(), 'name' => trim($data['name'])],
+            ['settings' => $data['settings']],
+        );
+
+        return response()->json(['id' => $preset->id, 'name' => $preset->name, 'settings' => $preset->settings]);
+    }
+
+    public function renamePreset(Request $request, VideoStudioPreset $preset)
+    {
+        abort_unless((int) $preset->admin_id === (int) auth('admin')->id(), 403);
+        $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
+        $preset->update(['name' => trim($data['name'])]);
+
+        return response()->json(['id' => $preset->id, 'name' => $preset->name, 'settings' => $preset->settings]);
+    }
+
+    public function destroyPreset(VideoStudioPreset $preset)
+    {
+        abort_unless((int) $preset->admin_id === (int) auth('admin')->id(), 403);
+        $preset->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    public function storeSocialPrompts(Request $request)
+    {
+        abort_unless(Schema::hasTable('video_studio_social_prompts'), 404);
+        $data = $request->validate([
+            'prompts' => ['required', 'array', 'max:8'],
+            'prompts.instagram' => ['nullable', 'string', 'max:30000'],
+            'prompts.telegram' => ['nullable', 'string', 'max:30000'],
+            'prompts.youtube' => ['nullable', 'string', 'max:30000'],
+            'prompts.aparat' => ['nullable', 'string', 'max:30000'],
+            'prompts.linkedin' => ['nullable', 'string', 'max:30000'],
+            'prompts.hook' => ['nullable', 'string', 'max:30000'],
+        ]);
+        foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin', 'hook'] as $platform) {
+            if (!array_key_exists($platform, $data['prompts'])) {
+                continue;
+            }
+            VideoStudioSocialPrompt::query()->updateOrCreate(
+                ['admin_id' => auth('admin')->id(), 'platform' => $platform],
+                ['prompt' => trim((string) data_get($data, "prompts.{$platform}", ''))],
+            );
+        }
+
+        return response()->json(['saved' => true, 'prompts' => VideoStudioSocialPrompt::query()->where('admin_id', auth('admin')->id())->pluck('prompt', 'platform')->all()]);
+    }
+
+    public function storeHookColor(Request $request)
+    {
+        abort_unless(Schema::hasTable('video_studio_hook_colors'), 404);
+
+        $data = $request->validate([
+            'target' => ['required', Rule::in(['background', 'text'])],
+            'name' => ['nullable', 'string', 'max:80'],
+            'color_value' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ]);
+        $color = VideoStudioHookColor::query()->updateOrCreate(
+            [
+                'admin_id' => auth('admin')->id(),
+                'target' => $data['target'],
+                'color_value' => strtoupper($data['color_value']),
+            ],
+            ['name' => trim((string) ($data['name'] ?? '')) ?: 'رنگ سفارشی'],
+        );
+
+        return response()->json([
+            'saved' => true,
+            'color' => $this->hookColorPayload($color),
+        ]);
+    }
+
+    public function destroyHookColor(VideoStudioHookColor $color)
+    {
+        abort_unless((int) $color->admin_id === (int) auth('admin')->id(), 403);
+        $color->delete();
+
+        return response()->json(['deleted' => true]);
     }
 
     public function updateSettings(Request $request)
@@ -308,7 +437,10 @@ class VideoStudioController extends Controller
                 'caption_guidelines' => ['nullable', 'string', 'max:5000'],
                 'instagram_prompt' => ['nullable', 'string', 'max:30000'],
                 'telegram_prompt' => ['nullable', 'string', 'max:30000'],
-                'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
+                'youtube_prompt' => ['nullable', 'string', 'max:30000'],
+                'aparat_prompt' => ['nullable', 'string', 'max:30000'],
+                'linkedin_prompt' => ['nullable', 'string', 'max:30000'],
+                'channel' => ['nullable', Rule::in(['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'])],
             ]);
             $product = Product::query()->find((int) $data['product_id']);
             if (!$product) {
@@ -324,6 +456,12 @@ class VideoStudioController extends Controller
             }
             $channel = (string) ($data['channel'] ?? 'instagram');
             $prompt = trim((string) ($data[$channel . '_prompt'] ?? $data['instagram_prompt'] ?? ''));
+            if ($prompt === '' && Schema::hasTable('video_studio_social_prompts')) {
+                $prompt = trim((string) VideoStudioSocialPrompt::query()
+                    ->where('admin_id', auth('admin')->id())
+                    ->where('platform', $channel)
+                    ->value('prompt'));
+            }
             $response = Http::retry(3, 300)->timeout(45)->post($webhook, [
                 'preview_only' => true,
                 'channel' => $channel,
@@ -466,9 +604,38 @@ class VideoStudioController extends Controller
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
             'instagram_enabled' => ['nullable', 'boolean'],
             'telegram_enabled' => ['nullable', 'boolean'],
+            'youtube_enabled' => ['nullable', 'boolean'],
+            'aparat_enabled' => ['nullable', 'boolean'],
+            'linkedin_enabled' => ['nullable', 'boolean'],
+            'telegram_send_video' => ['nullable', 'boolean'],
+            'telegram_send_images' => ['nullable', 'boolean'],
+            'instagram_send_video' => ['nullable', 'boolean'],
+            'instagram_send_images' => ['nullable', 'boolean'],
+            'youtube_send_video' => ['nullable', 'boolean'],
+            'youtube_send_images' => ['nullable', 'boolean'],
+            'aparat_send_video' => ['nullable', 'boolean'],
+            'aparat_send_images' => ['nullable', 'boolean'],
+            'linkedin_send_video' => ['nullable', 'boolean'],
+            'linkedin_send_images' => ['nullable', 'boolean'],
             'cta_enabled' => ['nullable', 'boolean'],
             'cta_text' => ['nullable', 'string', 'max:1000'],
             'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
+            'hook_background' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'background')) {
+                    $fail('رنگ پس‌زمینه هوک معتبر نیست.');
+                }
+            }],
+            'hook_text_color' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'text')) {
+                    $fail('رنگ متن هوک معتبر نیست.');
+                }
+            }],
+            'hook_font_size' => ['nullable', 'numeric', 'between:20,72'],
+            'hook_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
+            'hook_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
+            'hook_guidelines' => ['nullable', 'string', 'max:5000'],
+            'hook_position' => ['nullable', Rule::in(['top', 'center', 'bottom', 'side'])],
+            'cta_position' => ['nullable', Rule::in(['top', 'center', 'bottom', 'side'])],
             'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
             'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
             'text_command' => ['nullable', 'string', 'max:5000'],
@@ -481,7 +648,10 @@ class VideoStudioController extends Controller
             'prompt_profile' => ['nullable', 'string', 'max:30000'],
             'instagram_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_prompt' => ['nullable', 'string', 'max:30000'],
-            'channel' => ['nullable', Rule::in(['instagram', 'telegram'])],
+            'youtube_prompt' => ['nullable', 'string', 'max:30000'],
+            'aparat_prompt' => ['nullable', 'string', 'max:30000'],
+            'linkedin_prompt' => ['nullable', 'string', 'max:30000'],
+            'channel' => ['nullable', Rule::in(['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'])],
             'telegram_buttons_enabled' => ['nullable', 'boolean'],
             'telegram_button_label' => ['nullable', 'array', 'max:8'],
             'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
@@ -499,6 +669,8 @@ class VideoStudioController extends Controller
             'preview_hook' => ['nullable', 'string', 'max:1000'],
             'preview_caption' => ['nullable', 'string', 'max:5000'],
             'preview_keyword' => ['nullable', 'string', 'max:80'],
+            'parent_job_id' => ['nullable', 'integer', 'exists:video_studio_jobs,id'],
+            'version' => ['nullable', 'integer', 'min:1', 'max:99'],
         ]);
 
         if ($request->hasFile('source_file')) {
@@ -512,6 +684,26 @@ class VideoStudioController extends Controller
         }
         if (blank($data['instagram_prompt'] ?? null) && filled($data['prompt_profile'] ?? null)) {
             $data['instagram_prompt'] = $data['prompt_profile'];
+        }
+        $hookBackground = $this->resolveHookColor((string) ($data['hook_background'] ?? 'primary'), 'background');
+        $hookTextColor = $this->resolveHookColor((string) ($data['hook_text_color'] ?? 'light'), 'text');
+        $data['hook_background'] = $hookBackground['key'];
+        $data['hook_background_color'] = $hookBackground['render_value'];
+        $data['hook_text_color'] = $hookTextColor['key'];
+        $data['hook_text_color_value'] = $hookTextColor['render_value'];
+        if (Schema::hasTable('video_studio_social_prompts')) {
+            $savedPrompts = VideoStudioSocialPrompt::query()
+                ->where('admin_id', auth('admin')->id())
+                ->pluck('prompt', 'platform');
+            foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+                $key = $platform . '_prompt';
+                if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
+                    $data[$key] = (string) $savedPrompts[$platform];
+                }
+            }
+            if (blank($data['hook_guidelines'] ?? null) && filled($savedPrompts['hook'] ?? null)) {
+                $data['hook_guidelines'] = (string) $savedPrompts['hook'];
+            }
         }
         $telegramButtons = $this->normalizeTelegramButtons($request);
         unset($data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width']);
@@ -570,10 +762,16 @@ class VideoStudioController extends Controller
             $autoKeyword = false;
         }
         $buildNow = $request->boolean('build_now');
+        $parentJobId = (int) ($data['parent_job_id'] ?? 0) ?: null;
+        $version = max(1, min(99, (int) ($data['version'] ?? 1)));
+        unset($data['parent_job_id'], $data['version']);
         $instagramEnabled = $request->has('instagram_enabled') ? $request->boolean('instagram_enabled') : true;
         $telegramEnabled = $request->has('telegram_enabled') ? $request->boolean('telegram_enabled') : true;
-        $platformError = (!$instagramEnabled && !$telegramEnabled)
-            ? 'حداقل یکی از خروجی‌های اینستاگرام یا تلگرام باید روشن باشد.'
+        $youtubeEnabled = $request->boolean('youtube_enabled');
+        $aparatEnabled = $request->boolean('aparat_enabled');
+        $linkedinEnabled = $request->boolean('linkedin_enabled');
+        $platformError = (!$instagramEnabled && !$telegramEnabled && !$youtubeEnabled && !$aparatEnabled && !$linkedinEnabled)
+            ? 'حداقل یکی از خروجی‌های شبکه‌های اجتماعی باید روشن باشد.'
             : null;
         if ($autoHook) $data['hook_text'] = null;
         if ($autoCaption) $data['caption_text'] = null;
@@ -607,13 +805,19 @@ class VideoStudioController extends Controller
                 'auto_generate_hook' => $autoHook,
                 'auto_generate_caption' => $autoCaption,
                 'auto_generate_keyword' => $autoKeyword,
-                'hook_guidelines' => (string) $request->input('hook_guidelines', ''),
+                'hook_guidelines' => (string) ($data['hook_guidelines'] ?? ''),
                 'caption_guidelines' => (string) $request->input('caption_guidelines', ''),
                 'font_family' => (string) ($data['font_family'] ?? 'B_Yekan'),
                 'prompt_profile' => (string) ($data['prompt_profile'] ?? ''),
                 'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
                 'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
+                'youtube_prompt' => (string) ($data['youtube_prompt'] ?? ''),
+                'aparat_prompt' => (string) ($data['aparat_prompt'] ?? ''),
+                'linkedin_prompt' => (string) ($data['linkedin_prompt'] ?? ''),
                 'telegram_caption_text' => (string) ($data['telegram_caption_text'] ?? ''),
+                'youtube_caption_text' => (string) ($data['youtube_caption_text'] ?? ''),
+                'aparat_caption_text' => (string) ($data['aparat_caption_text'] ?? ''),
+                'linkedin_caption_text' => (string) ($data['linkedin_caption_text'] ?? ''),
                 'telegram_buttons' => $telegramButtons,
                 'channel' => (string) ($data['channel'] ?? 'instagram'),
                 'source_fingerprint' => $sourceFingerprint,
@@ -622,12 +826,52 @@ class VideoStudioController extends Controller
                 'preview_selected' => filled($data['preview_hook'] ?? null) || filled($data['preview_caption'] ?? null) || filled($data['preview_keyword'] ?? null),
                 'instagram_enabled' => $instagramEnabled,
                 'telegram_enabled' => $telegramEnabled,
+                'youtube_enabled' => $youtubeEnabled,
+                'aparat_enabled' => $aparatEnabled,
+                'linkedin_enabled' => $linkedinEnabled,
+                'telegram_send_video' => $request->boolean('telegram_send_video'),
+                'telegram_send_images' => $request->boolean('telegram_send_images'),
+                'instagram_send_video' => $request->boolean('instagram_send_video'),
+                'instagram_send_images' => $request->boolean('instagram_send_images'),
+                'youtube_send_video' => $request->boolean('youtube_send_video'),
+                'youtube_send_images' => $request->boolean('youtube_send_images'),
+                'aparat_send_video' => $request->boolean('aparat_send_video'),
+                'aparat_send_images' => $request->boolean('aparat_send_images'),
+                'linkedin_send_video' => $request->boolean('linkedin_send_video'),
+                'linkedin_send_images' => $request->boolean('linkedin_send_images'),
                 'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : true,
                 'cta_text' => (string) ($data['cta_text'] ?? ''),
                 'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+                'hook_background' => (string) ($data['hook_background'] ?? 'primary'),
+                'hook_background_color' => (string) ($data['hook_background_color'] ?? '#16594F'),
+                'hook_text_color' => (string) ($data['hook_text_color'] ?? 'light'),
+                'hook_text_color_value' => (string) ($data['hook_text_color_value'] ?? '#FFFFFF'),
+                'hook_font_size' => (float) ($data['hook_font_size'] ?? 36),
+                'hook_scale' => (float) ($data['hook_scale'] ?? 1),
+                'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
+                'hook_position' => (string) ($data['hook_position'] ?? 'center'),
+                'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($data['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
                 'text_command' => trim((string) ($data['text_command'] ?? '')),
+                'parent_job_id' => $parentJobId,
+                'version' => $version,
+                'render_config' => [
+                    'font_family' => (string) ($data['font_family'] ?? 'B_Yekan'),
+                    'hook_background' => (string) ($data['hook_background'] ?? 'primary'),
+                    'hook_background_color' => (string) ($data['hook_background_color'] ?? '#16594F'),
+                    'hook_text_color' => (string) ($data['hook_text_color'] ?? 'light'),
+                    'hook_text_color_value' => (string) ($data['hook_text_color_value'] ?? '#FFFFFF'),
+                    'hook_font_size' => (float) ($data['hook_font_size'] ?? 36),
+                    'hook_scale' => (float) ($data['hook_scale'] ?? 1),
+                    'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? 0),
+                    'hook_position' => (string) ($data['hook_position'] ?? 'center'),
+                    'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
+                    'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+                    'transition' => (string) ($data['transition'] ?? 'cut'),
+                    'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
+                ],
+                'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
             ],
         ]));
 
@@ -657,6 +901,19 @@ class VideoStudioController extends Controller
             'aspect_ratio' => ['required', Rule::in(['9:16', '1:1', '4:5', '16:9'])],
             'instagram_enabled' => ['nullable', 'boolean'],
             'telegram_enabled' => ['nullable', 'boolean'],
+            'youtube_enabled' => ['nullable', 'boolean'],
+            'aparat_enabled' => ['nullable', 'boolean'],
+            'linkedin_enabled' => ['nullable', 'boolean'],
+            'telegram_send_video' => ['nullable', 'boolean'],
+            'telegram_send_images' => ['nullable', 'boolean'],
+            'instagram_send_video' => ['nullable', 'boolean'],
+            'instagram_send_images' => ['nullable', 'boolean'],
+            'youtube_send_video' => ['nullable', 'boolean'],
+            'youtube_send_images' => ['nullable', 'boolean'],
+            'aparat_send_video' => ['nullable', 'boolean'],
+            'aparat_send_images' => ['nullable', 'boolean'],
+            'linkedin_send_video' => ['nullable', 'boolean'],
+            'linkedin_send_images' => ['nullable', 'boolean'],
             'cta_enabled' => ['nullable', 'boolean'],
             'cta_text' => ['nullable', 'string', 'max:1000'],
             'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
@@ -671,8 +928,14 @@ class VideoStudioController extends Controller
             'keyword' => ['nullable', 'string', 'max:80'],
             'dm_template' => ['nullable', 'string', 'max:5000'],
             'telegram_caption_text' => ['nullable', 'string', 'max:5000'],
+            'youtube_caption_text' => ['nullable', 'string', 'max:5000'],
+            'aparat_caption_text' => ['nullable', 'string', 'max:5000'],
+            'linkedin_caption_text' => ['nullable', 'string', 'max:5000'],
             'instagram_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_prompt' => ['nullable', 'string', 'max:30000'],
+            'youtube_prompt' => ['nullable', 'string', 'max:30000'],
+            'aparat_prompt' => ['nullable', 'string', 'max:30000'],
+            'linkedin_prompt' => ['nullable', 'string', 'max:30000'],
             'telegram_buttons_enabled' => ['nullable', 'boolean'],
             'telegram_button_label' => ['nullable', 'array', 'max:8'],
             'telegram_button_label.*' => ['nullable', 'string', 'max:80'],
@@ -722,26 +985,69 @@ class VideoStudioController extends Controller
             ->all();
         $buttons = $this->normalizeTelegramButtons($request);
         $payload = is_array($job->payload) ? $job->payload : [];
+        if (Schema::hasTable('video_studio_social_prompts')) {
+            $savedPrompts = VideoStudioSocialPrompt::query()
+                ->where('admin_id', auth('admin')->id())
+                ->pluck('prompt', 'platform');
+            foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+                $key = $platform . '_prompt';
+                if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
+                    $data[$key] = (string) $savedPrompts[$platform];
+                }
+            }
+        }
         $buildNow = $request->boolean('build_now');
         $instagramEnabled = $request->has('instagram_enabled') ? $request->boolean('instagram_enabled') : (bool) data_get($payload, 'instagram_enabled', true);
         $telegramEnabled = $request->has('telegram_enabled') ? $request->boolean('telegram_enabled') : (bool) data_get($payload, 'telegram_enabled', true);
-        $platformError = (!$instagramEnabled && !$telegramEnabled)
-            ? 'حداقل یکی از خروجی‌های اینستاگرام یا تلگرام باید روشن باشد.'
+        $youtubeEnabled = $request->has('youtube_enabled') ? $request->boolean('youtube_enabled') : (bool) data_get($payload, 'youtube_enabled', false);
+        $aparatEnabled = $request->has('aparat_enabled') ? $request->boolean('aparat_enabled') : (bool) data_get($payload, 'aparat_enabled', false);
+        $linkedinEnabled = $request->has('linkedin_enabled') ? $request->boolean('linkedin_enabled') : (bool) data_get($payload, 'linkedin_enabled', false);
+        $platformError = (!$instagramEnabled && !$telegramEnabled && !$youtubeEnabled && !$aparatEnabled && !$linkedinEnabled)
+            ? 'حداقل یکی از خروجی‌های شبکه‌های اجتماعی باید روشن باشد.'
             : null;
         $payload = array_merge($payload, [
             'font_family' => (string) $data['font_family'],
             'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
             'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
+            'youtube_prompt' => (string) ($data['youtube_prompt'] ?? ''),
+            'aparat_prompt' => (string) ($data['aparat_prompt'] ?? ''),
+            'linkedin_prompt' => (string) ($data['linkedin_prompt'] ?? ''),
             'telegram_caption_text' => (string) ($data['telegram_caption_text'] ?? ''),
+            'youtube_caption_text' => (string) ($data['youtube_caption_text'] ?? ''),
+            'aparat_caption_text' => (string) ($data['aparat_caption_text'] ?? ''),
+            'linkedin_caption_text' => (string) ($data['linkedin_caption_text'] ?? ''),
             'telegram_buttons' => $buttons,
             'instagram_enabled' => $instagramEnabled,
             'telegram_enabled' => $telegramEnabled,
+            'youtube_enabled' => $youtubeEnabled,
+            'aparat_enabled' => $aparatEnabled,
+            'linkedin_enabled' => $linkedinEnabled,
+            'telegram_send_video' => $request->has('telegram_send_video') ? $request->boolean('telegram_send_video') : (bool) data_get($payload, 'telegram_send_video', true),
+            'telegram_send_images' => $request->has('telegram_send_images') ? $request->boolean('telegram_send_images') : (bool) data_get($payload, 'telegram_send_images', false),
+            'instagram_send_video' => $request->has('instagram_send_video') ? $request->boolean('instagram_send_video') : (bool) data_get($payload, 'instagram_send_video', true),
+            'instagram_send_images' => $request->has('instagram_send_images') ? $request->boolean('instagram_send_images') : (bool) data_get($payload, 'instagram_send_images', false),
+            'youtube_send_video' => $request->has('youtube_send_video') ? $request->boolean('youtube_send_video') : (bool) data_get($payload, 'youtube_send_video', false),
+            'youtube_send_images' => $request->has('youtube_send_images') ? $request->boolean('youtube_send_images') : (bool) data_get($payload, 'youtube_send_images', false),
+            'aparat_send_video' => $request->has('aparat_send_video') ? $request->boolean('aparat_send_video') : (bool) data_get($payload, 'aparat_send_video', false),
+            'aparat_send_images' => $request->has('aparat_send_images') ? $request->boolean('aparat_send_images') : (bool) data_get($payload, 'aparat_send_images', false),
+            'linkedin_send_video' => $request->has('linkedin_send_video') ? $request->boolean('linkedin_send_video') : (bool) data_get($payload, 'linkedin_send_video', false),
+            'linkedin_send_images' => $request->has('linkedin_send_images') ? $request->boolean('linkedin_send_images') : (bool) data_get($payload, 'linkedin_send_images', false),
             'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : (bool) data_get($payload, 'cta_enabled', true),
             'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
             'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
             'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
             'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
             'text_command' => trim((string) ($data['text_command'] ?? data_get($payload, 'text_command', ''))),
+            'render_config' => [
+                'font_family' => (string) $data['font_family'],
+                'hook_background' => (string) data_get($payload, 'hook_background', 'primary'),
+                'hook_position' => (string) data_get($payload, 'hook_position', 'center'),
+                'cta_position' => (string) data_get($payload, 'cta_position', 'bottom'),
+                'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
+                'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
+                'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
+            ],
+            'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
             'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
             'source_fingerprint' => hash('sha256', json_encode([
                 'product_id' => (int) $data['product_id'],
@@ -752,7 +1058,7 @@ class VideoStudioController extends Controller
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
             'build_now' => $buildNow,
         ]);
-        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['transition'], $data['transition_duration'], $data['text_command']);
+        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['youtube_enabled'], $data['aparat_enabled'], $data['linkedin_enabled'], $data['telegram_send_video'], $data['telegram_send_images'], $data['instagram_send_video'], $data['instagram_send_images'], $data['youtube_send_video'], $data['youtube_send_images'], $data['aparat_send_video'], $data['aparat_send_images'], $data['linkedin_send_video'], $data['linkedin_send_images'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['transition'], $data['transition_duration'], $data['text_command']);
         $data['selected_images'] = $selectedImages ?: (array) $job->selected_images;
         $data['payload'] = $payload;
         if ($buildNow) {
@@ -831,6 +1137,90 @@ class VideoStudioController extends Controller
         return back()->with('success', 'سفارش‌های انتخاب‌شده برای ساخت مجدد ارسال شدند.');
     }
 
+    /**
+     * رنگ‌های پایه از توکن‌های موجود پنل می‌آیند؛ رنگ سفارشی فقط برای همان مدیر نگه‌داری می‌شود.
+     * مقدار render_value به ورکفلو داده می‌شود تا خروجی با پیش‌نمایش هم‌خوان بماند.
+     */
+    private function hookColorOptions(string $target): array
+    {
+        $defaults = $this->defaultHookColors($target);
+        if (! Schema::hasTable('video_studio_hook_colors') || ! auth('admin')->check()) {
+            return $defaults;
+        }
+
+        $custom = VideoStudioHookColor::query()
+            ->where('admin_id', auth('admin')->id())
+            ->where('target', $target)
+            ->latest('id')
+            ->get()
+            ->map(fn (VideoStudioHookColor $color): array => $this->hookColorPayload($color))
+            ->all();
+
+        return array_merge($defaults, $custom);
+    }
+
+    private function defaultHookColors(string $target): array
+    {
+        $colors = [
+            'background' => [
+                ['key' => 'primary', 'name' => 'سبز وطن', 'css_value' => 'var(--primary)', 'render_value' => '#16594F', 'is_custom' => false],
+                ['key' => 'dark', 'name' => 'مشکی', 'css_value' => 'var(--text-h)', 'render_value' => '#000000', 'is_custom' => false],
+                ['key' => 'light', 'name' => 'سفید', 'css_value' => 'var(--card-bg)', 'render_value' => '#FFFFFF', 'is_custom' => false],
+                ['key' => 'neutral', 'name' => 'خاکستری', 'css_value' => 'var(--text-soft)', 'render_value' => '#686E6B', 'is_custom' => false],
+            ],
+            'text' => [
+                ['key' => 'dark', 'name' => 'مشکی', 'css_value' => 'var(--text-h)', 'render_value' => '#000000', 'is_custom' => false],
+                ['key' => 'light', 'name' => 'سفید', 'css_value' => 'var(--card-bg)', 'render_value' => '#FFFFFF', 'is_custom' => false],
+                ['key' => 'primary', 'name' => 'سبز وطن', 'css_value' => 'var(--primary)', 'render_value' => '#16594F', 'is_custom' => false],
+                ['key' => 'neutral', 'name' => 'خاکستری', 'css_value' => 'var(--text-soft)', 'render_value' => '#686E6B', 'is_custom' => false],
+            ],
+        ];
+
+        return $colors[$target] ?? [];
+    }
+
+    private function hookColorPayload(VideoStudioHookColor $color): array
+    {
+        return [
+            'key' => 'custom-' . $color->id,
+            'name' => $color->name,
+            'css_value' => $color->color_value,
+            'render_value' => $color->color_value,
+            'is_custom' => true,
+            'id' => $color->id,
+        ];
+    }
+
+    private function resolveHookColor(string $key, string $target): array
+    {
+        foreach ($this->defaultHookColors($target) as $color) {
+            if ($color['key'] === $key) {
+                return $color;
+            }
+        }
+        if (preg_match('/^custom-(\d+)$/', $key, $matches) && Schema::hasTable('video_studio_hook_colors')) {
+            $color = VideoStudioHookColor::query()
+                ->whereKey((int) $matches[1])
+                ->where('admin_id', auth('admin')->id())
+                ->where('target', $target)
+                ->first();
+            if ($color) {
+                return $this->hookColorPayload($color);
+            }
+        }
+
+        return $this->defaultHookColors($target)[0];
+    }
+
+    private function isKnownHookColor(string $key, string $target): bool
+    {
+        if ($key === '') {
+            return true;
+        }
+
+        return $this->resolveHookColor($key, $target)['key'] === $key;
+    }
+
     private function normalizeTelegramButtons(Request $request): array
     {
         if (!$request->boolean('telegram_buttons_enabled')) {
@@ -861,6 +1251,41 @@ class VideoStudioController extends Controller
         }
 
         return array_slice($buttons, 0, 8);
+    }
+
+    /**
+     * برآورد سبک و بدون فراخوانی زندهٔ سرویس‌دهنده؛ نرخ از جدول نرخ ارز موجود خوانده می‌شود.
+     */
+    private function estimateVideoCost(int $productId, string $aspectRatio): array
+    {
+        if (! Schema::hasTable('finance_exchange_rates') || ! Schema::hasColumn('finance_exchange_rates', 'rate_to_toman')) {
+            return [];
+        }
+
+        $product = Product::query()->find($productId);
+        $model = $product && filled($product->primary_model)
+            ? AiModel::query()->where('openrouter_model_id', $product->primary_model)->first()
+            : null;
+        if (! $model) {
+            return [];
+        }
+
+        $unitUsd = app(StudioCostService::class)->modelUnitPrice($model, 'video', '', null, $aspectRatio);
+        $rateToman = (float) FinanceExchangeRate::query()
+            ->where('currency', 'USD')
+            ->where('rate_to_toman', '>', 0)
+            ->latest('rate_date')
+            ->value('rate_to_toman');
+        if (! is_numeric($unitUsd) || (float) $unitUsd <= 0 || $rateToman <= 0) {
+            return [];
+        }
+
+        return [
+            'usd' => round((float) $unitUsd, 6),
+            'toman' => round((float) $unitUsd * $rateToman, 2),
+            'rate_toman' => round($rateToman, 2),
+            'source' => 'قیمت مدل و نرخ ارز ثبت‌شده',
+        ];
     }
 
     private function dispatchJobToWorkflow(VideoStudioJob $job): void
@@ -938,22 +1363,75 @@ class VideoStudioController extends Controller
                 'prompt_profile' => $promptProfile,
                 'instagram_prompt' => (string) ($payload['instagram_prompt'] ?? ''),
                 'telegram_prompt' => (string) ($payload['telegram_prompt'] ?? ''),
+                'youtube_prompt' => (string) ($payload['youtube_prompt'] ?? ''),
+                'aparat_prompt' => (string) ($payload['aparat_prompt'] ?? ''),
+                'linkedin_prompt' => (string) ($payload['linkedin_prompt'] ?? ''),
                 'telegram_caption_text' => (string) ($payload['telegram_caption_text'] ?? ''),
+                'youtube_caption_text' => (string) ($payload['youtube_caption_text'] ?? ''),
+                'aparat_caption_text' => (string) ($payload['aparat_caption_text'] ?? ''),
+                'linkedin_caption_text' => (string) ($payload['linkedin_caption_text'] ?? ''),
                 'telegram_buttons' => is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
                 'instagram_enabled' => (bool) ($payload['instagram_enabled'] ?? true),
                 'telegram_enabled' => (bool) ($payload['telegram_enabled'] ?? true),
+                'youtube_enabled' => (bool) ($payload['youtube_enabled'] ?? false),
+                'aparat_enabled' => (bool) ($payload['aparat_enabled'] ?? false),
+                'linkedin_enabled' => (bool) ($payload['linkedin_enabled'] ?? false),
+                'telegram_send_video' => (bool) ($payload['telegram_send_video'] ?? true),
+                'telegram_send_images' => (bool) ($payload['telegram_send_images'] ?? false),
+                'instagram_send_video' => (bool) ($payload['instagram_send_video'] ?? true),
+                'instagram_send_images' => (bool) ($payload['instagram_send_images'] ?? false),
+                'youtube_send_video' => (bool) ($payload['youtube_send_video'] ?? false),
+                'youtube_send_images' => (bool) ($payload['youtube_send_images'] ?? false),
+                'aparat_send_video' => (bool) ($payload['aparat_send_video'] ?? false),
+                'aparat_send_images' => (bool) ($payload['aparat_send_images'] ?? false),
+                'linkedin_send_video' => (bool) ($payload['linkedin_send_video'] ?? false),
+                'linkedin_send_images' => (bool) ($payload['linkedin_send_images'] ?? false),
                 'cta_enabled' => (bool) ($payload['cta_enabled'] ?? true),
                 'cta_text' => (string) ($payload['cta_text'] ?? ''),
                 'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
+                'hook_background' => (string) ($payload['hook_background'] ?? 'primary'),
+                'hook_background_color' => (string) ($payload['hook_background_color'] ?? '#16594F'),
+                'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
+                'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
+                'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
+                'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
+                'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
+                'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
+                'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($payload['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
                 'text_command' => (string) ($payload['text_command'] ?? ''),
+                'render_config' => is_array($payload['render_config'] ?? null) ? $payload['render_config'] : [
+                    'font_family' => $fontFamily,
+                    'hook_background' => (string) ($payload['hook_background'] ?? 'primary'),
+                    'hook_background_color' => (string) ($payload['hook_background_color'] ?? '#16594F'),
+                    'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),
+                    'hook_text_color_value' => (string) ($payload['hook_text_color_value'] ?? '#FFFFFF'),
+                    'hook_font_size' => (float) ($payload['hook_font_size'] ?? 36),
+                    'hook_scale' => (float) ($payload['hook_scale'] ?? 1),
+                    'hook_vertical_offset' => (float) ($payload['hook_vertical_offset'] ?? 0),
+                    'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
+                    'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
+                    'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
+                    'transition' => (string) ($payload['transition'] ?? 'cut'),
+                    'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
+                ],
                 'video_code' => method_exists($job, 'shortCode') ? $job->shortCode() : ('P' . strtoupper(base_convert((string) $job->id, 10, 36))),
                 'telegram_topics' => [
                     'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
                     'instagram_thread_id' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', ''),
                     'telegram_thread_id' => (string) config('services.n8n.video_studio_telegram_channel_thread_id', ''),
                     'music_thread_id' => (string) config('services.n8n.video_studio_telegram_music_thread_id', ''),
+                    'linkedin_thread_id' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
+                    'aparat_thread_id' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
+                    'youtube_thread_id' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),
+                    'platform_topics' => [
+                        'instagram' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', '4'),
+                        'telegram' => (string) config('services.n8n.video_studio_telegram_channel_thread_id', '2'),
+                        'linkedin' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
+                        'aparat' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
+                        'youtube' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),
+                    ],
                 ],
                 'revision_request' => (string) ($payload['revision_request'] ?? ''),
                 'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
