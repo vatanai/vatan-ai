@@ -80,23 +80,52 @@
   const ctaText = document.getElementById('v2-modern-cta-text');
   const ctaScreen = document.getElementById('v2-modern-cta-screen');
   const ctaPreview = document.getElementById('v2-modern-cta-preview');
+  const ctaColorInput = target => document.querySelector(`input[name="${target === 'background' ? 'cta_background' : 'cta_text_color'}"]:checked`);
+  const syncCtaColors = () => {
+    const background = ctaColorInput('background');
+    const text = ctaColorInput('text');
+    ctaScreen?.style.setProperty('--v2-hook-bg', background?.dataset.v2ColorCss || 'var(--primary)');
+    ctaScreen?.style.setProperty('--v2-hook-fg', text?.dataset.v2ColorCss || 'var(--card-bg)');
+  };
+  const ctaSize = document.getElementById('v2-modern-cta-font-size');
+  const ctaScale = document.getElementById('v2-modern-cta-scale');
+  const ctaOffset = document.getElementById('v2-modern-cta-offset');
+  const ctaWeight = () => document.querySelector('input[name="cta_font_weight"]:checked')?.value || '3';
+  const syncCtaMetrics = () => {
+    if (!ctaPreview) return;
+    ctaPreview.style.setProperty('font-family', `'${document.querySelector('input[name="font_family"]:checked')?.value || 'B_Yekan'}'`, 'important');
+    ctaPreview.style.fontWeight = String(fontWeight[ctaWeight()] || 500);
+    ctaPreview.style.fontSize = `${ctaSize?.value || 36}px`;
+    ctaPreview.style.setProperty('--v2-hook-scale', ctaScale?.value || 1);
+    ctaPreview.style.setProperty('--v2-hook-offset', ctaOffset?.value || 0);
+    const sizeOutput = document.getElementById('v2-modern-cta-font-size-output');
+    const scaleOutput = document.getElementById('v2-modern-cta-scale-output');
+    const offsetOutput = document.getElementById('v2-modern-cta-offset-output');
+    if (sizeOutput) sizeOutput.textContent = toPersian(ctaSize?.value || 36);
+    if (scaleOutput) scaleOutput.textContent = `${toPersian(ctaScale?.value || 1)}×`;
+    if (offsetOutput) offsetOutput.textContent = `${toPersian(ctaOffset?.value || 0)}٪`;
+  };
   const syncCtaPreview = () => {
     if (!ctaPreview || !ctaScreen) return;
-    const text = String(ctaText?.value || '').trim() || 'برای دیدن جزئیات، محصول را ببینید.';
-    const background = document.querySelector('input[name="cta_background"]:checked');
+    const text = String(ctaText?.value || '').trim() || 'برای دیدن جزئیات محصول، همین حالا اقدام کنید';
     ctaPreview.textContent = text;
-    ctaScreen.style.setProperty('--v2-hook-bg', background?.dataset.v2CtaColorCss || 'var(--primary)');
-    ctaScreen.style.setProperty('--v2-hook-fg', 'var(--card-bg)');
-    ctaPreview.style.setProperty('font-family', `'${document.querySelector('input[name="font_family"]:checked')?.value || 'B_Yekan'}'`, 'important');
-    ctaPreview.style.fontWeight = String(fontWeight[hookWeight()] || 500);
-    ctaPreview.style.fontSize = `${Math.max(18, Math.min(42, Number(hookSize?.value || 36) * .8))}px`;
     ctaScreen.style.opacity = ctaEnabled?.checked === false ? '.45' : '1';
+    syncCtaColors();
+    syncCtaMetrics();
   };
+  const syncCtaChoice = () => {
+    const selected = document.querySelector('input[name="cta_text_choice"]:checked');
+    if (selected && ctaText) ctaText.value = selected.value;
+    document.querySelectorAll('#v2-modern-cta-grid .v2-hook-card').forEach(card => card.classList.toggle('is-selected', Boolean(card.querySelector('input')?.checked)));
+    syncCtaPreview();
+  };
+  document.querySelectorAll('input[name="cta_text_choice"]').forEach(input => input.addEventListener('change', syncCtaChoice));
   ctaText?.addEventListener('input', syncCtaPreview);
   ctaEnabled?.addEventListener('change', syncCtaPreview);
-  document.querySelectorAll('input[name="cta_background"],input[name="font_family"],input[name="hook_font_weight"]').forEach(input => input.addEventListener('change', syncCtaPreview));
-  hookSize?.addEventListener('input', syncCtaPreview);
-  syncCtaPreview();
+  document.querySelectorAll('input[name="cta_background"],input[name="cta_text_color"]').forEach(input => input.addEventListener('change', syncCtaPreview));
+  document.querySelectorAll('input[name="font_family"],input[name="cta_font_weight"]').forEach(input => input.addEventListener('change', syncCtaPreview));
+  [ctaSize, ctaScale, ctaOffset].forEach(input => input?.addEventListener('input', syncCtaPreview));
+  syncCtaChoice(); syncCtaPreview();
 
   const ctaDuration = document.getElementById('v2-modern-cta-duration');
   const ctaDurationMode = document.getElementById('v2-modern-cta-duration-mode');
@@ -143,6 +172,30 @@
       });
       holder.querySelector('input')?.click();
     } catch (error) { window.alert(error.message || 'ساخت هوک ناموفق بود.'); }
+    finally { button.disabled = false; }
+  });
+  const ctaPromptModal = document.getElementById('v2-cta-prompt-modal');
+  const ctaPromptText = document.getElementById('v2-cta-prompt-text');
+  const ctaPromptValue = document.getElementById('v2-modern-cta-guidelines');
+  document.getElementById('v2-modern-open-cta-prompt')?.addEventListener('click', () => { if (ctaPromptText) ctaPromptText.value = ctaPromptValue?.value || ''; ctaPromptModal?.classList.add('is-open'); });
+  const closeCtaPrompt = () => ctaPromptModal?.classList.remove('is-open');
+  document.getElementById('v2-cta-prompt-close')?.addEventListener('click', closeCtaPrompt);
+  ctaPromptModal?.addEventListener('click', event => { if (event.target === ctaPromptModal) closeCtaPrompt(); });
+  document.getElementById('v2-cta-prompt-save')?.addEventListener('click', () => { if (ctaPromptValue) ctaPromptValue.value = ctaPromptText?.value || ''; closeCtaPrompt(); });
+  document.getElementById('v2-modern-regenerate-cta')?.addEventListener('click', async event => {
+    if (!product?.value) { window.alert('ابتدا یک محصول انتخاب کنید.'); return; }
+    const button = event.currentTarget; const payload = new FormData();
+    payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('channel', 'instagram');
+    payload.append('hook_guidelines', ctaPromptValue?.value || '');
+    button.disabled = true;
+    try {
+      const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: payload });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ساخت CTA ناموفق بود.');
+      const values = (data.hook_options || []).map(value => String(value || '').trim()).filter(Boolean).slice(0, 3); const holder = document.getElementById('v2-modern-cta-grid');
+      if (!values.length || !holder) return; holder.replaceChildren();
+      values.forEach((text, index) => { const label = document.createElement('label'); label.className = 'v2-hook-card'; const input = document.createElement('input'); input.type = 'radio'; input.name = 'cta_text_choice'; input.value = text; input.addEventListener('change', syncCtaChoice); const title = document.createElement('strong'); title.textContent = `گزینه ${toPersian(index + 1)}`; const copy = document.createElement('p'); copy.textContent = text; label.append(input, title, copy); holder.appendChild(label); });
+      holder.querySelector('input')?.click();
+    } catch (error) { window.alert(error.message || 'ساخت CTA ناموفق بود.'); }
     finally { button.disabled = false; }
   });
 
@@ -343,12 +396,18 @@
   telegramButtons?.addEventListener('input', updateTelegramPreview); telegramButtons?.addEventListener('change', updateTelegramPreview); updateInstagramPreview(); updateTelegramPreview();
 
   const colors = @json($hookColors); let colorTarget = 'background';
+  const colorTargetMeta = target => ({
+    apiTarget: target === 'cta_background' || target === 'cta_text' ? (target === 'cta_background' ? 'background' : 'text') : target,
+    inputName: target === 'background' ? 'hook_background' : target === 'text' ? 'hook_text_color' : target === 'cta_background' ? 'cta_background' : 'cta_text_color',
+    title: target === 'background' ? 'مدیریت رنگ پس‌زمینه هوک' : target === 'text' ? 'مدیریت رنگ متن هوک' : target === 'cta_background' ? 'مدیریت رنگ پس‌زمینه CTA' : 'مدیریت رنگ متن CTA',
+  });
   const colorModal = document.getElementById('v2-modern-color-modal'); const colorList = document.getElementById('v2-modern-color-manager-list');
   const colorName = document.getElementById('v2-modern-color-name'); const colorValue = document.getElementById('v2-modern-color-value');
   const renderColorManager = () => {
-    document.getElementById('v2-modern-color-title').textContent = colorTarget === 'background' ? 'مدیریت رنگ پس‌زمینه هوک' : 'مدیریت رنگ متن هوک';
+    const meta = colorTargetMeta(colorTarget);
+    document.getElementById('v2-modern-color-title').textContent = meta.title;
     colorList.replaceChildren();
-    (colors[colorTarget] || []).forEach(color => {
+    (colors[meta.apiTarget] || []).forEach(color => {
       const item = document.createElement('div'); item.className = 'v2-modern-managed-color';
       const swatch = document.createElement('span'); swatch.className = 'v2-modern-managed-swatch'; swatch.style.setProperty('--v2-color', color.css_value);
       const label = document.createElement('span'); label.textContent = color.name;
@@ -358,21 +417,23 @@
     });
   };
   const colorOption = (target, color) => {
+    const meta = colorTargetMeta(target);
     const wrapper = document.createElement('div'); wrapper.className = 'v2-modern-color';
-    const input = document.createElement('input'); input.type = 'radio'; input.name = target === 'background' ? 'hook_background' : 'hook_text_color'; input.value = color.key; input.id = `v2-modern-${target}-${color.key}`; input.dataset.v2ColorCss = color.css_value; input.dataset.v2ColorRender = color.render_value;
-    const label = document.createElement('label'); label.htmlFor = input.id; label.title = color.name; label.style.setProperty('--v2-color', color.css_value); input.addEventListener('change', syncHookColors); wrapper.append(input, label); return wrapper;
+    const input = document.createElement('input'); input.type = 'radio'; input.name = meta.inputName; input.value = color.key; input.id = `v2-modern-${target}-${color.key}`; input.dataset.v2ColorCss = color.css_value; input.dataset.v2ColorRender = color.render_value;
+    const label = document.createElement('label'); label.htmlFor = input.id; label.title = color.name; label.style.setProperty('--v2-color', color.css_value); input.addEventListener('change', target.startsWith('cta_') ? syncCtaColors : syncHookColors); wrapper.append(input, label); return wrapper;
   };
   const openColorManager = target => { colorTarget = target; renderColorManager(); colorModal?.classList.add('is-open'); };
   document.querySelectorAll('[data-v2-modern-open-colors]').forEach(button => button.addEventListener('click', () => openColorManager(button.dataset.v2ModernOpenColors)));
   const closeColorManager = () => colorModal?.classList.remove('is-open'); document.getElementById('v2-modern-close-colors')?.addEventListener('click', closeColorManager); colorModal?.addEventListener('click', event => { if (event.target === colorModal) closeColorManager(); });
   document.getElementById('v2-modern-save-color')?.addEventListener('click', async event => {
     const value = colorValue.value.trim(); if (!/^#[0-9a-fA-F]{6}$/.test(value)) { window.alert('کد رنگ را به صورت #RRGGBB وارد کنید.'); return; }
+    const meta = colorTargetMeta(colorTarget);
     const button = event.currentTarget; button.disabled = true;
     try {
-      const response = await fetch('{{ route('admin.video-studio.experimental.hook-colors.store') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, Accept: 'application/json' }, body: JSON.stringify({ target: colorTarget, name: colorName.value.trim(), color_value: value }) });
+      const response = await fetch('{{ route('admin.video-studio.experimental.hook-colors.store') }}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, Accept: 'application/json' }, body: JSON.stringify({ target: meta.apiTarget, name: colorName.value.trim(), color_value: value }) });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ذخیره رنگ ناموفق بود.');
-      const previous = colors[colorTarget].findIndex(color => color.key === data.color.key); if (previous >= 0) colors[colorTarget][previous] = data.color; else colors[colorTarget].push(data.color);
-      const list = document.querySelector(`[data-v2-modern-color-list="${colorTarget}"]`); const add = list.querySelector('[data-v2-modern-open-colors]'); const option = colorOption(colorTarget, data.color); list.insertBefore(option, add); option.querySelector('input').checked = true; syncHookColors(); colorName.value = ''; renderColorManager();
+      const previous = colors[meta.apiTarget].findIndex(color => color.key === data.color.key); if (previous >= 0) colors[meta.apiTarget][previous] = data.color; else colors[meta.apiTarget].push(data.color);
+      const list = document.querySelector(`[data-v2-modern-color-list="${colorTarget}"]`); const add = list.querySelector('[data-v2-modern-open-colors]'); const option = colorOption(colorTarget, data.color); list.insertBefore(option, add); option.querySelector('input').checked = true; syncHookColors(); syncCtaColors(); colorName.value = ''; renderColorManager();
     } catch (error) { window.alert(error.message || 'ذخیره رنگ ناموفق بود.'); }
     finally { button.disabled = false; }
   });
@@ -380,14 +441,15 @@
     const button = event.target.closest('[data-v2-modern-remove-color]'); if (!button) return;
     const isCustom = button.dataset.v2ModernColorCustom === '1';
     const colorKey = button.dataset.v2ModernRemoveColor;
+    const meta = colorTargetMeta(colorTarget);
     const response = await fetch(isCustom
       ? '{{ route('admin.video-studio.experimental.hook-colors.destroy', ['color' => '__COLOR__']) }}'.replace('__COLOR__', colorKey)
-      : '{{ route('admin.video-studio.experimental.hook-colors.defaults.destroy', ['target' => '__TARGET__', 'colorKey' => '__COLOR_KEY__']) }}'.replace('__TARGET__', colorTarget).replace('__COLOR_KEY__', colorKey), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
+      : '{{ route('admin.video-studio.experimental.hook-colors.defaults.destroy', ['target' => '__TARGET__', 'colorKey' => '__COLOR_KEY__']) }}'.replace('__TARGET__', meta.apiTarget).replace('__COLOR_KEY__', colorKey), { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' } });
     if (!response.ok) { window.alert('حذف رنگ ناموفق بود.'); return; }
     const key = isCustom ? `custom-${colorKey}` : colorKey; const selected = document.getElementById(`v2-modern-${colorTarget}-${key}`)?.checked;
-    colors[colorTarget] = colors[colorTarget].filter(color => color.key !== key); document.getElementById(`v2-modern-${colorTarget}-${key}`)?.closest('.v2-modern-color')?.remove();
+    colors[meta.apiTarget] = colors[meta.apiTarget].filter(color => color.key !== key); document.getElementById(`v2-modern-${colorTarget}-${key}`)?.closest('.v2-modern-color')?.remove();
     if (selected) document.querySelector(`[data-v2-modern-color-list="${colorTarget}"] input`)?.click();
-    renderColorManager(); syncHookColors();
+    renderColorManager(); syncHookColors(); syncCtaColors();
   });
   form.addEventListener('v2:settings-applied', () => {
     syncHookText(hookManual?.value || hookValue?.value || '');

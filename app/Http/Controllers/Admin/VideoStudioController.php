@@ -642,7 +642,21 @@ class VideoStudioController extends Controller
             'linkedin_send_images' => ['nullable', 'boolean'],
             'cta_enabled' => ['nullable', 'boolean'],
             'cta_text' => ['nullable', 'string', 'max:1000'],
-            'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
+            'cta_background' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'background')) {
+                    $fail('رنگ پس‌زمینه CTA معتبر نیست.');
+                }
+            }],
+            'cta_text_color' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'text')) {
+                    $fail('رنگ متن CTA معتبر نیست.');
+                }
+            }],
+            'cta_font_size' => ['nullable', 'numeric', 'between:20,72'],
+            'cta_font_weight' => ['nullable', 'integer', 'between:1,5'],
+            'cta_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
+            'cta_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
+            'cta_guidelines' => ['nullable', 'string', 'max:5000'],
             'cta_duration' => ['nullable', 'numeric', 'between:0.1,5'],
             'cta_duration_mode' => ['nullable', Rule::in(['manual', 'auto'])],
             'hook_background' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
@@ -730,6 +744,12 @@ class VideoStudioController extends Controller
         $data['hook_background_color'] = $hookBackground['render_value'];
         $data['hook_text_color'] = $hookTextColor['key'];
         $data['hook_text_color_value'] = $hookTextColor['render_value'];
+        $ctaBackground = $this->resolveHookColor((string) ($data['cta_background'] ?? 'primary'), 'background');
+        $ctaTextColor = $this->resolveHookColor((string) ($data['cta_text_color'] ?? 'light'), 'text');
+        $data['cta_background'] = $ctaBackground['key'];
+        $data['cta_background_color'] = $ctaBackground['render_value'];
+        $data['cta_text_color'] = $ctaTextColor['key'];
+        $data['cta_text_color_value'] = $ctaTextColor['render_value'];
         if (Schema::hasTable('video_studio_social_prompts')) {
             $savedPrompts = VideoStudioSocialPrompt::query()
                 ->where('admin_id', auth('admin')->id())
@@ -825,6 +845,14 @@ class VideoStudioController extends Controller
             'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? 'manual'),
             'cta_duration' => (float) ($data['cta_duration'] ?? 2),
             'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? 'manual'),
+            'cta_enabled' => (bool) ($data['cta_enabled'] ?? true),
+            'cta_text' => (string) ($data['cta_text'] ?? ''),
+            'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+            'cta_text_color' => (string) ($data['cta_text_color'] ?? 'light'),
+            'cta_font_size' => (float) ($data['cta_font_size'] ?? 36),
+            'cta_font_weight' => (int) ($data['cta_font_weight'] ?? 3),
+            'cta_scale' => (float) ($data['cta_scale'] ?? 1),
+            'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? 0),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $recentDuplicate = VideoStudioJob::query()
             ->whereIn('status', ['queued', 'processing'])
@@ -885,6 +913,14 @@ class VideoStudioController extends Controller
                 'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : true,
                 'cta_text' => (string) ($data['cta_text'] ?? ''),
                 'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+                'cta_background_color' => (string) ($data['cta_background_color'] ?? '#16594F'),
+                'cta_text_color' => (string) ($data['cta_text_color'] ?? 'light'),
+                'cta_text_color_value' => (string) ($data['cta_text_color_value'] ?? '#FFFFFF'),
+                'cta_font_size' => (float) ($data['cta_font_size'] ?? 36),
+                'cta_font_weight' => (int) ($data['cta_font_weight'] ?? 3),
+                'cta_scale' => (float) ($data['cta_scale'] ?? 1),
+                'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? 0),
+                'cta_guidelines' => (string) ($data['cta_guidelines'] ?? ''),
                 'cta_duration' => (float) ($data['cta_duration'] ?? 2),
                 'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? 'manual'),
                 'hook_background' => (string) ($data['hook_background'] ?? 'primary'),
@@ -922,7 +958,17 @@ class VideoStudioController extends Controller
                     'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? 'manual'),
                     'hook_position' => (string) ($data['hook_position'] ?? 'center'),
                     'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
+                    'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : true,
+                    'cta_text' => (string) ($data['cta_text'] ?? ''),
                     'cta_background' => (string) ($data['cta_background'] ?? 'primary'),
+                    'cta_background_color' => (string) ($data['cta_background_color'] ?? '#16594F'),
+                    'cta_text_color' => (string) ($data['cta_text_color'] ?? 'light'),
+                    'cta_text_color_value' => (string) ($data['cta_text_color_value'] ?? '#FFFFFF'),
+                    'cta_font_size' => (float) ($data['cta_font_size'] ?? 36),
+                    'cta_font_weight' => (int) ($data['cta_font_weight'] ?? 3),
+                    'cta_scale' => (float) ($data['cta_scale'] ?? 1),
+                    'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? 0),
+                    'cta_guidelines' => (string) ($data['cta_guidelines'] ?? ''),
                     'cta_duration' => (float) ($data['cta_duration'] ?? 2),
                     'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? 'manual'),
                     'transition' => (string) ($data['transition'] ?? 'cut'),
@@ -973,7 +1019,21 @@ class VideoStudioController extends Controller
             'linkedin_send_images' => ['nullable', 'boolean'],
             'cta_enabled' => ['nullable', 'boolean'],
             'cta_text' => ['nullable', 'string', 'max:1000'],
-            'cta_background' => ['nullable', Rule::in(['primary', 'light', 'dark'])],
+            'cta_background' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'background')) {
+                    $fail('رنگ پس‌زمینه CTA معتبر نیست.');
+                }
+            }],
+            'cta_text_color' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'text')) {
+                    $fail('رنگ متن CTA معتبر نیست.');
+                }
+            }],
+            'cta_font_size' => ['nullable', 'numeric', 'between:20,72'],
+            'cta_font_weight' => ['nullable', 'integer', 'between:1,5'],
+            'cta_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
+            'cta_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
+            'cta_guidelines' => ['nullable', 'string', 'max:5000'],
             'cta_duration' => ['nullable', 'numeric', 'between:0.1,5'],
             'cta_duration_mode' => ['nullable', Rule::in(['manual', 'auto'])],
             'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
@@ -1043,6 +1103,12 @@ class VideoStudioController extends Controller
             ->values()
             ->all();
         $buttons = $this->normalizeTelegramButtons($request);
+        $ctaBackground = $this->resolveHookColor((string) ($data['cta_background'] ?? data_get($job->payload, 'cta_background', 'primary')), 'background');
+        $ctaTextColor = $this->resolveHookColor((string) ($data['cta_text_color'] ?? data_get($job->payload, 'cta_text_color', 'light')), 'text');
+        $data['cta_background'] = $ctaBackground['key'];
+        $data['cta_background_color'] = $ctaBackground['render_value'];
+        $data['cta_text_color'] = $ctaTextColor['key'];
+        $data['cta_text_color_value'] = $ctaTextColor['render_value'];
         $payload = is_array($job->payload) ? $job->payload : [];
         if (Schema::hasTable('video_studio_social_prompts')) {
             $savedPrompts = VideoStudioSocialPrompt::query()
@@ -1094,6 +1160,14 @@ class VideoStudioController extends Controller
             'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : (bool) data_get($payload, 'cta_enabled', true),
             'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
             'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
+            'cta_background_color' => (string) ($data['cta_background_color'] ?? data_get($payload, 'cta_background_color', '#16594F')),
+            'cta_text_color' => (string) ($data['cta_text_color'] ?? data_get($payload, 'cta_text_color', 'light')),
+            'cta_text_color_value' => (string) ($data['cta_text_color_value'] ?? data_get($payload, 'cta_text_color_value', '#FFFFFF')),
+            'cta_font_size' => (float) ($data['cta_font_size'] ?? data_get($payload, 'cta_font_size', 36)),
+            'cta_font_weight' => (int) ($data['cta_font_weight'] ?? data_get($payload, 'cta_font_weight', 3)),
+            'cta_scale' => (float) ($data['cta_scale'] ?? data_get($payload, 'cta_scale', 1)),
+            'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? data_get($payload, 'cta_vertical_offset', 0)),
+            'cta_guidelines' => (string) ($data['cta_guidelines'] ?? data_get($payload, 'cta_guidelines', '')),
             'cta_duration' => (float) ($data['cta_duration'] ?? data_get($payload, 'cta_duration', 2)),
             'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? data_get($payload, 'cta_duration_mode', 'manual')),
             'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
@@ -1105,8 +1179,18 @@ class VideoStudioController extends Controller
                 'hook_position' => (string) data_get($payload, 'hook_position', 'center'),
                 'cta_position' => (string) data_get($payload, 'cta_position', 'bottom'),
                 'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
+                'cta_background_color' => (string) ($data['cta_background_color'] ?? data_get($payload, 'cta_background_color', '#16594F')),
+                'cta_text_color' => (string) ($data['cta_text_color'] ?? data_get($payload, 'cta_text_color', 'light')),
+                'cta_text_color_value' => (string) ($data['cta_text_color_value'] ?? data_get($payload, 'cta_text_color_value', '#FFFFFF')),
+                'cta_font_size' => (float) ($data['cta_font_size'] ?? data_get($payload, 'cta_font_size', 36)),
+                'cta_font_weight' => (int) ($data['cta_font_weight'] ?? data_get($payload, 'cta_font_weight', 3)),
+                'cta_scale' => (float) ($data['cta_scale'] ?? data_get($payload, 'cta_scale', 1)),
+                'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? data_get($payload, 'cta_vertical_offset', 0)),
+                'cta_guidelines' => (string) ($data['cta_guidelines'] ?? data_get($payload, 'cta_guidelines', '')),
                 'cta_duration' => (float) ($data['cta_duration'] ?? data_get($payload, 'cta_duration', 2)),
                 'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? data_get($payload, 'cta_duration_mode', 'manual')),
+                'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : (bool) data_get($payload, 'cta_enabled', true),
+                'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
                 'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
                 'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
             ],
@@ -1120,10 +1204,18 @@ class VideoStudioController extends Controller
                 'aspect_ratio' => (string) $data['aspect_ratio'],
                 'cta_duration' => (float) ($data['cta_duration'] ?? data_get($payload, 'cta_duration', 2)),
                 'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? data_get($payload, 'cta_duration_mode', 'manual')),
+                'cta_enabled' => $request->has('cta_enabled') ? $request->boolean('cta_enabled') : (bool) data_get($payload, 'cta_enabled', true),
+                'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
+                'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
+                'cta_text_color' => (string) ($data['cta_text_color'] ?? data_get($payload, 'cta_text_color', 'light')),
+                'cta_font_size' => (float) ($data['cta_font_size'] ?? data_get($payload, 'cta_font_size', 36)),
+                'cta_font_weight' => (int) ($data['cta_font_weight'] ?? data_get($payload, 'cta_font_weight', 3)),
+                'cta_scale' => (float) ($data['cta_scale'] ?? data_get($payload, 'cta_scale', 1)),
+                'cta_vertical_offset' => (float) ($data['cta_vertical_offset'] ?? data_get($payload, 'cta_vertical_offset', 0)),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
             'build_now' => $buildNow,
         ]);
-        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['youtube_enabled'], $data['aparat_enabled'], $data['linkedin_enabled'], $data['telegram_send_video'], $data['telegram_send_images'], $data['instagram_send_video'], $data['instagram_send_images'], $data['youtube_send_video'], $data['youtube_send_images'], $data['aparat_send_video'], $data['aparat_send_images'], $data['linkedin_send_video'], $data['linkedin_send_images'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['cta_duration'], $data['cta_duration_mode'], $data['transition'], $data['transition_duration'], $data['text_command']);
+        unset($data['source_file'], $data['source_library_id'], $data['selected_images_text'], $data['telegram_buttons_enabled'], $data['telegram_button_label'], $data['telegram_button_url'], $data['telegram_button_style'], $data['telegram_button_width'], $data['build_now'], $data['instagram_enabled'], $data['telegram_enabled'], $data['youtube_enabled'], $data['aparat_enabled'], $data['linkedin_enabled'], $data['telegram_send_video'], $data['telegram_send_images'], $data['instagram_send_video'], $data['instagram_send_images'], $data['youtube_send_video'], $data['youtube_send_images'], $data['aparat_send_video'], $data['aparat_send_images'], $data['linkedin_send_video'], $data['linkedin_send_images'], $data['cta_enabled'], $data['cta_text'], $data['cta_background'], $data['cta_background_color'], $data['cta_text_color'], $data['cta_text_color_value'], $data['cta_font_size'], $data['cta_font_weight'], $data['cta_scale'], $data['cta_vertical_offset'], $data['cta_guidelines'], $data['cta_duration'], $data['cta_duration_mode'], $data['transition'], $data['transition_duration'], $data['text_command']);
         $data['selected_images'] = $selectedImages ?: (array) $job->selected_images;
         $data['payload'] = $payload;
         if ($buildNow) {
@@ -1520,6 +1612,14 @@ class VideoStudioController extends Controller
                 'cta_enabled' => (bool) ($payload['cta_enabled'] ?? true),
                 'cta_text' => (string) ($payload['cta_text'] ?? ''),
                 'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
+                'cta_background_color' => (string) ($payload['cta_background_color'] ?? '#16594F'),
+                'cta_text_color' => (string) ($payload['cta_text_color'] ?? 'light'),
+                'cta_text_color_value' => (string) ($payload['cta_text_color_value'] ?? '#FFFFFF'),
+                'cta_font_size' => (float) ($payload['cta_font_size'] ?? 36),
+                'cta_font_weight' => (int) ($payload['cta_font_weight'] ?? 3),
+                'cta_scale' => (float) ($payload['cta_scale'] ?? 1),
+                'cta_vertical_offset' => (float) ($payload['cta_vertical_offset'] ?? 0),
+                'cta_guidelines' => (string) ($payload['cta_guidelines'] ?? ''),
                 'cta_duration' => (float) ($payload['cta_duration'] ?? 2),
                 'cta_duration_mode' => (string) ($payload['cta_duration_mode'] ?? 'manual'),
                 'hook_background' => (string) ($payload['hook_background'] ?? 'primary'),
@@ -1557,6 +1657,14 @@ class VideoStudioController extends Controller
                     'hook_position' => (string) ($payload['hook_position'] ?? 'center'),
                     'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
                     'cta_background' => (string) ($payload['cta_background'] ?? 'primary'),
+                    'cta_background_color' => (string) ($payload['cta_background_color'] ?? '#16594F'),
+                    'cta_text_color' => (string) ($payload['cta_text_color'] ?? 'light'),
+                    'cta_text_color_value' => (string) ($payload['cta_text_color_value'] ?? '#FFFFFF'),
+                    'cta_font_size' => (float) ($payload['cta_font_size'] ?? 36),
+                    'cta_font_weight' => (int) ($payload['cta_font_weight'] ?? 3),
+                    'cta_scale' => (float) ($payload['cta_scale'] ?? 1),
+                    'cta_vertical_offset' => (float) ($payload['cta_vertical_offset'] ?? 0),
+                    'cta_guidelines' => (string) ($payload['cta_guidelines'] ?? ''),
                     'cta_duration' => (float) ($payload['cta_duration'] ?? 2),
                     'cta_duration_mode' => (string) ($payload['cta_duration_mode'] ?? 'manual'),
                     'transition' => (string) ($payload['transition'] ?? 'cut'),
