@@ -6,7 +6,7 @@
   @include('admin.partials.header')
   <div class="admin-content orders-page p-6 flex-1 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]" id="content" dir="rtl">
     @include('admin.orders.partials.messages')
-    <div class="orders-head"><div><div class="orders-title">سفارش #{{ $order->order_number }}</div><div class="orders-subtitle">ثبت‌شده در {{ \App\Support\Jalali::formatNumeric($order->created_at) }}</div></div><div class="orders-actions"><a href="{{ route('admin.orders.index') }}" class="order-btn"><i class="fa-solid fa-arrow-right"></i> بازگشت</a>@include('admin.orders.partials.status-badge',['status'=>$order->status])</div></div>
+    <div class="orders-head"><div><div class="orders-title">سفارش #{{ $order->order_number }}</div><div class="orders-subtitle">ثبت‌شده در {{ $order->created_at->format('Y/m/d H:i') }}</div></div><div class="orders-actions"><a href="{{ route('admin.orders.index') }}" class="order-btn"><i class="fa-solid fa-arrow-right"></i> بازگشت</a>@include('admin.orders.partials.status-badge',['status'=>$order->status])</div></div>
     <div class="order-detail-grid">
       <div>
         <section class="order-panel"><div class="order-panel-head"><div class="order-panel-title">اطلاعات سفارش</div></div><div class="order-info-grid">
@@ -33,7 +33,7 @@
           @if($order->error_message)<div class="order-info-row" style="grid-column:1/-1"><span class="order-info-key">شرح خطا</span><span class="order-info-value" style="color:var(--danger)">{{ $order->error_message }}</span></div>@endif
         </div></section>
         <section class="order-panel"><div class="order-panel-head"><div class="order-panel-title">تاریخچه سفارش</div></div><div class="order-timeline">
-          @forelse($order->events as $event)<div class="order-event"><div class="order-event-title">{{ $event->title }}</div>@if($event->description)<div class="order-event-desc">{{ $event->description }}</div>@endif<div class="order-event-time">{{ \App\Support\Jalali::formatNumeric($event->created_at) }} · {{ $event->admin?->name ?? 'سیستم' }}</div></div>@empty<div class="order-empty">هنوز رویدادی ثبت نشده است.</div>@endforelse
+          @forelse($order->events as $event)<div class="order-event"><div class="order-event-title">{{ $event->title }}</div>@if($event->description)<div class="order-event-desc">{{ $event->description }}</div>@endif<div class="order-event-time">{{ $event->created_at->format('Y/m/d H:i') }} · {{ $event->admin?->name ?? 'سیستم' }}</div></div>@empty<div class="order-empty">هنوز رویدادی ثبت نشده است.</div>@endforelse
         </div></section>
       </div>
       <aside>

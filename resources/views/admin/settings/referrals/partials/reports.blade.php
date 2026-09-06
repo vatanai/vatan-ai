@@ -49,7 +49,7 @@
             <td data-label="دعوت‌کننده"><strong>{{ trim(($item->inviter?->name ?? '').' '.($item->inviter?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->inviter?->phone }} · {{ $item->inviter?->referral_code }}</small></td>
             <td data-label="دعوت‌شده"><strong>{{ trim(($item->invitee?->name ?? '').' '.($item->invitee?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->invitee?->phone }}</small></td>
             <td data-label="خرید"><span class="badge-pro {{ $item->purchase_completed ? 'badge-success' : 'badge-neutral' }}">{{ $item->purchase_completed ? 'خرید موفق' : 'در انتظار خرید' }}</span></td>
-            <td data-label="پاداش پرداختی">{{ number_format((int) $item->paid_tokens) }} اعتبار</td>
+            <td data-label="پاداش پرداختی">{{ number_format((int) $item->paid_tokens) }} توکن</td>
             <td data-label="وضعیت">
               <span class="badge-pro {{ $item->status === 'qualified' ? 'badge-success' : ($item->status === 'under_review' ? 'badge-warning' : 'badge-danger') }}">{{ $item->status === 'qualified' ? 'معتبر' : ($item->status === 'under_review' ? 'نیازمند بررسی' : 'ردشده') }}</span>
               @if($item->risk_reason)<small class="referral-risk-reason">{{ $item->risk_reason }}</small>@endif
@@ -85,7 +85,7 @@
           <tr>
             <td data-label="کاربر"><strong>{{ trim(($item->user?->name ?? '').' '.($item->user?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->user?->phone }}</small></td>
             <td data-label="نوع پاداش">{{ $rewardLabel }}</td>
-            <td data-label="مقدار"><strong>{{ number_format($item->amount) }}</strong> اعتبار</td>
+            <td data-label="مقدار"><strong>{{ number_format($item->amount) }}</strong> توکن</td>
             <td data-label="وضعیت"><span class="badge-pro {{ $rewardStatusClass }}">{{ $rewardStatusLabel }}</span></td>
             <td data-label="دلیل / یادداشت"><span class="referral-cell-note">{{ $item->reason ?: '—' }}</span></td>
             <td data-label="زمان">{{ $item->created_at?->format('Y/m/d H:i') }}</td>

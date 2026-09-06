@@ -26,17 +26,17 @@ class GenerationController extends Controller
             'image' => 'required|image|max:10240',
         ]);
 
-        // فرضی: هزینه تولید هر تصویر ۱۰ اعتبار است
+        // فرضی: هزینه تولید هر تصویر ۱۰ توکن است
         $tokenCost = 10; 
 
-        // 🔴 بررسی و کسر اعتبار مستقیماً از جدول کاربران (User) برای محاسبه مصرف شده
+        // 🔴 بررسی و کسر توکن مستقیماً از جدول کاربران (User) برای محاسبه مصرف شده
         if (Auth::check()) {
             $user = Auth::user();
             
             try {
                 app(TokenBalanceService::class)->debit($user, $tokenCost);
             } catch (ValidationException) {
-                return response()->json(['error' => 'اعتبار شما کافی نیست. لطفا حساب خود را شارژ کنید.'], 403);
+                return response()->json(['error' => 'توکن شما کافی نیست. لطفا حساب خود را شارژ کنید.'], 403);
             }
         }
 
@@ -56,7 +56,7 @@ class GenerationController extends Controller
         dispatch(new \App\Jobs\ProcessImageJob($generationId));
 
         return response()->json([
-            'message' => 'تصویر با موفقیت در صف پردازش قرار گرفت و اعتبار کسر شد.',
+            'message' => 'تصویر با موفقیت در صف پردازش قرار گرفت و توکن کسر شد.',
             'generation_id' => $generationId
         ]);
     }

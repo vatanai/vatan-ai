@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', $product ? 'ویرایش محصول عکس — AIPIX Admin' : ($duplicateFrom ? 'تکثیر محصول عکس — AIPIX Admin' : 'ثبت محصولات عکس — AIPIX Admin'))
+@section('title', 'ثبت محصول جدید — AIPIX Admin')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/products-create.css') }}">
@@ -19,7 +19,7 @@
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
           <a href="/admin/products" class="text-[var(--text2)] hover:text-[var(--text)] transition-colors">محصولات</a>
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-          <span class="text-[var(--text)] font-semibold">{{ $product ? 'ویرایش محصول عکس' : ($duplicateFrom ? 'تکثیر محصول عکس' : 'ثبت محصولات عکس') }}</span>
+          <span class="text-[var(--text)] font-semibold">{{ $product ? 'ویرایش محصول' : ($duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید') }}</span>
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
           {{-- بند ۳۳: انتخاب نقش نمایشی (Role Preview) — فقط UI، پیش‌نمایش قفل فیلدها --}}
@@ -103,7 +103,7 @@
       @endif
 
       <div class="mb-6">
-        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $product ? 'ویرایش محصول عکس' : ($duplicateFrom ? 'تکثیر محصول عکس' : 'ثبت محصولات عکس') }}</div>
+        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $product ? 'ویرایش محصول' : ($duplicateFrom ? 'تکثیر محصول' : 'ثبت محصول جدید') }}</div>
         <div class="text-xs text-[var(--text3)]">محصول را در ۵ مرحله تنظیم کنید — هویت، رسانه، هوش مصنوعی، ورودی و خروجی</div>
       </div>
 
@@ -165,12 +165,12 @@
           <div class="hidden md:block w-6 shrink-0 h-px bg-[var(--b1)] transition-colors" id="conn-3"></div>
           <div class="md:hidden w-px h-3 bg-[var(--b1)] mr-[35px] transition-colors" id="conn-3-m"></div>
 
-          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-4" data-completion-mirrors-step="2" onclick="goStep(4)">
+          <div class="step-item flex-1 flex items-center gap-3 p-3 md:p-2.5 rounded-lg cursor-pointer transition-all duration-200 border border-transparent" id="step-tab-4" onclick="goStep(4)">
             <div class="step-circle w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 border-[var(--b2)] text-[var(--text3)] transition-all duration-200" id="step-num-4" data-num="۴">۴</div>
             <div class="flex-1 min-w-0">
               <div class="step-label text-[11px] text-[var(--text3)] mb-0.5 transition-colors">گام چهارم</div>
-              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و اعتبار</div>
-              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، مصرف اعتبار، انتشار</div>
+              <div class="step-title text-xs font-bold text-[var(--text2)] transition-colors">خروجی و قیمت</div>
+              <div class="step-desc text-[10.5px] text-[var(--text3)] mt-0.5">واترمارک، قیمت، انتشار</div>
             </div>
             <div class="shrink-0 flex items-center gap-1.5 pr-1">
               <span class="step-frac hidden text-[10px] font-bold font-mono text-[var(--text3)] bg-[var(--text)]/5 rounded px-1.5 py-0.5" id="step-frac-4"></span>
@@ -208,9 +208,9 @@
           @include('admin.products.partials.future-updates')
         </div>
 
-        {{-- ═══ گام دوم: هوش مصنوعی — معماری کیفیت و پرامپت ═══ --}}
+        {{-- ═══ گام دوم: هوش مصنوعی — پایپ‌لاین و پرامپت ═══ --}}
         <div class="hidden space-y-4" id="panel-2">
-          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom, 'product' => $product, 'exchange' => $exchange ?? [], 'labTested' => $labTested ?? false, 'modelQualityPresets' => $modelQualityPresets ?? collect()])
+          @include('admin.products.partials.step-2', ['aiModels' => $aiModels, 'duplicateFrom' => $duplicateFrom, 'product' => $product, 'exchange' => $exchange ?? [], 'labTested' => $labTested ?? false])
         </div>
 
         {{-- ═══ گام سوم: متغیرها و فیلدهای ورودی کاربر ═══ --}}
@@ -218,9 +218,9 @@
           @include('admin.products.partials.step-3', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
-        {{-- ═══ گام چهارم: خروجی و مصرف اعتبار ═══ --}}
+        {{-- ═══ گام چهارم: خروجی و قیمت ═══ --}}
         <div class="hidden space-y-4" id="panel-4">
-          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product, 'modelQualityPresets' => $modelQualityPresets ?? collect(), 'qualityCreditPresets' => $qualityCreditPresets ?? collect()])
+          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
         </div>
 
         {{-- ═══ گام پنجم: بازبینی نهایی ═══ --}}

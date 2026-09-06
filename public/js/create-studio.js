@@ -134,8 +134,7 @@
       if (key === 'quality') return (video.resolutions || []).map((value) => ({value, label: qualityLabel(value), meta: value === video.default_resolution ? 'پیشنهادی' : ''}));
       if (key === 'motion') return [{value: '', label: 'بر اساس پرامپت', meta: 'تنظیم خودکار'}].concat((video.motion_presets || []).map((item) => ({value: item.key, label: item.label, meta: item.description})));
     } else {
-      const selectedModelValue = selectedValues.model || root.querySelector('[data-studio-select="model"] .create-studio-select-option.is-selected')?.dataset.value || '';
-      const selectedModel = (activeConfig.model_options || []).find((item) => String(item.value) === String(selectedModelValue));
+      const selectedModel = (activeConfig.model_options || []).find((item) => String(item.value) === String(selectedValues.model));
       if (key === 'ratio') {
         const ratios = (activeConfig.output_aspect_ratios || []).filter((value) => {
           const supported = (selectedModel?.supported_aspect_ratios || []).map((item) => String(item).toLowerCase());
@@ -176,7 +175,7 @@
     if (!container) return;
     container.innerHTML = '';
     const supportedTypes = ['select', 'radio', 'button_group', 'style_preset'];
-    (activeConfig?.fields || []).filter((field) => supportedTypes.includes(field.type) && !['style', 'background', 'duration', 'theme', 'action', 'actions', 'visual_style'].includes(String(field.id).toLowerCase()) && !['اکشن', 'actions', 'action', 'استایل بصری'].includes(String(field.label || '').trim().toLowerCase()) && !field.hidden).forEach((field) => {
+    (activeConfig?.fields || []).filter((field) => supportedTypes.includes(field.type) && !['style', 'background', 'duration', 'theme', 'action', 'actions'].includes(String(field.id).toLowerCase()) && !['اکشن', 'actions', 'action'].includes(String(field.label || '').trim().toLowerCase()) && !field.hidden).forEach((field) => {
       const row = document.createElement('div');
       row.className = 'create-studio-setting-row';
       row.dataset.studioDynamicField = field.id;
@@ -311,19 +310,7 @@
       if (select.dataset.studioSelect === 'ratio') button.innerHTML = `<i class="create-studio-ratio-frame" style="--ratio:${String(option.value || '1:1').replace(':', '/')}"></i><span><b>${option.label}</b><small>${option.meta || ''}</small></span><i class="fa-solid fa-check"></i>`;
       else if (select.dataset.studioSelect === 'model') button.innerHTML = `<span><b>${option.label}</b></span><i class="fa-solid fa-check"></i>`;
       else button.innerHTML = `<span><b>${option.label}</b><small>${option.meta || ''}</small></span><i class="fa-solid fa-check"></i>`;
-      button.addEventListener('click', () => {
-        const nextValue = option.value ?? '';
-        chooseSelect(select, nextValue);
-        // منوی انتخاب مدل در موبایل/پورتال از فرم جدا می‌شود؛ مقدار مدل را
-        // بعد از بستن منو نیز صریحاً نگه می‌داریم تا همان مدل به بک‌اند برسد.
-        if (select.dataset.studioSelect === 'model') {
-          const input = select.querySelector('[data-select-input]');
-          if (input) {
-            input.value = nextValue;
-            input.setAttribute('value', nextValue);
-          }
-        }
-      });
+      button.addEventListener('click', () => chooseSelect(select, option.value ?? ''));
       menu.appendChild(button);
     });
   }
@@ -415,8 +402,7 @@
     if (quoteTimer) window.clearTimeout(quoteTimer);
     const sequence = ++quoteSequence;
     quoteTimer = window.setTimeout(async () => {
-    const selectedModelValue = selectedValues.model || root.querySelector('[data-studio-select="model"] .create-studio-select-option.is-selected')?.dataset.value || '';
-    const selectedModel = selectedModelValue ? optionsFor('model').find((option) => String(option.value) === String(selectedModelValue)) : null;
+      const selectedModel = selectedValues.model ? optionsFor('model').find((option) => String(option.value) === String(selectedValues.model)) : null;
       const params = new URLSearchParams({
         mode: currentMode,
         model: selectedModel?.value || '',
@@ -473,9 +459,7 @@
   function finishProgress() { stopProgress(); progressBar.style.width = '100%'; window.setTimeout(() => { progress.hidden = true; }, 350); }
 
   function appendDefaults(data) {
-    Object.entries(activeConfig.defaults || {})
-      .filter(([key]) => !['style', 'background', 'action', 'actions', 'visual_style'].includes(String(key).toLowerCase()))
-      .forEach(([key, value]) => data.append(`fields[${key}]`, value));
+    Object.entries(activeConfig.defaults || {}).forEach(([key, value]) => data.append(`fields[${key}]`, value));
     if (currentMode === 'video') {
       data.set('video[duration]', selectedValues.duration || activeConfig.video.default_duration);
       data.set('video[aspect_ratio]', selectedValues.ratio || activeConfig.video.default_aspect_ratio);
@@ -498,8 +482,7 @@
     });
     if (currentMode === 'video' && uploadInput.files[0]) data.append('source_image', uploadInput.files[0]);
     if (currentMode === 'image' && uploadInput.files[0] && activeConfig.reference_upload_key) data.append(`uploads[${activeConfig.reference_upload_key}][]`, uploadInput.files[0]);
-      const selectedModelValue = selectedValues.model || root.querySelector('[data-studio-select="model"] .create-studio-select-option.is-selected')?.dataset.value || '';
-      const selectedModel = selectedModelValue ? optionsFor('model').find((option) => String(option.value) === String(selectedModelValue)) : null;
+    const selectedModel = selectedValues.model ? optionsFor('model').find((option) => String(option.value) === String(selectedValues.model)) : null;
     if (selectedModel?.value) {
       data.set('studio_model', selectedModel.value);
       if (selectedModel.provider) data.set('studio_provider', selectedModel.provider);
@@ -549,16 +532,7 @@
   prompt.addEventListener('input', updatePromptCount);
   negativeInput?.addEventListener('input', () => root.querySelector('[data-studio-negative]').value = negativeInput.value);
   root.querySelector('[data-studio-improve]').addEventListener('click', () => { const suffix = currentMode === 'video' ? ' حرکت نرم دوربین، ریتم سینمایی و نورپردازی طبیعی' : ' ترکیب‌بندی حرفه‌ای، نورپردازی طبیعی و جزئیات دقیق'; prompt.value = prompt.value.trim() ? `${prompt.value.trim()}،${suffix}` : (currentMode === 'video' ? 'یک نمای سینمایی از تهران در شب با باران و نورهای نئون' : 'یک پرتره ادیتوریال با نور پنجره و پس‌زمینه مینیمال') + suffix; updatePromptCount(); prompt.focus(); });
-  // چون ورودی فایل داخل ناحیه‌ی انتخاب قرار دارد، فعال‌سازی پیش‌فرض ناحیه و
-  // کلیک دستی هم‌زمان روی input در بعضی مرورگرها پنجره‌ی انتخاب فایل را
-  // دوبار باز می‌کند و باعث می‌شود اصلاً باز نشود. فعال‌سازی را یک‌بار و با
-  // جلوگیری از رفتار پیش‌فرض انجام می‌دهیم.
-  uploadZone.addEventListener('click', (event) => {
-    if (event.target === uploadInput) return;
-    event.preventDefault();
-    uploadInput.click();
-  });
-  uploadZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); uploadInput.click(); } });
+  uploadZone.addEventListener('click', () => uploadInput.click()); uploadZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); uploadInput.click(); } });
   uploadInput.addEventListener('change', () => { const file = uploadInput.files[0]; if (!file) return; uploadFile.hidden = false; uploadFile.textContent = file.name; });
   submit.addEventListener('click', generate); root.querySelector('[data-studio-regenerate]').addEventListener('click', generate);
   root.querySelector('[data-studio-error-close]').addEventListener('click', hideError);

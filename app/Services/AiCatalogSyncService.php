@@ -499,18 +499,12 @@ class AiCatalogSyncService
 
         foreach ((array) ($remote['supported_resolutions'] ?? []) as $resolution) {
             $resolution = (string) $resolution;
-            $normalizedResolution = strtolower($resolution);
-            $inputPrefix = $frameTypes !== [] ? 'image_to_video' : 'text_to_video';
             $candidates = [
-                $inputPrefix . '_duration_seconds_without_audio_' . $normalizedResolution,
-                $inputPrefix . '_duration_seconds_' . $normalizedResolution,
-                'duration_seconds_without_audio_' . $normalizedResolution,
-                'duration_seconds_' . $normalizedResolution,
-                'duration_seconds_with_audio_' . $normalizedResolution,
-                'cents_per_video_output_second_' . $normalizedResolution,
+                'cents_per_video_output_second_' . strtolower($resolution),
+                'duration_seconds_' . strtolower($resolution),
                 'duration_seconds_' . strtoupper($resolution),
-                'text_to_video_duration_seconds_' . $normalizedResolution,
-                'image_to_video_duration_seconds_' . $normalizedResolution,
+                'text_to_video_duration_seconds_' . strtolower($resolution),
+                'image_to_video_duration_seconds_' . strtolower($resolution),
             ];
             foreach ($candidates as $key) {
                 if (is_numeric($pricing[$key] ?? null)) {
@@ -523,8 +517,7 @@ class AiCatalogSyncService
         }
 
         if ($resolutionTiers === []) {
-            $inputPrefix = $frameTypes !== [] ? 'image_to_video' : 'text_to_video';
-            foreach ([$inputPrefix . '_duration_seconds_without_audio', $inputPrefix . '_duration_seconds', 'duration_seconds_without_audio', 'duration_seconds', 'cents_per_second_output', 'cents_per_video_output_second_480p'] as $key) {
+            foreach (['duration_seconds', 'cents_per_second_output', 'cents_per_video_output_second_480p'] as $key) {
                 if (is_numeric($pricing[$key] ?? null)) {
                     $value = (float) $pricing[$key];
                     if (str_starts_with($key, 'cents_')) $value /= 100;

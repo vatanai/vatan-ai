@@ -12,13 +12,13 @@
   // ── تبدیل عدد به رقم فارسی ──
   $__fa = fn ($n) => strtr((string) $n, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']);
 
-  // ── هزینه اعتبار هر ساخت ──
+  // ── هزینه توکن هر ساخت ──
   $__isPerCredit = $product->pricing_model === 'per_credit';
-  $__cost        = $__isPerCredit ? $product->qualityCreditCost('standard') : 0;
-  $__tokenLabel  = ($__isPerCredit && $__cost > 0) ? ($__fa($__cost) . ' اعتبار') : 'رایگان';
+  $__cost        = (int) ($product->credit_cost ?? 0);
+  $__tokenLabel  = ($__isPerCredit && $__cost > 0) ? ($__fa($__cost) . ' توکن') : 'رایگان';
   $__tokenPopTxt = ($__isPerCredit && $__cost > 0)
-      ? ('برای ساخت و تولید این عکس ' . $__fa($__cost) . ' اعتبار نیاز است.')
-      : 'ساخت این محصول رایگان است و اعتباری از حساب شما کم نمی‌شود.';
+      ? ('برای ساخت و تولید این عکس ' . $__fa($__cost) . ' توکن نیاز است.')
+      : 'ساخت این محصول رایگان است و توکنی از حساب شما کم نمی‌شود.';
 
   // ── دسته‌بندی‌ها (رابطه چندگانه؛ اگر خالی بود از فیلد قدیمی category) ──
   $__cats = $product->categories->pluck('name_fa')->filter()->values()->all();
@@ -77,7 +77,7 @@
 /* ═══════════════════════════════════════════════════════
    صفحه محصول اصلی — طراحی دوستونه فول‌صفحه
    راست: توضیحات محصول | چپ: نمایش بزرگ تصویر (عرض ۱۲۰۰)
-   رنگ‌ها فقط از اعتبار‌های رسمی اپ (resources/css/app.css)
+   رنگ‌ها فقط از توکن‌های رسمی اپ (resources/css/app.css)
 ═══════════════════════════════════════════════════════ */
 
 /* قانون حاشیه استاندارد صفحه — پشتیبان (نسخه اصلی در app.css) */
@@ -199,7 +199,7 @@
 }
 .pd-desc-text::-webkit-scrollbar{ width:0; display:none; }
 
-/* ردیف اعتبار / سیو / انتشار / لایک — خمیدگی ۱۲، باکس‌های کناری مربع ۴۸×۴۸ */
+/* ردیف توکن / سیو / انتشار / لایک — خمیدگی ۱۲، باکس‌های کناری مربع ۴۸×۴۸ */
 .pd-actions{ display:flex; gap:10px; align-items:stretch; }
 .pd-token-wrap{ position:relative; flex:1 1 auto; min-width:0; }
 .pd-token{
@@ -222,7 +222,7 @@
 .pd-token:hover{ border-color:var(--green); }
 .pd-token i{ color:var(--green); font-size:13px; }
 .pd-token b{ color:var(--green); font-weight:800; }
-/* پاپ‌آپ توضیح اعتبار — زیر باکس اعتبار باز می‌شود */
+/* پاپ‌آپ توضیح توکن — زیر باکس توکن باز می‌شود */
 .pd-token-pop{
   position:absolute;
   top:calc(100% + 8px);
@@ -308,7 +308,6 @@
   align-items:center;
   justify-content:center;
   padding:24px;
-  overflow:hidden;
 }
 
 /* دکمه برگشت (ضربدر) — بالا سمت چپ بخش تصویر */
@@ -350,18 +349,14 @@
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
 }
 .pd-main img{
-  max-width:94%;
-  max-height:88%;
+  max-width:100%;
+  max-height:100%;
   border-radius:12px;
   object-fit:contain;
   background:var(--bg-card);
 }
-.pd-mobile-actions-slot{display:none}
-.pd-mobile-gallery-slot{display:none}
-.pd-mobile-bottom-clearance{display:none}
 
 /* ═══════════ سکشن دوم: محصولات مشابه (اسلایدر) ═══════════ */
 .pd-similar{
@@ -491,37 +486,17 @@
 @media (max-width:767px){
   .pd-shell{ flex-direction:column; }
   .pd-stage{
-    order:-2;               /* تصاویر بالا */
+    order:-1;               /* تصاویر بالا */
     flex:none;
     width:100%;
-    padding:14px;
-    min-height:min(52vh,520px);
-    max-height:540px;
+    padding:16px;
+    min-height:52vh;
   }
-  .pd-main{width:100%;height:min(48vh,480px);padding:6px}
-  .pd-main img{ width:auto;max-width:100%;height:auto;max-height:100%;object-fit:contain; }
-  .pd-mobile-actions-slot{
-    order:-1;
-    width:100%;
-    display:block;
-    padding:12px 18px 16px;
-    background:var(--bg-surface);
-    border-top:1px solid var(--border-subtle);
-  }
-  .pd-mobile-actions-slot .pd-actions{width:100%;margin:0}
-  .pd-mobile-gallery-slot{display:block}
-  .pd-mobile-gallery-slot .pd-product-gallery{margin:0}
-  .pd-info{ border-inline-start:none; border-top:0; }
+  .pd-main img{ max-height:50vh; }
+  .pd-info{ border-inline-start:none; border-top:1px solid var(--border-subtle); }
   .pd-info-scroll{ padding:22px 18px 40px; }
   .pd-title{ font-size:20px; }
-  .pd-similar{padding:36px 0}
-  .pd-mobile-bottom-clearance{
-    display:block;
-    width:100%;
-    height:calc(170px + env(safe-area-inset-bottom, 0px));
-    flex:0 0 auto;
-    background:var(--bg-page);
-  }
+  .pd-similar{ padding:36px 0 110px; } /* جا برای نویگیشن پایین موبایل */
 }
 </style>
 @endpush
@@ -566,11 +541,10 @@
       </div>
       @endif
 
-      {{-- ۴) اعتبار مصرفی / سیو / انتشار / لایک --}}
-      <span class="pd-actions-origin" hidden></span>
+      {{-- ۴) توکن مصرفی / سیو / انتشار / لایک --}}
       <div class="pd-actions">
         <div class="pd-token-wrap">
-          <button type="button" class="pd-token" id="pdTokenBtn" title="میزان اعتبار مصرفی">
+          <button type="button" class="pd-token" id="pdTokenBtn" title="میزان توکن مصرفی">
             <i class="fa-solid fa-bolt"></i>
             <b>{{ $__tokenLabel }}</b>
           </button>
@@ -591,12 +565,10 @@
       {{-- ۵) تنظیمات داینامیک محصول + دکمه «بساز» (همان دکمه اصلی پروژه) --}}
       {{-- باکس «تنظیمات محصول» به دستور کاربر مخفی است (hideFields) — فقط دکمه «بساز» نمایش داده می‌شود --}}
       @include('app.partials.product-options', ['product' => $product, 'genButtonLabel' => 'بساز', 'hideFields' => true])
-      <div class="pd-mobile-gallery-slot" aria-label="تصاویر محصول در موبایل"></div>
 
       {{-- ۶) تصاویر محصول --}}
       @if(count($__productImages))
-      <span class="pd-product-gallery-origin" hidden></span>
-      <div class="pd-gal pd-product-gallery">
+      <div class="pd-gal">
         <h2>تصاویر محصول</h2>
         <div class="pd-gal-grid">
           @foreach($__productImages as $__img)
@@ -639,9 +611,6 @@
 
   </section>
 
-  {{-- در موبایل همان اکشن‌های اصلی بدون تکثیر، دقیقاً زیر تصویر منتقل می‌شوند. --}}
-  <div class="pd-mobile-actions-slot" aria-label="عملیات محصول"></div>
-
 </div>
 
 {{-- ═══════════ سکشن ۲: محصولات مشابه (اسلایدر افقی) ═══════════ --}}
@@ -683,9 +652,6 @@
 </section>
 @endif
 
-{{-- فضای اسکرول مستقل در موبایل؛ آخرین اسلایدر/گالری نباید زیر نویگیشن ثابت بماند. --}}
-<div class="pd-mobile-bottom-clearance" aria-hidden="true"></div>
-
 {{-- مودال میز کار هوش مصنوعی + مودال ورود --}}
 @include('app.partials.product-share-modal')
 @include('app.partials.product-workspace-modal', ['product' => $product])
@@ -704,7 +670,7 @@ var _modalTimers = [];
 var _modalResultUrl = null;
 
 /* ───── مدل‌های خروجی چندگانه (Output Variants) ───── */
-var CREDIT_COST = {{ (int) ($product->pricing_model === 'per_credit' ? $product->qualityCreditCost('standard') : 0) }};
+var CREDIT_COST = {{ (int) ($product->credit_cost ?? 0) }};
 var IS_PER_CREDIT = @json($product->pricing_model === 'per_credit');
 var HAS_VARIANTS = @json(count($product->outputVariantList()) > 0);
 
@@ -732,7 +698,7 @@ function updateVariantTotal() {
     if (!IS_PER_CREDIT || CREDIT_COST <= 0) {
       numEl.textContent = 'رایگان';
     } else {
-      numEl.textContent = Number(count * CREDIT_COST).toLocaleString('fa-IR') + ' اعتبار';
+      numEl.textContent = Number(count * CREDIT_COST).toLocaleString('fa-IR') + ' توکن';
     }
   }
 }
@@ -893,9 +859,10 @@ function triggerGeneration() {
 
   selectedVariantKeys.forEach(function (k) { fd.append('variants[]', k); });
 
-  var ratio = document.querySelector('select[name="modal_ratio"]');
+  var ratio = document.querySelector('input[name="modal_ratio"]:checked');
+  var quality = document.querySelector('input[name="modal_quality"]:checked');
   fd.append('output[aspect_ratio]', ratio ? ratio.value : @json($product->defaultOutputAspectRatio()));
-  fd.append('output[quality]', @json($product->defaultOutputResolutionForUser(auth()->user())));
+  fd.append('output[quality]', quality ? quality.value : @json($product->defaultOutputResolution()));
 
   var overlay = document.getElementById('modalProgressOverlay');
   overlay.classList.remove('hidden');
@@ -926,7 +893,7 @@ function triggerGeneration() {
     headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF}
   })
   .then(function(r){
-    // ═══ مدیریت هوشمند خطای اتمام اعتبار (HTTP 402 یا عدم مجاز بودن) ═══
+    // ═══ مدیریت هوشمند خطای اتمام توکن (HTTP 402 یا عدم مجاز بودن) ═══
     if (r.status === 402) {
        _modalTimers.forEach(clearTimeout); _modalTimers = [];
        overlay.classList.add('hidden');
@@ -936,7 +903,7 @@ function triggerGeneration() {
        if(typeof window.showTokenShortageModal === 'function') {
            window.showTokenShortageModal();
        }
-       throw new Error('موجودی اعتبار شما کافی نیست.');
+       throw new Error('موجودی اعتبار توکن شما کافی نیست.');
     }
     return r.json();
   })
@@ -972,10 +939,10 @@ function triggerGeneration() {
         errorTxt.textContent = d.failed_message;
       }
 
-      // ═══ به‌روزرسانی زنده و آنی مقدار اعتبار در دراپ‌داون پروفایل بدون رفرش ═══
+      // ═══ به‌روزرسانی زنده و آنی مقدار توکن در دراپ‌داون پروفایل بدون رفرش ═══
       var tokenEl = document.getElementById('top-nav-tokens');
       if (tokenEl && d.remaining_tokens !== undefined) {
-          tokenEl.textContent = Number(d.remaining_tokens).toLocaleString('fa-IR') + ' اعتبار';
+          tokenEl.textContent = Number(d.remaining_tokens).toLocaleString('fa-IR') + ' توکن';
       }
     } else {
       errorBox.classList.remove('hidden');
@@ -988,7 +955,7 @@ function triggerGeneration() {
     overlay.classList.add('hidden');
     document.getElementById('btnModalSubmit').disabled = false;
 
-    if(err.message !== 'موجودی اعتبار شما کافی نیست.') {
+    if(err.message !== 'موجودی اعتبار توکن شما کافی نیست.') {
         errorBox.classList.remove('hidden');
         errorTxt.textContent = err.message || 'ارتباط با سرور برقرار نشد.';
     }
@@ -1179,7 +1146,7 @@ btnLike?.addEventListener('click', function(){
   .finally(function(){ _likeBusy = false; });
 });
 
-/* ───── پاپ‌آپ توضیح اعتبار — با کلیک روی باکس اعتبار باز/بسته می‌شود ───── */
+/* ───── پاپ‌آپ توضیح توکن — با کلیک روی باکس توکن باز/بسته می‌شود ───── */
 var tokenBtn = document.getElementById('pdTokenBtn');
 var tokenPop = document.getElementById('pdTokenPop');
 tokenBtn?.addEventListener('click', function (e) {
@@ -1197,35 +1164,6 @@ document.addEventListener('click', function (e) {
   var mainImg = document.getElementById('pdpMainImage');
   var counter = document.getElementById('pdCounter');
   var galleryImgs = Array.prototype.slice.call(document.querySelectorAll('.pd-gal-grid img'));
-  var actions = document.querySelector('.pd-actions');
-  var actionsOrigin = document.querySelector('.pd-actions-origin');
-  var mobileActionsSlot = document.querySelector('.pd-mobile-actions-slot');
-  var productGallery = document.querySelector('.pd-product-gallery');
-  var productGalleryOrigin = document.querySelector('.pd-product-gallery-origin');
-  var mobileGallerySlot = document.querySelector('.pd-mobile-gallery-slot');
-  var mobileMedia = window.matchMedia('(max-width: 767px)');
-
-  function syncProductActionsPosition(){
-    if (!actions || !actionsOrigin || !mobileActionsSlot) return;
-    if (mobileMedia.matches) mobileActionsSlot.appendChild(actions);
-    else actionsOrigin.after(actions);
-  }
-
-  function syncProductGalleryPosition(){
-    if (!productGallery || !productGalleryOrigin || !mobileGallerySlot) return;
-    if (mobileMedia.matches) mobileGallerySlot.appendChild(productGallery);
-    else productGalleryOrigin.after(productGallery);
-  }
-
-  syncProductActionsPosition();
-  syncProductGalleryPosition();
-  if (mobileMedia.addEventListener) {
-    mobileMedia.addEventListener('change', syncProductActionsPosition);
-    mobileMedia.addEventListener('change', syncProductGalleryPosition);
-  } else {
-    mobileMedia.addListener(syncProductActionsPosition);
-    mobileMedia.addListener(syncProductGalleryPosition);
-  }
 
   function show(i){
     var img = galleryImgs[i];

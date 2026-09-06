@@ -11,7 +11,6 @@
     <link href="{{ asset('admin/css/design-tokens.css') }}?v={{ filemtime(public_path('admin/css/design-tokens.css')) }}" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="{{ asset('admin/js/dashboard-prefetch.js') }}" defer></script>
 
     @stack('styles')
 </head>
@@ -72,8 +71,6 @@
     </script>
 
     @include('admin.partials.jalali-date-inputs')
-    @include('admin.partials.backup-delivery-modal')
-    @stack('scripts')
     @yield('scripts')
 
 </body>

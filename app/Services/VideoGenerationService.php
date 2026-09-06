@@ -126,36 +126,6 @@ class VideoGenerationService
         if ($studioQuote && $studioQuote['credits_per_output'] !== null) {
             $creditCost = (int) $studioQuote['credits_per_output'] + $featureCost + ($identityRequested ? 2 : 0);
         }
-
-        $runOptions = $options + [
-            'duration' => $duration,
-            'aspect_ratio' => $aspectRatio,
-            'resolution' => $resolution,
-            'workflow' => $options['workflow'] ?? $config['workflow'],
-        ];
-        $candidateModels = $this->candidateModels($runner, $runOptions);
-        $candidateCreditCosts = [];
-        foreach ($candidateModels as $candidate) {
-            $candidateKey = $this->candidateKey($candidate);
-            if ($candidateKey === $this->candidateKey($model)) {
-                $candidateCreditCosts[$candidateKey] = $creditCost;
-                continue;
-            }
-
-            $candidateQuote = $this->studioCosts->quote($product, [
-                'media_type' => 'video',
-                'resolution' => $resolution,
-                'aspect_ratio' => $aspectRatio,
-                'duration' => $duration,
-                'count' => 1,
-            ], $candidate);
-            if ($candidateQuote['cost_known'] && $candidateQuote['credits'] !== null) {
-                $candidateCreditCosts[$candidateKey] = (int) $candidateQuote['credits'] + $featureCost + ($identityRequested ? 2 : 0);
-            }
-        }
-        $candidateCreditCosts[$this->candidateKey($model)] ??= $creditCost;
-        $reservedCreditCost = max($creditCost, ...array_values($candidateCreditCosts));
-
         $allowPromotional = (bool) ($config['allow_promotional_credits'] ?? false)
             || $this->wallet->productAllowsPromotionalCredits($product);
 
@@ -169,10 +139,8 @@ class VideoGenerationService
             'status' => 'processing',
             'payment_status' => 'paid',
             'processing_status' => 'queued',
-            // سقف امنِ همه‌ی مدل‌های سازگار رزرو می‌شود؛ پس از موفقیت،
-            // اختلاف با هزینه‌ی مدل اجراشده به کیف پول برمی‌گردد.
-            'original_credits' => $reservedCreditCost,
-            'final_credits' => $reservedCreditCost,
+            'original_credits' => $creditCost,
+            'final_credits' => $creditCost,
             'ai_model' => $model->openrouter_model_id,
             'ai_provider' => $model->provider,
             'attempts' => 1,
@@ -191,9 +159,6 @@ class VideoGenerationService
                 'workflow' => $options['workflow'] ?? $config['workflow'],
                 'reference_mode' => $options['reference_mode'] ?? null,
                 'source_image_data' => $hasSourceImage && strlen($sourceImageDataList[0]) <= 600000 ? $sourceImageDataList[0] : null,
-                'requested_credit_cost' => $creditCost,
-                'reserved_credit_cost' => $reservedCreditCost,
-                'candidate_credit_costs' => $candidateCreditCosts,
             ],
             'source' => 'app',
             'paid_at' => now(),
@@ -203,7 +168,7 @@ class VideoGenerationService
 
         $reservation = ['total' => 0, 'promotional' => 0, 'paid' => 0, 'ledger_key' => null];
         try {
-            if ($reservedCreditCost > 0) $reservation = $this->wallet->reserve($user, $reservedCreditCost, $allowPromotional, $order);
+            if ($creditCost > 0) $reservation = $this->wallet->reserve($user, $creditCost, $allowPromotional, $order);
         } catch (ValidationException $exception) {
             $order->update(['status' => 'review', 'payment_status' => 'failed', 'processing_status' => 'stopped', 'error_message' => 'اعتبار کافی نیست.']);
             throw $exception;
@@ -222,14 +187,9 @@ class VideoGenerationService
 
         $submitted = false;
         $lastError = null;
-        foreach ($candidateModels as $candidate) {
-            // مدل‌هایی که قیمت معتبرشان مشخص نیست وارد صف نمی‌شوند؛ در غیر این
-            // صورت ممکن است برای fallback مبلغی رزرو نشده باشد.
-            if (!array_key_exists($this->candidateKey($candidate), $candidateCreditCosts)) {
-                continue;
-            }
+        foreach ($this->candidateModels($product) as $candidate) {
             try {
-                $this->submitCandidate($generation, $order, $candidate, $product, $prompt, $runOptions);
+                $this->submitCandidate($generation, $order, $candidate, $product, $prompt, $options + ['duration' => $duration, 'aspect_ratio' => $aspectRatio, 'resolution' => $resolution]);
                 $submitted = true;
                 break;
             } catch (\Throwable $error) {
@@ -330,13 +290,8 @@ class VideoGenerationService
             throw $error;
         }
         $reservation = (array) ($generation->credit_reservation ?? []);
-        $activeCreditCost = (int) data_get(
-            $generation->input_payload,
-            'active_credit_cost',
-            data_get($generation->input_payload, 'requested_credit_cost', $reservation['total'] ?? 0),
-        );
         if (!$generation->credits_settled_at && (int) ($reservation['total'] ?? 0) > 0 && $generation->user) {
-            $reservation = $this->wallet->settle($generation->user, $reservation, $activeCreditCost);
+            $reservation = $this->wallet->settle($generation->user, $reservation, (int) $reservation['total']);
         }
         $actualCost = (float) ($normalized['actual_cost_usd'] ?? $normalized['estimated_cost_usd'] ?? 0);
         $generation->update([
@@ -354,7 +309,6 @@ class VideoGenerationService
         $generation->order?->update([
             'status' => 'completed',
             'processing_status' => 'completed',
-            'final_credits' => (int) ($reservation['total'] ?? $activeCreditCost),
             'promotional_credits_used' => (int) ($reservation['promotional'] ?? 0),
             'paid_credits_used' => (int) ($reservation['paid'] ?? 0),
             'output_payload' => ['media_type' => 'video', 'path' => $stored['path'], 'provider_url' => $output['url']],
@@ -395,64 +349,18 @@ class VideoGenerationService
         Log::warning('Video generation failed', ['generated_video_id' => $generation->id, 'message' => $message]);
     }
 
-    private function candidateModels(Product $product, array $options = []): array
+    private function candidateModels(Product $product): array
     {
-        $ids = array_values(array_filter(array_merge([(string) $product->primary_model], (array) $product->fallback_models)));
+        $ids = array_values(array_unique(array_filter(array_merge([(string) $product->primary_model], (array) $product->fallback_models))));
         $providers = array_values(array_merge([(string) $product->ai_provider], (array) $product->fallback_model_providers));
-        $workflow = (string) ($options['workflow'] ?? data_get($product->videoConfiguration(), 'workflow', 'text_to_video'));
-        $pairs = [];
         $models = [];
         foreach ($ids as $index => $id) {
-            $provider = trim((string) ($providers[$index] ?? ''));
-            $key = $provider . '|' . $id;
-            if ($provider === '' || isset($pairs[$key])) continue;
-            $pairs[$key] = true;
             $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
-                ->where('openrouter_model_id', $id)->where('provider', $provider)->first();
-            if (!$model || !$this->supportsWorkflow($model, $workflow)) continue;
-            if (!$this->supportsOptions($model, $options)) continue;
-            if (filled($this->credentials->for($model->provider)['api_key'] ?? null)) $models[] = $model;
+                ->where('openrouter_model_id', $id)->where('provider', $providers[$index] ?? null)->first();
+            if ($model && filled($this->credentials->for($model->provider)['api_key'] ?? null)) $models[] = $model;
         }
         return $models;
-    }
-
-    private function candidateKey(AiModel $model): string
-    {
-        return $model->provider . '|' . $model->openrouter_model_id;
-    }
-
-    private function supportsWorkflow(AiModel $model, string $workflow): bool
-    {
-        return match ($workflow) {
-            'text_to_video' => $model->task_type === 'text_to_video',
-            'video_to_video' => $model->task_type === 'video_to_video',
-            default => in_array($model->task_type, ['image_to_video', 'face_animation'], true),
-        };
-    }
-
-    private function supportsOptions(AiModel $model, array $options): bool
-    {
-        $summary = $this->modelSchemas->summarize($model);
-        foreach ([
-            'duration' => ['capability' => 'supported_durations', 'schema' => $summary['durations'] ?? [], 'normalize' => static fn ($value): string => (string) ((int) $value)],
-            'resolution' => ['capability' => 'supported_resolutions', 'schema' => $summary['resolutions'] ?? [], 'normalize' => static fn ($value): string => match (strtolower(trim((string) $value))) {
-                '2160', '2160p', '4k' => '4k',
-                '1440', '1440p', '2k' => '2k',
-                default => strtolower(trim((string) $value)),
-            }],
-            'aspect_ratio' => ['capability' => 'supported_aspect_ratios', 'schema' => $summary['aspect_ratios'] ?? [], 'normalize' => static fn ($value): string => strtolower(trim((string) $value))],
-        ] as $option => $definition) {
-            $supported = data_get($model->capability_config, $definition['capability']);
-            if (!is_array($supported) || $supported === []) $supported = $definition['schema'];
-            if (!is_array($supported) || $supported === []) continue;
-
-            $value = ($definition['normalize'])($options[$option] ?? '');
-            $allowed = array_map($definition['normalize'], $supported);
-            if (!in_array($value, $allowed, true)) return false;
-        }
-
-        return true;
     }
 
     private function submitCandidate(GeneratedVideo $generation, Order $order, AiModel $model, Product $product, string $prompt, array $options): void
@@ -464,12 +372,9 @@ class VideoGenerationService
         ]);
         $requestId = (string) $submitted['external_request_id'];
         $providerRequest = AiProviderRequest::query()->where('provider', $model->provider)->where('external_request_id', $requestId)->first();
-        $payload = (array) $generation->input_payload;
-        $attempted = (array) data_get($payload, 'attempted_models', []);
+        $attempted = (array) data_get($generation->input_payload, 'attempted_models', []);
         $attempted[] = ['provider' => $model->provider, 'model' => $model->openrouter_model_id];
-        $candidateCreditCosts = (array) data_get($payload, 'candidate_credit_costs', []);
-        $activeCreditCost = (int) ($candidateCreditCosts[$this->candidateKey($model)] ?? data_get($payload, 'requested_credit_cost', 0));
-        $generation->update(['status' => 'queued', 'external_request_id' => $requestId, 'ai_provider_request_id' => $providerRequest?->id, 'input_payload' => array_merge($payload, ['attempted_models' => $attempted, 'active_model' => $model->openrouter_model_id, 'active_provider' => $model->provider, 'active_credit_cost' => $activeCreditCost])]);
+        $generation->update(['status' => 'queued', 'external_request_id' => $requestId, 'ai_provider_request_id' => $providerRequest?->id, 'input_payload' => array_merge((array) $generation->input_payload, ['attempted_models' => $attempted, 'active_model' => $model->openrouter_model_id, 'active_provider' => $model->provider])]);
         $order->update(['processing_status' => 'queued', 'ai_model' => $model->openrouter_model_id, 'ai_provider' => $model->provider, 'attempts' => max(1, count($attempted))]);
         $order->recordEvent('queued', 'ویدیو وارد صف شد', 'مدل: ' . $model->name . ' · شناسه درخواست: ' . $requestId);
     }
@@ -487,18 +392,10 @@ class VideoGenerationService
         $product = $generation->product;
         $payload = (array) $generation->input_payload;
         $attempted = collect((array) ($payload['attempted_models'] ?? []))->map(fn ($row) => ($row['provider'] ?? '') . '|' . ($row['model'] ?? ''))->all();
-        $options = $payload + [
-            'workflow' => data_get($payload, 'workflow', $product->videoConfiguration()['workflow']),
-            'duration' => $generation->duration_seconds,
-            'aspect_ratio' => data_get($payload, 'aspect_ratio', $product->videoConfiguration()['default_aspect_ratio']),
-            'resolution' => data_get($payload, 'resolution', $product->videoConfiguration()['default_resolution']),
-        ];
-        foreach ($this->candidateModels($product, $options) as $candidate) {
+        foreach ($this->candidateModels($product) as $candidate) {
             if (in_array($candidate->provider . '|' . $candidate->openrouter_model_id, $attempted, true)) continue;
-            $candidateCreditCosts = (array) data_get($payload, 'candidate_credit_costs', []);
-            if ((int) ($candidateCreditCosts[$this->candidateKey($candidate)] ?? 0) < 1) continue;
             try {
-                $this->submitCandidate($generation, $generation->order, $candidate, $product, (string) $generation->user_prompt, $options);
+                $this->submitCandidate($generation, $generation->order, $candidate, $product, (string) $generation->user_prompt, $payload + ['duration' => $generation->duration_seconds, 'aspect_ratio' => data_get($payload, 'aspect_ratio', $product->videoConfiguration()['default_aspect_ratio']), 'resolution' => data_get($payload, 'resolution', $product->videoConfiguration()['default_resolution'])]);
                 $generation->order?->recordEvent('fallback', 'مدل جایگزین فعال شد', $reason);
                 return true;
             } catch (\Throwable $error) {
@@ -550,27 +447,6 @@ class VideoGenerationService
                 $mime = Storage::disk('public')->mimeType($path) ?: 'image/jpeg';
                 $sourceImages[] = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk('public')->get($path));
             }
-        }
-
-        // مدل‌های Fal برای فیلدهایی مثل image_url یک نشانی عمومی می‌خواهند؛
-        // data URI در زمان ارسال پذیرفته می‌شود اما در صف پردازش قابل دریافت
-        // نیست و در نتیجه درخواست بعد از آپلود تصویر ناموفق می‌شود. فایل‌های
-        // آپلودشده‌ی استودیو روی دیسک عمومی ذخیره شده‌اند، پس برای Fal همان
-        // نشانی قابل دسترسی را ارسال می‌کنیم و برای سایر پروایدرها قرارداد
-        // فعلیِ data URI را نگه می‌داریم.
-        if ($model->provider === 'fal') {
-            $publicImageUrls = [];
-            $uploadPaths = array_values(array_filter(array_merge(
-                [(string) ($options['source_upload_path'] ?? '')],
-                (array) ($options['source_upload_paths'] ?? []),
-            )));
-            foreach ($uploadPaths as $path) {
-                if (!is_string($path) || !Storage::disk('public')->exists($path)) continue;
-                $url = Storage::disk('public')->url($path);
-                if (!filter_var($url, FILTER_VALIDATE_URL)) $url = asset('storage/' . ltrim($path, '/'));
-                if (filter_var($url, FILTER_VALIDATE_URL)) $publicImageUrls[] = $url;
-            }
-            if ($publicImageUrls !== []) $sourceImages = $publicImageUrls;
         }
 
         if ($model->provider === 'openrouter') {

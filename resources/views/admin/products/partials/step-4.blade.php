@@ -1,4 +1,4 @@
-{{-- پارشیال: گام چهارم — خروجی و مصرف اعتبار --}}
+{{-- پارشیال: گام چهارم — خروجی و قیمت --}}
 {{-- بازطراحی UI طبق «سند شماره ۱ - ثبت محصول»، بخش سوم. تمام name های واقعی و مقادیر مجاز آن‌ها
      دقیقاً با Validation کنترلر (watermark_position: corner/center/none،
      gallery_layout: grid/masonry/slider) هماهنگ نگه داشته شده‌اند.
@@ -6,92 +6,7 @@
 
 @php
   $newBadge = '<span class="inline-flex items-center gap-1 bg-[var(--orange)]/10 text-[var(--orange)] border border-[var(--orange)]/30 rounded px-1.5 py-[1px] text-[9px] font-bold shrink-0 whitespace-nowrap"><i class="fa-solid fa-code text-[8px]"></i> برنامه‌نویسی شود</span>';
-  $sourceProduct = $duplicateFrom ?? $product ?? null;
-  $savedModelConfiguration = old('model_configuration', (array) ($sourceProduct?->model_configuration ?? []));
-  $creditPresetPayloads = collect($qualityCreditPresets ?? [])->mapWithKeys(function ($preset): array {
-      return [$preset->preset_key => [
-          'name' => $preset->name,
-          'costs' => $preset->costs(),
-          'is_default_for_product_creation' => (bool) $preset->is_default_for_product_creation,
-          'update_url' => route('admin.product-credit-presets.update', $preset),
-          'delete_url' => route('admin.product-credit-presets.destroy', $preset),
-      ]];
-  })->all();
-  $defaultCreditPresetKey = collect($qualityCreditPresets ?? [])->first(fn ($preset) => (bool) $preset->is_default_for_product_creation)?->preset_key
-      ?: collect($qualityCreditPresets ?? [])->first()?->preset_key
-      ?: 'preset_1';
-  $rawCreditPresetKey = (string) data_get($savedModelConfiguration, 'quality_credit_preset_key', $defaultCreditPresetKey);
-  $selectedCreditPresetKey = array_key_exists($rawCreditPresetKey, $creditPresetPayloads) || $rawCreditPresetKey === 'custom'
-      ? $rawCreditPresetKey
-      : 'custom';
-  $selectedPresetCosts = data_get($creditPresetPayloads, "{$selectedCreditPresetKey}.costs", \App\Models\Product::DEFAULT_QUALITY_CREDIT_COSTS);
-  $savedCreditCosts = (array) data_get($savedModelConfiguration, 'quality_credit_costs', $selectedPresetCosts);
-  $qualityCreditCosts = collect(\App\Models\Product::DEFAULT_QUALITY_CREDIT_COSTS)
-      ->mapWithKeys(fn (int $default, string $key) => [$key => (is_numeric($savedCreditCosts[$key] ?? null) && (int) $savedCreditCosts[$key] > 0) ? (int) $savedCreditCosts[$key] : (int) ($selectedPresetCosts[$key] ?? $default)])
-      ->all();
 @endphp
-
-{{-- ═══════════════════ Card ۰ — مصرف اعتبار سه سطحی محصول ═══════════════════ --}}
-<section class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" id="quality-credit-pricing-card" data-quality-credit-pricing
-  data-credit-presets='@json($creditPresetPayloads)'
-  data-credit-preset-create-url="{{ route('admin.product-credit-presets.store') }}">
-  <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-start justify-between gap-3 flex-wrap">
-    <div>
-      <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-bolt text-[var(--accent)]"></i> مصرف اعتبار محصول</div>
-      <div class="text-[10.5px] text-[var(--text3)] mt-1">هزینه‌ی هر سطح کیفیت را برای همین محصول مشخص کنید؛ تعداد خروجی و گزینه‌های اضافه جداگانه محاسبه می‌شوند.</div>
-    </div>
-    <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-[var(--green)]/10 text-[var(--green)] border border-[var(--green)]/25"><i class="fa-solid fa-circle-check"></i> فعال</span>
-  </div>
-
-  <input type="hidden" name="model_configuration[quality_credit_preset_key]" id="quality-credit-preset-key" value="{{ old('model_configuration.quality_credit_preset_key', $selectedCreditPresetKey) }}">
-  <div class="flex items-center gap-2 flex-wrap mb-4">
-    <label for="quality-credit-preset" class="text-[11px] font-bold text-[var(--text2)]">پیش‌فرض مصرف اعتبار</label>
-    <select id="quality-credit-preset" class="h-9 px-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg text-[11px] font-bold text-[var(--text)]" data-quality-credit-preset>
-      @foreach($creditPresetPayloads as $presetKey => $preset)
-        <option value="{{ $presetKey }}" @selected($selectedCreditPresetKey === $presetKey)>{{ $preset['name'] }}</option>
-      @endforeach
-      <option value="custom" @selected($selectedCreditPresetKey === 'custom')>تنظیم سفارشی</option>
-    </select>
-    <button type="button" class="h-9 px-3 rounded-lg text-[10.5px] font-bold bg-[var(--primary-l)] text-[var(--primary)] border border-[var(--primary-m)]" data-manage-quality-credit-presets>مدیریت پیش‌فرض‌ها</button>
-    <button type="button" class="h-9 px-3 rounded-lg text-[10.5px] font-bold bg-[var(--s1)] text-[var(--text2)] border border-[var(--b1)]" data-fix-quality-credit-preset>ثبت این اعداد در پیش‌فرض</button>
-    <span class="text-[10px] text-[var(--text3)]" data-quality-credit-status>با انتخاب پیش‌فرض، سه عدد این محصول پر می‌شود و قابل ویرایش است.</span>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    @foreach([
-      'standard' => ['استاندارد', 'متعادل برای ساخت روزمره', 'fa-wand-magic-sparkles'],
-      'professional' => ['حرفه‌ای', 'جزئیات و پایداری بیشتر', 'fa-gem'],
-      'best' => ['بهترین خروجی', 'بالاترین کیفیت خروجی', 'fa-crown'],
-    ] as $qualityKey => [$qualityTitle, $qualityDescription, $qualityIcon])
-      <label class="flex flex-col gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-xl">
-        <span class="flex items-center gap-2"><span class="w-7 h-7 grid place-items-center rounded-lg bg-[var(--primary-l)] text-[var(--primary)]"><i class="fa-solid {{ $qualityIcon }} text-[11px]"></i></span><span><b class="text-[11.5px] text-[var(--text)]">{{ $qualityTitle }}</b><small class="block text-[9px] text-[var(--text3)] mt-0.5">{{ $qualityDescription }}</small></span></span>
-        <span class="flex items-center gap-2">
-          <input type="number" name="model_configuration[quality_credit_costs][{{ $qualityKey }}]" value="{{ old('model_configuration.quality_credit_costs.'.$qualityKey, $qualityCreditCosts[$qualityKey]) }}" min="1" max="1000000" step="1" required class="quality-credit-cost-input w-full h-10 px-3 bg-[var(--s2)] border border-[var(--b1)] rounded-lg text-sm font-bold text-[var(--text)] ltr text-left" data-quality-credit-cost="{{ $qualityKey }}" inputmode="numeric">
-          <span class="text-[10px] whitespace-nowrap text-[var(--text3)]">اعتبار</span>
-        </span>
-      </label>
-    @endforeach
-  </div>
-  <div class="text-[10px] text-[var(--text3)] mt-3"><i class="fa-solid fa-circle-info ml-1 text-[var(--primary)]"></i>تغییر دستی، پیش‌فرض این محصول را به «تنظیم سفارشی» تبدیل می‌کند؛ مدل‌های انتخاب‌شده در گام ۲ تغییر نمی‌کنند.</div>
-</section>
-
-<dialog id="quality-credit-preset-dialog" class="rounded-2xl p-0 w-[min(94vw,680px)]" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;max-height:90vh;background:var(--s2);color:var(--text);border:1px solid var(--b1);box-shadow:var(--shadow-card);">
-  <div class="p-5" dir="rtl">
-    <div class="flex items-start justify-between gap-3 mb-5">
-      <div>
-        <div class="text-sm font-extrabold text-[var(--text)]">مدیریت پیش‌فرض‌های مصرف اعتبار</div>
-        <div class="text-[10.5px] text-[var(--text3)] mt-1">نام و عدد سه سطح را ذخیره کنید و یک پیش‌فرض را برای ثبت محصول انتخاب کنید.</div>
-      </div>
-      <button type="button" class="w-8 h-8 rounded-lg text-[var(--text3)] hover:text-[var(--text)]" data-close-quality-credit-presets aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="flex items-center gap-2 mb-4">
-      <input type="text" class="flex-1 h-10 px-3 rounded-lg bg-[var(--s1)] border border-[var(--b1)] text-xs text-[var(--text)]" data-new-quality-credit-preset-name placeholder="نام پیش‌فرض جدید">
-      <button type="button" class="h-10 px-3 rounded-lg text-xs font-bold bg-[var(--primary)] text-white" data-add-quality-credit-preset><i class="fa-solid fa-plus ml-1"></i> افزودن</button>
-    </div>
-    <div class="space-y-2" data-quality-credit-preset-list></div>
-    <div class="min-h-5 mt-4 text-[10.5px]" data-quality-credit-preset-manager-status></div>
-  </div>
-</dialog>
 
 {{-- ═══════════════════ Card ۱ — تنظیمات خروجی (واترمارک) ═══════════════════ --}}
 <div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
@@ -194,6 +109,70 @@
           <input type="text" id="wm-text-color-hex" class="bg-transparent border-none outline-none text-xs text-[var(--text)] ltr text-left flex-1" value="#FFFFFF" readonly>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+{{-- ═══════════════════ Card ۲ — قیمت‌گذاری ═══════════════════ --}}
+<div class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5">
+  <div class="mb-4 pb-3 border-b border-[var(--b1)]">
+    <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-coins text-[var(--accent)]"></i> قیمت‌گذاری</div>
+    <div class="text-[10.5px] text-[var(--text3)] mt-1">نحوه محاسبه هزینه استفاده از محصول</div>
+  </div>
+
+  @php $curPricing = old('pricing_model', optional($duplicateFrom)->pricing_model ?? 'per_credit'); @endphp
+  <div class="flex flex-col gap-1.5 mb-3.5">
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">مدل قیمت‌گذاری <span class="text-[var(--red)] mr-0.5">*</span> <span class="pro-tooltip-wrap" style="display:inline-flex;"><i class="fa-solid fa-circle-question text-[10px] text-[var(--text3)] cursor-help"></i><span class="pro-tooltip" style="width:230px;">رایگان: بدون هزینه — کردیتی: به‌ازای هر اجرا کردیت کم می‌شود — اشتراکی: نیازمند اشتراک فعال کاربر.</span></span></label>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+      <label class="pricing-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curPricing == 'free' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+        <input type="radio" name="pricing_model" value="free" {{ $curPricing == 'free' ? 'checked' : '' }} class="accent-[var(--accent)]" onchange="toggleCreditCost(this)">
+        <span class="text-xs font-semibold text-[var(--text2)]"><i class="fa-solid fa-gift ml-1 text-[var(--text3)]"></i> رایگان</span>
+      </label>
+      <label class="pricing-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curPricing == 'per_credit' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+        <input type="radio" name="pricing_model" value="per_credit" {{ $curPricing == 'per_credit' ? 'checked' : '' }} class="accent-[var(--accent)]" onchange="toggleCreditCost(this)">
+        <span class="text-xs font-semibold text-[var(--text2)]"><i class="fa-solid fa-coins ml-1 text-[var(--text3)]"></i> کردیتی</span>
+      </label>
+      <label class="pricing-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curPricing == 'subscription' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+        <input type="radio" name="pricing_model" value="subscription" {{ $curPricing == 'subscription' ? 'checked' : '' }} class="accent-[var(--accent)]" onchange="toggleCreditCost(this)">
+        <span class="text-xs font-semibold text-[var(--text2)]"><i class="fa-solid fa-rotate ml-1 text-[var(--text3)]"></i> اشتراکی</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
+    <div class="flex flex-col gap-1.5 transition-all {{ $curPricing != 'per_credit' ? 'opacity-30 pointer-events-none' : '' }}" id="credit-cost-wrap">
+      <label class="text-xs font-semibold text-[var(--text2)]">هزینه کردیت محصول <span class="text-[var(--red)] mr-0.5">*</span></label>
+      <input type="number" name="credit_cost" min="1" required class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="هزینه کردیت را وارد کنید" value="{{ old('credit_cost', optional($duplicateFrom)->credit_cost ?? 10) }}">
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداقل کردیت لازم</label>
+      <input type="number" name="new_min_credit_required" min="0" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: 1" value="{{ old('new_min_credit_required', optional($duplicateFrom)->new_min_credit_required ?? 0) }}">
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">حداکثر تعداد اجرا برای هر کاربر</label>
+      <input type="number" name="new_max_run_per_user" min="1" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="بدون محدودیت" value="{{ old('new_max_run_per_user', optional($duplicateFrom)->new_max_run_per_user) }}">
+    </div>
+    <div class="flex items-center justify-between p-2.5 bg-[var(--s1)] border border-[var(--b1)] rounded-lg mt-auto">
+      <div>
+        <div class="text-[12.5px] font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">نمایش برچسب رایگان</div>
+      </div>
+      <label class="relative w-9 h-5 shrink-0 block cursor-pointer">
+        <input type="checkbox" name="new_show_free_badge" value="1" class="sr-only peer">
+        <span class="absolute inset-0 bg-[var(--b2)] rounded-full transition-colors peer-checked:bg-[var(--green)] before:content-[''] before:absolute before:w-3.5 before:h-3.5 before:right-[3px] before:top-[3px] before:bg-[var(--text3)] before:rounded-full before:transition-all peer-checked:before:-translate-x-[16px] peer-checked:before:bg-white"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5 flex-wrap">برچسب اختصاصی قیمت</label>
+    <input type="text" name="new_price_custom_label" maxlength="100" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)]" placeholder="مثلاً: ویژه، اقتصادی، هدیه" value="{{ old('new_price_custom_label', optional($duplicateFrom)->new_price_custom_label) }}">
+    <div class="flex gap-1.5 flex-wrap">
+      @foreach (['ویژه','اقتصادی','هدیه'] as $preset)
+        <span class="text-[10.5px] bg-[var(--b1)] border border-[var(--b2)] rounded px-2 py-0.5 cursor-pointer text-[var(--text2)] hover:border-[var(--accent)]" onclick="document.querySelector('[name=new_price_custom_label]').value='{{ $preset }}'">{{ $preset }}</span>
+      @endforeach
     </div>
   </div>
 </div>

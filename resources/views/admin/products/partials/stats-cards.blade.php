@@ -2,7 +2,7 @@
   ══════════════════════════════════════════════════════════════════
   کامپوننت مستقل: کارت‌های آماری صفحه لیست محصولات (Layer 1 / Summary Cards)
   ──────────────────────────────────────────────────────────────────
-  اعتبار‌های رنگی از public/admin/css/design-tokens.css (سازگار با تم روز/شب
+  توکن‌های رنگی از public/admin/css/design-tokens.css (سازگار با تم روز/شب
   از طریق کلاس body.light — طبق doc/design-system.md).
 
   ورودی‌های مورد انتظار از View والد:
@@ -51,20 +51,19 @@
     <div class="pro-tooltip">{{ $activeCount ?? 0 }} محصول فعال (قابل استفاده برای کاربران) و {{ $inactiveCount ?? 0 }} محصول غیرفعال (خارج از دسترس)</div>
   </div>
 
-  {{-- کارت ۳: پیش‌نویس‌ها بر اساس نوع رسانه --}}
+  {{-- کارت ۳: پیش‌نویس‌ها --}}
   <div class="stat-card pro-tooltip-wrap">
     <div class="stat-card-icon" style="background:var(--warning-l);color:var(--warning);">
       <i class="fa-solid fa-pen"></i>
     </div>
     <div class="min-w-0">
-      <div class="text-[12px] font-extrabold leading-6" style="color:var(--text-h);">محصولات عکس <b>{{ $draftPhotoCount ?? 0 }}</b></div>
-      <div class="text-[12px] font-extrabold leading-6" style="color:var(--text-h);">محصولات ویدیو <b>{{ $draftVideoCount ?? 0 }}</b></div>
+      <div class="stat-card-value">{{ $draftCount ?? 0 }}</div>
       <div class="stat-card-label">پیش‌نویس‌ها</div>
     </div>
     <div class="pro-tooltip">محصولاتی که هنوز منتشر نشده و در حال آماده‌سازی هستند</div>
   </div>
 
-  {{-- کارت ۴: کل اجراها — اجراهای عکس و ویدیو از دیتابیس واقعی --}}
+  {{-- کارت ۴: کل اجراها — متصل به دیتابیس واقعی (count جدول generations) --}}
   <div class="stat-card pro-tooltip-wrap">
     <div class="stat-card-icon" style="background:var(--info-l);color:var(--info);">
       <i class="fa-solid fa-bolt"></i>
@@ -73,7 +72,7 @@
       <div class="stat-card-value">{{ number_format($totalRuns ?? 0) }}</div>
       <div class="stat-card-label">کل اجراها</div>
     </div>
-    <div class="pro-tooltip">تعداد کل اجرای محصولات عکس و ویدیو؛ از جدول‌های اجرا و تولید ویدیو محاسبه می‌شود</div>
+    <div class="pro-tooltip">تعداد کل دفعاتی که کاربران محصولات پلتفرم را اجرا کرده‌اند — مستقیم از جدول اجراها (generations) محاسبه می‌شود</div>
   </div>
 
   {{-- کارت ۵: محبوب‌ترین محصول — بیشترین تعداد اجرای واقعی --}}

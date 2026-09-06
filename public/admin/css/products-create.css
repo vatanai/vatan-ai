@@ -37,20 +37,6 @@
   --orange:       var(--warning);
 }
 
-/* پاپ‌آپ مدیریت پیش‌فرض‌های اعتبار باید مستقل از جهت صفحه، دقیقاً در مرکز viewport قرار بگیرد. */
-#quality-credit-preset-dialog {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  margin: 0;
-  width: min(94vw, 680px);
-  max-height: 90vh;
-}
-#quality-credit-preset-dialog::backdrop {
-  background: color-mix(in srgb, var(--text-h) 55%, transparent);
-}
-
 /* Skeleton System Unified — یک کلاس مشترک shimmer برای همه حالت‌های Loading صفحه */
 .skeleton { position: relative; overflow: hidden; background: var(--s1); }
 .skeleton::after {
@@ -67,20 +53,6 @@
 
 /* A11Y: مشخص بودن واضح Focus روی عناصر تعاملی */
 #real-product-form :focus-visible, .admin-content :focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-
-/* وضعیت انتخاب کیفیت خروجی باید مستقل از مرحله‌ی build تیل‌ویند واضح بماند. */
-#product-create-page [data-output-quality]:has(input:checked) {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--s2));
-}
-#product-create-page [data-output-quality] input:checked ~ span b {
-  color: var(--accent);
-}
-#product-create-page [data-output-quality] input:checked ~ .output-quality-check {
-  color: #fff;
-  border-color: var(--green);
-  background: var(--green);
-}
 
 /* ── پس‌زمینه تیره‌ی پنجره «راهنمایی آیتم» — دقیقاً همان مقدار rgba استاندارد که در
    .drawer-overlay و .mobile-sidebar-overlay (design-tokens.css) برای Overlayهای پنل ادمین استفاده شده،

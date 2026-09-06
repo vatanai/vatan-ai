@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\ServiceCreditAccount;
 use App\Models\ServiceCreditTransaction;
-use App\Models\AiProviderRequest;
-use App\Models\GeneratedImage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -58,11 +56,6 @@ class FalAiBillingService
         }
     }
 
-    public function costFromBillingEvent(?array $event): ?float
-    {
-        return is_array($event) ? $this->eventCostUsd($event) : null;
-    }
-
     public function usage(string $start, string $end): array
     {
         if (!$this->hasKey()) return ['available' => false, 'source' => 'fal.ai usage API'];
@@ -76,17 +69,8 @@ class FalAiBillingService
                 'limit' => 1000,
             ]);
             if ($response->failed()) return ['available' => false, 'source' => 'fal.ai usage API', 'http_status' => $response->status()];
-            $payload = (array) $response->json();
-            // پاسخ رسمی فعلی در حالت time_series، هزینه را داخل results و
-            // با cost_total/cost برمی‌گرداند. نسخهٔ قبلی فقط summary را
-            // می‌خواند و در بعضی پاسخ‌ها quantity یا مقدار اشتباه را به‌جای
-            // دلار مصرف‌شده وارد کارت اعتبار می‌کرد.
-            $summary = (array) ($payload['summary'] ?? []);
-            $timeSeries = (array) ($payload['time_series'] ?? []);
-            $total = $summary !== []
-                ? $this->sumUsageCosts($summary)
-                : $this->sumUsageCosts($timeSeries);
-
+            $summary = collect((array) $response->json('summary', []));
+            $total = (float) $summary->sum(fn ($row) => (float) ($row['cost_total'] ?? $row['cost'] ?? 0));
             return ['available' => true, 'total_usage' => $total, 'source' => 'fal.ai usage API', 'raw' => $response->json()];
         } catch (\Throwable) {
             return ['available' => false, 'source' => 'fal.ai usage API'];
@@ -118,93 +102,20 @@ class FalAiBillingService
     public function recordBillingEvent(ServiceCreditAccount $account, array $event): bool
     {
         $requestId = trim((string) ($event['request_id'] ?? ''));
-        $cost = $this->eventCostUsd($event);
-        if ($requestId === '' || $cost === null || $cost <= 0) return false;
+        $cost = $event['cost_total'] ?? null;
+        if ($requestId === '' || !is_numeric($cost) || (float) $cost <= 0) return false;
         $reference = 'fal-billing-' . $requestId;
-        $created = false;
-        if (!ServiceCreditTransaction::query()->where('reference', $reference)->exists()) {
-            ServiceCreditTransaction::create([
-                'service_credit_account_id' => $account->id,
-                'admin_id' => null,
-                'type' => 'usage',
-                'amount' => round($cost, 6),
-                'occurred_at' => $event['timestamp'] ?? now(),
-                'reference' => $reference,
-                'note' => 'مصرف واقعی از billing-events رسمی Fal.ai؛ endpoint: ' . ($event['endpoint_id'] ?? 'نامشخص'),
-            ]);
-            $created = true;
-        }
-
-        // billing-events ممکن است چند لحظه بعد از تکمیل پاسخ ظاهر شود. با
-        // اتصال آن به درخواست داخلی، قیمت نهایی جایگزین برآورد اولیه می‌شود
-        // و در صورت چند خروجی، بهای هر تصویر نیز دقیقاً تقسیم می‌گردد.
-        $request = AiProviderRequest::query()
-            ->where('provider', 'fal')
-            ->where('external_request_id', $requestId)
-            ->first();
-        if ($request) {
-            $actual = round($cost, 6);
-            if ($request->actual_cost_usd === null || abs((float) $request->actual_cost_usd - $actual) > 0.0000005) {
-                $raw = (array) $request->raw_response;
-                $raw['billing_event'] = $event;
-                $request->forceFill([
-                    'actual_cost_usd' => $actual,
-                    'raw_response' => $raw,
-                ])->save();
-            }
-
-            $images = GeneratedImage::query()
-                ->where('ai_provider_request_id', $request->id)
-                ->get();
-            if ($images->isNotEmpty()) {
-                $perImage = round($actual / $images->count(), 6);
-                foreach ($images as $image) {
-                    if (abs((float) $image->cost - $perImage) > 0.0000005) {
-                        $image->forceFill(['cost' => $perImage])->save();
-                    }
-                }
-            }
-        }
-
-        return $created;
-    }
-
-    /**
-     * جمع هزینهٔ نهایی پاسخ Usage بدون شمردن quantity یا cost_subtotal.
-     * در پاسخ‌های مختلف Fal، ردیف‌ها ممکن است داخل results یا چند لایهٔ
-     * گروه‌بندی باشند؛ این تابع هر دو شکل رسمی را پوشش می‌دهد.
-     */
-    private function sumUsageCosts(mixed $value): float
-    {
-        if (!is_array($value)) return 0.0;
-
-        if (array_key_exists('cost_total', $value) || array_key_exists('cost', $value) || array_key_exists('cost_estimate_nano_usd', $value)) {
-            return $this->eventCostUsd($value) ?? 0.0;
-        }
-
-        $total = 0.0;
-        foreach ($value as $child) {
-            $total += $this->sumUsageCosts($child);
-        }
-
-        return $total;
-    }
-
-    private function eventCostUsd(array $event): ?float
-    {
-        foreach (['cost_total', 'cost'] as $key) {
-            if (is_numeric($event[$key] ?? null)) {
-                return max(0.0, (float) $event[$key]);
-            }
-        }
-
-        // Fal این مقدار را به nano USD می‌دهد؛ تبدیل نکردن آن باعث اختلاف
-        // شدید بین مبلغ واقعی و مبلغ نمایش‌داده‌شده می‌شود.
-        if (is_numeric($event['cost_estimate_nano_usd'] ?? null)) {
-            return max(0.0, (float) $event['cost_estimate_nano_usd'] / 1_000_000_000);
-        }
-
-        return null;
+        if (ServiceCreditTransaction::query()->where('reference', $reference)->exists()) return false;
+        ServiceCreditTransaction::create([
+            'service_credit_account_id' => $account->id,
+            'admin_id' => null,
+            'type' => 'usage',
+            'amount' => round((float) $cost, 6),
+            'occurred_at' => $event['timestamp'] ?? now(),
+            'reference' => $reference,
+            'note' => 'مصرف واقعی از billing-events رسمی Fal.ai؛ endpoint: ' . ($event['endpoint_id'] ?? 'نامشخص'),
+        ]);
+        return true;
     }
 
     private function client()

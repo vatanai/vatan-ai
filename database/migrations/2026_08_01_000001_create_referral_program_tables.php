@@ -13,7 +13,7 @@ return new class extends Migration
         Schema::create('referral_settings', function (Blueprint $table) {
             $table->id();
             $table->boolean('registration_gift_enabled')->default(true);
-            $table->unsignedInteger('registration_gift_tokens')->default(40);
+            $table->unsignedInteger('registration_gift_tokens')->default(50);
             $table->boolean('registration_sms_enabled')->default(true);
             $table->boolean('registration_gift_review_repeated_ip')->default(true);
             $table->boolean('registration_gift_review_repeated_device')->default(true);
@@ -39,7 +39,7 @@ return new class extends Migration
         });
 
         DB::table('referral_settings')->insert([
-            'profile_description' => 'لینک اختصاصی خودت را در شبکه‌های اجتماعی یا برای دوستانت بفرست. هر کاربر جدیدی که با لینک تو ثبت‌نام کند و اولین خرید موفقش را انجام دهد، یک دعوت موفق برای تو ثبت می‌شود و پاداش اعتباری‌ات خودکار به حسابت می‌آید.',
+            'profile_description' => 'لینک اختصاصی خودت را در شبکه‌های اجتماعی یا برای دوستانت بفرست. هر کاربر جدیدی که با لینک تو ثبت‌نام کند و اولین خرید موفقش را انجام دهد، یک دعوت موفق برای تو ثبت می‌شود و پاداش توکنی‌ات خودکار به حسابت می‌آید.',
             'share_message' => 'با لینک دعوت من به وطن بپیوند، ابزارهای هوش مصنوعی را تجربه کن و هدیه شروع بگیر: {referral_link}',
             'created_at' => now(),
             'updated_at' => now(),

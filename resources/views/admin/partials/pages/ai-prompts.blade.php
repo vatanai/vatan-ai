@@ -206,7 +206,7 @@
       <textarea id="prompt-editor-content" rows="10" class="w-full bg-[#16161c] border border-[#222230] rounded-lg px-3 py-2 text-[12px] text-white placeholder:text-[#4d7a56] focus:border-[#2e2e3e] focus:outline-none transition-colors duration-150 resize-none font-mono leading-relaxed" placeholder="متن پرامپت را اینجا وارد کنید..."></textarea>
       <div class="flex items-center justify-between mt-[6px]">
         <span class="text-[10px] text-[#4d7a56]" id="prompt-char-count">۰ کاراکتر</span>
-        <span class="text-[10px] text-[#4d7a56]">≈ <span id="prompt-token-count">۰</span> اعتبار</span>
+        <span class="text-[10px] text-[#4d7a56]">≈ <span id="prompt-token-count">۰</span> توکن</span>
       </div>
     </div>
     <div>

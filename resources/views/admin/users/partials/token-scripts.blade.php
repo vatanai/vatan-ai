@@ -1,4 +1,4 @@
-{{-- پارشیال مدیریت اعتبار: اسکریپت‌های صفحه (جستجو، انتخاب کاربر، میانبرها، اعمال اعتبار، تاریخچه) --}}
+{{-- پارشیال مدیریت توکن: اسکریپت‌های صفحه (جستجو، انتخاب کاربر، میانبرها، اعمال توکن، تاریخچه) --}}
 <script>
 (function () {
   'use strict';
@@ -13,7 +13,7 @@
 
   /* عنوان بردکرامب هدر */
   var bc = $('breadcrumb');
-  if (bc) bc.textContent = 'مدیریت اعتبار';
+  if (bc) bc.textContent = 'مدیریت توکن';
 
   /* جلوگیری از XSS هنگام رندر داده‌های کاربر در HTML */
   function esc(s) {
@@ -59,7 +59,7 @@
           '<div class="tk-user-name">' + esc(u.name || '—') + '</div>' +
           '<div class="tk-user-meta">' + esc(u.phone || u.email || '—') + '</div>' +
         '</div>' +
-        '<div class="tk-token-badge">' + faNum(u.token) + ' اعتبار</div>' +
+        '<div class="tk-token-badge">' + faNum(u.token) + ' توکن</div>' +
       '</div>';
     }).join('');
   }
@@ -99,54 +99,32 @@
     tkUpdatePreview();
   };
 
-  window.tkUpdateExpiryMode = function () {
-    var unit = $('tkExpiryUnit').value;
-    var visible = $('tkAction').value === 'add' && $('tkCreditKind').value !== 'paid_adjustment';
-    $('tkExpiryGroup').style.display = visible ? 'block' : 'none';
-    $('tkExpiryValue').style.display = visible && ['days','weeks','months'].indexOf(unit) >= 0 ? 'block' : 'none';
-    $('tkExpiryDate').style.display = visible && unit === 'date' ? 'block' : 'none';
-  };
-
-  function tkExpiryAt() {
-    var unit = $('tkExpiryUnit')?.value || 'none';
-    if (unit === 'date') return $('tkExpiryDate').value || null;
-    if (['days','weeks','months'].indexOf(unit) < 0) return null;
-    var n = parseInt($('tkExpiryValue').value, 10);
-    if (!Number.isFinite(n) || n < 1) return null;
-    var d = new Date();
-    if (unit === 'days') d.setDate(d.getDate() + n);
-    if (unit === 'weeks') d.setDate(d.getDate() + (n * 7));
-    if (unit === 'months') d.setMonth(d.getMonth() + n);
-    return d.toISOString();
-  }
-
   /* ─── پیش‌نمایش موجودی پس از اعمال ─── */
   window.tkUpdatePreview = function () {
     var el = $('tkPreview');
-    var action = $('tkAction').value;
-    if ($('tkCreditKindGroup')) $('tkCreditKindGroup').style.display = action === 'deduct' ? 'none' : 'block';
     var amount = parseInt($('tkAmount').value, 10);
     if (!selectedUser || isNaN(amount) || amount < 0) { el.style.display = 'none'; return; }
+    var action = $('tkAction').value;
     var cur = parseInt(selectedUser.token, 10) || 0;
     var after = action === 'add' ? cur + amount : (action === 'deduct' ? cur - amount : amount);
     el.style.display = 'block';
     if (after < 0) {
       el.className = 'tk-preview is-danger';
-      el.innerHTML = 'موجودی کاربر کافی نیست (کمبود: <b>' + faNum(Math.abs(after)) + '</b> اعتبار)';
+      el.innerHTML = 'موجودی کاربر کافی نیست (کمبود: <b>' + faNum(Math.abs(after)) + '</b> توکن)';
     } else {
       el.className = 'tk-preview';
-      el.innerHTML = 'موجودی پس از اعمال: <b>' + faNum(after) + '</b> اعتبار';
+      el.innerHTML = 'موجودی پس از اعمال: <b>' + faNum(after) + '</b> توکن';
     }
     el.style.display = 'block';
   };
 
-  /* ─── اعمال تغییر اعتبار روی سرور ─── */
+  /* ─── اعمال تغییر توکن روی سرور ─── */
   window.tkSubmit = function () {
     if (!selectedUser) return tkToast('error', 'ابتدا یک کاربر را جستجو و انتخاب کنید');
     var action = $('tkAction').value;
     var amount = parseInt($('tkAmount').value, 10);
     if (isNaN(amount) || amount < 0 || (action !== 'set' && amount < 1)) {
-      return tkToast('error', 'مقدار اعتبار را به‌درستی وارد کنید');
+      return tkToast('error', 'مقدار توکن را به‌درستی وارد کنید');
     }
     if (action === 'deduct' && amount > (parseInt(selectedUser.token, 10) || 0)) {
       return tkToast('error', 'موجودی کاربر کافی نیست');
@@ -164,21 +142,21 @@
         'Accept': 'application/json',
         'X-CSRF-TOKEN': csrf
       },
-        body: JSON.stringify({ action: action, amount: amount, credit_kind: $('tkCreditKind').value, note: $('tkNote').value || null, expires_at: action === 'add' && $('tkCreditKind').value !== 'paid_adjustment' ? tkExpiryAt() : null, send_sms: !!$('tkSendSms')?.checked })
+      body: JSON.stringify({ action: action, amount: amount, note: $('tkNote').value || null })
     })
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
       })
       .then(function (res) {
         if (!res.ok || !res.d || res.d.status !== 'success') {
-          throw new Error((res.d && res.d.message) || 'خطا در اعمال اعتبار');
+          throw new Error((res.d && res.d.message) || 'خطا در اعمال توکن');
         }
         selectedUser.token = res.d.new_balance;
         $('tkSelToken').textContent = faNum(res.d.new_balance);
         $('tkAmount').value = '';
         $('tkNote').value = '';
         tkUpdatePreview();
-        tkToast('success', res.d.message || 'اعتبار با موفقیت اعمال شد');
+        tkToast('success', res.d.message || 'توکن با موفقیت اعمال شد');
         tkLoadHistory(selectedUser.id);
       })
       .catch(function (e) {
@@ -190,7 +168,7 @@
       });
   };
 
-  /* ─── تاریخچه‌ی تغییرات اعتبار ─── */
+  /* ─── تاریخچه‌ی تغییرات توکن ─── */
   function tkLoadHistory(userId) {
     var box = $('tkHistoryItems');
     box.innerHTML = '<div class="tk-h-loading">در حال بارگذاری...</div>';
@@ -204,8 +182,8 @@
   }
 
   var hConf = {
-    add:    { icon: 'fa-plus',   cls: 'tk-h-add',    sign: '+', label: 'افزودن اعتبار' },
-    deduct: { icon: 'fa-minus',  cls: 'tk-h-deduct', sign: '−', label: 'کسر اعتبار' },
+    add:    { icon: 'fa-plus',   cls: 'tk-h-add',    sign: '+', label: 'افزودن توکن' },
+    deduct: { icon: 'fa-minus',  cls: 'tk-h-deduct', sign: '−', label: 'کسر توکن' },
     set:    { icon: 'fa-equals', cls: 'tk-h-set',    sign: '',  label: 'تنظیم مستقیم' }
   };
 
@@ -228,19 +206,10 @@
           '<div class="tk-h-amount tk-amt-' + (hConf[h.type] ? h.type : 'set') + '">' + c.sign + faNum(h.amount) + '</div>' +
           '<div class="tk-h-meta">موجودی: ' + faNum(h.balance_after) + '</div>' +
           '<div class="tk-h-meta">' + esc(h.time || '') + '</div>' +
-          (h.expires_at ? '<div class="tk-h-meta">انقضا: ' + esc(h.expires_at) + '</div>' : '') +
         '</div>' +
-        '<button type="button" class="tk-clear-btn" style="margin:0;white-space:nowrap;" onclick="tkResendSms(' + Number(h.id) + ')"><i class="fa-solid fa-paper-plane"></i> پیامک</button>' +
       '</div>';
     }).join('');
   }
-
-  window.tkResendSms = function (id) {
-    fetch('/api/v1/admin/token-history/' + encodeURIComponent(id) + '/sms', { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf } })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) { tkToast(res.ok && res.d.status === 'success' ? 'success' : 'error', res.d.message || 'ارسال پیامک انجام نشد.'); })
-      .catch(function () { tkToast('error', 'ارتباط با سرور برقرار نشد.'); });
-  };
 
   /* ─── توست نتیجه‌ی عملیات ─── */
   window.tkToast = function (type, msg) {

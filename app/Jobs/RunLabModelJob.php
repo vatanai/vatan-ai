@@ -7,7 +7,6 @@ use App\Models\LabRun;
 use App\Models\ServiceCreditAccount;
 use App\Services\FalAiBillingService;
 use App\Services\AiProviderRouter;
-use App\Services\ExchangeRateService;
 use App\Services\OpenRouterService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,27 +26,10 @@ class RunLabModelJob implements ShouldQueue
 
     public function __construct(public int $runId) {}
 
-    public function handle(AiProviderRouter $router, OpenRouterService $openRouter, ExchangeRateService $exchangeRate): void
+    public function handle(AiProviderRouter $router, OpenRouterService $openRouter): void
     {
         $run = LabRun::with(['experiment.images', 'aiModel'])->find($this->runId);
         if (!$run || in_array($run->status, ['completed', 'cancelled'], true)) return;
-
-        // نرخ زمان ثبت آزمایش ممکن است به‌دلیل قطعی موقت سرویس ارز صفر بوده
-        // باشد؛ قبل از ثبت هزینه نهایی، آخرین نرخ معتبر را دوباره می‌خوانیم.
-        $rateIrr = (float) $run->exchange_rate_irr;
-        if ($rateIrr <= 0) {
-            $rateIrr = (float) data_get($exchangeRate->usdToIrr(), 'rate', 0);
-            if ($rateIrr > 0) {
-                $run->exchange_rate_irr = $rateIrr;
-                $run->save();
-                if ((float) $run->experiment->exchange_rate_irr <= 0) {
-                    $run->experiment->forceFill([
-                        'exchange_rate_irr' => $rateIrr,
-                        'exchange_rate_usd' => $rateIrr / 10,
-                    ])->save();
-                }
-            }
-        }
 
         $started = microtime(true);
         $run->forceFill(['status' => 'processing', 'started_at' => now(), 'error_message' => null])->save();
@@ -149,7 +131,7 @@ class RunLabModelJob implements ShouldQueue
             $this->recordFalBilling($run, $result);
             $actualCost = $generationCost + $scoringCost;
             $durationMs = (int) round((microtime(true) - $started) * 1000);
-            $rateToman = $rateIrr / 10;
+            $rateToman = (float) $run->exchange_rate_irr / 10;
             $run->forceFill([
                 'status' => 'completed',
                 'actual_cost_usd' => $actualCost,
@@ -210,20 +192,14 @@ class RunLabModelJob implements ShouldQueue
                 : 'failed')
             : ($runs->contains(fn ($run) => $run->status === 'processing') ? 'processing' : 'queued');
         $totalUsd = (float) $runs->sum(fn ($run) => $this->effectiveRunCost($run));
-        $rateIrr = (float) $experiment->exchange_rate_irr;
-        if ($rateIrr <= 0) {
-            $rateIrr = (float) $runs->max(fn ($run) => (float) $run->exchange_rate_irr);
-        }
-        $rateToman = $rateIrr / 10;
+        $rateToman = (float) $experiment->exchange_rate_irr / 10;
         $experiment->forceFill([
             'status' => $status,
             'actual_cost_usd' => $totalUsd,
-            'actual_cost_irr' => $totalUsd * $rateIrr,
+            'actual_cost_irr' => $totalUsd * (float) $experiment->exchange_rate_irr,
             'actual_cost_toman' => $totalUsd * $rateToman,
             'total_cost_usd' => $totalUsd,
             'total_cost_toman' => $totalUsd * $rateToman,
-            'exchange_rate_irr' => $rateIrr > 0 ? $rateIrr : $experiment->exchange_rate_irr,
-            'exchange_rate_usd' => $rateToman > 0 ? $rateToman : $experiment->exchange_rate_usd,
             'models_count' => $runs->count(),
             'started_at' => $runs->min('started_at') ?: $experiment->started_at,
             'completed_at' => $terminal ? now() : null,

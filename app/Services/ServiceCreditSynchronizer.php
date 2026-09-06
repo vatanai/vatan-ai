@@ -20,9 +20,9 @@ class ServiceCreditSynchronizer
         }
 
         Cache::forget('finance.openrouter_credits');
+        Cache::forget('finance.liara_credits');
         Cache::forget('finance.fal_credits');
         Cache::forget('finance.replicate_credits');
-        Cache::forget('finance.melipayamak_credits');
         $accounts = $this->overview->get()['accounts'];
         $result = ['synced' => 0, 'transactions_created' => 0, 'changes' => []];
 
@@ -55,19 +55,6 @@ class ServiceCreditSynchronizer
                 $minimumDelta = $account->currency === 'USD' ? 0.000001 : 0.01;
                 if (abs($delta) < $minimumDelta) {
                     return ['account' => $account->name, 'delta' => 0, 'initialized' => false];
-                }
-
-                // برای Fal.ai، ریزمصرف request-level از billing-events رسمی وارد
-                // تراکنش‌ها شده است؛ delta موجودی فقط snapshot است و نباید usage
-                // دوم تولید کند.
-                if ($account->sync_driver === 'fal') {
-                    ServiceCreditSnapshot::create([
-                        'service_credit_account_id' => $account->id,
-                        'balance' => $currentBalance,
-                        'currency' => $account->currency,
-                        'captured_at' => now(),
-                    ]);
-                    return ['account' => $account->name, 'delta' => $delta, 'initialized' => false, 'usage_source' => 'fal.ai billing-events'];
                 }
 
                 $snapshot = ServiceCreditSnapshot::create([

@@ -32,16 +32,16 @@ class FrontPromptController extends Controller
             'additional_prompt' => 'nullable|string|max:1000'
         ]);
 
-        // ۲. خواندن کلید API از تنظیمات امن پروژه
+        // ۲. متد هوشمند صید کلید API (بررسی لاراول کانفیگ -> متغیرهای عمومی لیارا)
         $apiKey = config('services.openrouter.api_key') 
                   ?? env('OPENROUTER_API_KEY') 
                   ?? env('OPENROUTER_KEY');
 
         if (!$apiKey) {
-            Log::critical('OpenRouter API Key Missing on Cloudiva Environment.');
+            Log::critical('OpenRouter API Key Missing on Liara Environment.');
             return response()->json([
                 'success' => false,
-                'message' => 'کلید اتصال به هوش مصنوعی (OPENROUTER_API_KEY) در متغیرهای برنامه تنظیم نشده است.'
+                'message' => 'کلید اتصال به هوش مصنوعی (OPENROUTER_API_KEY) در متغیرهای برنامه لیارا تنظیم نشده است.'
             ], 500);
         }
 
@@ -100,7 +100,7 @@ class FrontPromptController extends Controller
             }
             $fileContents = base64_decode($rawBase64Image);
 
-            // ایجاد مسیر امن ذخیره‌سازی روی دیسک دائمی سرویس
+            // ایجاد مسیر امن ذخیره‌سازی روی دیسک دپلو شده لیارا
             $aiImageName = 'uniset_' . time() . '_' . uniqid() . '.png';
             $diskPath    = 'uploads/prompts/' . $aiImageName;
 

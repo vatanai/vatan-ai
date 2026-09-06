@@ -6,7 +6,7 @@
       <img class="trends-card-media" src="{{ $card['src'] }}" alt="{{ $card['name'] }}" loading="lazy">
     @endif
     <span class="trends-card-overlay"></span>
-    <span class="trends-token-badge"><i class="fa-solid fa-coins"></i> {{ number_format((int) ($card['tokens'] ?? 0)) }} توکن</span>
+    <span class="trends-download-badge"><i class="fa-solid fa-download"></i> {{ number_format((int) $card['downloads']) }} دانلود</span>
     <span class="trends-card-type"><i class="fa-solid {{ $card['video'] ? 'fa-video' : 'fa-image' }}"></i></span>
     <span class="trends-card-info">
       <strong>{{ $card['name'] }}</strong>

@@ -99,7 +99,7 @@
     </section>
 
     <section class="content-card overflow-hidden mb-4">
-      <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">نمره مدیر سایت</h2><p class="text-[10px] mt-1" style="color:var(--text-soft);">نمره، شباهت، کیفیت جزئیات، هزینه و زمان هر خروجی را ثبت کنید؛ اطلاعات بلافاصله در جدول محاسبه دقیق ذخیره می‌شود.</p></div>
+      <div class="p-4 border-b" style="border-color:var(--border);"><h2 class="text-sm font-extrabold" style="color:var(--text-h);">نمره مدیر سایت</h2><p class="text-[10px] mt-1" style="color:var(--text-soft);">نمره، شباهت، کیفیت جزئیات و اولویت استفاده هر خروجی را ثبت کنید؛ اطلاعات بلافاصله در جدول محاسبه دقیق ذخیره می‌شود.</p></div>
       <div class="overflow-x-auto"><table class="table-pro"><thead><tr><th>مدل</th><th>نمره ۱ تا ۱۰</th><th>شباهت</th><th>کیفیت جزئیات</th><th>اولویت استفاده</th><th>ثبت</th></tr></thead><tbody>
       @foreach($experiment->runs as $run)
         @foreach($run->outputs as $output)
@@ -115,10 +115,6 @@
                 <select class="input-pro" name="similarity_score"><option value="">شباهت</option>@foreach(['خیلی کم','کم','متوسط','زیاد','خیلی زیاد'] as $v)<option @selected($manager?->similarity_score === $v)>{{ $v }}</option>@endforeach</select>
                 <select class="input-pro" name="detail_quality"><option value="">جزئیات</option>@foreach(['ضعیف','قابل قبول','خوب','عالی'] as $v)<option @selected($manager?->detail_quality === $v)>{{ $v }}</option>@endforeach</select>
                 <input class="input-pro" style="width:90px" type="number" min="1" max="{{ max(1, $experiment->runs->count()) }}" name="usage_priority" value="{{ $manager?->usage_priority }}" placeholder="اولویت">
-                <input class="input-pro" style="width:98px" type="number" min="0" max="100" step="0.01" name="quality_score" value="{{ $run->quality_score }}" placeholder="کیفیت %">
-                <input class="input-pro" style="width:98px" type="number" min="0" max="100" step="0.01" name="identity_score" value="{{ $run->identity_score }}" placeholder="هویت %">
-                <input class="input-pro" style="width:98px" type="number" min="0" max="100" step="0.01" name="sample_match_score" value="{{ $run->sample_match_score }}" placeholder="تطبیق %">
-                <input class="input-pro" style="min-width:160px" type="text" name="notes" value="{{ $run->notes }}" placeholder="یادداشت">
               </form>
             </td>
             <td><button class="btn-pro btn-pro-primary" type="submit" form="manager-score-{{ $output->id }}">ذخیره</button></td>

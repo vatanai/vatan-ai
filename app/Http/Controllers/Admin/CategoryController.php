@@ -139,7 +139,6 @@ class CategoryController extends Controller
             'name'  => 'required|string|max:255|unique:categories,name',
             'slug'  => 'nullable|string|max:255|unique:categories,slug',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'cover_ratio' => 'required|in:1:1,2:1,1:2',
             'parent_id' => 'nullable|exists:categories,id', // حداکثر ۲ مگابایت
             'custom_url' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
         ], [
@@ -151,7 +150,7 @@ class CategoryController extends Controller
             'image.max'     => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد.',
         ]);
 
-        $data = $request->only(['name', 'cover_ratio']);
+        $data = $request->only(['name']);
         
         // هندل کردن اسلاگ فارسی و انگلیسی (جلوگیری از حذف حروف فارسی توسط لاراول)
         $slugSource = $request->slug ? $request->slug : $request->name;
@@ -194,7 +193,6 @@ class CategoryController extends Controller
             'name'  => 'required|string|max:255|unique:categories,name,' . $category->id,
             'slug'  => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'cover_ratio' => 'required|in:1:1,2:1,1:2',
             'parent_id' => 'nullable|exists:categories,id',
             'custom_url' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
         ], [
@@ -204,7 +202,7 @@ class CategoryController extends Controller
             'image.image'   => 'فایل انتخابی باید تصویر باشد.',
         ]);
 
-        $data = $request->only(['name', 'cover_ratio']);
+        $data = $request->only(['name']);
         
         $slugSource = $request->slug ? $request->slug : $request->name;
         $data['slug'] = preg_replace('/\s+/u', '-', trim($slugSource));

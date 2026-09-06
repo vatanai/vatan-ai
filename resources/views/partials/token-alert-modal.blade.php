@@ -8,7 +8,7 @@
             <i class="fa-solid fa-xmark text-xs"></i>
         </button>
 
-        {{-- آیکون متحرک و افکت نئون سکه/اعتبار --}}
+        {{-- آیکون متحرک و افکت نئون سکه/توکن --}}
         <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.15)] animate-pulse mb-2">
             <i class="fa-solid fa-coins text-2xl"></i>
         </div>
@@ -16,7 +16,7 @@
         {{-- متن‌های راهنما --}}
         <h3 class="text-[15px] font-black text-gray-100">موجودی اعتبار شما کافی نیست!</h3>
         <p class="text-[11.5px] text-gray-400 leading-relaxed px-2">
-            هزینه استفاده از این ابزار هوش مصنوعی بیشتر از اعتبار‌های باقی‌مانده شماست. برای دسترسی به کارگاه ساخت و پردازش رندر، نیاز به شارژ حساب خود دارید.
+            هزینه استفاده از این ابزار هوش مصنوعی بیشتر از توکن‌های باقی‌مانده شماست. برای دسترسی به کارگاه ساخت و پردازش رندر، نیاز به شارژ حساب خود دارید.
         </p>
 
         {{-- آمار وضعیت فعلی --}}
@@ -29,7 +29,7 @@
         <div class="w-full grid grid-cols-1 gap-2 mt-2">
             <a href="/app/pricing" class="w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/10 active:scale-[0.99] no-underline">
                 <i class="fa-solid fa-basket-shopping text-xs"></i>
-                خرید بسته و افزایش آنی اعتبار
+                خرید بسته و افزایش آنی توکن
             </a>
             <button type="button" onclick="closeGlobalTokenModal()" class="w-full h-10 bg-white/[0.03] hover:bg-white/10 text-gray-400 hover:text-white font-bold text-[11px] rounded-xl transition-colors cursor-pointer">
                 بعداً تهیه می‌کنم (بازگشت)

@@ -46,13 +46,6 @@
   if (window.location.hash === '#referral-program' || requestedTab === 'referral') {
     activateProfileTab('referral', true);
   }
-  if (requestedTab === 'account') {
-    activateProfileTab('files', true);
-    activateFilesSubTab('account');
-  } else if (requestedTab === 'files') {
-    activateProfileTab('files', true);
-    activateFilesSubTab(new URLSearchParams(window.location.search).get('file_tab') || 'account');
-  }
 
   /* ───── لینک دعوت و اشتراک‌گذاری ───── */
   var referralLinkInput = document.getElementById('referralLinkInput');
@@ -245,26 +238,15 @@
   }
 
   /* ───── Files Sub-Tabs ───── */
-  function activateFilesSubTab(sub) {
-    var selected = document.querySelector('.files-sub-tab[data-sub="' + sub + '"]');
-    var panel = document.getElementById('files-' + sub);
-    if (!selected || !panel) return;
-
-    document.querySelectorAll('.files-sub-tab').forEach(function (button) {
-      button.classList.toggle('active', button === selected);
-    });
-    ['account', 'face-profiles', 'personal'].forEach(function (key) {
-      var current = document.getElementById('files-' + key);
-      if (!current) return;
-      current.style.display = key === sub ? (key === 'personal' ? 'grid' : 'block') : 'none';
-    });
-  }
-
   document.querySelectorAll('.files-sub-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      document.querySelectorAll('.files-sub-tab').forEach(function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
       var sub = btn.getAttribute('data-sub');
-      activateFilesSubTab(sub);
-      history.replaceState(null, '', '?tab=files&file_tab=' + encodeURIComponent(sub));
+      document.getElementById('files-created').style.display  = sub === 'created'  ? 'grid' : 'none';
+      document.getElementById('files-personal').style.display = sub === 'personal' ? 'grid' : 'none';
     });
   });
 

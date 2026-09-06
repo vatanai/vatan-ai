@@ -10,7 +10,6 @@ use App\Services\StudioCostService;
 use App\Services\VideoGenerationService;
 use App\Services\VideoModelSchemaService;
 use App\Services\VideoProductConfigService;
-use App\Services\UserGalleryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -46,13 +45,9 @@ class StudioWorkflowController extends Controller
                     'value' => (string) $model->openrouter_model_id,
                     'provider' => (string) $model->provider,
                     'task_type' => (string) $model->task_type,
-                    'supports_text' => $model->task_type === 'text_to_video',
+                    'supports_text' => $model->task_type === 'text_to_video' || data_get($model->capability_config, 'supports_text_to_video') === true,
                     'supports_image' => (bool) $summary['supports_image'],
                     'supports_video' => (bool) $summary['supports_video'],
-                    'supports_image_to_video' => in_array($model->task_type, ['image_to_video', 'face_animation'], true)
-                        || data_get($model->capability_config, 'supports_image_to_video') === true,
-                    'supports_video_to_video' => $model->task_type === 'video_to_video'
-                        || data_get($model->capability_config, 'supports_video_to_video') === true,
                     'supports_multiple_images' => $maxImages > 1,
                     'max_images' => $maxImages,
                     'supported_durations' => array_values(array_map('strval', data_get($capabilities, 'supported_durations', $summary['durations'] ?? []))),
@@ -85,7 +80,7 @@ class StudioWorkflowController extends Controller
         ]);
     }
 
-    public function generate(Request $request, VideoGenerationService $videos, VideoModelSchemaService $modelSchemas, UserGalleryService $userGallery): \Illuminate\Http\JsonResponse
+    public function generate(Request $request, VideoGenerationService $videos, VideoModelSchemaService $modelSchemas): \Illuminate\Http\JsonResponse
     {
         $workflow = $this->workflow($request->input('workflow'));
         $product = $this->videoProduct();
@@ -103,15 +98,15 @@ class StudioWorkflowController extends Controller
             'source_images' => [$isImageWorkflow ? 'required' : 'nullable', 'array', 'min:' . ($workflow === 'image_sequence_to_video' ? 2 : 1), 'max:4'],
             'source_images.*' => ['image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
             'source_video' => [$isVideoWorkflow ? 'required' : 'nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
+            'rights_confirmed' => ['accepted'],
         ]);
-        $user = $request->user();
-        $saveToPersonalGallery = $userGallery->isEnabledFor($user);
         $this->ensureSupportedOptions($model, $request, $modelSchemas);
 
         $runner = clone $product;
         $runner->primary_model = $model->openrouter_model_id;
         $runner->ai_provider = $model->provider;
-        $this->configureWorkflowFallbacks($runner, $product, $model, $workflow);
+        $runner->fallback_models = [];
+        $runner->fallback_model_providers = [];
         $providerOptions = (array) $runner->provider_options;
         $videoConfig = $runner->videoConfiguration();
         $videoConfig['workflow'] = $isImageWorkflow ? 'image_to_video' : $workflow;
@@ -123,11 +118,9 @@ class StudioWorkflowController extends Controller
 
         $imageData = [];
         $imagePaths = [];
-        $imageInputs = [];
         foreach ((array) $request->file('source_images', []) as $file) {
             $path = $file->store('uploads/video-inputs/images', 'public');
             $imagePaths[] = $path;
-            $imageInputs[] = ['path' => $path, 'size' => $file->getSize(), 'mime' => $file->getMimeType()];
             $imageData[] = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
             UserUpload::create([
                 'user_id' => $request->user()->id,
@@ -170,30 +163,6 @@ class StudioWorkflowController extends Controller
                 'reference_mode' => $workflow === 'image_sequence_to_video' || count($imageData) > 1 ? 'input_references' : null,
                 'studio_mode' => true,
             ]);
-
-            if ($saveToPersonalGallery) {
-                foreach ($imageInputs as $input) {
-                    try {
-                        $userGallery->capture($user, 'input_image', null, $input['path'], 'public', (int) $input['size'], $input['mime'], [
-                            'product_id' => $product->id,
-                            'order_id' => $generation->order_id,
-                        ]);
-                    } catch (\Throwable $exception) {
-                        report($exception);
-                    }
-                }
-                if ($sourceVideoPath) {
-                    try {
-                        $videoUpload = $request->file('source_video');
-                        $userGallery->capture($user, 'input_video', null, $sourceVideoPath, 'public', (int) ($videoUpload?->getSize() ?? 0), $videoUpload?->getMimeType(), [
-                            'product_id' => $product->id,
-                            'order_id' => $generation->order_id,
-                        ]);
-                    } catch (\Throwable $exception) {
-                        report($exception);
-                    }
-                }
-            }
 
             return response()->json([
                 'success' => true,
@@ -246,10 +215,11 @@ class StudioWorkflowController extends Controller
             ->when($provider !== '', fn ($query) => $query->where('provider', $provider))
             ->first();
 
+        $capabilities = (array) ($model?->capability_config ?? []);
         $compatible = match ($workflow) {
-            'text_to_video' => $model && $model->task_type === 'text_to_video',
-            'video_to_video' => $model && $model->task_type === 'video_to_video',
-            default => $model && in_array($model->task_type, ['image_to_video', 'face_animation'], true),
+            'text_to_video' => $model && ($model->task_type === 'text_to_video' || data_get($capabilities, 'supports_text_to_video') === true),
+            'video_to_video' => $model && ($model->task_type === 'video_to_video' || data_get($capabilities, 'supports_video_to_video') === true),
+            default => $model && ($model->task_type === 'image_to_video' || $model->task_type === 'face_animation' || data_get($capabilities, 'supports_image_to_video') === true),
         };
 
         if (!$compatible) {
@@ -257,70 +227,6 @@ class StudioWorkflowController extends Controller
         }
 
         return $model;
-    }
-
-    /**
-     * مسیر استودیو باید fallbackهای واقعیِ همان نوع ورودی را نگه دارد. مدل‌های
-     * متن‌به‌ویدیو نباید برای عکس‌به‌ویدیو وارد صف شوند. مدل‌های OpenRouter نیز
-     * قبل از providerهای دیگر قرار می‌گیرند تا اولویت عملیاتی وطن حفظ شود.
-     */
-    private function configureWorkflowFallbacks(Product $runner, Product $source, AiModel $primary, string $workflow): void
-    {
-        $compatible = function (AiModel $candidate) use ($workflow): bool {
-            return match ($workflow) {
-                'text_to_video' => $candidate->task_type === 'text_to_video',
-                'video_to_video' => $candidate->task_type === 'video_to_video',
-                default => in_array($candidate->task_type, ['image_to_video', 'face_animation'], true),
-            };
-        };
-
-        $pairs = collect();
-        $configuredProviders = array_values(array_merge(
-            [(string) $source->ai_provider],
-            (array) $source->fallback_model_providers,
-        ));
-        $configuredIds = array_values(array_merge(
-            [(string) $source->primary_model],
-            (array) $source->fallback_models,
-        ));
-        foreach ($configuredIds as $index => $candidateId) {
-            $candidateId = trim((string) $candidateId);
-            $provider = trim((string) ($configuredProviders[$index] ?? ''));
-            if ($candidateId === '' || $provider === '') continue;
-            $pairs->push(['model' => $candidateId, 'provider' => $provider]);
-        }
-
-        $automatic = AiModel::query()
-            ->where('is_active', true)
-            ->where('output_modality', 'video')
-            ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
-            ->whereNotNull('openrouter_model_id')
-            ->where('openrouter_model_id', '<>', '')
-            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
-            ->orderByDesc('lab_priority')
-            ->orderBy('id')
-            ->get()
-            ->filter(fn (AiModel $candidate): bool => $compatible($candidate))
-            ->filter(fn (AiModel $candidate): bool => filled(app(\App\Services\AiProviderCredentials::class)->for($candidate->provider)['api_key'] ?? null));
-
-        $candidates = $pairs
-            ->merge($automatic->map(fn (AiModel $candidate): array => [
-                'model' => (string) $candidate->openrouter_model_id,
-                'provider' => (string) $candidate->provider,
-            ]))
-            ->filter(fn (array $candidate): bool => !(
-                $candidate['model'] === (string) $primary->openrouter_model_id
-                && $candidate['provider'] === (string) $primary->provider
-            ))
-            ->unique(fn (array $candidate): string => $candidate['provider'] . '|' . $candidate['model'])
-            ->sortBy(fn (array $candidate): array => [
-                $candidate['provider'] === 'openrouter' ? 0 : ($candidate['provider'] === 'fal' ? 1 : 2),
-            ])
-            ->take(6)
-            ->values();
-
-        $runner->fallback_models = $candidates->pluck('model')->all();
-        $runner->fallback_model_providers = $candidates->pluck('provider')->all();
     }
 
     private function ensureSupportedOptions(AiModel $model, Request $request, VideoModelSchemaService $modelSchemas): void

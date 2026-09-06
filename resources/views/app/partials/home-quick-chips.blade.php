@@ -76,7 +76,7 @@
       </svg>
     </span>
     <span class="ig-quick-text">
-      <span class="ig-quick-title">تولد مناسبت</span>
+      <span class="ig-quick-title">تولد و مناسبت‌ها</span>
       <span class="ig-quick-sub">برای هر جشن بساز</span>
     </span>
   </button>

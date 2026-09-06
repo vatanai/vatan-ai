@@ -18,7 +18,7 @@
 .create-studio-page[data-workflow-studio] .create-studio-workflow-file img{display:block;width:100%;height:100%;object-fit:cover}
 .create-studio-page[data-workflow-studio] .create-studio-workflow-file b{position:absolute;right:4px;top:4px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--green);color:var(--bg-page);font-size:8px}
 .create-studio-page[data-workflow-studio] .create-studio-workflow-file span{position:absolute;right:0;bottom:0;left:0;padding:3px;background:color-mix(in srgb,var(--bg-page) 82%,transparent);color:var(--text-primary);font-size:7px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.create-studio-page[data-workflow-studio] .create-studio-reference-drop[data-workflow-disabled="true"]{opacity:.5;pointer-events:none}
+.create-studio-page[data-workflow-studio] .create-studio-reference-drop[data-workflow-disabled]{opacity:.5;pointer-events:none}
 .create-studio-page[data-workflow-studio] .create-studio-reference-drop[data-workflow-multiple="true"]{border-color:color-mix(in srgb,var(--green) 40%,var(--border-subtle))}
 .create-studio-page[data-workflow-studio] .create-studio-workflow-badge{display:inline-flex;align-items:center;gap:4px;margin-top:5px;color:var(--green);font-size:7px}
 @media (max-width:700px){

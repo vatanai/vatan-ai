@@ -1,185 +1,4 @@
 <script>
-/* ══════ مصرف اعتبار سه‌سطحی محصول ══════ */
-function setQualityCreditCostInputs(costs) {
-  Object.keys(costs || {}).forEach(function (key) {
-    var input = document.querySelector('[data-quality-credit-cost="' + key + '"]');
-    if (input && Number(costs[key]) > 0) input.value = Number(costs[key]);
-  });
-}
-
-function markQualityCreditCostsCustom() {
-  var presetKey = document.getElementById('quality-credit-preset-key');
-  var preset = document.querySelector('[data-quality-credit-preset]');
-  if (presetKey) presetKey.value = 'custom';
-  if (preset && preset.value !== 'custom') preset.value = 'custom';
-  var status = document.querySelector('[data-quality-credit-status]');
-  if (status) {
-    status.textContent = 'تغییر دستی فعال است؛ این محصول با تنظیم سفارشی ذخیره می‌شود.';
-    status.style.color = 'var(--warning)';
-  }
-}
-
-function qualityCreditCostsFromInputs() {
-  var costs = {};
-  document.querySelectorAll('[data-quality-credit-cost]').forEach(function (input) {
-    costs[input.dataset.qualityCreditCost] = Number(input.value || 0);
-  });
-  return costs;
-}
-
-function qualityCreditPresetStatus(message, isError) {
-  var box = document.querySelector('[data-quality-credit-preset-manager-status]');
-  if (box) {
-    box.textContent = message;
-    box.style.color = isError ? 'var(--danger)' : 'var(--success)';
-  }
-  if (typeof showGlobalError === 'function' && isError) showGlobalError(message);
-}
-
-function qualityCreditRequest(url, method, payload) {
-  return fetch(url, {
-    method: method,
-    headers: {'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},
-    credentials: 'same-origin',
-    body: payload ? JSON.stringify(payload) : undefined,
-  }).then(function (response) {
-    return response.json().catch(function () { return {}; }).then(function (data) {
-      if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'ذخیره‌ی پیش‌فرض مصرف اعتبار انجام نشد.');
-      return data;
-    });
-  });
-}
-
-function renderQualityCreditPresetSelect(presets, selectedKey) {
-  var select = document.querySelector('[data-quality-credit-preset]');
-  if (!select) return;
-  var current = selectedKey || select.value;
-  select.innerHTML = Object.entries(presets).map(function (entry) {
-    return '<option value="' + String(entry[0]).replace(/"/g, '&quot;') + '">' + String(entry[1].name || entry[0]).replace(/[&<>]/g, '') + '</option>';
-  }).join('') + '<option value="custom">تنظیم سفارشی</option>';
-  select.value = presets[current] ? current : 'custom';
-}
-
-function renderQualityCreditPresetManager(presets) {
-  var list = document.querySelector('[data-quality-credit-preset-list]');
-  if (!list) return;
-  list.innerHTML = Object.entries(presets).map(function (entry) {
-    var key = entry[0], preset = entry[1];
-    var costs = preset.costs || {};
-    return '<div class="p-3 rounded-xl bg-[var(--s1)] border border-[var(--b1)]" data-credit-preset-row="' + key + '">' +
-      '<div class="flex items-center gap-2 flex-wrap">' +
-      '<input class="flex-1 min-w-[150px] h-9 px-2.5 rounded-lg bg-[var(--s2)] border border-[var(--b1)] text-xs text-[var(--text)]" data-credit-preset-name value="' + String(preset.name || '').replace(/[&<>"']/g, '') + '">' +
-      '<button type="button" class="h-9 px-2.5 rounded-lg text-[10px] font-bold bg-[var(--primary-l)] text-[var(--primary)]" data-credit-preset-save>ذخیره نام</button>' +
-      '<button type="button" class="h-9 px-2.5 rounded-lg text-[10px] font-bold ' + (preset.is_default_for_product_creation ? 'bg-[var(--success-l)] text-[var(--success)]' : 'bg-[var(--s2)] text-[var(--text2)]') + '" data-credit-preset-default>' + (preset.is_default_for_product_creation ? 'پیش‌فرض ثبت محصول' : 'انتخاب برای ثبت محصول') + '</button>' +
-      '<button type="button" class="h-9 px-2.5 rounded-lg text-[10px] font-bold text-[var(--danger)] bg-[var(--danger-l)]" data-credit-preset-delete>حذف</button>' +
-      '</div>' +
-      '<div class="flex items-center gap-3 flex-wrap mt-2 text-[10px] text-[var(--text3)]">استاندارد: <b>' + Number(costs.standard || 0).toLocaleString('fa-IR') + '</b> · حرفه‌ای: <b>' + Number(costs.professional || 0).toLocaleString('fa-IR') + '</b> · بهترین: <b>' + Number(costs.best || 0).toLocaleString('fa-IR') + '</b> اعتبار</div>' +
-      '</div>';
-  }).join('');
-}
-
-function openQualityCreditPresetManager() {
-  var dialog = document.getElementById('quality-credit-preset-dialog');
-  if (!dialog) return;
-  renderQualityCreditPresetManager(window.__qualityCreditPresets || {});
-  dialog.showModal();
-}
-
-function closeQualityCreditPresetManager() { document.getElementById('quality-credit-preset-dialog')?.close(); }
-
-document.addEventListener('DOMContentLoaded', function () {
-  var root = document.querySelector('[data-quality-credit-pricing]');
-  if (!root) return;
-  var presets = {};
-  try { presets = JSON.parse(root.dataset.creditPresets || '{}'); } catch (error) { presets = {}; }
-  window.__qualityCreditPresets = presets;
-  var select = root.querySelector('[data-quality-credit-preset]');
-  var keyInput = document.getElementById('quality-credit-preset-key');
-  var status = root.querySelector('[data-quality-credit-status]');
-  select?.addEventListener('change', function () {
-    var selected = presets[select.value];
-    if (selected?.costs) {
-      window.__qualityCreditSourcePresetKey = select.value;
-      setQualityCreditCostInputs(selected.costs);
-      if (keyInput) keyInput.value = select.value;
-      if (status) { status.textContent = 'مقادیر پیش‌فرض انتخاب شد؛ در صورت نیاز قابل ویرایش است.'; status.style.color = 'var(--success)'; }
-    } else {
-      markQualityCreditCostsCustom();
-    }
-  });
-  root.querySelector('[data-manage-quality-credit-presets]')?.addEventListener('click', openQualityCreditPresetManager);
-  root.querySelector('[data-fix-quality-credit-preset]')?.addEventListener('click', function () {
-    var key = select?.value === 'custom' ? (window.__qualityCreditSourcePresetKey || '') : (select?.value || '');
-    var preset = presets[key];
-    if (!preset?.update_url) {
-      qualityCreditPresetStatus('ابتدا یک پیش‌فرض ذخیره‌شده را انتخاب کنید؛ تنظیم سفارشی قابل ذخیره روی پیش‌فرض نیست.', true);
-      return;
-    }
-    qualityCreditRequest(preset.update_url, 'PATCH', {costs: qualityCreditCostsFromInputs()})
-      .then(function (data) {
-        presets[key] = Object.assign(presets[key], {costs: data.costs || qualityCreditCostsFromInputs()});
-        if (select) select.value = key;
-        if (keyInput) keyInput.value = key;
-        qualityCreditPresetStatus(data.message || 'اعداد این محصول در پیش‌فرض ذخیره شد.', false);
-      })
-      .catch(function (error) { qualityCreditPresetStatus(error.message, true); });
-  });
-  root.querySelectorAll('[data-quality-credit-cost]').forEach(function (input) {
-    input.addEventListener('input', markQualityCreditCostsCustom);
-  });
-
-  document.getElementById('quality-credit-preset-dialog')?.addEventListener('click', function (event) {
-    if (event.target === this) this.close();
-  });
-  document.querySelector('[data-close-quality-credit-presets]')?.addEventListener('click', closeQualityCreditPresetManager);
-  document.querySelector('[data-add-quality-credit-preset]')?.addEventListener('click', function () {
-    var nameInput = document.querySelector('[data-new-quality-credit-preset-name]');
-    var name = String(nameInput?.value || '').trim();
-    if (!name) { qualityCreditPresetStatus('نام پیش‌فرض را وارد کنید.', true); return; }
-    qualityCreditRequest(root.dataset.creditPresetCreateUrl, 'POST', {name: name, costs: qualityCreditCostsFromInputs()})
-      .then(function (data) {
-        var key = data.preset.preset_key;
-        presets[key] = {name: data.preset.name, costs: data.costs, is_default_for_product_creation: !!data.preset.is_default_for_product_creation, update_url: data.update_url, delete_url: data.delete_url};
-        window.__qualityCreditPresets = presets;
-        renderQualityCreditPresetManager(presets);
-        renderQualityCreditPresetSelect(presets, key);
-        if (keyInput) keyInput.value = key;
-        if (nameInput) nameInput.value = '';
-        qualityCreditPresetStatus(data.message || 'پیش‌فرض اضافه شد.', false);
-      })
-      .catch(function (error) { qualityCreditPresetStatus(error.message, true); });
-  });
-  document.querySelector('[data-quality-credit-preset-list]')?.addEventListener('click', function (event) {
-    var row = event.target.closest('[data-credit-preset-row]');
-    if (!row) return;
-    var key = row.dataset.creditPresetRow, preset = presets[key];
-    if (!preset) return;
-    if (event.target.closest('[data-credit-preset-save]')) {
-      var name = row.querySelector('[data-credit-preset-name]')?.value.trim();
-      if (!name) { qualityCreditPresetStatus('نام پیش‌فرض نمی‌تواند خالی باشد.', true); return; }
-      qualityCreditRequest(preset.update_url, 'PATCH', {name: name})
-        .then(function (data) { preset.name = data.preset.name; renderQualityCreditPresetManager(presets); renderQualityCreditPresetSelect(presets); qualityCreditPresetStatus(data.message, false); })
-        .catch(function (error) { qualityCreditPresetStatus(error.message, true); });
-    } else if (event.target.closest('[data-credit-preset-default]')) {
-      qualityCreditRequest(preset.update_url, 'PATCH', {is_default_for_product_creation: true})
-        .then(function (data) {
-          Object.keys(presets).forEach(function (item) { presets[item].is_default_for_product_creation = item === key; });
-          renderQualityCreditPresetManager(presets); renderQualityCreditPresetSelect(presets, key); select.value = key; keyInput.value = key; setQualityCreditCostInputs(presets[key].costs); qualityCreditPresetStatus(data.message, false);
-        }).catch(function (error) { qualityCreditPresetStatus(error.message, true); });
-    } else if (event.target.closest('[data-credit-preset-delete]')) {
-      if (!window.confirm('این پیش‌فرض حذف شود؟ محصولات متصل به پیش‌فرض بعدی منتقل می‌شوند.')) return;
-      qualityCreditRequest(preset.delete_url, 'DELETE')
-        .then(function (data) {
-          delete presets[key]; window.__qualityCreditPresets = presets;
-          var nextKey = Object.keys(presets).find(function (item) { return presets[item].is_default_for_product_creation; }) || Object.keys(presets)[0] || 'custom';
-          renderQualityCreditPresetManager(presets); renderQualityCreditPresetSelect(presets, nextKey);
-          if (presets[nextKey]) { keyInput.value = nextKey; setQualityCreditCostInputs(presets[nextKey].costs); }
-          qualityCreditPresetStatus(data.message, false);
-        }).catch(function (error) { qualityCreditPresetStatus(error.message, true); });
-    }
-  });
-});
-
 /* ══════ Card ۱ — نمایش/مخفی‌سازی تنظیمات واترمارک + دقت گوشه ══════ */
 function toggleWatermarkSettings() {
   const enabled = document.getElementById('watermark-enabled-input').checked;
@@ -273,7 +92,7 @@ function refreshCardGalleryPreview() {
   if (pos.indexOf('right') > -1) label.style.right = '12px'; else label.style.left = '12px';
 }
 
-/* ══════ رادیوکارت‌های نمایش/شکل/گالری: هایلایت کارت انتخاب‌شده ══════ */
+/* ══════ Card ۲/۳ — رادیوکارت‌های Pricing/Display/Shape/Gallery: هایلایت کارت انتخاب‌شده ══════ */
 function wireCardRadioGroup(selector) {
   document.querySelectorAll(selector + ' input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => {
@@ -283,7 +102,7 @@ function wireCardRadioGroup(selector) {
     });
   });
 }
-document.querySelectorAll('.preview-card-option, .shape-card-option').forEach(card => {
+document.querySelectorAll('.pricing-card, .preview-card-option, .shape-card-option').forEach(card => {
   const radio = card.querySelector('input[type="radio"]');
   if (!radio) return;
   radio.addEventListener('change', () => {

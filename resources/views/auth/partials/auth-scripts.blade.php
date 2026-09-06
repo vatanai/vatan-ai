@@ -1,60 +1,458 @@
 <script>
-  const authState={phone:'',sending:false,verifying:false,registering:false,resendTimer:null,expiresAt:0};
-  const csrf=()=>document.querySelector('meta[name="csrf-token"]').content;
-  const fa='۰۱۲۳۴۵۶۷۸۹';
-  const decimalZeroPoints=[0x30,0x660,0x6f0,0x7c0,0x966,0x9e6,0xa66,0xae6,0xb66,0xbe6,0xc66,0xce6,0xd66,0xe50,0xed0,0xf20,0x1040,0x1090,0x17e0,0x1810,0x1946,0x19d0,0x1a80,0x1a90,0x1b50,0x1bb0,0x1c40,0x1c50,0xa620,0xa8d0,0xa900,0xa9d0,0xa9f0,0xaa50,0xabf0,0xff10,0x104a0,0x10d30,0x11066,0x110f0,0x11136,0x111d0,0x112f0,0x11450,0x114d0,0x11650,0x116c0,0x11730,0x118e0,0x11950,0x11c50,0x11d50,0x11da0,0x11f50,0x16a60,0x16ac0,0x16b50,0x16e80,0x1d7ce,0x1d7d8,0x1d7e2,0x1d7ec,0x1d7f6,0x1e140,0x1e2f0,0x1e4f0,0x1e950];
-  function normalizeDigits(value){return Array.from(String(value??'')).map(char=>{const point=char.codePointAt(0),zero=decimalZeroPoints.find(base=>point>=base&&point<=base+9);return zero===undefined?char:String(point-zero)}).join('')}
-  function normalizePhone(value){let phone=normalizeDigits(value).trim().replace(/[\s\-()]/g,'');if(phone.startsWith('+98'))phone='0'+phone.slice(3);else if(phone.startsWith('0098'))phone='0'+phone.slice(4);else if(phone.startsWith('98')&&phone.length===12)phone='0'+phone.slice(2);else if(/^9\d{9}$/.test(phone))phone='0'+phone;return phone}
-  function toFa(value){return String(value).replace(/\d/g,d=>fa[d])}
-  function activeStep(){return document.querySelector('.auth-step.active')?.id}
-  function updateStageHeight(){requestAnimationFrame(()=>{const stage=document.getElementById('step-stage'),step=document.querySelector('.auth-step.active');if(stage&&step)stage.style.height=`${step.scrollHeight}px`})}
-  function goToStep(id){document.querySelectorAll('.auth-step').forEach(step=>step.classList.toggle('active',step.id===id));updateStageHeight()}
-  function setLoading(show,text='در حال انجام...'){const el=document.getElementById('auth-loading');document.getElementById('auth-loading-text').textContent=text;el.classList.toggle('is-visible',show);el.setAttribute('aria-hidden',show?'false':'true')}
-  function showError(id,message,wrapId){const error=document.getElementById(id);error.textContent=message;error.classList.remove('hidden');if(wrapId)document.getElementById(wrapId)?.classList.add('has-error');updateStageHeight()}
-  function clearError(id,wrapId){document.getElementById(id)?.classList.add('hidden');if(wrapId)document.getElementById(wrapId)?.classList.remove('has-error')}
-  async function jsonRequest(url,body){const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf()},body:JSON.stringify(body)});let data={};try{data=await response.json()}catch{}if(!response.ok||data.status!=='success')throw new Error(data.message||'در ارتباط با سرور مشکلی پیش آمد.');return data}
+let mode = 'register';
+let resendTimerId = null;
+let otpExpired = false;
+let currentPhone = '';
+let otpVerificationInProgress = false;
 
-  async function sendCode(){
-    if(authState.sending)return;
-    const input=document.getElementById('phone-input'),phone=normalizePhone(input.value);input.value=phone;
-    if(!/^09\d{9}$/.test(phone)){showError('phone-error','شماره موبایل معتبر نیست.','phone-wrap');return}
-    clearError('phone-error','phone-wrap');authState.phone=phone;authState.sending=true;
-    const button=document.getElementById('send-code-button');button.disabled=true;
-    document.getElementById('otp-phone-display').textContent=toFa(phone);resetOtp();goToStep('step-otp');setLoading(true,'در حال ارسال کد ورود...');
-    try{const data=await jsonRequest('/auth/unified/send-otp',{phone});startResendTimer(data.resend_in||60,data.expires_in||@json((int) config('auth.otp.expires_minutes',10)*60));setLoading(false);focusFirstOtp()}
-    catch(error){setLoading(false);goToStep('step-phone');showError('phone-error',error.message,'phone-wrap')}
-    finally{authState.sending=false;button.disabled=false}
+// تشخیص کیبورد فارسی/عربی در فیلدهای رمز عبور
+function isPersianKeyboardInput(value) {
+  return /[؀-ۿ]/.test(value);
+}
+
+function attachPersianKeyboardGuard(inputId, wrapId, errorId, defaultErrorText) {
+  const input = document.getElementById(inputId);
+  const wrap = document.getElementById(wrapId);
+  const errorEl = document.getElementById(errorId);
+  if (!input || !wrap || !errorEl) return;
+  input.addEventListener('input', () => {
+    if (isPersianKeyboardInput(input.value)) {
+      wrap.classList.add('border-rose-500');
+      errorEl.textContent = 'به نظر می‌رسد کیبورد فارسی فعال است. لطفاً کیبورد را انگلیسی کنید و رمز را دوباره وارد کنید.';
+      errorEl.classList.remove('hidden');
+      updateStageHeight();
+    } else if (errorEl.textContent.includes('کیبورد')) {
+      wrap.classList.remove('border-rose-500');
+      errorEl.classList.add('hidden');
+      errorEl.textContent = defaultErrorText;
+      updateStageHeight();
+    }
+  });
+}
+
+// ═══ تابع حیاتی برای محاسبه و به روزرسانی آنی ارتفاع کارت هنگام نمایش خطا ═══
+function updateStageHeight() {
+  setTimeout(() => {
+    const stage = document.getElementById('step-stage');
+    const activeStep = document.querySelector('.auth-step.active');
+    if (stage && activeStep) {
+      stage.style.height = activeStep.scrollHeight + 'px';
+    }
+  }, 50); // ۵۰ میلی‌ثانیه تاخیر برای رندر کامل تکستِ ارور در DOM
+}
+
+function switchTab(name) {
+  mode = name;
+  document.getElementById('tab-login').classList.toggle('active', name === 'login');
+  document.getElementById('tab-register').classList.toggle('active', name === 'register');
+  goToStep(name === 'register' ? 'reg-step-1' : 'login-step-1');
+}
+
+function goToStep(id) {
+  const targetStep = document.getElementById(id);
+  document.querySelectorAll('.auth-step').forEach(el => el.classList.remove('active'));
+  targetStep.classList.add('active');
+  updateStageHeight();
+}
+
+function validatePhone(phone) {
+  return /^09\d{9}$/.test(phone);
+}
+
+function normalizePhoneDigits(value) {
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  let phone = String(value).trim()
+    .replace(/[۰-۹]/g, digit => String(fa.indexOf(digit)))
+    .replace(/[٠-٩]/g, digit => String(ar.indexOf(digit)))
+    .replace(/[\s\-()]/g, '');
+
+  if (phone.startsWith('+98')) return '0' + phone.slice(3);
+  if (phone.startsWith('0098')) return '0' + phone.slice(4);
+  if (phone.startsWith('98') && phone.length === 12) return '0' + phone.slice(2);
+  if (/^9\d{9}$/.test(phone)) return '0' + phone;
+  return phone;
+}
+
+function normalizeOtpDigits(value) {
+  return normalizePhoneDigits(value).replace(/[^0-9]/g, '').slice(0, 5);
+}
+
+function applyOtpCode(value, shouldSubmit = true) {
+  const code = normalizeOtpDigits(value);
+  const boxes = Array.from(document.querySelectorAll('.otp-box'));
+  boxes.forEach((box, index) => {
+    box.value = code[index] || '';
+    box.classList.remove('border-rose-500');
+  });
+  document.getElementById('otp-error').classList.add('hidden');
+  updateStageHeight();
+
+  if (code.length === boxes.length) {
+    boxes[boxes.length - 1]?.focus({preventScroll: true});
+    if (shouldSubmit) confirmOtp();
+  } else {
+    boxes[code.length]?.focus({preventScroll: true});
   }
-  function backToPhone(){if(authState.sending||authState.verifying)return;goToStep('step-phone');setTimeout(()=>document.getElementById('phone-input').focus(),40)}
-  function resetOtp(){document.querySelectorAll('.otp-box').forEach(box=>{box.value='';box.classList.remove('has-error')});clearError('otp-error')}
-  function focusFirstOtp(){const box=document.querySelector('.otp-box');setTimeout(()=>box?.focus({preventScroll:true}),40)}
-  function startResendTimer(seconds,expiresIn){clearInterval(authState.resendTimer);authState.expiresAt=Date.now()+expiresIn*1000;const link=document.getElementById('resend-link'),timer=document.getElementById('resend-timer');link.disabled=true;let left=seconds;const draw=()=>{timer.textContent=`(${toFa(left)} ثانیه)`;if(left--<=0){clearInterval(authState.resendTimer);link.disabled=false;timer.textContent=''}};draw();authState.resendTimer=setInterval(draw,1000)}
-  async function resendCode(){if(authState.sending||document.getElementById('resend-link').disabled)return;await sendCodeForCurrentPhone()}
-  async function sendCodeForCurrentPhone(){authState.sending=true;document.getElementById('resend-link').disabled=true;resetOtp();setLoading(true,'در حال ارسال مجدد کد...');try{const data=await jsonRequest('/auth/unified/send-otp',{phone:authState.phone});startResendTimer(data.resend_in||60,data.expires_in||@json((int) config('auth.otp.expires_minutes',10)*60));setLoading(false);focusFirstOtp()}catch(error){setLoading(false);showError('otp-error',error.message);document.getElementById('resend-link').disabled=false}finally{authState.sending=false}}
-  function otpCode(){return normalizeDigits([...document.querySelectorAll('.otp-box')].map(box=>box.value).join('')).replace(/\D/g,'').slice(0,5)}
-  function fillOtp(value,submit=true){const code=normalizeDigits(value).replace(/\D/g,'').slice(0,5),boxes=[...document.querySelectorAll('.otp-box')];boxes.forEach((box,i)=>box.value=code[i]||'');clearError('otp-error');if(code.length===5&&submit)verifyCode();else boxes[code.length]?.focus()}
-  async function verifyCode(){
-    if(authState.verifying||authState.sending)return;const code=otpCode(),boxes=[...document.querySelectorAll('.otp-box')];
-    if(code.length!==5){boxes.forEach(box=>{if(!box.value)box.classList.add('has-error')});return}
-    if(Date.now()>authState.expiresAt){showError('otp-error','کد منقضی شده است؛ کد جدید بگیر.');return}
-    authState.verifying=true;setLoading(true,'در حال تأیید شماره...');
-    try{const data=await jsonRequest('/auth/unified/verify-otp',{phone:authState.phone,code});if(data.next==='redirect'){window.location.href=data.redirect;return}setLoading(false);goToStep('step-profile');setTimeout(()=>document.getElementById('name-input').focus({preventScroll:true}),50)}
-    catch(error){setLoading(false);showError('otp-error',error.message);boxes.forEach(box=>{box.value='';box.classList.add('has-error')});document.getElementById('otp-boxes').classList.remove('shake-effect');void document.getElementById('otp-boxes').offsetWidth;document.getElementById('otp-boxes').classList.add('shake-effect');focusFirstOtp()}
-    finally{authState.verifying=false}
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function toPersianDigits(str) {
+  const fa = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+  return String(str).replace(/[0-9]/g, d => fa[d]);
+}
+
+// ثبت‌نام: بررسی شماره سپس رفتن به مرحله OTP
+function goToOtp(fromMode) {
+  const inputId = fromMode === 'login' ? 'login-phone-input' : 'reg-phone-input';
+  const wrapId = fromMode === 'login' ? 'login-phone-wrap' : 'reg-phone-wrap';
+  const errorId = fromMode === 'login' ? 'login-phone-error' : 'reg-phone-error';
+
+  const input = document.getElementById(inputId);
+  const wrap = document.getElementById(wrapId);
+  const error = document.getElementById(errorId);
+  const phone = normalizePhoneDigits(input.value);
+  input.value = phone;
+
+  if (!validatePhone(phone)) {
+    wrap.classList.add('border-rose-500');
+    error.textContent = 'شماره موبایل معتبر نیست';
+    error.classList.remove('hidden');
+    updateStageHeight();
+    return;
   }
-  function normalizedNumericInput(id,maxLength){const input=document.getElementById(id),value=normalizeDigits(input.value).replace(/\D/g,'').slice(0,maxLength);input.value=value;return value}
-  async function completeProfile(){
-    if(authState.registering)return;const name=document.getElementById('name-input').value.trim(),last=document.getElementById('lastname-input').value.trim(),galleryConsent=document.getElementById('gallery-consent');let valid=true;
-    if(!name){showError('name-error','نام را وارد کنید.','name-wrap');valid=false}else clearError('name-error','name-wrap');if(!last){showError('lastname-error','نام خانوادگی را وارد کنید.','lastname-wrap');valid=false}else clearError('lastname-error','lastname-wrap');
-    const dayValue=normalizedNumericInput('birth-day-input',2),yearValue=normalizedNumericInput('birth-year-input',4),day=Number(dayValue),month=Number(document.getElementById('birth-month-input').value),year=Number(yearValue),current=Number(document.getElementById('birth-year-input').dataset.currentYear);let birthError='';
-    if(!dayValue||day<1||day>31)birthError='روز تولد باید عددی بین ۱ تا ۳۱ باشد.';else if(!month)birthError='ماه تولد را انتخاب کنید.';else if(!yearValue||year<1250||year>current)birthError=`سال تولد باید بین ۱۲۵۰ تا ${toFa(current)} باشد.`;else if(month>6&&day>30)birthError='روز واردشده با ماه انتخاب‌شده سازگار نیست.';
-    if(birthError){showError('birthdate-error',birthError,'birthdate-wrap');valid=false}else clearError('birthdate-error','birthdate-wrap');if(!galleryConsent?.checked){showError('gallery-consent-error','برای ساخت حساب، پذیرش قوانین و رضایت ذخیره‌سازی ورودی‌ها لازم است.');valid=false}else clearError('gallery-consent-error');if(!valid)return;
-    authState.registering=true;setLoading(true,'در حال ساخت حساب و ورود...');
-    try{const data=await jsonRequest('/auth/unified/register',{phone:authState.phone,name,last_name:last,birth_day:day,birth_month:month,birth_year:year,gallery_consent:galleryConsent.checked?1:0});localStorage.setItem('show_welcome_modal','true');localStorage.setItem('user_first_name',data.user_name||name);window.location.href=data.redirect}
-    catch(error){setLoading(false);alert(error.message)}finally{authState.registering=false}
+
+  fetch('/auth/check-phone', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ phone: phone, mode: fromMode })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      wrap.classList.remove('border-rose-500');
+      error.classList.add('hidden');
+      currentPhone = phone;
+      processOtpTransition(phone, fromMode);
+    } else {
+      wrap.classList.add('border-rose-500');
+      error.textContent = data.message;
+      error.classList.remove('hidden');
+      updateStageHeight();
+    }
+  })
+  .catch(() => {
+    wrap.classList.add('border-rose-500');
+    error.textContent = 'خطا در اتصال به سرور';
+    error.classList.remove('hidden');
+    updateStageHeight();
+  });
+}
+
+function processOtpTransition(phone, fromMode) {
+  fetch('/auth/send-otp', {
+    method: 'POST', headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+    body: JSON.stringify({phone: phone, purpose: fromMode})
+  }).then(async res => ({ok:res.ok, data:await res.json()})).then(({ok,data}) => {
+    if (!ok || data.status !== 'success') throw new Error(data.message || 'ارسال کد ناموفق بود');
+    document.getElementById('otp-phone-display').textContent = toPersianDigits(phone);
+    document.getElementById('otp-back').onclick = () => goToStep(fromMode === 'login' ? 'login-step-1' : 'reg-step-1');
+    goToStep('step-otp');
+    resetOtpBoxes();
+    startResendTimer();
+  }).catch(error => {
+    const errorEl = document.getElementById(fromMode === 'login' ? 'login-phone-error' : 'reg-phone-error');
+    errorEl.textContent = error.message; errorEl.classList.remove('hidden'); updateStageHeight();
+  });
+}
+
+function goBackFromPassword() {
+  goToStep('step-otp');
+}
+
+function resetOtpBoxes() {
+  const boxes = document.querySelectorAll('.otp-box');
+  boxes.forEach(b => { b.value = ''; b.classList.remove('border-rose-500'); });
+  document.getElementById('otp-error').classList.add('hidden');
+  otpVerificationInProgress = false;
+  focusFirstOtpBox();
+}
+
+function focusFirstOtpBox() {
+  const firstBox = document.querySelector('.otp-box');
+  if (!firstBox) return;
+  firstBox.focus({preventScroll: true});
+  requestAnimationFrame(() => firstBox.focus({preventScroll: true}));
+  setTimeout(() => firstBox.focus({preventScroll: true}), 120);
+}
+
+function startResendTimer() {
+  let seconds = 60;
+  otpExpired = false;
+  const link = document.getElementById('resend-link');
+  const timer = document.getElementById('resend-timer');
+  link.style.pointerEvents = 'none';
+  link.style.opacity = '0.5';
+  timer.style.display = 'inline';
+  timer.textContent = '(' + toPersianDigits(seconds) + ' ثانیه)';
+
+  if (resendTimerId) clearInterval(resendTimerId);
+  resendTimerId = setInterval(() => {
+    seconds--;
+    if (seconds <= 0) {
+      clearInterval(resendTimerId);
+      link.style.pointerEvents = 'auto';
+      link.style.opacity = '1';
+      timer.style.display = 'none';
+      otpExpired = true;
+    } else {
+      timer.textContent = '(' + toPersianDigits(seconds) + ' ثانیه)';
+    }
+  }, 1000);
+}
+
+function resendOtp() {
+  resetOtpBoxes();
+  processOtpTransition(currentPhone, mode);
+}
+
+function showOtpError(message) {
+  const errEl = document.getElementById('otp-error');
+  errEl.textContent = message;
+  errEl.classList.remove('hidden');
+
+  const boxesWrap = document.getElementById('otp-boxes');
+  boxesWrap.classList.remove('shake-effect');
+  document.querySelectorAll('.otp-box').forEach(b => b.classList.add('border-rose-500'));
+  void boxesWrap.offsetWidth;
+  boxesWrap.classList.add('shake-effect');
+
+  updateStageHeight();
+}
+
+function confirmOtp() {
+  const boxes = document.querySelectorAll('.otp-box');
+  const code = normalizeOtpDigits(Array.from(boxes).map(b => b.value).join(''));
+
+  if (otpVerificationInProgress) return;
+
+  if (code.length < boxes.length) {
+    boxes.forEach(b => { if (!b.value) b.classList.add('border-rose-500'); });
+    return;
   }
-  ['birth-day-input','birth-year-input'].forEach(id=>document.getElementById(id)?.addEventListener('input',()=>{normalizedNumericInput(id,id==='birth-day-input'?2:4);clearError('birthdate-error','birthdate-wrap')}));
-  document.querySelectorAll('.otp-box').forEach((box,index,boxes)=>{box.addEventListener('input',()=>{const value=normalizeDigits(box.value).replace(/\D/g,'');if(value.length>1){fillOtp(value);return}box.value=value;box.classList.remove('has-error');clearError('otp-error');if(value&&index<boxes.length-1)boxes[index+1].focus();if([...boxes].every(item=>item.value))verifyCode()});box.addEventListener('keydown',event=>{if(event.key==='Backspace'&&!box.value&&index>0)boxes[index-1].focus()});box.addEventListener('paste',event=>{const value=event.clipboardData?.getData('text')||'';if(normalizeDigits(value).replace(/\D/g,'')){event.preventDefault();fillOtp(value)}})});
-  document.addEventListener('keydown',event=>{if(event.key!=='Enter'||event.shiftKey||event.ctrlKey||event.altKey||event.metaKey)return;const actions={'step-phone':sendCode,'step-otp':verifyCode,'step-profile':completeProfile};if(actions[activeStep()]){event.preventDefault();actions[activeStep()]()}});
-  window.addEventListener('DOMContentLoaded',()=>{goToStep('step-phone');setTimeout(()=>document.getElementById('phone-input').focus({preventScroll:true}),80)});window.addEventListener('resize',updateStageHeight);
+  if (otpExpired) {
+    showOtpError('کد منقضی شده، ارسال مجدد را بزنید');
+    return;
+  }
+
+  otpVerificationInProgress = true;
+
+  fetch('/auth/verify-otp', {
+    method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+    body:JSON.stringify({phone:currentPhone,purpose:mode,code:code})
+  }).then(async res => ({ok:res.ok,data:await res.json()})).then(({ok,data}) => {
+    if (!ok || data.status !== 'success') throw new Error(data.message || 'کد نامعتبر است');
+    if (resendTimerId) clearInterval(resendTimerId);
+    if (mode === 'login') { window.location.href = data.redirect; return; }
+    goToStep('step-3');
+  }).catch(error => {
+    otpVerificationInProgress = false;
+    showOtpError(error.message);
+    boxes.forEach(b => b.value='');
+    focusFirstOtpBox();
+  });
+}
+
+function togglePasswordVisibility(inputId, iconId) {
+  const pwdInput = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  if (pwdInput.type === 'password') {
+    pwdInput.type = 'text';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  } else {
+    pwdInput.type = 'password';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  }
+}
+
+function submitPassword() {
+  const pwdWrap = document.getElementById('password-wrap');
+  const pwdError = document.getElementById('password-error');
+  const confirmInput = document.getElementById('password-confirm-input');
+  const confirmWrap = document.getElementById('password-confirm-wrap');
+  const confirmError = document.getElementById('password-confirm-error');
+
+  if (isPersianKeyboardInput(pwdInput.value) || isPersianKeyboardInput(confirmInput.value)) {
+    pwdWrap.classList.add('border-rose-500');
+    pwdError.textContent = 'به نظر می‌رسد کیبورد فارسی فعال است. لطفاً کیبورد را انگلیسی کنید و رمز را دوباره وارد کنید.';
+    pwdError.classList.remove('hidden');
+    updateStageHeight();
+    return;
+  }
+
+  if (pwdInput.value.length < 6) {
+    pwdWrap.classList.add('border-rose-500');
+    pwdError.textContent = 'رمز عبور باید حداقل ۶ کاراکتر باشد';
+    pwdError.classList.remove('hidden');
+    updateStageHeight();
+    return;
+  }
+
+  pwdWrap.classList.remove('border-rose-500');
+  pwdError.classList.add('hidden');
+
+  if (confirmInput.value !== pwdInput.value) {
+    confirmWrap.classList.add('border-rose-500');
+    confirmError.textContent = 'رمز عبور و تکرار آن یکسان نیست';
+    confirmError.classList.remove('hidden');
+    updateStageHeight();
+    return;
+  }
+
+  confirmWrap.classList.remove('border-rose-500');
+  confirmError.classList.add('hidden');
+
+  // این مرحله فقط برای ثبت‌نام استفاده می‌شود؛ ورود مستقیماً از submitLogin() انجام می‌شود
+  goToStep('step-3');
+}
+
+function completeProfile() {
+  const nameInput = document.getElementById('name-input');
+  const nameWrap = document.getElementById('name-wrap');
+  const nameError = document.getElementById('name-error');
+  const lastInput = document.getElementById('lastname-input');
+  const lastWrap = document.getElementById('lastname-wrap');
+  const lastError = document.getElementById('lastname-error');
+  const emailInput = document.getElementById('email-input');
+  const emailWrap = document.getElementById('email-wrap');
+  const emailError = document.getElementById('email-error');
+  const birthDayInput = document.getElementById('birth-day-input');
+  const birthMonthInput = document.getElementById('birth-month-input');
+  const birthYearInput = document.getElementById('birth-year-input');
+  const birthdateWrap = document.getElementById('birthdate-wrap');
+  const birthdateError = document.getElementById('birthdate-error');
+  const pwdInput = document.getElementById('password-input');
+  let valid = true;
+
+  if (!nameInput.value.trim()) {
+    nameWrap.classList.add('border-rose-500');
+    nameError.classList.remove('hidden');
+    valid = false;
+  } else {
+    nameWrap.classList.remove('border-rose-500');
+    nameError.classList.add('hidden');
+  }
+
+  if (!lastInput.value.trim()) {
+    lastWrap.classList.add('border-rose-500');
+    lastError.classList.remove('hidden');
+    valid = false;
+  } else {
+    lastWrap.classList.remove('border-rose-500');
+    lastError.classList.add('hidden');
+  }
+
+  const birthDay = Number(normalizePhoneDigits(birthDayInput.value));
+  const birthMonth = Number(birthMonthInput.value);
+  const birthYear = Number(normalizePhoneDigits(birthYearInput.value));
+  const currentJalaliYear = Number(birthYearInput.dataset.currentYear);
+  const maxDay = birthMonth >= 1 && birthMonth <= 6 ? 31 : 30;
+  const birthdateIsValid = Number.isInteger(birthDay)
+    && Number.isInteger(birthMonth)
+    && Number.isInteger(birthYear)
+    && birthMonth >= 1 && birthMonth <= 12
+    && birthDay >= 1 && birthDay <= maxDay
+    && birthYear >= 1250 && birthYear <= currentJalaliYear;
+
+  if (!birthdateIsValid) {
+    birthdateWrap.querySelectorAll('input, select').forEach(el => el.classList.add('border-rose-500'));
+    birthdateError.classList.remove('hidden');
+    valid = false;
+  } else {
+    birthdateWrap.querySelectorAll('input, select').forEach(el => el.classList.remove('border-rose-500'));
+    birthdateError.classList.add('hidden');
+  }
+
+  // ایمیل اختیاری است: فقط اگر چیزی وارد شده، فرمتش چک می‌شود
+  if (emailInput.value.trim() && !validateEmail(emailInput.value.trim())) {
+    emailWrap.classList.add('border-rose-500');
+    emailError.classList.remove('hidden');
+    valid = false;
+  } else {
+    emailWrap.classList.remove('border-rose-500');
+    emailError.classList.add('hidden');
+  }
+
+  updateStageHeight();
+
+  if (!valid) return;
+
+  fetch('/auth/register-submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+      name: nameInput.value.trim(),
+      last_name: lastInput.value.trim(),
+      email: emailInput.value.trim(),
+      birth_day: birthDay,
+      birth_month: birthMonth,
+      birth_year: birthYear,
+      phone: currentPhone
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.status === 'success') {
+      localStorage.setItem('show_welcome_modal', 'true');
+      localStorage.setItem('user_first_name', data.user_name);
+      window.location.href = data.redirect;
+    } else {
+      alert(data.message);
+    }
+  })
+  .catch(() => alert('خطا در ذخیره‌سازی اطلاعات ثبت‌نام.'));
+}
+
+document.querySelectorAll('.otp-box').forEach((box, i, all) => {
+  box.addEventListener('input', () => {
+    const normalized = normalizeOtpDigits(box.value);
+    if (normalized.length > 1) {
+      applyOtpCode(normalized);
+      return;
+    }
+    box.value = normalized;
+    box.classList.remove('border-rose-500');
+    document.getElementById('otp-error').classList.add('hidden');
+    updateStageHeight();
+    if (box.value && i < all.length - 1) all[i + 1].focus();
+    if (Array.from(all).every(b => b.value)) confirmOtp();
+  });
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !box.value && i > 0) {
+      all[i - 1].focus();
+      updateStageHeight();
+    }
+  });
+  box.addEventListener('paste', (event) => {
+    const pastedCode = normalizeOtpDigits(event.clipboardData?.getData('text') || '');
+    if (!pastedCode) return;
+    event.preventDefault();
+    applyOtpCode(pastedCode);
+  });
+});
+
+attachPersianKeyboardGuard('password-input', 'password-wrap', 'password-error', 'رمز عبور باید حداقل ۶ کاراکتر باشد');
+attachPersianKeyboardGuard('password-confirm-input', 'password-confirm-wrap', 'password-confirm-error', 'رمز عبور و تکرار آن یکسان نیست');
+window.addEventListener('DOMContentLoaded', () => {
+  updateStageHeight();
+});
 </script>

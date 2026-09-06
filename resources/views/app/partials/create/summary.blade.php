@@ -24,7 +24,7 @@
       @if($product->pricing_model === 'per_credit')
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">
         <span style="font-size:12px;color:rgba(255,255,255,0.45);">هزینه</span>
-        <span style="font-size:13px;font-weight:700;color:#f5923a;">{{ $product->qualityCreditCost('standard') }} کردیت</span>
+        <span style="font-size:13px;font-weight:700;color:#f5923a;">{{ $product->credit_cost }} کردیت</span>
       </div>
       @endif
     </div>

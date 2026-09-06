@@ -9,33 +9,39 @@
       </div>
 
       @if(isset($creditOverview))
+      <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:1px;">اعتبار و مصرف سرویس‌ها</div>
+        <a href="{{ route('admin.service-credits.index') }}" style="font-size:11px;color:var(--primary);text-decoration:none;">مدیریت کامل ←</a>
+      </div>
       @php
-        $creditAlerts = collect($creditOverview['alerts'] ?? []);
+        $creditBySlug = $creditOverview['accounts']->keyBy('slug');
+        $providerCards = [
+          ['slug' => 'cloudiva', 'name' => 'Cloudiva', 'icon' => 'fa-cloud'],
+          ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
+          ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
+          ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
+          ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
+        ];
       @endphp
-      @if($creditAlerts->isNotEmpty())
-        <section class="dashboard-credit-alerts" aria-label="هشدارهای اعتبار سرویس‌ها">
-          <div class="dashboard-credit-alerts-head"><span><i class="fa-solid fa-triangle-exclamation"></i> هشدارهای مهم اعتبار</span><a href="{{ route('admin.service-credits.index') }}">مدیریت آستانه‌ها ←</a></div>
-          <div class="dashboard-credit-alert-list">
-            @foreach($creditAlerts->take(4) as $alert)
-              <div class="dashboard-credit-alert {{ $alert['level'] }}"><i class="fa-solid {{ $alert['level'] === 'critical' ? 'fa-circle-exclamation' : ($alert['level'] === 'offline' ? 'fa-plug-circle-xmark' : 'fa-bell') }}"></i><div><strong>{{ $alert['title'] }} · {{ $alert['name'] }}</strong><span>{{ $alert['message'] }}</span></div></div>
-            @endforeach
+      <div class="grid grid-cols-3 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:14px;">
+        <div style="background:var(--input-bg);border:1px solid var(--primary);border-radius:10px;padding:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;color:var(--text-soft);">قیمت روز دلار</span>
+            <i class="fa-solid fa-dollar-sign" style="color:var(--primary);"></i>
           </div>
-        </section>
-      @endif
-      <div class="dashboard-credit-heading"><div>اعتبار و مصرف سرویس‌ها <small>{{ $creditOverview['accounts']->count() }} سرویس در حال پایش</small></div><a href="{{ route('admin.service-credits.index') }}">مدیریت کامل ←</a></div>
-      <div class="dashboard-credit-board">
-        <div class="dashboard-credit-rate"><div class="dashboard-credit-card-head"><span>قیمت روز دلار</span><i class="fa-solid fa-dollar-sign"></i></div><strong>{{ ($creditOverview['exchange']['rate'] ?? 0) > 0 ? number_format($creditOverview['exchange']['rate'] / 10).' تومان' : 'ناموجود' }}</strong><small>{{ $creditOverview['exchange']['source'] ?? 'نرخ پشتیبان' }} · {{ ($creditOverview['exchange']['online'] ?? false) ? 'آنلاین' : 'پشتیبان' }}</small></div>
-        @foreach($creditOverview['accounts'] as $creditAccount)
-          @php
-            $creditIcon = ['openrouter' => 'fa-route', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud', 'melipayamak' => 'fa-message-sms'][$creditAccount->slug] ?? 'fa-wallet';
-            $creditAlertLabel = ['critical' => 'بحرانی', 'warning' => 'نزدیک به حد هشدار', 'offline' => 'اتصال نامشخص', 'normal' => 'وضعیت عادی'][$creditAccount->alert_level] ?? 'وضعیت عادی';
-          @endphp
-          <a href="{{ route('admin.service-credits.index') }}" class="dashboard-credit-service {{ $creditAccount->alert_level }}">
-            <div class="dashboard-credit-card-head"><span><i class="fa-solid {{ $creditIcon }}"></i> {{ $creditAccount->name }}</span><em>{{ $creditAlertLabel }}</em></div>
-            <strong>{{ $creditAccount->currency === 'USD' ? '$'.number_format((float) $creditAccount->display_balance, 2) : number_format((float) $creditAccount->display_balance / 10).' تومان' }}</strong>
-            <small>{{ $creditAccount->status_label }} · {{ $creditAccount->currency === 'USD' ? '$'.number_format((float) $creditAccount->balance_usd, 4) : 'موجودی ریالی' }}</small>
-            @if(count($creditAccount->timeline_points ?? []))<div class="dashboard-credit-timeline">@foreach($creditAccount->timeline_points as $point)<span style="height:{{ $point['height'] }}%" title="{{ $point['time'] }}"></span>@endforeach</div>@else<div class="dashboard-credit-timeline empty"><span></span></div>@endif
-            <div class="dashboard-credit-forecast">@if($creditAccount->forecast_hours !== null)<i class="fa-solid fa-hourglass-half"></i> دوام برآوردی: {{ number_format($creditAccount->forecast_hours, 1) }} ساعت @else <i class="fa-solid fa-clock"></i> روند مصرف: دادهٔ کافی نداریم @endif</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-h);">{{ ($creditOverview['exchange']['rate'] ?? 0) > 0 ? number_format($creditOverview['exchange']['rate'] / 10).' تومان' : 'ناموجود' }}</div>
+          <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditOverview['exchange']['source'] ?? 'نرخ پشتیبان' }} · {{ ($creditOverview['exchange']['online'] ?? false) ? 'آنلاین' : 'پشتیبان' }}</div>
+        </div>
+        @foreach($providerCards as $providerCard)
+          @php($creditAccount = $creditBySlug->get($providerCard['slug']))
+          <a href="{{ route('admin.service-credits.index') }}" style="text-decoration:none;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:14px;display:block;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:11px;font-weight:700;color:var(--text-soft);">{{ $providerCard['name'] }}</span>
+              <span style="width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--primary-l);color:var(--primary);"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span>
+            </div>
+            <div style="font-size:18px;font-weight:800;color:var(--text-h);">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-main);margin-top:3px;">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی ثبت نشده' }}</div>
+            <div style="font-size:10px;color:var(--text-soft);margin-top:5px;">{{ $creditAccount?->status_label ?? 'حساب ساخته نشده' }}</div>
           </a>
         @endforeach
       </div>

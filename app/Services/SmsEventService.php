@@ -76,17 +76,7 @@ class SmsEventService
             }
 
             $variables = $template->provider_variables ?: ($approvedTemplate['variables'] ?? config("sms_events.events.{$template->event_key}.variables", []));
-            $values = collect($variables)->map(function ($variable) use ($data, $template) {
-                $value = (string) ($data[$variable] ?? config("sms_events.samples.{$variable}", ''));
-
-                // متن تأییدشده 523374 بین متغیر نام و «عزیز» فاصله ندارد؛
-                // NBSP داخل خود متغیر مانع حذف فاصله در درگاه اشتراکی می‌شود.
-                if ($template->event_key === 'login_otp' && $variable === 'name') {
-                    return rtrim($value)."\u{00A0}";
-                }
-
-                return $value;
-            })->all();
+            $values = collect($variables)->map(fn ($variable) => $data[$variable] ?? config("sms_events.samples.{$variable}", ''))->all();
             $this->gateway->sendShared($phone, $values, (string) $template->provider_template_id, $body, $type);
             return true;
         }

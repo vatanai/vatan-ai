@@ -108,15 +108,7 @@ class HomeSectionRenderService
                 break;
 
             case 'video':
-                $query->whereIn('media_type', ['video', 'both'])
-                    ->whereNotNull('preview_video_url')
-                    ->where('preview_video_url', '<>', '');
-                break;
-
-            case 'latest_non_trending':
-                $query->where(function ($builder) {
-                    $builder->where('is_trending', false)->orWhereNull('is_trending');
-                });
+                $query->whereIn('media_type', ['video', 'both']);
                 break;
 
             case 'category':

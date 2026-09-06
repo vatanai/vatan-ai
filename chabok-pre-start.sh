@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Cloudiva runs this script before the web process on every container start.
+# Cloudiwa runs this script before the web process on every container start.
 # Keep the image-lab queue in a supervised loop so a completed, failed, or
 # restarted worker is replaced without taking the public website down.
 set -u

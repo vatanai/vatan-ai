@@ -33,6 +33,7 @@
         ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
         ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
         ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
+        ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
       ];
     @endphp
     <div class="credit-grid">
@@ -50,10 +51,10 @@
 
     <div class="credit-accounts">
       @forelse($accounts as $account)
-        <article class="credit-card {{ $account->is_low ? 'low' : '' }} {{ $account->alert_level }}">
+        <article class="credit-card {{ $account->is_low ? 'low' : '' }}">
           <div class="credit-card-head">
             <div class="credit-service">
-              <div class="credit-logo"><i class="fa-solid {{ ['openrouter' => 'fa-route', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud'][$account->slug] ?? 'fa-wallet' }}"></i></div>
+              <div class="credit-logo"><i class="fa-solid {{ ['openrouter' => 'fa-route', 'liara' => 'fa-cloud-arrow-up', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud'][$account->slug] ?? 'fa-wallet' }}"></i></div>
               <div><div class="credit-name">{{ $account->name }}</div><div class="credit-status {{ $account->is_online ? 'online' : '' }}"><span class="credit-dot"></span>{{ $account->status_label }}</div></div>
             </div>
             <button class="credit-btn" type="button" data-open-modal="edit-{{ $account->id }}"><i class="fa-solid fa-sliders"></i></button>
@@ -69,16 +70,9 @@
           @php($usagePercent = ($account->display_balance + $account->month_usage) > 0 ? min(100, ($account->month_usage / ($account->display_balance + $account->month_usage)) * 100) : 0)
           <div class="credit-progress"><span style="width:{{ $usagePercent }}%"></span></div>
           <div class="credit-summary-meta">{{ number_format($usagePercent, 1) }}٪ از اعتبار در دسترس این دوره مصرف شده</div>
-          @if(count($account->timeline_points ?? []))
-            <div class="credit-timeline" aria-label="روند موجودی {{ $account->name }}">
-              @foreach($account->timeline_points as $point)<span style="height:{{ $point['height'] }}%" title="{{ $point['time'] }} · {{ number_format($point['balance'], 2) }}"></span>@endforeach
-            </div>
-            <div class="credit-summary-meta">روند موجودی در آخرین نمونه‌های ثبت‌شده</div>
-          @endif
-          @if($account->forecast_hours !== null)<div class="credit-forecast"><i class="fa-solid fa-hourglass-half"></i> با روند فعلی، اعتبار حدود {{ number_format($account->forecast_hours, 1) }} ساعت دوام می‌آورد.</div>@endif
-          @if($account->usage_is_estimate)<div class="credit-summary-meta">هزینه جاری ساعتی: {{ number_format($account->hourly_usage / 10) }} تومان — محاسبه آنلاین بر اساس منابع فعال سرویس</div>@endif
+          @if($account->usage_is_estimate)<div class="credit-summary-meta">هزینه جاری ساعتی: {{ number_format($account->hourly_usage / 10) }} تومان — محاسبه آنلاین براساس منابع فعال Liara</div>@endif
           @if($account->usage_source)<div class="credit-summary-meta">منبع مصرف: {{ $account->usage_source }}</div>@endif
-          @if($account->alert_level !== 'normal')<div class="credit-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{ $account->alert_message }}</div>@endif
+          @if($account->is_low)<div class="credit-warning"><i class="fa-solid fa-triangle-exclamation"></i> موجودی از حد هشدار کمتر شده است</div>@endif
           @if($account->sync_error)<div class="credit-warning">{{ $account->sync_error }}</div>@endif
         </article>
 
@@ -88,16 +82,14 @@
             <div class="credit-form-grid">
               <div class="credit-field"><label>موجودی دستی ({{ $account->currency }})</label><input type="number" step="0.000001" name="manual_balance" value="{{ $account->manual_balance }}" required></div>
               <div class="credit-field"><label>حد هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="{{ $account->low_balance_threshold }}"></div>
-              <div class="credit-field"><label>حد بحرانی</label><input type="number" step="0.000001" name="critical_balance_threshold" value="{{ $account->critical_balance_threshold }}"></div>
-              <div class="credit-field"><label>یادداشت</label><input name="note" value="{{ $account->note }}"></div>
+              <div class="credit-field" style="grid-column:span 2"><label>یادداشت</label><input name="note" value="{{ $account->note }}"></div>
             </div>
             <label class="credit-check"><input type="checkbox" name="show_on_dashboard" value="1" {{ $account->show_on_dashboard ? 'checked' : '' }}> نمایش کارت در مرکز فرماندهی</label>
-            <label class="credit-check"><input type="checkbox" name="alerts_enabled" value="1" {{ $account->alerts_enabled ? 'checked' : '' }}> فعال‌بودن هشدارهای این سرویس</label>
             <div class="credit-actions"><button class="credit-btn primary">ذخیره</button><button class="credit-btn" type="button" data-close-modal>انصراف</button></div>
           </form>
         </div></div>
       @empty
-        <div class="credit-panel">پس از اجرای migration، اکانت‌های پیش‌فرض providerها ساخته می‌شوند.</div>
+        <div class="credit-panel">پس از اجرای migration، اکانت‌های پیش‌فرض OpenRouter و Liara ساخته می‌شوند.</div>
       @endforelse
     </div>
 
@@ -128,9 +120,27 @@
         <div class="credit-filter-actions"><button class="credit-btn primary" type="submit"><i class="fa-solid fa-filter"></i> اعمال فیلتر</button><a class="credit-btn" href="{{ route('admin.service-credits.index') }}">پاک‌کردن</a></div>
       </form>
 
-      <div id="credit-report-table-region" data-report-url="{{ route('admin.service-credits.index') }}" aria-live="polite">
-        @include('admin.service-credits.partials.usage-table')
-      </div>
+      <div class="credit-table-wrap"><table class="credit-table credit-report-table"><thead><tr>
+        <th>زمان / منبع</th><th>اجراکننده</th><th>محصول</th><th>پرووایدر و مدل</th><th>وضعیت</th><th>خروجی</th><th>هزینه</th><th>جزئیات</th>
+      </tr></thead><tbody>
+        @forelse($transactions as $transaction)
+          @php($statusClass = in_array($transaction['status_key'], ['completed','charge','refund'], true) ? 'success' : (in_array($transaction['status_key'], ['failed','usage'], true) ? 'danger' : 'warning'))
+          <tr class="credit-report-row">
+            <td><div class="credit-source-cell"><span class="credit-source-icon {{ $transaction['source_key'] }}"><i class="fa-solid {{ $transaction['source_key'] === 'lab' ? 'fa-flask' : ($transaction['source_key'] === 'user' ? 'fa-user' : ($transaction['source_key'] === 'ledger' ? 'fa-wallet' : 'fa-receipt')) }}"></i></span><div><strong>{{ $transaction['source_label'] }}</strong><small>{{ $transaction['date_jalali'] }}</small><small>{{ $transaction['date_gregorian'] }}</small></div></div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['actor_label'] }}</strong><small>{{ $transaction['user_name'] }}</small><small>{{ $transaction['user_contact'] }}</small></div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['product_name'] }}</strong>@if($transaction['order_number'])<small>{{ $transaction['order_number'] }}</small>@elseif($transaction['reference'] !== '—')<small>{{ $transaction['reference'] }}</small>@endif</div></td>
+            <td><div class="credit-entity-cell"><strong>{{ $transaction['provider'] }}</strong><small>{{ $transaction['model'] }}</small>@if($transaction['latency_seconds'] !== null)<small>{{ number_format($transaction['latency_seconds'], 1) }} ثانیه · {{ $transaction['retries'] ?? 0 }} تلاش</small>@endif</div></td>
+            <td><span class="credit-status-badge {{ $statusClass }}"><span></span>{{ $transaction['status_label'] }}</span>@if($transaction['error'])<small class="credit-error-text" title="{{ $transaction['error'] }}"><i class="fa-solid fa-circle-exclamation"></i> خطا</small>@endif</td>
+            <td>@if(count($transaction['output_urls']))<div class="credit-output-cell"><a href="{{ $transaction['output_urls'][0] }}" target="_blank" rel="noopener"><img src="{{ $transaction['output_urls'][0] }}" alt="خروجی"></a><span>{{ count($transaction['output_urls']) }} فایل</span></div>@else<span class="credit-muted">بدون خروجی</span>@endif</td>
+            <td><div class="credit-cost-cell">@if($transaction['amount_usd'] !== null)<strong>${{ number_format($transaction['amount_usd'], 6) }}</strong><small>{{ number_format($transaction['amount_toman']) }} تومان</small>@elseif($transaction['credits'] !== null)<strong>{{ number_format($transaction['credits']) }} اعتبار</strong><small>هزینه provider ثبت نشده</small>@else<span class="credit-muted">—</span>@endif</div></td>
+            <td>@if($transaction['detail_url'])<a class="credit-detail-link" href="{{ $transaction['detail_url'] }}" target="_blank">مشاهده <i class="fa-solid fa-arrow-up-left-from-circle"></i></a>@else<span class="credit-muted">—</span>@endif</td>
+          </tr>
+          @if($transaction['note'])<tr class="credit-report-note"><td colspan="8"><i class="fa-solid fa-circle-info"></i> {{ $transaction['note'] }}</td></tr>@endif
+        @empty
+          <tr><td colspan="8" class="credit-empty-state"><i class="fa-solid fa-receipt"></i><strong>رکوردی با این فیلتر پیدا نشد.</strong><span>با پاک‌کردن فیلترها یا اجرای یک تولید جدید، گزارش اینجا نمایش داده می‌شود.</span></td></tr>
+        @endforelse
+      </tbody></table></div>
+      @if($transactions->hasPages())<div class="credit-report-pagination">{{ $transactions->onEachSide(1)->links() }}</div>@endif
     </section>
   </div>
 </main>
@@ -157,10 +167,9 @@
       <div class="credit-field"><label>نام سرویس</label><input name="name" required></div><div class="credit-field"><label>شناسه انگلیسی</label><input name="slug" required></div>
       <div class="credit-field"><label>واحد پول</label><select name="currency"><option value="USD">دلار</option><option value="IRR">ریال</option></select></div>
       <div class="credit-field"><label>موجودی اولیه</label><input type="number" step="0.000001" name="manual_balance" value="0" required></div>
-      <div class="credit-field"><label>حد هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="0"></div><div class="credit-field"><label>حد بحرانی</label><input type="number" step="0.000001" name="critical_balance_threshold" value="0"></div><div class="credit-field" style="grid-column:span 2"><label>یادداشت</label><input name="note"></div>
+      <div class="credit-field"><label>حد هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="0"></div><div class="credit-field" style="grid-column:span 3"><label>یادداشت</label><input name="note"></div>
     </div>
     <label class="credit-check"><input type="checkbox" name="show_on_dashboard" value="1" checked> نمایش در مرکز فرماندهی</label>
-    <label class="credit-check"><input type="checkbox" name="alerts_enabled" value="1" checked> فعال‌بودن هشدارهای این سرویس</label>
     <div class="credit-actions"><button class="credit-btn primary">افزودن اکانت</button><button class="credit-btn" type="button" data-close-modal>انصراف</button></div>
   </form>
 </div></div>
@@ -171,33 +180,5 @@
 document.querySelectorAll('[data-open-modal]').forEach(function(button){button.addEventListener('click',function(){document.getElementById(button.dataset.openModal)?.classList.add('open')})});
 document.querySelectorAll('[data-close-modal]').forEach(function(button){button.addEventListener('click',function(){button.closest('.credit-modal')?.classList.remove('open')})});
 document.querySelectorAll('.credit-modal').forEach(function(modal){modal.addEventListener('click',function(event){if(event.target===modal)modal.classList.remove('open')})});
-(function(){
-  const region=document.getElementById('credit-report-table-region');
-  if(!region)return;
-  async function loadTable(url){
-    const requestUrl=new URL(url,window.location.href);
-    requestUrl.searchParams.set('usage_table','1');
-    region.classList.add('is-loading');
-    try{
-      const response=await fetch(requestUrl,{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'text/html'}});
-      if(!response.ok)throw new Error('بارگذاری فهرست ناموفق بود.');
-      region.innerHTML=await response.text();
-      const cleanUrl=new URL(requestUrl);cleanUrl.searchParams.delete('usage_table');
-      window.history.replaceState({},'',cleanUrl.pathname+cleanUrl.search);
-      region.scrollIntoView({behavior:'smooth',block:'nearest'});
-    }catch(error){
-      window.location.href=url;
-    }finally{region.classList.remove('is-loading')}
-  }
-  region.addEventListener('click',function(event){
-    const link=event.target.closest('.credit-report-pagination a');
-    if(!link)return;
-    event.preventDefault();loadTable(link.href);
-  });
-  region.addEventListener('change',function(event){
-    if(!event.target.matches('[data-credit-per-page]'))return;
-    const url=new URL(window.location.href);url.searchParams.set('per_page',event.target.value);url.searchParams.set('page','1');loadTable(url);
-  });
-}());
 </script>
 @endsection

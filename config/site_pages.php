@@ -2,15 +2,6 @@
 
 return [
     'pages' => [
-        'landing' => [
-            'name_fa' => 'صفحه نخست سایت',
-            'name_en' => 'Public Home',
-            'route_names' => ['site.home.root'],
-            'path' => '/',
-            'icon' => 'fa-globe',
-            'description' => 'صفحه عمومی نخست سایت، عنوان‌ها، سئو و تنظیمات نمایش',
-            'advanced_route' => 'admin.home-builder.index',
-        ],
         'home' => [
             'name_fa' => 'صفحه هوم',
             'name_en' => 'Home',
@@ -59,11 +50,11 @@ return [
         'articles' => [
             'name_fa' => 'صفحه مقالات',
             'name_en' => 'Articles',
-            'route_names' => ['articles.index'],
-            'path' => '/articles',
+            'route_names' => ['app.articles'],
+            'path' => '/app/articles',
             'icon' => 'fa-newspaper',
             'description' => 'فهرست مقالات، دسته‌بندی محتوا و صفحه جزئیات',
-            'advanced_route' => 'admin.articles.index',
+            'advanced_route' => null,
         ],
     ],
 ];

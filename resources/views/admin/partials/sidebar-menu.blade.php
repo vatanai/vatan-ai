@@ -57,7 +57,7 @@
 <div class="nav-item">
   <div class="nav-link {{ $isStudioMenu ? 'active' : '' }}" onclick="toggleSub('studio-submenu-new', this)"><div class="nav-icon"><i class="fa-solid fa-photo-film"></i></div><div class="nav-label">استودیو تولید</div><i class="fa-solid fa-chevron-down nav-chev {{ $isStudioMenu ? 'open' : '' }}"></i></div>
   <div class="submenu {{ $isStudioMenu ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
-    <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">تولید محتوای خودکار</div></a>
+    <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">سیستم تولید محتوای خودکار</div></a>
   </div></div>
 </div>
 

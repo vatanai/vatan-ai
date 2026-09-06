@@ -21,7 +21,6 @@ class GenerateProductRequest extends FormRequest
                 'studio_model' => ['nullable', 'string', 'max:200'],
                 'studio_provider' => ['nullable', 'string', 'max:40'],
                 'output.count' => ['nullable', 'integer', 'min:1', 'max:6'],
-                'gallery_item_id' => ['nullable', 'integer'],
             ]
             : [];
     }

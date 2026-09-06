@@ -22,7 +22,7 @@
           <label class="text-[11px] text-[var(--text-soft)]">پروایدر
             <select name="provider" class="input-pro mt-1.5 w-full" required>
               @foreach($providers as $provider)
-                <option value="{{ $provider }}">{{ match($provider) { 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate', default => $provider } }}</option>
+                <option value="{{ $provider }}">{{ match($provider) { 'liara' => 'Liara', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate', default => $provider } }}</option>
               @endforeach
             </select>
           </label>

@@ -41,26 +41,35 @@
 
         <div class="flex-1 min-h-0 border border-white/[0.03] [.light_&]:border-black/5 bg-[#070708] [.light_&]:bg-black/[0.03] rounded-2xl p-4 flex items-center justify-center overflow-hidden">
           <img src="{{ $product->displayImageUrl() }}"
-               alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg scale-[1.2]">
+               alt="Product Template" class="max-w-full max-h-full object-contain rounded-xl shadow-lg">
         </div>
 
         {{-- تنظیمات خروجی --}}
         <div class="shrink-0 mt-4 pt-3 border-t border-white/[0.03] [.light_&]:border-black/10">
           <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mb-2">سایز خروجی:</p>
-          @php
-            $__ratioLabels = ['3:4'=>'عمودی 3:4','4:3'=>'افقی 4:3','1:1'=>'مربع 1:1','4:5'=>'عمودی 4:5','9:16'=>'عمودی 9:16','16:9'=>'افقی 16:9','2:3'=>'عمودی 2:3','3:2'=>'افقی 3:2'];
-            $__modalRatios = $product->allowedAspectRatioList();
-            $__modalDefaultRatio = in_array('3:4', $__modalRatios, true) ? '3:4' : $product->defaultOutputAspectRatio();
-          @endphp
-          <div class="relative">
-            <select name="modal_ratio" aria-label="سایز خروجی" dir="ltr" class="w-full h-9 rounded-lg border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] px-3 text-[10px] font-bold text-gray-400 [.light_&]:text-gray-600 outline-none">
-              @foreach($__modalRatios as $val)
-                <option value="{{ $val }}" {{ $val === $__modalDefaultRatio ? 'selected' : '' }}>{{ $__ratioLabels[$val] ?? $val }}</option>
-              @endforeach
-            </select>
-            <i class="fa-solid fa-chevron-down pointer-events-none absolute left-3 top-3 text-[8px] text-gray-500"></i>
+          <div class="flex gap-1.5 flex-wrap">
+            @php $__ratioLabels = ['auto'=>'خودکار','1:1'=>'مربع','4:3'=>'افقی ۴:۳','3:4'=>'عمودی ۳:۴','2:3'=>'عمودی ۲:۳','9:16'=>'استوری','16:9'=>'افقی ۱۶:۹','3:2'=>'افقی ۳:۲']; @endphp
+            @foreach($product->allowedAspectRatioList() as $val)
+            @php $lbl = $__ratioLabels[$val] ?? $val; @endphp
+            <label class="cursor-pointer">
+              <input type="radio" name="modal_ratio" value="{{ $val }}" {{ $val === $product->defaultOutputAspectRatio() ? 'checked' : '' }} class="sr-only peer">
+              <span class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
+                {{ $lbl }}
+              </span>
+            </label>
+            @endforeach
           </div>
-          <p class="text-[10px] text-gray-500 [.light_&]:text-gray-600 mt-3">رزولوشن خروجی بر اساس پلن کاربر به‌صورت خودکار انتخاب می‌شود.</p>
+          <p class="text-[10px] font-bold text-gray-500 [.light_&]:text-gray-600 mt-3 mb-2">کیفیت خروجی:</p>
+          <div class="flex gap-1.5 flex-wrap">
+            @foreach($product->allowedResolutionList() as $val)
+            <label class="cursor-pointer">
+              <input type="radio" name="modal_quality" value="{{ $val }}" {{ $val === $product->defaultOutputResolution() ? 'checked' : '' }} class="sr-only peer">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-white/[0.05] [.light_&]:border-black/10 bg-white/[0.01] [.light_&]:bg-black/[0.02] text-gray-400 [.light_&]:text-gray-600 peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-400 transition-all">
+                {{ $val }}
+              </span>
+            </label>
+            @endforeach
+          </div>
         </div>
       </div>
 
@@ -112,10 +121,10 @@
             <span id="modalFormErrorTxt"></span>
           </div>
 
-          {{-- جمع نهایی اعتبار برای ساخت — بر اساس تعداد مدل‌های خروجی تیک‌خورده به‌روز می‌شود --}}
+          {{-- جمع نهایی توکن برای ساخت — بر اساس تعداد مدل‌های خروجی تیک‌خورده به‌روز می‌شود --}}
           @if(count($product->outputVariantList()))
             <div id="variantTokenTotal" class="flex items-center justify-between px-3 h-9 bg-white/[0.02] [.light_&]:bg-black/[0.03] border border-white/[0.05] [.light_&]:border-black/10 rounded-xl text-[10px] font-bold">
-              <span class="text-gray-400 [.light_&]:text-gray-600"><i class="fa-solid fa-bolt text-orange-400 text-[9px] ml-1"></i> جمع اعتبار برای ساخت</span>
+              <span class="text-gray-400 [.light_&]:text-gray-600"><i class="fa-solid fa-bolt text-orange-400 text-[9px] ml-1"></i> جمع توکن برای ساخت</span>
               <span class="text-orange-400" id="variantTokenTotalNum">—</span>
             </div>
           @endif

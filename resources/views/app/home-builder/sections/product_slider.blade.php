@@ -31,9 +31,8 @@
     $isGridMode = (string) $section->setting('display_mode', 'scroll') === 'grid';
     $gridCols = in_array((string) $section->setting('grid_cols', '3'), ['2', '3', '4']) ? (string) $section->setting('grid_cols', '3') : '3';
     $showCredit = (bool) $section->setting('show_credit', true);
-    $displayRows = (string) $section->setting('display_rows', '1') === '2' ? 'hb-rows-2' : '';
   @endphp
-  <div class="{{ $isGridMode ? 'hb-grid hb-cols-' . $gridCols : 'home-cards-scroll ' . $displayRows }}">
+  <div class="{{ $isGridMode ? 'hb-grid hb-cols-' . $gridCols : 'home-cards-scroll' }}">
     @foreach($products as $product)
       <a class="home-card {{ $cardClass }}" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
         <div class="home-card-overlay"></div>

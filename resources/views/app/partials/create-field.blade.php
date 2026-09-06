@@ -9,21 +9,21 @@
 @elseif($type === 'divider')
   <div class="cw-schema-divider"></div>
 @else
-<div class="cw-field" data-field="{{ $id }}" data-field-type="{{ $type }}" data-field-required="{{ !empty($field['required']) ? '1' : '0' }}" data-field-credit="{{ (int)($field['credit_cost'] ?? 0) }}" @if(!empty($field['show_if']['field'])) data-show-field="{{ $field['show_if']['field'] }}" data-show-op="{{ $field['show_if']['op'] ?? 'eq' }}" data-show-value="{{ $field['show_if']['value'] ?? '' }}" @endif>
+<div class="cw-field" data-field="{{ $id }}" data-field-type="{{ $type }}" data-field-credit="{{ (int)($field['credit_cost'] ?? 0) }}" @if(!empty($field['show_if']['field'])) data-show-field="{{ $field['show_if']['field'] }}" data-show-op="{{ $field['show_if']['op'] ?? 'eq' }}" data-show-value="{{ $field['show_if']['value'] ?? '' }}" @endif>
   <label class="cw-label" for="{{ $controlId }}"><span>{{ $field['label'] }} @if($field['required'] ?? false)<b>*</b>@endif</span>@if($field['help'] ?? false)<small>{{ $field['help'] }}</small>@endif</label>
 
   @if(in_array($type, ['image_upload','multi_image','file_upload']))
     <label class="cw-upload {{ $type === 'multi_image' ? 'is-multi' : '' }}" for="{{ $controlId }}">
-      <input id="{{ $controlId }}" name="uploads[{{ $id }}]{{ $type === 'multi_image' ? '[]' : '' }}" type="file" {{ $type === 'multi_image' ? 'multiple' : '' }} accept="{{ ($field['accept'] ?? '') ?: ($type !== 'file_upload' ? 'image/*' : '') }}" data-upload-input data-max-files="{{ min(3, max(1, (int)($field['max_files'] ?? 1))) }}" @if($field['required'] ?? false) required @endif>
+      <input id="{{ $controlId }}" name="uploads[{{ $id }}]{{ $type === 'multi_image' ? '[]' : '' }}" type="file" {{ $type === 'multi_image' ? 'multiple' : '' }} accept="{{ ($field['accept'] ?? '') ?: ($type !== 'file_upload' ? 'image/*' : '') }}" data-upload-input data-max-files="{{ min(3, max(1, (int)($field['max_files'] ?? 1))) }}">
       <span class="cw-upload-icon"><i class="fa-solid {{ $type === 'multi_image' ? 'fa-images' : ($type === 'file_upload' ? 'fa-file-arrow-up' : 'fa-cloud-arrow-up') }}"></i></span>
       <span class="cw-upload-copy"><strong>{{ $type === 'multi_image' ? 'افزودن تصاویر بیشتر' : ($type === 'file_upload' ? 'انتخاب فایل' : 'عکس را اینجا رها کنید') }}</strong><small>{{ $type === 'image_upload' ? 'یا برای انتخاب از دستگاه کلیک کنید' : ($field['help'] ?? 'برای انتخاب کلیک کنید') }}</small></span>
       <span class="cw-upload-action">انتخاب</span>
     </label>
     <div class="cw-upload-preview" data-upload-preview></div>
   @elseif(in_array($type, ['textarea','prompt','negative_prompt']))
-    <textarea id="{{ $controlId }}" name="fields[{{ $id }}]" class="cw-input" placeholder="{{ $field['placeholder'] ?? '' }}" @if($field['required'] ?? false) required @endif>{{ $value }}</textarea>
+    <textarea id="{{ $controlId }}" name="fields[{{ $id }}]" class="cw-input" placeholder="{{ $field['placeholder'] ?? '' }}">{{ $value }}</textarea>
   @elseif(in_array($type, ['text','number','seed']))
-    <input id="{{ $controlId }}" name="fields[{{ $id }}]" class="cw-input" type="{{ in_array($type, ['number','seed']) ? 'number' : 'text' }}" value="{{ $value }}" placeholder="{{ $field['placeholder'] ?? '' }}" @if(($field['min'] ?? '') !== '') min="{{ $field['min'] }}" @endif @if(($field['max'] ?? '') !== '') max="{{ $field['max'] }}" @endif @if(($field['step'] ?? '') !== '') step="{{ $field['step'] }}" @endif @if($field['required'] ?? false) required @endif>
+    <input id="{{ $controlId }}" name="fields[{{ $id }}]" class="cw-input" type="{{ in_array($type, ['number','seed']) ? 'number' : 'text' }}" value="{{ $value }}" placeholder="{{ $field['placeholder'] ?? '' }}" @if(($field['min'] ?? '') !== '') min="{{ $field['min'] }}" @endif @if(($field['max'] ?? '') !== '') max="{{ $field['max'] }}" @endif>
   @elseif(in_array($type, ['radio','multi_select','gender']))
     <div class="cw-chips {{ $type === 'multi_select' ? 'multi' : '' }}">
       @foreach($options as $option)<label><input type="{{ $type === 'multi_select' ? 'checkbox' : 'radio' }}" name="fields[{{ $id }}]{{ $type === 'multi_select' ? '[]' : '' }}" value="{{ $option['value'] }}" data-option-credit="{{ (int)($option['credit'] ?? 0) }}" {{ $value === $option['value'] ? 'checked' : '' }}><span>{{ $option['label'] }}</span></label>@endforeach

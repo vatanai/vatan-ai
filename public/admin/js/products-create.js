@@ -15,17 +15,7 @@ function toFa(v) { return String(v).replace(/[0-9]/g, function (d) { return '۰�
 /* ── وضعیت تکمیل هر مرحله بر اساس فیلدهای اجباری واقعی ──
    خروجی: { total, filled, complete, dynamic }
    مرحله ۳ پویاست: بر اساس ردیف‌های واقعاً اضافه‌شده‌ی «فیلدهای ورودی کاربر» (بند ۴۵). */
-function completionMirrorSourceStep(n) {
-  const source = Number(document.getElementById('step-tab-' + n)?.dataset.completionMirrorsStep || 0);
-  return source > 0 && source !== n ? source : null;
-}
-
 function computeStepStatus(n) {
-  const mirroredFrom = completionMirrorSourceStep(n);
-  if (mirroredFrom) {
-    const sourceStatus = computeStepStatus(mirroredFrom);
-    return Object.assign({}, sourceStatus, { mirroredFrom: mirroredFrom });
-  }
   if (n === 5) {
     const ready = [1, 2, 3, 4].every(function (step) {
       const status = computeStepStatus(step);
@@ -35,19 +25,20 @@ function computeStepStatus(n) {
   }
   if (n === 3) {
     const featuresEnabled = document.getElementById('special-features-enabled')?.value === '1';
+    const identityFilled = progressReady && progressFieldValue('identity_preservation') ? 1 : 0;
     if (!featuresEnabled) {
       return {
-        total: 0,
-        filled: 0,
-        complete: true,
+        total: 1,
+        filled: identityFilled,
+        complete: identityFilled === 1,
         dynamic: true
       };
     }
     const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
     if (!rows.length) {
-      return { total: 1, filled: 0, complete: false, dynamic: true };
+      return { total: 2, filled: identityFilled, complete: false, dynamic: true };
     }
-    let filled = 0;
+    let filled = identityFilled;
     rows.forEach(function (r) {
       const requiredInputsComplete = Array.from(r.querySelectorAll('[required]')).every(function (input) {
         return String(input.value || '').trim() !== '' && input.checkValidity();
@@ -55,7 +46,7 @@ function computeStepStatus(n) {
       const builderValidationPassed = !r.classList.contains('sb-invalid');
       if (requiredInputsComplete && builderValidationPassed) filled++;
     });
-    return { total: rows.length, filled: filled, complete: filled === rows.length, dynamic: true };
+    return { total: rows.length + 1, filled: filled, complete: filled === rows.length + 1, dynamic: true };
   }
   const req = STEP_REQUIRED_FIELDS[n] || [];
   let filled = 0;
@@ -119,9 +110,7 @@ function renderStepper() {
     // تیک سبز تکمیل گوشه‌ی کارت (بند ۴۲)
     if (checkEl) checkEl.classList.toggle('hidden', !(st.total > 0 && st.complete));
 
-    // وضعیت گام آینه‌ای برای نمایش تیک استفاده می‌شود، اما نباید همان فیلدهای
-    // اجباری را دوباره در درصد پیشرفت و قفل ثبت نهایی حساب کند.
-    if (st.total > 0 && !st.mirroredFrom) { overallTotal += st.total; overallFilled += st.filled; }
+    if (st.total > 0) { overallTotal += st.total; overallFilled += st.filled; }
   }
 
   // رنگ خط اتصال بین Stepها بر اساس مرحله‌ی فعلی
@@ -198,7 +187,7 @@ function lazyInitStep(n) {
   lazyInitedSteps.add(n);
   const panel = document.getElementById('panel-' + n);
   if (panel) initSearchables(panel);
-  if (n === 2 && typeof onPrimaryModelChange === 'function') onPrimaryModelChange(); // مدل اصلی هوش مصنوعی
+  if (n === 2 && typeof onPrimaryModelChange === 'function') onPrimaryModelChange(); // پایپ‌لاین هوش مصنوعی
   if (n === 3 && typeof refreshFormPreview === 'function') refreshFormPreview();     // ورودی و متغیرها
   if (n === 5 && typeof refreshFinalSummary === 'function') refreshFinalSummary();   // بازبینی نهایی
 }
@@ -211,9 +200,9 @@ const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: t
    از قبل موجود باشد؛ تصمیم نهایی همیشه با Validation واقعی سمت سرور است. */
 const STEP_REQUIRED_FIELDS = {
   1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_ids', 'دسته‌بندی'], ['main_images', 'تصویر اصلی محصول'] ],
-  2: [ ['prompt_template', 'متن پرامپت'], ['identity_preservation', 'وضعیت حفظ هویت'] ],
-  3: [],
-  4: [], // وضعیت تکمیل این گام از طریق data-completion-mirrors-step از گام دوم می‌آید
+  2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['fallback_models[]', 'مدل جایگزین هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
+  3: [ ['identity_preservation', 'وضعیت حفظ هویت'] ],
+  4: [ ['credit_cost', 'هزینه کردیت محصول'] ],
   5: [], // بازبینی نهایی: صرفاً مرور است
 };
 
@@ -249,9 +238,8 @@ function fieldValue(name) {
 }
 
 function validateStep(n) {
-  const sourceStep = completionMirrorSourceStep(n) || n;
   const missing = [];
-  (STEP_REQUIRED_FIELDS[sourceStep] || []).forEach(([name, label]) => {
+  (STEP_REQUIRED_FIELDS[n] || []).forEach(([name, label]) => {
     if (!fieldValue(name)) missing.push({ name, label });
   });
   ProductCreateState.validation[n] = missing.length === 0;

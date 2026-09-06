@@ -17,15 +17,15 @@ return new class extends Migration
         DB::table('home_sections')->where('page_key', 'app_home')->update(['status' => 'hidden']);
 
         $sections = [
-            $this->products('product_slider', 'peek', 'ترندهای امروز', 'محصولات جدید وطن، به‌جز مواردی که در ترندها هستند', [1, 36, 37, 6, 9], 1, 'portrait', ['source' => 'latest_non_trending', 'limit' => 24, 'display_rows' => '2', 'hover_effect' => 'neon_glow', 'view_all_link' => '/app/trends']),
-            $this->products('product_slider', 'motion_shimmer', 'استوری‌هایی که دیده می‌شوند', 'قالب‌های آماده برای ساخت استوری حرفه‌ای و چشم‌گیر', [10, 2, 7, 1], 34, 'social/instagram/story', ['display_rows' => '2', 'hover_effect' => 'shine']),
+            $this->products('product_slider', 'peek', 'ترندهای امروز', 'پراستفاده‌ترین سبک‌های پرتره برای شروع سریع', [1, 36, 37, 6, 9], 1, 'portrait', ['source' => 'trending', 'hover_effect' => 'neon_glow', 'view_all_link' => '/app/trends']),
+            $this->products('product_slider', 'motion_shimmer', 'استوری‌هایی که دیده می‌شوند', 'قالب‌های آماده برای ساخت استوری حرفه‌ای و چشم‌گیر', [10, 2, 7, 1], 34, 'social/instagram/story', ['hover_effect' => 'shine']),
             $this->hero('default', 'امروز چه چیزی ترند شده؟', 'محبوب‌ترین ایده‌ها و سبک‌های روز را ببین و با چند کلیک نسخه خودت را بساز.', '/assets/img/best-ai-prompts-for-cinematic-photos-and-portraits.jpeg', 'دیدن ترندها', '/trends'),
             $this->products('product_grid', 'bento', 'عکس محصول، آماده فروش', 'محصولت را با عکس‌های حرفه‌ای و تبلیغاتی بهتر معرفی کن', [8, 2, 10, 1, 36, 37], 77, 'business/product-photo', ['hover_effect' => 'zoom_soft']),
             $this->text('هر ایده، یک مسیر آماده برای اجرا', 'از پرتره و محتوای شبکه‌های اجتماعی تا تبلیغات و ویدیو؛ محصول مناسب را انتخاب کن، اطلاعاتت را بده و خروجی آماده تحویل بگیر.'),
             $this->products('product_slider', 'scroll_marquee', 'برای اینستاگرام آماده شو', 'ایده‌های سریع برای پست، استوری و ریلز برند یا صفحه شخصی', [10, 2, 1, 8, 7], 32, 'social/instagram', ['hover_effect' => 'saturate']),
             $this->products('product_grid', 'four_col', 'محبوب‌ترین ابزارهای ساخت', 'انتخاب‌های کاربردی کاربران برای ساخت سریع‌تر محتوا', [1, 2, 8, 10, 3, 7, 9, 6], 46, 'business', ['hover_effect' => 'lift_shadow']),
             $this->banner('/assets/img/dayno-cinematic-ai-photo-prompts-eH9Z8z.jpg', '/app/products', 'از ایده تا خروجی حرفه‌ای با ابزارهای آماده وطن'),
-            $this->products('product_slider', 'video_loop', 'ویدیو برای لحظه‌های ماندگار', 'ویدیوهای مناسبتی؛ خودکار، بی‌صدا و آماده تماشا', [3, 7, 10], 85, 'video/occasion-video', ['display_rows' => '2', 'hover_effect' => 'neon_glow']),
+            $this->products('product_slider', 'video_loop', 'ویدیو برای لحظه‌های ماندگار', 'ویدیوهای مناسبتی؛ خودکار، بی‌صدا و آماده تماشا', [3, 7, 10], 85, 'video/occasion-video', ['hover_effect' => 'neon_glow']),
             $this->products('product_slider', 'scroll_wheel', 'استایل مردانه، متفاوت و حرفه‌ای', 'ظاهرهای آماده برای پرتره، پروفایل و محتوای شخصی', [1, 36, 37, 6, 9], 111, 'fashion/mens-style', ['hover_effect' => 'tilt']),
             $this->categoryTabs(),
             $this->text('دنبال نتیجه سریع هستی؟', 'دسته‌بندی موردنظرت را انتخاب کن؛ هزینه هر محصول شفاف است و قبل از شروع دقیقاً می‌دانی چه خروجی‌ای دریافت می‌کنی.'),
@@ -89,7 +89,7 @@ return new class extends Migration
     private function categoryTabs(): array
     {
         return ['type' => 'category_slider', 'layout' => 'tabs', 'title_fa' => 'هر چیزی که لازم داری، یک‌جا', 'subtitle_fa' => 'با انتخاب هر دسته، محصولات مرتبط همان بخش را ببین', 'settings' => json_encode([
-            '_sample' => self::MARKER . ':tabs', 'limit' => 8, 'products_per_tab' => 8, 'display_rows' => '2',
+            '_sample' => self::MARKER . ':tabs', 'limit' => 8, 'products_per_tab' => 8,
             'show_view_all' => false, 'hover_effect' => 'neon_glow',
         ], JSON_UNESCAPED_UNICODE)];
     }

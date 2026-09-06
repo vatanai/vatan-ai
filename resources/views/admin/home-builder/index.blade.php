@@ -20,9 +20,6 @@
         <div class="text-[13px]" style="color:var(--text-soft);">ساخت، ترتیب‌دهی و انتشار Sectionهای صفحه اصلی اپ — بدون نیاز به برنامه‌نویس</div>
       </div>
       <div class="flex items-center gap-2">
-        <a href="{{ route('admin.home-builder.galleries.index') }}" class="btn-pro btn-pro-primary">
-          <i class="fa-solid fa-images text-[11px]"></i> گالری‌های صفحه اصلی
-        </a>
         <a href="{{ route('admin.home-builder.showcase') }}" class="btn-pro btn-pro-ghost">
           <i class="fa-solid fa-grip text-[11px]"></i> گالری همه مدل‌ها
         </a>

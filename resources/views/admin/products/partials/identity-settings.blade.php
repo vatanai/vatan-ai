@@ -1,13 +1,4 @@
 @php
-  // این پارشیال هم در گام دوم و هم در بازخوانی‌های قدیمی قابل استفاده است؛
-  // بنابراین نباید به تعریف کمکیِ گام سوم وابسته باشد.
-  if (!isset($__help) || !is_callable($__help)) {
-      $__help = function (string $key, string $title) {
-          $text = config('product_field_help.' . $key, '');
-          if ($text === '') return '';
-          return '<span class="field-help-btn inline-flex items-center justify-center shrink-0 cursor-pointer text-[var(--text3)] hover:text-[var(--accent)] transition-colors" role="button" tabindex="0" data-help-title="' . e($title) . '" data-help-text="' . e($text) . '" aria-label="راهنمایی آیتم"><i class="fa-solid fa-circle-question text-[10px]"></i></span>';
-      };
-  }
   $source = $product ?? $duplicateFrom;
   $curSubjectType = old('subject_type', optional($source)->subject_type ?? 'generic');
   $hasOldChoice = session()->hasOldInput('identity_preservation');

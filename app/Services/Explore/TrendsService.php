@@ -201,9 +201,7 @@ class TrendsService
             'poster' => $product->displayImageUrl(),
             'video' => $isVideo,
             'link' => route('app.product', $product->route_slug) . '?source=trends',
-            // کارت ترند باید هزینه‌ی ساخت محصول را نشان دهد؛ تعداد دانلود
-            // شاخص مصرف اعتبار کاربر نیست و از اینجا به بعد نمایش داده نمی‌شود.
-            'tokens' => $product->qualityCreditCost('standard'),
+            'downloads' => (int) ($product->downloads_count ?? 0),
         ];
     }
 

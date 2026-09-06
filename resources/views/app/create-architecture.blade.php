@@ -41,7 +41,7 @@
                   <div class="ca-mock-line-title"><b>ساخت تصویر</b><span>مرحله‌ی اصلی فقط همین‌جاست</span></div>
                   <div class="ca-mock-upload-row"><span class="ca-mock-upload-icon">↑</span><span><b>عکس اصلی را اضافه کنید</b><small>JPG، PNG یا WebP · حداکثر ۱۰ مگابایت</small></span><em>انتخاب</em></div>
                   <div class="ca-mock-two-fields"><div>شرح کوتاه ایده</div><div>سبک سینمایی</div></div>
-                  <div class="ca-mock-cta-row"><span>۱۸ اعتبار · حدود ۴۵ ثانیه</span><strong>بساز ✦</strong></div>
+                  <div class="ca-mock-cta-row"><span>۱۸ توکن · حدود ۴۵ ثانیه</span><strong>بساز ✦</strong></div>
                 </div>
               </div>
             </div>
@@ -82,7 +82,7 @@
               <div class="ca-mock-drawer-panel">
                 <div class="ca-mock-line-title"><b>تنظیمات سریع</b><span>۳ انتخاب اصلی</span></div>
                 <div class="ca-mock-choice-row"><span class="selected">آپلود تصویر</span><span>پریست وینتیج</span><span>نسبت ۴:۵</span></div>
-                <div class="ca-mock-drawer-footer"><span>پیشرفته</span><strong>بساز · ۱۸ اعتبار</strong></div>
+                <div class="ca-mock-drawer-footer"><span>پیشرفته</span><strong>بساز · ۱۸ توکن</strong></div>
               </div>
             </div>
             <div class="ca-concept-info">
@@ -121,7 +121,7 @@
                 <span class="ca-wire-label">خلاصه نتیجه</span>
                 <div class="ca-wire-box ca-wire-box-tall">نمونه / راهنمای کوتاه</div>
                 <div class="ca-wire-box">آمادگی ساخت</div>
-                <div class="ca-wire-box">اعتبار و زمان</div>
+                <div class="ca-wire-box">توکن و زمان</div>
               </div>
             </div>
             <div class="ca-wire-bottom"><span>حریم خصوصی و راهنما</span><span>نتیجه / مقایسه</span></div>
@@ -162,7 +162,7 @@
           <p class="ca-sample-copy">صفحه در شروع خلوت است؛ تنظیمات پیشرفته فقط وقتی لازم باشند از پنل کناری باز می‌شوند.</p>
 
           <div class="ca-wire ca-wire-drawer">
-            <div class="ca-wire-top"><span>هدر محصول و عنوان پروژه</span><span>اعتبار / پروفایل</span></div>
+            <div class="ca-wire-top"><span>هدر محصول و عنوان پروژه</span><span>توکن / پروفایل</span></div>
             <div class="ca-wire-canvas ca-wire-canvas-large"><span>فضای خالی خروجی</span><small>اول تصویر یا ایده را اضافه کنید</small></div>
             <div class="ca-wire-toolbar"><span>نتیجه</span><span>مقایسه</span><span>راهنما</span><strong>تنظیمات</strong></div>
             <div class="ca-wire-drawer-panel">

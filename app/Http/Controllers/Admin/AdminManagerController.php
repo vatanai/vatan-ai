@@ -94,7 +94,7 @@ class AdminManagerController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email:rfc', 'max:190', Rule::unique('admins')->ignore($admin)],
             'phone' => ['required', 'regex:/^09\d{9}$/', Rule::unique('admins')->ignore($admin)],
-            'role' => ['required', Rule::in(['leader', 'finance', 'admin'])],
+            'role' => ['required', Rule::in(['leader', 'admin'])],
             'password' => [$admin ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
         ], [
             'name.required' => 'نام مدیر را وارد کنید.',

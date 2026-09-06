@@ -33,14 +33,4 @@ class Admin extends Authenticatable
     {
         return $this->role === 'leader';
     }
-
-    public function canManageFinance(): bool
-    {
-        return in_array($this->role, ['finance', 'leader'], true);
-    }
-
-    public function canApproveFinance(): bool
-    {
-        return $this->isLeader();
-    }
 }

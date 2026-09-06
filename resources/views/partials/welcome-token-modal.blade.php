@@ -31,14 +31,14 @@
             به پاس همراهی و انتخاب شما، پکیج هدیه اولیه با موفقیت روی حساب کاربری شما فعال و شارژ گردید. هم‌اکنون می‌توانید از تمامی ابزارهای خلاقانه کارگاه استفاده کنید.
         </p>
 
-        {{-- نمایش اعتبار‌های هدیه تخصیص داده شده --}}
+        {{-- نمایش توکن‌های هدیه تخصیص داده شده --}}
         <div class="w-full bg-emerald-500/[0.03] border border-emerald-500/10 rounded-2xl py-3.5 px-5 flex items-center justify-between my-1 group hover:border-emerald-500/20 transition-all">
             <span class="text-gray-400 text-xs font-bold flex items-center gap-2">
                 <i class="fa-solid fa-circle-check text-emerald-500 text-[10px]"></i>
                 اعتبار هدیه خوش‌آمدگویی:
             </span>
             <span class="text-emerald-400 font-black text-sm tracking-wide bg-emerald-500/10 px-3 py-1 rounded-xl">
-               + {{ number_format(session('welcome_tokens')) }} اعتبار
+               + {{ number_format(session('welcome_tokens')) }} توکن
             </span>
         </div>
 

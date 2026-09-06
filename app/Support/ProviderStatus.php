@@ -9,18 +9,16 @@ use Illuminate\Support\Facades\Cache;
  * ══════════════════════════════════════════════════════════════════════
  * ProviderStatus — کلید مرکزی روشن/خاموش سرویس‌های هوش مصنوعی
  * ─────────────────────────────────────────────────────────────────────
- * هدف: با یک کلید ساده در پنل ادمین بتوانیم providerهای فعال پروژه را کنترل کنیم.
+ * هدف: بدون حذف یا خراب‌کردن هیچ کدی از OpenRouterService یا LiaraAiService،
+ * فقط با یک کلید ساده در پنل ادمین بتوانیم یک provider را «فریز» کنیم.
  *
  * ذخیره‌سازی: علاوه بر Cache، وضعیت صریح ادمین داخل settings همان provider
  * ذخیره می‌شود تا با پاک‌شدن Cache یا تغییر workerها از بین نرود.
  *
  * پیش‌فرض‌ها (اولین بار که کاربر هنوز چیزی تنظیم نکرده):
- *   - replicate → true  (مسیر اصلی MVP)
- *   - openrouter → false (تا زمان شارژ/تأیید حساب)
- *   - fal → false (تا زمان رفع مسیر شبکه و health-check موفق)
- * در نسخه‌ی MVP، migration فعال‌سازی providerها این مقدار را به‌صورت صریح
- * داخل ai_provider_settings روی true می‌گذارد؛ بنابراین وضعیت استقرارشده
- * از مقدار محافظه‌کارانه‌ی نصب اولیه جداست.
+ *   - liara      → true  (فعال — سرویس اصلی داخل ایران، بدون VPN)
+ *   - openrouter → true  (فعال — قابل انتخاب در ثبت محصول)
+ *   - fal/replicate → اگر کلید داشته باشند فعال، وگرنه خاموش
  *
  * برای برگرداندن OpenRouter کافیست از پنل ادمین آن را روشن کنند؛
  * هیچ کدی نه پاک شده و نه فریز شده — فقط یک flag کوچک است.
@@ -29,13 +27,14 @@ use Illuminate\Support\Facades\Cache;
 class ProviderStatus
 {
     /** لیست providerهای شناخته‌شده در سیستم. */
-    public const PROVIDERS = ['openrouter', 'fal', 'replicate'];
+    public const PROVIDERS = ['liara', 'openrouter', 'fal', 'replicate'];
 
     /** مقادیر پیش‌فرض روشن/خاموش برای اولین بار (تا وقتی ادمین دستی عوض نکرده). */
     protected const DEFAULTS = [
-        'openrouter' => false,
+        'liara'      => true,
+        'openrouter' => true,
         'fal'        => false,
-        'replicate'  => true,
+        'replicate'  => false,
     ];
 
     /**
@@ -96,7 +95,7 @@ class ProviderStatus
     /**
      * وضعیت همه providerها به‌صورت آرایه — برای نمایش در UI ادمین.
      *
-     * @return array<string,bool>  ['openrouter' => true, 'fal' => false, 'replicate' => false]
+     * @return array<string,bool>  ['liara' => true, 'openrouter' => false]
      */
     public static function all(): array
     {

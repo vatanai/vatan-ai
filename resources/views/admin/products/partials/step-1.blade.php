@@ -126,33 +126,24 @@
   @php
     $__outputSource = $duplicateFrom ?? ($product ?? null);
     $__ratioOptions = [
-      '3:4' => ['label' => 'عمودی 3:4', 'shape' => 'w-4 h-5'],
-      '4:3' => ['label' => 'افقی 4:3', 'shape' => 'w-5 h-4'],
-      '1:1' => ['label' => 'مربع 1:1', 'shape' => 'w-5 h-5'],
-      '4:5' => ['label' => 'عمودی 4:5', 'shape' => 'w-4 h-5'],
-      '9:16' => ['label' => 'عمودی 9:16', 'shape' => 'w-4 h-6'],
-      '16:9' => ['label' => 'افقی 16:9', 'shape' => 'w-6 h-4'],
-      '2:3' => ['label' => 'عمودی 2:3', 'shape' => 'w-4 h-6'],
-      '3:2' => ['label' => 'افقی 3:2', 'shape' => 'w-6 h-4'],
+      'auto' => ['label' => 'خودکار', 'shape' => 'w-5 h-5'],
+      '1:1' => ['label' => '۱:۱', 'shape' => 'w-5 h-5'],
+      '9:16' => ['label' => '۹:۱۶', 'shape' => 'w-4 h-6'],
+      '16:9' => ['label' => '۱۶:۹', 'shape' => 'w-6 h-4'],
+      '2:3' => ['label' => '۲:۳', 'shape' => 'w-4 h-6'],
+      '3:2' => ['label' => '۳:۲', 'shape' => 'w-6 h-4'],
+      '3:4' => ['label' => '۳:۴', 'shape' => 'w-4 h-5'],
+      '4:3' => ['label' => '۴:۳', 'shape' => 'w-5 h-4'],
     ];
     $__enabledRatios = collect(old('allowed_aspect_ratios', $__outputSource?->allowedAspectRatioList() ?? array_keys($__ratioOptions)))
       ->map(fn ($value) => (string) $value)->all();
-    $__resolutionOptions = \App\Models\Product::supportedOutputResolutions();
-    $__resolutionLabels = \App\Models\Product::OUTPUT_RESOLUTION_LABELS;
-    $__defaultResolutions = \App\Models\Product::DEFAULT_OUTPUT_RESOLUTIONS;
-    $__savedResolutions = $__outputSource?->allowedResolutionList() ?? [];
-    $__enabledResolutions = collect(old('allowed_resolutions', $__savedResolutions ?: $__defaultResolutions))
-      ->map(fn ($value) => (string) $value)
-      ->filter(fn ($value) => in_array($value, $__resolutionOptions, true))
-      ->values()->all();
-    $__resolutionDefaults = $__outputSource?->outputResolutionDefaults() ?? \App\Models\Product::DEFAULT_PLAN_OUTPUT_RESOLUTIONS;
-    $__freeResolutionDefault = (string) old('model_configuration.output_resolution_defaults.free', $__resolutionDefaults['free'] ?? '720');
-    $__paidResolutionDefault = (string) old('model_configuration.output_resolution_defaults.paid', $__resolutionDefaults['paid'] ?? '1080');
+    $__enabledResolutions = collect(old('allowed_resolutions', $__outputSource?->allowedResolutionList() ?? ['720', '1080']))
+      ->map(fn ($value) => (string) $value)->all();
   @endphp
   <div class="border-t border-[var(--b1)] pt-5 mt-1">
     <div class="mb-4">
       <div class="text-xs font-bold text-[var(--text)] flex items-center gap-2"><i class="fa-solid fa-sliders text-[var(--accent)]"></i> تنظیمات خروجی کاربر</div>
-      <div class="text-[10.5px] text-[var(--text3)] mt-1">نسبت‌های تصویر توسط مدیر فعال می‌شوند؛ رزولوشن تصویر برای کاربر بر اساس پلن به‌صورت خودکار تعیین می‌شود و از همین‌جا قابل کنترل است.</div>
+      <div class="text-[10.5px] text-[var(--text3)] mt-1">گزینه‌های روشن در صفحه ساخت به کاربر نمایش داده می‌شوند؛ حالت پیش‌فرض سایز `۳:۴` و کیفیت `۷۲۰` است.</div>
     </div>
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5">
@@ -165,10 +156,7 @@
             <label class="output-option-card relative flex flex-col items-center justify-center gap-1.5 min-h-[76px] rounded-lg border border-[var(--b1)] bg-[var(--s2)] cursor-pointer transition-all hover:border-[var(--accent)] {{ in_array($__ratio, $__enabledRatios, true) ? 'is-enabled border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
               <input type="checkbox" name="allowed_aspect_ratios[]" value="{{ $__ratio }}" class="sr-only peer" {{ in_array($__ratio, $__enabledRatios, true) ? 'checked' : '' }}>
               <span class="{{ $__ratioMeta['shape'] }} border-2 border-[var(--text3)] rounded-[4px] opacity-80 peer-checked:border-[var(--accent)]"></span>
-              <span dir="rtl" class="flex items-center justify-center gap-1.5 text-[10px] font-bold text-[var(--text2)] peer-checked:text-[var(--accent)]">
-                <b dir="ltr">{{ $__ratio }}</b>
-                <small class="font-semibold">{{ str_replace([$__ratio . ' ', ' ' . $__ratio], '', $__ratioMeta['label']) }}</small>
-              </span>
+              <span class="text-[10px] font-bold text-[var(--text2)] peer-checked:text-[var(--accent)]">{{ $__ratioMeta['label'] }}</span>
               <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-[var(--b2)] bg-[var(--s1)] text-transparent peer-checked:bg-[var(--green)] peer-checked:border-[var(--green)] peer-checked:text-white flex items-center justify-center text-[8px]"><i class="fa-solid fa-check"></i></span>
             </label>
           @endforeach
@@ -176,35 +164,15 @@
       </div>
       <div class="bg-[var(--s1)] border border-[var(--b1)] rounded-xl p-3.5">
         <div class="flex items-center justify-between gap-3 mb-3">
-          <div class="text-[11px] font-bold text-[var(--text2)]"><i class="fa-solid fa-display text-[var(--accent)] ml-1.5"></i>رزولوشن خروجی</div>
-          <span class="text-[9px] text-[var(--text3)]">انتخاب خودکار بر اساس پلن</span>
+          <div class="text-[11px] font-bold text-[var(--text2)]"><i class="fa-solid fa-display text-[var(--accent)] ml-1.5"></i>کیفیت‌های خروجی</div>
+          <span class="text-[9px] text-[var(--text3)]">۷۲۰ و ۱۰۸۰</span>
         </div>
-        <p class="text-[9px] text-[var(--text3)] mb-3">کاربر رایگان با مقدار انتخابی اول و کاربر دارای پلن با مقدار انتخابی دوم می‌سازد؛ این گزینه دیگر در صفحه ساخت به کاربر نمایش داده نمی‌شود.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
-          <label class="flex flex-col gap-1.5 text-[10px] font-semibold text-[var(--text2)]">
-            <span>پیش‌فرض پلن رایگان</span>
-            <select name="model_configuration[output_resolution_defaults][free]" class="bg-[var(--s2)] border border-[var(--b1)] rounded-lg px-2.5 py-2 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]">
-              @foreach($__resolutionOptions as $__resolution)
-                <option value="{{ $__resolution }}" @selected($__freeResolutionDefault === $__resolution)>{{ $__resolution }} — {{ $__resolutionLabels[$__resolution] ?? $__resolution }}</option>
-              @endforeach
-            </select>
-          </label>
-          <label class="flex flex-col gap-1.5 text-[10px] font-semibold text-[var(--text2)]">
-            <span>پیش‌فرض پلن پولی</span>
-            <select name="model_configuration[output_resolution_defaults][paid]" class="bg-[var(--s2)] border border-[var(--b1)] rounded-lg px-2.5 py-2 text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]">
-              @foreach($__resolutionOptions as $__resolution)
-                <option value="{{ $__resolution }}" @selected($__paidResolutionDefault === $__resolution)>{{ $__resolution }} — {{ $__resolutionLabels[$__resolution] ?? $__resolution }}</option>
-              @endforeach
-            </select>
-          </label>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
-          @foreach($__resolutionOptions as $__resolution)
-            @php $__resolutionLabel = $__resolutionLabels[$__resolution] ?? $__resolution; @endphp
-            <label data-output-quality="{{ $__resolution }}" class="output-option-card relative flex items-center justify-between gap-2 min-h-[76px] rounded-lg border border-[var(--b1)] bg-[var(--s2)] px-3 cursor-pointer transition-all hover:border-[var(--accent)] {{ in_array($__resolution, $__enabledResolutions, true) ? 'is-enabled border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
-              <input type="checkbox" name="allowed_resolutions[]" value="{{ $__resolution }}" class="sr-only peer" @checked(in_array($__resolution, $__enabledResolutions, true))>
+        <div class="grid grid-cols-2 gap-2">
+          @foreach(['720' => 'استاندارد', '1080' => 'بالاتر'] as $__resolution => $__resolutionLabel)
+            <label class="output-option-card relative flex items-center justify-between gap-2 min-h-[76px] rounded-lg border border-[var(--b1)] bg-[var(--s2)] px-3 cursor-pointer transition-all hover:border-[var(--accent)] {{ in_array($__resolution, $__enabledResolutions, true) ? 'is-enabled border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
+              <input type="checkbox" name="allowed_resolutions[]" value="{{ $__resolution }}" class="sr-only peer" {{ in_array($__resolution, $__enabledResolutions, true) ? 'checked' : '' }}>
               <span class="flex flex-col gap-1"><b class="text-[13px] text-[var(--text)] peer-checked:text-[var(--accent)]">{{ $__resolution }}</b><small class="text-[9px] text-[var(--text3)]">{{ $__resolutionLabel }}</small></span>
-              <span class="output-quality-check w-5 h-5 rounded-md border border-[var(--b2)] bg-[var(--s1)] text-transparent peer-checked:bg-[var(--green)] peer-checked:border-[var(--green)] peer-checked:text-white flex items-center justify-center text-[9px]"><i class="fa-solid fa-check"></i></span>
+              <span class="w-5 h-5 rounded-md border border-[var(--b2)] bg-[var(--s1)] text-transparent peer-checked:bg-[var(--green)] peer-checked:border-[var(--green)] peer-checked:text-white flex items-center justify-center text-[9px]"><i class="fa-solid fa-check"></i></span>
             </label>
           @endforeach
         </div>

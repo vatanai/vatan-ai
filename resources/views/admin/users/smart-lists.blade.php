@@ -57,15 +57,15 @@
 
         <div class="smart-card color-red" onclick="loadList('no_token', this)">
           <div class="smart-icon" style="color:var(--red);">🔴</div>
-          <div class="smart-title">بدون اعتبار</div>
-          <div class="smart-desc">موجودی اعتبار صفر یا کمتر از ۵</div>
+          <div class="smart-title">بدون توکن</div>
+          <div class="smart-desc">موجودی توکن صفر یا کمتر از ۵</div>
           <div class="smart-count" style="color:var(--red);" id="count-no_token">—</div>
         </div>
 
         <div class="smart-card color-orange" onclick="loadList('low_token', this)">
           <div class="smart-icon" style="color:var(--orange);">⚠️</div>
-          <div class="smart-title">اعتبار کم</div>
-          <div class="smart-desc">بین ۵ تا ۵۰ اعتبار باقی‌مانده</div>
+          <div class="smart-title">توکن کم</div>
+          <div class="smart-desc">بین ۵ تا ۵۰ توکن باقی‌مانده</div>
           <div class="smart-count" style="color:var(--orange);" id="count-low_token">—</div>
         </div>
 
@@ -128,7 +128,7 @@
               <tr>
                 <th>کاربر</th>
                 <th>موبایل / ایمیل</th>
-                <th style="text-align:center;">اعتبار</th>
+                <th style="text-align:center;">توکن</th>
                 <th style="text-align:center;">تصاویر</th>
                 <th>آخرین ورود</th>
                 <th style="text-align:center;">عملیات</th>
@@ -155,8 +155,8 @@ document.addEventListener('DOMContentLoaded',function(){var bc=document.getEleme
 
 const listMeta = {
   new_today:   { title: 'کاربران جدید امروز', emoji: '🆕' },
-  no_token:    { title: 'بدون اعتبار', emoji: '🔴' },
-  low_token:   { title: 'اعتبار کم', emoji: '⚠️' },
+  no_token:    { title: 'بدون توکن', emoji: '🔴' },
+  low_token:   { title: 'توکن کم', emoji: '⚠️' },
   inactive_30d:{ title: 'غیرفعال ۳۰ روز', emoji: '😴' },
   vip:         { title: 'کاربران VIP', emoji: '⭐' },
   no_order:    { title: 'بدون خرید', emoji: '🛒' },
@@ -232,7 +232,7 @@ function renderRows(users) {
       <td style="font-size:11px;color:var(--text3);">${u.last||u.last_login||'—'}</td>
       <td style="text-align:center;">
         <a href="/admin/users/${u.id}/logs" class="action-btn" title="لاگ"><i class="fa-solid fa-history"></i></a>
-        <a href="/admin/users/tokens?user_id=${u.id}" class="action-btn" title="اعتبار"><i class="fa-solid fa-coins"></i></a>
+        <a href="/admin/users/tokens?user_id=${u.id}" class="action-btn" title="توکن"><i class="fa-solid fa-coins"></i></a>
       </td>
     </tr>
   `).join('');

@@ -32,7 +32,7 @@
         <div class="sms-table-scroll"><table class="sms-table"><thead><tr><th>زمان</th><th>نوع</th><th>گیرنده</th><th>متن</th><th>شناسه</th><th>وضعیت</th></tr></thead><tbody>
         @forelse($messages as $m)
           @php $eventKey=Str::afterLast($m->type,':'); $eventLabel=config("sms_events.events.{$eventKey}.label",$m->type); @endphp
-          <tr><td>{{ $m->created_at?->format('Y/m/d H:i') }}</td><td><span class="sms-type"><i class="fa-solid {{ Str::startsWith($m->type,'test:')||Str::startsWith($m->type,'approval-check:')?'fa-flask':'fa-bolt' }}"></i>{{ $eventLabel }}</span></td><td dir="ltr">{{ $m->recipient }}</td><td>{{ Str::limit(str_replace('توکن', 'اعتبار', (string) $m->body),80)?:'رمز یک‌بارمصرف' }}</td><td>{{ $m->provider_id?:'—' }}</td><td><span class="badge-pro badge-pro-{{ $m->status==='failed'?'danger':'success' }}">{{ $m->status==='failed'?'ناموفق':'ارسال‌شده' }}</span></td></tr>
+          <tr><td>{{ $m->created_at?->format('Y/m/d H:i') }}</td><td><span class="sms-type"><i class="fa-solid {{ Str::startsWith($m->type,'test:')||Str::startsWith($m->type,'approval-check:')?'fa-flask':'fa-bolt' }}"></i>{{ $eventLabel }}</span></td><td dir="ltr">{{ $m->recipient }}</td><td>{{ Str::limit($m->body,80)?:'رمز یک‌بارمصرف' }}</td><td>{{ $m->provider_id?:'—' }}</td><td><span class="badge-pro badge-pro-{{ $m->status==='failed'?'danger':'success' }}">{{ $m->status==='failed'?'ناموفق':'ارسال‌شده' }}</span></td></tr>
         @empty
           <tr><td colspan="6">رکوردی وجود ندارد.</td></tr>
         @endforelse

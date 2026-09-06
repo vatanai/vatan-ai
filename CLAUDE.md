@@ -54,24 +54,31 @@
 
 طبق روال جاری پروژه: هر مرحله را به‌صورت تسک فارسی جدا ثبت کن (TaskCreate)، تسک را کامل تیک نزن، فقط وقتی کاربر صراحتاً تایید کرد تیک بزن.
 
-## دیپلوی و پوش (Deploy) — فقط Cloudiva
+## دیپلوی و پوش (Deploy) — همیشه دقیقاً همین مراحل
 
-مقصد رسمی پروژه فقط سرویس `vatanai-laravel-cloudiva` روی `Cloudiva` است.
+**اپ صحیح روی Liara همیشه `demovatan` است، نه `aivatan`** (اون اپ اصلاً وجود نداره). دامنه‌ی `aivatan.com` به‌صورت custom domain روی همین اپ `demovatan` ست شده. پلتفرم عمداً `laravel` (بدون Docker) است و نباید بدون تایید صریح کاربر عوض بشه — یه Dockerfile قدیمی و بلااستفاده هم توی ریشه‌ی پروژه با اسم `_archive_unused_Dockerfile.txt` نگه داشته شده، فعالش نکن.
 
 ### روال استاندارد هر بار (کد + دیتابیس با هم)
 
 ```bash
+# ۱. کامیت و پوش (توصیه‌شده، برای بک‌آپ و تاریخچه)
 cd "/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/vatan-ai"
 git add -A
 git commit -m "توضیح تغییرات"
 git push origin crm-integration
 
-# استقرار از پنل یا CLI رسمی Cloudiva/Chabokan انجام می‌شود.
-# پس از پایان کامل استقرار، در کنسول تازه‌ی همان سرویس اجرا شود:
-php artisan migrate --force --no-interaction
+# ۲. دیپلوی — بدون --no-cache (سریع‌تره، از کش لایه‌های Docker استفاده می‌کنه)
+liara deploy --app demovatan --platform laravel --port 3000
+
+# ۳. فقط اگر صفحه‌ای بعد از دیپلوی هنوز نسخه‌ی قدیمی رو نشون داد (شک به کش خراب)،
+#    یک‌بار با --no-cache بزن تا کل ایمیج از صفر ساخته بشه:
+# liara deploy --app demovatan --platform laravel --port 3000 --no-cache
+
+# ۴. بعد از تمومِ کامل دیپلوی، حتماً یک SSH تازه (نه تب قدیمی) به demovatan بزن:
+php artisan migrate --force
 ```
 
-token استقرار فقط باید به‌صورت secret در CI/CD `Cloudiva` نگه‌داری شود و داخل سورس یا پاسخ‌ها قرار نگیرد.
+نیازی به پاک کردن دستی کش (`view:clear`/`config:clear`) نیست — این کار الان خودکار توی هر build از طریق `composer.json` (`post-install-cmd` / `post-update-cmd`) انجام می‌شه، چون پوشه‌ی `storage` روی یک دیسک دائمی (persistent disk) مونت شده و کش‌های قدیمی می‌تونن بین دیپلوی‌ها باقی بمونن.
 
 ### نکته‌ی حیاتی: دیتابیس لوکال با Production جدا هستن
 
@@ -86,12 +93,19 @@ token استقرار فقط باید به‌صورت secret در CI/CD `Cloudiva
 3. یه migration جدید idempotent بساز که این فایل رو با `DB::unprepared(file_get_contents(database_path('data-import/NAME_JADVAL.sql')))` اجرا کنه — **حتماً توی `database/` باشه، نه `storage/app/`** (چون `storage/app/.gitignore` تقریباً همه‌چیز رو نادیده می‌گیره و فایل هیچ‌وقت توی دیپلوی نمی‌ره).
 4. مرحله ۴ روال بالا (`php artisan migrate --force`) این ایمپورت رو هم خودکار انجام می‌ده.
 
-### اگر استقرار یا اجرای برنامه خطا داد
+### اگه دیپلوی خیلی کند بود یا ارور داد
 
-قبل از هر استقرار، permission فایل‌های سورس باید خواندنی برای کاربر اجرای PHP باشد:
+- پلن فعلی اپ (CPU/RAM) رو از اینجا چک/بالا ببر: `https://console.liara.ir/apps/demovatan/resize` — با منابع خیلی کم (مثلاً ۰.۵ گیگ رم)، build ممکنه خیلی کند بشه یا گیر کنه.
+- `vendor/` توی `.liaraignore` هست و نباید حذفش کنی — Liara خودش موقع build با composer نصبش می‌کنه، آپلود کردنش فقط زمان تلف می‌کنه.
+
+### خطای Permission denied بعد از دیپلوی (فایل config یا هر فایل php)
+
+اگه بعد از دیپلوی، سایت با `Warning: require(...): Failed to open stream: Permission denied` بالا نیومد، یعنی یک یا چند فایل روی مک با پرمیشن بسته (600 — فقط خواندنی برای مالک) ذخیره شدن. `liara deploy` پرمیشن فایل‌ها رو عیناً به سرور می‌بره و چون PHP روی سرور با یوزر دیگه‌ای اجرا می‌شه، نمی‌تونه فایل رو بخونه. (خطای بعدیش مثل `Class "view" does not exist` فقط عارضه‌ی همینه، نه مشکل جدا.)
+
+**قبل از هر دیپلوی** (یا حداقل هر وقت فایل جدیدی به پروژه اضافه شده) این رو یک بار اجرا کن تا پرمیشن‌های بسته درست بشن:
 
 ```bash
 find . -type f -perm 600 -not -path "./vendor/*" -not -path "./node_modules/*" -not -path "./.git/*" -not -path "./storage/*" -not -name ".env" -exec chmod 644 {} \;
 ```
 
-(`.env` عمداً مستثنی شده و نباید وارد استقرار شود.)
+(`.env` عمداً مستثنی شده — اون باید خصوصی بمونه و اصلاً دیپلوی هم نمی‌شه.)

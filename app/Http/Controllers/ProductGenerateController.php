@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\AiModel;
 use App\Models\ProductMetricEvent;
 use App\Models\GeneratedImage;
+use App\Models\UserUpload;
 use App\Models\Order;
 use App\Models\AiProviderRequest;
 use App\Models\Discount;
@@ -19,10 +20,7 @@ use App\Services\ProductPromptBuilder;
 use App\Services\SmsEventService;
 use App\Services\ModelTierService;
 use App\Services\VideoProductConfigService;
-use App\Services\VideoModelSchemaService;
 use App\Services\StudioCostService;
-use App\Services\UserGalleryService;
-use App\Services\UserGalleryRecreationService;
 use App\Http\Requests\GenerateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -38,8 +36,6 @@ class ProductGenerateController extends Controller
         protected AiProviderRouter $openRouter,
         protected CreditWalletService $creditWallet,
         protected ModelTierService $modelTiers,
-        protected UserGalleryService $userGallery,
-        protected UserGalleryRecreationService $galleryRecreation,
     )
     {
     }
@@ -72,14 +68,6 @@ class ProductGenerateController extends Controller
         }
 
         $user = $request->user();
-        $galleryItem = null;
-        if ($user && $request->filled('gallery_item')) {
-            try {
-                $galleryItem = $this->galleryRecreation->ownedItem($user, (int) $request->query('gallery_item'));
-            } catch (ValidationException) {
-                $galleryItem = null;
-            }
-        }
         $tierKey = $this->modelTiers->tierKeyForUser($user);
         return view('app.create-product', [
             'product' => $product,
@@ -88,7 +76,6 @@ class ProductGenerateController extends Controller
                 $this->modelTiers->tierMeta($tierKey, $user?->plan),
                 $this->modelTiers->outputQualityOptions($user, $product),
             ),
-            'galleryItem' => $galleryItem,
         ]);
     }
 
@@ -243,14 +230,12 @@ class ProductGenerateController extends Controller
 
     private function studioModelOptions(Product $product, string $modality): array
     {
-        $modelSchemas = app(VideoModelSchemaService::class);
         $models = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', $modality)
             ->whereIn('task_type', $this->studioTaskTypes($modality))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
-            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
                 : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
@@ -260,7 +245,6 @@ class ProductGenerateController extends Controller
                 'name',
                 'openrouter_model_id',
                 'provider',
-                'task_type',
                 'capability_config',
                 'pricing_config',
             ]);
@@ -272,14 +256,6 @@ class ProductGenerateController extends Controller
             'provider' => (string) $model->provider,
             'supported_aspect_ratios' => $this->studioModelSupportedOptions($model, 'aspect_ratios', $modality),
             'supported_resolutions' => $this->studioModelSupportedOptions($model, 'resolutions', $modality),
-            'task_type' => (string) $model->task_type,
-            'supports_text' => $model->task_type === ($modality === 'video' ? 'text_to_video' : 'text_to_image'),
-            'supports_image' => (bool) $modelSchemas->summarize($model)['supports_image'],
-            'supports_video' => (bool) $modelSchemas->summarize($model)['supports_video'],
-            'supports_image_to_video' => in_array($model->task_type, ['image_to_video', 'face_animation'], true)
-                || data_get($model->capability_config, 'supports_image_to_video') === true,
-            'supports_video_to_video' => $model->task_type === 'video_to_video'
-                || data_get($model->capability_config, 'supports_video_to_video') === true,
         ])->unique('value')->values();
 
         $primary = (string) $product->primary_model;
@@ -388,7 +364,6 @@ class ProductGenerateController extends Controller
             || (array) data_get($pricing, 'resolution_tiers', []) !== []
             || (array) data_get($pricing, 'tiers', []) !== []
             || (array) data_get($pricing, 'duration_prices', []) !== []
-            || (array) data_get($pricing, 'pricing_skus', []) !== []
         );
     }
 
@@ -462,15 +437,8 @@ class ProductGenerateController extends Controller
 
     public function show(Product $product)
     {
-        abort_unless($product->status === 'active' && ! $product->trashed(), 404);
-
         if ($product->isVideoProduct()) {
-            return app(VideoProductController::class)->show(
-                request(),
-                $product,
-                app(ProductBuildSchema::class),
-                app(VideoModelSchemaService::class),
-            );
+            return app(VideoProductController::class)->show(request(), $product, app(ProductBuildSchema::class));
         }
 
         $metricPayload = [
@@ -527,12 +495,6 @@ class ProductGenerateController extends Controller
 
         $this->applyStudioModel($product, $request, 'image');
         $user = auth()->user();
-        $galleryItem = null;
-        if ($request->filled('gallery_item_id')) {
-            abort_unless($user, 401);
-            $galleryItem = $this->galleryRecreation->ownedItem($user, (int) $request->input('gallery_item_id'));
-        }
-        $saveToPersonalGallery = $user ? $this->userGallery->isEnabledFor($user) : false;
         $faceProfile = $this->selectedFaceProfile($request, $user);
         $requestedMainQuality = (string) $request->input('output.main_quality', 'standard');
         $mainQuality = $this->modelTiers->resolveOutputQuality($user, $requestedMainQuality, $product);
@@ -620,10 +582,6 @@ class ProductGenerateController extends Controller
             $totalCreditCost = max(0, $originalCreditCost - $discountCredits);
         }
 
-        $galleryRecreation = null;
-        $isFreeGalleryRecreation = false;
-        $chargeableCreditCost = $totalCreditCost;
-
         // اصلاح دریافت فایل‌ها بر اساس ساختار ارسالی جاوااسکریپت (uploads)
         $allFiles = $schema->flattenUploads($request);
         if (in_array($product->subject_type, ['face', 'body'], true) && count($allFiles) > 3) {
@@ -684,8 +642,7 @@ class ProductGenerateController extends Controller
         foreach ($allFiles as $file) {
             if (!$file) continue;
 
-            // فایل ورودی تا پایان پردازش از ابتدا روی دیسک خصوصی موقت نگهداری می‌شود.
-            $path = $file->store('temporary/product-inputs', 'user_gallery');
+            $path = $file->store('uploads/personal', 'public');
             $uploadedPaths[] = [
                 'path' => $path,
                 'size' => $file->getSize(),
@@ -696,15 +653,6 @@ class ProductGenerateController extends Controller
             if (str_starts_with((string) $mime, 'image/')) {
                 $b64 = base64_encode(file_get_contents($file->getRealPath()));
                 $base64Images[] = "data:{$mime};base64,{$b64}";
-            }
-        }
-
-        if ($galleryItem) {
-            $galleryDisk = Storage::disk($galleryItem->disk ?: 'user_gallery');
-            abort_unless($galleryDisk->exists($galleryItem->original_path), 422, 'فایل اصلی تصویر گالری در دسترس نیست.');
-            $galleryMime = $galleryItem->mime_type ?: $galleryDisk->mimeType($galleryItem->original_path);
-            if (str_starts_with((string) $galleryMime, 'image/')) {
-                $base64Images[] = 'data:' . $galleryMime . ';base64,' . base64_encode($galleryDisk->get($galleryItem->original_path));
             }
         }
 
@@ -729,7 +677,7 @@ class ProductGenerateController extends Controller
         $minRefs = (int) ($product->min_reference_images ?? 0);
         if ($identityRequested && ! $faceProfile && $minRefs > 0 && count($base64Images) < $minRefs) {
             foreach ($uploadedPaths as $up) {
-                Storage::disk('user_gallery')->delete($up['path']);
+                Storage::disk('public')->delete($up['path']);
             }
             return response()->json([
                 'success' => false,
@@ -774,14 +722,8 @@ class ProductGenerateController extends Controller
             $executionProduct->fallback_model_providers = [];
         }
 
-        if ($galleryItem) {
-            $galleryRecreation = $this->galleryRecreation->begin($user, $galleryItem, (int) $product->id, (int) $totalCreditCost);
-            $isFreeGalleryRecreation = $galleryRecreation->pricing_mode === 'monthly_free';
-            $chargeableCreditCost = $isFreeGalleryRecreation ? 0 : $totalCreditCost;
-        }
-
         $promotionalCreditsAllowed = false;
-        if ($product->pricing_model === 'per_credit' && $chargeableCreditCost > 0) {
+        if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
             if (! $user) {
                 return response()->json([
                     'success' => false,
@@ -814,7 +756,7 @@ class ProductGenerateController extends Controller
                 'processing_status' => 'processing',
                 'original_credits' => $originalCreditCost,
                 'discount_credits' => $discountCredits,
-                'final_credits' => $chargeableCreditCost,
+                'final_credits' => $totalCreditCost,
                 'discount_code' => $discount?->code,
                 'ai_model' => $executionProduct->primary_model,
                 'ai_provider' => $executionProduct->ai_provider,
@@ -834,26 +776,20 @@ class ProductGenerateController extends Controller
                 'paid_at' => now(),
                 'processing_started_at' => now(),
             ]);
-            if ($galleryRecreation) {
-                $this->galleryRecreation->attachOrder($galleryRecreation, $order->id);
-            }
             $order->recordEvent('created', 'سفارش ثبت شد', 'پردازش سفارش هوش مصنوعی آغاز شد.');
 
             // رزرو اتمیک اعتبار؛ از ساخت هم‌زمان بیش از موجودی جلوگیری می‌کند و
             // سهم اعتبار هدیه/خریداری‌شده را تا انتهای سفارش نگه می‌دارد.
-            if ($product->pricing_model === 'per_credit' && $chargeableCreditCost > 0) {
+            if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
                 try {
                     $creditReservation = $this->creditWallet->reserve(
                         $user,
-                        $chargeableCreditCost,
+                        $totalCreditCost,
                         $promotionalCreditsAllowed,
                         $order,
                     );
                 } catch (ValidationException $exception) {
-                    if ($galleryRecreation) {
-                        $this->galleryRecreation->fail($galleryRecreation, $exception->getMessage());
-                    }
-                    foreach ($uploadedPaths as $up) Storage::disk('user_gallery')->delete($up['path']);
+                    foreach ($uploadedPaths as $up) Storage::disk('public')->delete($up['path']);
                     $order->update([
                         'status' => 'review',
                         'payment_status' => 'failed',
@@ -863,7 +799,7 @@ class ProductGenerateController extends Controller
                     $order->recordEvent('payment_failed', 'رزرو اعتبار ناموفق بود', 'موجودی اعتبار برای مسیر انتخاب‌شده کافی نبود.');
                     return response()->json([
                         'success' => false,
-                        'message' => 'اعتبار شما کم است، برای ساخت عکس اعتبار خود را اضافه کنید.',
+                        'message' => collect($exception->errors())->flatten()->first() ?? 'اعتبارهای شما کافی نیست.',
                     ], 402);
                 }
             }
@@ -1007,30 +943,16 @@ class ProductGenerateController extends Controller
             // ۷. ثبت نهایی سوابق در دیتابیس در صورت لاگین بودن کاربر
             if ($user) {
                 foreach ($uploadedPaths as $up) {
-                    if ($saveToPersonalGallery) {
-                        try {
-                            $this->userGallery->capture(
-                                $user,
-                                'input_image',
-                                null,
-                                $up['path'],
-                                'user_gallery',
-                                (int) $up['size'],
-                                $up['mime'],
-                                ['product_id' => $product->id, 'order_id' => $order?->id],
-                            );
-                        } catch (\Throwable $exception) {
-                            report($exception);
-                        }
-                    }
-
-                    // فایل ورودی فقط تا پایان پردازش لازم است؛ ماندگاری آن منوط
-                    // به رضایت صریح و انتقال موفق به دیسک خصوصی گالری است.
-                    Storage::disk('user_gallery')->delete($up['path']);
+                    UserUpload::create([
+                        'user_id'   => $user->id,
+                        'file_path' => $up['path'],
+                        'size'      => $up['size'],
+                        'mime_type' => $up['mime'],
+                    ]);
                 }
 
                 foreach ($generated as $g) {
-                    $generatedImage = GeneratedImage::create([
+                    GeneratedImage::create([
                         'user_id'     => $user->id,
                         'product_id'  => $product->id,
                         'order_id' => $order?->id,
@@ -1040,7 +962,6 @@ class ProductGenerateController extends Controller
                         'cost'        => $g['cost'],
                         'size'        => $g['size'],
                     ]);
-
                 }
 
             }
@@ -1048,7 +969,7 @@ class ProductGenerateController extends Controller
             // اگر بعضی واریانت‌ها شکست خوردند، اعتبار همان خروجی‌ها بازگردانده می‌شود.
             $actualOriginalCredit = $product->pricing_model === 'per_credit' ? $creditCost * count($generated) : 0;
             $actualDiscount = $discount?->calculateCredits($actualOriginalCredit) ?? 0;
-            $actualCredit = $isFreeGalleryRecreation ? 0 : max(0, $actualOriginalCredit - $actualDiscount);
+            $actualCredit = max(0, $actualOriginalCredit - $actualDiscount);
             if ($creditReservation['total'] > 0 && $user) {
                 $creditReservation = $this->creditWallet->settle($user, $creditReservation, $actualCredit);
                 $creditReservationSettled = true;
@@ -1072,9 +993,6 @@ class ProductGenerateController extends Controller
                 'processing_duration_ms' => $order?->processing_started_at ? $order->processing_started_at->diffInMilliseconds(now()) : null,
             ]);
             $order?->recordEvent('completed', 'پردازش با موفقیت تکمیل شد', $failedMsg);
-            if ($galleryRecreation) {
-                $this->galleryRecreation->complete($galleryRecreation, $actualCredit);
-            }
             $this->markTelegramBuildCompleted($request, $product);
             if ($user?->phone && $order) app(SmsEventService::class)->send('order_completed', $user->phone, [
                 'name'=>$user->name, 'phone'=>$user->phone, 'order_number'=>$order->order_number,
@@ -1097,9 +1015,6 @@ class ProductGenerateController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            if ($galleryRecreation) {
-                $this->galleryRecreation->fail($galleryRecreation, $e->getMessage());
-            }
             if ($creditReservation['total'] > 0 && $user) {
                 $this->creditWallet->restore(
                     $user,
@@ -1111,7 +1026,7 @@ class ProductGenerateController extends Controller
                 );
             }
             foreach ($uploadedPaths as $up) {
-                Storage::disk('user_gallery')->delete($up['path']);
+                Storage::disk('public')->delete($up['path']);
             }
             Log::error('ProductGenerateController Error: ' . $e->getMessage());
             if ($order) {

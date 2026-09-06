@@ -10,181 +10,17 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Models\Otp;
 use App\Services\SmsEventService;
 use App\Services\ReferralProgramService;
-use App\Services\AuthEventService;
-use App\Services\UserGalleryService;
 use App\Models\ReferralSetting;
 use App\Support\Jalali;
-use App\Support\Numeral;
 use App\Support\PhoneNumber;
 use Carbon\Carbon;
 
 class AuthController extends Controller
 {
-    public function sendUnifiedOtp(Request $request)
-    {
-        $this->normalizePhoneInput($request);
-        $data = $request->validate(['phone' => ['required', 'regex:/^09\d{9}$/']]);
-        $phone = $data['phone'];
-        $user = User::query()->where('phone', $phone)->first();
-
-        if ($user && in_array($user->status, ['deleted', 'suspended'], true)) {
-            app(AuthEventService::class)->record($request, 'otp_request_blocked', $user, $phone, false, ['status' => $user->status]);
-            return response()->json(['status' => 'error', 'message' => 'امکان ورود با این شماره وجود ندارد.'], 403);
-        }
-
-        $rateLimitKey = 'unified-auth-otp:'.$phone.'|'.$request->ip();
-        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
-            return response()->json(['status' => 'error', 'message' => 'کد قبلاً ارسال شده است؛ تا پایان شمارشگر صبر کنید.'], 429);
-        }
-
-        $lock = Cache::lock('unified-auth-send:'.sha1($phone.'|'.$request->ip()), 12);
-        if (! $lock->get()) {
-            return response()->json(['status' => 'error', 'message' => 'ارسال کد در حال انجام است.'], 409);
-        }
-
-        try {
-            if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
-                return response()->json(['status' => 'error', 'message' => 'کد قبلاً ارسال شده است؛ تا پایان شمارشگر صبر کنید.'], 429);
-            }
-
-            $code = (string) random_int(10000, 99999);
-            $otpExpiryMinutes = $this->otpExpiryMinutes();
-            $sent = app(SmsEventService::class)->send($user ? 'login_otp' : 'otp_code', $phone, [
-                'name' => trim((string) $user?->name) ?: 'کاربر',
-                'code' => $code, 'expiry_minutes' => (string) $otpExpiryMinutes, 'brand_name' => 'پلتفرم وطن',
-            ], type: 'authentication');
-
-            if (! $sent) {
-                app(AuthEventService::class)->record($request, 'otp_send_failed', $user, $phone, false);
-                return response()->json(['status' => 'error', 'message' => 'ارسال کد انجام نشد؛ لطفاً دوباره تلاش کنید.'], 503);
-            }
-
-            Otp::query()->where('phone', $phone)->where('purpose', 'auth')->where('used', false)->update(['used' => true]);
-            Otp::query()->create([
-                'phone' => $phone, 'purpose' => 'auth', 'code' => Hash::make($code),
-                'expires_at' => now()->addMinutes($otpExpiryMinutes), 'used' => false, 'attempts' => 0,
-            ]);
-            $resendSeconds = $this->otpResendSeconds();
-            RateLimiter::hit($rateLimitKey, $resendSeconds);
-            app(AuthEventService::class)->record($request, 'otp_sent', $user, $phone);
-
-            return response()->json(['status' => 'success', 'expires_in' => $otpExpiryMinutes * 60, 'resend_in' => $resendSeconds]);
-        } finally {
-            $lock->release();
-        }
-    }
-
-    public function verifyUnifiedOtp(Request $request)
-    {
-        $this->normalizePhoneInput($request);
-        $this->normalizeOtpInput($request);
-        $data = $request->validate([
-            'phone' => ['required', 'regex:/^09\d{9}$/'],
-            'code' => ['required', 'digits:5'],
-        ]);
-
-        $otp = Otp::query()->where('phone', $data['phone'])->where('purpose', 'auth')
-            ->where('used', false)->latest()->first();
-        $user = User::query()->where('phone', $data['phone'])->first();
-
-        if (! $otp || ! $otp->isValid() || $otp->attempts >= 5) {
-            app(AuthEventService::class)->record($request, 'otp_verify_failed', $user, $data['phone'], false, ['reason' => 'expired_or_limited']);
-            return response()->json(['status' => 'error', 'message' => 'کد منقضی یا نامعتبر است.'], 422);
-        }
-
-        $otp->increment('attempts');
-        if (! Hash::check($data['code'], $otp->code)) {
-            app(AuthEventService::class)->record($request, 'otp_verify_failed', $user, $data['phone'], false, ['reason' => 'wrong_code']);
-            return response()->json(['status' => 'error', 'message' => 'کد وارد شده اشتباه است.'], 422);
-        }
-
-        $otp->update(['used' => true]);
-        app(AuthEventService::class)->record($request, 'otp_verified', $user, $data['phone']);
-
-        if ($user) {
-            if ($user->status !== 'active') {
-                return response()->json(['status' => 'error', 'message' => 'امکان ورود به این حساب وجود ندارد.'], 403);
-            }
-            Auth::login($user, true);
-            $request->session()->regenerate();
-            $this->trackSuccessfulLogin($request, $user, 'sms_otp');
-            return response()->json(['status' => 'success', 'next' => 'redirect', 'redirect' => $this->pullIntendedUrl($request)]);
-        }
-
-        Cache::put('unified_registration_verified_'.$data['phone'], true, now()->addMinutes(10));
-        return response()->json(['status' => 'success', 'next' => 'profile']);
-    }
-
-    public function registerUnified(Request $request)
-    {
-        $this->normalizePhoneInput($request);
-        $this->normalizeBirthDateInput($request);
-        [$currentJalaliYear] = Jalali::toJalaliYmd((int) now()->format('Y'), (int) now()->format('n'), (int) now()->format('j'));
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'], 'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['required', 'regex:/^09\d{9}$/'],
-            'gallery_consent' => ['accepted'],
-            'birth_day' => ['required', 'integer', 'between:1,31'],
-            'birth_month' => ['required', 'integer', 'between:1,12'],
-            'birth_year' => ['required', 'integer', 'between:1250,'.$currentJalaliYear],
-        ], [
-            'birth_day.required' => 'روز تولد را وارد کنید.',
-            'birth_day.integer' => 'روز تولد را فقط با عدد وارد کنید.',
-            'birth_day.between' => 'روز تولد باید عددی بین ۱ تا ۳۱ باشد.',
-            'birth_month.required' => 'ماه تولد را انتخاب کنید.',
-            'birth_month.integer' => 'ماه تولد معتبر نیست.',
-            'birth_month.between' => 'ماه تولد باید بین ۱ تا ۱۲ باشد.',
-            'birth_year.required' => 'سال تولد را وارد کنید.',
-            'birth_year.integer' => 'سال تولد را فقط با عدد وارد کنید.',
-            'birth_year.between' => 'سال تولد باید بین ۱۲۵۰ تا '.Jalali::toPersianDigits((string) $currentJalaliYear).' باشد.',
-            'gallery_consent.accepted' => 'برای ساخت حساب، پذیرش قوانین و رضایت ذخیره‌سازی ورودی‌ها لازم است.',
-        ]);
-        $validator->after(function ($validator) use ($request): void {
-            if (! $validator->errors()->hasAny(['birth_day', 'birth_month', 'birth_year'])
-                && ! Jalali::isValidDate((int) $request->birth_year, (int) $request->birth_month, (int) $request->birth_day)) {
-                $validator->errors()->add('birth_date', 'روز واردشده با ماه و سال انتخاب‌شده سازگار نیست.');
-            }
-        });
-        if ($validator->fails()) return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
-        if (! Cache::get('unified_registration_verified_'.$request->phone)) {
-            return response()->json(['status' => 'error', 'message' => 'ابتدا شماره موبایل را تأیید کنید.'], 422);
-        }
-        if (User::query()->where('phone', $request->phone)->exists()) {
-            return response()->json(['status' => 'error', 'message' => 'این شماره قبلاً ثبت شده است؛ دوباره وارد شوید.'], 409);
-        }
-
-        [$gy, $gm, $gd] = Jalali::toGregorianYmd((int) $request->birth_year, (int) $request->birth_month, (int) $request->birth_day);
-        [$user, $rewardResult] = DB::transaction(function () use ($request, $gy, $gm, $gd): array {
-            $user = User::query()->create([
-                'name' => trim($request->name), 'last_name' => trim($request->last_name),
-                'email' => $request->filled('email') ? trim($request->email) : null,
-                'phone' => $request->phone, 'birth_date' => sprintf('%04d-%02d-%02d', $gy, $gm, $gd),
-                'password' => Str::random(64), 'password_reveal' => null, 'status' => 'active',
-                'tokens' => 0, 'registered_at' => now(), 'last_login_at' => now(), 'login_count' => 1,
-            ]);
-            return [$user, app(ReferralProgramService::class)->completeRegistration($user, $request)];
-        });
-        if (Schema::hasTable('user_gallery_settings') && Schema::hasTable('user_gallery_events')) {
-            app(UserGalleryService::class)->syncConsent($user, true);
-        }
-
-        Cache::forget('unified_registration_verified_'.$request->phone);
-        Auth::login($user, true);
-        $request->session()->regenerate();
-        app(AuthEventService::class)->record($request, 'registration_completed', $user);
-        app(AuthEventService::class)->record($request, 'login_success', $user, metadata: ['first_login' => true]);
-        $giftTokens = (int) $rewardResult['registration_gift'] + (int) $rewardResult['invitee_reward'];
-        if ($giftTokens > 0) session()->flash('welcome_tokens', $giftTokens);
-
-        return response()->json(['status' => 'success', 'redirect' => $this->pullIntendedUrl($request), 'user_name' => $user->name]);
-    }
-
     public function sendOtp(Request $request)
     {
         $this->normalizePhoneInput($request);
@@ -211,11 +47,9 @@ class AuthController extends Controller
         }
 
         $code = (string) random_int(10000, 99999);
-        $otpExpiryMinutes = $this->otpExpiryMinutes();
-        $sent = app(SmsEventService::class)->send($data['purpose'] === 'login' ? 'login_otp' : 'otp_code', $data['phone'], [
-            'name' => trim((string) $user?->name) ?: 'کاربر',
+        $sent = app(SmsEventService::class)->send('otp_code', $data['phone'], [
             'code' => $code,
-            'expiry_minutes' => (string) $otpExpiryMinutes,
+            'expiry_minutes' => '3',
             'brand_name' => 'پلتفرم وطن',
         ], type: 'authentication');
         if (!$sent) {
@@ -234,19 +68,16 @@ class AuthController extends Controller
             'phone' => $data['phone'],
             'purpose' => $data['purpose'],
             'code' => Hash::make($code),
-            'expires_at' => now()->addMinutes($otpExpiryMinutes),
+            'expires_at' => now()->addMinutes(3),
             'used' => false,
             'attempts' => 0,
         ]);
 
-        $resendSeconds = $this->otpResendSeconds();
-        RateLimiter::hit($rateLimitKey, $resendSeconds);
+        RateLimiter::hit($rateLimitKey, 60);
 
         return response()->json([
             'status' => 'success',
             'message' => 'کد ورود برای شما پیامک شد.',
-            'expires_in' => $otpExpiryMinutes * 60,
-            'resend_in' => $resendSeconds,
         ]);
     }
 
@@ -277,7 +108,6 @@ class AuthController extends Controller
             $user = User::where('phone', $data['phone'])->where('status', 'active')->firstOrFail();
             Auth::login($user, true);
             $request->session()->regenerate();
-            $this->trackSuccessfulLogin($request, $user, 'sms_otp');
             return response()->json(['status' => 'success', 'redirect' => $this->pullIntendedUrl($request), 'user_name' => $user->name]);
         }
 
@@ -351,8 +181,6 @@ class AuthController extends Controller
     public function registerSubmit(Request $request)
     {
         $this->normalizePhoneInput($request);
-        $this->normalizeBirthDateInput($request);
-        [$currentJalaliYear] = Jalali::toJalaliYmd((int) now()->format('Y'), (int) now()->format('n'), (int) now()->format('j'));
 
         // حذف unique:users,phone برای مدیریت دستی وضعیت کاربران حذف شده
         $validator = Validator::make($request->all(), [
@@ -360,21 +188,9 @@ class AuthController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'email'     => ['nullable', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone'     => ['required', 'regex:/^09\d{9}$/'],
-            'password'  => ['required', 'string', 'regex:/^\d{8}$/'],
             'birth_day'   => ['required', 'integer', 'between:1,31'],
             'birth_month' => ['required', 'integer', 'between:1,12'],
-            'birth_year'  => ['required', 'integer', 'between:1250,'.$currentJalaliYear],
-        ], [
-            'password.regex' => 'رمز عبور باید دقیقاً ۸ رقم باشد.',
-            'birth_day.required' => 'روز تولد را وارد کنید.',
-            'birth_day.integer' => 'روز تولد را فقط با عدد وارد کنید.',
-            'birth_day.between' => 'روز تولد باید عددی بین ۱ تا ۳۱ باشد.',
-            'birth_month.required' => 'ماه تولد را انتخاب کنید.',
-            'birth_month.integer' => 'ماه تولد معتبر نیست.',
-            'birth_month.between' => 'ماه تولد باید بین ۱ تا ۱۲ باشد.',
-            'birth_year.required' => 'سال تولد را وارد کنید.',
-            'birth_year.integer' => 'سال تولد را فقط با عدد وارد کنید.',
-            'birth_year.between' => 'سال تولد باید بین ۱۲۵۰ تا '.Jalali::toPersianDigits((string) $currentJalaliYear).' باشد.',
+            'birth_year'  => ['required', 'integer', 'between:1250,1500'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -387,7 +203,7 @@ class AuthController extends Controller
             $day = (int) $request->birth_day;
 
             if (!Jalali::isValidDate($year, $month, $day)) {
-                $validator->errors()->add('birth_date', 'روز واردشده با ماه و سال انتخاب‌شده سازگار نیست.');
+                $validator->errors()->add('birth_date', 'تاریخ تولد شمسی واردشده معتبر نیست.');
                 return;
             }
 
@@ -427,28 +243,18 @@ class AuthController extends Controller
                 'email'     => $request->filled('email') ? $request->email : null,
                 'phone'     => $request->phone,
                 'birth_date'=> sprintf('%04d-%02d-%02d', $birthGy, $birthGm, $birthGd),
-                'password'  => $request->password,
-                'password_reveal' => $request->password,
+                // ورود کاربران فقط با رمز یک‌بارمصرف انجام می‌شود؛ این مقدار تصادفی
+                // صرفاً برای سازگاری با ستون قدیمی و غیرقابل‌تهی رمز نگه‌داری می‌شود.
+                'password'  => $registrationPassword = Str::random(64),
+                'password_reveal' => $registrationPassword,
                 'status'    => 'active',
                 'tokens'    => 0,
-                'registered_at' => now(),
-                'last_login_at' => now(),
-                'login_count' => 1,
             ]);
 
             return [$user, app(ReferralProgramService::class)->completeRegistration($user, $request)];
         });
 
         Auth::login($user, true);
-        $request->session()->regenerate();
-        app(AuthEventService::class)->record(
-            $request,
-            'login_success',
-            $user,
-            $user->phone,
-            metadata: ['first_login' => true],
-            method: 'password'
-        );
 
         $giftTokens = (int) $rewardResult['registration_gift'] + (int) $rewardResult['invitee_reward'];
 
@@ -498,8 +304,6 @@ class AuthController extends Controller
 
         if (Hash::check($request->password, $user->password)) {
             Auth::login($user, true);
-            $request->session()->regenerate();
-            $this->trackSuccessfulLogin($request, $user, 'password');
             if (!app()->environment('local')) {
                 app(SmsEventService::class)->send('login_success', $user->phone, [
                     'name'=>$user->name, 'phone'=>$user->phone, 'login_time'=>now()->format('Y/m/d H:i'),
@@ -639,23 +443,6 @@ class AuthController extends Controller
     }
 
     /** تبدیل تمام شکل‌های رایج شماره ایران به کلید یکتای 09xxxxxxxxx. */
-    private function trackSuccessfulLogin(Request $request, User $user, string $method): void
-    {
-        $user->forceFill([
-            'last_login_at' => now(),
-            'login_count' => (int) $user->login_count + 1,
-        ])->save();
-        app(AuthEventService::class)->record(
-            $request,
-            'login_success',
-            $user,
-            $user->phone,
-            metadata: ['auth_method' => $method],
-            method: $method
-        );
-    }
-
-    /** تبدیل تمام شکل‌های رایج شماره ایران به کلید یکتای 09xxxxxxxxx. */
     private function normalizePhoneInput(Request $request): void
     {
         if (! $request->has('phone')) {
@@ -675,31 +462,6 @@ class AuthController extends Controller
         ]);
 
         $request->merge(['code' => preg_replace('/\D+/u', '', $code)]);
-    }
-
-    /** پنجره‌ی اعتبار کد باید برای تأخیر تحویل پیامک حاشیه‌ی امن داشته باشد. */
-    private function otpExpiryMinutes(): int
-    {
-        return max(5, min(15, (int) config('auth.otp.expires_minutes', 10)));
-    }
-
-    private function otpResendSeconds(): int
-    {
-        return max(30, min(300, (int) config('auth.otp.resend_seconds', 60)));
-    }
-
-    private function normalizeBirthDateInput(Request $request): void
-    {
-        $normalized = [];
-        foreach (['birth_day', 'birth_month', 'birth_year'] as $field) {
-            if ($request->has($field)) {
-                $normalized[$field] = Numeral::toAscii((string) $request->input($field));
-            }
-        }
-
-        if ($normalized !== []) {
-            $request->merge($normalized);
-        }
     }
 
     private function pullIntendedUrl(Request $request): string

@@ -53,6 +53,16 @@ return new class extends Migration
                     'created_at' => now(),
                     'updated_at' => now(),
                 ],
+                [
+                    'name' => 'Liara',
+                    'slug' => 'liara',
+                    'currency' => 'IRR',
+                    'sync_driver' => 'manual',
+                    'show_on_dashboard' => true,
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ],
             ]);
         }
     }

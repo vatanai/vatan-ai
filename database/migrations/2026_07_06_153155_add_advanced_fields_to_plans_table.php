@@ -149,14 +149,11 @@ return new class extends Migration
         });
     }
 
-    /** بررسی وجود ایندکس با درایور فعلی دیتابیس، از جمله SQLite تست‌ها. */
+    /**
+     * بررسی وجود ایندکس روی جدول (سازگار با MySQL)
+     */
     private function indexExists(string $table, string $indexName): bool
     {
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            return collect(DB::select("PRAGMA index_list('" . str_replace("'", "''", $table) . "')"))
-                ->contains(fn (object $index): bool => ($index->name ?? null) === $indexName);
-        }
-
         $dbName = DB::connection()->getDatabaseName();
         $result = DB::select(
             'SELECT COUNT(1) AS cnt FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?',

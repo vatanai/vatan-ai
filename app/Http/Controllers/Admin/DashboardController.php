@@ -7,12 +7,14 @@ use App\Models\User;
 use App\Models\Generation;
 use App\Models\Product;
 use App\Services\ServiceCreditOverviewService;
+use App\Services\ServiceCreditSynchronizer;
 use App\Services\ServiceCreditTransactionReport;
 
 class DashboardController extends Controller
 {
     public function index(
         ServiceCreditOverviewService $creditOverview,
+        ServiceCreditSynchronizer $creditSynchronizer,
         ServiceCreditTransactionReport $transactionReport,
         $section = null
     )
@@ -27,8 +29,7 @@ class DashboardController extends Controller
             $stats = ['users_count' => 0, 'generations_count' => 0, 'products_count' => 0];
         }
 
-        // همگام‌سازی آنلاین فقط از مسیر «تازه‌سازی» انجام می‌شود؛ اجرای آن در
-        // هر بازشدن داشبورد باعث درخواست‌های زنجیره‌ای و کندی محسوس می‌شد.
+        $creditSynchronizer->sync();
         $creditData = $creditOverview->get(true);
         $creditTransactions = $transactionReport->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
 
@@ -41,7 +42,6 @@ class DashboardController extends Controller
             'actions'  => [],
             'creditOverview' => $creditData,
             'creditTransactions' => $creditTransactions,
-            'creditAlerts' => $creditData['alerts'] ?? collect(),
         ]);
     }
 }

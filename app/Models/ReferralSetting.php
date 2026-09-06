@@ -14,9 +14,6 @@ class ReferralSetting extends Model
         return [
             'registration_gift_enabled' => 'boolean',
             'registration_gift_tokens' => 'integer',
-            'telegram_registration_gift_enabled' => 'boolean',
-            'telegram_registration_gift_tokens' => 'integer',
-            'telegram_membership_required' => 'boolean',
             'registration_sms_enabled' => 'boolean',
             'registration_gift_review_repeated_ip' => 'boolean',
             'registration_gift_review_repeated_device' => 'boolean',
@@ -51,12 +48,7 @@ class ReferralSetting extends Model
     {
         return [
             'registration_gift_enabled' => true,
-            'registration_gift_tokens' => 40,
-            'telegram_registration_gift_enabled' => true,
-            'telegram_registration_gift_tokens' => 40,
-            'telegram_channel_username' => 'ai_vatan',
-            'telegram_channel_invite_url' => 'https://t.me/+R90JNkLlW7M4ZTk0',
-            'telegram_membership_required' => true,
+            'registration_gift_tokens' => 50,
             'registration_sms_enabled' => true,
             'registration_gift_review_repeated_ip' => true,
             'registration_gift_review_repeated_device' => true,
@@ -68,10 +60,10 @@ class ReferralSetting extends Model
             'attribution_window_days' => 30,
             'review_repeated_ip' => true,
             'review_repeated_device' => true,
-            'profile_enabled' => true,
+            'profile_enabled' => false,
             'profile_title' => 'همکاری در فروش وطن',
             'profile_subtitle' => 'لینکت را به اشتراک بگذار؛ دوستت هدیه می‌گیرد و تو پاداش.',
-            'profile_description' => 'لینک اختصاصی خودت را در شبکه‌های اجتماعی یا برای دوستانت بفرست. هر کاربر جدیدی که با لینک تو ثبت‌نام کند و اولین خرید موفقش را انجام دهد، یک دعوت موفق برای تو ثبت می‌شود و پاداش اعتباری‌ات خودکار به حسابت می‌آید.',
+            'profile_description' => 'لینک اختصاصی خودت را در شبکه‌های اجتماعی یا برای دوستانت بفرست. هر کاربر جدیدی که با لینک تو ثبت‌نام کند و اولین خرید موفقش را انجام دهد، یک دعوت موفق برای تو ثبت می‌شود و پاداش توکنی‌ات خودکار به حسابت می‌آید.',
             'share_message' => 'با لینک دعوت من به وطن بپیوند، ابزارهای هوش مصنوعی را تجربه کن و هدیه شروع بگیر: {referral_link}',
         ];
     }

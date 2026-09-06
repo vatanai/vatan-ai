@@ -86,15 +86,6 @@ class StudioCostService
             return null;
         }
 
-        // برخی مدل‌های OpenRouter قیمت را در pricing_skus و با تفکیک نوع
-        // ورودی/صدا اعلام می‌کنند و resolution_tiers آن‌ها خالی است. این
-        // قیمت‌ها همچنان قیمت واقعی هر ثانیه‌اند و باید قبل از live lookup
-        // خوانده شوند تا quote و fallback با مبلغ اشتباه انجام نشود.
-        $skuPrice = $this->skuUnitPrice($model, $resolution, $aspectRatio);
-        if ($skuPrice !== null) {
-            return $this->applyDuration($skuPrice, $model, $mediaType, $duration, $config);
-        }
-
         $durationMap = (array) ($config['duration_prices'] ?? []);
         if ($mediaType === 'video' && $duration && is_numeric($durationMap[(string) $duration] ?? null) && (float) $durationMap[(string) $duration] > 0) {
             return (float) $durationMap[(string) $duration];
@@ -104,77 +95,6 @@ class StudioCostService
         if (!is_numeric($unitPrice) || (float) $unitPrice <= 0) return null;
 
         return $this->applyUnitPricing((float) $unitPrice, $model, $mediaType, $resolution, $duration, $config);
-    }
-
-    private function skuUnitPrice(AiModel $model, string $resolution, string $aspectRatio = ''): ?float
-    {
-        $pricing = (array) ($model->pricing_config ?? []);
-        $skus = (array) ($pricing['pricing_skus'] ?? []);
-        if ($skus === []) return null;
-
-        $resolution = strtolower(trim($resolution));
-        $resolution = match ($resolution) {
-            '2160', '2160p', '4k' => '4k',
-            '1440', '1440p', '2k' => '2k',
-            '1080', '1080p' => '1080p',
-            '720', '720p' => '720p',
-            '480', '480p' => '480p',
-            default => $resolution,
-        };
-        $imageInput = in_array($model->task_type, ['image_to_video', 'face_animation'], true);
-        $prefix = $imageInput ? 'image_to_video' : 'text_to_video';
-        $keys = array_values(array_filter([
-            $prefix . '_duration_seconds_without_audio_' . $resolution,
-            $prefix . '_duration_seconds_' . $resolution,
-            'duration_seconds_without_audio_' . $resolution,
-            'duration_seconds_' . $resolution,
-            'duration_seconds_with_audio_' . $resolution,
-            'cents_per_video_output_second_' . $resolution,
-            $prefix . '_duration_seconds_without_audio',
-            $prefix . '_duration_seconds',
-            'duration_seconds_without_audio',
-            'duration_seconds',
-            'cents_per_second_output',
-        ], static fn (string $key): bool => !str_ends_with($key, '_')));
-
-        foreach ($keys as $key) {
-            if (!is_numeric($skus[$key] ?? null) || (float) $skus[$key] <= 0) continue;
-            $value = (float) $skus[$key];
-            if (str_starts_with($key, 'cents_')) $value /= 100;
-            return $value;
-        }
-
-        // قیمت برخی مدل‌های Seedance به ازای هر میلیون توکن ویدیو است.
-        // OpenRouter تعداد توکن را به‌صورت (عرض × ارتفاع × مدت × ۲۴) / ۱۰۲۴
-        // محاسبه می‌کند؛ بنابراین اینجا قیمت را به معادل هر ثانیه تبدیل
-        // می‌کنیم و applyDuration آن را برای مدت انتخاب‌شده ضرب می‌کند.
-        $tokenKeys = $imageInput
-            ? ['video_tokens_' . $resolution . '_with_video_input', 'video_tokens_with_video_input', 'video_tokens_without_audio', 'video_tokens']
-            : ['video_tokens_' . $resolution . '_without_audio', 'video_tokens_without_audio', 'video_tokens'];
-        foreach ($tokenKeys as $key) {
-            if (!is_numeric($skus[$key] ?? null) || (float) $skus[$key] <= 0) continue;
-            [$width, $height] = $this->videoDimensions($resolution, $aspectRatio);
-            $tokensPerSecond = ($width * $height * 24) / 1024;
-            return (float) $skus[$key] * $tokensPerSecond;
-        }
-
-        return null;
-    }
-
-    private function videoDimensions(string $resolution, string $aspectRatio): array
-    {
-        $height = match (strtolower(trim($resolution))) {
-            '4k', '2160', '2160p' => 2160,
-            '2k', '1440', '1440p' => 1440,
-            '1080', '1080p' => 1080,
-            '480', '480p' => 480,
-            default => 720,
-        };
-        [$ratioWidth, $ratioHeight] = array_pad(array_map('floatval', explode(':', $aspectRatio)), 2, 1.0);
-        $ratio = $ratioHeight > 0 && $ratioWidth > 0 ? $ratioWidth / $ratioHeight : 16 / 9;
-        $width = max(1, (int) round($height * $ratio));
-
-        return [$width, $height];
     }
 
     private function applyUnitPricing(float $price, AiModel $model, string $mediaType, string $resolution, ?int $duration, array $config): float

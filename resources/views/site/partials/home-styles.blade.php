@@ -232,9 +232,6 @@
       gap: 10px;
       flex-shrink: 0;
     }
-    #site-header .site-home-token { flex-shrink:0; }
-    #site-header .site-home-profile { position:relative; flex-shrink:0; }
-    #site-header .site-home-profile .topnav-popup-window { top:calc(100% + 12px); left:0; right:auto; }
 
     /* دکمه تم */
     .theme-btn {

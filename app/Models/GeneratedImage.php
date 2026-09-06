@@ -58,11 +58,4 @@ class GeneratedImage extends Model
 
         return route('app.product', $this->product->route_slug);
     }
-
-    public function imageUrl(): string
-    {
-        return filter_var($this->image_path, FILTER_VALIDATE_URL)
-            ? $this->image_path
-            : asset('storage/' . ltrim((string) $this->image_path, '/'));
-    }
 }

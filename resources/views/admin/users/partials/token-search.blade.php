@@ -1,4 +1,4 @@
-{{-- پارشیال مدیریت اعتبار: جستجوی کاربر (نام، نام‌خانوادگی، ایمیل، موبایل) + کارت کاربر انتخاب‌شده --}}
+{{-- پارشیال مدیریت توکن: جستجوی کاربر (نام، نام‌خانوادگی، ایمیل، موبایل) + کارت کاربر انتخاب‌شده --}}
 
 <div class="content-card" style="margin-bottom:16px;">
   <div class="tk-card-header"><i class="fa-solid fa-magnifying-glass" style="color:var(--primary);"></i> جستجوی کاربر</div>
@@ -21,7 +21,7 @@
         <div class="tk-user-meta" id="tkSelMeta">—</div>
       </div>
       <div style="text-align:left;">
-        <div class="tk-sel-token-label">موجودی اعتبار</div>
+        <div class="tk-sel-token-label">موجودی توکن</div>
         <div class="tk-sel-token" id="tkSelToken">—</div>
       </div>
     </div>

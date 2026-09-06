@@ -215,7 +215,7 @@
       <div class="log-detail hidden border-t border-b1 p-4 bg-s2">
         <div class="bg-orange/[0.05] border border-orange/[0.2] rounded-lg p-3">
           <div class="text-[10px] font-bold text-orange mb-1"><i class="fa-solid fa-circle-notch fa-spin ml-1"></i> در حال پردازش...</div>
-          <div class="text-[11px] text-watan-text">job در صف `database` — worker در حال پردازش</div>
+          <div class="text-[11px] text-watan-text">job در Redis queue — worker در حال پردازش با flux-pro</div>
         </div>
       </div>
     </div>

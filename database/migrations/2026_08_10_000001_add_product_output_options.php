@@ -15,7 +15,7 @@ return new class extends Migration
             }
         });
 
-        $allRatios = json_encode(['3:4', '4:3', '1:1', '4:5', '9:16', '16:9', '2:3', '3:2'], JSON_UNESCAPED_UNICODE);
+        $allRatios = json_encode(['auto', '1:1', '9:16', '16:9', '2:3', '3:2', '3:4', '4:3'], JSON_UNESCAPED_UNICODE);
         $allResolutions = json_encode(['720', '1080'], JSON_UNESCAPED_UNICODE);
 
         // محصولات قدیمی هم از همان گزینه‌های جدید استفاده می‌کنند؛ مدیر می‌تواند

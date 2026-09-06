@@ -32,16 +32,8 @@
   </script>
 
 @include('site.partials.home-styles')
-@include('layouts.partials.nav-styles')
 </head>
 <body id="top">
-@php
-  $homeReferralSettings = \App\Models\ReferralSetting::current();
-  $referralProfileMenuEnabled = $homeReferralSettings->profile_enabled;
-  $homeDisplayedTokens = auth()->check()
-    ? auth()->user()->effective_token_balance
-    : ($homeReferralSettings->registration_gift_enabled ? $homeReferralSettings->registration_gift_tokens : 0);
-@endphp
 
 <!-- ══════════════ HEADER ══════════════ -->
 <header id="site-header">
@@ -67,46 +59,6 @@
       <button class="theme-btn" onclick="vatanToggleTheme()" id="theme-btn" aria-label="تغییر تم">
         <i class="fa-solid fa-moon" id="theme-icon"></i>
       </button>
-
-      <div class="topnav-token-box site-home-token {{ auth()->guest() ? 'is-guest' : 'is-authenticated' }}" title="{{ auth()->guest() ? 'هدیه شروع کاربران جدید' : 'موجودی اعتبار شما' }}">
-        <span class="topnav-token-icon" role="img" aria-label="اعتبار"></span>
-        <span class="topnav-token-value">
-          <span class="topnav-token-number">{{ number_format($homeDisplayedTokens) }}</span>
-          @guest<span class="topnav-token-gift">هدیه</span>@endguest
-        </span>
-      </div>
-
-      <label class="topnav-popup site-home-profile" id="profile-popup">
-        <input type="checkbox" aria-label="منوی کاربری" />
-        <div tabindex="0" class="topnav-burger" role="button" aria-label="منوی کاربری">
-          @if(auth()->check() && auth()->user()->avatar)
-            <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="پروفایل" class="topnav-burger-img">
-          @else
-            <span class="topnav-burger-icon" aria-hidden="true">@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>19])</span>
-          @endif
-        </div>
-        <nav class="topnav-popup-window">
-          @auth
-            <div class="tp-userinfo">
-              <span class="tp-usercopy"><span class="tp-user-name">{{ trim((auth()->user()->name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: 'کاربر وطن AI' }}</span><span class="tp-user-plan">پلن {{ auth()->user()->plan_display_name }} | {{ number_format(auth()->user()->effective_token_balance) }} اعتبار</span></span>
-              <span class="tp-user-phone" dir="ltr">{{ auth()->user()->phone ?: '—' }}</span>
-            </div>
-            <hr><ul>
-              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید اعتبار</span></button></li>
-              <li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'files', 'file_tab' => 'account']) }}'"><i class="fa-solid fa-wallet"></i><span>حساب و پرداخت‌ها</span></button></li>
-              @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
-              <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
-              <hr><li><button type="button" class="is-danger" onclick="window.logoutFromCurrentPage(this)"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
-            </ul>
-          @else
-            <ul>
-              <li><button type="button" onclick="window.location.href='{{ route('login', ['redirect' => request()->fullUrl()]) }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
-              @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
-              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید اعتبار</span></button></li>
-            </ul>
-          @endauth
-        </nav>
-      </label>
 
       <!-- CTA -->
       <a href="{{ route('app.home') }}" class="btn btn-primary btn-header">
@@ -733,10 +685,6 @@
 
 <!-- ══════════════ SCRIPTS ══════════════ -->
 @include('site.partials.home-scripts')
-@include('layouts.partials.nav-scripts')
-@if(request()->filled('vtn_click'))
-  <script src="{{ route('growth.tracker') }}" defer></script>
-@endif
 
 </body>
 </html>
