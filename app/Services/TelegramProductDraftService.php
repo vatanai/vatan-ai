@@ -27,8 +27,8 @@ class TelegramProductDraftService
 
     public function handle(array $input, ?UploadedFile $image = null): array
     {
-        $telegramId = (int) data_get($input, 'telegram.id', $input['telegram_id'] ?? 0);
-        $chatId = (string) ($input['chat_id'] ?? $telegramId);
+        $telegramId = (int) data_get($input, 'telegram.id', data_get($input, 'telegram.telegram_id', $input['telegram_id'] ?? 0));
+        $chatId = (string) ($input['chat_id'] ?? data_get($input, 'telegram.chat_id', $telegramId));
         $updateId = isset($input['update_id']) ? (int) $input['update_id'] : null;
         $eventType = $this->eventType($input, $image);
 
