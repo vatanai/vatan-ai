@@ -648,6 +648,7 @@ class TelegramProductDraftService
 
     private function savedResponse(TelegramProductDraft $draft, Product $product, string $chatId, string $status): array
     {
+        $this->cleanupMessages($draft);
         $ai = (array) $draft->ai_result;
         $buttons = [];
         if ($status === 'active') {
@@ -697,8 +698,10 @@ class TelegramProductDraftService
 
     private function cancel(TelegramProductDraft $draft, string $chatId): array
     {
+        $messageIds = $this->messageIds($draft);
         $draft->forceFill(['state' => 'cancelled', 'cancelled_at' => now(), 'pending_edit_field' => null])->save();
-        return $this->response($chatId, 'فرآیند ثبت محصول لغو شد؛ هیچ محصولی حذف نشد.', [], ['status' => 'cancelled', 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft)]);
+        $this->cleanupMessages($draft);
+        return $this->response($chatId, 'فرآیند ثبت محصول لغو شد؛ هیچ محصولی حذف نشد.', [], ['status' => 'cancelled', 'draft_id' => $draft->id, 'delete_message_ids' => $messageIds, 'reply_markup' => $this->mainMenuMarkup()]);
     }
 
     private function cancelEdit(TelegramProductDraft $draft, string $chatId): array
@@ -781,6 +784,22 @@ class TelegramProductDraftService
     private function messageIds(TelegramProductDraft $draft): array
     {
         return array_values(array_filter(array_map('strval', (array) $draft->message_ids)));
+    }
+
+    private function cleanupMessages(TelegramProductDraft $draft): void
+    {
+        $token = trim((string) config('services.telegram_product.bot_token'));
+        if ($token === '') return;
+        foreach ($this->messageIds($draft) as $messageId) {
+            try {
+                Http::timeout(5)->post("https://api.telegram.org/bot{$token}/deleteMessage", [
+                    'chat_id' => $draft->chat_id,
+                    'message_id' => (int) $messageId,
+                ]);
+            } catch (\Throwable) {
+                // پاک‌سازی کمکی است؛ خطای آن نباید ثبت محصول را متوقف کند.
+            }
+        }
     }
 
     private function safePayload(array $input): array
