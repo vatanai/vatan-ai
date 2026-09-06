@@ -22,7 +22,6 @@
 
     @php
       $providerMeta = [
-        'liara' => ['title' => 'Liara AI', 'label' => 'لیارا', 'description' => 'سرویس سازگار با API تصویر', 'icon' => 'fa-cloud', 'color' => 'success'],
         'openrouter' => ['title' => 'OpenRouter', 'label' => 'OpenRouter', 'description' => 'گیت‌وی مدل‌های عمومی', 'icon' => 'fa-bolt', 'color' => 'info'],
         'fal' => ['title' => 'Fal.ai', 'label' => 'Fal.ai', 'description' => 'صف سریع مدل‌های تصویر و ویدیو', 'icon' => 'fa-wand-magic-sparkles', 'color' => 'warning'],
         'replicate' => ['title' => 'Replicate', 'label' => 'Replicate', 'description' => 'مدل‌های community با version مستقل', 'icon' => 'fa-cubes', 'color' => 'primary'],
@@ -120,7 +119,7 @@
                 <td data-label="مدل">
                   <div class="ai-model-name-cell">
                     <img src="{{ $model->image_url }}" class="w-8 h-8 rounded-lg object-cover border border-[var(--border)] bg-[var(--input-bg)]" alt="">
-                    <div class="min-w-0"><div class="font-bold text-[var(--text-h)]"><span class="truncate">{{ $model->name }}</span></div><div class="text-[10px] text-[var(--text-soft)]">{{ $model->provider_name }}</div></div>
+                    <div class="min-w-0"><div class="font-bold text-[var(--text-h)]"><span class="truncate">{{ $model->name }}</span></div><div class="text-[10px] text-[var(--text-soft)]">{{ $model->provider_name }}</div><form method="POST" action="{{ route('admin.ai-models.toggle-product-selection', $model) }}" class="mt-1"><input type="hidden" name="_token" value="{{ csrf_token() }}"><label class="inline-flex items-center gap-1.5 text-[9px] text-[var(--text-soft)] cursor-pointer" title="نمایش این مدل در انتخاب مدلِ گام ۲ و لیست محصولات"><input type="checkbox" onchange="this.form.submit()" @checked($model->featured_in_lab)> نمایش در انتخاب محصول</label></form></div>
                   </div>
                 </td>
                 <td class="align-middle" data-label="کاربرد مدل">

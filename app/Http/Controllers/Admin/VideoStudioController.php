@@ -620,8 +620,38 @@ class VideoStudioController extends Controller
                     . 'ساختار خروجی دقیقاً شامل این کلیدها باشد: hook_options, caption_options, keyword_options, cta_options, dm_template. '
                     . 'برای نوع خروجی درخواستی، سه گزینه کامل و غیرتکراری بساز و برای کلیدهای دیگر هم اگر لازم است آرایه خالی برگردان.';
 
-                $fallback = app(OpenRouterService::class)->generateStructuredText($fallbackSystem, $fallbackUser);
-                $body = ['output' => $fallback['content'] ?? []];
+                try {
+                    $fallback = app(OpenRouterService::class)->generateStructuredText($fallbackSystem, $fallbackUser);
+                    $body = ['output' => $fallback['content'] ?? []];
+                } catch (\Throwable $fallbackException) {
+                    // اگر مدل متنی موقتاً در دسترس نبود، پیش‌نمایش نباید با خطای ۵۰۲ متوقف شود.
+                    // این متن‌های کوتاه فقط مسیر پیش‌نمایش را زنده نگه می‌دارند؛ ساخت نهایی
+                    // همچنان از مسیر اصلی مدل/ورکفلو استفاده می‌کند.
+                    Log::warning('Video studio preview deterministic fallback activated', [
+                        'product_id' => $product->id,
+                        'content_type' => $contentType,
+                        'error' => $fallbackException->getMessage(),
+                    ]);
+                    $name = trim((string) $product->name_fa) ?: 'این محصول';
+                    $body = ['output' => match ($contentType) {
+                        'hook' => ['hook_options' => [
+                            "قبل از انتخاب {$name} این نکته را ببین",
+                            "با {$name} انتخاب آگاهانه‌تری داشته باش",
+                            "جزئیات {$name} را همین حالا ببین",
+                        ]],
+                        'cta' => ['cta_options' => [
+                            "برای دیدن جزئیات {$name}، کپشن را بخوان",
+                            "اگر {$name} را پسندیدی، همین حالا اقدام کن",
+                            "برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را کامنت کن",
+                        ]],
+                        'keyword' => ['keyword_options' => ['اطلاعات', 'جزئیات', 'راهنما']],
+                        default => ['caption_options' => [
+                            "قبل از خرید {$name} این نکته‌ها را ببین.",
+                            "با {$name} انتخاب آگاهانه‌تری داشته باش.",
+                            "برای دیدن جزئیات {$name}، کپشن را بخوان.",
+                        ]],
+                    }];
+                }
             }
 
             $raw = data_get($body, 'content.0.text')

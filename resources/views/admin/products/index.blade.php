@@ -1,6 +1,10 @@
 @extends('layouts.admin')
 @section('title', 'لیست محصولات — وطن استودیو')
 
+@push('styles')
+  <link rel="stylesheet" href="{{ asset('admin/css/backup.css') }}?v={{ filemtime(public_path('admin/css/backup.css')) }}">
+@endpush
+
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
   @include('admin.partials.header')
@@ -30,15 +34,20 @@
       </div>
       <div class="flex items-center gap-2">
         <a href="{{ route('admin.products.create') }}" class="btn-pro btn-pro-primary">
-          <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول جدید
+          <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول عکس
+        </a>
+        <a href="{{ route('admin.products.video.create') }}" class="btn-pro btn-pro-ghost">
+          <i class="fa-solid fa-video text-[11px]"></i> ثبت محصول ویدیو
         </a>
         <a href="{{ request()->fullUrl() }}" class="btn-pro btn-pro-ghost" id="btn-refresh-products" title="بروزرسانی لیست (با حفظ فیلترهای فعلی)">
           <i class="fa-solid fa-rotate-right text-[11px]"></i> بروزرسانی
         </a>
-        <button type="button" class="btn-pro btn-pro-ghost is-disabled" title="نیاز به بررسی برنامه">
-          <i class="fa-solid fa-file-export text-[11px]"></i> Export
-          <span class="pending-badge" style="position:static;">Coming Soon</span>
-        </button>
+        <form method="POST" action="{{ route('admin.products.export') }}" class="m-0" id="products-export-form">
+          @csrf
+          <button type="button" class="btn-pro btn-pro-ghost" onclick="openBackupDeliveryPrompt(this.form)" title="ساخت بک‌آپ محصولات و انتخاب روش دریافت">
+            <i class="fa-solid fa-file-export text-[11px]"></i> Export
+          </button>
+        </form>
       </div>
     </div>
 

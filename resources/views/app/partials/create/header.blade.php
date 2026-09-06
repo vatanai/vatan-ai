@@ -15,7 +15,7 @@
     @if($product->pricing_model === 'per_credit')
     <div style="margin-top:12px;display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(245,146,58,0.08);border:1px solid rgba(245,146,58,0.2);border-radius:10px;">
       <i class="fa-solid fa-bolt" style="color:#f5923a;font-size:12px;"></i>
-      <span style="font-size:12px;color:#f5923a;font-weight:700;">{{ $product->credit_cost }} کردیت</span>
+      <span style="font-size:12px;color:#f5923a;font-weight:700;">{{ $product->qualityCreditCost('standard') }} کردیت</span>
       <span style="font-size:11px;color:rgba(255,255,255,0.4);">به ازای هر تصویر</span>
     </div>
     @elseif($product->pricing_model === 'free')

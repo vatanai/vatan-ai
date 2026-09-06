@@ -16,7 +16,7 @@
             <span class="referral-switch" aria-hidden="true"></span>
           </label>
           <div class="referral-fields two-columns">
-            <label class="referral-field"><span>تعداد توکن هدیه</span><input class="input-pro" type="number" min="0" name="registration_gift_tokens" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}"><small>صفر یعنی بدون واریز توکن.</small></label>
+            <label class="referral-field"><span>تعداد اعتبار هدیه</span><input class="input-pro" type="number" min="0" name="registration_gift_tokens" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}"><small>صفر یعنی بدون واریز اعتبار.</small></label>
             <label class="referral-field"><span>فاصله مجاز دریافت مجدد</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" max="365" name="registration_gift_cooldown_days" value="{{ old('registration_gift_cooldown_days', $settings->registration_gift_cooldown_days) }}"><b>روز</b></div><small>برای دستگاه یا اینترنت تکراری.</small></label>
           </div>
           <label class="referral-check-row"><input type="hidden" name="registration_sms_enabled" value="0"><input type="checkbox" name="registration_sms_enabled" value="1" @checked(old('registration_sms_enabled', $settings->registration_sms_enabled))><span>پیامک خوش‌آمدگویی و مقدار هدیه ارسال شود</span></label>
@@ -42,11 +42,11 @@
               <option value="first_purchase" @selected(old('reward_trigger', $settings->reward_trigger) === 'first_purchase')>بعد از اولین خرید موفق کاربر دعوت‌شده — پیشنهادشده</option>
               <option value="registration" @selected(old('reward_trigger', $settings->reward_trigger) === 'registration')>بلافاصله بعد از ثبت‌نام و تأیید موبایل</option>
             </select>
-            <small class="is-important"><i class="fa-solid fa-shield"></i> شرط اولین خرید، ساخت حساب‌های متعدد فقط برای گرفتن توکن را بی‌اثر می‌کند.</small>
+            <small class="is-important"><i class="fa-solid fa-shield"></i> شرط اولین خرید، ساخت حساب‌های متعدد فقط برای گرفتن اعتبار را بی‌اثر می‌کند.</small>
           </label>
           <div class="referral-fields two-columns">
-            <label class="referral-field"><span>هدیه کاربر دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="invitee_reward_tokens" value="{{ old('invitee_reward_tokens', $settings->invitee_reward_tokens) }}"><b>توکن</b></div></label>
-            <label class="referral-field"><span>پاداش دعوت‌کننده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="inviter_reward_tokens" value="{{ old('inviter_reward_tokens', $settings->inviter_reward_tokens) }}"><b>توکن</b></div></label>
+            <label class="referral-field"><span>هدیه کاربر دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="invitee_reward_tokens" value="{{ old('invitee_reward_tokens', $settings->invitee_reward_tokens) }}"><b>اعتبار</b></div></label>
+            <label class="referral-field"><span>پاداش دعوت‌کننده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="inviter_reward_tokens" value="{{ old('inviter_reward_tokens', $settings->inviter_reward_tokens) }}"><b>اعتبار</b></div></label>
           </div>
         </div>
       </section>
@@ -59,7 +59,7 @@
         <div class="referral-card-body">
           <div class="referral-fields two-columns">
             <label class="referral-field"><span>اعتبار انتساب لینک</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" max="365" name="attribution_window_days" value="{{ old('attribution_window_days', $settings->attribution_window_days) }}"><b>روز</b></div></label>
-            <label class="referral-field"><span>بودجه کل کمپین</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" name="campaign_token_budget" value="{{ old('campaign_token_budget', $settings->campaign_token_budget) }}" placeholder="بدون سقف"><b>توکن</b></div></label>
+            <label class="referral-field"><span>بودجه کل کمپین</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" name="campaign_token_budget" value="{{ old('campaign_token_budget', $settings->campaign_token_budget) }}" placeholder="بدون سقف"><b>اعتبار</b></div></label>
             <label class="referral-field"><span>سقف دعوت موفق روزانه</span><input class="input-pro" type="number" min="1" name="daily_inviter_reward_limit" value="{{ old('daily_inviter_reward_limit', $settings->daily_inviter_reward_limit) }}" placeholder="بدون سقف"></label>
             <label class="referral-field"><span>سقف دعوت موفق ماهانه</span><input class="input-pro" type="number" min="1" name="monthly_inviter_reward_limit" value="{{ old('monthly_inviter_reward_limit', $settings->monthly_inviter_reward_limit) }}" placeholder="بدون سقف"></label>
             <label class="referral-field"><span>شروع کمپین</span><input class="input-pro" type="datetime-local" name="campaign_starts_at" value="{{ old('campaign_starts_at', $settings->campaign_starts_at?->format('Y-m-d\\TH:i')) }}"></label>
@@ -85,7 +85,7 @@
           </label>
           <label class="referral-field"><span>عنوان پنل کاربر</span><input class="input-pro" name="profile_title" maxlength="120" value="{{ old('profile_title', $settings->profile_title) }}"></label>
           <label class="referral-field"><span>زیرعنوان ترغیب‌کننده</span><input class="input-pro" name="profile_subtitle" maxlength="180" value="{{ old('profile_subtitle', $settings->profile_subtitle) }}"></label>
-          <label class="referral-field"><span>توضیحات برنامه</span><textarea class="input-pro referral-textarea" name="profile_description" maxlength="1000" rows="4">{{ old('profile_description', $settings->profile_description) }}</textarea></label>
+          <label class="referral-field"><span>توضیحات برنامه</span><textarea class="input-pro referral-textarea" name="profile_description" maxlength="1000" rows="4">{{ str_replace('توکن', 'اعتبار', old('profile_description', $settings->profile_description)) }}</textarea></label>
           <label class="referral-field"><span>متن آماده اشتراک‌گذاری</span><textarea class="input-pro referral-textarea" name="share_message" maxlength="500" rows="3">{{ old('share_message', $settings->share_message) }}</textarea><small>متغیر <b dir="ltr">{referral_link}</b> با لینک اختصاصی هر کاربر جایگزین می‌شود.</small></label>
           <div class="referral-profile-note"><i class="fa-solid fa-circle-check"></i><span>پنل پروفایل آماده است؛ پس از فعال‌کردن این گزینه برای کاربران نمایش داده می‌شود.</span></div>
         </div>

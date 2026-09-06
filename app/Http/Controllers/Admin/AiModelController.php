@@ -61,8 +61,7 @@ class AiModelController extends Controller
      * این متد در پنل ادمین یک کلید کوچک بالای لیست مدل‌ها می‌سازد؛
      * وقتی کاربر روی آن می‌زند، وضعیت provider در تنظیمات امن و Cache ذخیره می‌شود
      * و کل سیستم (فرم ثبت محصول، روتر تولید تصویر و ...) فوراً از آن پیروی می‌کند.
-     * کد OpenRouterService یا LiaraAiService دست‌نخورده باقی می‌ماند — فقط
-     * یک flag روشن/خاموش عوض می‌شود.
+     * فقط یک flag روشن/خاموش عوض می‌شود.
      *
      * مسیر: POST /admin/ai-models/toggle-provider
      */
@@ -76,7 +75,7 @@ class AiModelController extends Controller
         ProviderStatus::setEnabled($data['provider'], (bool) $data['enabled']);
 
         $label = match ($data['provider']) {
-            'liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate',
+            'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate',
         };
         $stateFa = $data['enabled'] ? 'روشن' : 'خاموش';
 
@@ -90,6 +89,20 @@ class AiModelController extends Controller
 
         return $this->modelActionRedirect($request, $aiModel)
             ->with('success', 'وضعیت مدل با موفقیت تغییر کرد.');
+    }
+
+    /**
+     * تعیین می‌کند یک مدلِ فعال در انتخاب‌های گام ۲ و لیست محصولات دیده شود یا خیر.
+     * همان پرچم، کاتالوگ منتخب آزمایشگاه را نیز کنترل می‌کند تا دو فهرست ناسازگار نداشته باشیم.
+     */
+    public function toggleProductSelection(Request $request, AiModel $aiModel)
+    {
+        $aiModel->update(['featured_in_lab' => ! $aiModel->featured_in_lab]);
+
+        return $this->modelActionRedirect($request, $aiModel)
+            ->with('success', $aiModel->featured_in_lab
+                ? 'مدل در انتخاب‌های محصول نمایش داده می‌شود.'
+                : 'مدل از انتخاب‌های محصول حذف شد.');
     }
 
     public function updateProviderSettings(Request $request)
@@ -132,7 +145,7 @@ class AiModelController extends Controller
             'usage_limit_max_outputs',
         ])) {
             $savedSettings = (array) $setting->settings;
-            $savedLimits = array_replace(AiProviderLimitService::DEFAULTS, (array) ($savedSettings['usage_limits'] ?? []));
+            $savedLimits = app(AiProviderLimitService::class)->config($data['provider'], $setting);
             $savedSettings['usage_limits'] = [
                 'enabled' => (bool) ($data['usage_limit_enabled'] ?? false),
                 'window_minutes' => (int) ($data['usage_limit_window_minutes'] ?? $savedLimits['window_minutes']),
@@ -140,6 +153,9 @@ class AiModelController extends Controller
                 'max_cost_usd' => (float) ($data['usage_limit_max_cost_usd'] ?? $savedLimits['max_cost_usd']),
                 'max_concurrent' => (int) ($data['usage_limit_max_concurrent'] ?? $savedLimits['max_concurrent']),
                 'max_outputs' => (int) ($data['usage_limit_max_outputs'] ?? $savedLimits['max_outputs']),
+                // مدار محافظ خروجی‌های ناموفق فعلاً تنظیم داخلی است؛ هنگام
+                // ذخیره فرم provider نباید ناخواسته حذف شود.
+                'max_failed_requests' => (int) ($savedLimits['max_failed_requests'] ?? 0),
             ];
             $setting->settings = $savedSettings;
         }
@@ -155,8 +171,11 @@ class AiModelController extends Controller
         ]);
 
         try {
-            $tester->test($data['provider']);
-            return redirect()->route('admin.ai-models.providers')->with('success', 'اتصال provider با موفقیت بررسی شد.');
+            $result = $tester->test($data['provider']);
+            $message = ($result['status'] ?? null) === 'rate_limited'
+                ? 'اتصال Fal.ai پاسخ داد، اما endpoint بررسی قیمت موقتاً rate-limited است؛ اعتبار کلید رد نشده است.'
+                : 'اتصال provider با موفقیت بررسی شد.';
+            return redirect()->route('admin.ai-models.providers')->with('success', $message);
         } catch (\Throwable $e) {
             return redirect()->route('admin.ai-models.providers')->withErrors(['provider' => $e->getMessage()]);
         }
@@ -205,7 +224,6 @@ class AiModelController extends Controller
             'external_version'     => $validatedData['external_version'] ?? null,
             'provider_name'        => $validatedData['provider_name'],
             'provider'             => $request->input('provider', 'openrouter'),
-            'liara_plan'           => $request->input('provider') === 'liara' ? $request->input('liara_plan') : null,
             'output_modality'      => $validatedData['output_modality'],
             'task_type'            => $validatedData['task_type'] ?? null,
             'supports_image_input' => $request->input('supports_image_input', '0') == '1',
@@ -223,6 +241,11 @@ class AiModelController extends Controller
             'input_schema'         => $this->decodeJson($validatedData['input_schema'] ?? null),
             'capability_config'    => $this->decodeJson($validatedData['capability_config'] ?? null),
             'recommended_category_ids' => array_values(array_map('intval', (array) $request->input('category_ids', []))),
+            'lab_categories'       => array_values(array_unique(array_map('strval', (array) $request->input('lab_categories', [])))),
+            'lab_priority'         => max(1, (int) $request->input('lab_priority', 999)),
+            'featured_in_lab'      => $request->boolean('featured_in_lab'),
+            'lab_status'           => $request->input('lab_status', 'active'),
+            'lab_description'      => $validatedData['lab_description'] ?? null,
             'pricing_config'       => $this->decodeJson($validatedData['pricing_config'] ?? null),
             'pricing_type'         => $validatedData['pricing_type'] ?? null,
             'commercial_use'       => $request->has('commercial_use') ? $request->boolean('commercial_use') : null,
@@ -290,7 +313,6 @@ class AiModelController extends Controller
             'external_version'     => $validatedData['external_version'] ?? null,
             'provider_name'        => $validatedData['provider_name'],
             'provider'             => $request->input('provider', $model->provider ?? 'openrouter'),
-            'liara_plan'           => $request->input('provider', $model->provider) === 'liara' ? $request->input('liara_plan') : null,
             'output_modality'      => $validatedData['output_modality'],
             'task_type'            => $validatedData['task_type'] ?? null,
             'supports_image_input' => $validatedData['supports_image_input'],
@@ -308,6 +330,11 @@ class AiModelController extends Controller
             'input_schema'         => $this->decodeJson($validatedData['input_schema'] ?? null),
             'capability_config'    => $this->decodeJson($validatedData['capability_config'] ?? null),
             'recommended_category_ids' => array_values(array_map('intval', (array) $request->input('category_ids', []))),
+            'lab_categories'       => array_values(array_unique(array_map('strval', (array) $request->input('lab_categories', [])))),
+            'lab_priority'         => max(1, (int) $request->input('lab_priority', 999)),
+            'featured_in_lab'      => $request->boolean('featured_in_lab'),
+            'lab_status'           => $request->input('lab_status', 'active'),
+            'lab_description'      => $validatedData['lab_description'] ?? null,
             'pricing_config'       => $this->decodeJson($validatedData['pricing_config'] ?? null),
             'pricing_type'         => $validatedData['pricing_type'] ?? null,
             'commercial_use'       => $request->has('commercial_use') ? $request->boolean('commercial_use') : null,

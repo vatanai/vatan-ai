@@ -8,7 +8,7 @@
   $previewPlan->short_description = old('short_description', $plan->short_description ?: 'مناسب برای کاربران وطن استودیو');
   $previewPlan->price = (int) old('price', $plan->price ?? 599000);
   $previewPlan->tokens = (int) old('tokens', $plan->tokens ?? 25);
-  $previewPlan->billing_type = old('billing_type', $plan->billing_type ?: 'monthly');
+  $previewPlan->billing_type = old('billing_type', $plan->billing_type ?: 'one_time');
   $previewPlan->icon = old('icon', $plan->icon ?: 'fa-solid fa-gem');
   $previewPlan->badge_text = old('badge_text', $plan->badge_text ?: 'پیشنهاد ما');
   $previewPlan->features = collect($features)->filter(fn($f) => !empty($f['title']))->values()->all() ?: [
@@ -50,12 +50,15 @@
       <section class="pb-form-card">
         <h3>قیمت و اعتبار پایه</h3>
         <div class="pb-fields">
-          <label><span class="pb-label">نوع فروش</span><select class="pb-select" name="billing_type"><option value="free" @selected(old('billing_type',$plan->billing_type)==='free')>رایگان</option><option value="monthly" @selected(old('billing_type',$plan->billing_type ?: 'monthly')==='monthly')>ماهانه</option><option value="yearly" @selected(old('billing_type',$plan->billing_type)==='yearly')>سالانه</option><option value="one_time" @selected(old('billing_type',$plan->billing_type)==='one_time')>خرید یک‌باره</option><option value="custom" @selected(old('billing_type',$plan->billing_type)==='custom')>قراردادی / تماس با فروش</option></select></label>
+          <label><span class="pb-label">نوع فروش</span><select class="pb-select" name="billing_type"><option value="free" @selected(old('billing_type',$plan->billing_type)==='free')>رایگان</option><option value="one_time" @selected(old('billing_type',$plan->billing_type ?: 'one_time')==='one_time')>خرید اعتبار</option><option value="custom" @selected(old('billing_type',$plan->billing_type)==='custom')>قراردادی / تماس با فروش</option></select><span class="pb-help">اعتبار خریداری‌شده دائمی است و تاریخ انقضا ندارد.</span></label>
           <label><span class="pb-label">قیمت *</span><input class="pb-input money-input" name="price" id="plan-price" value="{{ old('price',$plan->price) }}" inputmode="numeric" required></label>
           <label><span class="pb-label">پیشوند قیمت</span><input class="pb-input" name="price_prefix" value="{{ old('price_prefix',$plan->price_prefix) }}" placeholder="مثلاً از"></label>
           <label><span class="pb-label">قیمت قبل از تخفیف</span><input class="pb-input money-input" name="compare_at_price" value="{{ old('compare_at_price',$plan->compare_at_price) }}" inputmode="numeric"></label>
-          <label><span class="pb-label">تعداد توکن *</span><input class="pb-input" type="number" min="0" name="tokens" id="plan-tokens" value="{{ old('tokens',$plan->tokens ?? 0) }}" required></label>
-          <label><span class="pb-label">متن سفارشی توکن</span><input class="pb-input" name="token_label" value="{{ old('token_label',$plan->token_label) }}" placeholder="نامحدود بر اساس استفاده منصفانه"></label>
+          <label><span class="pb-label">تعداد اعتبار *</span><input class="pb-input" type="number" min="0" name="tokens" id="plan-tokens" value="{{ old('tokens',$plan->tokens ?? 0) }}" required></label>
+          <label><span class="pb-label">تعداد پروفایل چهره</span><input class="pb-input" type="number" min="0" max="50" name="face_profile_limit" value="{{ old('face_profile_limit',$plan->face_profile_limit ?? 0) }}" required><span class="pb-help">کاربر برای استفادهٔ دوباره بدون آپلود عکس، تا این تعداد پروفایل ذخیره می‌کند.</span></label>
+          <label><span class="pb-label">سطح مدل هوش مصنوعی</span><select class="pb-select" name="model_tier_key"><option value="free" @selected(old('model_tier_key',$plan->model_tier_key ?: 'free')==='free')>رایگان — گرید ۴</option><option value="economy" @selected(old('model_tier_key',$plan->model_tier_key)==='economy')>اقتصادی — گرید ۳</option><option value="pro" @selected(old('model_tier_key',$plan->model_tier_key)==='pro')>حرفه‌ای — گرید ۲</option><option value="business" @selected(old('model_tier_key',$plan->model_tier_key)==='business')>بیزینس — گرید ۱</option></select></label>
+          <label class="pb-check"><input type="checkbox" name="show_model_tier" value="1" @checked(old('show_model_tier',$plan->show_model_tier ?? true))> سطح ساخت در کارت پلن نمایش داده شود</label>
+          <label><span class="pb-label">متن سفارشی اعتبار</span><input class="pb-input" name="token_label" value="{{ old('token_label',$plan->token_label) }}" placeholder="نامحدود بر اساس استفاده منصفانه"></label>
           <label class="pb-check"><input type="checkbox" name="is_unlimited" value="1" @checked(old('is_unlimited',$plan->is_unlimited))> اعتبار نامحدود است</label>
           <label><span class="pb-label">سقف خرید هر کاربر</span><input class="pb-input" type="number" min="1" name="purchase_limit" value="{{ old('purchase_limit',$plan->purchase_limit) }}" placeholder="بدون محدودیت"></label>
         </div>
@@ -80,8 +83,8 @@
         <h3>قیمت و اعتبار مشتری ثابت</h3>
         <div class="pb-fields">
           <label><span class="pb-label">قیمت اختصاصی</span><input class="pb-input money-input" name="loyal_price" value="{{ old('loyal_price',$loyal['price']??'') }}" placeholder="خالی = قیمت پایه"></label>
-          <label><span class="pb-label">تعداد توکن اختصاصی</span><input class="pb-input" type="number" min="0" name="loyal_tokens" value="{{ old('loyal_tokens',$loyal['tokens']??'') }}" placeholder="خالی = مقدار پایه"></label>
-          <label><span class="pb-label">توکن هدیه اضافه</span><input class="pb-input" type="number" min="0" name="loyal_bonus_tokens" value="{{ old('loyal_bonus_tokens',$loyal['bonus_tokens']??0) }}"></label>
+          <label><span class="pb-label">تعداد اعتبار اختصاصی</span><input class="pb-input" type="number" min="0" name="loyal_tokens" value="{{ old('loyal_tokens',$loyal['tokens']??'') }}" placeholder="خالی = مقدار پایه"></label>
+          <label><span class="pb-label">اعتبار هدیه اضافه</span><input class="pb-input" type="number" min="0" name="loyal_bonus_tokens" value="{{ old('loyal_bonus_tokens',$loyal['bonus_tokens']??0) }}"></label>
           <div><span class="pb-label">دسترسی این گروه</span><label class="pb-check"><input type="checkbox" name="loyal_visible" value="1" @checked(old('loyal_visible',$loyal['visible']??true))> قابل مشاهده</label><label class="pb-check"><input type="checkbox" name="loyal_purchasable" value="1" @checked(old('loyal_purchasable',$loyal['purchasable']??true))> قابل خرید</label></div>
         </div>
       </section>
@@ -143,7 +146,7 @@
           <div class="pb-preview-icon"><i class="{{ old('icon',$plan->icon ?: 'fa-solid fa-gem') }}"></i></div>
           <b id="preview-name">{{ old('name',$plan->name ?: 'نام پلن') }}</b>
           <div class="pb-preview-price" id="preview-price">—</div>
-          <div class="pb-preview-meta"><span id="preview-tokens">۰</span> توکن</div>
+          <div class="pb-preview-meta"><span id="preview-tokens">۰</span> اعتبار</div>
           <p class="pb-preview-meta" id="preview-short">{{ old('short_description',$plan->short_description ?: 'مناسب برای گروه هدف شما') }}</p>
         </article>
       </section>

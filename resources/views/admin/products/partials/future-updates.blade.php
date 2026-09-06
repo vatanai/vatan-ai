@@ -10,11 +10,6 @@
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="future-updates-content">
     <article class="future-update-card">
-      <span class="future-update-icon"><i class="fa-solid fa-flask"></i></span>
-      <div><strong>آزمایشگاه محصول</strong><small>تجربه فرم کاربر، اجرای آزمایشی و مقایسه مدل‌ها</small></div>
-      <span class="future-update-badge">بزودی</span>
-    </article>
-    <article class="future-update-card">
       <span class="future-update-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
       <div><strong>تست ثبت محصول</strong><small>ساخت هوشمند ویژگی‌ها و سندباکس ثبت</small></div>
       <span class="future-update-badge">بزودی</span>
@@ -22,6 +17,26 @@
     <article class="future-update-card">
       <span class="future-update-icon"><i class="fa-solid fa-images"></i></span>
       <div><strong>پیش‌نمایش واقعی کارت و گالری</strong><small>نمایش زنده تصاویر واقعی محصول، حالت کارت، چیدمان گالری و برچسب روی تصویر</small></div>
+      <span class="future-update-badge">بزودی</span>
+    </article>
+    <article class="future-update-card">
+      <span class="future-update-icon"><i class="fa-solid fa-diagram-project"></i></span>
+      <div><strong>پایپ‌لاین هوش مصنوعی</strong><small>اجرای چندمرحله‌ای مدل‌ها و تنظیمات فنی پیشرفته، خارج از مسیر اصلی ثبت محصول تکمیل می‌شود.</small></div>
+      <span class="future-update-badge">بزودی</span>
+    </article>
+    <article class="future-update-card">
+      <span class="future-update-icon"><i class="fa-solid fa-shuffle"></i></span>
+      <div><strong>فعال‌سازی مدل جایگزین</strong><small>انتخاب و اولویت‌بندی مسیر جایگزین برای زمان خطای مدل اصلی، در نسخه‌ی مستقل آینده ارائه می‌شود.</small></div>
+      <span class="future-update-badge">بزودی</span>
+    </article>
+    <article class="future-update-card">
+      <span class="future-update-icon"><i class="fa-solid fa-robot"></i></span>
+      <div><strong>مدل اصلی هوش مصنوعی</strong><small>انتخاب مستقل مدل اصلی و پرووایدر خارج از معماری سه‌سطحی کیفیت، در نسخه‌ی آینده تکمیل می‌شود.</small></div>
+      <span class="future-update-badge">بزودی</span>
+    </article>
+    <article class="future-update-card md:col-span-2" data-legacy-pricing-update>
+      <span class="future-update-icon"><i class="fa-solid fa-coins"></i></span>
+      <div><strong>قیمت‌گذاری قدیمی</strong><small>مدل‌های رایگان، کردیتی و اشتراکی و تنظیمات جانبی آن‌ها از مسیر ثبت و ویرایش جدا شده‌اند؛ منبع فعال قیمت محصول، «مصرف اعتبار محصول» در گام چهارم است.</small></div>
       <span class="future-update-badge">بزودی</span>
     </article>
   </div>

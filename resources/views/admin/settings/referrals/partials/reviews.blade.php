@@ -47,7 +47,7 @@
         <tr>
           <td data-label="کاربر"><strong>{{ trim(($item->user?->name ?? '').' '.($item->user?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->user?->phone }}</small></td>
           <td data-label="نوع پاداش">{{ $rewardLabel }}</td>
-          <td data-label="مقدار"><strong>{{ number_format($item->amount) }}</strong> توکن</td>
+          <td data-label="مقدار"><strong>{{ number_format($item->amount) }}</strong> اعتبار</td>
           <td data-label="دلیل"><span class="referral-cell-note">{{ $item->reason ?: 'نیازمند بررسی مدیر' }}</span></td>
           <td data-label="زمان">{{ $item->created_at?->format('Y/m/d H:i') }}</td>
           <td data-label="تصمیم">

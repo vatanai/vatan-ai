@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateSitePageRequest;
 use App\Models\HomeSection;
+use App\Models\Article;
 use App\Models\Product;
 use App\Models\SitePage;
 use App\Models\SitePageRevision;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class SitePageController extends Controller
@@ -29,12 +31,13 @@ class SitePageController extends Controller
         $homeSections = HomeSection::query()->count();
 
         $metrics = [
+            'landing' => 'صفحه اصلی عمومی',
             'home' => "{$homeSections} سکشن",
             'explore' => "{$activeProducts} محصول فعال",
             'trends' => "{$trendingProducts} محصول ترند",
             'create' => "{$activeProducts} محصول قابل ساخت",
             'profile' => 'تنظیمات حساب کاربر',
-            'articles' => 'مدیریت محتوای آموزشی',
+            'articles' => Schema::hasTable('articles') ? Article::count() . ' مقاله' : 'بزودی',
         ];
 
         $pages = collect(config('site_pages.pages'))->map(function (array $definition, string $key) use ($storedPages, $metrics) {

@@ -8,7 +8,7 @@
      معماری:
        • رجیستری انواع فیلد: config/product_schema_types.php  (تنها منبع حقیقت)
        • منطق سازنده:        public/admin/js/schema-builder.js (State-driven)
-       • استایل اختصاصی:     public/admin/css/schema-builder.css (توکن‌محور، تم روز/شب)
+       • استایل اختصاصی:     public/admin/css/schema-builder.css (اعتبار‌محور، تم روز/شب)
        • سازگاری کامل عقب‌رو: کانتینر #input-fields-list و کلاس‌های schema-id /
          schema-label / schema-type / schema-required حفظ شده‌اند تا
          products-create.js (Stepper گام ۳) با ساختار جدید کار کند.

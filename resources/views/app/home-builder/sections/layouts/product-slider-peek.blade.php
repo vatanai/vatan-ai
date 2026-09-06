@@ -12,7 +12,7 @@
     <i class="fa-solid fa-chevron-left"></i>
   </button>
 
-  <div class="hb-peek-scroll" id="{{ $peekId }}">
+  <div class="hb-peek-scroll {{ (string) $section->setting('display_rows', '1') === '2' ? 'hb-rows-2' : '' }}" id="{{ $peekId }}">
     @foreach($products as $product)
       <a class="hb-peek-item" href="{{ route('app.product', $product->route_slug) }}">
         <div class="hb-peek-card" style="background-image: url('{{ $product->displayImageUrl() }}');">

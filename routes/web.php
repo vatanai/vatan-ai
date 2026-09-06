@@ -32,6 +32,9 @@ use App\Http\Controllers\Admin\Explore\TrendController;
 use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\PublicHomeController;
+use App\Http\Controllers\SupportController;
+use App\Http\Controllers\UserGalleryController;
+use App\Http\Controllers\Admin\UserGalleryController as AdminUserGalleryController;
 use App\Http\Controllers\GrowthTrackingController;
 use App\Http\Controllers\Admin\GrowthController;
 use App\Http\Controllers\Admin\GrowthDataSourceController;
@@ -76,9 +79,12 @@ Route::get('/site/payments/demo/result', [PlanSubscriptionController::class, 'de
 
 Route::get('/privacy', fn() => view('site.privacy'))->name('privacy');
 
-// سازگاری با لینک پشتیبانی موجود در برخی نسخه‌های قدیمی قالب سایت.
-Route::get('/support', fn() => redirect()->away('https://t.me/vatanstudio_bot'))
-    ->name('support.index');
+Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+Route::middleware('auth')->group(function () {
+    Route::post('/support/tickets', [SupportController::class, 'store'])->name('support.tickets.store');
+    Route::get('/support/tickets/{ticket}', [SupportController::class, 'show'])->name('support.tickets.show');
+    Route::post('/support/tickets/{ticket}/messages', [SupportController::class, 'reply'])->name('support.tickets.reply');
+});
 
 // ─── مرکز عمومی مقالات وطن ──────────────────────────────
 // تمام مسیرهای محتوایی خارج از /app هستند تا ساختار عمومی، اشتراک‌پذیر و سئویی داشته باشند.
@@ -91,6 +97,7 @@ Route::post('/articles/{article}/comments', [ArticleCommentController::class, 's
     ->middleware(['auth', 'throttle:5,1'])->name('articles.comments.store');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
 Route::get('/sitemap.xml', [ArticleController::class, 'sitemap'])->name('sitemap');
+Route::get('/sitemap', [ArticleController::class, 'sitemapPage'])->name('site.sitemap');
 
 Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token()]))
     ->name('auth.csrf-token');
@@ -118,6 +125,13 @@ Route::prefix('api')->name('telegram.api.')->middleware('auth:admin')->group(fun
 // صفحات پروفایل برای مشاهده عمومی هستند؛ عملیات شخصی همچنان احراز هویت می‌خواهد.
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
+Route::post('/my-gallery/consent', [UserGalleryController::class, 'updateConsent'])->name('profile.gallery.consent');
+Route::post('/my-gallery/preferences', [UserGalleryController::class, 'updatePreferences'])->name('profile.gallery.preferences');
+Route::get('/my-gallery/items/{item}/preview', [UserGalleryController::class, 'preview'])->name('profile.gallery.preview');
+Route::get('/my-gallery/items/{item}/original', [UserGalleryController::class, 'original'])->name('profile.gallery.original');
+Route::delete('/my-gallery/items/{item}', [UserGalleryController::class, 'destroy'])->name('profile.gallery.destroy');
+Route::get('/my-gallery/suggestions/{suggestion}/recreate', [UserGalleryController::class, 'recreate'])->name('profile.gallery.suggestion.recreate');
+Route::post('/my-gallery/suggestions/{suggestion}/dismiss', [UserGalleryController::class, 'dismissSuggestion'])->name('profile.gallery.suggestion.dismiss');
 
 // ─── User Authentication ──────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -352,8 +366,13 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::get('/settings/telegram/product-bot', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'index'])->name('settings.telegram.product-bot');
     Route::post('/settings/telegram/product-bot/managers', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'storeManager'])->name('settings.telegram.product-bot.managers.store');
     Route::put('/settings/telegram/product-bot/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateManager'])->name('settings.telegram.product-bot.managers.update');
+    Route::redirect('/products/settings', '/admin/settings/telegram/product-bot')->name('products.settings');
 // مسیرهای کامل CRUD دسته‌بندی
     Route::resource('categories', CategoryController::class);
+    Route::get('/support', [\App\Http\Controllers\Admin\SupportController::class, 'index'])->name('support.index');
+    Route::get('/support/{ticket}', [\App\Http\Controllers\Admin\SupportController::class, 'show'])->name('support.show');
+    Route::post('/support/{ticket}/reply', [\App\Http\Controllers\Admin\SupportController::class, 'reply'])->name('support.reply');
+    Route::patch('/support/{ticket}', [\App\Http\Controllers\Admin\SupportController::class, 'update'])->name('support.update');
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 Route::post('plans/reorder', [PlanController::class, 'reorder'])->name('plans.reorder');
 Route::put('plans/display-settings', [PlanController::class, 'updateDisplay'])->name('plans.display-settings');
@@ -415,6 +434,12 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     // مدیریت کاربران (متصل شده به کنترلر ادمین در پوشه Admin)
     Route::get('/users',                [AdminUserController::class, 'index'])->name('users.index');
     Route::get('/users/export',         [AdminUserController::class, 'export'])->name('users.export');
+    Route::get('/users/gallery', [AdminUserGalleryController::class, 'index'])->name('users.gallery.index');
+    Route::post('/users/gallery/settings', [AdminUserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
+    Route::get('/users/{user}/gallery', [AdminUserGalleryController::class, 'show'])->name('users.gallery.show');
+    Route::get('/users/{user}/gallery/items/{item}/preview', [AdminUserGalleryController::class, 'preview'])->name('users.gallery.preview');
+    Route::get('/users/{user}/gallery/items/{item}/original', [AdminUserGalleryController::class, 'original'])->name('users.gallery.original');
+    Route::delete('/users/{user}/gallery/items/{item}', [AdminUserGalleryController::class, 'destroy'])->name('users.gallery.destroy');
     Route::post('/users/{id}/status', [AdminUserController::class, 'changeStatus'])->name('users.status');
     Route::patch('/users/bulk-status', [AdminUserController::class, 'bulkChangeStatus'])->name('users.bulk-status');
     Route::post('/users/{id}/copy-password', [AdminUserController::class, 'copyPassword'])->name('users.copy-password');
@@ -435,10 +460,6 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::put('/products/videos/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'update'])->name('products.video.update');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
-    Route::redirect('/products/settings', '/admin/settings/telegram/product-bot')->name('products.settings');
-    Route::put('/products/settings/prompts', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updatePrompts'])->name('products.settings.prompts');
-    Route::post('/products/settings/managers', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'storeManager'])->name('products.settings.managers.store');
-    Route::put('/products/settings/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updateManager'])->name('products.settings.managers.update');
     Route::post('/products/translate-identity-prompt', [ProductController::class, 'translateIdentityPrompt'])->name('products.translate_identity_prompt');
     Route::post('/products/{product}/optimize-images', [ProductController::class, 'optimizeImages'])->name('products.optimize_images');
     Route::patch('/products/{product}/credit', [ProductController::class, 'updateCredit'])->name('products.update_credit');
@@ -458,8 +479,13 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('/product-credit-presets/{productCreditPreset}', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'update'])->name('product-credit-presets.update');
     Route::delete('/product-credit-presets/{productCreditPreset}', [\App\Http\Controllers\Admin\ProductCreditPresetController::class, 'destroy'])->name('product-credit-presets.destroy');
     Route::patch('/products/{product}/ai-model', [ProductController::class, 'updateAiModel'])->name('products.update_ai_model');
-    Route::get('/products/dashboard', [VideoStudioController::class, 'index'])->name('products.dashboard');
+    // مسیر قدیمی فقط برای سازگاری لینک‌های قبلی به نسخهٔ فعلی هدایت می‌شود؛
+    // دیگر صفحهٔ مستقلی برای تولید خودکار ویدیو ندارد.
+    Route::get('/products/dashboard', function (Request $request) {
+        return redirect()->route('admin.video-studio.experimental', $request->query());
+    })->name('products.dashboard');
     Route::get('/video-studio/experimental', [VideoStudioController::class, 'experimental'])->name('video-studio.experimental');
+    Route::get('/video-studio/experimental/jobs-snapshot', [VideoStudioController::class, 'jobsSnapshot'])->name('video-studio.experimental.jobs.snapshot');
     Route::post('/video-studio/experimental/presets', [VideoStudioController::class, 'storePreset'])->name('video-studio.experimental.presets.store');
     Route::patch('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'renamePreset'])->name('video-studio.experimental.presets.rename');
     Route::delete('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'destroyPreset'])->name('video-studio.experimental.presets.destroy');
@@ -486,6 +512,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('/video-studio/jobs/{job}/retry', [VideoStudioController::class, 'retryJob'])->name('video-studio.jobs.retry');
     Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
     Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
+    Route::post('/products/export', [\App\Http\Controllers\Admin\ProductBackupController::class, 'create'])->name('products.export');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
@@ -639,6 +666,11 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('/settings/referrals/conversions/{conversion}/review', [ReferralSettingController::class, 'reviewConversion'])->name('settings.referrals.conversions.review');
     Route::patch('/settings/referrals/rewards/{reward}/review', [ReferralSettingController::class, 'reviewReward'])->name('settings.referrals.rewards.review');
     Route::get('/settings/system',           fn() => view('admin.settings.system'))->name('settings.system');
+    Route::get('/settings/backup', [\App\Http\Controllers\Admin\ProductBackupController::class, 'index'])->name('settings.backup');
+    Route::post('/settings/backup', [\App\Http\Controllers\Admin\ProductBackupController::class, 'create'])->name('settings.backup.create');
+    Route::post('/settings/backup/restore', [\App\Http\Controllers\Admin\ProductBackupController::class, 'restore'])->name('settings.backup.restore');
+    Route::get('/settings/backup/{backup}/download', [\App\Http\Controllers\Admin\ProductBackupController::class, 'download'])->name('settings.backup.download');
+    Route::delete('/settings/backup/{backup}', [\App\Http\Controllers\Admin\ProductBackupController::class, 'destroy'])->name('settings.backup.destroy');
 
     // ماژول مستقل رشد و جذب؛ تمام مسیرها و داده‌های آن از سایر بخش‌های داشبورد جدا هستند.
     Route::prefix('growth')->name('growth.')->group(function () {

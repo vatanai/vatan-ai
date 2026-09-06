@@ -16,6 +16,73 @@
   const resultStage = root.querySelector('[data-result]');
   let hasGeneratedOutput = false;
 
+  root.querySelectorAll('[data-ratio-dropdown]').forEach((dropdown) => {
+    const summary = dropdown.querySelector('[data-ratio-summary] b');
+    dropdown.addEventListener('toggle', () => {
+      if (!dropdown.open) return;
+      root.querySelectorAll('[data-face-source]').forEach((selector) => {
+        const menu = selector.querySelector('[data-face-source-menu]');
+        const toggle = selector.querySelector('[data-face-source-toggle]');
+        if (menu) menu.hidden = true;
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        selector.classList.remove('is-open');
+      });
+      root.classList.remove('cw-face-menu-open');
+    });
+    dropdown.querySelectorAll('input[name="output[aspect_ratio]"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        if (summary) summary.textContent = input.dataset.ratioLabel || input.value;
+        dropdown.removeAttribute('open');
+      });
+    });
+  });
+
+  root.querySelectorAll('[data-face-source]').forEach((selector) => {
+    const toggle = selector.querySelector('[data-face-source-toggle]');
+    const menu = selector.querySelector('[data-face-source-menu]');
+    const label = selector.querySelector('[data-face-source-label]');
+    if (!toggle || !menu || !label) return;
+
+    toggle.addEventListener('click', () => {
+      const isOpen = !menu.hidden;
+      if (!isOpen) {
+        root.querySelectorAll('[data-ratio-dropdown]').forEach((dropdown) => dropdown.removeAttribute('open'));
+      }
+      menu.hidden = isOpen;
+      toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      selector.classList.toggle('is-open', !isOpen);
+      root.classList.toggle('cw-face-menu-open', !isOpen);
+    });
+
+    selector.querySelectorAll('[data-face-source-option]').forEach((option) => {
+      option.addEventListener('click', () => {
+        const optionLabel = option.querySelector('b');
+        if (optionLabel) label.textContent = optionLabel.textContent;
+        selector.querySelectorAll('[data-face-source-option]').forEach((item) => item.classList.remove('selected'));
+        option.classList.add('selected');
+        menu.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        selector.classList.remove('is-open');
+        root.classList.remove('cw-face-menu-open');
+      });
+    });
+  });
+
+  // کلیک بیرون از هر منوی باز، همان منو را می‌بندد.
+  document.addEventListener('click', (event) => {
+    const clickedControl = event.target.closest('[data-face-source], [data-ratio-dropdown]');
+    if (clickedControl && clickedControl.closest('.cw-page') === root) return;
+    root.querySelectorAll('[data-face-source]').forEach((selector) => {
+      const menu = selector.querySelector('[data-face-source-menu]');
+      const toggle = selector.querySelector('[data-face-source-toggle]');
+      if (menu) menu.hidden = true;
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
+      selector.classList.remove('is-open');
+    });
+    root.querySelectorAll('[data-ratio-dropdown][open]').forEach((dropdown) => dropdown.removeAttribute('open'));
+    root.classList.remove('cw-face-menu-open');
+  });
+
   function setStageTab(tab) {
     if (!isRedesign) return;
     stageTabButtons.forEach((button) => button.classList.toggle('active', button.dataset.stageTab === tab));
@@ -205,6 +272,22 @@
 
   root.querySelector('[data-action=reset]')?.addEventListener('click', () => window.location.reload());
   root.querySelector('[data-action=generate]')?.addEventListener('click', async () => {
+    const invalidRequiredField = [...form.querySelectorAll('.cw-field[data-field-required="1"]:not([hidden])')].find((field) => {
+      const controls = [...field.querySelectorAll('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])')];
+      if (!controls.length) return false;
+      if (controls[0].type === 'file') return !controls.some((control) => control.files.length > 0);
+      if (['checkbox', 'radio'].includes(controls[0].type)) return !controls.some((control) => control.checked);
+      return !controls.some((control) => String(control.value).trim() !== '' && control.checkValidity());
+    });
+    if (invalidRequiredField) {
+      const label = invalidRequiredField.querySelector('.cw-label span')?.textContent.replace('*', '').trim() || 'فیلد اجباری';
+      const control = invalidRequiredField.querySelector('input:not([type=hidden]), select, textarea');
+      alertText.textContent = `لطفاً «${label}» را وارد کنید.`;
+      alertBox.hidden = false;
+      control?.focus({ preventScroll: true });
+      invalidRequiredField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const requiredUploadField = [...form.querySelectorAll('.cw-field')].find((field) => field.querySelector('input[type=file]') && field.querySelector('.cw-label b'));
     const requiredUpload = requiredUploadField?.querySelector('.cw-upload')
       || root.querySelector('[data-required-upload="1"]');

@@ -19,13 +19,32 @@ class AiProviderLimitService
         'max_cost_usd' => 0.0,
         'max_concurrent' => 0,
         'max_outputs' => 1,
+        'max_failed_requests' => 0,
+    ];
+
+    /**
+     * Fal یک سرویس پرداخت‌به‌ازای-درخواست است؛ تنظیم امن باید حتی برای نصب
+     * تازه یا ردیف ناقص دیتابیس فعال باشد. مقادیر ذخیره‌شده‌ی مدیر همچنان
+     * روی این پیش‌فرض‌ها اولویت دارند.
+     */
+    private const PROVIDER_DEFAULTS = [
+        'fal' => [
+            'enabled' => true,
+            'window_minutes' => 60,
+            'max_requests' => 30,
+            'max_cost_usd' => 2.0,
+            'max_concurrent' => 2,
+            'max_outputs' => 1,
+            'max_failed_requests' => 3,
+        ],
     ];
 
     public function config(string $provider, ?AiProviderSetting $setting = null): array
     {
         $setting ??= AiProviderSetting::forProvider($provider);
         $saved = (array) ($setting?->settings ?? []);
-        $limits = array_replace(self::DEFAULTS, (array) ($saved['usage_limits'] ?? []));
+        $defaults = array_replace(self::DEFAULTS, self::PROVIDER_DEFAULTS[strtolower($provider)] ?? []);
+        $limits = array_replace($defaults, (array) ($saved['usage_limits'] ?? []));
 
         return [
             'enabled' => (bool) $limits['enabled'],
@@ -34,6 +53,7 @@ class AiProviderLimitService
             'max_cost_usd' => max(0, min(100000, (float) $limits['max_cost_usd'])),
             'max_concurrent' => max(0, min(1000, (int) $limits['max_concurrent'])),
             'max_outputs' => max(1, min(10, (int) $limits['max_outputs'])),
+            'max_failed_requests' => max(0, min(1000, (int) $limits['max_failed_requests'])),
         ];
     }
 
@@ -49,12 +69,18 @@ class AiProviderLimitService
 
         $requestCount = (clone $query)->count();
         $activeCount = (clone $query)->whereIn('status', ['reserved', 'queued', 'processing'])->count();
-        $spentUsd = (float) ((clone $query)->selectRaw('COALESCE(SUM(COALESCE(actual_cost_usd, estimated_cost_usd)), 0) AS total')->value('total') ?? 0);
+        $failedCount = (clone $query)->where('status', 'failed')->count();
+        // برآورد درخواست ناموفق «هزینهٔ مصرف‌شده» نیست. فقط مبلغ واقعی ثبت‌شده
+        // یا برآورد درخواست تکمیل‌شده در سقف هزینه محاسبه می‌شود.
+        $spentUsd = (float) ((clone $query)->selectRaw(
+            "COALESCE(SUM(CASE WHEN actual_cost_usd IS NOT NULL THEN actual_cost_usd WHEN status = 'completed' THEN estimated_cost_usd ELSE 0 END), 0) AS total"
+        )->value('total') ?? 0);
 
         return $limits + [
             'window_start' => $windowStart,
             'request_count' => $requestCount,
             'active_count' => $activeCount,
+            'failed_count' => $failedCount,
             'spent_usd' => round($spentUsd, 6),
             'remaining_requests' => $limits['max_requests'] > 0 ? max(0, $limits['max_requests'] - $requestCount) : null,
             'remaining_cost_usd' => $limits['max_cost_usd'] > 0 ? max(0, round($limits['max_cost_usd'] - $spentUsd, 6)) : null,
@@ -104,6 +130,10 @@ class AiProviderLimitService
 
         if ($limits['max_concurrent'] > 0 && $summary['active_count'] >= $limits['max_concurrent']) {
             throw new RuntimeException('سقف درخواست‌های هم‌زمان این provider پر است؛ پس از پایان اجرای فعلی دوباره تلاش کنید.');
+        }
+
+        if ($limits['max_failed_requests'] > 0 && $summary['failed_count'] >= $limits['max_failed_requests']) {
+            throw new RuntimeException('مدار محافظ این provider به‌دلیل چند خروجی ناموفق فعال شد؛ ابتدا علت خطا را بررسی کنید و پس از پایان بازه دوباره تلاش کنید.');
         }
 
         if ($limits['max_cost_usd'] > 0 && $estimatedCost !== null && ($summary['spent_usd'] + $estimatedCost) > $limits['max_cost_usd']) {

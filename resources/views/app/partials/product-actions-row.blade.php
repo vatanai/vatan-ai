@@ -1,5 +1,5 @@
 {{-- ═══════════════════════════════════════════════════════════════
-     پارشیال: ردیف بازگشت + سیو + اشتراک‌گذاری (+ توکن موبایل)
+     پارشیال: ردیف بازگشت + سیو + اشتراک‌گذاری (+ اعتبار موبایل)
      موبایل: بلافاصله زیر گالری | دسکتاپ: زیر باکس توضیحات محصول
      ═══════════════════════════════════════════════════════════════ --}}
 <div class="flex items-center justify-between">
@@ -18,10 +18,10 @@
       <i class="fa-solid fa-share-nodes text-xs"></i>
     </button>
 
-    {{-- میزان مصرف توکن/رایگان — فقط نسخه موبایل، کنار ذخیره و اشتراک‌گذاری --}}
+    {{-- میزان مصرف اعتبار/رایگان — فقط نسخه موبایل، کنار ذخیره و اشتراک‌گذاری --}}
     @if($product->pricing_model === 'per_credit' && $product->credit_cost > 0)
       <span class="lg:hidden px-3 h-10 inline-flex items-center rounded-full bg-[var(--bg-surface)] border border-[var(--orange)] text-[11px] font-bold text-[var(--orange)]">
-        <i class="fa-solid fa-bolt text-[10px] ml-1.5"></i>{{ $product->credit_cost }} توکن
+        <i class="fa-solid fa-bolt text-[10px] ml-1.5"></i>{{ $product->credit_cost }} اعتبار
       </span>
     @elseif($product->pricing_model === 'free')
       <span class="lg:hidden px-3 h-10 inline-flex items-center rounded-full bg-[var(--bg-surface)] border border-[var(--green)] text-[11px] font-bold text-[var(--green)]">

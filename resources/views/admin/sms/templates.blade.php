@@ -30,7 +30,7 @@
 @endsection
 @section('scripts')
 <script>
-const smsEvents=@json($events),smsSamples=@json(config('sms_events.samples',[])),smsTemplates=@json($templatePayload);
+const smsEvents=@json($events),smsSamples=@json(config('sms_events.samples',[])),smsTemplates=@json($templatePayload).map(item=>({...item,body:String(item.body||'').replaceAll('توکن','اعتبار')}));
 const modal=document.getElementById('template-modal'),form=document.getElementById('template-form'),eventEl=document.getElementById('template-event'),bodyEl=document.getElementById('template-body');
 const providerMethodEl=document.getElementById('template-provider-method'),bodyIdEl=document.getElementById('template-body-id'),providerVariablesEl=document.getElementById('template-provider-variables');
 function renderProviderVariables(selected=[]){const variables=smsEvents[eventEl.value]?.variables||[];providerVariablesEl.innerHTML=variables.map((variable,index)=>`<label><input type="checkbox" name="provider_variables[]" value="${variable}" ${selected.includes(variable)?'checked':''}> ${index+1}. {${variable}}</label>`).join('')||'<span>این رویداد متغیری ندارد.</span>'}

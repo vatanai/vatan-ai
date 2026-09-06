@@ -9,7 +9,7 @@
   </article>
   <article class="stat-card referral-stat-card">
     <span class="stat-card-icon is-info"><i class="fa-solid fa-coins"></i></span>
-    <div><div class="stat-card-value">{{ number_format($stats['paid_tokens']) }}</div><div class="stat-card-label">توکن پرداخت‌شده</div></div>
+    <div><div class="stat-card-value">{{ number_format($stats['paid_tokens']) }}</div><div class="stat-card-label">اعتبار پرداخت‌شده</div></div>
   </article>
   <article class="stat-card referral-stat-card">
     <span class="stat-card-icon is-warning"><i class="fa-solid fa-shield-halved"></i></span>
@@ -26,7 +26,7 @@
     @foreach([
       ['route' => 'admin.referrals.settings', 'icon' => 'fa-sliders', 'title' => 'تنظیمات برنامه', 'text' => 'مقدار هدیه، شرط پرداخت و محتوای پروفایل'],
       ['route' => 'admin.referrals.conversions', 'icon' => 'fa-user-group', 'title' => 'فهرست دعوت‌ها', 'text' => 'وضعیت ثبت‌نام، خرید و دعوت‌کننده'],
-      ['route' => 'admin.referrals.rewards', 'icon' => 'fa-coins', 'title' => 'گزارش پاداش‌ها', 'text' => 'ریز توکن‌های پرداخت‌شده و معلق'],
+      ['route' => 'admin.referrals.rewards', 'icon' => 'fa-coins', 'title' => 'گزارش پاداش‌ها', 'text' => 'ریز اعتبار‌های پرداخت‌شده و معلق'],
       ['route' => 'admin.referrals.visits', 'icon' => 'fa-arrow-pointer', 'title' => 'بازدید لینک‌ها', 'text' => 'ورودی لینک‌ها و نتیجه تبدیل'],
       ['route' => 'admin.referrals.reviews', 'icon' => 'fa-shield-halved', 'title' => 'صف بررسی', 'text' => 'تصمیم‌گیری روی موارد مشکوک و تکراری'],
     ] as $item)

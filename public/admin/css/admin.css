@@ -348,3 +348,42 @@ html, body { overflow: hidden; }
 
 /* hide main content scrollbar (all browsers) */
 #content::-webkit-scrollbar { display: none !important; width: 0 !important; }
+
+/* پایش اعتبار سرویس‌ها در مرکز فرماندهی */
+.dashboard-credit-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;color:var(--text-soft);font-size:11px;font-weight:800;letter-spacing:.5px}
+.dashboard-credit-heading small{font-size:10px;font-weight:500;margin-right:8px;color:var(--text3)}
+.dashboard-credit-heading a,.dashboard-credit-alerts-head a{color:var(--primary);font-size:10px;text-decoration:none;white-space:nowrap}
+.dashboard-credit-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:14px;margin-bottom:18px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px}
+.dashboard-credit-rate,.dashboard-credit-service{display:block;min-width:0;padding:14px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;text-decoration:none;transition:border-color .2s,transform .2s}
+.dashboard-credit-rate{border-color:var(--primary)}
+.dashboard-credit-service:hover{border-color:var(--primary);transform:translateY(-1px)}
+.dashboard-credit-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;color:var(--text-soft);font-size:11px;font-weight:800}
+.dashboard-credit-card-head i{color:var(--primary);margin-left:4px}
+.dashboard-credit-card-head em{font-style:normal;font-size:9px;color:var(--success);font-weight:700}
+.dashboard-credit-rate strong,.dashboard-credit-service>strong{display:block;color:var(--text-h);font-size:19px;font-weight:900;line-height:1.2}
+.dashboard-credit-rate small,.dashboard-credit-service small{display:block;margin-top:5px;color:var(--text-soft);font-size:10px}
+.dashboard-credit-service.warning{border-color:var(--warning)}
+.dashboard-credit-service.warning .dashboard-credit-card-head em{color:var(--warning)}
+.dashboard-credit-service.critical{border-color:var(--danger)}
+.dashboard-credit-service.critical .dashboard-credit-card-head em{color:var(--danger)}
+.dashboard-credit-service.offline{border-color:var(--warning)}
+.dashboard-credit-service.offline .dashboard-credit-card-head em{color:var(--warning)}
+.dashboard-credit-timeline{height:34px;display:flex;align-items:flex-end;gap:3px;margin-top:11px;padding:5px 6px;background:var(--card-bg);border:1px solid var(--border);border-radius:7px}
+.dashboard-credit-timeline span{flex:1;min-height:3px;background:var(--primary);border-radius:3px 3px 1px 1px;opacity:.85}
+.dashboard-credit-service.warning .dashboard-credit-timeline span{background:var(--warning)}
+.dashboard-credit-service.critical .dashboard-credit-timeline span{background:var(--danger)}
+.dashboard-credit-timeline.empty span{height:3px;background:var(--text-soft);opacity:.35}
+.dashboard-credit-forecast{margin-top:8px;color:var(--text-soft);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dashboard-credit-forecast i{color:var(--primary);margin-left:4px}
+.dashboard-credit-alerts{margin-bottom:14px;padding:12px;background:var(--card-bg);border:1px solid var(--danger);border-radius:12px}
+.dashboard-credit-alerts-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:var(--danger);font-size:11px;font-weight:800}
+.dashboard-credit-alerts-head i{margin-left:5px}
+.dashboard-credit-alert-list{display:grid;gap:6px}
+.dashboard-credit-alert{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;background:var(--danger-l);color:var(--danger)}
+.dashboard-credit-alert.warning,.dashboard-credit-alert.offline{background:var(--warning-l);color:var(--warning)}
+.dashboard-credit-alert>i{margin-top:2px}
+.dashboard-credit-alert strong,.dashboard-credit-alert span{display:block}
+.dashboard-credit-alert strong{font-size:10px}
+.dashboard-credit-alert span{margin-top:2px;color:var(--text-main);font-size:10px;font-weight:500;line-height:1.7}
+@media(max-width:1100px){.dashboard-credit-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.dashboard-credit-board{grid-template-columns:1fr;padding:10px}.dashboard-credit-heading{align-items:flex-start;flex-direction:column;gap:4px}.dashboard-credit-alerts-head{align-items:flex-start;flex-direction:column;gap:5px}}

@@ -30,6 +30,55 @@
       <article class="pb-stat"><b>{{ number_format($stats['purchases']) }}</b><span>خرید ثبت‌شده</span></article>
     </section>
 
+    <section class="pb-card pb-home-pricing">
+      <div class="pb-card-head pb-home-pricing__head">
+        <div>
+          <h3>استایل فعال صفحه نخست</h3>
+          <p>این همان چیدمان فعلی کارت‌های صفحه نخست است؛ متن نشان‌ها، قیمت، اعتبار، آمار و امکانات از اطلاعات پلن خوانده می‌شود.</p>
+        </div>
+        <span class="pb-badge pb-badge-success">فعال · {{ $homePricing['active_template'] ?? 'vatan-proposal' }}</span>
+      </div>
+      <div class="pb-home-pricing__intro">
+        <b>{{ $homePricing['title'] ?? 'پلن‌ها، بر پایه اعتبار دائمی' }}</b>
+        @foreach(($homePricing['notes'] ?? []) as $note)<span>{{ $note }}</span>@endforeach
+      </div>
+      <div class="pb-home-pricing__plans">
+        @forelse($homePricingPlans as $homePlan)
+          @php
+            $config = is_array($homePlan->home_pricing_config) ? $homePlan->home_pricing_config : [];
+            $price = (array) ($config['price'] ?? []);
+            $primaryStat = (array) ($config['primary_stat'] ?? []);
+            $secondaryStat = (array) ($config['secondary_stat'] ?? []);
+          @endphp
+          <article class="pb-home-pricing__plan {{ ($config['variant'] ?? '') === 'professional' ? 'is-featured' : '' }}">
+            <div class="pb-home-pricing__plan-head">
+              <span class="pb-icon"><i class="{{ $config['icon'] ?? $homePlan->icon }}"></i></span>
+              <div><b>{{ $homePlan->name }}</b><small>{{ $config['eyebrow'] ?? $homePlan->short_description }}</small></div>
+              <a class="pb-btn pb-btn-sm" href="{{ route('admin.plans.edit', $homePlan) }}" title="ویرایش پلن"><i class="fa-solid fa-pen"></i></a>
+            </div>
+            <dl class="pb-home-pricing__copy">
+              <div><dt>استایل انتخاب‌شده</dt><dd>{{ $homePlan->card_style }}</dd></div>
+              @if(filled($config['ribbon'] ?? null))<div><dt>نشان اصلی</dt><dd>{{ $config['ribbon'] }}</dd></div>@endif
+              @if(filled($config['badge'] ?? null))<div><dt>باکس تخفیف / وضعیت</dt><dd><bdi dir="rtl">{{ $config['badge'] }}</bdi></dd></div>@endif
+              <div><dt>قیمت باکس</dt><dd>{{ trim(implode(' ', array_filter([$price['prefix'] ?? null, $price['value'] ?? null, $price['suffix'] ?? null]))) }}</dd></div>
+              <div><dt>اعتبار</dt><dd>{{ $config['credit'] ?? number_format($homePlan->tokens) . ' اعتبار' }}</dd></div>
+              <div><dt>{{ $primaryStat['label'] ?? 'قیمت هر اعتبار' }}</dt><dd>{{ $primaryStat['value'] ?? '—' }}</dd></div>
+              <div><dt>{{ $secondaryStat['label'] ?? 'صرفه‌جویی' }}</dt><dd>{{ $secondaryStat['value'] ?? '—' }}</dd></div>
+            </dl>
+            <ul>
+              @foreach((array) $homePlan->features as $feature)
+                @php $featureTitle = is_array($feature) ? ($feature['title'] ?? '') : $feature; @endphp
+                @if(filled($featureTitle))<li>{{ $featureTitle }}</li>@endif
+              @endforeach
+            </ul>
+          </article>
+        @empty
+          <p class="pb-empty">هنوز هیچ استایل فعالی برای صفحه نخست ثبت نشده است.</p>
+        @endforelse
+      </div>
+      <p class="pb-home-pricing__legacy"><i class="fa-solid fa-box-archive"></i> پلن‌های بخش قبلی حذف نشده‌اند؛ وضعیت آن‌ها «غیرفعال» است و خریدهای قبلی‌شان حفظ می‌شود.</p>
+    </section>
+
     <div class="pb-grid">
       <section class="pb-card">
         <div class="pb-card-head">
@@ -48,7 +97,7 @@
           @csrf
           <div class="pb-table-wrap">
             <table class="pb-table">
-              <thead><tr><th>پلن</th><th>قیمت عادی</th><th>مشتری ثابت</th><th>توکن</th><th>وضعیت</th><th>خرید</th><th>عملیات</th></tr></thead>
+              <thead><tr><th>پلن</th><th>قیمت عادی</th><th>مشتری ثابت</th><th>اعتبار</th><th>وضعیت</th><th>خرید</th><th>عملیات</th></tr></thead>
               <tbody id="plan-sortable">
               @forelse($plans as $plan)
                 @php $loyal=$plan->audience_overrides['loyal']??[]; @endphp
@@ -58,7 +107,7 @@
                     <div class="pb-plan-name"><span class="pb-icon"><i class="{{ $plan->icon }}"></i></span><span><b>{{ $plan->name }}</b><small>{{ $plan->plan_code }}</small></span></div>
                   </td>
                   <td>{{ $plan->billing_type==='custom' ? (($plan->price_prefix ?: 'از').' '.number_format($plan->price)) : ($plan->price ? number_format($plan->price).' تومان' : 'رایگان') }}</td>
-                  <td>{{ isset($loyal['price']) ? number_format($loyal['price']).' تومان' : 'همان قیمت عادی' }}</td>
+                  <td>{{ isset($loyal['price']) && is_numeric($loyal['price']) ? number_format($loyal['price']).' تومان' : 'همان قیمت عادی' }}</td>
                   <td>{{ $plan->is_unlimited ? 'نامحدود*' : number_format($plan->tokens) }}</td>
                   <td>
                     @if($plan->archived_at)<span class="pb-badge pb-badge-danger">آرشیو</span>
@@ -66,7 +115,7 @@
                     @elseif($plan->status==='draft')<span class="pb-badge pb-badge-warning">پیش‌نویس</span>
                     @else<span class="pb-badge pb-badge-info">غیرفعال</span>@endif
                   </td>
-                  <td>{{ number_format($plan->purchases_count) }}</td>
+                  <td>{{ number_format($plan->purchases_count ?? 0) }}</td>
                   <td><div class="pb-row-actions">
                     <a class="pb-btn pb-btn-sm" href="{{ route('admin.plans.edit',$plan) }}" title="ویرایش"><i class="fa-solid fa-pen"></i></a>
                     <button class="pb-btn pb-btn-sm" form="duplicate-{{ $plan->id }}" title="تکثیر"><i class="fa-solid fa-copy"></i></button>

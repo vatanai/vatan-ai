@@ -1,7 +1,8 @@
 <div class="sms-template-grid">
 @forelse($templates as $template)
   @php
-    $chars=mb_strlen($template->body);
+    $displayBody = str_replace('توکن', 'اعتبار', (string) $template->body);
+    $chars=mb_strlen($displayBody);
     $parts=$chars<=70?1:(int)ceil($chars/67);
     $providerStatus=$template->provider_approval_status ?? ($template->provider_method === 'shared' ? 'pending' : 'not_applicable');
     $providerState=match($providerStatus){'approved'=>'is-approved','rejected'=>'is-rejected',default=>'is-pending'};
@@ -9,7 +10,7 @@
   @endphp
   <article class="content-card sms-template-card {{ !$template->is_active ? 'is-off' : '' }} {{ $providerState }}" data-template-group="{{ config('sms_events.events.'.$template->event_key.'.group','سفارشی') }}">
     <div class="sms-template-top"><div><div class="sms-template-event">{{ $template->eventLabel() }}</div><h3>{{ $template->name }}</h3></div><div class="sms-template-badges">@if($template->is_default)<span class="badge-pro badge-pro-primary">پیش‌فرض</span>@endif<span class="sms-state-icon {{ $template->is_active?'is-active':'is-inactive' }}" title="{{ $template->is_active?'الگوی فعال':'الگوی غیرفعال' }}"><i class="fa-solid {{ $template->is_active?'fa-circle-check':'fa-circle-xmark' }}"></i></span><span class="sms-vars-icon" title="متغیرها: {{ implode('، ',config('sms_events.events.'.$template->event_key.'.variables',[])) }}"><i class="fa-solid fa-brackets-curly"></i></span></div></div>
-    <p class="sms-template-body">{{ $template->body }}</p>
+    <p class="sms-template-body">{{ $displayBody }}</p>
     <div class="sms-template-meta"><span>{{ $chars }} کاراکتر</span><span>{{ $parts }} بخش پیامک</span><span>{{ number_format($template->sent_count) }} ارسال</span><span>{{ $template->provider_method === 'shared' ? 'BodyId: '.($template->provider_template_id ?: 'تنظیم‌نشده') : 'ارسال ساده' }}</span></div>
     <div class="sms-provider-state {{ $providerState }}"><i class="fa-solid {{ $providerStatus==='approved'?'fa-circle-check':($providerStatus==='rejected'?'fa-circle-xmark':'fa-clock') }}"></i><span>{{ $providerLabel }}</span>@if($template->provider_checked_at)<small>آخرین بررسی: {{ $template->provider_checked_at->format('Y/m/d H:i') }}</small>@elseif($template->provider_note)<small>{{ $template->provider_note }}</small>@endif</div>
     <div class="sms-template-actions">

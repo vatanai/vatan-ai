@@ -6,6 +6,7 @@
   $inputSchema = old('input_schema', json_encode($model->input_schema ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
   $capabilities = old('capability_config', json_encode($model->capability_config ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
   $pricing = old('pricing_config', json_encode($model->pricing_config ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+  $selectedLabCategories = collect(old('lab_categories', $model->lab_categories ?? []))->map(fn ($key) => (string) $key)->all();
 @endphp
 
 <input type="hidden" name="openrouter_model_id" id="legacy-model-id" value="{{ old('openrouter_model_id', $model->openrouter_model_id ?? $externalId) }}">
@@ -25,7 +26,7 @@
         <label class="form-label">نسخه‌ی مدل (`Replicate`)<input class="input-pro mt-1 w-full ltr text-left font-mono" dir="ltr" name="external_version" value="{{ old('external_version', $model->external_version ?? '') }}" placeholder="اختیاری برای مدل‌های رسمی"></label>
         <label class="form-label">provider
           <select class="input-pro mt-1 w-full" name="provider" id="provider-select" required>
-            @foreach(['fal' => 'Fal.ai', 'replicate' => 'Replicate', 'liara' => 'Liara AI', 'openrouter' => 'OpenRouter'] as $key => $label)
+            @foreach(['fal' => 'Fal.ai', 'replicate' => 'Replicate', 'openrouter' => 'OpenRouter'] as $key => $label)
               <option value="{{ $key }}" @selected($currentProvider === $key)>{{ $label }}</option>
             @endforeach
           </select>
@@ -47,6 +48,21 @@
     </section>
 
     <section class="content-card">
+      <div class="flex items-center gap-2 border-b border-[var(--border)] pb-3 mb-4"><i class="fa-solid fa-flask-vial text-[var(--primary)]"></i><div><h2 class="text-sm font-extrabold text-[var(--text-h)] m-0">metadata آزمایشگاه مدل</h2><p class="form-help mt-1">ترتیب و دسته‌بندی این مدل در `Model Lab` را مدیریت کنید.</p></div></div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <label class="form-label">اولویت نمایش<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="1" max="9999" name="lab_priority" value="{{ old('lab_priority', $model->lab_priority ?? 999) }}"></label>
+        <label class="form-label">وضعیت آزمایشگاه<select class="input-pro mt-1 w-full" name="lab_status"><option value="active" @selected(old('lab_status', $model->lab_status ?? 'active') === 'active')>فعال</option><option value="experimental" @selected(old('lab_status', $model->lab_status ?? 'active') === 'experimental')>آزمایشی</option></select></label>
+        <label class="inline-flex items-center gap-2 text-[11px] text-[var(--text-main)] mt-6"><input type="hidden" name="featured_in_lab" value="0"><input type="checkbox" name="featured_in_lab" value="1" @checked(old('featured_in_lab', $model->featured_in_lab ?? false))> نمایش در انتخاب مدل محصول <span class="text-[9px] text-[var(--text-soft)]">(گام ۲، لیست محصولات و مدل‌های منتخب آزمایشگاه)</span></label>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3">
+        @foreach(['popular' => 'پرکاربردترین', 'identity' => 'بیشترین شباهت', 'economic' => 'اقتصادی', 'vip' => 'VIP', 'experimental' => 'آزمایشی'] as $key => $label)
+          <label class="flex items-center gap-2 p-2 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] cursor-pointer"><input type="checkbox" name="lab_categories[]" value="{{ $key }}" @checked(in_array($key, $selectedLabCategories, true))><span class="text-[10px] text-[var(--text-main)]">{{ $label }}</span></label>
+        @endforeach
+      </div>
+      <label class="form-label mt-3">توضیح کاربرد در آزمایشگاه<textarea class="input-pro mt-1 w-full min-h-[70px]" name="lab_description" maxlength="4000">{{ old('lab_description', $model->lab_description ?? '') }}</textarea></label>
+    </section>
+
+    <section class="content-card">
       <div class="flex items-center gap-2 border-b border-[var(--border)] pb-3 mb-4"><i class="fa-solid fa-code text-[var(--info)]"></i><h2 class="text-sm font-extrabold text-[var(--text-h)] m-0">schema و پارامترهای قابل‌ارسال</h2></div>
       <p class="text-[11px] text-[var(--text-soft)] leading-6 mt-0">فقط کلیدهایی که در `allowed_inputs` یا `input_schema.properties` قرار می‌دهی به provider ارسال می‌شوند. اگر schema مدل متفاوت است، آن را همین‌جا ثبت کن.</p>
       <div class="space-y-3">
@@ -61,7 +77,7 @@
     <section class="content-card">
       <div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="text-sm font-extrabold text-[var(--text-h)] m-0">وضعیت و هزینه</h2><p class="form-help mt-1">مدل غیرفعال در ثبت محصول نمایش داده نمی‌شود.</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" class="sr-only peer" id="active-toggle" @checked(old('is_active', $model->is_active ?? true) == 1)><span class="w-10 h-6 rounded-full bg-[var(--border)] peer-checked:bg-[var(--primary)] after:content-[''] after:absolute after:top-1 after:right-1 after:w-4 after:h-4 after:rounded-full after:bg-[var(--text-soft)] peer-checked:after:bg-[var(--accent)] peer-checked:after:-translate-x-4 after:transition"></span></label></div>
       <div class="space-y-3">
-        <label class="form-label">هزینه به توکن<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="0" name="cost_per_generation" value="{{ old('cost_per_generation', $model->cost_per_generation ?? 0) }}" required></label>
+        <label class="form-label">هزینه به اعتبار<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="0" name="cost_per_generation" value="{{ old('cost_per_generation', $model->cost_per_generation ?? 0) }}" required></label>
         <label class="form-label">قیمت تخمینی provider به دلار<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="0" step="0.000001" name="cost_per_generation_usd" value="{{ old('cost_per_generation_usd', $model->cost_per_generation_usd ?? '') }}"></label>
         <label class="form-label">Pricing Config به شکل JSON<textarea class="input-pro mt-1 w-full min-h-[90px] ltr text-left font-mono" dir="ltr" name="pricing_config" required>{{ $pricing }}</textarea></label>
         <div class="grid grid-cols-2 gap-2"><label class="form-label">عرض<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="1" name="default_width" value="{{ old('default_width', $model->default_width ?? 1024) }}"></label><label class="form-label">ارتفاع<input class="input-pro mt-1 w-full ltr text-left" dir="ltr" type="number" min="1" name="default_height" value="{{ old('default_height', $model->default_height ?? 1024) }}"></label></div>

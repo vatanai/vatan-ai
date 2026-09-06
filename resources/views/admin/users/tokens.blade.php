@@ -1,9 +1,9 @@
 @extends('layouts.admin')
-@section('title', 'مدیریت توکن کاربران — وطن استودیو')
+@section('title', 'مدیریت اعتبار کاربران — وطن استودیو')
 
 @push('styles')
 <style>
-/* ─── صفحه‌ی مدیریت توکن — همه‌ی رنگ‌ها فقط از توکن‌های design-tokens.css (روز/شب خودکار) ─── */
+/* ─── صفحه‌ی مدیریت اعتبار — همه‌ی رنگ‌ها فقط از اعتبار‌های design-tokens.css (روز/شب خودکار) ─── */
 .tk-grid{display:grid;grid-template-columns:400px minmax(0,1fr);gap:20px;align-items:start;}
 @media(max-width:1100px){.tk-grid{grid-template-columns:1fr;}}
 
@@ -31,12 +31,12 @@ body:not(.light) .tk-avatar{color:var(--accent);border-color:var(--border);}
 .tk-clear-btn{background:none;border:none;color:var(--text-soft);font-size:11px;cursor:pointer;font-family:inherit;padding:0;margin-top:10px;transition:color .15s;}
 .tk-clear-btn:hover{color:var(--danger);}
 
-/* فرم عملیات توکن */
+/* فرم عملیات اعتبار */
 .tk-form-group{margin-bottom:14px;}
 .tk-label{display:block;font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:6px;}
 .tk-form-group .input-pro{width:100%;}
 
-/* باکس میانبرهای افزودن/کسر (۱ / ۵ / ۱۰ / ۲۰ / ۵۰) — زیر فیلد مقدار توکن */
+/* باکس میانبرهای افزودن/کسر (۱ / ۵ / ۱۰ / ۲۰ / ۵۰) — زیر فیلد مقدار اعتبار */
 .tk-quick-box{background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:14px;}
 .tk-quick-title{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--text-soft);margin-bottom:8px;}
 .tk-quick-row{display:flex;gap:6px;}
@@ -87,13 +87,13 @@ body:not(.light) .tk-amt-set{color:var(--accent);}
 
     <div class="tk-grid">
 
-      {{-- ستون راست: جستجوی کاربر + کاربر انتخاب‌شده + فرم عملیات توکن --}}
+      {{-- ستون راست: جستجوی کاربر + کاربر انتخاب‌شده + فرم عملیات اعتبار --}}
       <div>
         @include('admin.users.partials.token-search')
         @include('admin.users.partials.token-form')
       </div>
 
-      {{-- ستون چپ: تاریخچه‌ی تغییرات توکن --}}
+      {{-- ستون چپ: تاریخچه‌ی تغییرات اعتبار --}}
       @include('admin.users.partials.token-history')
 
     </div>

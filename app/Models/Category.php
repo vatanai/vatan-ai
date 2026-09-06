@@ -22,6 +22,7 @@ class Category extends Model
         'icon',
         'color',
         'image',
+        'cover_ratio',
         'sort_order',
         'is_active',
         'is_featured',
@@ -39,6 +40,11 @@ class Category extends Model
         'is_featured' => 'boolean',
         'sort_order'  => 'integer',
     ];
+
+    public function coverAspectRatio(): string
+    {
+        return in_array($this->cover_ratio, ['1:1', '2:1', '1:2'], true) ? $this->cover_ratio : '1:1';
+    }
 
     /*
     |--------------------------------------------------------------------------

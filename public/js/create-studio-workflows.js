@@ -46,7 +46,11 @@
   }
 
   function selectedValue(key) {
-    return root.querySelector('[data-studio-select="' + key + '"] [data-select-input]')?.value || '';
+    const input = root.querySelector('[data-studio-select="' + key + '"] [data-select-input]');
+    if (input?.value) return input.value;
+    return root.querySelector('[data-studio-select="' + key + '"] .create-studio-select-option.is-selected')?.dataset.value
+      || document.querySelector('body > [data-studio-menu-key="' + key + '"] .create-studio-select-option.is-selected')?.dataset.value
+      || '';
   }
 
   function selectedModel() {
@@ -56,14 +60,14 @@
   }
 
   function workflowModel(model) {
-    return (config.workflow_models || []).find((item) => String(item.value) === String(model?.value));
+    return (config.workflow_models || []).find((item) => String(item.value) === String(model?.value)) || model || null;
   }
 
   function modelSupportsWorkflow(item) {
-    if (!item) return true;
-    if (workflow === 'text_to_video') return item.supports_text;
-    if (workflow === 'video_to_video') return item.supports_video;
-    return item.supports_image;
+    if (!item) return false;
+    if (workflow === 'text_to_video') return item.task_type === 'text_to_video';
+    if (workflow === 'video_to_video') return item.task_type === 'video_to_video';
+    return ['image_to_video', 'face_animation'].includes(item.task_type);
   }
 
   function modelOptionError(item) {
@@ -82,12 +86,13 @@
   }
 
   function filterModelOptions() {
+    if (root.dataset.mode !== 'video') return;
     const menu = [...document.querySelectorAll('[data-select-menu]')]
       .find((item) => item.dataset.studioMenuKey === 'model' || item.closest('[data-studio-select="model"]'));
     if (!menu) return;
     menu.querySelectorAll('.create-studio-select-option').forEach((button) => {
       const item = (config.workflow_models || []).find((model) => String(model.value) === String(button.dataset.value));
-      button.hidden = !modelSupportsWorkflow(item);
+      button.hidden = !modelSupportsWorkflow(item || config.video?.model_options?.find((model) => String(model.value) === String(button.dataset.value)));
     });
   }
 
@@ -261,7 +266,9 @@
         throw new Error(payload.error_message || 'ساخت ویدیو ناموفق بود.');
       }
       if (progressText) progressText.textContent = payload.status === 'queued'
-        ? 'درخواست در صف ساخت قرار دارد...'
+        ? ((payload.attempted_models || []).length > 1
+          ? 'مدل اصلی پاسخ نداد؛ مدل جایگزین در صف ساخت قرار گرفت...'
+          : 'درخواست در صف ساخت قرار دارد...')
         : 'مدل هوش مصنوعی در حال ساخت خروجی است...';
     }
     throw new Error('ساخت ویدیو بیشتر از زمان معمول طول کشید.');
@@ -299,6 +306,10 @@
 
     const model = selectedModel();
     const modelData = workflowModel(model);
+    if (modelData && !modelSupportsWorkflow(modelData)) {
+      showError('مدل انتخاب‌شده برای این نوع ورودی مناسب نیست؛ یک مدل سازگار انتخاب کنید.');
+      return;
+    }
     if (modelData && workflow === 'video_to_video' && !modelData.supports_video) {
       showError('مدل انتخاب‌شده ورودی ویدیویی را پشتیبانی نمی‌کند.');
       return;
@@ -408,7 +419,20 @@
   });
   root.querySelector('[data-studio-select="model"] [data-select-toggle]')?.addEventListener('click', () => window.setTimeout(filterModelOptions, 40));
   document.addEventListener('click', (event) => {
-    if (event.target.closest('.create-studio-select-option')) window.setTimeout(requestQuote, 40);
+    const option = event.target.closest('.create-studio-select-option');
+    if (!option) return;
+    if (option.closest('[data-studio-menu-key="model"]') || option.closest('[data-studio-select="model"]')) {
+      // انتخاب مدل در منوی پورتالی انجام می‌شود؛ مقدار hidden input را نیز
+      // صریحاً همگام می‌کنیم تا هنگام ارسال فرم، همان مدل واقعاً به بک‌اند برسد.
+      window.setTimeout(() => {
+        const input = root.querySelector('[data-studio-select="model"] [data-select-input]');
+        if (input && option.dataset.value) {
+          input.value = option.dataset.value;
+          input.setAttribute('value', option.dataset.value);
+        }
+      }, 0);
+    }
+    window.setTimeout(requestQuote, 40);
   }, true);
   submit?.addEventListener('click', (event) => {
     if (root.dataset.mode !== 'video') return;

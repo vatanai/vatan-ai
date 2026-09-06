@@ -1,86 +1,23 @@
 <style>
-  /* افکت انیمیشن لرزش کارت در صورت خطای کد OTP */
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-6px); }
-    40%, 80% { transform: translateX(6px); }
-  }
-  .shake-effect { animation: shake 0.4s ease-in-out; }
-
-  /* اسکرول‌بار ستون فرم لاگین هرگز و تحت هیچ شرایطی نمایش داده نشود (حتی هنگام نمایش خطا) */
-  .auth-form-col {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-  .auth-form-col::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    display: none !important;
-  }
-
-  /* حذف باکس سفید/زرد autofill مرورگر روی همه فیلدهای فرم (رمز، ایمیل، موبایل، نام و ...) */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0px 1000px #16161c inset !important;
-    box-shadow: 0 0 0px 1000px #16161c inset !important;
-    -webkit-text-fill-color: #ffffff !important;
-    caret-color: #ffffff !important;
-    background-color: transparent !important;
-    background-clip: content-box !important;
-    border: 0 !important;
-    outline: 0 !important;
-    border-radius: 9px !important;
-    transition: background-color 5000s ease-in-out 0s !important;
-  }
-
-  /* ═══ لایوت دو ستونه صفحه ورود/ثبت‌نام — با CSS خام، مستقل از کامپایل Tailwind ═══ */
-  .auth-shell {
-    width: 100%;
-    max-width: 420px;
-  }
-  .auth-form-col {
-    width: 100%;
-  }
-  .auth-brand-col {
-    display: none;
-  }
-  @media (min-width: 768px) {
-    .auth-shell {
-      width: 840px;
-      max-width: 840px;
-      display: grid;
-      grid-template-columns: 420px 420px;
-      align-items: stretch;
-    }
-    .auth-form-col {
-      width: 420px;
-      height: 684px;
-      min-width: 0;
-    }
-    .auth-brand-col {
-      display: flex;
-      width: 420px;
-      height: 684px;
-    }
-  }
-
-  /* ═══ حالت هاور/انتخاب تب‌های ثبت‌نام و ورود — CSS خام ═══ */
-  .auth-tab {
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-  .auth-tab:hover {
-    background-color: rgba(207, 254, 0, 0.12);
-    color: #cffe00;
-  }
-  .auth-tab.active {
-    background-color: rgba(207, 254, 0, 0.16);
-    color: #cffe00;
-  }
-
-  .birth-month-select,
-  .birth-month-select option {
-    font-family: 'YekanBakh', sans-serif !important;
-  }
+  *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden} button,input,select{font:inherit}
+  .auth-page{position:relative;display:flex;align-items:center;justify-content:center;padding:16px;background:#0c0c10;color:#fff;font-family:YekanBakh,IRANSansXFaNum,sans-serif}
+  .auth-glow{position:fixed;border-radius:50%;filter:blur(100px);background:#cffe00;opacity:.1;pointer-events:none}.auth-glow-one{width:380px;height:380px;top:-170px;right:-100px}.auth-glow-two{width:330px;height:330px;bottom:-170px;left:-90px}
+  .auth-shell{position:relative;z-index:1;width:min(820px,100%);display:grid;grid-template-columns:minmax(0,410px) minmax(0,410px);background:#111116;border:1px solid #252530;border-radius:24px;overflow:hidden;box-shadow:0 26px 80px rgba(0,0,0,.46)}
+  .auth-form-col{min-width:0;padding:25px 30px;overflow:hidden}.auth-logo{height:44px;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:19px;text-decoration:none}.auth-logo img:first-child{width:45px;height:45px}.auth-logo img:last-child{width:112px;max-height:31px}
+  .step-stage{position:relative;width:100%;transition:height .22s ease}.auth-step{position:absolute;inset:0 0 auto;opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:.22s ease}.auth-step.active{opacity:1;visibility:visible;pointer-events:auto;transform:none}
+  .auth-step h1{font-size:19px;line-height:1.4;text-align:center;margin:0 0 5px;font-weight:900}.auth-subtitle{text-align:center;color:#7f9b83;font-size:11.5px;line-height:1.75;margin:0 0 18px}.auth-subtitle strong{color:#cffe00;display:inline-block}
+  .field-label{display:block;color:#b7cbb9;font-size:11px;font-weight:700;margin:0 0 6px}.field-label b{color:#f05c5c}.field-label span{color:#68806c;font-weight:500}
+  .field-wrap{height:43px;display:flex;align-items:center;gap:10px;padding:0 13px;margin-bottom:5px;background:#18181f;border:1px solid #292935;border-radius:11px;transition:border-color .16s,box-shadow .16s}.field-wrap:focus-within{border-color:#cffe00;box-shadow:0 0 0 3px rgba(207,254,0,.07)}.field-wrap.has-error,.birth-grid.has-error{border-color:#f05c5c}.field-wrap i{width:15px;color:#66806b;font-size:13px;text-align:center}.field-wrap input{width:100%;min-width:0;height:100%;border:0;outline:0;background:transparent;color:#fff;font-size:14px}.field-wrap input::placeholder,.birth-grid input::placeholder{color:#526456}
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-text-fill-color:#fff!important;caret-color:#fff!important;-webkit-box-shadow:0 0 0 1000px #18181f inset!important;box-shadow:0 0 0 1000px #18181f inset!important;border-radius:8px!important;transition:background-color 99999s ease-out!important}
+  .field-error{font-size:10.5px;color:#f07070;margin:0 2px 7px}.field-error.center{text-align:center}.hidden{display:none!important}
+  .primary-action{width:100%;height:44px;border:0;border-radius:11px;background:#cffe00;color:#07170d;display:flex;align-items:center;justify-content:center;gap:9px;font-size:13.5px;font-weight:900;cursor:pointer;transition:transform .14s,filter .14s;margin-top:11px}.primary-action:hover{filter:brightness(.92)}.primary-action:active{transform:scale(.99)}.primary-action:disabled{opacity:.55;cursor:not-allowed}
+  .social-separator{display:flex;align-items:center;gap:10px;color:#657a69;font-size:10.5px;margin:17px 0 12px}.social-separator:before,.social-separator:after{content:"";height:1px;background:#272730;flex:1}.social-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.social-method{position:relative;height:64px;border:1px solid #292935;border-radius:11px;background:#18181f;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}.social-method>span:nth-child(2){font-size:10.5px;font-weight:800}.social-method em{position:absolute;top:5px;left:5px;font-style:normal;font-size:7px;color:#f5a35d}.social-icon{width:23px;height:23px;display:grid;place-items:center}.social-icon img{width:18px;height:18px}.social-icon.google{color:#b7cbb9}
+  .back-action{border:0;background:transparent;color:#718877;font-size:11px;cursor:pointer;padding:0;margin:0 0 13px;display:flex;gap:6px;align-items:center}.otp-boxes{display:flex;justify-content:center;gap:8px;margin:24px 0 12px}.otp-box{width:48px;height:54px;border:1px solid #292935;border-radius:11px;background:#18181f;color:#fff;text-align:center;outline:0;font-size:20px;font-weight:900}.otp-box:focus{border-color:#cffe00;box-shadow:0 0 0 3px rgba(207,254,0,.07)}.otp-box.has-error{border-color:#f05c5c}.resend-row{text-align:center;color:#718877;font-size:11px;margin-top:18px}.resend-row button{border:0;background:transparent;color:#cffe00;font-weight:800;cursor:pointer}.resend-row button:disabled{color:#667569;cursor:not-allowed}.resend-row span{margin-right:4px}
+  .name-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.birth-grid{height:43px;display:grid;grid-template-columns:.75fr 1.25fr 1fr;gap:7px;margin-bottom:5px}.birth-grid input,.birth-grid select{width:100%;min-width:0;border:1px solid #292935;border-radius:11px;background:#18181f;color:#fff;text-align:center;outline:0;font-size:12px;padding:0 6px}.birth-grid select,.birth-grid option{font-family:YekanBakh,sans-serif}.birth-grid input:focus,.birth-grid select:focus{border-color:#cffe00}.profile-submit{margin-top:12px}
+  .auth-profile-height-reserver{height:58px}.auth-consent{display:flex;align-items:flex-start;gap:9.6px;margin:11px 1px 0;color:#8ea891;font-size:12.6px;line-height:1.8;cursor:pointer}.auth-consent input{width:18px;height:18px;flex:0 0 auto;margin:2px 0 0;accent-color:#cffe00}.auth-consent a{color:#cffe00;text-decoration:underline;text-underline-offset:2px}
+  .auth-brand-col{position:relative;min-height:520px;border-right:1px solid #252530;background:#09090c;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.brand-orbit{position:absolute;width:290px;height:290px;border-radius:50%;background:#cffe00;opacity:.09;filter:blur(75px)}.brand-icon{position:relative;width:80px;height:80px;margin-bottom:16px}.brand-logo{position:relative;width:145px;margin-bottom:12px}.auth-brand-col p{position:relative;color:#cffe00;font-size:12px}
+  .auth-loading{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;background:rgba(10,10,14,.66);backdrop-filter:blur(5px);opacity:0;visibility:hidden;pointer-events:none;transition:.16s;color:#fff;font-size:12px;font-weight:800}.auth-loading.is-visible{opacity:1;visibility:visible;pointer-events:auto}.auth-loading-spinner{width:30px;height:30px;border:3px solid rgba(207,254,0,.2);border-top-color:#cffe00;border-radius:50%;animation:auth-spin .7s linear infinite}@keyframes auth-spin{to{transform:rotate(360deg)}}
+  @keyframes auth-shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}.shake-effect{animation:auth-shake .3s ease}
+  @media(max-width:767px){.auth-page{padding:12px}.auth-shell{display:block;width:min(410px,100%);border-radius:20px}.auth-brand-col{display:none}.auth-form-col{padding:21px 20px}.auth-logo{margin-bottom:16px}.auth-step h1{font-size:18px}.auth-subtitle{margin-bottom:14px}.social-methods{gap:6px}.social-method{height:58px}.otp-box{width:min(48px,16vw);height:51px}.name-grid{gap:7px}}
+  @media(max-height:650px){.auth-form-col{padding-top:15px;padding-bottom:15px}.auth-logo{height:36px;margin-bottom:10px}.auth-logo img:first-child{width:38px;height:38px}.auth-logo img:last-child{width:100px}.auth-subtitle{margin-bottom:10px}.field-wrap,.birth-grid{height:39px}.primary-action{height:41px}.social-separator{margin:12px 0 9px}.social-method{height:52px}.auth-brand-col{min-height:490px}}
 </style>

@@ -71,19 +71,13 @@ class ReferralProgramService
             $signupDeviceHash = $this->deviceHash($request);
 
             if ($settings->registration_gift_enabled && $settings->registration_gift_tokens > 0) {
-                $registrationRisk = $this->registrationGiftRiskReason(
-                    $settings,
-                    $invitee,
-                    $signupIpHash,
-                    $signupDeviceHash,
-                );
                 $reward = $this->createAndPayReward(
                     user: $invitee,
                     amount: $settings->registration_gift_tokens,
                     type: 'registration_gift',
                     eventKey: 'registration-gift:'.$invitee->id,
                     settings: $settings,
-                    pendingReason: $registrationRisk,
+                    pendingReason: null,
                     ipHash: $signupIpHash,
                     deviceHash: $signupDeviceHash,
                 );
@@ -292,7 +286,10 @@ class ReferralProgramService
 
             $before = (int) $user->tokens;
             $after = $before + (int) $locked->amount;
-            $user->forceFill(['tokens' => $after])->save();
+            $user->forceFill([
+                'tokens' => $after,
+                'promotional_tokens' => $user->promotionalTokenBalance() + (int) $locked->amount,
+            ])->save();
 
             TokenLog::query()->create([
                 'user_id' => $user->id,
@@ -343,7 +340,7 @@ class ReferralProgramService
                 ->where('status', 'paid')
                 ->sum('amount');
             if ($spent + $amount > $settings->campaign_token_budget) {
-                $pendingReason = 'سقف کل توکن کمپین تکمیل شده است.';
+                $pendingReason = 'سقف کل اعتبار کمپین تکمیل شده است.';
             }
         }
 
@@ -367,7 +364,10 @@ class ReferralProgramService
         $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
         $before = (int) $lockedUser->tokens;
         $after = $before + $amount;
-        $lockedUser->forceFill(['tokens' => $after])->save();
+        $lockedUser->forceFill([
+            'tokens' => $after,
+            'promotional_tokens' => $lockedUser->promotionalTokenBalance() + $amount,
+        ])->save();
 
         $reward->update([
             'balance_before' => $before,

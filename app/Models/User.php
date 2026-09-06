@@ -155,6 +155,46 @@ class User extends Authenticatable
         return $this->hasMany(UserUpload::class, 'user_id');
     }
 
+    public function galleryItems(): HasMany
+    {
+        return $this->hasMany(UserGalleryItem::class, 'user_id');
+    }
+
+    public function gallerySetting(): HasOne
+    {
+        return $this->hasOne(UserGallerySetting::class, 'user_id');
+    }
+
+    public function galleryPreference(): HasOne
+    {
+        return $this->hasOne(UserGalleryPreference::class, 'user_id');
+    }
+
+    public function gallerySuggestions(): HasMany
+    {
+        return $this->hasMany(UserGallerySuggestion::class, 'user_id');
+    }
+
+    public function galleryRecreations(): HasMany
+    {
+        return $this->hasMany(UserGalleryRecreation::class, 'user_id');
+    }
+
+    public function galleryCampaigns(): HasMany
+    {
+        return $this->hasMany(UserGalleryCampaign::class, 'user_id');
+    }
+
+    public function galleryNotifications(): HasMany
+    {
+        return $this->hasMany(UserGalleryNotification::class, 'user_id');
+    }
+
+    public function galleryCostEvents(): HasMany
+    {
+        return $this->hasMany(UserGalleryCostEvent::class, 'user_id');
+    }
+
     public function faceProfiles(): HasMany
     {
         return $this->hasMany(FaceProfile::class);

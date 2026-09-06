@@ -18,6 +18,7 @@ class Plan extends Model
         'slug',
         'price',
         'tokens',
+        'face_profile_limit',
         'image_path',
         'short_description',
         'description',
@@ -40,11 +41,15 @@ class Plan extends Model
         'starts_at',
         'ends_at',
         'archived_at',
+        'model_tier_key',
+        'show_model_tier',
+        'home_pricing_config',
     ];
 
     protected $casts = [
         'price' => 'integer',
         'tokens' => 'integer',
+        'face_profile_limit' => 'integer',
         'compare_at_price' => 'integer',
         'tags' => 'array',
         'features' => 'array',
@@ -54,6 +59,8 @@ class Plan extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'archived_at' => 'datetime',
+        'show_model_tier' => 'boolean',
+        'home_pricing_config' => 'array',
     ];
 
     /**
@@ -122,6 +129,8 @@ class Plan extends Model
             'bonus_tokens' => (int) ($override['bonus_tokens'] ?? 0),
             'visible' => (bool) ($override['visible'] ?? true),
             'purchasable' => (bool) ($override['purchasable'] ?? true),
+            'model_tier_key' => $this->model_tier_key ?: 'free',
+            'show_model_tier' => (bool) $this->show_model_tier,
         ];
     }
 }

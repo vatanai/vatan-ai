@@ -5,6 +5,7 @@
   (که در HomeSectionRenderService با یک Query گروه‌بندی‌شده آماده شده) خوانده می‌شود.
 --}}
 @php $hbTabsId = 'hb-tabs-' . $section->id; @endphp
+@php $hbTabsRowsClass = (string) $section->setting('display_rows', '1') === '2' ? 'hb-rows-2' : ''; @endphp
 <div id="{{ $hbTabsId }}">
   <div class="hb-tabs-row">
     <button type="button" class="hb-tab-pill is-active"
@@ -21,7 +22,7 @@
   </div>
 
   <div class="hb-tabs-panel is-active" id="{{ $hbTabsId }}-panel-all">
-    <div class="home-cards-scroll">
+    <div class="home-cards-scroll {{ $hbTabsRowsClass }}">
       @foreach(($allTabProducts ?? collect()) as $product)
         <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image:url('{{ $product->displayImageUrl() }}')">
           <div class="home-card-overlay"></div>
@@ -37,7 +38,7 @@
 
   @foreach($categories as $hbTabIndex => $category)
     <div class="hb-tabs-panel" id="{{ $hbTabsId }}-panel-{{ $category->id }}">
-      <div class="home-cards-scroll">
+      <div class="home-cards-scroll {{ $hbTabsRowsClass }}">
         @foreach(($productsByCategory[$category->id] ?? collect()) as $product)
           <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
             <div class="home-card-overlay"></div>

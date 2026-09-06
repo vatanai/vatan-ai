@@ -115,7 +115,7 @@ class ProductBuildSchema
             'login_url' => route('login', ['redirect' => request()->fullUrl()]),
             'is_authenticated' => auth()->check(),
             'face_profiles' => $faceProfiles,
-            'profile_url' => route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']),
+            'profile_url' => route('app.profile', ['tab' => 'grid']),
         ];
     }
 
@@ -148,6 +148,9 @@ class ProductBuildSchema
                     $required = 'nullable';
                 }
                 $uploadKey = "uploads.{$field['id']}";
+                if (request()->filled('gallery_item_id') && in_array($field['type'], ['image_upload', 'multi_image'], true)) {
+                    $required = 'nullable';
+                }
                 $rules[$uploadKey] = [$required];
                 $maxKb = max(1, (int) ($field['max_size_mb'] ?: 10)) * 1024;
                 $fileRules = ['file', "max:{$maxKb}"];

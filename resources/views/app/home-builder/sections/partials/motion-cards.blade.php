@@ -1,4 +1,4 @@
-<div class="hb-motion-row hb-motion-row--{{ $motionVariant }}">
+<div class="hb-motion-row hb-motion-row--{{ $motionVariant }} {{ (string) $section->setting('display_rows', '1') === '2' ? 'hb-rows-2' : '' }}">
   @foreach($products as $motionIndex => $product)
     <a class="hb-motion-card" href="{{ route('app.product', $product->route_slug) }}" style="--hb-motion-index:{{ $motionIndex }}">
       <div class="hb-motion-media" style="background-image:url('{{ $product->displayImageUrl() }}')">

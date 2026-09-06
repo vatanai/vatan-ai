@@ -38,11 +38,11 @@
       <span class="app-footer__dot" aria-hidden="true"></span>
       <a href="{{ route('pricing.index') }}">تعرفه‌ها</a>
       <span class="app-footer__dot" aria-hidden="true"></span>
-      <span class="app-footer__pending" title="بزودی" aria-label="قوانین — بزودی">قوانین</span>
+      <a href="{{ route('privacy') }}">قوانین</a>
       <span class="app-footer__dot" aria-hidden="true"></span>
       <a href="{{ route('privacy') }}">حریم خصوصی</a>
       <span class="app-footer__dot" aria-hidden="true"></span>
-      <a href="https://t.me/vatanstudio_bot" target="_blank" rel="noopener noreferrer">پشتیبانی</a>
+      <a href="{{ route('support.index') }}">پشتیبانی</a>
     </nav>
   </div>
 </footer>

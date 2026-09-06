@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class ServiceCreditController extends Controller
@@ -21,11 +22,25 @@ class ServiceCreditController extends Controller
         ServiceCreditSynchronizer $synchronizer,
         ServiceCreditTransactionReport $transactionReport,
         Request $request
-    ): View
+    ): View|Response
     {
+        // این جدول در حالت پیش‌فرض گزارش خروجی‌های واقعی کاربران است؛ سایر
+        // رخدادهای مالی و آزمایشگاهی همچنان از فیلتر «منبع» در دسترس هستند.
+        if (! $request->query->has('source')) {
+            $request->merge(['source' => 'user']);
+        }
+
+        if ($request->boolean('usage_table')) {
+            return response()->view(
+                'admin.service-credits.partials.usage-table',
+                $transactionReport->build($request)
+            );
+        }
+
         $synchronizer->sync();
         $data = $overview->get();
         $report = $transactionReport->build($request);
+        $data['creditAlerts'] = $data['alerts'] ?? collect();
         return view('admin.service-credits.index', [...$data, ...$report]);
     }
 
@@ -37,10 +52,12 @@ class ServiceCreditController extends Controller
             'currency' => ['required', 'in:USD,IRR'],
             'manual_balance' => ['required', 'numeric', 'min:0'],
             'low_balance_threshold' => ['nullable', 'numeric', 'min:0'],
+            'critical_balance_threshold' => ['nullable', 'numeric', 'min:0'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
         $data['sync_driver'] = 'manual';
         $data['show_on_dashboard'] = $request->boolean('show_on_dashboard');
+        $data['alerts_enabled'] = $request->boolean('alerts_enabled');
         ServiceCreditAccount::create($data);
         return back()->with('success', 'اکانت جدید اضافه شد.');
     }
@@ -50,11 +67,13 @@ class ServiceCreditController extends Controller
         $data = $request->validate([
             'manual_balance' => ['required', 'numeric', 'min:0'],
             'low_balance_threshold' => ['nullable', 'numeric', 'min:0'],
+            'critical_balance_threshold' => ['nullable', 'numeric', 'min:0'],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
         $data['show_on_dashboard'] = $request->boolean('show_on_dashboard');
+        $data['alerts_enabled'] = $request->boolean('alerts_enabled');
         $account->update($data);
-        foreach (['openrouter', 'liara', 'fal', 'replicate'] as $provider) {
+        foreach (['openrouter', 'fal', 'replicate', 'melipayamak'] as $provider) {
             Cache::forget('finance.' . $provider . '_credits');
         }
         return back()->with('success', 'تنظیمات اکانت ذخیره شد.');

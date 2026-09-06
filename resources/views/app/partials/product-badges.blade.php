@@ -1,5 +1,5 @@
 {{-- ═══════════════════════════════════════════════════════════════
-     پارشیال: دسته‌بندی + تعداد ساخت (در صورت وجود) + قیمت/توکن (نسخه دسکتاپ)
+     پارشیال: دسته‌بندی + تعداد ساخت (در صورت وجود) + قیمت/اعتبار (نسخه دسکتاپ)
      موبایل: زیر عنوان/توضیح کوتاه | دسکتاپ: زیر ردیف سیو/اشتراک
      ═══════════════════════════════════════════════════════════════ --}}
 @php
@@ -23,7 +23,7 @@
 
   @if($product->pricing_model === 'per_credit' && $product->credit_cost > 0)
     <span class="hidden lg:inline-flex px-3 h-8 items-center rounded-full bg-[var(--bg-surface)] border border-[var(--orange)] text-[11px] font-bold text-[var(--orange)]">
-      <i class="fa-solid fa-bolt text-[10px] ml-1.5"></i>{{ $product->credit_cost }} توکن
+      <i class="fa-solid fa-bolt text-[10px] ml-1.5"></i>{{ $product->credit_cost }} اعتبار
     </span>
   @elseif($product->pricing_model === 'free')
     <span class="hidden lg:inline-flex px-3 h-8 items-center rounded-full bg-[var(--bg-surface)] border border-[var(--green)] text-[11px] font-bold text-[var(--green)]">

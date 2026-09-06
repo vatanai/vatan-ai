@@ -127,10 +127,15 @@ body.light {
 
 .tb-breadcrumb {
   display: flex; align-items: center; gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: 12.5px; color: var(--text-soft);
 }
-.tb-breadcrumb .active-crumb { color: var(--text-h); font-weight: 700; }
-.tb-breadcrumb i { font-size: 9px; }
+.tb-breadcrumb .breadcrumb-ancestor { color: var(--text-soft); text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.tb-breadcrumb .breadcrumb-ancestor:hover { color: var(--primary); }
+.tb-breadcrumb .active-crumb { color: var(--text-h); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.tb-breadcrumb .breadcrumb-separator { color: var(--text-soft); font-size: 9px; flex: none; }
 
 /* نشانگر شماره نسخه پنل مدیریت — عمداً کم‌رنگ و کوچک (نباید توی چشم بزنه) */
 .tb-version {
@@ -160,6 +165,48 @@ body.light {
   transform: translateY(-50%);
   color: var(--text-soft); font-size: 13px; pointer-events: none;
 }
+.tb-search-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  display: grid;
+  width: min(300px, 80vw);
+  max-height: 330px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+.tb-search-results[hidden] { display: none; }
+.tb-search-results__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 11px;
+  text-decoration: none;
+}
+.tb-search-results__item:hover {
+  background: var(--input-bg);
+  color: var(--primary);
+}
+.tb-search-results__item i {
+  flex: none;
+  color: var(--primary);
+  font-size: 10px;
+}
+.tb-search-results__empty {
+  padding: 12px 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+  text-align: center;
+}
 
 /* دکمه‌ی میانبر شبیه به چیپ (مثل دکمه CRM) */
 .tb-chip-btn {
@@ -177,6 +224,24 @@ body.light {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--danger); border: 2px solid var(--topbar-bg);
 }
+
+.tb-alert-wrap{position:relative;display:flex;align-items:center}
+.tb-alert-trigger{position:relative;border:0!important}
+.tb-notif-count{position:absolute;top:2px;right:1px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--danger);border:2px solid var(--topbar-bg);color:var(--topbar-bg);font-size:8px;font-weight:900;line-height:12px;text-align:center}
+.tb-alert-popover{position:absolute;top:46px;left:0;width:330px;z-index:100;overflow:hidden;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-card);direction:rtl}
+.tb-alert-popover[hidden]{display:none}
+.tb-alert-popover-head{display:flex;align-items:center;justify-content:space-between;padding:12px 13px;border-bottom:1px solid var(--divider);color:var(--text-main);font-size:11px}
+.tb-alert-popover-head span{color:var(--danger);font-size:9px;font-weight:800}
+.tb-alert-item{display:flex;align-items:flex-start;gap:8px;padding:10px 13px;color:var(--danger);text-decoration:none;border-bottom:1px solid var(--divider);transition:background .15s}
+.tb-alert-item:hover{background:var(--input-bg)}
+.tb-alert-item.warning,.tb-alert-item.offline{color:var(--warning)}
+.tb-alert-item>i{margin-top:2px;font-size:12px}
+.tb-alert-item span{min-width:0}
+.tb-alert-item strong,.tb-alert-item small{display:block}
+.tb-alert-item strong{font-size:10px;font-weight:800}
+.tb-alert-item small{margin-top:3px;color:var(--text-soft);font-size:9px;line-height:1.7}
+.tb-alert-popover-link{display:block;padding:10px 13px;color:var(--primary);font-size:10px;font-weight:800;text-decoration:none}
+@media(max-width:600px){.tb-alert-popover{position:fixed;top:58px;left:10px;right:10px;width:auto}.tb-notif-count{right:0}}
 
 .tb-divider-v { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
 
@@ -351,10 +416,14 @@ body.light .mini-btn.active {
     transform: translateX(100%);
     transition: transform .28s cubic-bezier(.4,0,.2,1);
     z-index: 400;
+    /* لبه‌ی چند پیکسلی پنلِ خارج‌شده نباید روی جدول و چک‌باکس‌ها
+       کلیک‌پذیر بماند؛ منوی بازشده دوباره تعامل را فعال می‌کند. */
+    pointer-events: none;
   }
   .admin-wrap.sidebar-toggled .mini-rail,
   .admin-wrap.sidebar-toggled .sidebar {
     transform: translateX(0);
+    pointer-events: auto;
   }
   .sidebar { box-shadow: -8px 0 30px rgba(0,0,0,.25); }
 }
@@ -586,6 +655,13 @@ body.light .sub-item.active .sub-dot { box-shadow: 0 0 8px rgba(22,89,79,.45); }
 .sub-sub-item:hover .sub-sub-label { color: var(--text-h); }
 .sub-sub-item.active .sub-sub-label { color: var(--sub-text-active); font-weight: 600; }
 
+/* زیرمنوی عمیق برای گروه‌های تو‌در‌تو؛ با همان توکن‌های موجود و بدون تغییر معماری منو */
+.sub-sub-wrap-deep.open { max-height: 520px; }
+.sub-sub-track-deep { margin-right: 14px; padding-top: 1px; padding-bottom: 4px; }
+.sub-sub-item-deep { margin-right: 10px; margin-left: 12px; padding: 5px 6px; gap: 7px; }
+.sub-sub-item-deep::before { right: -10px; width: 10px; }
+.sub-sub-item-deep .sub-sub-label { font-size: 10.75px; }
+
 /* --- بج‌های وضعیت ("بزودی"، "آینده"، "OpenRouter") --- */
 .nav-status-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 6px; border: 1px solid; flex-shrink: 0; white-space: nowrap; }
 .nav-status-badge.warn { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
@@ -743,22 +819,21 @@ body.light .live-chip { color: #16a34a; }
   .products-table-compact tbody td { padding: 9px 5px; font-size: 11px; }
   .products-table-compact thead th { font-size: 9.5px; letter-spacing: 0; white-space: normal; line-height: 1.45; }
   .products-table-compact th:nth-child(1) { width: 28px !important; }
-  .products-table-compact th:nth-child(2) { width: 44px !important; }
+  .products-table-compact th:nth-child(2) { width: 82px !important; }
   .products-table-compact th:nth-child(3) { width: 145px; }
-  .products-table-compact th:nth-child(4) { width: 62px; }
-  .products-table-compact th:nth-child(5) { width: 72px; }
-  .products-table-compact th:nth-child(6) { width: 100px; }
-  .products-table-compact th:nth-child(7) { width: 58px; }
-  .products-table-compact th:nth-child(8) { width: 64px; }
-  .products-table-compact th:nth-child(9) { width: 98px; }
-  .products-table-compact th:nth-child(10) { width: 60px; }
-  .products-table-compact th:nth-child(11) { width: 67px; }
-  .products-table-compact th:nth-child(12) { width: 128px; }
-  .products-table-compact th:nth-child(13) { width: 66px; }
+  .products-table-compact th:nth-child(4) { width: 120px; }
+  .products-table-compact th:nth-child(5) { width: 82px; }
+  .products-table-compact th:nth-child(6) { width: 138px; }
+  .products-table-compact th:nth-child(7) { width: 62px; }
+  .products-table-compact th:nth-child(8) { width: 82px; }
+  .products-table-compact th:nth-child(9) { width: 110px; }
+  .products-table-compact th:nth-child(10) { width: 145px; }
+  .products-table-compact th:nth-child(11) { width: 128px; }
   .products-table-compact .td-product > div { overflow: hidden; }
   .products-table-compact .td-product .font-mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .products-table-compact .badge-pro { padding: 3px 5px; font-size: 9px; }
-  .products-table-compact .table-thumb { width: 34px; height: 34px; }
+  .products-table-compact tbody .td-thumb { width: 82px !important; min-width: 82px !important; }
+  .products-table-compact tbody .td-thumb > .table-thumb { width: 72px !important; min-width: 72px !important; max-width: 72px !important; height: 72px !important; min-height: 72px !important; max-height: 72px !important; }
   .products-table-compact .progress-track { width: 30px; }
 }
 
@@ -965,6 +1040,8 @@ body.light .live-chip { color: #16a34a; }
   /* سرِ کارت: چک‌باکس + تصویر + نام محصول در یک ردیف */
   .table-pro tbody td.td-select { order: 1; width: auto; flex: 0 0 auto; padding-left: 8px; }
   .table-pro tbody td.td-thumb  { order: 2; width: auto; flex: 0 0 auto; }
+  .products-table-compact tbody td.td-thumb { width: 92px !important; min-width: 92px !important; flex: 0 0 92px !important; }
+  .products-table-compact tbody td.td-thumb > .table-thumb { width: 80px !important; min-width: 80px !important; max-width: 80px !important; height: 80px !important; min-height: 80px !important; max-height: 80px !important; }
   .table-pro tbody td.td-product{ order: 3; flex: 1 1 auto; min-width: 0; }
 
   /* بقیه‌ی ستون‌ها: هر کدام یک ردیف کامل برچسب:مقدار زیر سرِ کارت */
@@ -978,7 +1055,7 @@ body.light .live-chip { color: #16a34a; }
     font-size: 10.5px; font-weight: 700; color: var(--text-soft);
     flex-shrink: 0;
   }
-  .table-pro tbody td[data-label="عملیات"] { justify-content: flex-start; }
+  .table-pro tbody td[data-label^="عملیات"] { justify-content: center; }
 
   /* حالت خالی جدول: بدون تبدیل به فلکس، تمام عرض کارت */
   .table-pro tbody td.td-empty { order: 0; width: 100%; flex: 1 1 100%; padding: 0; }

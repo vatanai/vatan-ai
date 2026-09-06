@@ -97,6 +97,7 @@
     document.addEventListener('vatan-theme-changed', syncThemeUI);
   }
 
+  syncThemeUI();
   document.querySelectorAll('[data-mobile-theme]').forEach(function (item) {
     item.addEventListener('click', function (e) {
       e.preventDefault();

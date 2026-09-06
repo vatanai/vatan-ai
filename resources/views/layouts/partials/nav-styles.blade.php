@@ -160,21 +160,37 @@
     transform: translate(2px, 2px);
   }
 
-  /* ── باکس نمایش موجودی توکن در هدر (سمت چپ دکمه «بساز») ──
+  /* ── باکس نمایش موجودی اعتبار در هدر (سمت چپ دکمه «بساز») ──
      رنگ‌بندی هماهنگ با تم روز/شب از طریق متغیرهای --bg-card / --border-subtle / --text-primary
-     (همان توکن‌های رنگی که در resources/css/app.css و public/css/profile.css تعریف شده‌اند) */
+     (همان اعتبار‌های رنگی که در resources/css/app.css و public/css/profile.css تعریف شده‌اند) */
   .topnav-token-box {
-    display: flex;
+    display: grid;
+    grid-template-columns: max-content max-content;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    column-gap: 10.2px;
+    direction: ltr;
     height: 32.3px; /* ارتفاع ۱۵٪ کمتر (۳۸px → ۳۲٫۳px) */
-    padding: 0 13px;
+    min-width: 0;
+    padding: 0 8px;
     border-radius: 12px; /* خمیدگی باکس: ۱۲px */
     background: #1a1a1a; /* حالت شب */
     border: 1px solid var(--border-subtle);
     white-space: nowrap;
     flex-shrink: 0;
     transition: opacity 0.15s, border-color 0.15s;
+  }
+  /* عنصر کمکی قدیمی عمداً پنهان است؛ دو ستون اصلی همیشه در یک ردیف می‌مانند. */
+  .topnav-token-box::after {
+    content: '';
+    display: none;
+    width: 20.98px;
+    height: 1px;
+  }
+  .topnav-token-box.is-guest {
+    min-width: 106px;
+    padding-inline: 8px;
+    gap: 12.75px;
   }
   html.light .topnav-token-box {
     background: #1a1a1a;
@@ -188,18 +204,39 @@
     height: 20.98px;
     flex-shrink: 0;
     display: block;
-    order: 1; /* آیکون سمت چپ */
+    align-self: center;
     background: #cffe00;
     -webkit-mask: url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
     mask: url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
   }
+  .topnav-token-value {
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    align-self: center;
+    direction: rtl;
+  }
   .topnav-token-number {
-    font-size: 15.6px; /* ۲۰٪ بزرگتر نسبت به سایز پایه ۱۳px */
+    font-size: 17.16px; /* ۱۰٪ بزرگتر از اندازه قبلی ۱۵٫۶px */
     font-weight: 800;
     color: #ffffff; /* سفید در هر دو حالت (باکس تیره #1a1a1a) */
     font-family: 'YekanBakh', sans-serif; /* فونت عدد: یکان بخ */
     font-feature-settings: "tnum";
-    order: 0; /* عدد سمت راست */
+    direction: rtl;
+    line-height: 1;
+    text-align: center;
+    position: relative;
+    top: 1px;
+  }
+  .topnav-token-gift {
+    color: #ffffff;
+    font-family: 'YekanBakh', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
   }
 
 
@@ -379,7 +416,9 @@
   }
   .topnav-popup input:checked ~ .topnav-popup-window { transform: scale(1); visibility: visible; opacity: 1; }
   .topnav-popup-window .tp-userinfo { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; }
+  .topnav-popup-window .tp-usercopy { display:flex; min-width:0; flex-direction:column; align-items:center; gap:1px; text-align:center; }
   .topnav-popup-window .tp-user-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:800; color:var(--tp-item-color); }
+  .topnav-popup-window .tp-user-plan { color:var(--tp-green); font-size:11px; font-weight:650; opacity:1; white-space:nowrap; }
   html:not(.light) .topnav-popup-window .tp-user-name { color: #fff; }
   html.light .topnav-popup-window .tp-user-name { color: #fff; }
   .topnav-popup-window .tp-user-phone { margin-right: auto; font-size: 12.65px; font-weight: 600; color: var(--tp-item-color); opacity: 0.6; text-align: left; white-space: nowrap; }
@@ -429,7 +468,8 @@
     .topnav-link { padding-left: 10px; padding-right: 10px; font-size: 13px; }
     .sub-btn { min-width: 0; padding: 0 13.2px; }
     .sub-btn span { font-size: 13.2px; }
-    .topnav-token-box { padding: 0 10px; }
+    .topnav-token-box { padding-inline: 8px; column-gap: 10.2px; }
+    .topnav-token-box.is-guest { padding-inline: 8px; column-gap: 12.75px; }
     .topnav-create:hover { width: 88px; }
   }
   /* تبلت کوچک: متن خرید اشتراک مخفی، فقط آیکون */

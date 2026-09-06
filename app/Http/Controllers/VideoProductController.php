@@ -12,6 +12,7 @@ use App\Services\ProductBuildSchema;
 use App\Services\VideoGenerationService;
 use App\Services\VideoProductConfigService;
 use App\Services\VideoModelSchemaService;
+use App\Services\UserGalleryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -84,10 +85,11 @@ class VideoProductController extends Controller
             'source_video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'source_audio' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:20480'],
             'face_profile_id' => ['nullable', 'integer'],
-            'rights_confirmed' => ['accepted'],
         ]);
 
         $user = $request->user();
+        $gallery = app(UserGalleryService::class);
+        $saveToPersonalGallery = $gallery->isEnabledFor($user);
         $sourceImageData = null;
         $sourceUploadPath = null;
         $faceProfile = $this->selectedFaceProfile($request, $user);
@@ -103,11 +105,12 @@ class VideoProductController extends Controller
         }
 
         $sourceVideoUrl = null;
+        $sourceVideoPath = null;
         if ($request->hasFile('source_video')) {
             $file = $request->file('source_video');
-            $path = $file->store('uploads/video-inputs/videos', 'public');
-            $sourceVideoUrl = asset('storage/' . $path);
-            UserUpload::create(['user_id' => $user->id, 'file_path' => $path, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+            $sourceVideoPath = $file->store('uploads/video-inputs/videos', 'public');
+            $sourceVideoUrl = asset('storage/' . $sourceVideoPath);
+            UserUpload::create(['user_id' => $user->id, 'file_path' => $sourceVideoPath, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
         }
         $audioUrl = null;
         if ($request->hasFile('source_audio')) {
@@ -135,6 +138,31 @@ class VideoProductController extends Controller
                 'audio_url' => $audioUrl,
                 'studio_mode' => $studioMode,
             ]);
+
+            if ($saveToPersonalGallery) {
+                if ($sourceUploadPath) {
+                    try {
+                        $sourceImage = $request->file('source_image');
+                        $gallery->capture($user, 'input_image', null, $sourceUploadPath, 'public', (int) ($sourceImage?->getSize() ?? 0), $sourceImage?->getMimeType(), [
+                            'product_id' => $product->id,
+                            'order_id' => $generation->order_id,
+                        ]);
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+                }
+                if ($sourceVideoPath) {
+                    try {
+                        $sourceVideo = $request->file('source_video');
+                        $gallery->capture($user, 'input_video', null, $sourceVideoPath, 'public', (int) ($sourceVideo?->getSize() ?? 0), $sourceVideo?->getMimeType(), [
+                            'product_id' => $product->id,
+                            'order_id' => $generation->order_id,
+                        ]);
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -180,6 +208,9 @@ class VideoProductController extends Controller
             'status' => $generatedVideo->status,
             'video_url' => $generatedVideo->playbackUrl(),
             'error_message' => $generatedVideo->error_message,
+            'active_model' => data_get($generatedVideo->input_payload, 'active_model'),
+            'active_provider' => data_get($generatedVideo->input_payload, 'active_provider'),
+            'attempted_models' => data_get($generatedVideo->input_payload, 'attempted_models', []),
             'remaining_tokens' => $request->user()->fresh()->tokens,
         ]);
     }

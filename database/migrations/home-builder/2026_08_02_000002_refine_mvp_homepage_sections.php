@@ -25,7 +25,7 @@ return new class extends Migration
             'type' => 'product_slider', 'layout' => 'video_spotlight',
             'title_fa' => 'قصه‌ها را به حرکت درآور',
             'subtitle_fa' => 'یک روایت تصویری متفاوت؛ ویدیوهای منتخب در قاب اصلی و مکمل',
-            'settings' => $this->productSettings('video_spotlight', [3, 7, 10], '/app/products?video=1', ['hover_effect' => 'neon_glow']),
+            'settings' => $this->productSettings('video_spotlight', [3, 7, 10], '/app/products?video=1', ['source' => 'video', 'limit' => 5, 'display_rows' => '2', 'hover_effect' => 'neon_glow']),
         ]);
 
         $tabsPosition = (int) DB::table('home_sections')->where('page_key', 'app_home')->where('layout', 'tabs')

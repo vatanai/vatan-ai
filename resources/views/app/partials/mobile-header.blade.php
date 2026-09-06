@@ -1,5 +1,10 @@
 {{-- هدر مشترک موبایل اپ: هوم، اکسپلور، ترندز و پروفایل --}}
-@php $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled; @endphp
+@php
+  $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled;
+  $profilePlanLabel = auth()->check()
+    ? 'پلن ' . auth()->user()->plan_display_name . ' | ' . number_format(auth()->user()->effective_token_balance) . ' اعتبار'
+    : '';
+@endphp
 <header class="app-mobile-header" aria-label="هدر اپلیکیشن" dir="rtl">
   <a href="{{ route('app.home') }}" class="app-mobile-brand" aria-label="رفتن به خانه اپ">
     <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="28" height="28">
@@ -7,14 +12,19 @@
   </a>
 
   <div class="app-mobile-actions">
-      <div class="topnav-token-box app-mobile-token" title="موجودی توکن شما">
-        <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
-        <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
+      <div class="topnav-token-box app-mobile-token {{ auth()->guest() ? 'is-guest' : 'is-authenticated' }}" title="{{ auth()->guest() ? 'هدیه شروع کاربران جدید' : 'موجودی اعتبار شما' }}">
+        <span class="topnav-token-icon" role="img" aria-label="اعتبار"></span>
+        <span class="topnav-token-value">
+          <span class="topnav-token-number">{{ number_format(auth()->check() ? auth()->user()->effective_token_balance : (\App\Models\ReferralSetting::current()->registration_gift_enabled ? \App\Models\ReferralSetting::current()->registration_gift_tokens : 0)) }}</span>
+          @guest<span class="topnav-token-gift">هدیه</span>@endguest
+        </span>
       </div>
 
-    <a href="{{ route('pricing.index') }}" class="sub-btn app-mobile-sub" aria-label="خرید اشتراک">
-      <span><i class="fa-solid fa-crown"></i><span class="sub-label">خرید اشتراک</span></span>
-    </a>
+    @if(! auth()->check() || auth()->user()->hasFreePlan())
+      <a href="{{ route('pricing.index') }}" class="sub-btn app-mobile-sub" aria-label="خرید اشتراک">
+        <span><i class="fa-solid fa-crown"></i><span class="sub-label">خرید اشتراک</span></span>
+      </a>
+    @endif
 
     <label class="topnav-popup app-mobile-profile">
       <input type="checkbox" aria-label="منوی کاربری">
@@ -29,7 +39,7 @@
       <nav class="topnav-popup-window app-mobile-profile-menu">
         @auth
           <div class="tp-userinfo">
-            <span class="tp-user-name">{{ trim((auth()->user()->name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: 'کاربر وطن AI' }}</span>
+            <span class="tp-usercopy"><span class="tp-user-name">{{ trim((auth()->user()->name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: 'کاربر وطن AI' }}</span><span class="tp-user-plan">{{ $profilePlanLabel }}</span></span>
             <span class="tp-user-phone" dir="ltr">{{ auth()->user()->phone ?: '—' }}</span>
           </div>
           <hr>
@@ -44,9 +54,11 @@
 
         @auth
           <ul>
-            <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید توکن</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید اعتبار</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'files', 'file_tab' => 'account']) }}'"><i class="fa-solid fa-wallet"></i><span>حساب و پرداخت‌ها</span></button></li>
             @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
             <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('support.index') }}'"><i class="fa-solid fa-headset"></i><span>پشتیبانی</span></button></li>
             <hr>
             <li><button type="button" class="is-danger" onclick="window.logoutFromCurrentPage(this)"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
           </ul>
@@ -54,7 +66,8 @@
           <ul>
             <li><button type="button" onclick="window.location.href='{{ route('login', ['redirect' => request()->fullUrl()]) }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
             @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
-            <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید توکن</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید اعتبار</span></button></li>
+            <li><button type="button" onclick="window.location.href='{{ route('support.index') }}'"><i class="fa-solid fa-headset"></i><span>پشتیبانی</span></button></li>
           </ul>
         @endauth
       </nav>
@@ -79,9 +92,11 @@
     .app-mobile-brand img { display:block; flex-shrink:0; }
     .app-mobile-wordmark { width:65px; height:auto; }
     .app-mobile-actions { display:flex; align-items:center; gap:8px; min-width:0; direction:rtl; }
-    .app-mobile-header .app-mobile-token { order:1; min-width:58px; height:36px; padding:0 12px; gap:5px; }
-    .app-mobile-header .app-mobile-token .topnav-token-icon { width:20.4px; height:20.4px; transform:translateX(-2px); }
-    .app-mobile-header .app-mobile-token .topnav-token-number { font-size:14.4px; }
+    .app-mobile-header .app-mobile-token { order:1; min-width:0; height:36px; padding:0 8px; column-gap:13.6px; grid-template-columns:max-content max-content; }
+    .app-mobile-header .app-mobile-token.is-guest { min-width:104px; padding-inline:8px; column-gap:17px; }
+    .app-mobile-header .app-mobile-token .topnav-token-icon { width:20.4px; height:20.4px; transform:none; }
+    .app-mobile-header .app-mobile-token .topnav-token-number { font-size:15.84px; }
+    .app-mobile-header .app-mobile-token .topnav-token-gift { font-size:9.5px; }
     .app-mobile-header .app-mobile-sub { order:2; min-width:103.4px; width:auto; height:39.6px; padding:0 9.9px; }
     .app-mobile-header .app-mobile-sub span { font-size:11.55px; gap:4px; }
     .app-mobile-header .app-mobile-sub span i { font-size:13.2px; }
@@ -103,6 +118,7 @@
     .app-mobile-brand img:first-child { width:25px; height:25px; }
     .app-mobile-header .app-mobile-sub { min-width:83.6px; padding-inline:6.6px; }
     .app-mobile-header .app-mobile-sub .sub-label { font-size:9.9px; }
-    .app-mobile-header .app-mobile-token { min-width:54px; padding-inline:7px; }
+    .app-mobile-header .app-mobile-token { min-width:0; padding-inline:6px; column-gap:13.6px; }
+    .app-mobile-header .app-mobile-token.is-guest { min-width:100px; padding-inline:6px; column-gap:17px; }
   }
 </style>

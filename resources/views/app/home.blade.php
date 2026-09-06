@@ -33,12 +33,16 @@
           </div>
           <div class="ig-search-results" id="ig-search-results" hidden></div>
         </div>
+        <button type="submit" class="ig-generate ig-generate--mobile" aria-label="جست‌وجوی هوشمند">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <span>جست و جوی هوشمند</span>
+        </button>
       </form>
 
       {{-- ردیف کنترل‌ها --}}
       <div class="ig-controls">
         {{-- ثبت فرم، کاربر را به صفحه نتایج کامل کاتالوگ می‌برد. --}}
-        <button type="submit" form="home-search-form" class="ig-generate" data-ig="generate">
+        <button type="submit" form="home-search-form" class="ig-generate ig-generate--desktop" data-ig="generate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <span>جست و جوی هوشمند</span>
         </button>
@@ -515,6 +519,7 @@
   }
   .ig-generate:hover { filter: brightness(0.92); }
   .ig-generate svg { width: 18px; height: 18px; }
+  .ig-generate--mobile { display: none; }
 
   /* ═══════════════ آیتم‌های سریع (جایگزین پیل‌های مدل/نسبت/...) ═══════════════ */
   .ig-quick-row {
@@ -671,27 +676,45 @@
 
   @media (max-width: 639px) {
     .ig-box { padding: 12px; }
-    .ig-controls { gap: 9px; }
-    .ig-quick-row { gap: 5px; }
-    .ig-generate,
+    .ig-top { gap: 10px; margin-bottom: 12px; }
+    .ig-controls { display: block; }
+    .ig-left { width: 100%; }
+    .ig-generate--desktop { display: none; }
+    .ig-generate--mobile {
+      display: flex;
+      flex: 0 0 85.8px;
+      width: 85.8px;
+      height: 32.4px;
+      min-height: 32.4px;
+      padding: 4px 5px;
+      border-radius: 10px;
+      font-size: 8.5px;
+      line-height: 1.2;
+      white-space: normal;
+    }
+    .ig-generate--mobile svg { width: 14px; height: 14px; flex: none; }
+    .ig-quick-row {
+      display: grid;
+      width: 100%;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+    }
     .ig-quick-item {
-      height: 36px;
-      min-height: 36px;
+      width: 100%;
+      height: 32.4px;
+      min-height: 32.4px;
       padding: 3px;
       border-radius: 9px;
     }
-    .ig-generate { font-size: 9px; gap: 3px; }
-    .ig-generate { flex: 0.65 1 0; }
-    .ig-generate svg { width: 13px; height: 13px; }
     .ig-quick-item {
       gap: 3px;
-      flex-basis: calc(20% - 5px);
+      min-width: 0;
     }
     .ig-quick-icon { width: 20px; height: 20px; right: 5px; border-radius: 6px; }
     .ig-quick-icon svg { width: 13px; height: 13px; }
     .ig-quick-text { padding-right: 22px; }
-    .ig-quick-title { font-size: 8px; }
-    .ig-quick-sub { font-size: 6.5px; line-height: 1.15; }
+    .ig-quick-title { font-size: 8.4px; }
+    .ig-quick-sub { font-size: 6.8px; line-height: 1.15; }
     .ig-attachments { margin-right:0; }
   }
 
@@ -939,6 +962,25 @@
     }
 
     .home-section-title-right { font-size: 16px; }
+  }
+
+  /* تبلت: فاصله و اندازه‌ی کنترل‌ها بین موبایل و دسکتاپ تنظیم می‌شود تا
+     متن دوخطی کارت‌ها داخل قاب بماند و دکمه‌ی جست‌وجو هم‌ارتفاع آن‌ها باشد. */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .home-page { max-width: 760px; padding-inline: 22px; }
+    .ig-box { padding: 14px; }
+    .ig-controls { gap: 10px; }
+    .ig-generate--desktop,
+    .ig-quick-item { height: 44px; min-height: 44px; }
+    .ig-generate--desktop { flex-basis: 132px; padding-inline: 7px; gap: 5px; font-size: 12px; }
+    .ig-generate--desktop svg { width: 16px; height: 16px; }
+    .ig-quick-row { gap: 6px; }
+    .ig-quick-item { padding: 4px 5px; }
+    .ig-quick-icon { width: 24px; height: 24px; right: 5px; border-radius: 7px; }
+    .ig-quick-icon svg { width: 15px; height: 15px; }
+    .ig-quick-text { padding-right: 26px; }
+    .ig-quick-title { font-size: 10px; line-height: 1.15; }
+    .ig-quick-sub { font-size: 8px; line-height: 1.15; }
   }
 
   /* ══════════════════════════════════

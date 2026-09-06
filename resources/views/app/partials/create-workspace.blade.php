@@ -18,11 +18,20 @@
   $basicTypes = ['info','section','divider','image_upload','multi_image','textarea','prompt','text','number','radio','gender','select','multi_select','button_group'];
   $outputTypes = ['strength','slider','color','switch','checkbox','style_preset'];
   $advancedTypes = ['negative_prompt','seed','file_upload'];
-  $ratioLabels = ['auto' => 'خودکار', '1:1' => 'مربع', '9:16' => '۹:۱۶', '16:9' => '۱۶:۹', '2:3' => '۲:۳', '3:2' => '۳:۲', '3:4' => '۳:۴ عمودی', '4:3' => '۴:۳'];
+  $ratioTitles = ['3:4' => 'عمودی', '4:3' => 'افقی', '1:1' => 'مربع', '4:5' => 'عمودی', '9:16' => 'عمودی', '16:9' => 'افقی', '2:3' => 'عمودی', '3:2' => 'افقی'];
   $outputRatios = array_values(array_filter((array) ($product['output_aspect_ratios'] ?? [])));
-  $outputResolutions = array_values(array_filter((array) ($product['output_resolutions'] ?? ['720', '1080'])));
-  $defaultRatio = (string) ($product['default_output_aspect_ratio'] ?? '3:4');
-  $defaultResolution = (string) ($product['default_output_resolution'] ?? '720');
+  $supportedOutputResolutions = \App\Models\Product::supportedOutputResolutions();
+  $outputResolutions = array_values(array_intersect(
+    $supportedOutputResolutions,
+    array_map('strval', (array) ($product['output_resolutions'] ?? $supportedOutputResolutions))
+  ));
+  $outputResolutions = $outputResolutions ?: \App\Models\Product::DEFAULT_OUTPUT_RESOLUTIONS;
+  $defaultRatio = in_array('3:4', $outputRatios, true)
+    ? '3:4'
+    : (string) ($product['default_output_aspect_ratio'] ?? ($outputRatios[0] ?? '3:4'));
+  $defaultResolution = in_array((string) ($product['default_output_resolution'] ?? ''), $outputResolutions, true)
+    ? (string) $product['default_output_resolution']
+    : ($outputResolutions[0] ?? '720');
 @endphp
 
 <div class="cw-page" dir="rtl" data-instance="{{ $instance }}" data-generate-url="{{ $product['generate_url'] ?? '' }}" data-download-track-url="{{ $product['download_track_url'] ?? '' }}" data-login-url="{{ $product['login_url'] ?? route('login', ['redirect' => request()->fullUrl()]) }}" data-authenticated="{{ ($product['is_authenticated'] ?? false) ? '1' : '0' }}" data-preview="{{ ($previewMode ?? false) ? '1' : '0' }}">
@@ -50,7 +59,7 @@
           <div class="cw-redesign-product-copy">
             <h1>{{ $product['name'] }}</h1>
             <span class="cw-redesign-time">{{ $product['estimated_time'] }}</span>
-            <strong class="cw-redesign-cost"><i class="fa-solid fa-bolt"></i> {{ $product['cost'] }} توکن</strong>
+            <strong class="cw-redesign-cost"><i class="fa-solid fa-bolt"></i> {{ $product['cost'] }} اعتبار</strong>
           </div>
         </div>
       @endif
@@ -75,15 +84,33 @@
             <input type="hidden" name="identity_preservation" value="1">
           @endif
           <div class="cw-tab-panel active" data-panel="basic">
+            @if(count($outputRatios))
+              <div class="cw-field cw-output-options" data-output-options>
+                <label class="cw-label"><span>سایز خروجی</span><small>نسبت تصویر موردنظر را انتخاب کنید</small></label>
+                <details class="cw-ratio-dropdown" data-ratio-dropdown>
+                  <summary data-ratio-summary><b dir="ltr">{{ $defaultRatio }} {{ $ratioTitles[$defaultRatio] ?? '' }}</b></summary>
+                  <div class="cw-ratio-menu" role="radiogroup" aria-label="انتخاب سایز خروجی">
+                    @foreach($outputRatios as $ratio)
+                      <label class="cw-ratio-option">
+                        <input type="radio" name="output[aspect_ratio]" value="{{ $ratio }}" data-ratio-label="{{ $ratio }} {{ $ratioTitles[$ratio] ?? '' }}" @checked($ratio === $defaultRatio)>
+                        <span><i class="cw-ratio-frame" style="--ratio:{{ str_replace(':', '/', $ratio) }}"></i><span class="cw-ratio-option-meta" dir="rtl"><b dir="ltr">{{ $ratio }}</b><small>{{ $ratioTitles[$ratio] ?? '' }}</small></span></span>
+                      </label>
+                    @endforeach
+                  </div>
+                </details>
+              </div>
+            @endif
+            @include('app.partials.face-source-selector')
             @foreach($redesignFields as $field)
               @include('app.partials.create-field', ['field' => $field, 'instance' => $instance])
             @endforeach
           </div>
         @else
         <div class="cw-tab-panel active" data-panel="basic">
+          @include('app.partials.face-source-selector')
           @if(!empty($product['identity']['available']))
             <div class="cw-identity-option" data-identity-extra="{{ (int)$product['identity']['extra_cost'] }}">
-              <label class="cw-toggle"><span><b>حفظ دقیق شباهت چهره</b><small>Grade A · کیفیت High · +{{ (int)$product['identity']['extra_cost'] }} توکن</small></span><input name="identity_preservation" value="1" type="checkbox" data-identity-toggle><i></i></label>
+              <label class="cw-toggle"><span><b>حفظ دقیق شباهت چهره</b><small>Grade A · کیفیت High · +{{ (int)$product['identity']['extra_cost'] }} اعتبار</small></span><input name="identity_preservation" value="1" type="checkbox" data-identity-toggle><i></i></label>
               <p><i class="fa-solid fa-images"></i> برای نتیجه بهتر ۲ تا {{ (int)$product['identity']['max_images'] }} عکس واضح از زوایای مختلف اضافه کنید. هر عکس مرجع پردازش بیشتری مصرف می‌کند؛ سقف ۳ عکس است.</p>
             </div>
           @endif
@@ -95,27 +122,17 @@
           @if(count($outputRatios))
             <div class="cw-field cw-output-options" data-output-options>
               <label class="cw-label"><span>سایز خروجی</span><small>نسبت تصویر موردنظر را انتخاب کنید</small></label>
-              <div class="cw-ratios">
-                @foreach($outputRatios as $ratio)
-                  <label>
-                    <input type="radio" name="output[aspect_ratio]" value="{{ $ratio }}" {{ $ratio === $defaultRatio ? 'checked' : '' }}>
-                    <span><i style="--ratio:{{ $ratio === 'auto' ? '1/1' : str_replace(':', '/', $ratio) }}"></i><b>{{ $ratioLabels[$ratio] ?? $ratio }}</b><small>{{ $ratio }}</small></span>
-                  </label>
-                @endforeach
-              </div>
-            </div>
-          @endif
-          @if(count($outputResolutions))
-            <div class="cw-field cw-output-options" data-output-options>
-              <label class="cw-label"><span>کیفیت خروجی</span><small>کیفیت تصویر نهایی را انتخاب کنید</small></label>
-              <div class="cw-resolution">
-                @foreach($outputResolutions as $resolution)
-                  <label>
-                    <input type="radio" name="output[quality]" value="{{ $resolution }}" {{ $resolution === $defaultResolution ? 'checked' : '' }}>
-                    <span><b>{{ $resolution }}</b><small>{{ $resolution === '720' ? 'استاندارد' : 'بالاتر' }}</small></span>
-                  </label>
-                @endforeach
-              </div>
+              <details class="cw-ratio-dropdown" data-ratio-dropdown>
+                <summary data-ratio-summary><b dir="ltr">{{ $defaultRatio }} {{ $ratioTitles[$defaultRatio] ?? '' }}</b></summary>
+                <div class="cw-ratio-menu" role="radiogroup" aria-label="انتخاب سایز خروجی">
+                  @foreach($outputRatios as $ratio)
+                    <label class="cw-ratio-option">
+                      <input type="radio" name="output[aspect_ratio]" value="{{ $ratio }}" data-ratio-label="{{ $ratio }} {{ $ratioTitles[$ratio] ?? '' }}" @checked($ratio === $defaultRatio)>
+                      <span><i class="cw-ratio-frame" style="--ratio:{{ str_replace(':', '/', $ratio) }}"></i><span class="cw-ratio-option-meta" dir="rtl"><b dir="ltr">{{ $ratio }}</b><small>{{ $ratioTitles[$ratio] ?? '' }}</small></span></span>
+                    </label>
+                  @endforeach
+                </div>
+              </details>
             </div>
           @endif
           @if(!empty($product['output_variants']))
@@ -146,7 +163,7 @@
 
       <div class="cw-submit-wrap">
         @if($instance !== 'redesign')
-          <div class="cw-cost-row"><span><i class="fa-solid fa-bolt"></i> هزینه این ساخت</span><strong><b data-cost>{{ $product['cost'] }}</b> توکن</strong></div>
+          <div class="cw-cost-row"><span><i class="fa-solid fa-bolt"></i> هزینه این ساخت</span><strong><b data-cost>{{ $product['cost'] }}</b> اعتبار</strong></div>
           <div class="cw-discount-field">
             <label for="{{ $discountId }}">کد تخفیف</label>
             <input id="{{ $discountId }}" form="{{ $formId }}" name="discount_code" type="text" maxlength="40" autocomplete="off" placeholder="اختیاری" dir="ltr">

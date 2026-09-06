@@ -28,7 +28,7 @@
 | Charts | Chart.js 4.4 |
 | Font | Vazirmatn (RTL) |
 | AI | OpenRouter API |
-| Hosting | Liara |
+| Hosting | Cloudiva |
 | Direction | RTL (فارسی) |
 
 ---
@@ -190,7 +190,7 @@ PEOPLE / BUSINESS / EVENTS / FAMILY / KIDS / PETS / ENTERTAINMENT / PRODUCTS / A
 ## ۸. تسک رجیستری
 
 ### 🔴 بحرانی (باید همین الان):
-- [ ] Deploy روی Liara
+- [ ] Deploy روی Cloudiva
 - [ ] ساخت admin/products.blade.php
 - [ ] ساخت admin/products-create.blade.php
 
@@ -324,8 +324,8 @@ Stack: Laravel + MySQL + OpenRouter API
 
 ## ۱۳. Deployment
 
-- **هاستینگ:** Liara
-- **فایل config:** `liara.json` (در root پروژه)
+- **هاستینگ:** Cloudiva — سرویس `vatanai-laravel-cloudiva`
+- **فایل config:** تنظیمات سرویس و CI/CD در پنل Cloudiva
 - **مسیر پروژه:** `/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/ai-vatan-v4`
 - **مسیر در Bash:** `/sessions/nice-quirky-pasteur/mnt/ai-vatan-v4/`
 

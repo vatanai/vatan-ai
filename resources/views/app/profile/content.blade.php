@@ -27,26 +27,35 @@
 
 {{-- ===== PANEL: گرید (محتوا) — خروجی‌های واقعی کاربر از generated_images ===== --}}
 <div class="profile-panel panel-grid" data-panel="grid">
-  @forelse ($createdImages as $item)
-    <button type="button" class="grid-cell grid-cell--clickable"
-            data-image="{{ asset('storage/' . $item->image_path) }}"
-            data-date="{{ $item->jalali_created_at }}"
-            data-product-name="{{ optional($item->product)->name_fa ?? optional($item->product)->name_en ?? 'نامشخص' }}"
-            data-product-url="{{ $item->product_url ?? '' }}"
-            data-product-download-url="{{ optional($item->product)->slug ? route('app.product.download', optional($item->product)->slug) : '' }}"
-            aria-label="نمایش عکس ساخته‌شده">
-      <img src="{{ asset('storage/' . $item->image_path) }}" alt="" class="grid-img" loading="lazy">
-      @if(optional($item->product)->media_type === 'video')
-        <i class="fa-solid fa-video cell-badge"></i>
-      @endif
-    </button>
-  @empty
+  @if(($createdMedia ?? collect())->isNotEmpty())
+  @foreach ($createdMedia as $media)
+    @if($media instanceof \App\Models\GeneratedVideo)
+      <a href="{{ $media->playbackUrl() ?: '#' }}" class="grid-cell grid-cell--video" target="_blank" rel="noopener" aria-label="پخش ویدیوی ساخته‌شده">
+        <video src="{{ $media->playbackUrl() }}" class="grid-img" preload="metadata" muted playsinline></video>
+        <i class="fa-solid fa-play cell-badge"></i>
+      </a>
+    @else
+      <button type="button" class="grid-cell grid-cell--clickable"
+              data-image="{{ $media->imageUrl() }}"
+              data-date="{{ $media->jalali_created_at }}"
+              data-product-name="{{ optional($media->product)->name_fa ?? optional($media->product)->name_en ?? 'نامشخص' }}"
+              data-product-url="{{ $media->product_url ?? '' }}"
+              data-product-download-url="{{ optional($media->product)->slug ? route('app.product.download', optional($media->product)->slug) : '' }}"
+              aria-label="نمایش عکس ساخته‌شده">
+        <img src="{{ $media->imageUrl() }}" alt="" class="grid-img" loading="lazy">
+        @if(optional($media->product)->media_type === 'video')
+          <i class="fa-solid fa-video cell-badge"></i>
+        @endif
+      </button>
+    @endif
+  @endforeach
+  @else
     <div class="grid-empty">
       <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
       <p>هنوز محتوایی نساختی</p>
       <a href="{{ route('app.explore') }}" class="btn-empty-cta">ساخت اولین محتوا</a>
     </div>
-  @endforelse
+  @endif
 </div>
 
 {{-- ===== PANEL: ذخیره شده‌ها — محصولات واقعاً سیوشده از جدول saved_products ===== --}}

@@ -20,8 +20,6 @@
   };
 @endphp
 
-@include('admin.products.partials.identity-settings', ['aiModels' => $aiModels, 'product' => $product, 'duplicateFrom' => $duplicateFrom])
-
 {{-- ═══════════════════ Card — متغیرهای پرامپت (NEW / فقط UI — بند ۱۴) ═══════════════════ --}}
 <div class="hidden bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" data-future-update="متغیرهای پرامپت">
   <div class="mb-4 pb-3 border-b border-[var(--b1)] flex items-center justify-between flex-wrap gap-2">

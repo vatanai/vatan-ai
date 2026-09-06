@@ -16,6 +16,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // این دامپ با دستورهای اختصاصی MySQL تولید شده است. در محیط تست
+        // SQLite، سیدرهای تست دادهٔ موردنیاز را مستقل ایجاد می‌کنند.
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         if (!Schema::hasTable('categories')) {
             return;
         }

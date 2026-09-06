@@ -32,7 +32,7 @@ return new class extends Migration
             );
         }
 
-        DB::table('service_credit_accounts')->whereIn('slug', ['openrouter', 'liara'])
+        DB::table('service_credit_accounts')->where('slug', 'openrouter')
             ->update(['show_on_dashboard' => true, 'is_active' => true, 'updated_at' => $now]);
     }
 

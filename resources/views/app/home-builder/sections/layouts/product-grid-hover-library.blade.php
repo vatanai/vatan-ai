@@ -4,7 +4,7 @@
     'lift_shadow' => 'شناور با سایه', 'overlay_reveal' => 'نمایش اطلاعات', 'tilt' => 'چرخش سه‌بعدی',
     'shine' => 'عبور نور', 'blur_focus' => 'فوکوس از محو', 'border_draw' => 'ترسیم قاب',
     'pulse' => 'ضربان نرم', 'slide_caption' => 'ورود توضیحات', 'darken' => 'تاریک سینمایی',
-    'saturate' => 'تقویت رنگ', 'rotate_soft' => 'چرخش نرم', 'token_bounce' => 'حرکت آیکون توکن',
+    'saturate' => 'تقویت رنگ', 'rotate_soft' => 'چرخش نرم', 'token_bounce' => 'حرکت آیکون اعتبار',
   ];
   $hoverCols = in_array((string) $section->setting('hover_grid_cols', '4'), ['2','3','4','5'], true) ? (string) $section->setting('hover_grid_cols', '4') : '4';
   $hoverRows = max(1, min(8, (int) $section->setting('hover_grid_rows', 4)));

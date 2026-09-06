@@ -1,4 +1,24 @@
 <style>
+/* ── پنل‌های باز و بسته‌شونده گام دوم — هم‌فرم با آزمایشگاه مدل ── */
+.step2-disclosure { position:relative; overflow:hidden; margin-bottom:20px; border:1px solid var(--b1); border-radius:14px; background:var(--s2); }
+.step2-disclosure__header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px 18px; }
+.step2-disclosure__heading { display:flex; align-items:flex-start; gap:10px; min-width:0; }
+.step2-disclosure__icon { display:grid; place-items:center; width:32px; height:32px; flex:0 0 32px; border-radius:9px; background:var(--primary-l); color:var(--primary); }
+.step2-disclosure__heading h3 { margin:0; color:var(--text); font-size:12px; font-weight:800; }
+.step2-disclosure__heading p { margin:3px 0 0; color:var(--text3); font-size:10px; line-height:1.7; }
+.step2-disclosure__actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+.step2-disclosure__toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:180px; min-height:34px; padding:7px 10px; border:1px solid var(--b1); border-radius:9px; background:var(--s1); color:var(--text2); font-family:inherit; font-size:10px; font-weight:800; cursor:pointer; transition:border-color .2s ease,color .2s ease,background .2s ease; }
+.step2-disclosure__toggle:hover,.step2-disclosure__toggle[aria-expanded="true"] { border-color:var(--accent); color:var(--text); }
+.step2-disclosure__switch { position:relative; display:block; width:31px; height:17px; flex:0 0 31px; border-radius:999px; background:var(--b2); transition:background .2s ease; }
+.step2-disclosure__switch span { position:absolute; top:3px; right:3px; width:11px; height:11px; border-radius:50%; background:var(--text3); transition:transform .2s ease,background .2s ease; }
+.step2-disclosure__toggle[aria-expanded="true"] .step2-disclosure__switch { background:var(--green); }
+.step2-disclosure__toggle[aria-expanded="true"] .step2-disclosure__switch span { transform:translateX(-14px); background:var(--card-bg); }
+.step2-disclosure__toggle .fa-chevron-down { color:var(--text3); font-size:9px; transition:transform .2s ease; }
+.step2-disclosure__toggle[aria-expanded="true"] .fa-chevron-down { transform:rotate(180deg); color:var(--accent); }
+.step2-disclosure__drawer { padding:0 18px 16px; border-top:1px solid var(--b1); direction:rtl; }
+.step2-disclosure__drawer.hidden { display:none; }
+@media (max-width:640px) { .step2-disclosure__header { align-items:stretch; flex-direction:column; } .step2-disclosure__actions { justify-content:stretch; } .step2-disclosure__toggle { width:100%; } }
+
 /* ── انتخاب دو مرحله‌ای provider و مدل ── */
 .model-picker-field { position:relative; }
 .model-picker-label { display:block; margin-bottom:6px; color:var(--text3); font-size:10px; font-weight:700; }
@@ -28,6 +48,28 @@
 .model-picker-model-name small { color:var(--text3); font-size:8px; }
 .model-quality-grade { color:var(--warning); font-weight:800; white-space:nowrap; }
 @media (max-width:760px) { .model-picker-model-menu { min-width:0; width:calc(100vw - 54px); right:0; left:auto; } .model-picker-model-head,.model-picker-model-row { min-width:420px; } .model-picker-model-menu { overflow-x:auto; } }
+.model-grade-card { min-width:0; min-height:76px; display:flex; flex-direction:column; justify-content:space-between; gap:5px; overflow:hidden; }
+.model-grade-card.grade-1 { border-color:color-mix(in srgb,var(--accent) 78%,var(--b1)); background:color-mix(in srgb,var(--accent) 12%,var(--s1)); }
+.model-grade-card.grade-2 { border-color:color-mix(in srgb,var(--primary) 72%,var(--b1)); background:color-mix(in srgb,var(--primary) 12%,var(--s1)); }
+.model-grade-card.grade-3 { border-color:color-mix(in srgb,var(--success) 66%,var(--b1)); background:color-mix(in srgb,var(--success) 11%,var(--s1)); }
+.model-grade-card.grade-4 { border-color:color-mix(in srgb,var(--warning) 72%,var(--b1)); background:color-mix(in srgb,var(--warning) 12%,var(--s1)); }
+.model-grade-card:hover,.model-grade-card:focus-visible { transform:translateY(-1px); box-shadow:var(--shadow-card); outline:none; }
+.model-grade-card-top,.model-grade-card-meta { display:flex; align-items:center; gap:5px; min-width:0; line-height:1; }
+.model-grade-card-top { justify-content:flex-start; }
+.model-grade-card-meta { justify-content:space-between; color:var(--text3); font-size:8.8px; }
+.model-grade-card-meta b { color:var(--text2); font-size:9.4px; }
+.model-grade-badge { flex:0 0 auto; padding:3px 5px; border-radius:5px; color:var(--text); background:var(--b1); font-size:8.8px; font-weight:900; }
+.grade-1 .model-grade-badge { color:var(--text-h); background:color-mix(in srgb,var(--accent) 26%,var(--s1)); }
+.grade-2 .model-grade-badge { color:var(--text); background:color-mix(in srgb,var(--primary) 22%,var(--s1)); }
+.grade-3 .model-grade-badge { color:var(--text); background:color-mix(in srgb,var(--success) 20%,var(--s1)); }
+.grade-4 .model-grade-badge { color:var(--text); background:color-mix(in srgb,var(--warning) 24%,var(--s1)); }
+.model-grade-hint,.model-grade-provider { color:var(--text3); font-size:8.25px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.model-grade-provider { margin-right:auto; }
+.model-grade-card-name { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); font-size:10.5px; font-weight:800; line-height:1.35; }
+#recommended-product-models,#fallback-recommended-product-models { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media (max-width:1100px) { #recommended-product-models,#fallback-recommended-product-models { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:760px) { #recommended-product-models,#fallback-recommended-product-models { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { #recommended-product-models,#fallback-recommended-product-models { grid-template-columns:1fr; } }
 .fallback-toggle-card { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 13px; border:1px solid var(--b1); border-radius:11px; background:var(--s1); cursor:pointer; }
 .fallback-toggle-card > span { display:flex; flex-direction:column; gap:2px; min-width:0; }
 .fallback-toggle-card b { color:var(--text); font-size:11px; }
@@ -55,11 +97,5 @@
   background: rgba(160, 122, 245, 0.12);
   border-color: rgba(160, 122, 245, 0.45);
   color: #a07af5;
-}
-/* حالت فعال لیارا */
-#lbl-api-liara.active-provider {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.45);
-  color: #34d399;
 }
 </style>

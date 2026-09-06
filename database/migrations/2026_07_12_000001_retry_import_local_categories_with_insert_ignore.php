@@ -23,6 +23,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // INSERT IGNORE مخصوص MySQL است و نباید در دیتابیس SQLite تست اجرا شود.
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         if (!Schema::hasTable('categories')) {
             return;
         }

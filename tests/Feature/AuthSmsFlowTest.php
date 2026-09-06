@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Otp;
 use App\Models\SmsMessage;
+use App\Models\SmsTemplate;
 use App\Models\User;
 use App\Services\MeliPayamakService;
 use App\Services\SmsEventService;
@@ -20,7 +21,8 @@ class AuthSmsFlowTest extends TestCase
 
     public function test_user_can_request_and_verify_login_otp_without_redirecting_to_admin(): void
     {
-        $user = User::factory()->create([
+        $user = User::query()->create([
+            'name' => 'محسن',
             'phone' => '09127573116',
             'status' => 'active',
         ]);
@@ -29,11 +31,12 @@ class AuthSmsFlowTest extends TestCase
         $sms = Mockery::mock(SmsEventService::class);
         $sms->shouldReceive('send')
             ->once()
-            ->withArgs(function ($event, $phone, $data, $template, $type) use (&$plainCode) {
+            ->withArgs(function ($event, $phone, $data, $template, $type) use (&$plainCode, $user) {
                 $plainCode = $data['code'] ?? null;
 
-                return $event === 'otp_code'
+                return $event === 'login_otp'
                     && $phone === '09127573116'
+                    && $data['name'] === $user->name
                     && $template === null
                     && $type === 'authentication';
             })
@@ -97,5 +100,34 @@ class AuthSmsFlowTest extends TestCase
         $this->assertSame('رمز یک‌بارمصرف (مخفی‌شده)', $message->body);
         $this->assertArrayNotHasKey('values', $message->metadata ?? []);
         $this->assertSame('sent', $message->status);
+    }
+
+    public function test_returning_user_name_keeps_a_visible_space_before_dear_in_shared_template(): void
+    {
+        config()->set('services.melipayamak.api_key', 'test-key');
+        config()->set('services.melipayamak.base_url', 'https://console.melipayamak.com/api');
+
+        Http::fake([
+            'https://console.melipayamak.com/api/send/shared/test-key' => Http::response([
+                'recId' => 52337401,
+                'status' => 'عملیات موفق',
+            ]),
+        ]);
+
+        $template = SmsTemplate::query()
+            ->where('event_key', 'login_otp')
+            ->where('provider_template_id', '523374')
+            ->firstOrFail();
+
+        $sent = app(SmsEventService::class)->send('login_otp', '09127573116', [
+            'name' => 'محسن',
+            'code' => '86421',
+        ], $template, 'authentication');
+
+        $this->assertTrue($sent);
+        Http::assertSent(fn (Request $request) =>
+            $request['bodyId'] === '523374'
+            && $request['args'] === ["محسن\u{00A0}", '86421']
+        );
     }
 }

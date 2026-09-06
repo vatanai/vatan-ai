@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  *
  * این ستون مشخص می‌کند مدل از کدام سرویس‌دهنده فراخوانی می‌شود:
  *   - 'openrouter' : مدل‌های موجود از OpenRouter (پیش‌فرض برای همه ردیف‌های قدیمی)
- *   - 'liara'      : مدل‌های لیارا (OpenAI-compatible API)
+ *   - 'fal'/'replicate' : providerهای اجرای مدل تصویر
  *
  * مقدار پیش‌فرض 'openrouter' است تا همه مدل‌های موجود بدون تغییر کار کنند.
  */

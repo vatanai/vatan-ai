@@ -40,7 +40,7 @@
                   </div>
                 </div>
                 <div class="admin-meta">
-                  <span class="admin-badge role">{{ $admin->role === 'leader' ? 'رهبر' : 'مدیر' }}</span>
+                  <span class="admin-badge role">{{ match($admin->role) { 'leader' => 'مالک', 'finance' => 'مدیر مالی', default => 'مدیر مشاهده‌گر' } }}</span>
                   <span class="admin-badge {{ $admin->is_active ? 'active' : 'inactive' }}">{{ $admin->is_active ? 'فعال' : 'غیرفعال' }}</span>
                 </div>
                 <div class="admin-actions">
@@ -83,8 +83,9 @@
               <div class="admin-field">
                 <label for="role">نقش</label>
                 <select class="admin-input" id="role" name="role" required>
-                  <option value="admin" @selected(old('role', $editingAdmin?->role) === 'admin')>مدیر</option>
-                  <option value="leader" @selected(old('role', $editingAdmin?->role) === 'leader')>رهبر</option>
+                  <option value="admin" @selected(old('role', $editingAdmin?->role) === 'admin')>مدیر مشاهده‌گر</option>
+                  <option value="finance" @selected(old('role', $editingAdmin?->role) === 'finance')>مدیر مالی</option>
+                  <option value="leader" @selected(old('role', $editingAdmin?->role) === 'leader')>مالک</option>
                 </select>
               </div>
               <label class="admin-check">

@@ -50,7 +50,7 @@
     emptyTitle.textContent = isVideo ? 'حرکت ایده‌ات اینجا جان می‌گیرد' : 'ایده‌ات اینجا جان می‌گیرد';
     emptyCopy.textContent = isVideo ? 'صحنه و حرکت را بنویس و روی «بساز» بزن تا پیش‌نمایش ویدیو را ببینی.' : 'توضیحت را بنویس و روی «بساز» بزن تا اولین خروجی‌ات را ببینی.';
     videoOnly.hidden = !isVideo;
-    cost.textContent = isVideo ? '۱۴ توکن' : '۸ توکن';
+    cost.textContent = isVideo ? '۱۴ اعتبار' : '۸ اعتبار';
     submitLabel.textContent = 'بساز';
     submit.disabled = false;
   }

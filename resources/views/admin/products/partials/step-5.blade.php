@@ -52,7 +52,7 @@
     <span id="summary-status-badge" class="text-[10.5px] font-bold rounded-full px-2.5 py-1 bg-[var(--orange)]/15 text-[var(--orange)] border border-[var(--orange)]/30">Incomplete</span>
   </div>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5" id="final-summary-grid">
-    @foreach(['sum-name'=>'نام محصول','sum-category'=>'دسته','sum-model'=>'مدل AI','sum-price'=>'قیمت','sum-media'=>'نوع خروجی','sum-status'=>'وضعیت'] as $id => $label)
+    @foreach(['sum-name'=>'نام محصول','sum-category'=>'دسته','sum-model'=>'مدل AI','sum-price'=>'مصرف اعتبار استاندارد','sum-media'=>'نوع خروجی','sum-status'=>'وضعیت'] as $id => $label)
       <div class="flex items-center justify-between bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5"><span class="text-[11px] text-[var(--text3)]">{{ $label }}</span><span class="text-xs text-[var(--text)] font-semibold" id="{{ $id }}">—</span></div>
     @endforeach
   </div>
@@ -88,12 +88,12 @@ function updateExploreTileCovers() {
 function refreshFinalSummary() {
   var name = document.querySelector('[name="name_fa"]')?.value.trim();
   var model = document.getElementById('primary-model-select');
-  var pricing = document.querySelector('[name="pricing_model"]:checked');
   var media = document.querySelector('[name="media_type"]:checked');
+  var qualityStandardCost = document.querySelector('[name="model_configuration[quality_credit_costs][standard]"]')?.value?.trim() || '';
   var values = {
     'sum-name': name, 'sum-category': typeof getSelectedCategoryNames === 'function' ? getSelectedCategoryNames() : '',
     'sum-model': model?.value ? model.options[model.selectedIndex].textContent : '',
-    'sum-price': pricing ? ({free:'رایگان',per_credit:'کردیتی',subscription:'اشتراکی'}[pricing.value]) : '',
+    'sum-price': qualityStandardCost ? Number(qualityStandardCost).toLocaleString('fa-IR') + ' اعتبار' : '',
     'sum-media': media ? ({photo:'عکس',video:'ویدیو',both:'هر دو'}[media.value]) : '',
     'sum-status': document.getElementById('product-status')?.value === 'active' ? 'ثبت نهایی' : 'پیش‌نویس'
   };
@@ -128,8 +128,8 @@ function refreshProductPreview() {
   var description = value('description_fa') || value('description_en');
   var categories = typeof selectedCategories !== 'undefined' ? selectedCategories.map(function(cat){ return cat.name; }) : [];
   var tags = Array.from(document.querySelectorAll('#tags-wrap > [data-tag-chip]')).map(function(chip){ return chip.textContent.replace('×', '').trim(); }).filter(Boolean);
-  var pricing = document.querySelector('[name="pricing_model"]:checked')?.value || '';
-  var cost = value('credit_cost');
+  var qualityStandardCost = document.querySelector('[name="model_configuration[quality_credit_costs][standard]"]')?.value?.trim() || '';
+  var cost = qualityStandardCost;
   var mainImages = productPreviewFiles('main-images-file');
   var beforeImages = productPreviewFiles('before-images-file');
   var info = doc.querySelector('.pd-info-scroll');
@@ -152,8 +152,8 @@ function refreshProductPreview() {
 
   var token = doc.querySelector('#pdTokenBtn b');
   if (token) {
-    if (!pricing) token.innerHTML = productPreviewPlaceholder('قیمت محصول');
-    else token.textContent = pricing === 'per_credit' ? (cost ? cost + ' توکن' : 'هزینه توکن هنوز تکمیل نشده') : (pricing === 'free' ? 'رایگان' : 'اشتراکی');
+    if (!cost) token.innerHTML = productPreviewPlaceholder('مصرف اعتبار محصول');
+    else token.textContent = Number(cost).toLocaleString('fa-IR') + ' اعتبار';
   }
 
   var galleries = info ? Array.from(info.querySelectorAll('.pd-gal')) : [];
@@ -246,9 +246,10 @@ function openProductPreviewInNewTab() {
 function generateProductCode() { var el = document.getElementById('product-code-display'); if (!el || el.textContent.trim() !== '--------') return; el.textContent = Array.from({length:8}, function(){ return Math.floor(Math.random()*10); }).join(''); }
 document.addEventListener('DOMContentLoaded', function(){
   generateProductCode(); refreshFinalSummary(); updateExploreTileCovers();
-  ['name_fa','description_fa','credit_cost'].forEach(function(name){ document.querySelector('[name="'+name+'"]')?.addEventListener('input', refreshFinalSummary); });
+  ['name_fa','description_fa'].forEach(function(name){ document.querySelector('[name="'+name+'"]')?.addEventListener('input', refreshFinalSummary); });
+  document.querySelectorAll('[data-quality-credit-cost]').forEach(function(el){ el.addEventListener('input', refreshFinalSummary); });
   document.getElementById('primary-model-select')?.addEventListener('change', refreshFinalSummary);
-  document.querySelectorAll('[name="media_type"],[name="pricing_model"]').forEach(function(el){ el.addEventListener('change', refreshFinalSummary); });
+  document.querySelectorAll('[name="media_type"]').forEach(function(el){ el.addEventListener('change', refreshFinalSummary); });
   document.getElementById('main-images-file')?.addEventListener('change', updateExploreTileCovers);
   document.getElementById('main-images-file')?.addEventListener('change', refreshProductPreview);
   document.getElementById('before-images-file')?.addEventListener('change', refreshProductPreview);

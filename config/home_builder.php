@@ -14,6 +14,7 @@
 $productSourceFields = [
     ['key' => 'source', 'label' => 'منبع محصولات', 'type' => 'select', 'options' => [
         'latest' => 'جدیدترین‌ها',
+        'latest_non_trending' => 'جدیدترین‌ها (به‌جز ترندها)',
         'trending' => 'ترندها',
         'featured' => 'ویژه',
         'category' => 'دسته‌بندی خاص',
@@ -50,7 +51,7 @@ $hoverEffectField = ['key' => 'hover_effect', 'label' => 'حالت هاور کا
     'darken' => 'تاریک سینمایی',
     'saturate' => 'تقویت رنگ',
     'rotate_soft' => 'چرخش نرم',
-    'token_bounce' => 'حرکت آیکون توکن',
+    'token_bounce' => 'حرکت آیکون اعتبار',
 ], 'default' => 'neon_glow'];
 
 $fillEmptySpacesField = [
@@ -60,6 +61,10 @@ $fillEmptySpacesField = [
     'default' => false,
 ];
 $fillCategoryTabsSpacesField = [...$fillEmptySpacesField, 'show_if_layout' => ['tabs']];
+$displayRowsField = ['key' => 'display_rows', 'label' => 'تعداد ردیف نمایش', 'type' => 'select', 'options' => [
+    '1' => '۱ ردیف',
+    '2' => '۲ ردیف',
+], 'default' => '1'];
 
 return [
 
@@ -107,7 +112,7 @@ return [
                 'neon' => ['label' => 'قاب نئونی', 'thumb' => 'row-neon.svg'],
                 'cinema' => ['label' => 'سینمایی و عریض', 'thumb' => 'row-large.svg'],
                 'minimal' => ['label' => 'مینیمال روشن', 'thumb' => 'row-compact.svg'],
-                'motion_token' => ['label' => 'متحرک: توکن جهنده', 'thumb' => 'row-neon.svg'],
+                'motion_token' => ['label' => 'متحرک: اعتبار جهنده', 'thumb' => 'row-neon.svg'],
                 'motion_float' => ['label' => 'متحرک: کارت‌های شناور', 'thumb' => 'row-glass.svg'],
                 'motion_shimmer' => ['label' => 'متحرک: موج نور', 'thumb' => 'row-neon.svg'],
                 'motion_orbit' => ['label' => 'متحرک: مدار آیکون', 'thumb' => 'row-large.svg'],
@@ -125,6 +130,7 @@ return [
                 ...$productSourceFields,
                 ['key' => 'limit', 'label' => 'تعداد آیتم', 'type' => 'number', 'default' => 8, 'min' => 1, 'max' => 24],
                 $fillEmptySpacesField,
+                $displayRowsField,
                 ['key' => 'sort', 'label' => 'مرتب‌سازی', 'type' => 'select', 'options' => [
                     'latest' => 'جدیدترین',
                     'popular' => 'محبوب‌ترین',
@@ -217,6 +223,7 @@ return [
                 ['key' => 'limit', 'label' => 'تعداد آیتم (تعداد تب دسته‌بندی)', 'type' => 'number', 'default' => 10, 'min' => 1, 'max' => 30],
                 ['key' => 'products_per_tab', 'label' => 'تعداد محصول هر تب', 'type' => 'number', 'default' => 8, 'min' => 1, 'max' => 20, 'show_if_layout' => ['tabs']],
                 $fillCategoryTabsSpacesField,
+                $displayRowsField,
                 $hoverEffectField,
                 ...$viewAllFields,
             ],

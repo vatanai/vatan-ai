@@ -10,20 +10,25 @@
     <span class="user-email text-[11px] text-white/40 [.light_&]:text-black/45 truncate">
       {{ auth()->user()->email }}
     </span>
+    @php
+      $dropdownTierKey = auth()->user()->plan?->model_tier_key ?? 'free';
+      $dropdownTier = \App\Services\ModelTierService::DEFINITIONS[$dropdownTierKey] ?? \App\Services\ModelTierService::DEFINITIONS['free'];
+    @endphp
+    <span class="user-email text-[11px] text-white/40 [.light_&]:text-black/45 truncate">پلن {{ auth()->user()->plan_display_name }} · {{ $dropdownTier['name'] }}</span>
   </div>
 
-  {{-- بخش توکن‌ها — متصل شده به موجودی واقعی دیتابیس کاربر --}}
+  {{-- بخش اعتبار‌ها — متصل شده به موجودی واقعی دیتابیس کاربر --}}
   <div class="dropdown-token-section p-2.5 flex flex-col gap-1">
-    <span class="token-title text-[11px] text-white/40 [.light_&]:text-black/45">توکن‌های باقی‌مانده:</span>
+    <span class="token-title text-[11px] text-white/40 [.light_&]:text-black/45">اعتبار‌های باقی‌مانده:</span>
     <span id="top-nav-tokens" class="token-value text-[13.5px] font-black text-[#cffe00]">
-      {{ number_format(auth()->user()->token_balance) }} توکن
+      {{ number_format(auth()->user()->effective_token_balance) }} اعتبار
     </span>
   </div>
   
   <hr class="border-0 h-px bg-white/5 [.light_&]:bg-black/5 my-1.5 mx-1">
   
   {{-- آیتم‌های منو --}}
-  <a href="#" class="dropdown-item flex items-center gap-2.5 p-2.5 text-white/70 [.light_&]:text-black/70 text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:text-white [.light_&]:hover:text-black hover:bg-white/5 [.light_&]:hover:bg-black/5">
+  <a href="{{ route('app.profile') }}" class="dropdown-item flex items-center gap-2.5 p-2.5 text-white/70 [.light_&]:text-black/70 text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:text-white [.light_&]:hover:text-black hover:bg-white/5 [.light_&]:hover:bg-black/5">
     <i class="fa-solid fa-user w-4 h-4 text-center opacity-80 text-[14px]"></i>
     پروفایل
   </a>
@@ -33,12 +38,9 @@
     <i class="fa-solid fa-images w-4 h-4 text-center opacity-80 text-[14px]"></i>
     گالری من
   </a>
-{{-- کد اصلاح شده خط ۳۶ در فایل profile-dropdown.blade.php --}}
 <a href="{{ route('pricing.index') }}" class="dropdown-item flex items-center gap-2.5 p-2.5 text-white/70 [.light_&]:text-black/70 text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:text-white [.light_&]:hover:text-black hover:bg-white/5 [.light_&]:hover:bg-black/5">
     <i class="fa-solid fa-gem w-4 h-4 text-center opacity-80 text-[14px]"></i>
-    خرید پلن 
-</a>    <i class="fa-solid fa-images w-4 h-4 text-center opacity-80 text-[14px]"></i>
-     خرید پلن 
+    خرید یا ارتقای پلن
   </a>
   
   <a href="#" class="dropdown-item flex items-center gap-2.5 p-2.5 text-white/70 [.light_&]:text-black/70 text-[13px] font-medium no-underline rounded-md transition-all duration-150 hover:text-white [.light_&]:hover:text-black hover:bg-white/5 [.light_&]:hover:bg-black/5">

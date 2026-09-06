@@ -1,8 +1,19 @@
+@php
+  $usesPublicChrome = ! request()->routeIs(
+      'app.*',
+      'products.index',
+      'categories.show',
+      'profile',
+      'profile.gallery',
+      'prompts.show'
+  );
+@endphp
 <!DOCTYPE html>
 <html lang="fa" dir="rtl" class="dark"> {{-- به صورت پیش‌فرض کلاس دارک اضافه شد --}}
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  @include('partials.google-site-verification')
   <title>@yield('page_title', ($sitePage->meta_title ?? null) ?: ($sitePage->title ?? null) ?: ($title ?? 'وطن AI'))</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -10,10 +21,10 @@
     <meta name="description" content="{{ $sitePage->meta_description ?: $sitePage->subtitle }}">
     @if(!empty($sitePage->meta_keywords))<meta name="keywords" content="{{ implode(', ', $sitePage->meta_keywords) }}">@endif
     <meta name="robots" content="{{ $sitePage->is_indexable ? 'index,follow' : 'noindex,nofollow' }}">
-    <link rel="canonical" href="{{ $sitePage->canonical_url ?: url()->current() }}">
+    <link rel="canonical" href="{{ $canonicalUrl ?? ($sitePage->canonical_url ?: url()->current()) }}">
     <meta property="og:title" content="{{ $sitePage->meta_title ?: $sitePage->title }}">
     <meta property="og:description" content="{{ $sitePage->meta_description ?: $sitePage->subtitle }}">
-    <meta property="og:url" content="{{ $sitePage->canonical_url ?: url()->current() }}">
+    <meta property="og:url" content="{{ $canonicalUrl ?? ($sitePage->canonical_url ?: url()->current()) }}">
     <meta property="og:type" content="website">
     @if($sitePage->og_image)<meta property="og:image" content="{{ url(Storage::disk('public')->url($sitePage->og_image)) }}">@endif
     <meta name="twitter:card" content="{{ $sitePage->og_image ? 'summary_large_image' : 'summary' }}">
@@ -33,6 +44,12 @@
   @stack('styles')
   {{-- استایل مستقل فوتر عمداً بعد از استایل صفحات لود می‌شود؛ بدون تایید کاربر جابه‌جا یا ادغام نشود. --}}
   <link href="{{ asset('css/app-footer.css') }}?v={{ filemtime(public_path('css/app-footer.css')) }}" rel="stylesheet">
+  <link href="{{ asset('css/support-widget.css') }}?v={{ filemtime(public_path('css/support-widget.css')) }}" rel="stylesheet">
+  @if($usesPublicChrome)
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/site/css/home-preview.css') }}?v={{ filemtime(public_path('assets/site/css/home-preview.css')) }}">
+    @include('layouts.partials.nav-styles')
+  @endif
 
   <style>
     
@@ -151,7 +168,6 @@
       'app.profile',
       'profile',
       'profile.gallery',
-      'app.create',
       'app.create.preview',
       'app.create.architecture',
       'app.create.product',
@@ -159,38 +175,63 @@
       'app.product-details'
   );
 
-  $showAppFooter = ! $hideAppFooter && request()->routeIs(
+  $showAppFooter = ! $usesPublicChrome && ! $hideAppFooter && request()->routeIs(
       'app.*',
       'products.index',
       'categories.show',
       'profile',
       'profile.gallery',
-      'prompts.show',
-      'privacy'
+      'prompts.show'
   );
 
   if (isset($sitePage)) {
       $showAppFooter = (bool) $sitePage->display('show_footer', $showAppFooter);
   }
 
+  // صفحه‌ی انتخاب محصولات باید بعد از آخرین کارت، فوتر اپ را هم نمایش بدهد.
+  if (request()->routeIs('app.create') && ! request()->filled('product')) {
+      $showAppFooter = true;
+  }
+
   $managedPageLayout = isset($sitePage) ? $sitePage->display('layout_width', 'default') : 'default';
 @endphp
-<body id="top" @class(['vatan-app-shell' => $showAppFooter, 'site-page-managed' => isset($sitePage), 'site-page-layout-' . $managedPageLayout => isset($sitePage)]) @if(isset($sitePage)) data-site-page="{{ $sitePage->key }}" data-site-page-version="{{ $sitePage->version }}" @endif>
+<body id="top" @class(['vatan-preview' => $usesPublicChrome, 'vatan-app-shell' => $showAppFooter, 'site-page-managed' => isset($sitePage), 'site-page-layout-' . $managedPageLayout => isset($sitePage)]) @if(isset($sitePage)) data-site-page="{{ $sitePage->key }}" data-site-page-version="{{ $sitePage->version }}" @endif>
+
+  @if($usesPublicChrome)
+    @include('site.preview.partials.header')
+  @endif
 
   {{-- محتوای اصلی صفحات --}}
   <main>
     @yield('content')
   </main>
 
-  @if($showAppFooter)
+  @if($usesPublicChrome)
+    @include('site.preview.partials.footer')
+    <section class="vp-app-footer-wrap vp-app-footer-wrap--public" aria-label="فوتر اپ وطن">
+      @include('app.partials.footer')
+    </section>
+  @elseif($showAppFooter)
     @include('app.partials.footer')
   @endif
 
-  {{-- ناوبری هدر و فوتر موبایل --}}
-  @include('layouts.nav')
-  @include('partials.token-alert-modal')
+  @if(! $usesPublicChrome)
+    {{-- ناوبری هدر و فوتر موبایل اپ --}}
+    @include('layouts.nav')
+    @include('partials.token-alert-modal')
+  @endif
+
+  @if($usesPublicChrome)
+    @include('support.partials.widget')
+  @endif
 
   @stack('scripts')
+  @if($usesPublicChrome)
+    <script src="{{ asset('assets/site/js/home-preview.js') }}?v={{ filemtime(public_path('assets/site/js/home-preview.js')) }}" defer></script>
+  @endif
+  @if(request()->filled('vtn_click'))
+    <script src="{{ route('growth.tracker') }}" defer></script>
+  @endif
 
 </body>
 </html>

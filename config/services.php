@@ -82,8 +82,9 @@ return [
         'video_studio_preview_webhook' => env('N8N_VIDEO_STUDIO_PREVIEW_WEBHOOK'),
         'video_studio_status_secret' => env('N8N_VIDEO_STUDIO_STATUS_SECRET'),
         'video_studio_telegram_chat_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHAT_ID'),
-        'video_studio_telegram_instagram_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_INSTAGRAM_THREAD_ID'),
-        'video_studio_telegram_channel_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHANNEL_THREAD_ID'),
+        // تاپیک‌های پیش‌فرض گروه ساخت ویدیو؛ مقدار محیطی در صورت وجود اولویت دارد.
+        'video_studio_telegram_instagram_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_INSTAGRAM_THREAD_ID', '4'),
+        'video_studio_telegram_channel_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_CHANNEL_THREAD_ID', '2'),
         'video_studio_telegram_music_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_MUSIC_THREAD_ID'),
         'video_studio_telegram_linkedin_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_LINKEDIN_THREAD_ID', '29'),
         'video_studio_telegram_aparat_thread_id' => env('N8N_VIDEO_STUDIO_TELEGRAM_APARAT_THREAD_ID', '31'),
@@ -107,8 +108,8 @@ return [
 
     'telegram_product' => [
         'webhook_secret' => env('TELEGRAM_PRODUCT_WEBHOOK_SECRET', env('TELEGRAM_WEBHOOK_SECRET')),
-        'bot_token' => env('TELEGRAM_PRODUCT_BOT_TOKEN'),
-        'bot_username' => env('TELEGRAM_PRODUCT_BOT_USERNAME'),
+        'bot_token' => env('TELEGRAM_PRODUCT_BOT_TOKEN', env('TELEGRAM_BOT_TOKEN')),
+        'bot_username' => env('TELEGRAM_PRODUCT_BOT_USERNAME', env('TELEGRAM_BOT_USERNAME')),
         'max_images' => (int) env('TELEGRAM_PRODUCT_MAX_IMAGES', 5),
         'ai_model' => env('TELEGRAM_PRODUCT_AI_MODEL', 'openai/gpt-4o-mini'),
     ],

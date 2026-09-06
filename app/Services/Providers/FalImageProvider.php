@@ -41,7 +41,6 @@ class FalImageProvider extends AbstractQueuedImageProvider
         $requestTimeout = max(60, (int) ($credentials['timeout'] ?: 600));
         try {
             $response = Http::withHeaders($this->requestHeaders())
-                ->retry(2, 1000, fn ($exception) => $exception instanceof ConnectionException)
                 ->connectTimeout($connectTimeout)
                 ->timeout($requestTimeout)
                 ->post($url, $input);
@@ -67,7 +66,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
             ->where('provider', 'fal')
             ->where('external_request_id', $requestId)
             ->first();
-        $remote = is_array($request?->raw_response) ? $request->raw_response : [];
+        $remote = $this->remoteRequestPayload($request);
         // Fal.ai لینک‌های دقیق status/response را در پاسخ submit برمی‌گرداند.
         // بعضی endpointها (مثل نسخه‌های مختلف Flux) مسیر نهایی متفاوتی از
         // شناسه‌ی مدل ثبت‌شده دارند؛ بازسازی URL از روی model id در این حالت
@@ -90,14 +89,18 @@ class FalImageProvider extends AbstractQueuedImageProvider
 
         $status = (array) $response->json();
         $responseUrl = (string) ($status['response_url'] ?? ($remote['response_url'] ?? ''));
-        if (($status['status'] ?? null) === 'COMPLETED' && $responseUrl !== '') {
+        if (strtoupper((string) ($status['status'] ?? '')) === 'COMPLETED' && $responseUrl !== '') {
             $result = Http::withHeaders($this->requestHeaders())
-                ->retry(2, 750, fn ($exception) => $exception instanceof ConnectionException)
+                ->retry(2, 750, fn ($exception) => $exception instanceof ConnectionException, throw: false)
+                ->connectTimeout(10)
                 ->timeout(max(30, (int) ($credentials['timeout'] ?: 600)))
                 ->get($responseUrl);
-            if ($result->successful()) {
-                $status['result'] = $result->json();
+
+            if ($result->failed()) {
+                throw new RuntimeException('Fal.ai result HTTP ' . $result->status() . ': ' . $result->body());
             }
+
+            $status['result'] = (array) $result->json();
         }
 
         return $status;
@@ -111,7 +114,7 @@ class FalImageProvider extends AbstractQueuedImageProvider
             ->where('provider', 'fal')
             ->where('external_request_id', $requestId)
             ->first();
-        $remote = is_array($request?->raw_response) ? $request->raw_response : [];
+        $remote = $this->remoteRequestPayload($request);
         $cancelUrl = (string) ($remote['cancel_url'] ?? '');
         if ($cancelUrl === '') {
             $cancelUrl = $base . '/' . ltrim($model->externalModelId(), '/') . '/requests/' . rawurlencode($requestId) . '/cancel';
@@ -128,6 +131,19 @@ class FalImageProvider extends AbstractQueuedImageProvider
         return (array) $response->json();
     }
 
+    /**
+     * در پاسخ اولیه‌ی صف، لینک‌ها در ریشه هستند؛ بعد از اولین poll همان پاسخ
+     * داخل provider_metadata.response ذخیره می‌شود. هر دو شکل باید بدون
+     * بازسازی حدسی URL پشتیبانی شوند، چون بعضی endpointها مسیر کوتاه‌شده دارند.
+     */
+    private function remoteRequestPayload(?AiProviderRequest $request): array
+    {
+        $raw = is_array($request?->raw_response) ? $request->raw_response : [];
+        $response = $raw['response'] ?? null;
+
+        return is_array($response) ? $response : $raw;
+    }
+
     public function normalizeResponse(AiModel $model, array $payload): array
     {
         $status = strtoupper((string) ($payload['status'] ?? ''));
@@ -141,8 +157,18 @@ class FalImageProvider extends AbstractQueuedImageProvider
         };
 
         $result = (array) ($payload['result'] ?? ($payload['payload'] ?? $payload));
+        // خروجی HTTP صف Fal در بعضی endpointها مستقیم و در بعضی دیگر داخل
+        // data برمی‌گردد. هر دو قرارداد رسمی را می‌خوانیم تا پاسخ موفق به‌اشتباه
+        // «بدون عکس» ثبت نشود.
+        foreach ([$result['data'] ?? null, $payload['data'] ?? null] as $nested) {
+            if (is_array($nested) && collect(['images', 'image', 'video', 'videos', 'output', 'outputs'])->contains(fn (string $key): bool => !empty($nested[$key] ?? null))) {
+                $result = $nested;
+                break;
+            }
+        }
+
         $items = [];
-        foreach (['images', 'image', 'output'] as $key) {
+        foreach (['images', 'image', 'video', 'videos', 'output', 'outputs'] as $key) {
             $value = $result[$key] ?? null;
             if (!$value) continue;
             $values = is_array($value) && array_is_list($value) ? $value : [$value];
@@ -154,9 +180,22 @@ class FalImageProvider extends AbstractQueuedImageProvider
             }
         }
 
+        $error = $payload['error'] ?? data_get($payload, 'result.error');
+        $errorMessage = is_string($error)
+            ? $error
+            : (is_array($error) ? json_encode($error, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null);
+        $missingOutput = in_array($status, ['COMPLETED', 'OK'], true) && $items === [];
+        if ($missingOutput) {
+            $normalizedStatus = 'failed';
+            $errorMessage = $errorMessage ?: 'Fal.ai درخواست را تکمیل‌شده اعلام کرد، اما هیچ فایل تصویری یا ویدیویی برنگرداند.';
+        }
+
         $requestId = (string) ($payload['request_id'] ?? $payload['gateway_request_id'] ?? '');
         $billingEvent = null;
-        if ($normalizedStatus === 'completed' && $requestId !== '') {
+        // طبق قرارداد Fal فقط خروجی موفق قابل‌صورتحساب است. اگر provider
+        // وضعیت COMPLETED بدهد اما برنامه هیچ فایل معتبری از پاسخ استخراج
+        // نکند، آن را موفق/قابل‌کسر ثبت نکن و هزینه را از پاسخ ناقص حدس نزن.
+        if ($normalizedStatus === 'completed' && $items !== [] && $requestId !== '') {
             $billingEvent = app(\App\Services\FalAiBillingService::class)->billingEvent($requestId);
         }
         return [
@@ -165,9 +204,11 @@ class FalImageProvider extends AbstractQueuedImageProvider
             'status' => $normalizedStatus,
             'output_urls' => $items,
             'estimated_cost_usd' => $this->estimateCost($model),
-            'actual_cost_usd' => is_numeric($billingEvent['cost_total'] ?? null) ? (float) $billingEvent['cost_total'] : null,
-            'error_code' => $payload['error_type'] ?? null,
-            'error_message' => $payload['error'] ?? null,
+            'actual_cost_usd' => $normalizedStatus === 'completed' && $items !== []
+                ? app(\App\Services\FalAiBillingService::class)->costFromBillingEvent($billingEvent)
+                : null,
+            'error_code' => $payload['error_type'] ?? ($missingOutput ? 'provider_output_missing' : null),
+            'error_message' => $errorMessage,
             'provider_metadata' => array_filter(['response' => $payload, 'billing_event' => $billingEvent], fn ($value) => $value !== null),
         ];
     }

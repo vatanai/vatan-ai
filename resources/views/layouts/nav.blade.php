@@ -1,5 +1,10 @@
-@php $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled; @endphp
-@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'profile'))
+@php
+  $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled;
+  $profilePlanLabel = auth()->check()
+    ? 'پلن ' . auth()->user()->plan_display_name . ' | ' . number_format(auth()->user()->effective_token_balance) . ' اعتبار'
+    : '';
+@endphp
+@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'profile', 'app.create', 'app.create.studio', 'app.create.product', 'app.create.loader-demo'))
   @include('app.partials.mobile-header')
 @endif
 
@@ -38,7 +43,7 @@
       @endforeach
 
       {{-- دکمه بساز — حالت عادی فقط + ، روی هاور از چپ و راست باز می‌شود و «بساز» نمایان می‌شود --}}
-      <a href="{{ route('app.create') }}" class="topnav-create no-underline whitespace-nowrap" data-key="create" aria-label="بساز">
+      <a href="{{ route('app.create.studio') }}" class="topnav-create no-underline whitespace-nowrap" data-key="create" aria-label="بساز">
         <span class="topnav-create-sign" aria-hidden="true">+</span>
         <span class="topnav-create-text">بساز</span>
       </a>
@@ -65,10 +70,13 @@
 
     {{-- بخش اکشن‌ها و وضعیت احراز هویت — سمت چپ --}}
     <div class="topnav-left-side flex items-center gap-3 shrink-0">
-      {{-- باکس نمایش موجودی توکن — سمت چپ دکمه «بساز»، رنگ ست با تم روز/شب --}}
-        <div class="topnav-token-box order-2" title="موجودی توکن شما">
-          <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
-          <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
+      {{-- باکس نمایش موجودی اعتبار — سمت چپ دکمه «بساز»، رنگ ست با تم روز/شب --}}
+        <div class="topnav-token-box order-2 {{ auth()->guest() ? 'is-guest' : 'is-authenticated' }}" title="{{ auth()->guest() ? 'هدیه شروع کاربران جدید' : 'موجودی اعتبار شما' }}">
+          <span class="topnav-token-icon" role="img" aria-label="اعتبار"></span>
+          <span class="topnav-token-value">
+            <span class="topnav-token-number">{{ number_format(auth()->check() ? auth()->user()->effective_token_balance : (\App\Models\ReferralSetting::current()->registration_gift_enabled ? \App\Models\ReferralSetting::current()->registration_gift_tokens : 0)) }}</span>
+            @guest<span class="topnav-token-gift">هدیه</span>@endguest
+          </span>
         </div>
 
       {{-- دکمه تغییر تم (روز / شب / سیستم) --}}
@@ -105,13 +113,11 @@
         </div>
       </div>
 
-      {{-- باکس خرید اشتراک — قبل خرید «خرید اشتراک»، بعد خرید سطح اشتراک --}}
-      @php
-        $subLabel = auth()->check() ? (auth()->user()->plan_name ?? 'خرید اشتراک') : 'خرید اشتراک';
-      @endphp
-      <a href="{{ route('pricing.index') }}" class="sub-btn order-3 shrink-0" aria-label="خرید اشتراک">
-        <span><i class="fa-solid fa-crown"></i><span class="sub-label">{{ $subLabel }}</span></span>
-      </a>
+      @if(! auth()->check() || auth()->user()->hasFreePlan())
+        <a href="{{ route('pricing.index') }}" class="sub-btn order-3 shrink-0" aria-label="خرید اشتراک">
+          <span><i class="fa-solid fa-crown"></i><span class="sub-label">خرید اشتراک</span></span>
+        </a>
+      @endif
 
       {{-- آیکون پروفایل + منوی کشویی (Popup) — سمت چپ --}}
       <label class="topnav-popup order-4" id="profile-popup">
@@ -130,29 +136,7 @@
           @endauth
         </div>
 
-        <nav class="topnav-popup-window">
-          @auth
-            {{-- نام و نام خانوادگی + شماره موبایل --}}
-            <div class="tp-userinfo">
-              <span class="tp-user-name">{{ trim((auth()->user()->name ?? '') . ' ' . (auth()->user()->last_name ?? '')) ?: 'کاربر وطن AI' }}</span>
-              <span class="tp-user-phone" dir="ltr">{{ auth()->user()->phone ?: '—' }}</span>
-            </div>
-            <hr>
-            <ul>
-              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-gem"></i><span>ارتقای حساب و خرید توکن</span></button></li>
-              @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
-              <li><button type="button" onclick="window.location.href='{{ route('app.profile') }}'"><i class="fa-solid fa-image"></i><span>عکس پروفایل</span></button></li>
-              <hr>
-              <li><button type="button" class="is-danger" onclick="window.logoutFromCurrentPage(this)"><i class="fa-solid fa-right-from-bracket"></i><span>خروج</span></button></li>
-            </ul>
-          @else
-            <ul>
-              <li><button type="button" onclick="window.location.href='{{ route('login', ['redirect' => request()->fullUrl()]) }}'"><i class="fa-solid fa-right-to-bracket"></i><span>ورود و ثبت نام</span></button></li>
-              @if($referralProfileMenuEnabled)<li><button type="button" onclick="window.location.href='{{ route('app.profile', ['tab' => 'referral']) }}#referral-program'"><i class="fa-solid fa-handshake-angle"></i><span>همکاری در فروش</span></button></li>@endif
-              <li><button type="button" onclick="window.location.href='{{ route('pricing.index') }}'"><i class="fa-solid fa-coins"></i><span>خرید توکن</span></button></li>
-            </ul>
-          @endauth
-        </nav>
+        @include('partials.topnav-profile-popup-window')
       </label>
     </div>
 
@@ -187,7 +171,7 @@
       </span>
     </a>
 
-    <a href="{{ route('app.create') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="create" aria-label="بساز">
+    <a href="{{ route('app.create.studio') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="create" aria-label="بساز">
       <span class="vatan-nav-icon-wrap vatan-nav-icon-wrap-25">
         @include('partials.nav-svg',['key'=>'create','state'=>'off','size'=>25,'class'=>'vatan-nav-icon-off text-white [.light_&]:text-black'])
         @include('partials.nav-svg',['key'=>'create','state'=>'on','size'=>25,'class'=>'vatan-nav-icon-on text-white [.light_&]:text-black'])

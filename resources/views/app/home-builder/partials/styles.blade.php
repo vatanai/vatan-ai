@@ -14,6 +14,10 @@
     margin: 2px -16px 0 -16px; width: calc(100% + 32px); isolation: isolate;
   }
   .home-cards-scroll::-webkit-scrollbar { display: none; }
+  .home-cards-scroll.hb-rows-2 {
+    display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
+    grid-auto-columns: 148px; column-gap: 5px; row-gap: 5px; align-items: stretch;
+  }
 
   .home-card {
     aspect-ratio: 4 / 5; border-radius:var(--hb-product-card-radius); overflow: hidden; position: relative;
@@ -112,11 +116,13 @@
     .home-cards-scroll { margin-left: 0; margin-right: 0; width: 100%; }
     .home-cards-scroll .home-card { width: 180px; }
     .home-cards-scroll .home-card--compact { width: 140px; }
+    .home-cards-scroll.hb-rows-2 { grid-auto-columns: 180px; column-gap: 5px; row-gap: 5px; }
     .home-section-title-right { font-size: 16px; }
   }
   @media (min-width: 1024px) {
     .home-cards-scroll { gap: 14px; }
     .home-cards-scroll .home-card { width: 200px; }
+    .home-cards-scroll.hb-rows-2 { grid-auto-columns: 200px; column-gap: 5px; row-gap: 5px; }
     .home-section-title-right { font-size: 17px; }
     .hb-grid { gap: 14px; }
   }
@@ -138,6 +144,10 @@
   .hb-peek-wrap { position: relative; margin-top: 8px; }
   .hb-peek-scroll { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 4px 2px 4px; direction: rtl; }
   .hb-peek-scroll::-webkit-scrollbar { display: none; }
+  .hb-peek-scroll.hb-rows-2 {
+    display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
+    grid-auto-columns: 150px; column-gap: 12px; row-gap: 14px; align-items: start;
+  }
   .hb-peek-item { flex: 0 0 auto; width: 150px; scroll-snap-align: start; cursor: pointer; }
   .hb-peek-card { position:relative; width:100%; aspect-ratio:4/5; border-radius:var(--hb-product-card-radius); overflow:hidden; border:1.5px solid transparent; transition:border-color .25s ease,transform .25s ease; background-size:cover; background-position:center; }
   .hb-peek-item:hover .hb-peek-card, .hb-peek-item.is-active .hb-peek-card { border-color: #cffe00; transform: translateY(-2px); }
@@ -428,6 +438,10 @@
   /* پنج مدل سکشن متحرک */
   .hb-motion-row,.hb-video-loop-row { display:flex; gap:14px; overflow-x:auto; scrollbar-width:none; }
   .hb-motion-row::-webkit-scrollbar,.hb-video-loop-row::-webkit-scrollbar { display:none; }
+  .hb-motion-row.hb-rows-2 {
+    display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, auto);
+    grid-auto-columns:170px; column-gap:14px; row-gap:14px; align-items:start;
+  }
   .hb-motion-card { flex:0 0 170px; color:#fff; text-decoration:none; }
   .hb-motion-media { position:relative; aspect-ratio:4/5; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; }
   .hb-motion-meta { display:flex; justify-content:space-between; gap:8px; padding-top:7px; font-size:10px; }
@@ -446,6 +460,11 @@
 
   /* ویدیوی حلقه‌ای */
   .hb-video-loop-card { position:relative; flex:0 0 min(76vw,340px); aspect-ratio:16/10; overflow:hidden; border-radius:var(--hb-product-card-radius); color:#fff; }
+  .hb-video-loop-row.hb-rows-2 {
+    display:grid; grid-auto-flow:column; grid-template-rows:repeat(2, auto);
+    grid-auto-columns:min(76vw,340px); grid-auto-rows:212.5px;
+    column-gap:14px; row-gap:14px; align-items:start;
+  }
   .hb-video-loop-card video,.hb-video-loop-fallback { width:100%; height:100%; object-fit:cover; display:block; background-size:cover; background-position:center; }
   .hb-video-loop-fallback { animation:hb-video-fallback 6s ease-in-out infinite alternate; }
   .hb-video-loop-info { position:absolute; right:12px; bottom:11px; z-index:2; text-shadow:0 2px 7px #000; }
@@ -475,6 +494,8 @@
     .hb-hover-library,.hb-hover-showcase { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:10px; }
     .hb-motion-card { flex-basis:142px; }
     .hb-video-loop-card { flex-basis:86vw; }
+    .hb-motion-row.hb-rows-2 { grid-auto-columns:142px; column-gap:10px; row-gap:12px; }
+    .hb-video-loop-row.hb-rows-2 { grid-auto-columns:86vw; grid-auto-rows:53.75vw; column-gap:10px; row-gap:10px; }
     .hb-stack-card { flex-basis:155px; margin-left:-54px; }
     .hb-wheel-card { flex-basis:138px; }
   }

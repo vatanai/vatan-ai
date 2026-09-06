@@ -17,8 +17,8 @@ function updatePlanPreview(){
   document.getElementById('preview-short').textContent=document.getElementById('plan-short').value||'مناسب برای گروه هدف شما';
   document.querySelectorAll('#desktop-plan-preview .vpc__name,#mobile-plan-preview .vpc__name').forEach(el=>el.textContent=document.getElementById('plan-name').value||'نام پلن');
   document.querySelectorAll('#desktop-plan-preview .vpc__fit,#mobile-plan-preview .vpc__fit').forEach(el=>el.textContent=document.getElementById('plan-short').value||'مناسب برای کاربران وطن استودیو');
-  document.querySelectorAll('#desktop-plan-preview .vpc__price,#mobile-plan-preview .vpc__price').forEach(el=>el.innerHTML=Number(price)===0?'رایگان':Number(price).toLocaleString('fa-IR')+' <small>تومان / ماه</small>');
-  document.querySelectorAll('#desktop-plan-preview .vpc__tokens,#mobile-plan-preview .vpc__tokens').forEach(el=>el.textContent=Number(document.getElementById('plan-tokens').value||0).toLocaleString('fa-IR')+' توکن');
+  document.querySelectorAll('#desktop-plan-preview .vpc__price,#mobile-plan-preview .vpc__price').forEach(el=>el.innerHTML=Number(price)===0?'رایگان':Number(price).toLocaleString('fa-IR')+' <small>تومان</small>');
+  document.querySelectorAll('#desktop-plan-preview .vpc__tokens,#mobile-plan-preview .vpc__tokens').forEach(el=>el.textContent=Number(document.getElementById('plan-tokens').value||0).toLocaleString('fa-IR')+' اعتبار');
 }
 ['plan-name','plan-price','plan-tokens','plan-short'].forEach(id=>document.getElementById(id)?.addEventListener('input',updatePlanPreview));updatePlanPreview();
 function selectPlanCardStyle(style){

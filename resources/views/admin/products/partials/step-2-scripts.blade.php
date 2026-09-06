@@ -19,7 +19,7 @@ function togglePrimaryModelMenu() {
 function updateApiProviderPicker(provider) {
   const label = document.getElementById('api-provider-picker-label');
   const choice = document.querySelector('[data-provider-choice="' + provider + '"]');
-  if (label) label.textContent = provider === 'all' ? 'همه پرووایدرها' : (choice?.querySelector('span')?.textContent || provider);
+  if (label) label.textContent = choice?.querySelector('span')?.textContent || 'انتخاب پرووایدر';
   document.querySelectorAll('[data-provider-choice]').forEach(function (item) {
     item.classList.toggle('is-selected', item.dataset.providerChoice === provider);
   });
@@ -27,7 +27,7 @@ function updateApiProviderPicker(provider) {
 
 function primaryModelFilterValues() {
   return {
-    provider: __currentApiProvider || 'all',
+    provider: __currentApiProvider || '',
     purpose: document.getElementById('primary-model-purpose-filter')?.value || 'all',
     task: document.getElementById('primary-model-task-filter')?.value || 'product_image',
     search: (document.getElementById('primary-model-search')?.value || '').trim().toLowerCase(),
@@ -35,7 +35,7 @@ function primaryModelFilterValues() {
 }
 
 function modelMatchesPrimaryFilters(provider, purpose, task, search, modelProvider, modelTask, modelWorkflow, modelUseCases, modelSearch) {
-  const providerOk = provider === 'all' || provider === modelProvider;
+  const providerOk = Boolean(provider) && provider === modelProvider;
   const taskOk = task === 'all' || (task === 'product_image' ? modelWorkflow === 'product_image' : modelTask === task);
   const useCases = String(modelUseCases || '').split(',').filter(Boolean);
   const purposeMap = {
@@ -70,6 +70,10 @@ function renderPrimaryModelPicker() {
     primarySel.value = '';
     onPrimaryModelChange();
   }
+  document.querySelectorAll('#recommended-product-models .recommended-model-card').forEach(function (card) {
+    const providerOk = Boolean(filters.provider) && card.dataset.recommendedProvider === filters.provider;
+    card.classList.toggle('hidden', !providerOk);
+  });
 }
 
 function onPrimaryModelFilterChange() {
@@ -77,7 +81,7 @@ function onPrimaryModelFilterChange() {
 }
 
 function toggleFallbackConfiguration() {
-  const enabled = document.getElementById('fallback-enabled')?.checked;
+  const enabled = document.getElementById('fallback-enabled')?.value === '1';
   const box = document.getElementById('fallback-configuration');
   box?.classList.toggle('hidden', !enabled);
   document.querySelectorAll('#fallback-configuration input, #fallback-configuration select').forEach((control) => {
@@ -94,12 +98,12 @@ function toggleFallbackModelMenu() {
 }
 
 function renderFallbackModelPicker() {
-  const provider = document.getElementById('fallback-provider-filter')?.value || 'all';
+  const provider = document.getElementById('fallback-provider-filter')?.value || '';
   const task = document.getElementById('fallback-task-filter')?.value || 'product_image';
   const query = (document.getElementById('fallback-model-search')?.value || '').trim().toLowerCase();
   document.querySelectorAll('#fallback-model-options .model-picker-model-row').forEach(function (row) {
     const taskOk = task === 'all' || (task === 'product_image' ? row.dataset.fallbackWorkflow === 'product_image' : row.dataset.fallbackTask === task);
-    const providerOk = provider === 'all' || row.dataset.fallbackProvider === provider;
+    const providerOk = Boolean(provider) && row.dataset.fallbackProvider === provider;
     const searchOk = !query || (row.dataset.fallbackSearch || '').toLowerCase().includes(query);
     row.classList.toggle('hidden', !(taskOk && providerOk && searchOk));
   });
@@ -118,6 +122,31 @@ function selectFallbackModelFromPicker(row) {
   document.querySelectorAll('#fallback-model-options .model-picker-model-row').forEach((item) => item.classList.toggle('is-selected', item === row));
   document.getElementById('fallback-model-menu')?.classList.add('hidden');
   document.getElementById('fallback-model-picker-button')?.setAttribute('aria-expanded', 'false');
+}
+
+function selectFallbackModelCard(card) {
+  if (!card) return;
+  const modelInput = document.getElementById('fallback-model-input');
+  const providerInput = document.getElementById('fallback-provider-input');
+  if (modelInput) modelInput.value = card.dataset.fallbackId || '';
+  if (providerInput) providerInput.value = card.dataset.fallbackProvider || '';
+  const providerFilter = document.getElementById('fallback-provider-filter');
+  if (providerFilter) providerFilter.value = card.dataset.fallbackProvider || '';
+  document.querySelectorAll('#fallback-recommended-product-models [data-fallback-card]').forEach(function (item) {
+    const selected = item === card;
+    item.classList.toggle('is-selected', selected);
+    const check = item.querySelector('.recommended-model-check');
+    if (check) check.style.display = selected ? 'inline-block' : 'none';
+  });
+  const label = document.getElementById('fallback-selected-label');
+  if (label) label.textContent = 'مدل انتخاب‌شده: ' + (card.dataset.fallbackName || card.dataset.fallbackId || '—');
+}
+
+function filterFallbackModelCards() {
+  const provider = document.getElementById('fallback-provider-filter')?.value || '';
+  document.querySelectorAll('#fallback-recommended-product-models [data-fallback-card]').forEach(function (card) {
+    card.classList.toggle('hidden', !provider || card.dataset.fallbackProvider !== provider);
+  });
 }
 
 function selectApiProvider(provider) {
@@ -153,7 +182,7 @@ function onPrimaryModelChange() {
   const opt = sel.options[sel.selectedIndex];
   if (!opt || !sel.value) { card.classList.add('hidden'); return; }
 
-  // شناسه برخی مدل‌ها بین Liara و OpenRouter مشترک است. Provider باید همیشه
+  // شناسه برخی مدل‌ها بین providerها مشترک است. Provider باید همیشه
   // از خود option انتخاب‌شده خوانده شود تا جفت مدل/سرویس از هم جدا نشود.
   const selectedProvider = opt.getAttribute('data-api-provider') || '';
   const providerInput = document.getElementById('ai-provider-input');
@@ -169,6 +198,7 @@ function onPrimaryModelChange() {
   document.querySelectorAll('#primary-model-options .model-picker-model-row').forEach(function (row) {
     row.classList.toggle('is-selected', row.dataset.modelId === opt.value && row.dataset.modelProvider === selectedProvider);
   });
+  markRecommendedModelSelection(selectedProvider, opt.value);
 
   document.getElementById('model-info-name').textContent = opt.getAttribute('data-name') || '—';
   document.getElementById('model-info-provider').textContent = opt.getAttribute('data-provider') || '—';
@@ -190,30 +220,25 @@ function onPrimaryModelChange() {
   card.classList.remove('hidden');
 }
 function clearRecommendedModelSelection() {
-  document.querySelectorAll('.recommended-model-card').forEach(function(card){
+  document.querySelectorAll('#recommended-product-models .recommended-model-card').forEach(function(card){
     card.classList.remove('border-[var(--green)]','bg-[var(--green)]/5');
     const check = card.querySelector('.recommended-model-check'); if (check) check.style.display = 'none';
   });
 }
-function selectRecommendedModel(modelId) {
-  const select = document.getElementById('primary-model-select'); if (!select) return;
-  const automaticFallbacks = {'openai/gpt-image-2':'openai/gpt-image-1','openai/gpt-image-1':'openai/gpt-image-1-mini','openai/gpt-image-1-mini':'openai/gpt-image-1'};
-  window.__recommendedSelectionInProgress = true;
-  setFallbackSelection(select, modelId, 'openrouter');
-  select.dispatchEvent(new Event('change', {bubbles:true}));
-  if (typeof refreshSearchable === 'function') refreshSearchable(select);
-  window.__recommendedSelectionInProgress = false;
+function markRecommendedModelSelection(provider, modelId) {
   clearRecommendedModelSelection();
-  const activeCard = document.querySelector('.recommended-model-card[data-recommended-model="' + modelId + '"]');
-  activeCard?.classList.add('border-[var(--green)]','bg-[var(--green)]/5'); const activeCheck = activeCard?.querySelector('.recommended-model-check'); if (activeCheck) activeCheck.style.display = 'inline-block';
-  const fallback = document.querySelector('.fallback-select-item');
-  const primaryProvider = select.options[select.selectedIndex]?.getAttribute('data-api-provider') || 'openrouter';
-  if (fallback && automaticFallbacks[modelId]) {
-    setFallbackSelection(fallback, automaticFallbacks[modelId], primaryProvider);
-    if (typeof refreshSearchable === 'function') refreshSearchable(fallback);
-  } else if (automaticFallbacks[modelId]) {
-    setFallbackModelById(automaticFallbacks[modelId], primaryProvider);
-  }
+  const activeCard = document.querySelector('#recommended-product-models .recommended-model-card[data-recommended-provider="' + provider + '"][data-recommended-model="' + modelId + '"]');
+  activeCard?.classList.add('border-[var(--green)]','bg-[var(--green)]/5');
+  const activeCheck = activeCard?.querySelector('.recommended-model-check');
+  if (activeCheck) activeCheck.style.display = 'inline-block';
+}
+function selectRecommendedModel(provider, modelId) {
+  const select = document.getElementById('primary-model-select'); if (!select) return;
+  window.__recommendedSelectionInProgress = true;
+  const row = document.querySelector('#primary-model-options .model-picker-model-row[data-model-provider="' + provider + '"][data-model-id="' + modelId + '"]');
+  if (row) selectPrimaryModelFromPicker(row);
+  window.__recommendedSelectionInProgress = false;
+  markRecommendedModelSelection(provider, modelId);
 }
 
 function syncFallbackProvider(select) {
@@ -243,8 +268,7 @@ function setFallbackModelById(modelId, provider) {
 function onApiProviderChange(provider) {
   __currentApiProvider = provider;
   const providerInput = document.getElementById('ai-provider-input');
-  // «همه» فقط فیلتر نمایشی است و نباید به‌عنوان provider واقعی فرم ارسال شود.
-  if (providerInput && provider !== 'all') providerInput.value = provider;
+  if (providerInput) providerInput.value = provider;
 
   // آپدیت استایل دکمه‌های تاگل
   document.querySelectorAll('.api-provider-btn').forEach(btn => btn.classList.remove('active-provider'));
@@ -252,7 +276,8 @@ function onApiProviderChange(provider) {
   if (activeBtn) activeBtn.classList.add('active-provider');
   updateApiProviderPicker(provider);
   renderPrimaryModelPicker();
-  document.getElementById('recommended-openrouter-models')?.classList.toggle('hidden', provider !== 'openrouter');
+  // فقط مدل‌های پرووایدر انتخاب‌شده دیده می‌شوند؛ انتخاب کارت نیز جفت دقیق
+  // provider + model را در فرم ثبت می‌کند.
 
   // مدل‌های جایگزین مستقل از سرویس مدل اصلی هستند؛ مدیر می‌تواند برای
   // failover یک مدل لیارا و یک مدل OpenRouter را هم‌زمان انتخاب کند.
@@ -551,11 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   clearRecommendedModelSelection();
   onPrimaryModelChange();
-  clearRecommendedModelSelection();
   toggleFallbackConfiguration();
-  renderFallbackModelPicker();
+  filterFallbackModelCards();
+  document.querySelectorAll('#fallback-recommended-product-models [data-fallback-card].is-selected').forEach(selectFallbackModelCard);
   onPromptInput();
   // اجرای اولیه فیلتر provider
-  onApiProviderChange(typeof __currentApiProvider !== 'undefined' ? __currentApiProvider : 'openrouter');
+  onApiProviderChange(typeof __currentApiProvider !== 'undefined' ? __currentApiProvider : '');
 });
 </script>

@@ -22,6 +22,7 @@ class AiWebhookController extends Controller
         if (!$verifier->verifyFal($body, $headers)) return response()->json(['message' => 'امضای وب‌هوک معتبر نیست.'], 401);
 
         $normalized = $provider->handleWebhook((array) $request->json()->all());
+        app(\App\Services\VideoGenerationService::class)->syncFromProvider($normalized);
         Log::info('Fal.ai webhook processed', ['request_id' => $normalized['external_request_id'], 'status' => $normalized['status']]);
         return response()->json(['received' => true]);
     }
@@ -38,6 +39,7 @@ class AiWebhookController extends Controller
         if (!$verifier->verifyReplicate($body, $headers, $secret)) return response()->json(['message' => 'امضای وب‌هوک معتبر نیست.'], 401);
 
         $normalized = $provider->handleWebhook((array) $request->json()->all());
+        app(\App\Services\VideoGenerationService::class)->syncFromProvider($normalized);
         Log::info('Replicate webhook processed', ['request_id' => $normalized['external_request_id'], 'status' => $normalized['status']]);
         return response()->json(['received' => true]);
     }

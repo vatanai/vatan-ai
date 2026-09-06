@@ -15,6 +15,116 @@
   const progressStage = root.querySelector('[data-progress]');
   const resultStage = root.querySelector('[data-result]');
   let hasGeneratedOutput = false;
+  let progressAnimationFrame = null;
+  let progressStartedAt = 0;
+  let progressLastValue = 0;
+
+  const progressBar = progressStage?.querySelector('[data-progress-bar]');
+  const progressTrack = progressStage?.querySelector('[role="progressbar"]');
+  const progressValue = progressStage?.querySelector('[data-progress-value]');
+  const progressText = progressStage?.querySelector('[data-progress-text]');
+  const progressTime = progressStage?.querySelector('[data-progress-time]');
+  const progressNote = progressStage?.querySelector('[data-progress-note]');
+
+  function formatElapsedTime(totalSeconds) {
+    const minutes = Math.floor(totalSeconds / 60).toLocaleString('fa-IR', { minimumIntegerDigits: 2, useGrouping: false });
+    const seconds = Math.floor(totalSeconds % 60).toLocaleString('fa-IR', { minimumIntegerDigits: 2, useGrouping: false });
+    return `${minutes}:${seconds}`;
+  }
+
+  function progressForElapsed(elapsedSeconds) {
+    if (elapsedSeconds < 4) {
+      const part = elapsedSeconds / 4;
+      return 10 * (1 - Math.pow(1 - part, 2));
+    }
+    if (elapsedSeconds < 16) {
+      const part = (elapsedSeconds - 4) / 12;
+      return 10 + (22 * Math.pow(part, .9));
+    }
+    if (elapsedSeconds < 30) {
+      const part = (elapsedSeconds - 16) / 14;
+      return 32 + (32 * (1 - Math.pow(1 - part, 1.45)));
+    }
+    if (elapsedSeconds < 46) {
+      const part = (elapsedSeconds - 30) / 16;
+      return 64 + (18 * (1 - Math.pow(1 - part, 1.35)));
+    }
+
+    // پس از ثانیه ۴۶ پیشرفت به‌صورت مجانبی کند می‌شود و هرگز قبل از
+    // دریافت پاسخ واقعی به ۱۰۰ درصد نمی‌رسد.
+    return Math.min(96, 82 + (14 * (1 - Math.exp(-(elapsedSeconds - 46) / 26))));
+  }
+
+  function messageForElapsed(elapsedSeconds) {
+    if (elapsedSeconds < 2) return 'در حال بررسی ورودی‌ها';
+    if (elapsedSeconds < 8) return 'در حال تحلیل تصویر و جزئیات آن';
+    if (elapsedSeconds < 18) return 'در حال ساخت ترکیب اصلی تصویر';
+    if (elapsedSeconds < 25) return 'در حال پرداخت جزئیات نهایی';
+    if (elapsedSeconds < 30) return 'در حال تکمیل خروجی شما';
+    return 'ساخت کمی بیشتر از معمول طول کشیده؛ همچنان ادامه دارد';
+  }
+
+  function renderVisualProgress(value, elapsedSeconds, message = null) {
+    if (!progressStage || !progressBar || !progressTrack) return;
+    const roundedValue = Math.max(0, Math.min(100, Math.round(value)));
+    const currentMessage = message || messageForElapsed(elapsedSeconds);
+    progressLastValue = Math.max(progressLastValue, roundedValue);
+    progressBar.style.width = `${progressLastValue}%`;
+    if (progressValue) progressValue.textContent = `${progressLastValue.toLocaleString('fa-IR')}٪`;
+    if (progressText && progressText.textContent !== currentMessage) progressText.textContent = currentMessage;
+    if (progressTime) progressTime.textContent = `زمان سپری‌شده ${formatElapsedTime(elapsedSeconds)}`;
+    if (progressNote) progressNote.textContent = elapsedSeconds < 30 ? 'زمان هدف حدود ۰۰:۳۰' : 'در انتظار پاسخ نهایی سرویس';
+    progressTrack.setAttribute('aria-valuenow', String(progressLastValue));
+    progressTrack.setAttribute('aria-valuetext', `${progressLastValue.toLocaleString('fa-IR')} درصد؛ ${currentMessage}`);
+  }
+
+  function stopVisualProgress() {
+    if (progressAnimationFrame !== null) cancelAnimationFrame(progressAnimationFrame);
+    progressAnimationFrame = null;
+  }
+
+  function resetVisualProgress() {
+    stopVisualProgress();
+    progressLastValue = 0;
+    progressStage?.classList.remove('is-complete');
+    renderVisualProgress(0, 0, 'در حال بررسی ورودی‌ها');
+  }
+
+  function startVisualProgress() {
+    resetVisualProgress();
+    progressStartedAt = performance.now();
+    const tick = (now) => {
+      const elapsedSeconds = Math.max(0, (now - progressStartedAt) / 1000);
+      renderVisualProgress(progressForElapsed(elapsedSeconds), elapsedSeconds);
+      progressAnimationFrame = requestAnimationFrame(tick);
+    };
+    progressAnimationFrame = requestAnimationFrame(tick);
+  }
+
+  function completeVisualProgress() {
+    stopVisualProgress();
+    const elapsedSeconds = Math.max(0, (performance.now() - progressStartedAt) / 1000);
+    progressStage?.classList.add('is-complete');
+    renderVisualProgress(100, elapsedSeconds, 'خروجی آماده شد');
+    if (progressNote) progressNote.textContent = 'آماده برای نمایش';
+    return new Promise((resolve) => window.setTimeout(resolve, 520));
+  }
+
+  function waitForStageImage(image) {
+    if (!image || (image.complete && image.naturalWidth > 0)) return Promise.resolve();
+    return new Promise((resolve) => {
+      let timeout = null;
+      const done = () => {
+        image.removeEventListener('load', done);
+        image.removeEventListener('error', done);
+        if (timeout) window.clearTimeout(timeout);
+        resolve();
+      };
+      image.addEventListener('load', done, { once: true });
+      image.addEventListener('error', done, { once: true });
+      timeout = window.setTimeout(done, 8000);
+    });
+  }
 
   root.querySelectorAll('[data-ratio-dropdown]').forEach((dropdown) => {
     const summary = dropdown.querySelector('[data-ratio-summary] b');
@@ -41,6 +151,7 @@
     const toggle = selector.querySelector('[data-face-source-toggle]');
     const menu = selector.querySelector('[data-face-source-menu]');
     const label = selector.querySelector('[data-face-source-label]');
+    const faceProfileInput = selector.querySelector('[data-face-profile-input]');
     if (!toggle || !menu || !label) return;
 
     toggle.addEventListener('click', () => {
@@ -60,6 +171,11 @@
         if (optionLabel) label.textContent = optionLabel.textContent;
         selector.querySelectorAll('[data-face-source-option]').forEach((item) => item.classList.remove('selected'));
         option.classList.add('selected');
+        if (faceProfileInput) faceProfileInput.value = option.dataset.faceProfileId || '';
+        hasPrimaryImage = Boolean(faceProfileInput?.value)
+          || Boolean(form.querySelector('[name="gallery_item_id"]')?.value)
+          || [...root.querySelectorAll('[data-upload-input][accept*="image"]')].some((imageInput) => imageInput.files.length);
+        updateReadiness();
         menu.hidden = true;
         toggle.setAttribute('aria-expanded', 'false');
         selector.classList.remove('is-open');
@@ -153,7 +269,8 @@
   const readiness = root.querySelector('[data-readiness]');
   const readinessText = root.querySelector('[data-readiness-text]');
   const scoreBar = root.querySelector('[data-score-bar]');
-  let hasPrimaryImage = false;
+  let hasPrimaryImage = Boolean(form.querySelector('[data-face-profile-input]')?.value)
+    || Boolean(form.querySelector('[name="gallery_item_id"]')?.value);
   function updateReadiness() {
     const value = hasPrimaryImage ? 92 : 35;
     const generateButton = root.querySelector('[data-action=generate]');
@@ -161,9 +278,13 @@
       generateButton.disabled = !hasPrimaryImage;
       generateButton.setAttribute('aria-disabled', hasPrimaryImage ? 'false' : 'true');
     }
+    if (!readiness || !scoreBar || !readinessText) return;
     readiness.textContent = value.toLocaleString('fa-IR') + '٪';
     scoreBar.style.width = value + '%';
-    readinessText.textContent = hasPrimaryImage ? 'همه‌چیز برای یک خروجی دقیق آماده است.' : 'ابتدا تصویر اصلی را اضافه کنید.';
+    const selectedFaceProfile = form.querySelector('[data-face-profile-input]')?.value;
+    readinessText.textContent = hasPrimaryImage
+      ? (selectedFaceProfile ? 'پروفایل چهره انتخاب شد و برای ساخت آماده است.' : 'همه‌چیز برای یک خروجی دقیق آماده است.')
+      : 'ابتدا تصویر اصلی را اضافه کنید.';
   }
 
   root.querySelectorAll('[data-upload-input]').forEach((input) => {
@@ -197,7 +318,7 @@
         remove.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); const transfer = new DataTransfer(); selected.filter((_, fileIndex) => fileIndex !== index).forEach((kept) => transfer.items.add(kept)); input.files = transfer.files; renderFiles(input.files); });
         item.appendChild(remove); preview.appendChild(item);
       });
-      if (input.accept.includes('image')) { hasPrimaryImage = [...root.querySelectorAll('[data-upload-input][accept*="image"]')].some((imageInput) => imageInput.files.length); updateReadiness(); }
+      if (input.accept.includes('image')) { hasPrimaryImage = Boolean(form.querySelector('[name="gallery_item_id"]')?.value) || [...root.querySelectorAll('[data-upload-input][accept*="image"]')].some((imageInput) => imageInput.files.length); updateReadiness(); }
       if (input.accept.includes('image') && selected.length) {
         upload.style.borderColor = '';
         const warnings = (await Promise.all(selected.map(checkImageQuality))).filter(Boolean);
@@ -242,6 +363,21 @@
   const costElement = root.querySelector('[data-cost]');
   const baseCostText = costElement?.textContent || root.querySelector('[name="redesign_cost"]')?.value || '0';
   const baseCost = Number(String(baseCostText).match(/[0-9٠-٩]+/)?.[0] || 0);
+  function selectedMainQuality() {
+    return form.querySelector('[data-main-quality]:checked') || form.querySelector('input[type="hidden"][data-main-quality]');
+  }
+  function mainQualityCreditCost() {
+    const selected = selectedMainQuality();
+    return selected ? Number(selected.dataset.creditCost || baseCost) : baseCost;
+  }
+  function updateMainQualitySummary() {
+    const selected = selectedMainQuality();
+    if (!selected) return;
+    const qualityName = root.querySelector('[data-build-quality-name]');
+    const qualityGrade = root.querySelector('[data-build-quality-grade]');
+    if (qualityName) qualityName.textContent = selected.dataset.qualityName || '';
+    if (qualityGrade) qualityGrade.textContent = selected.dataset.qualityGrade || '';
+  }
   function recalculateCost() {
     let extra = 0;
     root.querySelectorAll('.cw-field:not([hidden])').forEach((field) => {
@@ -255,11 +391,15 @@
     });
     const identity = root.querySelector('[data-identity-toggle]');
     if (identity?.checked) extra += Number(identity.closest('[data-identity-extra]')?.dataset.identityExtra || 0);
-    if (costElement) costElement.textContent = baseCost + extra;
+    const total = mainQualityCreditCost() + extra;
+    if (costElement) costElement.textContent = total;
+    const redesignCost = root.querySelector('[name="redesign_cost"]');
+    if (redesignCost) redesignCost.value = total;
   }
-  form.addEventListener('change', recalculateCost);
+  form.addEventListener('change', () => { recalculateCost(); updateMainQualitySummary(); });
   form.addEventListener('input', recalculateCost);
   recalculateCost();
+  updateMainQualitySummary();
   root.querySelector('[data-identity-toggle]')?.addEventListener('change', (event) => {
     const grade = root.querySelector('[data-grade-label]');
     if (grade) grade.textContent = event.target.checked ? 'Grade A · High' : 'Grade B · Medium';
@@ -281,7 +421,8 @@
     const requiredUpload = requiredUploadField?.querySelector('.cw-upload')
       || root.querySelector('[data-required-upload="1"]');
     const requiredUploadInput = requiredUpload?.querySelector('input[type=file]');
-    if (requiredUploadInput && !requiredUploadInput.files.length) {
+    const selectedFaceProfile = form.querySelector('[data-face-profile-input]')?.value;
+    if (requiredUploadInput && !requiredUploadInput.files.length && !selectedFaceProfile && !form.querySelector('[name="gallery_item_id"]')?.value) {
       alertText.textContent = 'برای ادامه، تصویر الزامی را اضافه کنید.';
       alertBox.hidden = false; requiredUpload.style.borderColor = 'var(--red)';
       tabs.find((tab) => tab.dataset.tab === 'basic')?.click(); requiredUpload.scrollIntoView({ behavior: 'smooth', block: 'center' }); return;
@@ -292,15 +433,15 @@
     const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]'); const result = root.querySelector('[data-result]');
     setStageTab('upload');
     empty.hidden = true; result.hidden = true; progress.hidden = false;
-    const bar = progress.querySelector('.cw-progress-track i'); const text = progress.querySelector('[data-progress-text]');
-    bar.style.width = '18%'; text.textContent = 'در حال بررسی ورودی‌ها';
+    startVisualProgress();
+    const submit = root.querySelector('[data-action=generate]'); submit.disabled = true;
     if (root.dataset.preview === '1' || !root.dataset.generateUrl) {
-      setTimeout(() => { bar.style.width = '58%'; text.textContent = 'در حال حفظ جزئیات چهره'; }, 650);
-      setTimeout(() => { bar.style.width = '86%'; text.textContent = 'پرداخت نهایی تصویر'; }, 1400);
-      setTimeout(() => { progress.hidden = true; result.hidden = false; revealOutputTab(); }, 2300);
+      setTimeout(async () => {
+        await completeVisualProgress();
+        progress.hidden = true; result.hidden = false; submit.disabled = false; revealOutputTab();
+      }, 3200);
       return;
     }
-    const submit = root.querySelector('[data-action=generate]'); submit.disabled = true;
     const data = new FormData(form);
     // FormData فرم را مبنا می‌گیرد، اما set باعث می‌شود در صورت وجود فیلدهای
     // قدیمیِ هم‌نام یا اسکریپت‌های سازگاری، فقط یک مقدار واقعی به بک‌اند برسد.
@@ -308,8 +449,11 @@
       || form.querySelector('select[name="output[aspect_ratio]"]');
     const selectedQuality = form.querySelector('[name="output[quality]"]:checked')
       || form.querySelector('select[name="output[quality]"]');
+    const selectedMainQuality = form.querySelector('[name="output[main_quality]"]:checked')
+      || form.querySelector('input[type="hidden"][name="output[main_quality]"]');
     if (selectedAspectRatio?.value) data.set('output[aspect_ratio]', selectedAspectRatio.value);
     if (selectedQuality?.value) data.set('output[quality]', selectedQuality.value);
+    if (selectedMainQuality?.value) data.set('output[main_quality]', selectedMainQuality.value);
     try {
       const response = await fetch(root.dataset.generateUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' }, body: data });
       const responseText = await response.text();
@@ -331,14 +475,30 @@
         button.addEventListener('click', () => { main.src = image.url; [...strip.children].forEach((item) => item.classList.toggle('active', item === button)); });
         strip.appendChild(button);
       });
-      result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${Number(images.length).toLocaleString('fa-IR')} خروجی آماده شد`;
-      bar.style.width = '100%'; progress.hidden = true; result.hidden = false; revealOutputTab();
+      const resultMessage = images.length === 1
+        ? 'یک خروجی آماده و در بخش پروفایل ذخیره شد'
+        : `${Number(images.length).toLocaleString('fa-IR')} خروجی آماده و در بخش پروفایل ذخیره شد`;
+      result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${resultMessage}`;
+      await waitForStageImage(main);
+      await completeVisualProgress();
+      progress.hidden = true; result.hidden = false; revealOutputTab();
+      const profileModal = root.querySelector('[data-profile-modal]');
+      if (profileModal && root.dataset.authenticated === '1') {
+        profileModal.hidden = false;
+        document.body.classList.add('cw-modal-open');
+      }
     } catch (error) {
+      resetVisualProgress();
       progress.hidden = true; empty.hidden = false; setStageTab('upload'); alertText.textContent = error.message; alertBox.hidden = false;
     } finally { submit.disabled = false; }
   });
   root.querySelectorAll('.cw-result-strip button').forEach((button) => button.addEventListener('click', () => {
     root.querySelectorAll('.cw-result-strip button').forEach((item) => item.classList.toggle('active', item === button));
+  }));
+  root.querySelectorAll('[data-profile-modal-close]').forEach((element) => element.addEventListener('click', () => {
+    const profileModal = root.querySelector('[data-profile-modal]');
+    if (profileModal) profileModal.hidden = true;
+    document.body.classList.remove('cw-modal-open');
   }));
   root.querySelector('[data-action=download]')?.addEventListener('click', () => {
     const url = root.querySelector('[data-result] > img').src;
@@ -358,5 +518,23 @@
   });
   root.querySelector('[data-action=regenerate]')?.addEventListener('click', () => root.querySelector('[data-action=generate]')?.click());
   updateReadiness();
+  if (root.dataset.loaderDemo === '1') {
+    setStageTab('upload');
+    if (emptyStage) emptyStage.hidden = true;
+    if (outputPlaceholder) outputPlaceholder.hidden = true;
+    if (resultStage) resultStage.hidden = true;
+    if (progressStage) {
+      progressStage.hidden = false;
+      startVisualProgress();
+    }
+  } else if (root.dataset.resultDemo === '1') {
+    hasGeneratedOutput = true;
+    if (emptyStage) emptyStage.hidden = true;
+    if (progressStage) progressStage.hidden = true;
+    if (outputPlaceholder) outputPlaceholder.hidden = true;
+    if (outputStageTab) outputStageTab.hidden = false;
+    if (resultStage) resultStage.hidden = false;
+    setStageTab('output');
+  }
   });
 }());

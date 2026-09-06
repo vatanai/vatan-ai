@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SavePlanRequest;
 use App\Models\Plan;
 use App\Models\PlanSetting;
+use App\Services\PlanCatalogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,8 @@ class PlanController extends Controller
         return view('admin.plans.index', [
             'plans' => $query->get(),
             'display' => PlanSetting::display(),
+            'homePricing' => PlanSetting::homePricing(),
+            'homePricingPlans' => app(PlanCatalogService::class)->homePricingPlans(),
             'stats' => [
                 'total' => Plan::count(),
                 'active' => Plan::published()->count(),
@@ -134,13 +137,23 @@ class PlanController extends Controller
     private function payload(SavePlanRequest $request, ?Plan $plan = null): array
     {
         $data = $request->validated();
-        $features = collect($data['features'])->values()->map(fn ($feature, $index) => [
+        $features = collect($data['features'])
+            ->reject(fn ($feature) => trim((string) ($feature['title'] ?? '')) === 'پروفایل چهره')
+            ->values()->map(fn ($feature, $index) => [
             'title' => trim($feature['title']),
             'value' => trim((string) ($feature['value'] ?? '')),
             'included' => $feature['included'],
             'highlighted' => (bool) ($feature['highlighted'] ?? false),
             'sort_order' => $index + 1,
         ])->all();
+        $faceProfileLimit = (int) $data['face_profile_limit'];
+        $features[] = [
+            'title' => 'پروفایل چهره',
+            'value' => (string) $faceProfileLimit,
+            'included' => $faceProfileLimit > 0 ? 'limited' : 'no',
+            'highlighted' => true,
+            'sort_order' => count($features) + 1,
+        ];
 
         $imagePath = $plan?->image_path;
         if ($request->hasFile('image')) {
@@ -157,6 +170,7 @@ class PlanController extends Controller
             'price_prefix' => $data['price_prefix'] ?? null,
             'compare_at_price' => $data['compare_at_price'] ?? null,
             'tokens' => $data['tokens'],
+            'face_profile_limit' => $faceProfileLimit,
             'token_label' => $data['token_label'] ?? null,
             'billing_type' => $data['billing_type'],
             'is_unlimited' => $data['is_unlimited'],
@@ -182,6 +196,8 @@ class PlanController extends Controller
             'starts_at' => $data['starts_at'] ?? null,
             'ends_at' => $data['ends_at'] ?? null,
             'image_path' => $imagePath,
+            'model_tier_key' => $data['model_tier_key'],
+            'show_model_tier' => $data['show_model_tier'],
         ];
     }
 

@@ -10,15 +10,15 @@
       <span class="referral-program-kicker"><i class="fa-solid fa-people-arrows-left-right"></i> همکاری در فروش وطن</span>
       <h2>{{ $referralSettings->profile_title }}</h2>
       <p class="referral-program-lead">{{ $referralSettings->profile_subtitle }}</p>
-      <p class="referral-program-description">{{ $referralSettings->profile_description }}</p>
+      <p class="referral-program-description">{{ str_replace('توکن', 'اعتبار', $referralSettings->profile_description) }}</p>
       <div class="referral-reward-summary">
         @if($referralSettings->registration_gift_enabled && $referralSettings->registration_gift_tokens > 0)
-          <span><i class="fa-solid fa-gift"></i> هدیه شروع دوستت: <b>{{ number_format($referralSettings->registration_gift_tokens) }} توکن</b></span>
+          <span><i class="fa-solid fa-gift"></i> هدیه شروع دوستت: <b>{{ number_format($referralSettings->registration_gift_tokens) }} اعتبار</b></span>
         @endif
         @if($referralSettings->invitee_reward_tokens > 0)
-          <span><i class="fa-solid fa-sparkles"></i> هدیه دعوت‌شده: <b>{{ number_format($referralSettings->invitee_reward_tokens) }} توکن</b></span>
+          <span><i class="fa-solid fa-sparkles"></i> هدیه دعوت‌شده: <b>{{ number_format($referralSettings->invitee_reward_tokens) }} اعتبار</b></span>
         @endif
-        <span><i class="fa-solid fa-coins"></i> پاداش هر دعوت موفق: <b>{{ number_format($referralSettings->inviter_reward_tokens) }} توکن</b></span>
+        <span><i class="fa-solid fa-coins"></i> پاداش هر دعوت موفق: <b>{{ number_format($referralSettings->inviter_reward_tokens) }} اعتبار</b></span>
       </div>
     </div>
     <div class="referral-program-visual" aria-hidden="true">
@@ -45,13 +45,13 @@
       <article class="referral-user-stat"><span><i class="fa-solid fa-arrow-pointer"></i></span><strong>{{ number_format($referralData['visits']) }}</strong><small>ورود از لینک تو</small></article>
       <article class="referral-user-stat"><span><i class="fa-solid fa-user-check"></i></span><strong>{{ number_format($referralData['registrations']) }}</strong><small>ثبت‌نام با دعوت</small></article>
       <article class="referral-user-stat"><span><i class="fa-solid fa-bag-shopping"></i></span><strong>{{ number_format($referralData['successful_purchases']) }}</strong><small>خرید موفق</small></article>
-      <article class="referral-user-stat is-highlight"><span><i class="fa-solid fa-coins"></i></span><strong>{{ number_format($referralData['paid_tokens']) }}</strong><small>توکن دریافت‌شده</small></article>
+      <article class="referral-user-stat is-highlight"><span><i class="fa-solid fa-coins"></i></span><strong>{{ number_format($referralData['paid_tokens']) }}</strong><small>اعتبار دریافت‌شده</small></article>
     </section>
 
     <section class="referral-link-card {{ $programActive ? '' : 'is-disabled' }}">
       <div class="referral-section-heading">
         <div><span>لینک اختصاصی تو</span><small>این لینک را در شبکه‌های اجتماعی یا برای دوستانت بفرست.</small></div>
-        @if($referralData['pending_tokens'] > 0)<b><i class="fa-solid fa-hourglass-half"></i> {{ number_format($referralData['pending_tokens']) }} توکن در انتظار بررسی</b>@endif
+        @if($referralData['pending_tokens'] > 0)<b><i class="fa-solid fa-hourglass-half"></i> {{ number_format($referralData['pending_tokens']) }} اعتبار در انتظار بررسی</b>@endif
       </div>
       <div class="referral-code-row"><span>کد دعوت تو</span><code dir="ltr">{{ $referralData['code'] }}</code><small>همین کد داخل همه لینک‌های کسب پاداش تو استفاده می‌شود.</small></div>
       <div class="referral-link-box" dir="ltr">
@@ -62,7 +62,7 @@
     </section>
 
     <section class="referral-how-card">
-      <div class="referral-section-heading"><div><span>چطور پاداش می‌گیری؟</span><small>سه قدم ساده و شفاف تا دریافت توکن</small></div></div>
+      <div class="referral-section-heading"><div><span>چطور پاداش می‌گیری؟</span><small>سه قدم ساده و شفاف تا دریافت اعتبار</small></div></div>
       <div class="referral-steps">
         <article><b>۱</b><div><strong>لینکت را منتشر کن</strong><p>در استوری، کانال، گروه یا پیام مستقیم با مخاطبانت به اشتراک بگذار.</p></div></article>
         <i class="fa-solid fa-chevron-left"></i>
@@ -93,7 +93,7 @@
           @endphp
           <article class="referral-invite-row">
             <div class="referral-invite-user"><span>{{ mb_substr($inviteName, 0, 1) }}</span><div><strong>{{ $inviteName }}</strong><small>{{ $invite->created_at?->format('Y/m/d') }}</small></div></div>
-            <div class="referral-invite-state {{ $inviteState['class'] }}"><i class="fa-solid {{ $inviteState['icon'] }}"></i><span>{{ $inviteState['label'] }}</span>@if($reward?->status === 'paid')<b>+{{ number_format($reward->amount) }} توکن</b>@endif</div>
+            <div class="referral-invite-state {{ $inviteState['class'] }}"><i class="fa-solid {{ $inviteState['icon'] }}"></i><span>{{ $inviteState['label'] }}</span>@if($reward?->status === 'paid')<b>+{{ number_format($reward->amount) }} اعتبار</b>@endif</div>
           </article>
         @empty
           <div class="referral-invites-empty"><i class="fa-solid fa-link"></i><strong>هنوز دعوتی ثبت نشده</strong><p>لینکت را به اشتراک بگذار؛ اولین دعوت موفق از همین‌جا دیده می‌شود.</p></div>

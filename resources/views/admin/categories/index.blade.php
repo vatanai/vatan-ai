@@ -102,10 +102,13 @@
               <td class="p-4 text-center whitespace-nowrap text-[11px] text-[var(--text-soft)]">{{ \App\Support\Jalali::formatNumeric($category->last_product_at) }}</td>
               <td class="p-4 text-center"><span class="font-bold {{ $category->usage_count > 0 ? 'text-[var(--primary)]' : 'text-[var(--text-soft)]' }}">{{ number_format($category->usage_count) }}</span></td>
               <td class="p-4 text-center">@if($category->products_count > 0)<span class="inline-flex items-center gap-1 text-[10px] text-[var(--success)]"><i class="fa-solid fa-circle text-[6px]"></i> دارای محصول</span>@else<span class="inline-flex items-center gap-1 text-[10px] text-[var(--text-soft)]"><i class="fa-regular fa-circle text-[6px]"></i> خالی</span>@endif</td>
-              <td class="p-4 text-center">
-                <button type="button" class="copy-category-link inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)] cursor-pointer" data-url="{{ $category->url() }}" title="کپی لینک دسته‌بندی" aria-label="کپی لینک {{ $category->name }}">
-                  <i class="fa-regular fa-copy"></i>
-                </button>
+              <td class="p-4">
+                <div class="inline-flex items-center justify-center gap-2 max-w-[280px]">
+                  <a href="{{ $category->url() }}" target="_blank" rel="noopener noreferrer" dir="ltr" class="max-w-[220px] truncate font-mono text-[10px] text-[var(--text-soft)] hover:text-[var(--primary)] no-underline" title="{{ $category->url() }}">{{ $category->url() }}</a>
+                  <button type="button" class="copy-category-link inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)] cursor-pointer" data-url="{{ $category->url() }}" title="کپی لینک دسته‌بندی" aria-label="کپی لینک {{ $category->name }}">
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                </div>
               </td>
               <td class="p-4 text-left"><div class="inline-flex gap-2">
                 <a href="{{ route('admin.categories.edit', $category) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)]" title="ویرایش"><i class="fa-regular fa-pen-to-square"></i></a>
@@ -127,7 +130,7 @@
 </main>
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script>
 document.querySelectorAll('.copy-category-link').forEach(function (button) {
   button.addEventListener('click', async function () {
@@ -143,4 +146,4 @@ document.querySelectorAll('.copy-category-link').forEach(function (button) {
   });
 });
 </script>
-@endpush
+@endsection

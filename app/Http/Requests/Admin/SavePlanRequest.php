@@ -22,6 +22,7 @@ class SavePlanRequest extends FormRequest
 
         $this->merge([
             'price' => $numeric($this->input('price')) ?? 0,
+            'face_profile_limit' => $numeric($this->input('face_profile_limit')) ?? 0,
             'compare_at_price' => $numeric($this->input('compare_at_price')),
             'loyal_price' => $numeric($this->input('loyal_price')),
             'loyal_tokens' => $numeric($this->input('loyal_tokens')),
@@ -30,6 +31,7 @@ class SavePlanRequest extends FormRequest
             'is_featured' => $this->boolean('is_featured'),
             'loyal_visible' => $this->boolean('loyal_visible'),
             'loyal_purchasable' => $this->boolean('loyal_purchasable'),
+            'show_model_tier' => $this->boolean('show_model_tier'),
         ]);
     }
 
@@ -46,6 +48,7 @@ class SavePlanRequest extends FormRequest
             'price_prefix' => ['nullable', 'string', 'max:30'],
             'compare_at_price' => ['nullable', 'integer', 'min:0'],
             'tokens' => ['required', 'integer', 'min:0'],
+            'face_profile_limit' => ['required', 'integer', 'between:0,50'],
             'token_label' => ['nullable', 'string', 'max:255'],
             'billing_type' => ['required', Rule::in(['free', 'monthly', 'yearly', 'one_time', 'custom'])],
             'is_unlimited' => ['boolean'],
@@ -69,6 +72,8 @@ class SavePlanRequest extends FormRequest
             'loyal_bonus_tokens' => ['nullable', 'integer', 'min:0'],
             'loyal_visible' => ['boolean'],
             'loyal_purchasable' => ['boolean'],
+            'model_tier_key' => ['required', Rule::in(['free', 'economy', 'pro', 'business'])],
+            'show_model_tier' => ['boolean'],
         ];
     }
 

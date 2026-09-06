@@ -19,7 +19,7 @@
         <div class="flex justify-end mt-5"><button type="button" id="standalone-next" class="btn-pro btn-pro-primary">ادامه به آزمایشگاه <i class="fa-solid fa-arrow-left"></i></button></div>
       </section>
       <section id="standalone-step-two" class="hidden mt-4">
-        @include('admin.products.partials.ai-model-lab', ['aiModels' => $models, 'exchange' => $exchange ?? [], 'labTested' => false, 'product' => null, 'labVersion' => 'V12'])
+        @include('admin.products.partials.ai-model-lab', ['aiModels' => $models, 'exchange' => $exchange ?? [], 'labTested' => false, 'product' => null, 'labVersion' => 'V13'])
         <div class="flex justify-between mt-4"><button type="button" id="standalone-back" class="btn-pro btn-pro-ghost">گام قبل</button><button type="submit" class="btn-pro btn-pro-primary">ساخت و اجرای آزمایش <i class="fa-solid fa-flask"></i></button></div>
       </section>
     </form>
