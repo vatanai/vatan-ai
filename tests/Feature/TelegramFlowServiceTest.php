@@ -198,4 +198,25 @@ class TelegramFlowServiceTest extends TestCase
                 && data_get($request->data(), 'reply_markup.inline_keyboard.0.0.callback_data') === 'continue';
         });
     }
+
+    public function test_interaction_service_sends_configured_media_file_id_with_buttons(): void
+    {
+        config()->set('services.telegram.bot_token', 'test-token');
+        Http::fake(['https://api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        app(\App\Services\TelegramInteractionService::class)->sendResponse([
+            'type' => 'send_message',
+            'chat_id' => '555008',
+            'text' => 'پیام شروع',
+            'media' => ['type' => 'video', 'file_id' => 'BAACAgQAAx'],
+            'buttons' => [['text' => 'ادامه', 'callback_data' => 'continue']],
+        ]);
+
+        Http::assertSent(function ($request): bool {
+            return str_ends_with($request->url(), '/sendVideo')
+                && data_get($request->data(), 'video') === 'BAACAgQAAx'
+                && data_get($request->data(), 'caption') === 'پیام شروع'
+                && data_get($request->data(), 'reply_markup.inline_keyboard.0.0.callback_data') === 'continue';
+        });
+    }
 }

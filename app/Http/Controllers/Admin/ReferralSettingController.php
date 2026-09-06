@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\TelegramBotContent;
 use App\Models\ReferralConversion;
 use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralSettingLog;
 use App\Models\ReferralVisit;
+use App\Models\TokenLog;
 use App\Services\ReferralProgramService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +34,103 @@ class ReferralSettingController extends Controller
     public function settings(Request $request): View
     {
         return $this->renderPage($request, 'settings');
+    }
+
+    public function newUserGift(): View
+    {
+        $startContent = TelegramBotContent::query()->firstOrNew(['content_key' => 'welcome']);
+
+        return view('admin.settings.new-user-gift', [
+            'settings' => ReferralSetting::current(),
+            'startContent' => $startContent,
+            'todayGifts' => (int) ReferralReward::query()
+                ->where('reward_type', 'registration_gift')
+                ->where('status', 'paid')
+                ->whereDate('created_at', today())
+                ->count(),
+            'todayTelegramGifts' => (int) TokenLog::query()
+                ->where('source', 'telegram_registration_gift')
+                ->whereDate('created_at', today())
+                ->count(),
+        ]);
+    }
+
+    public function updateNewUserGift(Request $request): RedirectResponse
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        $data = $request->validate([
+            'registration_gift_enabled' => ['required', 'boolean'],
+            'registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'telegram_registration_gift_enabled' => ['required', 'boolean'],
+            'telegram_registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'telegram_channel_username' => ['nullable', 'string', 'max:120'],
+            'telegram_channel_id' => ['nullable', 'string', 'max:80'],
+            'telegram_channel_invite_url' => ['nullable', 'url', 'max:2048'],
+            'telegram_bot_username' => ['nullable', 'string', 'max:120'],
+            'telegram_mini_app_url' => ['nullable', 'string', 'max:2048'],
+            'telegram_membership_required' => ['required', 'boolean'],
+            'telegram_start_media_type' => ['nullable', Rule::in(['none', 'photo', 'video'])],
+            'telegram_start_media_file_id' => ['nullable', 'string', 'max:2048'],
+            'telegram_start_body' => ['nullable', 'string', 'max:10000'],
+            'telegram_start_button_enabled' => ['required', 'boolean'],
+            'telegram_start_button_text' => ['nullable', 'string', 'max:255'],
+            'telegram_start_button_url' => ['nullable', 'url', 'max:2048'],
+        ]);
+
+        $startKeys = [
+            'telegram_start_media_type',
+            'telegram_start_media_file_id',
+            'telegram_start_body',
+            'telegram_start_button_enabled',
+            'telegram_start_button_text',
+            'telegram_start_button_url',
+        ];
+        $startData = [];
+        foreach ($startKeys as $key) {
+            $startData[$key] = $data[$key] ?? null;
+            unset($data[$key]);
+        }
+
+        DB::transaction(function () use ($request, $data, $startData) {
+            $settings = ReferralSetting::query()->lockForUpdate()->firstOrFail();
+            $before = $settings->only(array_keys($data));
+            $settings->update($data);
+            $this->updateTelegramStartContent($startData);
+
+            ReferralSettingLog::query()->create([
+                'admin_id' => $request->user('admin')->id,
+                'before_values' => $before,
+                'after_values' => $settings->fresh()->only(array_keys($data)),
+            ]);
+        });
+
+        return back()->with('success', 'اعتبار هدیه کاربر جدید ذخیره شد.');
+    }
+
+    private function updateTelegramStartContent(array $data): void
+    {
+        $content = TelegramBotContent::query()->firstOrNew(['content_key' => 'welcome']);
+        $mediaType = ($data['telegram_start_media_type'] ?? 'none') ?: 'none';
+        $button = null;
+
+        if ((bool) ($data['telegram_start_button_enabled'] ?? false)) {
+            $button = [
+                'text' => trim((string) ($data['telegram_start_button_text'] ?? '')) ?: 'ثبت‌نام برای شروع',
+            ];
+            $buttonUrl = trim((string) ($data['telegram_start_button_url'] ?? ''));
+            $button[$buttonUrl !== '' ? 'url' : 'callback_data'] = $buttonUrl !== '' ? $buttonUrl : 'register';
+        }
+
+        $content->fill([
+            'title' => 'خوش‌آمدگویی',
+            'body' => $data['telegram_start_body'] ?? null,
+            'media_type' => $mediaType === 'none' ? null : $mediaType,
+            'media_file_id' => trim((string) ($data['telegram_start_media_file_id'] ?? '')) ?: null,
+            'buttons' => $button ? [$button] : [],
+            'is_active' => true,
+        ]);
+        $content->save();
     }
 
     public function conversions(Request $request): View
@@ -73,7 +172,7 @@ class ReferralSettingController extends Controller
         $pageMeta = match ($page) {
             'settings' => ['title' => 'تنظیمات برنامه', 'description' => 'هدیه شروع، شرط آزادشدن پاداش، محدودیت‌ها و متن معرفی را مدیریت کنید.', 'icon' => 'fa-sliders'],
             'conversions' => ['title' => 'فهرست دعوت‌ها', 'description' => 'کاربران دعوت‌کننده و دعوت‌شده، وضعیت خرید و نتیجه هر دعوت را ببینید.', 'icon' => 'fa-user-group'],
-            'rewards' => ['title' => 'گزارش پاداش‌ها', 'description' => 'تمام توکن‌های پرداخت‌شده، معلق و ردشده را جست‌وجو و بررسی کنید.', 'icon' => 'fa-coins'],
+            'rewards' => ['title' => 'گزارش پاداش‌ها', 'description' => 'تمام اعتبار‌های پرداخت‌شده، معلق و ردشده را جست‌وجو و بررسی کنید.', 'icon' => 'fa-coins'],
             'visits' => ['title' => 'بازدید لینک‌ها', 'description' => 'ورودی لینک‌های اختصاصی و نرخ تبدیل آن‌ها به ثبت‌نام را پیگیری کنید.', 'icon' => 'fa-arrow-pointer'],
             'reviews' => ['title' => 'صف بررسی', 'description' => 'دعوت‌ها و پاداش‌های مشکوک را در یک صف مستقل تصمیم‌گیری کنید.', 'icon' => 'fa-shield-halved'],
             default => ['title' => 'نمای کلی همکاری در فروش', 'description' => 'وضعیت برنامه، عملکرد لینک‌ها و مسیرهای مدیریتی را یکجا ببینید.', 'icon' => 'fa-people-arrows-left-right'],
@@ -194,7 +293,7 @@ class ReferralSettingController extends Controller
             ]),
         };
         $headers = match ($tab) {
-            'rewards' => ['شناسه', 'کاربر', 'موبایل', 'نوع', 'توکن', 'وضعیت', 'دلیل', 'زمان'],
+            'rewards' => ['شناسه', 'کاربر', 'موبایل', 'نوع', 'اعتبار', 'وضعیت', 'دلیل', 'زمان'],
             'visits' => ['شناسه', 'دعوت‌کننده', 'موبایل', 'کد دعوت', 'نتیجه', 'زمان', 'صفحه ورود'],
             default => ['شناسه', 'دعوت‌کننده', 'موبایل دعوت‌کننده', 'دعوت‌شده', 'موبایل دعوت‌شده', 'وضعیت', 'خرید', 'دلیل ریسک', 'زمان'],
         };

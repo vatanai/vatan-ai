@@ -21,16 +21,26 @@ class TelegramInteractionService
         $replyMarkup = $this->replyMarkup((array) ($response['buttons'] ?? []));
         $media = (array) ($response['media'] ?? []);
 
-        if (($media['type'] ?? null) === 'photo' && ! empty($media['url'])) {
+        $mediaType = (string) ($media['type'] ?? '');
+        $mediaValue = trim((string) ($media['file_id'] ?? $media['url'] ?? ''));
+        $mediaMethods = [
+            'photo' => ['field' => 'photo', 'method' => 'sendPhoto'],
+            'video' => ['field' => 'video', 'method' => 'sendVideo'],
+            'animation' => ['field' => 'animation', 'method' => 'sendAnimation'],
+            'document' => ['field' => 'document', 'method' => 'sendDocument'],
+        ];
+
+        if ($mediaValue !== '' && isset($mediaMethods[$mediaType])) {
+            $mediaConfig = $mediaMethods[$mediaType];
             $payload = [
                 'chat_id' => $chatId,
-                'photo' => $media['url'],
+                $mediaConfig['field'] => $mediaValue,
                 'caption' => $text,
             ];
             if ($replyMarkup !== null) {
                 $payload['reply_markup'] = $replyMarkup;
             }
-            $this->call('sendPhoto', $payload);
+            $this->call($mediaConfig['method'], $payload);
             return;
         }
 
