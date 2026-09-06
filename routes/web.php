@@ -76,6 +76,10 @@ Route::get('/site/payments/demo/result', [PlanSubscriptionController::class, 'de
 
 Route::get('/privacy', fn() => view('site.privacy'))->name('privacy');
 
+// سازگاری با لینک پشتیبانی موجود در برخی نسخه‌های قدیمی قالب سایت.
+Route::get('/support', fn() => redirect()->away('https://t.me/vatanstudio_bot'))
+    ->name('support.index');
+
 // ─── مرکز عمومی مقالات وطن ──────────────────────────────
 // تمام مسیرهای محتوایی خارج از /app هستند تا ساختار عمومی، اشتراک‌پذیر و سئویی داشته باشند.
 Route::get('/articles', [ArticleController::class, 'index'])->middleware('site.page')->name('articles.index');
