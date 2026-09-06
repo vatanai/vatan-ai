@@ -854,7 +854,35 @@ class VideoStudioController extends Controller
                 'exception' => get_class($e),
                 'trace' => mb_substr($e->getTraceAsString(), 0, 4000),
             ]);
-            return response()->json(['message' => 'ارتباط با مدل هوش مصنوعی ناموفق بود.'], 502);
+            // حتی در خطای غیرمنتظره‌ی سرویس بیرونی، رابط پیش‌نمایش باید خروجی قابل
+            // استفاده داشته باشد و کاربر با خطای خام مدل متوقف نشود.
+            $fallbackProduct = Product::query()->find((int) $request->input('product_id'));
+            $fallbackName = trim((string) ($fallbackProduct?->name_fa ?? 'این محصول')) ?: 'این محصول';
+            $fallbackType = (string) $request->input('content_type', 'caption');
+            $fallback = match ($fallbackType) {
+                'hook' => [
+                    "قبل از انتخاب {$fallbackName} این نکته را ببین",
+                    "با {$fallbackName} انتخاب آگاهانه‌تری داشته باش",
+                    "جزئیات {$fallbackName} را همین حالا ببین",
+                ],
+                'cta' => [
+                    "برای دیدن جزئیات {$fallbackName}، کپشن را بخوان",
+                    "اگر {$fallbackName} را پسندیدی، همین حالا اقدام کن",
+                    "برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را کامنت کن",
+                ],
+                'keyword' => ['اطلاعات', 'جزئیات', 'راهنما'],
+                default => [
+                    "قبل از خرید {$fallbackName} این نکته‌ها را ببین.",
+                    "با {$fallbackName} انتخاب آگاهانه‌تری داشته باش.",
+                    "برای دیدن جزئیات {$fallbackName}، کپشن را بخوان.",
+                ],
+            };
+            return response()->json([
+                'hook_options' => $fallbackType === 'hook' ? $fallback : [],
+                'caption_options' => in_array($fallbackType, ['caption', 'keyword'], true) ? $fallback : [],
+                'keyword_options' => $fallbackType === 'keyword' ? $fallback : [],
+                'cta_options' => $fallbackType === 'cta' ? $fallback : [],
+            ]);
         }
     }
 
