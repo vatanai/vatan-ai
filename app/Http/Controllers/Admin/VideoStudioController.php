@@ -19,9 +19,11 @@ use App\Models\VideoStudioPreset;
 use App\Models\VideoStudioSocialPrompt;
 use App\Support\Jalali;
 use App\Services\StudioCostService;
+use App\Services\OpenRouterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -30,7 +32,7 @@ use Illuminate\Validation\ValidationException;
 
 class VideoStudioController extends Controller
 {
-    public function index(Request $request, string $view = 'admin.video-studio.index')
+    public function index(Request $request, string $view = 'admin.video-studio.experimental')
     {
         $hasGeneratedVideos = Schema::hasTable('generated_videos');
         $hasProductRuns = Schema::hasTable('product_test_runs');
@@ -112,21 +114,6 @@ class VideoStudioController extends Controller
             'font_family' => 'B_Yekan',
             'aspect_ratio' => '9:16',
         ]);
-        if (blank($settings->prompt_profile)) {
-            $defaultPromptPath = resource_path('prompts/instagram-video.md');
-            if (is_file($defaultPromptPath)) {
-                $settings->prompt_profile = trim((string) file_get_contents($defaultPromptPath));
-            }
-        }
-        if (blank($settings->instagram_prompt)) {
-            $settings->instagram_prompt = $settings->prompt_profile;
-        }
-        if (blank($settings->telegram_prompt)) {
-            $defaultTelegramPromptPath = resource_path('prompts/telegram-video.md');
-            if (is_file($defaultTelegramPromptPath)) {
-                $settings->telegram_prompt = trim((string) file_get_contents($defaultTelegramPromptPath));
-            }
-        }
         if ($request->boolean('fresh')) {
             // صفحهٔ سازنده پس از ثبت سفارش باید برای سفارش بعدی کاملاً خنثی باشد؛
             // مقادیر پرامپت مادر باقی می‌مانند اما محصول و منبع قبلی نه.
@@ -154,9 +141,9 @@ class VideoStudioController extends Controller
         $socialPrompts = Schema::hasTable('video_studio_social_prompts')
             ? VideoStudioSocialPrompt::query()->where('admin_id', auth('admin')->id())->pluck('prompt', 'platform')->all()
             : [];
-        $socialPrompts['instagram'] = (string) ($socialPrompts['instagram'] ?? $settings->instagram_prompt ?? '');
-        $socialPrompts['telegram'] = (string) ($socialPrompts['telegram'] ?? $settings->telegram_prompt ?? '');
-        $socialPrompts['hook'] = (string) ($socialPrompts['hook'] ?? $settings->hook_guidelines ?? '');
+        foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin', 'hook'] as $platform) {
+            $socialPrompts[$platform] = trim((string) ($socialPrompts[$platform] ?? ''));
+        }
         $hookColors = [
             'background' => $this->hookColorOptions('background'),
             'text' => $this->hookColorOptions('text'),
@@ -192,7 +179,7 @@ class VideoStudioController extends Controller
                 });
         }
         $jobs = Schema::hasTable('video_studio_jobs')
-            ? VideoStudioJob::query()->with('product')->latest()->limit(20)->get()
+            ? VideoStudioJob::query()->with('product')->latest()->limit(10)->get()
             : collect();
         $estimatedCosts = $jobs->mapWithKeys(function (VideoStudioJob $job): array {
             $saved = data_get($job->payload, 'estimated_cost', []);
@@ -273,6 +260,74 @@ class VideoStudioController extends Controller
         return $this->index($request, 'admin.video-studio.experimental');
     }
 
+    /**
+     * تصویر سبک صف ساخت برای تازه‌سازی خودکار نسخهٔ فعلی.
+     * منبع همان جدول `video_studio_jobs` است تا نسخهٔ قدیمی و جدید از دو صف جدا نشوند.
+     */
+    public function jobsSnapshot(Request $request)
+    {
+        abort_unless(Schema::hasTable('video_studio_jobs'), 404);
+
+        $search = trim((string) $request->query('search', ''));
+        $query = VideoStudioJob::query()->with('product:id,name_fa')->latest('id');
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('id', 'like', '%' . $search . '%')
+                    ->orWhere('status', 'like', '%' . $search . '%')
+                    ->orWhere('error_message', 'like', '%' . $search . '%')
+                    ->orWhereHas('product', function ($productQuery) use ($search): void {
+                        $productQuery->where('name_fa', 'like', '%' . $search . '%')
+                            ->orWhere('name_en', 'like', '%' . $search . '%')
+                            ->orWhere('slug', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+        $jobs = VideoStudioJob::query()
+            ->with('product:id,name_fa')
+            ->latest('id');
+        if ($search !== '') {
+            $jobs = $query;
+        }
+        $jobs = $jobs->paginate(10, ['id', 'product_id', 'status', 'error_message', 'video_url', 'payload', 'created_at'], 'page');
+
+        $allJobs = VideoStudioJob::query();
+        $stats = [
+            'total' => (clone $allJobs)->count(),
+            'completed' => (clone $allJobs)->where('status', 'completed')->count(),
+            'active' => (clone $allJobs)->whereIn('status', ['queued', 'pending', 'processing'])->count(),
+            'failed' => (clone $allJobs)->whereIn('status', ['failed', 'error'])->count(),
+        ];
+
+        return response()->json([
+            'data' => $jobs->getCollection()->map(function (VideoStudioJob $job): array {
+                $cost = data_get($job->payload, 'estimated_cost', []);
+                return [
+                    'id' => $job->id,
+                    'code' => method_exists($job, 'shortCode') ? $job->shortCode() : 'P' . $job->id,
+                    'product' => $job->product?->name_fa ?? 'محصول',
+                    'version' => (int) data_get($job->payload, 'version', 1),
+                    'status' => (string) $job->status,
+                    'error_message' => (string) ($job->error_message ?? ''),
+                    'video_url' => (string) ($job->video_url ?? ''),
+                    'cost_toman' => is_numeric($cost['toman'] ?? null) ? (float) $cost['toman'] : null,
+                    'settings' => array_merge((array) ($job->payload ?? []), [
+                        'product_id' => $job->product_id,
+                        'selected_images' => $job->selected_images,
+                        'aspect_ratio' => $job->aspect_ratio,
+                        'parent_job_id' => $job->id,
+                        'version' => ((int) data_get($job->payload, 'version', 1)) + 1,
+                    ]),
+                ];
+            })->values(),
+            'current_page' => $jobs->currentPage(),
+            'last_page' => $jobs->lastPage(),
+            'total' => $jobs->total(),
+            'per_page' => 10,
+            'search' => $search,
+            'stats' => $stats,
+        ]);
+    }
+
     public function storePreset(Request $request)
     {
         abort_unless(Schema::hasTable('video_studio_presets'), 404);
@@ -317,14 +372,19 @@ class VideoStudioController extends Controller
             'prompts.linkedin' => ['nullable', 'string', 'max:30000'],
             'prompts.hook' => ['nullable', 'string', 'max:30000'],
         ]);
+        $rawPrompts = (array) $request->input('prompts', []);
         foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin', 'hook'] as $platform) {
-            if (!array_key_exists($platform, $data['prompts'])) {
+            if (!array_key_exists($platform, $rawPrompts)) {
                 continue;
             }
-            VideoStudioSocialPrompt::query()->updateOrCreate(
-                ['admin_id' => auth('admin')->id(), 'platform' => $platform],
-                ['prompt' => trim((string) data_get($data, "prompts.{$platform}", ''))],
-            );
+            // مقدار خالی هم یک مقدار معتبر است و باید مقدار قبلی را پاک کند؛
+            // updateOrCreate در بعضی نسخه‌های دیتابیس/مدل مقدار null را حفظ می‌کرد.
+            $identity = ['admin_id' => auth('admin')->id(), 'platform' => $platform];
+            $values = ['prompt' => trim((string) ($rawPrompts[$platform] ?? '')), 'updated_at' => now()];
+            $updated = DB::table('video_studio_social_prompts')->where($identity)->update($values);
+            if ($updated === 0 && !DB::table('video_studio_social_prompts')->where($identity)->exists()) {
+                DB::table('video_studio_social_prompts')->insert($identity + $values + ['created_at' => now()]);
+            }
         }
 
         return response()->json(['saved' => true, 'prompts' => VideoStudioSocialPrompt::query()->where('admin_id', auth('admin')->id())->pluck('prompt', 'platform')->all()]);
@@ -445,7 +505,7 @@ class VideoStudioController extends Controller
         $setting->save();
 
         return redirect()
-            ->route('admin.products.dashboard', $productId ? ['product_id' => $productId] : [])
+            ->route('admin.video-studio.experimental', $productId ? ['product_id' => $productId] : [])
             ->with('success', 'تنظیمات ساخت ویدیو ذخیره شد.');
     }
 
@@ -454,7 +514,10 @@ class VideoStudioController extends Controller
         try {
             $data = $request->validate([
                 'product_id' => ['required', 'integer', 'exists:products,id'],
+                'content_type' => ['nullable', Rule::in(['hook', 'cta', 'caption', 'keyword'])],
                 'hook_guidelines' => ['nullable', 'string', 'max:5000'],
+                'hook_prompt' => ['nullable', 'string', 'max:30000'],
+                'cta_prompt' => ['nullable', 'string', 'max:30000'],
                 'caption_guidelines' => ['nullable', 'string', 'max:5000'],
                 'instagram_prompt' => ['nullable', 'string', 'max:30000'],
                 'telegram_prompt' => ['nullable', 'string', 'max:30000'],
@@ -476,34 +539,110 @@ class VideoStudioController extends Controller
                 return response()->json(['message' => 'اتصال پیش‌نمایش ورکفلو تنظیم نشده است.'], 422);
             }
             $channel = (string) ($data['channel'] ?? 'instagram');
-            $prompt = trim((string) ($data[$channel . '_prompt'] ?? $data['instagram_prompt'] ?? ''));
-            if ($prompt === '' && Schema::hasTable('video_studio_social_prompts')) {
+            $contentType = (string) ($data['content_type'] ?? 'caption');
+            $prompt = match ($contentType) {
+                'hook' => trim((string) ($data['hook_prompt'] ?? $data['hook_guidelines'] ?? '')),
+                'cta' => trim((string) ($data['cta_prompt'] ?? '')),
+                default => trim((string) ($data[$channel . '_prompt'] ?? '')),
+            };
+            // اگر رابط کاربری این بخش را عمداً خالی فرستاده، هرگز از پرامپت قدیمی
+            // یا پرامپت شبکهٔ دیگری استفاده نکن؛ فقط وقتی کلید پرامپت غایب است
+            // مقدار ذخیره‌شدهٔ همان شبکه را به‌عنوان مقدار پیش‌فرض بخوان.
+            $promptWasExplicitlyProvided = match ($contentType) {
+                'hook' => array_key_exists('hook_prompt', $data) || array_key_exists('hook_guidelines', $data),
+                'cta' => array_key_exists('cta_prompt', $data),
+                default => array_key_exists($channel . '_prompt', $data),
+            };
+            if ($prompt === '' && !$promptWasExplicitlyProvided && Schema::hasTable('video_studio_social_prompts')) {
+                $savedPlatform = $contentType === 'hook' ? 'hook' : $channel;
                 $prompt = trim((string) VideoStudioSocialPrompt::query()
                     ->where('admin_id', auth('admin')->id())
-                    ->where('platform', $channel)
+                    ->where('platform', $savedPlatform)
                     ->value('prompt'));
             }
-            $response = Http::retry(3, 300)->timeout(45)->post($webhook, [
+            if ($prompt === '') {
+                $label = match ($contentType) {
+                    'hook' => 'هوک',
+                    'cta' => 'دعوت به اقدام',
+                    'keyword' => 'کلمهٔ کلیدی',
+                    default => 'کپشن ' . match ($channel) {
+                        'telegram' => 'تلگرام',
+                        'youtube' => 'یوتیوب',
+                        'aparat' => 'آپارات',
+                        'linkedin' => 'لینکدین',
+                        default => 'اینستاگرام',
+                    },
+                };
+                return response()->json(['message' => "پرامپت {$label} تنظیم نشده است؛ ابتدا پرامپت همین بخش را ذخیره کنید."], 422);
+            }
+            $previewPayload = [
                 'preview_only' => true,
+                'content_type' => $contentType,
                 'channel' => $channel,
                 'product_id' => $product->id,
                 'product_name' => (string) $product->name_fa,
                 'product_link' => route('app.product', ['product' => $product->route_slug]),
-                'hook_guidelines' => (string) ($data['hook_guidelines'] ?? ''),
-                'caption_guidelines' => (string) ($data['caption_guidelines'] ?? ''),
+                'hook_guidelines' => $contentType === 'hook'
+                    ? $prompt
+                    : (string) ($data['hook_guidelines'] ?? ''),
+                'caption_guidelines' => in_array($contentType, ['cta', 'caption', 'keyword'], true)
+                    ? $prompt
+                    : (string) ($data['caption_guidelines'] ?? ''),
                 'prompt_profile' => $prompt,
-            ]);
-            if (!$response->successful()) {
-                return response()->json(['message' => 'مدل هوش مصنوعی پاسخ معتبر نداد.'], 502);
+                'hook_prompt' => $contentType === 'hook' ? $prompt : '',
+                'cta_prompt' => $contentType === 'cta' ? $prompt : '',
+                'caption_prompt' => in_array($contentType, ['caption', 'keyword'], true) ? $prompt : '',
+            ];
+
+            $body = null;
+            try {
+                $response = Http::retry(3, 300)->timeout(45)->post($webhook, $previewPayload);
+                $candidate = $response->json();
+                if (!$response->successful() || data_get($candidate, 'error')) {
+                    throw new \RuntimeException('n8n preview webhook returned an invalid response.');
+                }
+                $body = $candidate;
+            } catch (\Throwable $n8nException) {
+                // اعتبار Anthropic ورکفلو ممکن است منقضی یا از سمت سرویس مسدود شده باشد.
+                // برای پیش‌نمایش، از سرویس متنی پایدار خود سایت استفاده می‌کنیم و
+                // ساخت نهایی/ارسال را به مسیر اصلی n8n دست‌نخورده واگذار می‌کنیم.
+                Log::warning('Video studio preview n8n fallback activated', [
+                    'product_id' => $product->id,
+                    'channel' => $channel,
+                    'content_type' => $contentType,
+                    'error' => $n8nException->getMessage(),
+                ]);
+
+                $fallbackSystem = 'تو نویسنده حرفه‌ای محتوای فارسی برای ویدیوهای کوتاه وطن هستی. فقط JSON معتبر و بدون Markdown برگردان. برای هر کلید آرایه‌ای دقیقاً ۳ گزینه متفاوت تولید کن. ادعای ساختگی، عدد بی‌منبع و وعده غیرواقعی ممنوع است. متن‌ها طبیعی، کوتاه، قابل انتشار و متناسب با شبکه اجتماعی باشند.';
+                $fallbackUser = "محصول: {$product->name_fa}\nتوضیحات محصول: " . trim((string) ($product->description_fa ?: $product->description_en ?: ''))
+                    . "\nلینک محصول: " . route('app.product', ['product' => $product->route_slug])
+                    . "\nنوع خروجی: {$contentType}\nشبکه: {$channel}\nدستور مدیر: {$prompt}\n"
+                    . 'ساختار خروجی دقیقاً شامل این کلیدها باشد: hook_options, caption_options, keyword_options, cta_options, dm_template. '
+                    . 'برای نوع خروجی درخواستی، سه گزینه کامل و غیرتکراری بساز و برای کلیدهای دیگر هم اگر لازم است آرایه خالی برگردان.';
+
+                $fallback = app(OpenRouterService::class)->generateStructuredText($fallbackSystem, $fallbackUser);
+                $body = ['output' => $fallback['content'] ?? []];
             }
 
-            $body = $response->json();
             $raw = data_get($body, 'content.0.text')
                 ?? data_get($body, 'text')
                 ?? data_get($body, 'output')
                 ?? data_get($body, 'response')
                 ?? data_get($body, 'result')
+                ?? data_get($body, '0.json')
+                ?? data_get($body, '0.output')
                 ?? $body;
+            // n8n/مدل‌ها گاهی خروجی را داخل یک آرایه یا کلید output برمی‌گردانند.
+            // یک لایهٔ تودرتو را باز می‌کنیم تا کلیدهای پیشنهاد از دست نروند.
+            if (is_array($raw) && count($raw) === 1 && is_array(reset($raw))) {
+                $raw = reset($raw);
+            }
+            if (is_array($raw) && isset($raw['json']) && is_array($raw['json'])) {
+                $raw = $raw['json'];
+            }
+            if (is_array($raw) && isset($raw['output']) && is_string($raw['output'])) {
+                $raw = $raw['output'];
+            }
             if (is_array($raw)) {
                 $options = $raw;
             } else {
@@ -511,24 +650,153 @@ class VideoStudioController extends Controller
                 $clean = preg_replace('/^```(?:json)?\s*|\s*```$/u', '', $clean) ?: $clean;
                 $options = json_decode($clean, true);
             }
+            // پاسخ مدل ممکن است چند لایه داخل کلیدهای json، output، content یا text باشد.
+            $decodeModelPayload = function ($value) use (&$decodeModelPayload) {
+                if (is_string($value)) {
+                    $clean = trim($value);
+                    $fence = str_repeat(chr(96), 3);
+                    $clean = preg_replace('/^' . preg_quote($fence, '/') . '(?:json)?\s*|\s*' . preg_quote($fence, '/') . '$/u', '', $clean) ?: $clean;
+                    $decoded = json_decode($clean, true);
+                    if (is_array($decoded)) {
+                        return $decodeModelPayload($decoded);
+                    }
+
+                    // بعضی مدل‌ها قبل یا بعد از `JSON` یک جملهٔ کوتاه اضافه می‌کنند.
+                    // اولین شیء/آرایهٔ قابل‌تجزیه را از متن جدا می‌کنیم.
+                    foreach ([['{', '}'], ['[', ']']] as [$opening, $closing]) {
+                        $start = mb_strpos($clean, $opening);
+                        $end = mb_strrpos($clean, $closing);
+                        if ($start === false || $end === false || $end <= $start) {
+                            continue;
+                        }
+                        $embedded = json_decode(mb_substr($clean, $start, $end - $start + 1), true);
+                        if (is_array($embedded)) {
+                            return $decodeModelPayload($embedded);
+                        }
+                    }
+
+                    return $value;
+                }
+                if (!is_array($value)) {
+                    return $value;
+                }
+                foreach (['hook_options', 'caption_options', 'keyword_options', 'cta_options'] as $optionKey) {
+                    if (array_key_exists($optionKey, $value)) {
+                        return $value;
+                    }
+                }
+                foreach (['json', 'output', 'content', 'text', 'response', 'result', 'message', 'body', 'data', 'choices'] as $nestedKey) {
+                    if (!array_key_exists($nestedKey, $value)) {
+                        continue;
+                    }
+                    $nested = $decodeModelPayload($value[$nestedKey]);
+                    if (is_array($nested)) {
+                        return $nested;
+                    }
+                }
+                if (array_is_list($value)) {
+                    foreach ($value as $item) {
+                        $nested = $decodeModelPayload($item);
+                        if (!is_array($nested)) {
+                            continue;
+                        }
+                        foreach (['hook_options', 'caption_options', 'keyword_options', 'cta_options', 'captions', 'keywords', 'hooks', 'ctas'] as $optionKey) {
+                            if (array_key_exists($optionKey, $nested)) {
+                                return $nested;
+                            }
+                        }
+                    }
+                }
+                return count($value) === 1 ? $decodeModelPayload(reset($value)) : $value;
+            };
+            $options = $decodeModelPayload($options);
+            if (is_string($options)) {
+                $lines = preg_split('/\R+/u', trim($options), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+                $lines = array_values(array_filter(array_map(static function ($line): string {
+                    return trim((string) preg_replace('/^\s*(?:[-*•]|\d+[.)])\s*/u', '', $line));
+                }, $lines)));
+                if ($lines !== []) {
+                    $optionKey = match ($contentType) {
+                        'hook' => 'hook_options',
+                        'cta' => 'cta_options',
+                        'keyword' => 'keyword_options',
+                        default => 'caption_options',
+                    };
+                    $options = [$optionKey => $lines];
+                }
+            }
             if (!is_array($options)) {
                 return response()->json(['message' => 'خروجی مدل قابل تبدیل به پیشنهادهای محتوا نبود.'], 502);
             }
 
             $normalize = static function (string $key) use ($options): array {
-                $value = $options[$key . '_options'] ?? $options[$key] ?? [];
+                $aliases = match ($key) {
+                    'caption' => ['caption_options', 'captions', 'caption'],
+                    'keyword' => ['keyword_options', 'keywords', 'keyword'],
+                    'hook' => ['hook_options', 'hooks', 'hook'],
+                    'cta' => ['cta_options', 'ctas', 'cta'],
+                    default => [$key . '_options', $key],
+                };
+                $value = [];
+                foreach ($aliases as $alias) {
+                    if (array_key_exists($alias, $options)) {
+                        $value = $options[$alias];
+                        break;
+                    }
+                }
+                if ($value === []) {
+                    foreach (['suggestions', 'options', 'items', 'proposals'] as $genericAlias) {
+                        if (array_key_exists($genericAlias, $options)) {
+                            $value = $options[$genericAlias];
+                            break;
+                        }
+                    }
+                }
+                if ($value === [] && array_is_list($options)) {
+                    $value = $options;
+                }
                 $value = is_array($value) ? $value : [$value];
-                $value = array_values(array_filter(array_map(static fn ($item): string => trim((string) $item), $value)));
+                $value = array_values(array_filter(array_map(static function ($item): string {
+                    if (is_array($item)) {
+                        $rawItem = $item;
+                        $item = $rawItem['text']
+                            ?? $item['value']
+                            ?? $item['content']
+                            ?? $item['caption']
+                            ?? $item['hook']
+                            ?? $item['cta']
+                            ?? $item['title']
+                            ?? $item['name']
+                            ?? data_get($rawItem, 'message.content')
+                            ?? data_get($rawItem, 'json.text')
+                            ?? '';
+                        if ($item === '' || $item === null) {
+                            $label = trim((string) ($rawItem['name'] ?? $rawItem['title'] ?? ''));
+                            $description = trim((string) ($rawItem['description'] ?? $rawItem['text'] ?? ''));
+                            $item = trim($label . ($label !== '' && $description !== '' ? ' — ' : '') . $description);
+                        }
+                    }
+                    return trim((string) $item);
+                }, $value)));
                 return array_slice(array_pad($value, 3, $value[0] ?? ''), 0, 3);
             };
             $hooks = $normalize('hook');
             $captions = $normalize('caption');
             $keywords = $normalize('keyword');
             $ctas = $normalize('cta');
+            if ($contentType === 'cta' && count(array_filter($ctas)) === 0) {
+                $ctas = $captions;
+            }
             if (count(array_filter($ctas)) === 0) {
                 $ctas = array_fill(0, 3, 'برای دیدن جزئیات این محصول، کپشن را بخوان و کلمهٔ کلیدی را کامنت کن.');
             }
-            if (count(array_filter(array_merge($hooks, $captions, $keywords))) === 0) {
+            $relevantOptions = match ($contentType) {
+                'hook' => $hooks,
+                'cta' => $ctas,
+                'keyword' => $keywords,
+                default => $captions,
+            };
+            if (count(array_filter($relevantOptions)) === 0) {
                 return response()->json(['message' => 'پیشنهادی از مدل دریافت نشد.'], 502);
             }
 
@@ -713,6 +981,7 @@ class VideoStudioController extends Controller
             'preview_keyword' => ['nullable', 'string', 'max:80'],
             'parent_job_id' => ['nullable', 'integer', 'exists:video_studio_jobs,id'],
             'version' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'editing_rules' => ['nullable', 'json'],
         ]);
 
         // ترتیب انتخاب مدیر روی تصاویر، ترتیب نمایش پلان‌ها بعد از هوک است؛ این ترتیب
@@ -754,12 +1023,16 @@ class VideoStudioController extends Controller
             $savedPrompts = VideoStudioSocialPrompt::query()
                 ->where('admin_id', auth('admin')->id())
                 ->pluck('prompt', 'platform');
-            foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
-                $key = $platform . '_prompt';
-                if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
-                    $data[$key] = (string) $savedPrompts[$platform];
-                }
+        } else {
+            $savedPrompts = collect();
+        }
+        foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+            $key = $platform . '_prompt';
+            if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
+                $data[$key] = (string) $savedPrompts[$platform];
             }
+        }
+        if (Schema::hasTable('video_studio_social_prompts')) {
             if (blank($data['hook_guidelines'] ?? null) && filled($savedPrompts['hook'] ?? null)) {
                 $data['hook_guidelines'] = (string) $savedPrompts['hook'];
             }
@@ -824,6 +1097,12 @@ class VideoStudioController extends Controller
         $parentJobId = (int) ($data['parent_job_id'] ?? 0) ?: null;
         $version = max(1, min(99, (int) ($data['version'] ?? 1)));
         unset($data['parent_job_id'], $data['version']);
+        $editingRules = $this->normalizeVideoEditingRules($request->input('editing_rules'),
+            (string) ($data['aspect_ratio'] ?? '9:16'),
+            (string) ($data['transition'] ?? 'cut'),
+            (float) ($data['transition_duration'] ?? 0.5),
+        );
+        $renderInstructions = $this->videoEditingInstructions();
         $instagramEnabled = $request->has('instagram_enabled') ? $request->boolean('instagram_enabled') : true;
         $telegramEnabled = $request->has('telegram_enabled') ? $request->boolean('telegram_enabled') : true;
         $youtubeEnabled = $request->boolean('youtube_enabled');
@@ -862,7 +1141,7 @@ class VideoStudioController extends Controller
             ->first(fn (VideoStudioJob $candidate): bool => (string) data_get($candidate->payload, 'source_fingerprint') === $sourceFingerprint);
         if ($recentDuplicate) {
             return redirect()
-                ->route('admin.products.dashboard', ['product_id' => $recentDuplicate->product_id])
+                ->route('admin.video-studio.experimental', ['product_id' => $recentDuplicate->product_id])
                 ->with('warning', "این ترکیب محصول و منبع از قبل در صف است (#{$recentDuplicate->id}) و دوباره ارسال نشد.");
         }
         $job = VideoStudioJob::create(array_merge($data, [
@@ -941,6 +1220,8 @@ class VideoStudioController extends Controller
                 'cta_position' => (string) ($data['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($data['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
+                'editing_rules' => $editingRules,
+                'render_instructions' => $renderInstructions,
                 'text_command' => trim((string) ($data['text_command'] ?? '')),
                 'parent_job_id' => $parentJobId,
                 'version' => $version,
@@ -973,6 +1254,8 @@ class VideoStudioController extends Controller
                     'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? 'manual'),
                     'transition' => (string) ($data['transition'] ?? 'cut'),
                     'transition_duration' => (float) ($data['transition_duration'] ?? 0.5),
+                    'editing_rules' => $editingRules,
+                    'render_instructions' => $renderInstructions,
                 ],
                 'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
             ],
@@ -982,7 +1265,7 @@ class VideoStudioController extends Controller
             $this->dispatchJobToWorkflow($job);
         }
 
-        return redirect()->route('admin.products.dashboard', ['fresh' => 1])
+        return redirect()->route('admin.video-studio.experimental', ['fresh' => 1])
             ->with('success', $buildNow
                 ? (($sourceError || $platformError) ? 'سفارش ثبت شد اما پیش از ساخت ناموفق علامت خورد؛ تنظیمات را اصلاح و ساخت مجدد را بزنید.' : ($job->status === 'processing' ? 'ساخت ویدیو شروع شد و در صف پردازش قرار گرفت.' : 'سفارش در صف ساخت ثبت شد.'))
                 : 'تنظیمات در لیست ساخت ذخیره شد و هنوز ویدیو ساخته نمی‌شود.');
@@ -1065,6 +1348,7 @@ class VideoStudioController extends Controller
             'telegram_button_width' => ['nullable', 'array', 'max:8'],
             'telegram_button_width.*' => ['nullable', Rule::in(['full', 'half'])],
             'build_now' => ['nullable', 'boolean'],
+            'editing_rules' => ['nullable', 'json'],
         ]);
 
         if ($request->hasFile('source_file')) {
@@ -1110,15 +1394,23 @@ class VideoStudioController extends Controller
         $data['cta_text_color'] = $ctaTextColor['key'];
         $data['cta_text_color_value'] = $ctaTextColor['render_value'];
         $payload = is_array($job->payload) ? $job->payload : [];
+        $editingRules = $this->normalizeVideoEditingRules($request->input('editing_rules') ?: data_get($payload, 'editing_rules'),
+            (string) ($data['aspect_ratio'] ?? $job->aspect_ratio ?? '9:16'),
+            (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
+            (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
+        );
+        $renderInstructions = $this->videoEditingInstructions();
         if (Schema::hasTable('video_studio_social_prompts')) {
             $savedPrompts = VideoStudioSocialPrompt::query()
                 ->where('admin_id', auth('admin')->id())
                 ->pluck('prompt', 'platform');
-            foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
-                $key = $platform . '_prompt';
-                if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
-                    $data[$key] = (string) $savedPrompts[$platform];
-                }
+        } else {
+            $savedPrompts = collect();
+        }
+        foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+            $key = $platform . '_prompt';
+            if (blank($data[$key] ?? null) && filled($savedPrompts[$platform] ?? null)) {
+                $data[$key] = (string) $savedPrompts[$platform];
             }
         }
         $buildNow = $request->boolean('build_now');
@@ -1172,6 +1464,8 @@ class VideoStudioController extends Controller
             'cta_duration_mode' => (string) ($data['cta_duration_mode'] ?? data_get($payload, 'cta_duration_mode', 'manual')),
             'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
             'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
+            'editing_rules' => $editingRules,
+            'render_instructions' => $renderInstructions,
             'text_command' => trim((string) ($data['text_command'] ?? data_get($payload, 'text_command', ''))),
             'render_config' => [
                 'font_family' => (string) $data['font_family'],
@@ -1193,6 +1487,8 @@ class VideoStudioController extends Controller
                 'cta_text' => (string) ($data['cta_text'] ?? data_get($payload, 'cta_text', '')),
                 'transition' => (string) ($data['transition'] ?? data_get($payload, 'transition', 'cut')),
                 'transition_duration' => (float) ($data['transition_duration'] ?? data_get($payload, 'transition_duration', 0.5)),
+                'editing_rules' => $editingRules,
+                'render_instructions' => $renderInstructions,
             ],
             'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
             'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
@@ -1504,6 +1800,100 @@ class VideoStudioController extends Controller
         ];
     }
 
+    /**
+     * قوانین قطعی تدوین را از لایهٔ هوش مصنوعی جدا نگه می‌دارد تا اجرای آن‌ها
+     * توکن اضافه مصرف نکند و هر سفارش، مستقل از نسخهٔ قدیمی، تنظیمات کامل داشته باشد.
+     */
+    private function videoEditingRules(string $aspectRatio, string $transition, float $transitionDuration): array
+    {
+        return [
+            'enabled' => true,
+            'target_aspect_ratio' => $aspectRatio ?: '9:16',
+            'fit_mode' => 'cover',
+            'object_fit' => 'cover',
+            'crop_mode' => 'subject_center',
+            'crop_anchor' => 'center',
+            'fill_frame' => true,
+            'allow_letterbox' => false,
+            'no_letterbox' => true,
+            'preserve_subject' => true,
+            'keep_subject_centered' => true,
+            'safe_area' => [
+                'top' => 0.08,
+                'right' => 0.08,
+                'bottom' => 0.10,
+                'left' => 0.08,
+            ],
+            'hook_first' => true,
+            'image_order' => 'selected_order',
+            'cta_last' => true,
+            'transition' => $transition ?: 'cut',
+            'transition_duration' => max(0.2, min(1.5, $transitionDuration ?: 0.5)),
+            'audio_sync_mode' => 'beat_if_available',
+            'audio_sync_fallback' => 'equal_segments',
+            'audio_sync' => [
+                'enabled' => true,
+                'mode' => 'beat_if_available',
+                'fallback' => 'equal_segments',
+            ],
+            'render_with_deterministic_rules' => true,
+            'llm_for_rendering' => false,
+        ];
+    }
+
+    private function normalizeVideoEditingRules(mixed $input, string $aspectRatio, string $transition, float $transitionDuration): array
+    {
+        $rules = $this->videoEditingRules($aspectRatio, $transition, $transitionDuration);
+        if (is_string($input)) {
+            $decoded = json_decode($input, true);
+            $input = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($input)) {
+            return $rules;
+        }
+
+        $fitModes = ['cover', 'contain'];
+        $cropModes = ['subject_center', 'center'];
+        $transitions = ['cut', 'fade', 'blur', 'slide'];
+        $audioModes = ['beat_if_available', 'equal_segments', 'disabled'];
+        $rules['fit_mode'] = in_array((string) ($input['fit_mode'] ?? ''), $fitModes, true) ? (string) $input['fit_mode'] : $rules['fit_mode'];
+        $rules['object_fit'] = $rules['fit_mode'];
+        $rules['crop_mode'] = in_array((string) ($input['crop_mode'] ?? ''), $cropModes, true) ? (string) $input['crop_mode'] : $rules['crop_mode'];
+        $rules['crop_anchor'] = 'center';
+        $rules['fill_frame'] = filter_var($input['fill_frame'] ?? $rules['fill_frame'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $rules['fill_frame'];
+        $rules['allow_letterbox'] = filter_var($input['allow_letterbox'] ?? $rules['allow_letterbox'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $rules['allow_letterbox'];
+        $rules['no_letterbox'] = ! $rules['allow_letterbox'];
+        $rules['preserve_subject'] = filter_var($input['preserve_subject'] ?? $rules['preserve_subject'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $rules['preserve_subject'];
+        $rules['keep_subject_centered'] = $rules['preserve_subject'];
+        $rules['hook_first'] = filter_var($input['hook_first'] ?? $rules['hook_first'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $rules['hook_first'];
+        $rules['cta_last'] = filter_var($input['cta_last'] ?? $rules['cta_last'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $rules['cta_last'];
+        $rules['transition'] = in_array((string) ($input['transition'] ?? ''), $transitions, true) ? (string) $input['transition'] : $rules['transition'];
+        $rules['transition_duration'] = max(0.2, min(1.5, (float) ($input['transition_duration'] ?? $rules['transition_duration'])));
+        $rules['audio_sync_mode'] = in_array((string) ($input['audio_sync_mode'] ?? ''), $audioModes, true) ? (string) $input['audio_sync_mode'] : $rules['audio_sync_mode'];
+        $rules['audio_sync'] = [
+            'enabled' => $rules['audio_sync_mode'] !== 'disabled',
+            'mode' => $rules['audio_sync_mode'],
+            'fallback' => $rules['audio_sync_mode'] === 'beat_if_available' ? 'equal_segments' : $rules['audio_sync_mode'],
+        ];
+        $rules['render_with_deterministic_rules'] = true;
+        $rules['llm_for_rendering'] = false;
+        if (is_array($input['safe_area'] ?? null)) {
+            foreach (['top', 'right', 'bottom', 'left'] as $side) {
+                if (is_numeric($input['safe_area'][$side] ?? null)) {
+                    $rules['safe_area'][$side] = max(0, min(0.2, (float) $input['safe_area'][$side]));
+                }
+            }
+        }
+        $rules['target_aspect_ratio'] = $aspectRatio ?: '9:16';
+
+        return $rules;
+    }
+
+    private function videoEditingInstructions(): string
+    {
+        return 'تدوین را با قواعد قطعی انجام بده: خروجی باید تمام قاب هدف را با حالت cover و crop سوژه‌محور پر کند؛ حاشیهٔ خالی، نوار سیاه و letterbox ممنوع است؛ سوژهٔ اصلی تا حد ممکن در کادر امن بماند؛ هوک ابتدا، تصاویر طبق image_sequence و CTA در انتهای ویدیو قرار بگیرند؛ ناحیهٔ امن متن رعایت شود؛ ترنزیشن و زمان‌های ورودی اعمال شوند؛ اگر تشخیص ضرب صدا ممکن بود بر اساس ضرب تقسیم کن و در غیر این صورت زمان پلان‌ها را به‌صورت یکنواخت بین بخش‌ها تقسیم کن. برای اجرای این قواعد از مدل زبانی استفاده نکن.';
+    }
+
     private function dispatchJobToWorkflow(VideoStudioJob $job): void
     {
         if (!$this->ensureJobSource($job)) {
@@ -1519,6 +1909,17 @@ class VideoStudioController extends Controller
 
         $product = $job->product ?: Product::query()->find($job->product_id);
         $payload = is_array($job->payload) ? $job->payload : [];
+        $editingRules = is_array($payload['editing_rules'] ?? null)
+            ? $payload['editing_rules']
+            : $this->videoEditingRules(
+                (string) ($job->aspect_ratio ?: '9:16'),
+                (string) ($payload['transition'] ?? 'cut'),
+                (float) ($payload['transition_duration'] ?? 0.5),
+            );
+        $renderInstructions = trim((string) ($payload['render_instructions'] ?? '')) ?: $this->videoEditingInstructions();
+        $renderConfig = is_array($payload['render_config'] ?? null) ? $payload['render_config'] : [];
+        $renderConfig['editing_rules'] = $editingRules;
+        $renderConfig['render_instructions'] = $renderInstructions;
         $autoHook = (bool) ($payload['auto_generate_hook'] ?? false);
         $autoCaption = (bool) ($payload['auto_generate_caption'] ?? false);
         $autoKeyword = (bool) ($payload['auto_generate_keyword'] ?? false);
@@ -1543,6 +1944,19 @@ class VideoStudioController extends Controller
         if ($promptProfile !== '') {
             $hookGuidelines = trim($promptProfile . "\n\n" . $hookGuidelines);
             $captionGuidelines = trim($promptProfile . "\n\n" . $captionGuidelines);
+        }
+        // قرارداد صریح هر شبکه برای ورکفلو؛ نودهای ارسال نباید کپشن یا دکمهٔ
+        // تلگرام را به‌صورت پیش‌فرض برای شبکهٔ دیگری مصرف کنند.
+        $platformPayloads = [];
+        foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+            $platformPayloads[$platform] = [
+                'enabled' => (bool) ($payload[$platform . '_enabled'] ?? false),
+                'caption' => (string) ($platform === 'instagram' ? ($job->caption_text ?? '') : ($payload[$platform . '_caption_text'] ?? '')),
+                'prompt' => (string) ($payload[$platform . '_prompt'] ?? ''),
+                'send_video' => (bool) ($payload[$platform . '_send_video'] ?? false),
+                'send_images' => (bool) ($payload[$platform . '_send_images'] ?? false),
+                'buttons' => $platform === 'telegram' && is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
+            ];
         }
         if (Schema::hasTable('video_hook_inspirations')) {
             $library = VideoHookInspiration::query()
@@ -1576,6 +1990,7 @@ class VideoStudioController extends Controller
                 'hook_font_file_url' => $fontFileUrl,
                 'hook_text' => $job->hook_text,
                 'caption_text' => $job->caption_text,
+                'instagram_caption_text' => (string) ($job->caption_text ?? ''),
                 'keyword' => $job->keyword,
                 'dm_template' => $job->dm_template,
                 'auto_generate_hook' => $autoHook,
@@ -1594,6 +2009,7 @@ class VideoStudioController extends Controller
                 'aparat_caption_text' => (string) ($payload['aparat_caption_text'] ?? ''),
                 'linkedin_caption_text' => (string) ($payload['linkedin_caption_text'] ?? ''),
                 'telegram_buttons' => is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
+                'platform_payloads' => $platformPayloads,
                 'instagram_enabled' => (bool) ($payload['instagram_enabled'] ?? true),
                 'telegram_enabled' => (bool) ($payload['telegram_enabled'] ?? true),
                 'youtube_enabled' => (bool) ($payload['youtube_enabled'] ?? false),
@@ -1638,8 +2054,10 @@ class VideoStudioController extends Controller
                 'cta_position' => (string) ($payload['cta_position'] ?? 'bottom'),
                 'transition' => (string) ($payload['transition'] ?? 'cut'),
                 'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
+                'editing_rules' => $editingRules,
+                'render_instructions' => $renderInstructions,
                 'text_command' => (string) ($payload['text_command'] ?? ''),
-                'render_config' => is_array($payload['render_config'] ?? null) ? $payload['render_config'] : [
+                'render_config' => $renderConfig ?: [
                     'font_family' => $fontFamily,
                     'hook_background' => (string) ($payload['hook_background'] ?? 'primary'),
                     'hook_background_color' => (string) ($payload['hook_background_color'] ?? '#16594F'),
@@ -1669,19 +2087,21 @@ class VideoStudioController extends Controller
                     'cta_duration_mode' => (string) ($payload['cta_duration_mode'] ?? 'manual'),
                     'transition' => (string) ($payload['transition'] ?? 'cut'),
                     'transition_duration' => (float) ($payload['transition_duration'] ?? 0.5),
+                    'editing_rules' => $editingRules,
+                    'render_instructions' => $renderInstructions,
                 ],
                 'video_code' => method_exists($job, 'shortCode') ? $job->shortCode() : ('P' . strtoupper(base_convert((string) $job->id, 10, 36))),
                 'telegram_topics' => [
                     'chat_id' => (string) config('services.n8n.video_studio_telegram_chat_id', ''),
-                    'instagram_thread_id' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', ''),
-                    'telegram_thread_id' => (string) config('services.n8n.video_studio_telegram_channel_thread_id', ''),
+                    'instagram_thread_id' => (string) (config('services.n8n.video_studio_telegram_instagram_thread_id') ?: '4'),
+                    'telegram_thread_id' => (string) (config('services.n8n.video_studio_telegram_channel_thread_id') ?: '2'),
                     'music_thread_id' => (string) config('services.n8n.video_studio_telegram_music_thread_id', ''),
                     'linkedin_thread_id' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
                     'aparat_thread_id' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
                     'youtube_thread_id' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),
                     'platform_topics' => [
-                        'instagram' => (string) config('services.n8n.video_studio_telegram_instagram_thread_id', '4'),
-                        'telegram' => (string) config('services.n8n.video_studio_telegram_channel_thread_id', '2'),
+                        'instagram' => (string) (config('services.n8n.video_studio_telegram_instagram_thread_id') ?: '4'),
+                        'telegram' => (string) (config('services.n8n.video_studio_telegram_channel_thread_id') ?: '2'),
                         'linkedin' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
                         'aparat' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
                         'youtube' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),

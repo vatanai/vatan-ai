@@ -3,7 +3,16 @@
   const form = document.getElementById('v2-form');
   if (!form) return;
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content || form.querySelector('[name="_token"]')?.value || '';
+  const promptValues = @json($socialPrompts ?? []);
   const toPersian = value => String(value).replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+  const showPromptError = (key, message) => {
+    document.querySelectorAll('[data-v2-prompt-error="' + key + '"]').forEach(holder => {
+      holder.textContent = message || '';
+      holder.hidden = !message;
+      holder.classList.toggle('is-visible', Boolean(message));
+    });
+  };
+  const clearPromptError = key => showPromptError(key, '');
   const legacyControls = [
     ...form.querySelectorAll('[data-v2-panel="1"] > .v2-hook-font-field,[data-v2-panel="1"] > .v2-hook-workspace,[data-v2-panel="1"] > .v2-cta-card,[data-v2-panel="1"] > .v2-grid'),
     ...form.querySelectorAll('[data-v2-panel="2"] > .v2-platform-grid > .v2-platform--instagram,[data-v2-panel="2"] > .v2-platform-grid > .v2-platform--telegram'),
@@ -150,18 +159,25 @@
   document.getElementById('v2-modern-open-hook-prompt')?.addEventListener('click', openHookPrompt);
   document.getElementById('v2-modern-regenerate-hook')?.addEventListener('click', async event => {
     const product = document.getElementById('v2-product');
-    if (!product?.value) { window.alert('ابتدا یک محصول انتخاب کنید.'); return; }
+    clearPromptError('hook');
+    if (!product?.value) { showPromptError('hook', 'ابتدا یک محصول انتخاب کنید.'); return; }
+    const prompt = document.getElementById('v2-hook-guidelines')?.value.trim() || '';
+    if (!prompt) { showPromptError('hook', 'پرامپت هوک تنظیم نشده است؛ ابتدا پرامپت همین بخش را ذخیره کنید.'); return; }
     const button = event.currentTarget;
+    const holder = document.getElementById('v2-modern-hook-grid');
+    const previousHolder = holder?.innerHTML || '';
     const payload = new FormData();
-    payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('channel', 'instagram');
-    payload.append('hook_guidelines', document.getElementById('v2-hook-guidelines')?.value || '');
+    payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('content_type', 'hook');
+    payload.append('channel', 'instagram'); payload.append('hook_prompt', prompt);
     button.disabled = true;
+    button.dataset.v2PreviousHtml = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال ساخت...';
+    if (holder) { holder.replaceChildren(); const loading = document.createElement('div'); loading.className = 'v2-note v2-generation-loading'; loading.textContent = 'در حال ساخت هوک...'; holder.appendChild(loading); }
     try {
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: payload });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ساخت هوک ناموفق بود.');
       const values = (data.hook_options || []).map(value => String(value || '').trim()).filter(Boolean).slice(0, 3);
-      const holder = document.getElementById('v2-modern-hook-grid');
-      if (!values.length || !holder) return;
+      if (!values.length || !holder) throw new Error('پیشنهادی از مدل دریافت نشد.');
       holder.replaceChildren();
       values.forEach((text, index) => {
         const label = document.createElement('label'); label.className = 'v2-hook-card';
@@ -171,8 +187,8 @@
         input.addEventListener('change', syncHookChoice); label.append(input, title, copy); holder.appendChild(label);
       });
       holder.querySelector('input')?.click();
-    } catch (error) { window.alert(error.message || 'ساخت هوک ناموفق بود.'); }
-    finally { button.disabled = false; }
+    } catch (error) { if (holder) holder.innerHTML = previousHolder; showPromptError('hook', error.message || 'ساخت هوک ناموفق بود.'); }
+    finally { button.disabled = false; button.innerHTML = button.dataset.v2PreviousHtml || 'ساخت هوک'; }
   });
   const ctaPromptModal = document.getElementById('v2-cta-prompt-modal');
   const ctaPromptText = document.getElementById('v2-cta-prompt-text');
@@ -183,20 +199,28 @@
   ctaPromptModal?.addEventListener('click', event => { if (event.target === ctaPromptModal) closeCtaPrompt(); });
   document.getElementById('v2-cta-prompt-save')?.addEventListener('click', () => { if (ctaPromptValue) ctaPromptValue.value = ctaPromptText?.value || ''; closeCtaPrompt(); });
   document.getElementById('v2-modern-regenerate-cta')?.addEventListener('click', async event => {
-    if (!product?.value) { window.alert('ابتدا یک محصول انتخاب کنید.'); return; }
+    clearPromptError('cta');
+    if (!product?.value) { showPromptError('cta', 'ابتدا یک محصول انتخاب کنید.'); return; }
+    const prompt = ctaPromptValue?.value.trim() || '';
+    if (!prompt) { showPromptError('cta', 'پرامپت دعوت به اقدام تنظیم نشده است؛ ابتدا پرامپت همین بخش را ذخیره کنید.'); return; }
     const button = event.currentTarget; const payload = new FormData();
-    payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('channel', 'instagram');
-    payload.append('hook_guidelines', ctaPromptValue?.value || '');
+    const holder = document.getElementById('v2-modern-cta-grid');
+    const previousHolder = holder?.innerHTML || '';
+    payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('content_type', 'cta');
+    payload.append('channel', 'instagram'); payload.append('cta_prompt', prompt);
     button.disabled = true;
+    button.dataset.v2PreviousHtml = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال ساخت...';
+    if (holder) { holder.replaceChildren(); const loading = document.createElement('div'); loading.className = 'v2-note v2-generation-loading'; loading.textContent = 'در حال ساخت دعوت به اقدام...'; holder.appendChild(loading); }
     try {
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: payload });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ساخت CTA ناموفق بود.');
-      const values = (data.hook_options || []).map(value => String(value || '').trim()).filter(Boolean).slice(0, 3); const holder = document.getElementById('v2-modern-cta-grid');
-      if (!values.length || !holder) return; holder.replaceChildren();
+      const values = (data.cta_options || data.caption_options || data.hook_options || []).map(value => String(value || '').trim()).filter(Boolean).slice(0, 3);
+      if (!values.length || !holder) throw new Error('پیشنهادی از مدل دریافت نشد.'); holder.replaceChildren();
       values.forEach((text, index) => { const label = document.createElement('label'); label.className = 'v2-hook-card'; const input = document.createElement('input'); input.type = 'radio'; input.name = 'cta_text_choice'; input.value = text; input.addEventListener('change', syncCtaChoice); const title = document.createElement('strong'); title.textContent = `گزینه ${toPersian(index + 1)}`; const copy = document.createElement('p'); copy.textContent = text; label.append(input, title, copy); holder.appendChild(label); });
       holder.querySelector('input')?.click();
-    } catch (error) { window.alert(error.message || 'ساخت CTA ناموفق بود.'); }
-    finally { button.disabled = false; }
+    } catch (error) { if (holder) holder.innerHTML = previousHolder; showPromptError('cta', error.message || 'ساخت CTA ناموفق بود.'); }
+    finally { button.disabled = false; button.innerHTML = button.dataset.v2PreviousHtml || 'ساخت CTA'; }
   });
 
   const product = document.getElementById('v2-product');
@@ -368,16 +392,37 @@
     if (template) dm.value = template;
   };
   const requestContent = async (channel, button, keywordOnly = false) => {
-    if (!product?.value) { window.alert('ابتدا یک محصول انتخاب کنید.'); return; }
+    const errorKey = keywordOnly && channel === 'instagram' ? 'instagram-keyword' : channel;
+    clearPromptError(errorKey);
+    if (!product?.value) { showPromptError(errorKey, 'ابتدا یک محصول انتخاب کنید.'); return; }
+   const configuredPrompt = String(document.querySelector(`[data-v2-default-prompt="${channel}"]`)?.value || promptValues?.[channel] || '').trim();
+    if (!configuredPrompt) { showPromptError(errorKey, `پرامپت ${channel === 'instagram' ? 'اینستاگرام' : channel === 'telegram' ? 'تلگرام' : channel === 'youtube' ? 'یوتیوب' : channel === 'aparat' ? 'آپارات' : 'لینکدین'} تنظیم نشده است؛ ابتدا پرامپت همین بخش را ذخیره کنید.`); return; }
+    const holder = keywordOnly
+      ? document.getElementById('v2-modern-keyword-options')
+      : document.getElementById(`v2-modern-caption-options-${channel}`);
+    const previousHolder = holder?.innerHTML || '';
     const payload = new FormData(); payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('channel', channel);
+    payload.append('content_type', keywordOnly ? 'keyword' : 'caption');
+    payload.append(`${channel}_prompt`, configuredPrompt);
     if (channel === 'instagram') payload.append('hook_guidelines', document.getElementById('v2-hook-guidelines')?.value || '');
     button.disabled = true;
+    const previousButton = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال ساخت...';
+    if (holder) { holder.replaceChildren(); const loading = document.createElement('div'); loading.className = 'v2-note v2-generation-loading'; loading.textContent = keywordOnly ? 'در حال ساخت کلمهٔ کلیدی...' : 'در حال ساخت کپشن...'; holder.appendChild(loading); }
     try {
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: payload });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ساخت محتوا ناموفق بود.');
-      if (keywordOnly) renderKeywords(data.keyword_options || [], data.dm_template || ''); else { renderCaptions(channel, data.caption_options || [data.caption || '']); if (channel === 'instagram') renderKeywords(data.keyword_options || [], data.dm_template || ''); }
-    } catch (error) { window.alert(error.message || 'ساخت محتوا ناموفق بود.'); }
-    finally { button.disabled = false; }
+      if (keywordOnly) {
+        if (!(data.keyword_options || []).length) throw new Error('پیشنهادی از مدل دریافت نشد.');
+        renderKeywords(data.keyword_options || [], data.dm_template || '');
+      } else {
+        const values = data.caption_options || (data.caption ? [data.caption] : []);
+        if (!values.length) throw new Error('پیشنهادی از مدل دریافت نشد.');
+        renderCaptions(channel, values);
+        if (channel === 'instagram' && (data.keyword_options || []).length) renderKeywords(data.keyword_options || [], data.dm_template || '');
+      }
+    } catch (error) { if (holder) holder.innerHTML = previousHolder; showPromptError(errorKey, error.message || 'ساخت محتوا ناموفق بود.'); }
+    finally { button.disabled = false; button.innerHTML = previousButton; }
   };
   document.querySelectorAll('[data-v2-modern-generate]').forEach(button => button.addEventListener('click', () => requestContent(button.dataset.v2ModernGenerate, button)));
   document.querySelectorAll('[data-v2-modern-keyword]').forEach(button => button.addEventListener('click', () => requestContent(button.dataset.v2ModernKeyword, button, true)));

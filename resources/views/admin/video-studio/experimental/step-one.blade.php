@@ -16,7 +16,7 @@
     <div class="v2-modern-hook-layout">
       <div class="v2-modern-hook-controls">
         <div class="v2-modern-hook-choice">
-          <div class="v2-modern-hook-choice-head"><strong>متن هوک را انتخاب کنید:</strong><div class="v2-inline-actions"><button class="v2-mini-btn" type="button" id="v2-modern-open-hook-prompt"><i class="fa-solid fa-sliders"></i> تنظیم پرامپت</button><button class="v2-mini-btn" type="button" id="v2-modern-regenerate-hook"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت هوک</button></div></div>
+          <div class="v2-modern-hook-choice-head"><strong>متن هوک را انتخاب کنید:</strong><div class="v2-inline-actions"><span class="v2-inline-error" data-v2-prompt-error="hook" role="alert" hidden></span><button class="v2-mini-btn" type="button" id="v2-modern-open-hook-prompt"><i class="fa-solid fa-sliders"></i> تنظیم پرامپت</button><button class="v2-mini-btn" type="button" id="v2-modern-regenerate-hook"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت هوک</button></div></div>
           <div class="v2-hook-grid" id="v2-modern-hook-grid">
             @forelse($hookInspirations->take(3) as $hook)
               <label class="v2-hook-card {{ (filled($settings->hook_text ?? '') ? ($settings->hook_text ?? '') === $hook->hook_text : $loop->first) ? 'is-selected' : '' }}"><input type="radio" name="v2_modern_hook_choice" value="{{ $hook->hook_text }}" @checked(filled($settings->hook_text ?? '') ? ($settings->hook_text ?? '') === $hook->hook_text : $loop->first)><strong>{{ $hook->title }}</strong><p>{{ $hook->hook_text }}</p></label>
@@ -62,7 +62,7 @@
     <div class="v2-modern-hook-layout">
       <div class="v2-modern-hook-controls">
         <div class="v2-modern-hook-choice">
-          <div class="v2-modern-hook-choice-head"><strong>متن دعوت به اقدام را انتخاب کنید:</strong><div class="v2-inline-actions"><button class="v2-mini-btn" type="button" id="v2-modern-open-cta-prompt"><i class="fa-solid fa-sliders"></i> تنظیم پرامپت</button><button class="v2-mini-btn" type="button" id="v2-modern-regenerate-cta"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت CTA</button></div></div>
+          <div class="v2-modern-hook-choice-head"><strong>متن دعوت به اقدام را انتخاب کنید:</strong><div class="v2-inline-actions"><span class="v2-inline-error" data-v2-prompt-error="cta" role="alert" hidden></span><button class="v2-mini-btn" type="button" id="v2-modern-open-cta-prompt"><i class="fa-solid fa-sliders"></i> تنظیم پرامپت</button><button class="v2-mini-btn" type="button" id="v2-modern-regenerate-cta"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت CTA</button></div></div>
           <div class="v2-hook-grid" id="v2-modern-cta-grid">
             @forelse($hookInspirations->take(3) as $hook)
               <label class="v2-hook-card {{ (filled($settings->cta_text ?? '') ? ($settings->cta_text ?? '') === $hook->hook_text : $loop->first) ? 'is-selected' : '' }}"><input type="radio" name="cta_text_choice" value="{{ $hook->hook_text }}" @checked(filled($settings->cta_text ?? '') ? ($settings->cta_text ?? '') === $hook->hook_text : $loop->first)><strong>{{ $hook->title }}</strong><p>{{ $hook->hook_text }}</p></label>
@@ -72,7 +72,7 @@
               @endforeach
             @endforelse
           </div>
-          <div class="v2-field" style="margin-top:10px"><label for="v2-modern-cta-text">متن دعوت به اقدام</label><textarea class="v2-textarea" id="v2-modern-cta-text" name="cta_text" rows="3" placeholder="متن پایانی ویدیو را برای پیش‌نمایش و ساخت ویرایش کنید.">{{ old('cta_text', $settings->cta_text ?? '') }}</textarea><input type="hidden" id="v2-modern-cta-guidelines" name="cta_guidelines" value="{{ old('cta_guidelines', $settings->cta_guidelines ?? '') }}"></div>
+          <div class="v2-field" style="margin-top:10px"><label for="v2-modern-cta-text">متن دعوت به اقدام</label><textarea class="v2-textarea" id="v2-modern-cta-text" name="cta_text" rows="3" placeholder="متن پایانی ویدیو را برای پیش‌نمایش و ساخت ویرایش کنید.">{{ old('cta_text', $settings->cta_text ?? '') }}</textarea><input type="hidden" id="v2-modern-cta-guidelines" name="cta_guidelines" value="{{ old('cta_guidelines', '') }}"></div>
         </div>
 
         <div class="v2-modern-hook-styles">
