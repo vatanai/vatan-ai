@@ -13,7 +13,7 @@
       @if(session('success'))
         <div class="tps-alert tps-alert--success"><i class="fa-solid fa-circle-check"></i><span>{{ session('success') }}</span></div>
       @endif
-      @if($errors->any())
+      @if(isset($errors) && $errors->any())
         <div class="tps-alert tps-alert--error"><i class="fa-solid fa-triangle-exclamation"></i><span>{{ $errors->first() }}</span></div>
       @endif
 
@@ -83,7 +83,7 @@
         <div class="tps-card__head"><div><h2>آخرین فرآیندهای ثبت محصول</h2><p>وضعیت آخرین درخواست‌های ارسال‌شده از بات.</p></div><span class="tps-badge">نمایش آخرین ۱۲ مورد</span></div>
         <div class="tps-table-wrap"><table class="tps-table"><thead><tr><th>مدیر</th><th>وضعیت</th><th>توضیح</th><th>زمان</th></tr></thead><tbody>
           @forelse($drafts as $draft)
-            <tr><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ IlluminateSupportStr::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
+            <tr><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ \Illuminate\Support\Str::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
           @empty
             <tr><td colspan="4" class="tps-empty">هنوز فرآیندی در دیتابیس ثبت نشده است.</td></tr>
           @endforelse
