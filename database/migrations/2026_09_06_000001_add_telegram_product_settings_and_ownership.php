@@ -52,14 +52,16 @@ return new class extends Migration
         if (! Schema::hasTable('telegram_product_registrations')) {
             Schema::create('telegram_product_registrations', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('product_id')->unique()->constrained('products')->cascadeOnDelete();
-                $table->foreignId('telegram_product_manager_id')->nullable()->constrained('telegram_product_managers')->nullOnDelete();
+                $table->unsignedBigInteger('product_id')->unique();
+                $table->unsignedBigInteger('telegram_product_manager_id')->nullable();
                 $table->uuid('draft_id')->nullable();
                 $table->unsignedBigInteger('telegram_id')->nullable()->index();
                 $table->longText('input_prompt')->nullable();
                 $table->json('ai_result')->nullable();
                 $table->string('status', 30)->default('draft');
                 $table->timestamps();
+                $table->foreign('product_id', 'tp_reg_product_fk')->references('id')->on('products')->cascadeOnDelete();
+                $table->foreign('telegram_product_manager_id', 'tp_reg_manager_fk')->references('id')->on('telegram_product_managers')->nullOnDelete();
                 $table->index(['telegram_product_manager_id', 'created_at'], 'telegram_product_registrations_manager_created_idx');
             });
         }
