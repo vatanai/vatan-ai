@@ -62,6 +62,58 @@ class OpenRouterService implements AiImageProviderInterface
         return trim((string) data_get($response->json(), 'choices.0.message.content'));
     }
 
+    /** تولید فراداده‌ی متنی محصول؛ عمداً هیچ تصویر یا مسیر فایل به این متد داده نمی‌شود. */
+    public function generateProductMetadata(string $description, array $categoryNames = []): array
+    {
+        $categories = collect($categoryNames)->map(fn ($name) => trim((string) $name))->filter()->values()->implode('، ');
+        $response = $this->postWithFailover('/chat/completions', [
+            'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
+            'messages' => [
+                [
+                    'role' => 'system',
+                    'content' => 'برای یک محصول تصویری در پلتفرم وطن فقط JSON معتبر برگردان. کلیدها دقیقاً name_fa، name_en، description_fa، description_en، category، tags باشند. نام‌ها کوتاه و حرفه‌ای، توضیحات کاربردی و tags آرایه‌ای از حداکثر ۸ عبارت کوتاه باشند. category را فقط از فهرست داده‌شده انتخاب کن. تصویر، مسیر فایل و هیچ فیلد فنی را تحلیل یا تولید نکن.',
+                ],
+                [
+                    'role' => 'user',
+                    'content' => "توضیح مدیر:\n{$description}\n\nفهرست دسته‌بندی‌های مجاز:\n{$categories}",
+                ],
+            ],
+            'temperature' => 0.2,
+            'response_format' => ['type' => 'json_object'],
+        ], 60);
+        $response->throw();
+
+        $content = trim((string) data_get($response->json(), 'choices.0.message.content', '{}'));
+        $content = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content);
+        $metadata = json_decode($content, true);
+        if (! is_array($metadata)) {
+            throw new Exception('پاسخ متنی هوش مصنوعی معتبر نیست.');
+        }
+
+        foreach (['name_fa', 'name_en', 'description_fa', 'description_en', 'category'] as $key) {
+            if (trim((string) ($metadata[$key] ?? '')) === '') {
+                throw new Exception("فیلد {$key} در پاسخ هوش مصنوعی خالی است.");
+            }
+        }
+
+        return [
+            'name_fa' => trim((string) $metadata['name_fa']),
+            'name_en' => trim((string) $metadata['name_en']),
+            'description_fa' => trim((string) $metadata['description_fa']),
+            'description_en' => trim((string) $metadata['description_en']),
+            'category' => trim((string) $metadata['category']),
+            'tags' => collect((array) ($metadata['tags'] ?? []))
+                ->map(fn ($tag) => trim((string) $tag))
+                ->filter()
+                ->unique()
+                ->take(8)
+                ->values()
+                ->all(),
+            'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
+            'usage' => (array) ($response->json('usage') ?? []),
+        ];
+    }
+
     /** ارزیابی تصویری خروجی آزمایش با مدل بینایی ارزان OpenRouter. */
     public function scoreLabImage(string $modelId, string $prompt, string $imageData, int $timeout = 60): array
     {

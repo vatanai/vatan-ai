@@ -40,6 +40,47 @@ class OpenRouterServiceTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_product_metadata_uses_only_text_and_never_sends_image_fields(): void
+    {
+        config(['services.telegram_product.ai_model' => 'openai/gpt-4o-mini']);
+
+        Http::fake([
+            'https://openrouter.test/api/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'name_fa' => 'پرتره استودیویی',
+                            'name_en' => 'Studio Portrait',
+                            'description_fa' => 'یک محصول تصویری حرفه‌ای برای پرتره.',
+                            'description_en' => 'A professional product for portraits.',
+                            'category' => 'پرتره',
+                            'tags' => ['پرتره', 'استودیو'],
+                        ], JSON_UNESCAPED_UNICODE),
+                    ],
+                ]],
+                'usage' => ['total_tokens' => 42],
+            ]),
+        ]);
+
+        $result = app(OpenRouterService::class)->generateProductMetadata(
+            'برای یک پرتره‌ی حرفه‌ای با نور نرم توضیح تولید کن.',
+            ['پرتره', 'تبلیغاتی'],
+        );
+
+        $this->assertSame('پرتره استودیویی', $result['name_fa']);
+        $this->assertSame(['پرتره', 'استودیو'], $result['tags']);
+        Http::assertSent(function (Request $request): bool {
+            $payload = $request->data();
+            $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
+
+            return ! str_contains($encoded, 'image_url')
+                && ! str_contains($encoded, 'file_id')
+                && ! str_contains($encoded, 'image_paths')
+                && ! str_contains($encoded, 'base64')
+                && str_contains($payload['messages'][1]['content'], 'توضیح مدیر');
+        });
+    }
+
     public function test_model_limited_to_one_image_is_retried_as_separate_requests(): void
     {
         Http::fakeSequence('https://openrouter.test/api/v1/images')

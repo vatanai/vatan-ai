@@ -105,6 +105,13 @@ return [
         'broadcast_rate_per_second' => (int) env('TELEGRAM_BROADCAST_RATE_PER_SECOND', 25),
     ],
 
+    'telegram_product' => [
+        'webhook_secret' => env('TELEGRAM_PRODUCT_WEBHOOK_SECRET', env('TELEGRAM_WEBHOOK_SECRET')),
+        'bot_token' => env('TELEGRAM_PRODUCT_BOT_TOKEN'),
+        'max_images' => (int) env('TELEGRAM_PRODUCT_MAX_IMAGES', 5),
+        'ai_model' => env('TELEGRAM_PRODUCT_AI_MODEL', 'openai/gpt-4o-mini'),
+    ],
+
     'meta' => [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),

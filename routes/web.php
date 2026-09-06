@@ -44,6 +44,7 @@ use App\Http\Controllers\Admin\ArticleCategoryController as AdminArticleCategory
 use App\Http\Controllers\Admin\ArticleCommentController as AdminArticleCommentController;
 use App\Http\Controllers\TelegramMiniAppController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Http\Controllers\TelegramProductWebhookController;
 
 // ─── Root & Landing ──────────────────────────────────────
 // صفحه‌ی اصلی عمومی باید برای کاربر واردشده هم قابل مشاهده باشد؛
@@ -93,6 +94,10 @@ Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token(
 // ورودی بات در یک مسیر مستقل نگه داشته شده تا با احراز هویت و فرم‌های سایت تداخل نداشته باشد.
 Route::post('/webhooks/telegram', [TelegramWebhookController::class, 'update'])
     ->name('telegram.webhook');
+Route::post('/webhooks/telegram/product', [TelegramProductWebhookController::class, 'update'])
+    ->name('telegram.product.webhook');
+Route::get('/webhooks/telegram/product/{draft}/status', [TelegramProductWebhookController::class, 'status'])
+    ->name('telegram.product.status');
 Route::get('/telegram/mini-app', [TelegramMiniAppController::class, 'show'])
     ->name('telegram.mini-app');
 Route::post('/api/telegram/mini-app/session', [TelegramMiniAppController::class, 'session'])

@@ -49,3 +49,37 @@ Artisan::command('admin:bump-version', function () {
 
     $this->info("نسخه داشبورد از {$current} به {$next} افزایش یافت.");
 })->purpose('یک واحد به شماره نسخه‌ی داشبورد (ردیف «ورژن داشبورد» در فایل VERSION) اضافه می‌کند');
+
+Artisan::command('telegram:product-manager {action} {--telegram-id=} {--name=} {--admin-id=}', function (string $action) {
+    $action = strtolower(trim($action));
+    if ($action === 'list') {
+        App\Models\TelegramProductManager::query()->orderBy('id')->get()->each(function ($manager): void {
+            $this->line(sprintf('%s | %s | %s | %s', $manager->id, $manager->name, $manager->telegram_id ?: 'بدون شناسه', $manager->is_active ? 'فعال' : 'غیرفعال'));
+        });
+        return;
+    }
+    if (! in_array($action, ['add', 'disable', 'enable'], true)) {
+        $this->error('عملیات مجاز: list، add، enable، disable');
+        return 1;
+    }
+    $telegramId = (int) $this->option('telegram-id');
+    $manager = App\Models\TelegramProductManager::query()->where('telegram_id', $telegramId)->first();
+    if (! $manager && $action === 'add') {
+        if ($telegramId < 1 || trim((string) $this->option('name')) === '') {
+            $this->error('برای add، گزینه‌های --telegram-id و --name الزامی هستند.');
+            return 1;
+        }
+        $manager = App\Models\TelegramProductManager::query()->create([
+            'telegram_id' => $telegramId,
+            'name' => trim((string) $this->option('name')),
+            'admin_id' => $this->option('admin-id') ? (int) $this->option('admin-id') : null,
+            'is_active' => true,
+        ]);
+    }
+    if (! $manager) {
+        $this->error('مدیر با این شناسه پیدا نشد.');
+        return 1;
+    }
+    $manager->forceFill(['is_active' => $action !== 'disable'])->save();
+    $this->info($action === 'add' ? 'مدیر ثبت محصول اضافه شد.' : 'وضعیت مدیر ثبت محصول تغییر کرد.');
+})->purpose('افزودن و مدیریت مدیران مجاز ثبت محصول در تلگرام');
