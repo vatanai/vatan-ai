@@ -14,6 +14,7 @@ class TelegramProductManager extends Model
         'admin_id',
         'is_active',
         'metadata',
+        'permissions',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class TelegramProductManager extends Model
         'admin_id' => 'integer',
         'is_active' => 'boolean',
         'metadata' => 'array',
+        'permissions' => 'array',
     ];
 
     public function admin(): BelongsTo
@@ -41,5 +43,17 @@ class TelegramProductManager extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function can(string $permission): bool
+    {
+        if (! $this->is_active) return false;
+        $defaults = self::defaultPermissions();
+        return (bool) ($this->permissions[$permission] ?? $defaults[$permission] ?? false);
+    }
+
+    public static function defaultPermissions(): array
+    {
+        return ['create_product' => true, 'edit_product' => true, 'publish_product' => true, 'manage_prompts' => false, 'manage_bot_settings' => false, 'view_reports' => true];
     }
 }

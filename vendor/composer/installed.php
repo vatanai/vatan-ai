@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'laravel/laravel',
-        'pretty_version' => 'dev-main',
-        'version' => 'dev-main',
-        'reference' => '33c50b2caaeaed228ce95e32ef26399d2ab010ca',
+        'pretty_version' => 'dev-crm-integration',
+        'version' => 'dev-crm-integration',
+        'reference' => '2bb72299a556de478f01feacaf535c70aeae6a1f',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -353,9 +353,9 @@
             'dev_requirement' => false,
         ),
         'laravel/laravel' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => '33c50b2caaeaed228ce95e32ef26399d2ab010ca',
+            'pretty_version' => 'dev-crm-integration',
+            'version' => 'dev-crm-integration',
+            'reference' => '2bb72299a556de478f01feacaf535c70aeae6a1f',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

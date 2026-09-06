@@ -9,11 +9,14 @@ use App\Models\Product;
 use App\Models\TelegramProductDraft;
 use App\Models\TelegramProductEvent;
 use App\Models\TelegramProductManager;
+use App\Models\TelegramProductRegistration;
+use App\Models\TelegramProductSetting;
 use App\Support\ProviderStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -105,6 +108,13 @@ class TelegramProductDraftService
                 (string) $draft->description,
                 $categories->map(fn (Category $category) => $category->name_fa ?: $category->name)->all(),
             );
+            if (filled($ai['product_prompt'] ?? null)) {
+                try {
+                    $ai['product_prompt'] = $this->openRouter->optimizeProductPrompt((string) $ai['product_prompt']);
+                } catch (\Throwable $optimizerException) {
+                    report($optimizerException);
+                }
+            }
             $category = $this->matchCategory((string) $ai['category'], $categories);
             $duplicate = $this->duplicateProduct($ai['name_fa'], $ai['name_en']);
             $ai['category_id'] = $category?->id;
@@ -129,6 +139,9 @@ class TelegramProductDraftService
 
     private function start(TelegramProductManager $manager, string $chatId, array $input): array
     {
+        if (! $manager->can('create_product')) {
+            return $this->response($chatId, 'دسترسی ثبت محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
+        }
         TelegramProductDraft::query()
             ->where('telegram_product_manager_id', $manager->id)
             ->whereIn('state', TelegramProductDraft::ACTIVE_STATES)
@@ -174,14 +187,12 @@ class TelegramProductDraftService
         }
 
         $paths[] = $this->images->store($image, 'products/telegram');
-        $draft->forceFill(['image_paths' => array_values($paths), 'state' => 'awaiting_description'])->save();
+        $draft->forceFill(['image_paths' => array_values($paths), 'state' => 'awaiting_prompt'])->save();
         $this->rememberMessage($draft, $input['message_id'] ?? null);
 
-        return $this->response($chatId, 'تصویر ثبت شد. اگر تصویر دیگری دارید، اضافه کنید؛ سپس توضیح محصول را وارد کنید.', [
-            ['text' => 'افزودن تصویر دیگر', 'callback_data' => 'product:add_image'],
-            ['text' => 'واردکردن توضیح', 'callback_data' => 'product:describe'],
+        return $this->response($chatId, "عکس دریافت شد ✅\nحالا پرامپت ساخت این محصول را همراه با نام و توضیحات دلخواهت در یک پیام بفرست.", [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ], ['status' => 'awaiting_description', 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft)]);
+        ], ['status' => 'awaiting_prompt', 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'reply_markup' => $this->mainMenuMarkup()]);
     }
 
     private function downloadTelegramImage(string $fileId): UploadedFile
@@ -228,19 +239,26 @@ class TelegramProductDraftService
         if (($action[1] ?? '') === 'start') {
             return $this->start($manager, $chatId, $input);
         }
+        if (($action[1] ?? '') === 'settings') {
+            return $this->settingsAction($manager, $chatId, $action[2] ?? '');
+        }
+        if (($action[1] ?? '') === 'education') {
+            return $this->education($chatId);
+        }
         if (! $draft) {
             return $this->response($chatId, 'فرآیند فعالی وجود ندارد. ابتدا ثبت محصول جدید را شروع کنید.');
         }
 
         return match ($action[1] ?? '') {
             'add_image' => $this->setStateResponse($draft, 'awaiting_image', $chatId, 'تصویر بعدی را ارسال کنید.'),
-            'describe' => $this->setStateResponse($draft, 'awaiting_description', $chatId, 'توضیح محصول را در یک پیام بفرستید.'),
+            'describe' => $this->setStateResponse($draft, 'awaiting_prompt', $chatId, 'پرامپت ساخت محصول را همراه با نام و توضیحات در یک پیام بفرستید.'),
             'status' => $this->statusResponse($draft, $chatId),
             'cancel' => $this->cancel($draft, $chatId),
             'cancel_edit' => $this->cancelEdit($draft, $chatId),
             'edit' => $this->editPrompt($draft, $chatId, $action[2] ?? ''),
+            'confirm' => $this->confirmMetadata($draft, $chatId),
             'save_draft' => $this->save($draft, 'draft', $chatId),
-            'publish' => $this->save($draft, 'active', $chatId),
+            'publish' => $manager->can('publish_product') ? $this->save($draft, 'active', $chatId) : $this->response($chatId, 'دسترسی انتشار محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']),
             default => $this->response($chatId, 'این دکمه دیگر معتبر نیست. لطفاً وضعیت فعلی را دوباره بررسی کنید.'),
         };
     }
@@ -252,8 +270,14 @@ class TelegramProductDraftService
             return $this->start($manager, $chatId, $input);
         }
         if ($text === 'ویرایش محصول') {
+            if (! $manager->can('edit_product')) return $this->response($chatId, 'دسترسی ویرایش محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
             return $this->beginProductEdit($manager, $draft, $chatId, $input);
         }
+        if ($text === 'تنظیمات') return $this->settingsMenu($manager, $chatId);
+        if ($text === 'آموزش') return $this->education($chatId);
+        if ($text === 'دریافت نتیجه' && $draft) return $this->statusResponse($draft, $chatId);
+        if ($text === 'تنظیمات پرامپت اسم و توضیحات محصول') return $this->settingsAction($manager, $chatId, 'metadata');
+        if ($text === 'تنظیمات پرامپت اصلاح پرامپت محصول') return $this->settingsAction($manager, $chatId, 'optimizer');
         if ($text === 'لغو فرآیند' && $draft) {
             return $this->cancel($draft, $chatId);
         }
@@ -263,12 +287,19 @@ class TelegramProductDraftService
                 'reply_markup' => $this->mainMenuMarkup(),
             ]);
         }
+        if ($text === 'تأیید' && in_array($draft->state, ['review', 'duplicate'], true)) return $this->confirmMetadata($draft, $chatId);
+        if ($text === 'کپی برای ویرایش' && in_array($draft->state, ['review', 'duplicate', 'awaiting_save_choice'], true)) return $this->editPrompt($draft, $chatId, 'metadata');
+        if ($text === 'ذخیره در پیش‌نویس' && in_array($draft->state, ['review', 'awaiting_save_choice'], true)) return $this->save($draft, 'draft', $chatId);
+        if (in_array($text, ['ثبت و انتشار', 'ثبت تغییرات'], true) && in_array($draft->state, ['review', 'awaiting_save_choice'], true)) return $this->save($draft, 'active', $chatId);
+        if ($draft->state === 'awaiting_setting_prompt') {
+            return $this->saveSettingPrompt($manager, $draft, $chatId, $text);
+        }
         if ($draft->state === 'awaiting_product_code') {
             return $this->receiveProductCode($draft, $chatId, $text);
         }
-        if ($draft->state === 'awaiting_description') {
+        if (in_array($draft->state, ['awaiting_prompt', 'awaiting_description'], true)) {
             if (mb_strlen($text) < 10) {
-                return $this->response($chatId, 'توضیح محصول کمی کوتاه است؛ حداقل ۱۰ کاراکتر وارد کنید.', [], ['status' => 'awaiting_description', 'draft_id' => $draft->id]);
+                return $this->response($chatId, 'متن ورودی کمی کوتاه است؛ پرامپت، نام یا توضیحات محصول را کامل‌تر بفرستید.', [], ['status' => 'awaiting_prompt', 'draft_id' => $draft->id]);
             }
             $draft->forceFill([
                 'description' => $text,
@@ -279,13 +310,13 @@ class TelegramProductDraftService
             $this->rememberMessage($draft, $input['message_id'] ?? null);
             ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
             return $this->response($chatId, 'اطلاعات در حال آماده‌سازی است؛ چند لحظه صبر کنید.', [
-                ['text' => 'دریافت نتیجه', 'callback_data' => 'product:status'],
                 ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
             ], [
                 'status' => 'processing',
                 'draft_id' => $draft->id,
                 'delete_message_ids' => $this->messageIds($draft),
                 'poll_after_seconds' => 3,
+                'reply_markup' => $this->mainMenuMarkup(),
             ]);
         }
         if ($draft->state === 'awaiting_edit') {
@@ -344,16 +375,21 @@ class TelegramProductDraftService
 
         $draft->forceFill([
             'product_id' => $product->id,
-            'state' => 'awaiting_edit',
+            'state' => 'review',
+            'ai_result' => [
+                'name_fa' => (string) $product->name_fa,
+                'name_en' => (string) $product->name_en,
+                'description_fa' => (string) $product->description_fa,
+                'description_en' => (string) $product->description_en,
+                'category' => (string) ($product->category ?: 'عمومی'),
+                'category_name' => (string) ($product->category ?: 'عمومی'),
+                'tags' => (array) ($product->tags ?? []),
+                'product_prompt' => (string) ($product->prompt_template ?? ''),
+            ],
+            'input_payload' => array_merge((array) $draft->input_payload, ['edit_existing' => true]),
         ])->save();
 
-        return $this->response($chatId, 'محصول پیدا شد. کد ویرایش ثبت شد و مرحله‌ی بعد، نمایش گزینه‌های ویرایش همین محصول است.', [
-            ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ], [
-            'status' => 'edit_ready',
-            'draft_id' => $draft->id,
-            'product_id' => $product->id,
-        ]);
+        return $this->reviewResponse($draft->fresh());
     }
 
     private function applyEdit(TelegramProductDraft $draft, string $chatId, string $text): array
@@ -363,6 +399,19 @@ class TelegramProductDraftService
         }
         $ai = (array) $draft->ai_result;
         $field = (string) $draft->pending_edit_field;
+        if ($field === 'metadata') {
+            $draft->forceFill([
+                'description' => $text,
+                'state' => 'processing',
+                'pending_edit_field' => null,
+                'processing_started_at' => now(),
+                'reviewed_at' => null,
+            ])->save();
+            ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
+            return $this->response($chatId, 'متن ویرایش‌شده دریافت شد؛ نام و توضیحات دوباره آماده می‌شود.', [
+                ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+            ], ['status' => 'processing', 'draft_id' => $draft->id, 'poll_after_seconds' => 3, 'reply_markup' => $this->mainMenuMarkup()]);
+        }
         if (! in_array($field, ['name_fa', 'name_en', 'description_fa'], true)) {
             return $this->response($chatId, 'این نوع اصلاح پشتیبانی نمی‌شود.');
         }
@@ -381,10 +430,23 @@ class TelegramProductDraftService
 
     private function save(TelegramProductDraft $draft, string $status, string $chatId): array
     {
-        if (! in_array($draft->state, ['review'], true)) {
+        if (! in_array($draft->state, ['review', 'awaiting_save_choice'], true)) {
             return $this->response($chatId, 'این فرآیند هنوز برای ذخیره آماده نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
         }
         $ai = (array) $draft->ai_result;
+        if ($draft->product_id && data_get($draft->input_payload, 'edit_existing')) {
+            $product = Product::query()->find($draft->product_id);
+            if (! $product) return $this->response($chatId, 'محصول موردنظر دیگر پیدا نشد.', [], ['status' => 'failed', 'draft_id' => $draft->id]);
+            $product->forceFill([
+                'name_fa' => trim((string) ($ai['name_fa'] ?? $product->name_fa)),
+                'name_en' => trim((string) ($ai['name_en'] ?? $product->name_en)),
+                'description_fa' => trim((string) ($ai['description_fa'] ?? $product->description_fa)),
+                'description_en' => trim((string) ($ai['description_en'] ?? $product->description_en)),
+                'tags' => array_values((array) ($ai['tags'] ?? $product->tags ?? [])),
+            ])->save();
+            $draft->forceFill(['state' => 'published', 'completed_at' => now()])->save();
+            return $this->savedResponse($draft->fresh(), $product->fresh(), $chatId, 'active');
+        }
         $duplicate = $this->duplicateProduct((string) ($ai['name_fa'] ?? ''), (string) ($ai['name_en'] ?? ''));
         if ($duplicate) {
             $draft->forceFill(['state' => 'duplicate', 'reviewed_at' => null, 'ai_result' => array_merge($ai, ['duplicate_product_id' => $duplicate->id])])->save();
@@ -468,6 +530,19 @@ class TelegramProductDraftService
                 'state' => $status === 'active' ? 'published' : 'draft_saved',
                 'completed_at' => now(),
             ])->save();
+            if (Schema::hasTable('telegram_product_registrations')) {
+                TelegramProductRegistration::query()->updateOrCreate(
+                    ['product_id' => $product->id],
+                    [
+                        'telegram_product_manager_id' => $draft->telegram_product_manager_id,
+                        'draft_id' => $draft->id,
+                        'telegram_id' => $draft->telegram_id,
+                        'input_prompt' => $draft->description,
+                        'ai_result' => $ai,
+                        'status' => $status,
+                    ],
+                );
+            }
             return $product;
         });
 
@@ -478,22 +553,15 @@ class TelegramProductDraftService
     {
         $ai = (array) $draft->ai_result;
         $duplicate = $draft->state === 'duplicate';
-        $text = "خلاصه محصول آماده است:\n\nنام فارسی: {$ai['name_fa']}\nنام انگلیسی: {$ai['name_en']}\nدسته‌بندی: " . ($ai['category_name'] ?? $ai['category']) . "\nتوضیح: {$ai['description_fa']}";
+        $text = "نام محصول:\n{$ai['name_fa']}\n\nتوضیحات محصول:\n{$ai['description_fa']}";
         if ($duplicate) {
-            $text .= "\n\nهشدار: محصولی با عنوان مشابه قبلاً ثبت شده است؛ ذخیره متوقف شد.";
+            $text .= "\n\n⚠️ محصولی با عنوان مشابه قبلاً ثبت شده است؛ قبل از ثبت آن را اصلاح کنید.";
         }
-        return $this->response($draft->chat_id, $text, $duplicate ? [
-            ['text' => 'اصلاح نام فارسی', 'callback_data' => 'product:edit:name_fa'],
-            ['text' => 'اصلاح توضیح', 'callback_data' => 'product:edit:description_fa'],
+        return $this->response($draft->chat_id, $text, [
+            ['text' => 'تأیید', 'callback_data' => 'product:confirm'],
+            ['text' => 'کپی برای ویرایش', 'callback_data' => 'product:edit:metadata'],
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ] : [
-            ['text' => 'اصلاح نام فارسی', 'callback_data' => 'product:edit:name_fa'],
-            ['text' => 'اصلاح نام انگلیسی', 'callback_data' => 'product:edit:name_en'],
-            ['text' => 'اصلاح توضیح', 'callback_data' => 'product:edit:description_fa'],
-            ['text' => 'ذخیره در پیش‌نویس', 'callback_data' => 'product:save_draft'],
-            ['text' => 'انتشار در وب‌سایت', 'callback_data' => 'product:publish'],
-            ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ], ['status' => $draft->state, 'ready' => true, 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft)]);
+        ], ['status' => $draft->state, 'ready' => true, 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'keyboard' => 'review']);
     }
 
     private function statusResponse(TelegramProductDraft $draft, string $chatId): array
@@ -520,28 +588,103 @@ class TelegramProductDraftService
         return $this->response($chatId, 'این فرآیند دیگر در وضعیت بررسی نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
     }
 
+    private function confirmMetadata(TelegramProductDraft $draft, string $chatId): array
+    {
+        if (! in_array($draft->state, ['review', 'duplicate'], true)) {
+            return $this->response($chatId, 'ابتدا باید نتیجه‌ی آماده‌شده را بررسی کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+        }
+        if ($draft->state === 'duplicate') return $this->reviewResponse($draft->fresh());
+        $draft->forceFill(['state' => 'awaiting_save_choice', 'reviewed_at' => now()])->save();
+        $isEdit = (bool) data_get($draft->input_payload, 'edit_existing');
+        $text = $isEdit ? 'اطلاعات اصلاح‌شده تأیید شد. نوع ذخیره‌ی تغییرات را انتخاب کنید.' : 'نام و توضیحات تأیید شد. حالا نوع ثبت محصول را انتخاب کنید.';
+        return $this->response($chatId, $text, [
+            ['text' => $isEdit ? 'ثبت تغییرات' : 'ذخیره در پیش‌نویس', 'callback_data' => $isEdit ? 'product:publish' : 'product:save_draft'],
+            ...($isEdit ? [] : [['text' => 'ثبت و انتشار', 'callback_data' => 'product:publish']]),
+            ['text' => 'کپی برای ویرایش', 'callback_data' => 'product:edit:metadata'],
+            ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+        ], ['status' => 'awaiting_save_choice', 'draft_id' => $draft->id, 'keyboard' => 'review']);
+    }
+
+    private function settingsMenu(TelegramProductManager $manager, string $chatId): array
+    {
+        return $this->response($chatId, 'تنظیمات بات ثبت محصول\n\nاز این بخش می‌توانید پرامپت‌های تولید اطلاعات محصول را مدیریت کنید.', [
+            ['text' => 'تنظیمات پرامپت اسم و توضیحات محصول', 'callback_data' => 'product:settings:metadata'],
+            ['text' => 'تنظیمات پرامپت اصلاح پرامپت محصول', 'callback_data' => 'product:settings:optimizer'],
+        ], ['status' => 'settings', 'reply_markup' => $this->mainMenuMarkup()]);
+    }
+
+    private function settingsAction(TelegramProductManager $manager, string $chatId, string $key): array
+    {
+        if (! $manager->can('manage_prompts')) return $this->response($chatId, 'دسترسی مدیریت پرامپت‌ها برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
+        $settingKey = $key === 'metadata' ? 'metadata_prompt' : ($key === 'optimizer' ? 'prompt_optimizer' : null);
+        if (! $settingKey) return $this->settingsMenu($manager, $chatId);
+        $draft = TelegramProductDraft::query()->create([
+            'id' => (string) Str::uuid(),
+            'telegram_product_manager_id' => $manager->id,
+            'telegram_id' => $manager->telegram_id,
+            'chat_id' => $chatId,
+            'state' => 'awaiting_setting_prompt',
+            'pending_edit_field' => $settingKey,
+        ]);
+        $current = TelegramProductSetting::value($settingKey, '');
+        return $this->response($chatId, "پرامپت فعلی:\n\n{$current}\n\n👇 متن جدید را در یک پیام ارسال کنید:", [
+            ['text' => 'لغو اصلاح', 'callback_data' => 'product:cancel'],
+        ], ['status' => 'awaiting_setting_prompt', 'draft_id' => $draft->id]);
+    }
+
+    private function saveSettingPrompt(TelegramProductManager $manager, TelegramProductDraft $draft, string $chatId, string $text): array
+    {
+        if (! $manager->can('manage_prompts')) return $this->response($chatId, 'دسترسی مدیریت پرامپت‌ها برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
+        if (mb_strlen($text) < 20) return $this->response($chatId, 'پرامپت خیلی کوتاه است؛ متن کامل‌تری ارسال کنید.', [], ['status' => 'awaiting_setting_prompt', 'draft_id' => $draft->id]);
+        TelegramProductSetting::put((string) $draft->pending_edit_field, $text);
+        $draft->forceFill(['state' => 'cancelled', 'cancelled_at' => now(), 'pending_edit_field' => null])->save();
+        return $this->response($chatId, 'پرامپت با موفقیت ذخیره شد.', [], ['status' => 'settings_saved', 'reply_markup' => $this->mainMenuMarkup()]);
+    }
+
+    private function education(string $chatId): array
+    {
+        return $this->response($chatId, "آموزش ثبت محصول\n\n۱) روی «ثبت محصول جدید» بزنید و عکس اصلی را ارسال کنید.\n۲) بعد از دریافت عکس، پرامپت ساخت محصول را همراه با نام و توضیحات در یک پیام بفرستید.\n۳) نام و توضیحات پیشنهادی را بررسی کنید و «تأیید» یا «کپی برای ویرایش» را بزنید.\n۴) نوع ثبت را انتخاب کنید: پیش‌نویس یا انتشار در سایت.\n۵) در پایان کد محصول و لینک نمایش آن برای شما ارسال می‌شود.\n\nبرای ویرایش محصول قبلی، «ویرایش محصول» را بزنید و کد محصول را ارسال کنید.", [], ['status' => 'education', 'reply_markup' => $this->mainMenuMarkup()]);
+    }
+
     private function savedResponse(TelegramProductDraft $draft, Product $product, string $chatId, string $status): array
     {
-        $buttons = [['text' => 'ویرایش در داشبورد', 'url' => route('admin.products.create', ['product' => $product->id])]];
+        $ai = (array) $draft->ai_result;
+        $buttons = [];
         if ($status === 'active') {
             $buttons[] = ['text' => 'مشاهده محصول در سایت', 'url' => route('app.product', ['product' => $product->route_slug])];
         }
-        return $this->response($chatId, $status === 'active' ? 'محصول با موفقیت منتشر شد.' : 'محصول در وضعیت پیش‌نویس ذخیره شد.', $buttons, [
+        $buttons[] = ['text' => 'ویرایش در داشبورد', 'url' => route('admin.products.create', ['product' => $product->id])];
+        $text = ($status === 'active' ? '✅ محصول با موفقیت ثبت و منتشر شد.' : '✅ محصول با موفقیت در پیش‌نویس ذخیره شد.')
+            . "\n\nکد محصول: {$product->product_code}"
+            . "\nنام: {$product->name_fa}"
+            . "\nتوضیحات: {$product->description_fa}"
+            . "\nدسته‌بندی: " . ($ai['category_name'] ?? $product->category)
+            . "\nبرچسب‌ها: " . implode('، ', (array) ($ai['tags'] ?? $product->tags ?? []));
+        return $this->response($chatId, $text, $buttons, [
             'status' => $product->status,
             'draft_id' => $draft->id,
             'product_id' => $product->id,
             'delete_message_ids' => $this->messageIds($draft),
+            'photo_url' => filled($product->thumbnail) ? Storage::disk('public')->url($product->thumbnail) : null,
+            'reply_markup' => $this->mainMenuMarkup(),
+            'final_product' => true,
         ]);
     }
 
     private function editPrompt(TelegramProductDraft $draft, string $chatId, string $field): array
     {
-        $labels = ['name_fa' => 'نام فارسی', 'name_en' => 'نام انگلیسی', 'description_fa' => 'توضیح فارسی'];
-        if (! isset($labels[$field]) || ! in_array($draft->state, ['review', 'duplicate'], true)) {
+        $labels = ['metadata' => 'نام و توضیحات محصول', 'name_fa' => 'نام فارسی', 'name_en' => 'نام انگلیسی', 'description_fa' => 'توضیح فارسی'];
+        if (! isset($labels[$field]) || ! in_array($draft->state, ['review', 'duplicate', 'awaiting_save_choice'], true)) {
             return $this->response($chatId, 'این بخش فعلاً قابل اصلاح نیست.');
         }
         $draft->forceFill(['state' => 'awaiting_edit', 'pending_edit_field' => $field])->save();
-        return $this->response($chatId, "متن جدید «{$labels[$field]}» را ارسال کنید.", [
+        if ($field === 'metadata') {
+            $ai = (array) $draft->ai_result;
+            $prompt = "👇 متن زیر را کپی کن، هر بخش را خواستی کم‌وزیاد یا ویرایش کن و در یک پیام بفرست:\n\nنام محصول: {$ai['name_fa']}\n\nتوضیحات محصول: {$ai['description_fa']}";
+        } else {
+            $prompt = "متن جدید «{$labels[$field]}» را ارسال کنید.";
+        }
+        return $this->response($chatId, $prompt, [
             ['text' => 'لغو اصلاح', 'callback_data' => 'product:cancel_edit'],
         ], ['status' => 'awaiting_edit', 'draft_id' => $draft->id]);
     }
@@ -569,7 +712,7 @@ class TelegramProductDraftService
 
     private function activeDraft(TelegramProductManager $manager, string $chatId): ?TelegramProductDraft
     {
-        return TelegramProductDraft::query()->where('telegram_product_manager_id', $manager->id)->whereIn('state', TelegramProductDraft::ACTIVE_STATES)->latest()->first();
+        return TelegramProductDraft::query()->where('telegram_product_manager_id', $manager->id)->where('chat_id', $chatId)->whereIn('state', TelegramProductDraft::ACTIVE_STATES)->latest()->first();
     }
 
     private function duplicateProduct(string $nameFa, string $nameEn): ?Product
@@ -619,6 +762,7 @@ class TelegramProductDraftService
         return [
             'keyboard' => [
                 [['text' => 'ثبت محصول جدید'], ['text' => 'ویرایش محصول']],
+                [['text' => 'تنظیمات'], ['text' => 'آموزش']],
                 [['text' => 'لغو فرآیند']],
             ],
             'resize_keyboard' => true,

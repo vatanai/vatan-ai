@@ -66,6 +66,11 @@
           <a href="{{ route('admin.categories.create') }}" class="sub-item {{ request()->is('admin/categories/create') ? 'active' : '' }}">
             <div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی</div>
           </a>
+          @if(auth('admin')->user()?->isLeader())
+          <a href="{{ route('admin.products.settings') }}" class="sub-item {{ request()->is('admin/products/settings') ? 'active' : '' }}">
+            <div class="sub-dot"></div><div class="sub-label">تنظیمات</div>
+          </a>
+          @endif
           <div class="sub-item sub-item-parent {{ request()->is('admin/lab*') ? 'active' : '' }}" onclick="toggleSubSub('products-lab-submenu', this)">
             <div class="sub-dot"></div><div class="sub-label">آزمایشگاه</div><i class="fa-solid fa-chevron-down sub-chev"></i>
           </div>

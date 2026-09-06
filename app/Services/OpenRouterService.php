@@ -63,15 +63,16 @@ class OpenRouterService implements AiImageProviderInterface
     }
 
     /** تولید فراداده‌ی متنی محصول؛ عمداً هیچ تصویر یا مسیر فایل به این متد داده نمی‌شود. */
-    public function generateProductMetadata(string $description, array $categoryNames = []): array
+    public function generateProductMetadata(string $description, array $categoryNames = [], ?string $systemPrompt = null): array
     {
         $categories = collect($categoryNames)->map(fn ($name) => trim((string) $name))->filter()->values()->implode('، ');
+        $systemPrompt = $systemPrompt ?: $this->productSetting('metadata_prompt') ?: 'برای یک محصول تصویری در پلتفرم وطن فقط JSON معتبر برگردان. کلیدها دقیقاً name_fa، name_en، description_fa، description_en، category، tags و product_prompt باشند. نام‌ها کوتاه و حرفه‌ای، توضیحات کاربردی و tags آرایه‌ای از حداکثر ۸ عبارت کوتاه باشند. category را فقط از فهرست داده‌شده انتخاب کن. product_prompt را به انگلیسی و آماده‌ی مدل تولید تصویر بنویس. تصویر، مسیر فایل و هیچ فیلد فنی را تحلیل یا تولید نکن.';
         $response = $this->postWithFailover('/chat/completions', [
             'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'برای یک محصول تصویری در پلتفرم وطن فقط JSON معتبر برگردان. کلیدها دقیقاً name_fa، name_en، description_fa، description_en، category، tags باشند. نام‌ها کوتاه و حرفه‌ای، توضیحات کاربردی و tags آرایه‌ای از حداکثر ۸ عبارت کوتاه باشند. category را فقط از فهرست داده‌شده انتخاب کن. تصویر، مسیر فایل و هیچ فیلد فنی را تحلیل یا تولید نکن.',
+                    'content' => $systemPrompt,
                 ],
                 [
                     'role' => 'user',
@@ -102,6 +103,7 @@ class OpenRouterService implements AiImageProviderInterface
             'description_fa' => trim((string) $metadata['description_fa']),
             'description_en' => trim((string) $metadata['description_en']),
             'category' => trim((string) $metadata['category']),
+            'product_prompt' => filled($metadata['product_prompt'] ?? null) ? trim((string) $metadata['product_prompt']) : null,
             'tags' => collect((array) ($metadata['tags'] ?? []))
                 ->map(fn ($tag) => trim((string) $tag))
                 ->filter()
@@ -112,6 +114,32 @@ class OpenRouterService implements AiImageProviderInterface
             'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
             'usage' => (array) ($response->json('usage') ?? []),
         ];
+    }
+
+    public function optimizeProductPrompt(string $prompt, ?string $systemPrompt = null): string
+    {
+        $systemPrompt = $systemPrompt ?: $this->productSetting('prompt_optimizer') ?: 'پرامپت محصول را برای تولید تصویر حرفه‌ای و دقیق بهینه کن. خروجی فقط متن پرامپت نهایی انگلیسی باشد.';
+        $response = $this->postWithFailover('/chat/completions', [
+            'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
+            'messages' => [
+                ['role' => 'system', 'content' => $systemPrompt],
+                ['role' => 'user', 'content' => $prompt],
+            ],
+            'temperature' => 0.15,
+        ], 60);
+        $response->throw();
+        return trim((string) data_get($response->json(), 'choices.0.message.content'));
+    }
+
+    protected function productSetting(string $key): ?string
+    {
+        try {
+            if (Schema::hasTable('telegram_product_settings')) {
+                return \App\Models\TelegramProductSetting::value($key);
+            }
+        } catch (\Throwable) {
+        }
+        return null;
     }
 
     /** ارزیابی تصویری خروجی آزمایش با مدل بینایی ارزان OpenRouter. */

@@ -426,6 +426,10 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::put('/products/videos/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'update'])->name('products.video.update');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/settings', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'index'])->name('products.settings');
+    Route::put('/products/settings/prompts', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updatePrompts'])->name('products.settings.prompts');
+    Route::post('/products/settings/managers', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'storeManager'])->name('products.settings.managers.store');
+    Route::put('/products/settings/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updateManager'])->name('products.settings.managers.update');
     Route::post('/products/translate-identity-prompt', [ProductController::class, 'translateIdentityPrompt'])->name('products.translate_identity_prompt');
     Route::post('/products/{product}/optimize-images', [ProductController::class, 'optimizeImages'])->name('products.optimize_images');
     Route::patch('/products/{product}/credit', [ProductController::class, 'updateCredit'])->name('products.update_credit');

@@ -9,12 +9,15 @@ class TelegramProductDraft extends Model
 {
     public const ACTIVE_STATES = [
         'awaiting_image',
+        'awaiting_prompt',
         'awaiting_description',
         'processing',
         'review',
         'duplicate',
         'awaiting_edit',
         'awaiting_product_code',
+        'awaiting_save_choice',
+        'awaiting_setting_prompt',
     ];
 
     protected $keyType = 'string';

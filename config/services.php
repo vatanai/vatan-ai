@@ -108,6 +108,7 @@ return [
     'telegram_product' => [
         'webhook_secret' => env('TELEGRAM_PRODUCT_WEBHOOK_SECRET', env('TELEGRAM_WEBHOOK_SECRET')),
         'bot_token' => env('TELEGRAM_PRODUCT_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_PRODUCT_BOT_USERNAME'),
         'max_images' => (int) env('TELEGRAM_PRODUCT_MAX_IMAGES', 5),
         'ai_model' => env('TELEGRAM_PRODUCT_AI_MODEL', 'openai/gpt-4o-mini'),
     ],
