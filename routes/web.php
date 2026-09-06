@@ -347,6 +347,11 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
         Route::post('/campaigns', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'storeCampaign'])->name('campaigns.store');
         Route::post('/campaigns/{telegramCampaign}/prepare', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'prepareCampaign'])->name('campaigns.prepare');
     });
+
+    // تنظیمات بات اختصاصی ثبت محصول مدیران
+    Route::get('/settings/telegram/product-bot', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'index'])->name('settings.telegram.product-bot');
+    Route::post('/settings/telegram/product-bot/managers', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'storeManager'])->name('settings.telegram.product-bot.managers.store');
+    Route::put('/settings/telegram/product-bot/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateManager'])->name('settings.telegram.product-bot.managers.update');
 // مسیرهای کامل CRUD دسته‌بندی
     Route::resource('categories', CategoryController::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
@@ -430,7 +435,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::put('/products/videos/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'update'])->name('products.video.update');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
-    Route::get('/products/settings', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'index'])->name('products.settings');
+    Route::redirect('/products/settings', '/admin/settings/telegram/product-bot')->name('products.settings');
     Route::put('/products/settings/prompts', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updatePrompts'])->name('products.settings.prompts');
     Route::post('/products/settings/managers', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'storeManager'])->name('products.settings.managers.store');
     Route::put('/products/settings/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductSettingsController::class, 'updateManager'])->name('products.settings.managers.update');
