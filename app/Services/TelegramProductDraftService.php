@@ -757,7 +757,47 @@ class TelegramProductDraftService
 
     private function response(string $chatId, string $text, array $buttons = [], array $extra = []): array
     {
-        return array_merge(['ok' => true, 'action' => 'send_message', 'chat_id' => $chatId, 'text' => $text, 'buttons' => array_values($buttons)], $extra);
+        $buttons = array_values($buttons);
+        $response = [
+            'ok' => true,
+            'action' => 'send_message',
+            'chat_id' => $chatId,
+            'text' => $text,
+            'buttons' => $buttons,
+        ];
+        if ($buttons !== [] && ! array_key_exists('reply_markup', $extra)) {
+            $response['reply_markup'] = $this->markupForButtons($buttons);
+        }
+
+        return array_merge($response, $extra);
+    }
+
+    private function markupForButtons(array $buttons): array
+    {
+        $isInline = collect($buttons)->contains(fn (array $button): bool => filled($button['url'] ?? null));
+        if ($isInline) {
+            return ['inline_keyboard' => [$buttons]];
+        }
+
+        $keyboard = [];
+        $row = [];
+        foreach ($buttons as $button) {
+            $row[] = ['text' => (string) ($button['text'] ?? '')];
+            if (count($row) === 2 || ($button['text'] ?? '') === 'لغو فرآیند' || ($button['text'] ?? '') === 'لغو اصلاح') {
+                $keyboard[] = $row;
+                $row = [];
+            }
+        }
+        if ($row !== []) {
+            $keyboard[] = $row;
+        }
+
+        return [
+            'keyboard' => $keyboard,
+            'resize_keyboard' => true,
+            'is_persistent' => true,
+            'input_field_placeholder' => 'یک گزینه را انتخاب کنید',
+        ];
     }
 
     private function mainMenuMarkup(): array
