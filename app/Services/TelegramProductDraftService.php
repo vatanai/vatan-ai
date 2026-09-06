@@ -667,7 +667,6 @@ class TelegramProductDraftService
             'product_id' => $product->id,
             'delete_message_ids' => $this->messageIds($draft),
             'photo_url' => filled($product->thumbnail) ? Storage::disk('public')->url($product->thumbnail) : null,
-            'reply_markup' => $this->mainMenuMarkup(),
             'final_product' => true,
         ]);
     }
