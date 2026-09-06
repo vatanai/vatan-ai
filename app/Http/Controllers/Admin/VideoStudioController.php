@@ -613,16 +613,36 @@ class VideoStudioController extends Controller
                     'error' => $n8nException->getMessage(),
                 ]);
 
-                $fallbackSystem = 'تو نویسنده حرفه‌ای محتوای فارسی برای ویدیوهای کوتاه وطن هستی. فقط JSON معتبر و بدون Markdown برگردان. برای هر کلید آرایه‌ای دقیقاً ۳ گزینه متفاوت تولید کن. ادعای ساختگی، عدد بی‌منبع و وعده غیرواقعی ممنوع است. متن‌ها طبیعی، کوتاه، قابل انتشار و متناسب با شبکه اجتماعی باشند.';
-                $fallbackUser = "محصول: {$product->name_fa}\nتوضیحات محصول: " . trim((string) ($product->description_fa ?: $product->description_en ?: ''))
-                    . "\nلینک محصول: " . route('app.product', ['product' => $product->route_slug])
-                    . "\nنوع خروجی: {$contentType}\nشبکه: {$channel}\nدستور مدیر: {$prompt}\n"
-                    . 'ساختار خروجی دقیقاً شامل این کلیدها باشد: hook_options, caption_options, keyword_options, cta_options, dm_template. '
-                    . 'برای نوع خروجی درخواستی، سه گزینه کامل و غیرتکراری بساز و برای کلیدهای دیگر هم اگر لازم است آرایه خالی برگردان.';
-
+                $name = trim((string) $product->name_fa) ?: 'این محصول';
+                $body = ['output' => match ($contentType) {
+                    'hook' => ['hook_options' => [
+                        "قبل از انتخاب {$name} این نکته را ببین",
+                        "با {$name} انتخاب آگاهانه‌تری داشته باش",
+                        "جزئیات {$name} را همین حالا ببین",
+                    ]],
+                    'cta' => ['cta_options' => [
+                        "برای دیدن جزئیات {$name}، کپشن را بخوان",
+                        "اگر {$name} را پسندیدی، همین حالا اقدام کن",
+                        "برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را کامنت کن",
+                    ]],
+                    'keyword' => ['keyword_options' => ['اطلاعات', 'جزئیات', 'راهنما']],
+                    default => ['caption_options' => [
+                        "قبل از خرید {$name} این نکته‌ها را ببین.",
+                        "با {$name} انتخاب آگاهانه‌تری داشته باش.",
+                        "برای دیدن جزئیات {$name}، کپشن را بخوان.",
+                    ]],
+                }];
                 try {
+                    $fallbackSystem = 'تو نویسنده حرفه‌ای محتوای فارسی برای ویدیوهای کوتاه وطن هستی. فقط JSON معتبر و بدون Markdown برگردان. برای هر کلید آرایه‌ای دقیقاً ۳ گزینه متفاوت تولید کن. ادعای ساختگی، عدد بی‌منبع و وعده غیرواقعی ممنوع است. متن‌ها طبیعی، کوتاه، قابل انتشار و متناسب با شبکه اجتماعی باشند.';
+                    $fallbackUser = "محصول: {$product->name_fa}\nتوضیحات محصول: " . trim((string) ($product->description_fa ?: $product->description_en ?: ''))
+                        . "\nلینک محصول: " . (filled($product->route_slug) ? route('app.product', ['product' => $product->route_slug]) : '')
+                        . "\nنوع خروجی: {$contentType}\nشبکه: {$channel}\nدستور مدیر: {$prompt}\n"
+                        . 'ساختار خروجی دقیقاً شامل این کلیدها باشد: hook_options, caption_options, keyword_options, cta_options, dm_template. '
+                        . 'برای نوع خروجی درخواستی، سه گزینه کامل و غیرتکراری بساز و برای کلیدهای دیگر هم اگر لازم است آرایه خالی برگردان.';
                     $fallback = app(OpenRouterService::class)->generateStructuredText($fallbackSystem, $fallbackUser);
-                    $body = ['output' => $fallback['content'] ?? []];
+                    if (is_array($fallback['content'] ?? null) && $fallback['content'] !== []) {
+                        $body = ['output' => $fallback['content']];
+                    }
                 } catch (\Throwable $fallbackException) {
                     // اگر مدل متنی موقتاً در دسترس نبود، پیش‌نمایش نباید با خطای ۵۰۲ متوقف شود.
                     // این متن‌های کوتاه فقط مسیر پیش‌نمایش را زنده نگه می‌دارند؛ ساخت نهایی
@@ -632,25 +652,6 @@ class VideoStudioController extends Controller
                         'content_type' => $contentType,
                         'error' => $fallbackException->getMessage(),
                     ]);
-                    $name = trim((string) $product->name_fa) ?: 'این محصول';
-                    $body = ['output' => match ($contentType) {
-                        'hook' => ['hook_options' => [
-                            "قبل از انتخاب {$name} این نکته را ببین",
-                            "با {$name} انتخاب آگاهانه‌تری داشته باش",
-                            "جزئیات {$name} را همین حالا ببین",
-                        ]],
-                        'cta' => ['cta_options' => [
-                            "برای دیدن جزئیات {$name}، کپشن را بخوان",
-                            "اگر {$name} را پسندیدی، همین حالا اقدام کن",
-                            "برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را کامنت کن",
-                        ]],
-                        'keyword' => ['keyword_options' => ['اطلاعات', 'جزئیات', 'راهنما']],
-                        default => ['caption_options' => [
-                            "قبل از خرید {$name} این نکته‌ها را ببین.",
-                            "با {$name} انتخاب آگاهانه‌تری داشته باش.",
-                            "برای دیدن جزئیات {$name}، کپشن را بخوان.",
-                        ]],
-                    }];
                 }
             }
 
