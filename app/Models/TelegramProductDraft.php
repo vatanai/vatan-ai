@@ -14,6 +14,7 @@ class TelegramProductDraft extends Model
         'review',
         'duplicate',
         'awaiting_edit',
+        'awaiting_product_code',
     ];
 
     protected $keyType = 'string';
