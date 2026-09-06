@@ -849,6 +849,11 @@ class VideoStudioController extends Controller
             ], 422);
         } catch (\Throwable $e) {
             report($e);
+            Log::error('Video studio preview failed', [
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'trace' => mb_substr($e->getTraceAsString(), 0, 4000),
+            ]);
             return response()->json(['message' => 'ارتباط با مدل هوش مصنوعی ناموفق بود.'], 502);
         }
     }
