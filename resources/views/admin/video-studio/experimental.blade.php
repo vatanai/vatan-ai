@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'تولید محتوای خودکار')
+@section('title', config('video_studio.admin_label', 'تولید محتوای خودکار'))
 
 @push('styles')
 <style>
@@ -70,7 +70,7 @@
   @include('admin.partials.header')
   <div class="v2-page" id="content">
     <div class="v2-head">
-      <div><div class="v2-title">تولید محتوای خودکار</div><div class="v2-subtitle">تنظیم، ساخت و ارسال خودکار محتوای ویدیویی برای شبکه‌های اجتماعی</div></div>
+      <div><div class="v2-title">{{ config('video_studio.admin_label', 'تولید محتوای خودکار') }}</div><div class="v2-subtitle">تنظیم، ساخت و ارسال خودکار محتوای ویدیویی برای شبکه‌های اجتماعی</div></div>
     </div>
 
     <div class="v2-kpi-grid" aria-label="خلاصه وضعیت تولید">

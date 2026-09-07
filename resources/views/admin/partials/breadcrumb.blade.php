@@ -91,7 +91,7 @@
         }
     } elseif (request()->is('admin/telegram*') || request()->is('admin/video-studio*')) {
         $addBreadcrumb('استودیو تولید');
-        $addBreadcrumb(request()->is('admin/telegram*') ? 'تلگرام' : 'تولید محتوای خودکار');
+        $addBreadcrumb(request()->is('admin/telegram*') ? 'تلگرام' : config('video_studio.admin_label', 'تولید محتوای خودکار'));
     } elseif (request()->is('admin/dashboard/crm')) {
         $addBreadcrumb('تنظیمات');
         $addBreadcrumb('سیستم مدیریت پروژه');
