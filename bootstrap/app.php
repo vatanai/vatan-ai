@@ -49,7 +49,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // در فایل blade است، نه کش قدیمی — و پارامتر __viewcache_recovered=1 در آدرس از
         // حلقه‌ی بی‌نهایت جلوگیری می‌کند.
         $exceptions->render(function (\Throwable $e, Request $request) {
-            $isLabRequest = $request->is('admin/lab') || $request->is('admin/lab/*');
+            $isLabRequest = ($request->is('admin/lab') || $request->is('admin/lab/*'))
+                && ($request->isMethod('post') || $request->expectsJson());
             if ($isLabRequest) {
                 report($e);
 
