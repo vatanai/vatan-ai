@@ -182,10 +182,19 @@ class VideoStudioController extends Controller
             ? VideoStudioJob::query()->with('product')->latest()->limit(10)->get()
             : collect();
         $estimatedCosts = $jobs->mapWithKeys(function (VideoStudioJob $job): array {
-            $saved = data_get($job->payload, 'estimated_cost', []);
-            return [$job->id => is_array($saved) && $saved !== []
-                ? $saved
-                : $this->estimateVideoCost((int) $job->product_id, (string) $job->aspect_ratio)];
+            $payload = is_array($job->payload) ? $job->payload : [];
+            $sourceMode = (string) ($job->source_mode ?: data_get($payload, 'source_mode', 'auto'));
+            $calculated = $this->estimateVideoCost((int) $job->product_id, (string) $job->aspect_ratio, $sourceMode);
+            $saved = data_get($payload, 'estimated_cost', []);
+
+            // هزینه‌ی ذخیره‌شده‌ی سفارش‌های قدیمی ممکن است قبل از اصلاح مسیر
+            // تدوین، قیمت مدل تولید ویدیو را نشان دهد. برای منبع موجود، برآورد
+            // قطعی و بدون فراخوانی مدل همیشه مرجع نهایی است.
+            if (in_array($sourceMode, ['auto', 'music', 'video', 'upload'], true)) {
+                return [$job->id => $calculated];
+            }
+
+            return [$job->id => is_array($saved) && $saved !== [] ? $saved : $calculated];
         });
         $completedVideoCounts = Schema::hasTable('video_studio_jobs')
             ? VideoStudioJob::query()->where('status', 'completed')->selectRaw('product_id, COUNT(*) AS total')->groupBy('product_id')->pluck('total', 'product_id')->mapWithKeys(fn ($count, $id): array => [(int) $id => (int) $count])->all()
@@ -2179,9 +2188,8 @@ class VideoStudioController extends Controller
         // تلگرام را به‌صورت پیش‌فرض برای شبکهٔ دیگری مصرف کنند.
         $platformPayloads = [];
         foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
-            $caption = (string) ($platform === 'instagram'
-                ? ($job->caption_text ?? '')
-                : ($payload[$platform . '_caption_text'] ?? ''));
+            $caption = (string) ($payload[$platform . '_caption_text']
+                ?? ($platform === 'instagram' ? ($job->caption_text ?? '') : ''));
             if (trim($caption) === '') {
                 $caption = implode("\n\n", $this->defaultSocialCaptions($product, $platform));
             }
@@ -2476,6 +2484,91 @@ class VideoStudioController extends Controller
             'completed_at' => in_array($status, ['completed', 'failed'], true) ? now() : null,
         ]);
 
+        if ($status === 'completed') {
+            $this->deliverRequestedProductImages($job->fresh());
+        }
+
         return response()->json(['ok' => true, 'job_id' => $job->id, 'status' => $job->status]);
+    }
+
+    /**
+     * عکس‌های محصول را فقط یک بار برای تاپیک‌هایی که در سفارش فعال شده‌اند
+     * ارسال می‌کند. ارسال ویدیو همچنان مسئولیت ورکفلو است؛ این مسیر فقط
+     * گزینه‌ی «ارسال عکس‌های محصول» را اجرا می‌کند.
+     */
+    private function deliverRequestedProductImages(VideoStudioJob $job): void
+    {
+        $payload = is_array($job->payload) ? $job->payload : [];
+        if (filled(data_get($payload, 'images_delivered_at'))) {
+            return;
+        }
+
+        $token = trim((string) config('services.telegram.bot_token'));
+        $chatId = trim((string) config('services.n8n.video_studio_telegram_chat_id'));
+        if ($token === '' || $chatId === '') {
+            return;
+        }
+
+        $images = collect($job->selected_images ?: $this->productImageUrls($job->product))
+            ->map(static fn ($url): string => trim((string) $url))
+            ->filter(static fn (string $url): bool => Str::startsWith($url, ['http://', 'https://']))
+            ->unique()
+            ->take(5)
+            ->values();
+        if ($images->isEmpty()) {
+            return;
+        }
+
+        $topics = [
+            'instagram' => (string) (config('services.n8n.video_studio_telegram_instagram_thread_id') ?: '4'),
+            'telegram' => (string) (config('services.n8n.video_studio_telegram_channel_thread_id') ?: '2'),
+            'linkedin' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
+            'aparat' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
+            'youtube' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),
+        ];
+        $buttons = collect((array) ($payload['telegram_buttons'] ?? []))
+            ->filter(fn ($button): bool => is_array($button) && filled($button['label'] ?? '') && filled($button['url'] ?? ''))
+            ->map(static fn (array $button): array => [
+                'text' => (string) $button['label'],
+                'url' => (string) $button['url'],
+            ])->values()->all();
+        $replyMarkup = $buttons !== [] ? ['inline_keyboard' => array_map(static fn (array $button): array => [$button], $buttons)] : null;
+        $caption = (string) ($payload['instagram_caption_text']
+            ?: $payload['telegram_caption_text']
+            ?: $job->caption_text
+            ?: 'تصاویر محصول');
+
+        $sent = false;
+        foreach ($topics as $platform => $topicId) {
+            if (!(bool) ($payload[$platform . '_enabled'] ?? false) || !(bool) ($payload[$platform . '_send_images'] ?? false) || $topicId === '') {
+                continue;
+            }
+            foreach ($images as $index => $imageUrl) {
+                try {
+                    $request = [
+                        'chat_id' => $chatId,
+                        'message_thread_id' => $topicId,
+                        'photo' => $imageUrl,
+                        'caption' => $index === 0 ? $caption : '',
+                    ];
+                    if ($platform === 'telegram' && $replyMarkup !== null && $index === 0) {
+                        $request['reply_markup'] = json_encode($replyMarkup, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    }
+                    $response = Http::acceptJson()->timeout(8)->post("https://api.telegram.org/bot{$token}/sendPhoto", $request);
+                    $sent = $sent || $response->successful();
+                } catch (\Throwable $exception) {
+                    Log::warning('Video studio product image delivery failed', [
+                        'job_id' => $job->id,
+                        'platform' => $platform,
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        if ($sent) {
+            $payload['images_delivered_at'] = now()->toIso8601String();
+            $job->forceFill(['payload' => $payload])->save();
+        }
     }
 }
