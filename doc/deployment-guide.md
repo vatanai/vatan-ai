@@ -2,128 +2,54 @@
 
 ---
 
-## ⚠️ دو اپ فعال روی لیارا (۱۴۰۵/۰۴/۱۲ آپدیت شد)
+## سرویس تولیدی کلودیوا
 
-الان دو تا اپ جدا روی لیارا داریم که هر دو فعالن:
+سایت اصلی روی سرویس `vatanai-laravel-cloudiva` در `Cloudiva` با دامنهٔ `aivatan.com` اجرا می‌شود.
 
-| اپ | پلتفرم | فایل کانفیگ | آدرس |
-|----|--------|-------------|------|
-| `demovatan` | Laravel (native) | `liara.json` (پیش‌فرض) | https://demovatan.liara.run |
-| `aivatan` | Docker | `liara.aivatan.json` | https://aivatan.com |
+### روال دیپلوی
 
-> نکته: هشدار قبلی این فایل («platform: laravel هرگز استفاده نشه») دیگه معتبر نیست — `demovatan` با موفقیت روی پلتفرم Laravel لیارا بالا اومده و فعاله.
-
-### دستور دیپلوی به هرکدوم:
 ```bash
-# دیپلوی به demovatan (پیش‌فرض، از liara.json خودش می‌خونه)
-liara deploy
-
-# دیپلوی به aivatan (با کانفیگ جدا)
-liara deploy --liara-json liara.aivatan.json
+cd "/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/vatan-ai"
+git add -A
+git commit -m "توضیح تغییرات"
+git push origin crm-integration
+npx -y @cloudiva.net/cli deploy --service vatanai-laravel-cloudiva
 ```
 
-> قبل از هر دیپلوی حتماً مطمئن شو داری با فایل کانفیگ درست کار می‌کنی — این دو اپ زیرساخت متفاوت دارن (یکی Docker یکی Laravel native) و قاطی کردنشون می‌تونه دیپلوی رو خراب کنه.
+بعد از موفق شدن استقرار، در کنسول تازهٔ همان سرویس اجرا شود:
+
+```bash
+php artisan migrate --force
+```
 
 ---
 
-## مشخصات پروژه (اپ aivatan)
+## مشخصات پروژه
 
 | آیتم | مقدار |
 |------|-------|
 | Framework | Laravel 13 |
 | PHP | 8.3 |
-| Platform لیارا | Docker |
+| پلتفرم | Laravel |
 | Database | MySQL 8 |
-| App ID لیارا | `aivatan` |
-| DB ID لیارا | `aivatan-db` |
-| شبکه خصوصی | `project-net` |
+| سرویس | `vatanai-laravel-cloudiva` |
 | آدرس پروداکشن | https://aivatan.com |
-
----
-
-## تنظیمات لیارا (یک‌بار انجام شده — دست نزن)
-
-### متغیرهای محیطی (Environment Variables)
-```
-APP_ENV=production
-APP_DEBUG=false
-APP_KEY=base64:32jIgGhEsC3jaIMY4Mq2/obi6KVcQCig08205UGBkoQ=
-APP_URL=https://aivatan.com
-LOG_CHANNEL=errorlog
-SESSION_DRIVER=cookie
-CACHE_STORE=file
-DB_CONNECTION=mysql
-DB_HOST=aivatan-db
-DB_DATABASE=focused_williams
-DB_USERNAME=root
-DB_PASSWORD=5nctswamfEbAaVlMsTIum4jF
-DB_PORT=3306
-```
-
-### تنظیمات پلتفرم
-- **فایل‌سیستم Read Only:** غیرفعال ✓ (مهم — اگه فعال بشه سایت 500 میده)
-- **شبکه خصوصی:** project-net ✓
 
 ---
 
 ## فایل‌های مهم پروژه
 
-### `liara.json`
-```json
-{
-  "port": 80,
-  "app": "aivatan",
-  "platform": "docker",
-  "deploy": {
-    "command": "php artisan migrate --force"
-  }
-}
-```
-> ⚠️ هرگز `platform` رو به `laravel` تغییر نده — سرور لیارا به GitHub دسترسی نداره و build fail میشه.
+### فایل‌های نادیده‌گرفته‌شدهٔ دیپلوی
 
-### `Dockerfile`
-```dockerfile
-FROM php:8.3-apache
-RUN a2enmod rewrite headers
-RUN apt-get update && apt-get install -y \
-    libzip-dev zip unzip libpng-dev libjpeg-dev libwebp-dev \
-    libxml2-dev libonig-dev && rm -rf /var/lib/apt/lists/*
-RUN docker-php-ext-install pdo pdo_mysql mbstring zip xml bcmath opcache
-RUN echo '<VirtualHost *:80>\n    DocumentRoot /var/www/html/public\n    <Directory /var/www/html/public>\n        AllowOverride All\n        Require all granted\n    </Directory>\n</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
-WORKDIR /var/www/html
-COPY . .
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
-EXPOSE 80
-CMD ["apache2-foreground"]
-```
+فایل‌های سنگین و محرمانه نباید در بستهٔ استقرار قرار بگیرند:
 
-### `.gitignore` — نکته مهم
-خط `/vendor` باید **کامنت** باشه تا vendor هنگام دیپلوی آپلود بشه:
-```
-#/vendor
-```
-
-### `.liaraignore`
+### `.divaignore`
 ```
 node_modules
 .git
 npm-debug.log
 .env
 ```
-
----
-
-## دیپلوی روی لیارا
-
-```bash
-cd "/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/ai-vatan-v4"
-liara deploy
-```
-
-> - از ترمینال مک یا VS Code بزن — از VS Code Extension استفاده نکن
-> - حجم آپلود حدود ۳۰ مگ هست (vendor داخلشه) — نرماله
-> - بعد از deploy، لیارا خودش `php artisan migrate --force` رو اجرا می‌کنه
 
 ---
 
@@ -186,19 +112,18 @@ php artisan migrate
 
 | مشکل | راه‌حل |
 |------|--------|
-| خطای ۵۰۰ بعد از دیپلوی | در داشبورد لیارا، Read Only filesystem رو چک کن — باید غیرفعال باشه |
-| `platform: laravel` در خطا | مطمئن شو `liara.json` داره `platform: docker` |
-| composer timeout | نرمال نیست — لیارا به GitHub دسترسی نداره، باید Docker platform بمونه |
+| خطای ۵۰۰ بعد از دیپلوی | لاگ‌های سرویس `vatanai-laravel-cloudiva` و وضعیت فایل‌سیستم را در پنل `Cloudiva` بررسی کن |
+| خطای migration | از کنسول تازهٔ سرویس `php artisan migrate --force` را اجرا کن |
 | `{{variable}}` در Blade خطا میده | بنویس `@{{variable}}` تا Blade اون رو PHP تفسیر نکنه |
 | تغییرات CSS/JS اعمال نشده | `npm run build` بزن، بعد دیپلوی کن |
-| خطای CORS رو `localhost:5173` یا `[::1]:5173` توی پروداکشن | فایل `public/hot` (باقی‌مونده از `npm run dev`) رفته بالا. اون رو حذف کن و مطمئن شو `public/hot` توی `.liaraignore` هست |
+| خطای CORS رو `localhost:5173` یا `[::1]:5173` توی پروداکشن | فایل `public/hot` (باقی‌مونده از `npm run dev`) رفته بالا؛ آن را حذف کن و در `.divaignore` قرار بده |
 
 ---
 
 ## چک‌لیست قبل از هر دیپلوی
 
 - [ ] فایل‌های diagnostic مثل `health.php` از `public/` حذف شده
-- [ ] `APP_DEBUG=false` توی لیارا
-- [ ] `liara.json` روی `platform: docker` هست
-- [ ] `/vendor` در `.gitignore` کامنته (`#/vendor`)
+- [ ] `APP_DEBUG=false` در متغیرهای محیطی `Cloudiva`
+- [ ] سرویس مقصد `vatanai-laravel-cloudiva` است
+- [ ] `.env` و `node_modules` در `.divaignore` هستند
 - [ ] CSS/JS با `npm run build` ساخته شده
