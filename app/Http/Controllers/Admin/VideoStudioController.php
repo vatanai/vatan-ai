@@ -815,6 +815,19 @@ class VideoStudioController extends Controller
             $captions = $normalize('caption');
             $keywords = $normalize('keyword');
             $ctas = $normalize('cta');
+            // کپشن اینستاگرام یک خروجی ترکیبی است: همان درخواست باید هم‌زمان
+            // سه کپشن و سه کلمهٔ کلیدی برگرداند. بعضی نودهای قدیمی فقط کپشن را
+            // برمی‌گردانند؛ در این حالت پاسخ را سمت سرور کامل می‌کنیم تا رابط
+            // کاربر هیچ‌وقت با «پیشنهادی از مدل دریافت نشد» متوقف نشود.
+            if ($contentType === 'caption' && $channel === 'instagram' && count(array_filter($keywords)) === 0) {
+                $keywords = $this->defaultInstagramKeywords($product);
+            }
+            if (count(array_filter($captions)) === 0 && in_array($contentType, ['caption', 'keyword'], true)) {
+                $captions = $this->defaultSocialCaptions($product, $channel);
+            }
+            if (count(array_filter($keywords)) === 0 && $contentType === 'keyword') {
+                $keywords = $this->defaultInstagramKeywords($product);
+            }
             if ($contentType === 'cta' && count(array_filter($ctas)) === 0) {
                 $ctas = $captions;
             }
@@ -840,7 +853,7 @@ class VideoStudioController extends Controller
                 'caption' => $captions[0] ?? '',
                 'keyword' => $keywords[0] ?? '',
                 'cta' => $ctas[0] ?? '',
-                'dm_template' => trim((string) ($options['dm_template'] ?? '')),
+                'dm_template' => trim((string) ($options['dm_template'] ?? ($channel === 'instagram' ? 'برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را در دایرکت ارسال کنید.' : ''))),
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -882,8 +895,58 @@ class VideoStudioController extends Controller
                 'caption_options' => in_array($fallbackType, ['caption', 'keyword'], true) ? $fallback : [],
                 'keyword_options' => $fallbackType === 'keyword' ? $fallback : [],
                 'cta_options' => $fallbackType === 'cta' ? $fallback : [],
+                'dm_template' => $fallbackType === 'caption' && $channel === 'instagram'
+                    ? 'برای دریافت اطلاعات بیشتر، کلمهٔ کلیدی را در دایرکت ارسال کنید.'
+                    : '',
             ]);
         }
+    }
+
+    /**
+     * گزینه‌های قطعی و رایگان برای وقتی که سرویس مدل یا نود پیش‌نمایش پاسخ
+     * معتبر نمی‌دهد. این متن‌ها جایگزین تنظیمات مدیر نیستند؛ فقط قرارداد پاسخ
+     * رابط را کامل نگه می‌دارند.
+     */
+    private function defaultSocialCaptions(Product $product, string $channel): array
+    {
+        $name = trim((string) $product->name_fa) ?: 'این محصول';
+        $link = filled($product->route_slug) ? route('app.product', ['product' => $product->route_slug]) : '';
+        $suffix = $link !== '' ? "\n{$link}" : '';
+
+        return match ($channel) {
+            'youtube' => [
+                "{$name}؛ معرفی کوتاه و کاربردی برای یک انتخاب آگاهانه{$suffix}",
+                "قبل از انتخاب {$name} این ویدیوی کوتاه را ببین{$suffix}",
+                "ویژگی‌های مهم {$name} را در چند ثانیه ببین{$suffix}",
+            ],
+            'aparat' => [
+                "معرفی {$name}؛ نکته‌های مهم قبل از خرید{$suffix}",
+                "{$name} را سریع و خلاصه بشناس{$suffix}",
+                "این ویدیو راهنمای کوتاه انتخاب {$name} است{$suffix}",
+            ],
+            'linkedin' => [
+                "یک نگاه کوتاه به {$name} و کاربردهای آن{$suffix}",
+                "چرا {$name} می‌تواند انتخاب مناسبی باشد؟{$suffix}",
+                "نکته‌های کلیدی دربارهٔ {$name} برای تصمیم بهتر{$suffix}",
+            ],
+            default => [
+                "قبل از خرید {$name} این نکته‌ها را ببین.",
+                "با {$name} انتخاب آگاهانه‌تری داشته باش.",
+                "برای دیدن جزئیات {$name}، کپشن را بخوان.",
+            ],
+        };
+    }
+
+    private function defaultInstagramKeywords(Product $product): array
+    {
+        $name = trim((string) $product->name_fa) ?: 'محصول';
+        $firstWord = trim((string) preg_split('/\s+/u', $name)[0]);
+
+        return array_values(array_unique(array_filter([
+            $firstWord !== '' ? $firstWord : 'محصول',
+            'جزئیات',
+            'راهنما',
+        ])));
     }
 
     public function storeHook(Request $request)
@@ -1321,7 +1384,7 @@ class VideoStudioController extends Controller
                     'editing_rules' => $editingRules,
                     'render_instructions' => $renderInstructions,
                 ],
-                'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
+                'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio'], (string) ($data['source_mode'] ?? 'auto')),
             ],
         ]));
 
@@ -1383,6 +1446,23 @@ class VideoStudioController extends Controller
             'cta_guidelines' => ['nullable', 'string', 'max:5000'],
             'cta_duration' => ['nullable', 'numeric', 'between:0.1,5'],
             'cta_duration_mode' => ['nullable', Rule::in(['manual', 'auto'])],
+            'hook_background' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'background')) {
+                    $fail('رنگ پس‌زمینه هوک معتبر نیست.');
+                }
+            }],
+            'hook_text_color' => ['nullable', 'string', 'max:60', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! $this->isKnownHookColor((string) $value, 'text')) {
+                    $fail('رنگ متن هوک معتبر نیست.');
+                }
+            }],
+            'hook_font_size' => ['nullable', 'numeric', 'between:20,72'],
+            'hook_font_weight' => ['nullable', 'integer', 'between:1,5'],
+            'hook_scale' => ['nullable', 'numeric', 'between:0.7,1.5'],
+            'hook_vertical_offset' => ['nullable', 'numeric', 'between:-45,45'],
+            'hook_duration' => ['nullable', 'numeric', 'between:0.1,5'],
+            'hook_duration_mode' => ['nullable', Rule::in(['manual', 'auto'])],
+            'hook_position' => ['nullable', Rule::in(['top', 'center', 'bottom', 'side'])],
             'transition' => ['nullable', Rule::in(['cut', 'fade', 'blur', 'slide'])],
             'transition_duration' => ['nullable', 'numeric', 'between:0.2,1.5'],
             'text_command' => ['nullable', 'string', 'max:5000'],
@@ -1457,6 +1537,12 @@ class VideoStudioController extends Controller
         $data['cta_background_color'] = $ctaBackground['render_value'];
         $data['cta_text_color'] = $ctaTextColor['key'];
         $data['cta_text_color_value'] = $ctaTextColor['render_value'];
+        $hookBackground = $this->resolveHookColor((string) ($data['hook_background'] ?? data_get($job->payload, 'hook_background', 'primary')), 'background');
+        $hookTextColor = $this->resolveHookColor((string) ($data['hook_text_color'] ?? data_get($job->payload, 'hook_text_color', 'light')), 'text');
+        $data['hook_background'] = $hookBackground['key'];
+        $data['hook_background_color'] = $hookBackground['render_value'];
+        $data['hook_text_color'] = $hookTextColor['key'];
+        $data['hook_text_color_value'] = $hookTextColor['render_value'];
         $payload = is_array($job->payload) ? $job->payload : [];
         $editingRules = $this->normalizeVideoEditingRules($request->input('editing_rules') ?: data_get($payload, 'editing_rules'),
             (string) ($data['aspect_ratio'] ?? $job->aspect_ratio ?? '9:16'),
@@ -1488,6 +1574,17 @@ class VideoStudioController extends Controller
             : null;
         $payload = array_merge($payload, [
             'font_family' => (string) $data['font_family'],
+            'hook_background' => (string) $data['hook_background'],
+            'hook_background_color' => (string) $data['hook_background_color'],
+            'hook_text_color' => (string) $data['hook_text_color'],
+            'hook_text_color_value' => (string) $data['hook_text_color_value'],
+            'hook_font_size' => (float) ($data['hook_font_size'] ?? data_get($payload, 'hook_font_size', 36)),
+            'hook_font_weight' => (int) ($data['hook_font_weight'] ?? data_get($payload, 'hook_font_weight', 3)),
+            'hook_scale' => (float) ($data['hook_scale'] ?? data_get($payload, 'hook_scale', 1)),
+            'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? data_get($payload, 'hook_vertical_offset', 0)),
+            'hook_duration' => (float) ($data['hook_duration'] ?? data_get($payload, 'hook_duration', 2)),
+            'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? data_get($payload, 'hook_duration_mode', 'manual')),
+            'hook_position' => (string) ($data['hook_position'] ?? data_get($payload, 'hook_position', 'center')),
             'instagram_prompt' => (string) ($data['instagram_prompt'] ?? ''),
             'telegram_prompt' => (string) ($data['telegram_prompt'] ?? ''),
             'youtube_prompt' => (string) ($data['youtube_prompt'] ?? ''),
@@ -1533,8 +1630,17 @@ class VideoStudioController extends Controller
             'text_command' => trim((string) ($data['text_command'] ?? data_get($payload, 'text_command', ''))),
             'render_config' => [
                 'font_family' => (string) $data['font_family'],
-                'hook_background' => (string) data_get($payload, 'hook_background', 'primary'),
-                'hook_position' => (string) data_get($payload, 'hook_position', 'center'),
+                'hook_background' => (string) $data['hook_background'],
+                'hook_background_color' => (string) $data['hook_background_color'],
+                'hook_text_color' => (string) $data['hook_text_color'],
+                'hook_text_color_value' => (string) $data['hook_text_color_value'],
+                'hook_font_size' => (float) ($data['hook_font_size'] ?? data_get($payload, 'hook_font_size', 36)),
+                'hook_font_weight' => (int) ($data['hook_font_weight'] ?? data_get($payload, 'hook_font_weight', 3)),
+                'hook_scale' => (float) ($data['hook_scale'] ?? data_get($payload, 'hook_scale', 1)),
+                'hook_vertical_offset' => (float) ($data['hook_vertical_offset'] ?? data_get($payload, 'hook_vertical_offset', 0)),
+                'hook_duration' => (float) ($data['hook_duration'] ?? data_get($payload, 'hook_duration', 2)),
+                'hook_duration_mode' => (string) ($data['hook_duration_mode'] ?? data_get($payload, 'hook_duration_mode', 'manual')),
+                'hook_position' => (string) ($data['hook_position'] ?? data_get($payload, 'hook_position', 'center')),
                 'cta_position' => (string) data_get($payload, 'cta_position', 'bottom'),
                 'cta_background' => (string) ($data['cta_background'] ?? data_get($payload, 'cta_background', 'primary')),
                 'cta_background_color' => (string) ($data['cta_background_color'] ?? data_get($payload, 'cta_background_color', '#16594F')),
@@ -1554,7 +1660,7 @@ class VideoStudioController extends Controller
                 'editing_rules' => $editingRules,
                 'render_instructions' => $renderInstructions,
             ],
-            'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio']),
+            'estimated_cost' => $this->estimateVideoCost((int) $data['product_id'], (string) $data['aspect_ratio'], (string) ($data['source_mode'] ?? 'auto')),
             'source_library_id' => (int) ($data['source_library_id'] ?? 0) ?: null,
             'source_fingerprint' => hash('sha256', json_encode([
                 'product_id' => (int) $data['product_id'],
@@ -1832,10 +1938,27 @@ class VideoStudioController extends Controller
     /**
      * برآورد سبک و بدون فراخوانی زندهٔ سرویس‌دهنده؛ نرخ از جدول نرخ ارز موجود خوانده می‌شود.
      */
-    private function estimateVideoCost(int $productId, string $aspectRatio): array
+    private function estimateVideoCost(int $productId, string $aspectRatio, string $sourceMode = 'auto'): array
     {
         if (! Schema::hasTable('finance_exchange_rates') || ! Schema::hasColumn('finance_exchange_rates', 'rate_to_toman')) {
             return [];
+        }
+
+        // این سازنده ویدیو از فایل موجود برای صدا و از تصاویر محصول برای پلان‌ها
+        // استفاده می‌کند؛ در این مسیر مدل تولید ویدیو فراخوانی نمی‌شود. قبلاً
+        // قیمت مدل اصلی محصول (مثلاً یک مدل ویدیویی گران) به‌اشتباه به‌عنوان
+        // هزینهٔ این تدوین نمایش داده می‌شد و عددی مثل ۳۳ هزار تومان می‌ساخت.
+        if (in_array($sourceMode, ['auto', 'music', 'video', 'upload'], true)) {
+            return [
+                'usd' => 0,
+                'toman' => 0,
+                'rate_toman' => (float) FinanceExchangeRate::query()
+                    ->where('currency', 'USD')
+                    ->where('rate_to_toman', '>', 0)
+                    ->latest('rate_date')
+                    ->value('rate_to_toman'),
+                'source' => 'تدوین قطعی با منبع موجود؛ بدون هزینهٔ مدل تولید ویدیو',
+            ];
         }
 
         $product = Product::query()->find($productId);
@@ -1958,6 +2081,30 @@ class VideoStudioController extends Controller
         return 'تدوین را با قواعد قطعی انجام بده: خروجی باید تمام قاب هدف را با حالت cover و crop سوژه‌محور پر کند؛ حاشیهٔ خالی، نوار سیاه و letterbox ممنوع است؛ سوژهٔ اصلی تا حد ممکن در کادر امن بماند؛ هوک ابتدا، تصاویر طبق image_sequence و CTA در انتهای ویدیو قرار بگیرند؛ ناحیهٔ امن متن رعایت شود؛ ترنزیشن و زمان‌های ورودی اعمال شوند؛ اگر تشخیص ضرب صدا ممکن بود بر اساس ضرب تقسیم کن و در غیر این صورت زمان پلان‌ها را به‌صورت یکنواخت بین بخش‌ها تقسیم کن. برای اجرای این قواعد از مدل زبانی استفاده نکن.';
     }
 
+    private function productImageUrls(?Product $product): array
+    {
+        if (!$product) {
+            return [];
+        }
+
+        return collect(array_merge(
+            [$product->cover, $product->thumbnail],
+            (array) $product->sample_outputs,
+            (array) $product->before_images,
+        ))->map(function ($path): ?string {
+            $path = trim((string) $path);
+            if ($path === '') {
+                return null;
+            }
+            if (Str::startsWith($path, ['http://', 'https://', 'data:'])) {
+                return $path;
+            }
+            return Storage::disk('public')->exists($path)
+                ? asset('storage/' . ltrim($path, '/'))
+                : null;
+        })->filter()->unique()->values()->all();
+    }
+
     private function dispatchJobToWorkflow(VideoStudioJob $job): void
     {
         if (!$this->ensureJobSource($job)) {
@@ -2009,17 +2156,60 @@ class VideoStudioController extends Controller
             $hookGuidelines = trim($promptProfile . "\n\n" . $hookGuidelines);
             $captionGuidelines = trim($promptProfile . "\n\n" . $captionGuidelines);
         }
+        // منبع ویدیو/موزیک فقط منبع صداست. تصویرهای خروجی همیشه از تصاویر
+        // انتخاب‌شدهٔ محصول می‌آیند تا ورکفلو نتواند به‌اشتباه فریم‌های ویدیوی
+        // آرشیو را به‌عنوان پلان تصویری استفاده کند.
+        $productImageUrls = $this->productImageUrls($product);
+        $selectedImageUrls = collect($job->selected_images ?: $productImageUrls)
+            ->map(static fn ($url): string => trim((string) $url))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        if ($selectedImageUrls === []) {
+            $selectedImageUrls = $productImageUrls;
+        }
+        $sourceAudioOnly = in_array((string) $job->source_mode, ['music', 'video'], true);
+        $renderConfig['visual_source'] = 'product_images';
+        $renderConfig['visual_image_urls'] = $selectedImageUrls;
+        $renderConfig['source_audio_url'] = (string) $job->source_url;
+        $renderConfig['source_audio_only'] = $sourceAudioOnly;
+        $renderConfig['source_video_as_visual'] = false;
         // قرارداد صریح هر شبکه برای ورکفلو؛ نودهای ارسال نباید کپشن یا دکمهٔ
         // تلگرام را به‌صورت پیش‌فرض برای شبکهٔ دیگری مصرف کنند.
         $platformPayloads = [];
         foreach (['instagram', 'telegram', 'youtube', 'aparat', 'linkedin'] as $platform) {
+            $caption = (string) ($platform === 'instagram'
+                ? ($job->caption_text ?? '')
+                : ($payload[$platform . '_caption_text'] ?? ''));
+            if (trim($caption) === '') {
+                $caption = implode("\n\n", $this->defaultSocialCaptions($product, $platform));
+            }
+            $buttons = $platform === 'telegram' && is_array($payload['telegram_buttons'] ?? null)
+                ? array_values($payload['telegram_buttons'])
+                : [];
             $platformPayloads[$platform] = [
+                'delivery_id' => "video-studio:{$job->id}:{$platform}",
                 'enabled' => (bool) ($payload[$platform . '_enabled'] ?? false),
-                'caption' => (string) ($platform === 'instagram' ? ($job->caption_text ?? '') : ($payload[$platform . '_caption_text'] ?? '')),
+                'caption' => $caption,
                 'prompt' => (string) ($payload[$platform . '_prompt'] ?? ''),
                 'send_video' => (bool) ($payload[$platform . '_send_video'] ?? false),
                 'send_images' => (bool) ($payload[$platform . '_send_images'] ?? false),
-                'buttons' => $platform === 'telegram' && is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
+                'image_urls' => $selectedImageUrls,
+                'buttons' => $buttons,
+                'inline_keyboard' => $platform === 'telegram'
+                    ? array_map(static fn (array $button): array => [[
+                        'text' => (string) ($button['label'] ?? ''),
+                        'url' => (string) ($button['url'] ?? ''),
+                        'style' => (string) ($button['style'] ?? 'primary'),
+                        'color' => match ((string) ($button['style'] ?? 'primary')) {
+                            'success' => 'success',
+                            'danger' => 'danger',
+                            default => 'primary',
+                        },
+                        'width' => (string) ($button['width'] ?? 'full'),
+                    ]], $buttons)
+                    : [],
             ];
         }
         if (Schema::hasTable('video_hook_inspirations')) {
@@ -2048,6 +2238,13 @@ class VideoStudioController extends Controller
                 'source_mode' => $job->source_mode,
                 'source_url' => $job->source_url,
                 'selected_images' => $job->selected_images,
+                'product_images' => $productImageUrls,
+                'visual_images' => $selectedImageUrls,
+                'visual_image_urls' => $selectedImageUrls,
+                'visual_source' => 'product_images',
+                'source_audio_url' => $job->source_url,
+                'source_audio_only' => $sourceAudioOnly,
+                'source_video_as_visual' => false,
                 'aspect_ratio' => $job->aspect_ratio,
                 'font_family' => $fontFamily,
                 'font_file_url' => $fontFileUrl,
@@ -2074,6 +2271,23 @@ class VideoStudioController extends Controller
                 'linkedin_caption_text' => (string) ($payload['linkedin_caption_text'] ?? ''),
                 'telegram_buttons' => is_array($payload['telegram_buttons'] ?? null) ? $payload['telegram_buttons'] : [],
                 'platform_payloads' => $platformPayloads,
+                'delivery_plan' => collect($platformPayloads)
+                    ->filter(static fn (array $platform): bool => (bool) ($platform['enabled'] ?? false))
+                    ->map(static fn (array $platform, string $name): array => [
+                        'platform' => $name,
+                        'delivery_id' => "video-studio:{$job->id}:{$name}",
+                        'send_video' => (bool) ($platform['send_video'] ?? false),
+                        'send_images' => (bool) ($platform['send_images'] ?? false),
+                        'topic_id' => match ($name) {
+                            'instagram' => (string) (config('services.n8n.video_studio_telegram_instagram_thread_id') ?: '4'),
+                            'telegram' => (string) (config('services.n8n.video_studio_telegram_channel_thread_id') ?: '2'),
+                            'linkedin' => (string) config('services.n8n.video_studio_telegram_linkedin_thread_id', '29'),
+                            'aparat' => (string) config('services.n8n.video_studio_telegram_aparat_thread_id', '31'),
+                            'youtube' => (string) config('services.n8n.video_studio_telegram_youtube_thread_id', '33'),
+                            default => null,
+                        },
+                        'send_once' => true,
+                    ])->values()->all(),
                 'instagram_enabled' => (bool) ($payload['instagram_enabled'] ?? true),
                 'telegram_enabled' => (bool) ($payload['telegram_enabled'] ?? true),
                 'youtube_enabled' => (bool) ($payload['youtube_enabled'] ?? false),
@@ -2123,6 +2337,11 @@ class VideoStudioController extends Controller
                 'text_command' => (string) ($payload['text_command'] ?? ''),
                 'render_config' => $renderConfig ?: [
                     'font_family' => $fontFamily,
+                    'visual_source' => 'product_images',
+                    'visual_image_urls' => $selectedImageUrls,
+                    'source_audio_url' => $job->source_url,
+                    'source_audio_only' => $sourceAudioOnly,
+                    'source_video_as_visual' => false,
                     'hook_background' => (string) ($payload['hook_background'] ?? 'primary'),
                     'hook_background_color' => (string) ($payload['hook_background_color'] ?? '#16594F'),
                     'hook_text_color' => (string) ($payload['hook_text_color'] ?? 'light'),

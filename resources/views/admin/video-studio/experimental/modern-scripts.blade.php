@@ -391,41 +391,37 @@
     if (holder && values.length) { holder.replaceChildren(); values.forEach((text, index) => holder.appendChild(modernCaptionOption(index, text, value => { keyword.value = value; }))); holder.firstElementChild?.classList.add('is-selected'); keyword.value = values[0]; }
     if (template) dm.value = template;
   };
-  const requestContent = async (channel, button, keywordOnly = false) => {
-    const errorKey = keywordOnly && channel === 'instagram' ? 'instagram-keyword' : channel;
+  const requestContent = async (channel, button) => {
+    const errorKey = channel;
     clearPromptError(errorKey);
     if (!product?.value) { showPromptError(errorKey, 'ابتدا یک محصول انتخاب کنید.'); return; }
    const configuredPrompt = String(document.querySelector(`[data-v2-default-prompt="${channel}"]`)?.value || promptValues?.[channel] || '').trim();
     if (!configuredPrompt) { showPromptError(errorKey, `پرامپت ${channel === 'instagram' ? 'اینستاگرام' : channel === 'telegram' ? 'تلگرام' : channel === 'youtube' ? 'یوتیوب' : channel === 'aparat' ? 'آپارات' : 'لینکدین'} تنظیم نشده است؛ ابتدا پرامپت همین بخش را ذخیره کنید.`); return; }
-    const holder = keywordOnly
-      ? document.getElementById('v2-modern-keyword-options')
-      : document.getElementById(`v2-modern-caption-options-${channel}`);
+    const holder = document.getElementById(`v2-modern-caption-options-${channel}`);
     const previousHolder = holder?.innerHTML || '';
     const payload = new FormData(); payload.append('_token', csrf); payload.append('product_id', product.value); payload.append('channel', channel);
-    payload.append('content_type', keywordOnly ? 'keyword' : 'caption');
+    // برای اینستاگرام یک درخواست واحد، هم‌زمان سه کپشن و سه کلمهٔ کلیدی می‌سازد.
+    payload.append('content_type', 'caption');
     payload.append(`${channel}_prompt`, configuredPrompt);
     if (channel === 'instagram') payload.append('hook_guidelines', document.getElementById('v2-hook-guidelines')?.value || '');
     button.disabled = true;
     const previousButton = button.innerHTML;
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال ساخت...';
-    if (holder) { holder.replaceChildren(); const loading = document.createElement('div'); loading.className = 'v2-note v2-generation-loading'; loading.textContent = keywordOnly ? 'در حال ساخت کلمهٔ کلیدی...' : 'در حال ساخت کپشن...'; holder.appendChild(loading); }
+    if (holder) { holder.replaceChildren(); const loading = document.createElement('div'); loading.className = 'v2-note v2-generation-loading'; loading.textContent = 'در حال ساخت کپشن و کلمهٔ کلیدی...'; holder.appendChild(loading); }
     try {
       const response = await fetch('{{ route('admin.video-studio.preview') }}', { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: payload });
       const data = await response.json(); if (!response.ok) throw new Error(data.message || 'ساخت محتوا ناموفق بود.');
-      if (keywordOnly) {
-        if (!(data.keyword_options || []).length) throw new Error('پیشنهادی از مدل دریافت نشد.');
-        renderKeywords(data.keyword_options || [], data.dm_template || '');
-      } else {
-        const values = data.caption_options || (data.caption ? [data.caption] : []);
-        if (!values.length) throw new Error('پیشنهادی از مدل دریافت نشد.');
-        renderCaptions(channel, values);
-        if (channel === 'instagram' && (data.keyword_options || []).length) renderKeywords(data.keyword_options || [], data.dm_template || '');
+      const values = data.caption_options || (data.caption ? [data.caption] : []);
+      if (!values.length) throw new Error('پیشنهادی از مدل دریافت نشد.');
+      renderCaptions(channel, values);
+      if (channel === 'instagram') {
+        const keywords = data.keyword_options || ['اطلاعات', 'جزئیات', 'راهنما'];
+        renderKeywords(keywords, data.dm_template || '');
       }
     } catch (error) { if (holder) holder.innerHTML = previousHolder; showPromptError(errorKey, error.message || 'ساخت محتوا ناموفق بود.'); }
     finally { button.disabled = false; button.innerHTML = previousButton; }
   };
   document.querySelectorAll('[data-v2-modern-generate]').forEach(button => button.addEventListener('click', () => requestContent(button.dataset.v2ModernGenerate, button)));
-  document.querySelectorAll('[data-v2-modern-keyword]').forEach(button => button.addEventListener('click', () => requestContent(button.dataset.v2ModernKeyword, button, true)));
   document.getElementById('v2-modern-instagram-caption')?.addEventListener('input', updateInstagramPreview);
   document.getElementById('v2-modern-telegram-caption')?.addEventListener('input', updateTelegramPreview);
 
