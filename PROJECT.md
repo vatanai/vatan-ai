@@ -28,7 +28,7 @@
 | Charts | Chart.js 4.4 |
 | Font | Vazirmatn (RTL) |
 | AI | OpenRouter API |
-| Hosting | Liara |
+| Hosting | Cloudiva |
 | Direction | RTL (فارسی) |
 
 ---
