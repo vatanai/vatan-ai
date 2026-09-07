@@ -167,7 +167,7 @@ class TelegramProductDraftService
         ]);
         $this->rememberMessage($draft, $input['message_id'] ?? null);
 
-        return $this->response($chatId, "خب بیا ثبت محصول جدید رو شروع کنیم\nقدم اول برام تصاویر اصلی محصول رو ارسال کن...", [
+        return $this->response($chatId, "خب بیا ثبت محصول جدید‌رو شروع کنیم\nقدم اول برام تصاویر اصلی محصول‌رو ارسال کن...", [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
         ], [
             'status' => 'awaiting_image',
