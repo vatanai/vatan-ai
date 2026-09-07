@@ -460,6 +460,9 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('/products/{product}/ai-model', [ProductController::class, 'updateAiModel'])->name('products.update_ai_model');
     Route::get('/products/dashboard', [VideoStudioController::class, 'index'])->name('products.dashboard');
     Route::get('/video-studio/experimental', [VideoStudioController::class, 'experimental'])->name('video-studio.experimental');
+    // نقطهٔ دادهٔ صف نسخهٔ جدید؛ باید قبل از رندر صفحه نام‌گذاری شده باشد تا
+    // اسکریپت همگام‌سازی زندهٔ صف در محیط لوکال و production هر دو کار کند.
+    Route::get('/video-studio/experimental/jobs-snapshot', [VideoStudioController::class, 'jobsSnapshot'])->name('video-studio.experimental.jobs.snapshot');
     Route::post('/video-studio/experimental/presets', [VideoStudioController::class, 'storePreset'])->name('video-studio.experimental.presets.store');
     Route::patch('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'renamePreset'])->name('video-studio.experimental.presets.rename');
     Route::delete('/video-studio/experimental/presets/{preset}', [VideoStudioController::class, 'destroyPreset'])->name('video-studio.experimental.presets.destroy');
