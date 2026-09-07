@@ -532,7 +532,16 @@
   prompt.addEventListener('input', updatePromptCount);
   negativeInput?.addEventListener('input', () => root.querySelector('[data-studio-negative]').value = negativeInput.value);
   root.querySelector('[data-studio-improve]').addEventListener('click', () => { const suffix = currentMode === 'video' ? ' حرکت نرم دوربین، ریتم سینمایی و نورپردازی طبیعی' : ' ترکیب‌بندی حرفه‌ای، نورپردازی طبیعی و جزئیات دقیق'; prompt.value = prompt.value.trim() ? `${prompt.value.trim()}،${suffix}` : (currentMode === 'video' ? 'یک نمای سینمایی از تهران در شب با باران و نورهای نئون' : 'یک پرتره ادیتوریال با نور پنجره و پس‌زمینه مینیمال') + suffix; updatePromptCount(); prompt.focus(); });
-  uploadZone.addEventListener('click', () => uploadInput.click()); uploadZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); uploadInput.click(); } });
+  // چون ورودی فایل داخل ناحیه‌ی انتخاب قرار دارد، فعال‌سازی پیش‌فرض ناحیه و
+  // کلیک دستی هم‌زمان روی input در بعضی مرورگرها پنجره‌ی انتخاب فایل را
+  // دوبار باز می‌کند و باعث می‌شود اصلاً باز نشود. فعال‌سازی را یک‌بار و با
+  // جلوگیری از رفتار پیش‌فرض انجام می‌دهیم.
+  uploadZone.addEventListener('click', (event) => {
+    if (event.target === uploadInput) return;
+    event.preventDefault();
+    uploadInput.click();
+  });
+  uploadZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); uploadInput.click(); } });
   uploadInput.addEventListener('change', () => { const file = uploadInput.files[0]; if (!file) return; uploadFile.hidden = false; uploadFile.textContent = file.name; });
   submit.addEventListener('click', generate); root.querySelector('[data-studio-regenerate]').addEventListener('click', generate);
   root.querySelector('[data-studio-error-close]').addEventListener('click', hideError);

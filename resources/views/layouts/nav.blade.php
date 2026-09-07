@@ -38,7 +38,7 @@
       @endforeach
 
       {{-- دکمه بساز — حالت عادی فقط + ، روی هاور از چپ و راست باز می‌شود و «بساز» نمایان می‌شود --}}
-      <a href="{{ route('app.create') }}" class="topnav-create no-underline whitespace-nowrap" data-key="create" aria-label="بساز">
+      <a href="{{ route('app.create.studio') }}" class="topnav-create no-underline whitespace-nowrap" data-key="create" aria-label="بساز">
         <span class="topnav-create-sign" aria-hidden="true">+</span>
         <span class="topnav-create-text">بساز</span>
       </a>
