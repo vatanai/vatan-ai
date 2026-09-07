@@ -56,7 +56,7 @@
 
 ## دیپلوی و پوش (Deploy) — همیشه دقیقاً همین مراحل
 
-**اپ صحیح روی Liara همیشه `demovatan` است، نه `aivatan`** (اون اپ اصلاً وجود نداره). دامنه‌ی `aivatan.com` به‌صورت custom domain روی همین اپ `demovatan` ست شده. پلتفرم عمداً `laravel` (بدون Docker) است و نباید بدون تایید صریح کاربر عوض بشه — یه Dockerfile قدیمی و بلااستفاده هم توی ریشه‌ی پروژه با اسم `_archive_unused_Dockerfile.txt` نگه داشته شده، فعالش نکن.
+**سرویس صحیح روی Cloudiva `vatanai-laravel-cloudiva` است** و دامنه‌ی `aivatan.com` به همین سرویس متصل است. پلتفرم `laravel` (بدون Docker) است و نباید بدون تأیید صریح کاربر عوض بشود.
 
 ### روال استاندارد هر بار (کد + دیتابیس با هم)
 
@@ -67,14 +67,10 @@ git add -A
 git commit -m "توضیح تغییرات"
 git push origin crm-integration
 
-# ۲. دیپلوی — بدون --no-cache (سریع‌تره، از کش لایه‌های Docker استفاده می‌کنه)
-liara deploy --app demovatan --platform laravel --port 3000
+# ۲. دیپلوی روی سرویس واقعی Cloudiva:
+npx -y @cloudiva.net/cli deploy --service vatanai-laravel-cloudiva
 
-# ۳. فقط اگر صفحه‌ای بعد از دیپلوی هنوز نسخه‌ی قدیمی رو نشون داد (شک به کش خراب)،
-#    یک‌بار با --no-cache بزن تا کل ایمیج از صفر ساخته بشه:
-# liara deploy --app demovatan --platform laravel --port 3000 --no-cache
-
-# ۴. بعد از تمومِ کامل دیپلوی، حتماً یک SSH تازه (نه تب قدیمی) به demovatan بزن:
+# ۳. بعد از پایان دیپلوی، در کنسول تازه‌ی همان سرویس اجرا شود:
 php artisan migrate --force
 ```
 
@@ -95,12 +91,12 @@ php artisan migrate --force
 
 ### اگه دیپلوی خیلی کند بود یا ارور داد
 
-- پلن فعلی اپ (CPU/RAM) رو از اینجا چک/بالا ببر: `https://console.liara.ir/apps/demovatan/resize` — با منابع خیلی کم (مثلاً ۰.۵ گیگ رم)، build ممکنه خیلی کند بشه یا گیر کنه.
-- `vendor/` توی `.liaraignore` هست و نباید حذفش کنی — Liara خودش موقع build با composer نصبش می‌کنه، آپلود کردنش فقط زمان تلف می‌کنه.
+- منابع سرویس را از پنل Cloudiva بررسی کن؛ منابع خیلی کم می‌تواند build را کند یا متوقف کند.
+- `vendor/` را دستی آپلود نکن؛ نصب وابستگی‌ها در فرایند build انجام می‌شود.
 
 ### خطای Permission denied بعد از دیپلوی (فایل config یا هر فایل php)
 
-اگه بعد از دیپلوی، سایت با `Warning: require(...): Failed to open stream: Permission denied` بالا نیومد، یعنی یک یا چند فایل روی مک با پرمیشن بسته (600 — فقط خواندنی برای مالک) ذخیره شدن. `liara deploy` پرمیشن فایل‌ها رو عیناً به سرور می‌بره و چون PHP روی سرور با یوزر دیگه‌ای اجرا می‌شه، نمی‌تونه فایل رو بخونه. (خطای بعدیش مثل `Class "view" does not exist` فقط عارضه‌ی همینه، نه مشکل جدا.)
+اگه بعد از دیپلوی، سایت با `Warning: require(...): Failed to open stream: Permission denied` بالا نیامد، یعنی یک یا چند فایل روی مک با پرمیشن بسته (`600`) ذخیره شده است. ابزار دیپلوی پرمیشن فایل‌ها را به سرور منتقل می‌کند و PHP نمی‌تواند فایل را بخواند.
 
 **قبل از هر دیپلوی** (یا حداقل هر وقت فایل جدیدی به پروژه اضافه شده) این رو یک بار اجرا کن تا پرمیشن‌های بسته درست بشن:
 
