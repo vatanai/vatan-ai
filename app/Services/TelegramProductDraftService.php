@@ -139,6 +139,16 @@ class TelegramProductDraftService
 
     private function start(TelegramProductManager $manager, string $chatId, array $input): array
     {
+        if (trim((string) ($input['text'] ?? '')) === '/start') {
+            return $this->response($chatId, 'سلام عزیز، خوش اومدی به سیستم هوشمند ثبت محصول پلتفرم وطن', [
+                ['text' => 'ثبت محصول جدید'],
+            ], [
+                'status' => 'welcome',
+                'welcome' => true,
+                'photo_url' => 'https://placehold.co/1200x630/0d1b2a/ffffff.png?text=Vatan',
+            ]);
+        }
+
         if (! $manager->can('create_product')) {
             return $this->response($chatId, 'دسترسی ثبت محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
         }
@@ -157,7 +167,7 @@ class TelegramProductDraftService
         ]);
         $this->rememberMessage($draft, $input['message_id'] ?? null);
 
-        return $this->response($chatId, 'ثبت محصول جدید شروع شد. تصویر اصلی محصول را ارسال کنید.', [
+        return $this->response($chatId, "خب بیا ثبت محصول جدید رو شروع کنیم\nقدم اول برام تصاویر اصلی محصول رو ارسال کن...", [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
         ], [
             'status' => 'awaiting_image',
@@ -186,11 +196,16 @@ class TelegramProductDraftService
             throw ValidationException::withMessages(['image' => 'فایل تصویر به بک‌اند تحویل داده نشده است.']);
         }
 
+        $hasPreviousImage = $paths !== [];
         $paths[] = $this->images->store($image, 'products/telegram');
         $draft->forceFill(['image_paths' => array_values($paths), 'state' => 'awaiting_prompt'])->save();
         $this->rememberMessage($draft, $input['message_id'] ?? null);
 
-        return $this->response($chatId, "عکس دریافت شد ✅\nحالا پرامپت ساخت این محصول را همراه با نام و توضیحات دلخواهت در یک پیام بفرست.", [
+        $text = $hasPreviousImage
+            ? "محتوای دیگه از این محصول دریافت شد ✅\nمرسی که دقت نظر داری و محتوای بیشتری می‌فرستی برام\nخب حالا پرامپت ساخت این محصول‌رو همراه با نام و توضیحات دلخواهت در یک پیام بفرست برام"
+            : "محتوا دریافت شد ✅\nچه محصول خفنی، ایول...!\nخب حالا پرامپت ساخت این محصول‌رو همراه با نام و توضیحات دلخواهت در یک پیام بفرست برام";
+
+        return $this->response($chatId, $text, [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
         ], ['status' => 'awaiting_prompt', 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'reply_markup' => $this->mainMenuMarkup()]);
     }
@@ -607,10 +622,10 @@ class TelegramProductDraftService
 
     private function settingsMenu(TelegramProductManager $manager, string $chatId): array
     {
-        return $this->response($chatId, 'تنظیمات بات ثبت محصول\n\nاز این بخش می‌توانید پرامپت‌های تولید اطلاعات محصول را مدیریت کنید.', [
+        return $this->response($chatId, "تنظیمات بات ثبت محصول\n\nاز این بخش می‌توانید پرامپت‌های تولید اطلاعات محصول را مدیریت کنید.", [
             ['text' => 'تنظیمات پرامپت اسم و توضیحات محصول', 'callback_data' => 'product:settings:metadata'],
             ['text' => 'تنظیمات پرامپت اصلاح پرامپت محصول', 'callback_data' => 'product:settings:optimizer'],
-        ], ['status' => 'settings', 'reply_markup' => $this->mainMenuMarkup()]);
+        ], ['status' => 'settings']);
     }
 
     private function settingsAction(TelegramProductManager $manager, string $chatId, string $key): array
