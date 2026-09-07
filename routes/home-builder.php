@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\HomeBuilder\HomeBuilderController;
+use App\Http\Controllers\Admin\HomePageGalleryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -20,6 +21,12 @@ Route::middleware(['web', 'auth:admin'])
         Route::get('/', [HomeBuilderController::class, 'index'])->name('index');
         Route::get('/showcase', [HomeBuilderController::class, 'showcase'])->name('showcase');
         Route::get('/showcase/preview/{type}/{layout}', [HomeBuilderController::class, 'showcasePreview'])->name('showcase.preview');
+
+        // مدیریت گالری‌های صفحهٔ اصلی که از منوی مشترک پنل قابل دسترسی است.
+        Route::get('/galleries', [HomePageGalleryController::class, 'index'])->name('galleries.index');
+        Route::get('/galleries/{gallery}', [HomePageGalleryController::class, 'show'])->name('galleries.show');
+        Route::put('/galleries/{gallery}', [HomePageGalleryController::class, 'update'])->name('galleries.update');
+
         Route::post('/preview', [HomeBuilderController::class, 'preview'])->name('preview');
 
         Route::post('/', [HomeBuilderController::class, 'store'])->name('store');

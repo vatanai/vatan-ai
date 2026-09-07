@@ -37,6 +37,8 @@ use App\Http\Controllers\Admin\GrowthController;
 use App\Http\Controllers\Admin\GrowthDataSourceController;
 use App\Http\Controllers\Admin\GrowthUserController;
 use App\Http\Controllers\Admin\VideoStudioController;
+use App\Http\Controllers\Admin\SupportController;
+use App\Http\Controllers\Admin\UserGalleryController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\ArticleCommentController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
@@ -425,6 +427,20 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/users/all-activities', [AdminUserController::class, 'allActivities'])->name('users.all_activities');
     Route::get('/users/{id}/logs',      [AdminUserController::class, 'logs'])->name('users.logs');
     Route::get('/users/tokens',         [AdminUserController::class, 'tokens'])->name('users.tokens'); // پشتیبانی از دکمه مدیریت توکن قالب شما
+
+    // مدیریت تیکت‌های پشتیبانی؛ این مسیرها توسط منوی سایت و صفحهٔ جزئیات تیکت استفاده می‌شوند.
+    Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+    Route::get('/support/{ticket}', [SupportController::class, 'show'])->name('support.show');
+    Route::post('/support/{ticket}/reply', [SupportController::class, 'reply'])->name('support.reply');
+    Route::patch('/support/{ticket}', [SupportController::class, 'update'])->name('support.update');
+
+    // گالری ورودی‌های کاربران؛ مسیرهای فایل قبل از پارامترهای عمومی کاربران ثبت شده‌اند.
+    Route::get('/users/gallery', [UserGalleryController::class, 'index'])->name('users.gallery.index');
+    Route::post('/users/gallery/settings', [UserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
+    Route::get('/users/{user}/gallery', [UserGalleryController::class, 'show'])->name('users.gallery.show');
+    Route::get('/users/{user}/gallery/{item}/preview', [UserGalleryController::class, 'preview'])->name('users.gallery.preview');
+    Route::get('/users/{user}/gallery/{item}/original', [UserGalleryController::class, 'original'])->name('users.gallery.original');
+    Route::delete('/users/{user}/gallery/{item}', [UserGalleryController::class, 'destroy'])->name('users.gallery.destroy');
 
     // مدیریت محصولات
     // توجه: مسیر ویرایش دیگر جدا نیست و کامل از پروژه حذف شده — ویرایش هم از همین صفحه «ثبت محصول»
