@@ -38,7 +38,7 @@
                     <h1 class="text-[12px] font-bold text-gray-300 uppercase tracking-widest leading-relaxed max-w-[250px]">
                         {{ $prompt->name }}
                     </h1>
-                    <a href="{{ route('home') }}" class="text-gray-500 hover:text-white transition-colors cursor-pointer">
+                    <a href="{{ route('site.home.root') }}" class="text-gray-500 hover:text-white transition-colors cursor-pointer">
                         <i class="fa-solid fa-xmark text-sm"></i>
                     </a>
                 </div>

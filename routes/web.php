@@ -92,6 +92,7 @@ Route::post('/articles/{article}/events', [ArticleController::class, 'track'])->
 Route::post('/articles/{article}/comments', [ArticleCommentController::class, 'store'])
     ->middleware(['auth', 'throttle:5,1'])->name('articles.comments.store');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
+Route::get('/sitemap', [ArticleController::class, 'sitemapPage'])->name('site.sitemap');
 Route::get('/sitemap.xml', [ArticleController::class, 'sitemap'])->name('sitemap');
 
 Route::get('/auth/csrf-token', fn () => response()->json(['token' => csrf_token()]))
@@ -150,6 +151,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
     Route::delete('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'destroyFaceProfile'])->name('profile.face-profiles.destroy');
+    Route::get('/my-gallery/{item}/preview', [\App\Http\Controllers\UserGalleryController::class, 'preview'])->name('profile.gallery.preview');
     Route::post('/app/product/{product:slug}/save', [SavedProductController::class, 'toggle'])->name('app.product.save');
     Route::post('/app/product/{product:slug}/like', [App\Http\Controllers\LikedProductController::class, 'toggle'])->name('app.product.like');
     Route::post('/app/product/{product:slug}/download', [App\Http\Controllers\ProductDownloadController::class, 'store'])->name('app.product.download');

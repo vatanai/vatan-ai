@@ -1,0 +1,44 @@
+.admin-user-operational { min-width: 205px; }
+.admin-user-operational-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.admin-user-operational-item { min-width: 0; min-height: 45px; padding: 6px 7px; display: flex; flex-direction: column; justify-content: center; gap: 3px; border-radius: 8px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-main); }
+.admin-user-operational-item > span { display: flex; align-items: center; gap: 4px; color: var(--text-soft); font-size: 8.5px; white-space: nowrap; }
+.admin-user-operational-item > span i { color: var(--primary); font-size: 8px; }
+.admin-user-operational-item > strong { display: block; overflow: hidden; color: var(--text-h); font-size: 9.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.admin-user-operational-output { text-decoration: none; transition: border-color .18s, color .18s, background .18s; }
+.admin-user-operational-output:hover { border-color: var(--info); background: var(--info-l); }
+.admin-user-operational-output > span i,
+.admin-user-operational-output > strong { color: var(--info); }
+.admin-user-operational-missing { color: var(--text-soft); font-size: 10px; }
+.finance-case-hero .admin-user-operational { width: min(100%, 470px); margin-top: 10px; }
+.finance-case-table .admin-user-operational { min-width: 220px; }
+.orders-table .admin-user-operational { min-width: 215px; margin-top: 8px; }
+@media (max-width: 560px) {
+  .admin-user-operational { min-width: 0; width: 100%; }
+  .admin-user-operational-grid { grid-template-columns: 1fr; }
+  .users-index-table .admin-user-operational { min-width: 0; }
+}
+
+/* جدول کاربران فضای فشرده‌تری برای ورودی/خروجی دارد تا شرح گزارش اعتبار
+   با ستون کناری تداخل نکند؛ سایر جدول‌های ادمین همان اندازه‌ی قبلی را حفظ می‌کنند. */
+.users-index-table .admin-user-operational {
+  width: 100%;
+  min-width: 174px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.users-index-table .admin-user-operational-item,
+.users-index-table .admin-credit-report > div,
+.users-index-table .admin-credit-report > div > div {
+  min-width: 0;
+}
+.users-index-table .admin-credit-report span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.users-index-table .admin-status-column {
+  padding-inline: 4px !important;
+}
+.users-index-table .user-status-control {
+  width: min(100%, 120px);
+  max-width: 120px;
+}

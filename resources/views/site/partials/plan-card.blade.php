@@ -50,7 +50,7 @@
     @elseif($plan->billing_type === 'custom')
       <a href="/#contact" class="vpc__cta">درخواست مشاوره فروش</a>
     @elseif(auth()->check())
-      <form action="{{ route('pricing.fakePayment', $purchasePlanKey) }}" method="POST">@csrf<button class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">انتخاب و فعال‌سازی پلن</button></form>
+      <form action="{{ route('pricing.start-payment', $purchasePlanKey) }}" method="POST">@csrf<button class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">انتخاب و فعال‌سازی پلن</button></form>
     @else
       <a href="{{ route('login', ['redirect' => request()->fullUrl()]) }}" class="vpc__cta {{ $plan->is_featured ? '' : 'vpc__cta--ghost' }}">ورود و انتخاب پلن</a>
     @endif

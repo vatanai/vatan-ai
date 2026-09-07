@@ -1,0 +1,10 @@
+<div class="article-card-admin__head"><div><h2>فهرست مقالات</h2><p>فیلترها را ترکیب کنید تا سریع‌تر به محتوای موردنظر برسید.</p></div><a class="article-btn article-btn--small" href="{{ route('admin.articles.index') }}"><i class="fa-solid fa-rotate-left"></i> پاک‌کردن فیلتر</a></div>
+<div class="article-card-admin__body">
+  <form class="article-filters" method="GET" action="{{ route('admin.articles.index') }}">
+    <div class="article-field"><label for="article-search">جست‌وجو</label><input class="article-input" id="article-search" name="search" value="{{ request('search') }}" placeholder="عنوان، نامک یا خلاصه..."></div>
+    <div class="article-field"><label for="article-status">وضعیت</label><select class="article-select" id="article-status" name="status"><option value="">همه وضعیت‌ها</option>@foreach(['draft'=>'پیش‌نویس','in_review'=>'در انتظار بررسی','changes_requested'=>'نیازمند اصلاح','scheduled'=>'زمان‌بندی‌شده','published'=>'منتشرشده','archived'=>'آرشیوشده','trash'=>'زباله‌دان'] as $value=>$label)<option value="{{ $value }}" @selected(request('status')===$value)>{{ $label }}</option>@endforeach</select></div>
+    <div class="article-field"><label for="article-category">دسته‌بندی</label><select class="article-select" id="article-category" name="category_id"><option value="">همه دسته‌ها</option>@foreach($categories as $category)<option value="{{ $category->id }}" @selected((int)request('category_id')===$category->id)>{{ $category->name }}</option>@endforeach</select></div>
+    <div class="article-field"><label for="article-author">نویسنده</label><select class="article-select" id="article-author" name="author_id"><option value="">همه نویسندگان</option>@foreach($authors as $author)<option value="{{ $author->id }}" @selected((int)request('author_id')===$author->id)>{{ $author->name }}</option>@endforeach</select></div>
+    <div class="article-field"><span>&nbsp;</span><button class="article-btn article-btn--primary" type="submit"><i class="fa-solid fa-filter"></i> اعمال</button></div>
+  </form>
+</div>

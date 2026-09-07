@@ -1,0 +1,220 @@
+.create-products-page {
+  min-height: calc(100vh - 64px);
+  overflow-x: hidden;
+  padding: 42px 0 120px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: 'YekanBakh', sans-serif;
+}
+
+.create-products-header {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.create-products-eyebrow {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.create-products-header h1 {
+  margin: 6px 0 7px;
+  font-size: clamp(25px, 4vw, 38px);
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+
+.create-products-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.create-products-section,
+.create-products-list {
+  min-width: 0;
+}
+
+.create-products-track {
+  display: flex;
+  width: min(100%, 520px);
+  margin-inline: auto;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.create-product-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 17px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-decoration: none;
+  box-shadow: none;
+  transition: transform .35s cubic-bezier(.22, 1, .36, 1), box-shadow .35s ease;
+}
+
+.create-product-card:hover {
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--bg-page) 55%, transparent);
+  transform: scale(1.012) translateY(-2px);
+}
+
+.create-product-card-media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.create-product-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .35s ease;
+}
+
+.create-product-card:hover .create-product-card-media img {
+  transform: scale(1.035);
+}
+
+.create-product-card-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 0, 0, .76) 0%, transparent 62%);
+  transition: background .35s ease;
+}
+
+.create-product-card:hover .create-product-card-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, .84) 0%, transparent 66%);
+}
+
+.create-product-card-info {
+  position: absolute;
+  z-index: 2;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  color: #fff;
+  pointer-events: none;
+}
+
+.create-product-card-info h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.55;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .65);
+}
+
+.create-product-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, .68);
+  font-size: 10px;
+  line-height: 1.55;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+}
+
+.create-product-card-category {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.create-product-card-credit {
+  color: var(--green);
+  font-weight: 750;
+}
+
+.create-product-card-credit i {
+  margin-left: 2px;
+  font-size: 8px;
+}
+
+.create-products-scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 15px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.create-products-scroll-hint i {
+  color: var(--green);
+}
+
+.create-products-empty {
+  display: flex;
+  width: min(100%, 520px);
+  min-height: 300px;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px dashed var(--border-subtle);
+  border-radius: 17px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+.create-products-empty i {
+  color: var(--green);
+  font-size: 30px;
+}
+
+.create-products-empty strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.create-products-empty span {
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .create-products-page {
+    padding: 25px 0 110px;
+  }
+
+  .create-products-header {
+    margin-bottom: 22px;
+    text-align: right;
+  }
+
+  .create-products-header h1 {
+    font-size: 28px;
+  }
+
+  .create-products-header p {
+    font-size: 10px;
+  }
+
+  .create-products-track {
+    gap: 12px;
+  }
+
+  .create-product-card-info {
+    right: 12px;
+    bottom: 10px;
+    left: 12px;
+  }
+
+  .create-product-card-info h3 {
+    font-size: 14px;
+  }
+}

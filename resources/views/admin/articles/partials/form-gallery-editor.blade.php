@@ -1,0 +1,26 @@
+@php
+  $gallerySource = $galleryData['source_type'] ?? 'manual';
+  $galleryProducts = collect($galleryData['product_ids'] ?? [])->map(fn($id)=>(int)$id)->all();
+  $galleryGenerated = collect($galleryData['generated_image_ids'] ?? [])->map(fn($id)=>(int)$id)->all();
+@endphp
+<article class="article-gallery-editor" data-gallery-editor>
+  @if(!empty($galleryData['id']))<input type="hidden" name="galleries[{{ $galleryIndex }}][id]" value="{{ $galleryData['id'] }}">@endif
+  <div class="article-gallery-editor__head"><strong><i class="fa-regular fa-images"></i> <span data-gallery-label>{{ $galleryData['title'] ?? 'گالری جدید' }}</span></strong><button class="article-btn article-btn--danger article-btn--small" type="button" data-remove-gallery data-gallery-id="{{ $galleryData['id'] ?? '' }}"><i class="fa-solid fa-trash"></i> حذف</button></div>
+  <div class="article-gallery-editor__body">
+    <div class="article-grid-2"><div class="article-field"><label>عنوان گالری</label><input class="article-input" name="galleries[{{ $galleryIndex }}][title]" value="{{ $galleryData['title'] ?? '' }}" required data-gallery-title></div><div class="article-field"><label>توضیح کوتاه</label><input class="article-input" name="galleries[{{ $galleryIndex }}][description]" value="{{ $galleryData['description'] ?? '' }}"></div></div>
+    <div class="article-gallery-editor__options">
+      <div class="article-field"><label>منبع محتوا</label><select class="article-select" name="galleries[{{ $galleryIndex }}][source_type]" data-gallery-source>@foreach(['manual'=>'بارگذاری و مسیر دستی','products'=>'محصولات مشخص','category'=>'دسته‌بندی محصولات','generated'=>'خروجی‌های ساخته‌شده'] as $value=>$label)<option value="{{ $value }}" @selected($gallerySource===$value)>{{ $label }}</option>@endforeach</select></div>
+      <div class="article-field"><label>چیدمان</label><select class="article-select" name="galleries[{{ $galleryIndex }}][display_style]">@foreach(['grid'=>'شبکه‌ای','slider'=>'اسلاید افقی','masonry'=>'چیدمان آزاد','showcase'=>'ویترین برجسته'] as $value=>$label)<option value="{{ $value }}" @selected(($galleryData['display_style'] ?? 'grid')===$value)>{{ $label }}</option>@endforeach</select></div>
+      <div class="article-field"><label>حداکثر آیتم</label><input class="article-input" type="number" min="1" max="24" name="galleries[{{ $galleryIndex }}][limit]" value="{{ $galleryData['limit'] ?? 12 }}"></div>
+      <div class="article-field"><label>ترتیب</label><input class="article-input" value="{{ is_numeric($galleryIndex) ? $galleryIndex+1 : '' }}" readonly></div>
+    </div>
+    <div class="article-gallery-editor__source" data-gallery-source-panel="manual" @if($gallerySource!=='manual') hidden @endif>
+      <div class="article-manual-items" data-manual-items>@foreach($galleryData['items'] ?? [] as $itemIndex=>$itemData)@include('admin.articles.partials.form-gallery-item',['galleryIndex'=>$galleryIndex,'itemIndex'=>$itemIndex,'itemData'=>$itemData])@endforeach</div>
+      <button class="article-btn article-btn--small" type="button" data-add-manual-item><i class="fa-solid fa-link"></i> افزودن مسیر دستی</button>
+      <label class="article-upload-zone"><span><i class="fa-solid fa-arrow-up-from-bracket"></i> بارگذاری چند تصویر یا ویدیو</span><input type="file" name="galleries[{{ $galleryIndex }}][uploads][]" multiple accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm"></label>
+    </div>
+    <div class="article-gallery-editor__source" data-gallery-source-panel="products" @if($gallerySource!=='products') hidden @endif><div class="article-field"><label>محصولات گالری</label><select class="article-select" name="galleries[{{ $galleryIndex }}][product_ids][]" multiple size="7">@foreach($products as $product)<option value="{{ $product->id }}" @selected(in_array($product->id,$galleryProducts,true))>{{ $product->name_fa }} — {{ $product->product_code }}</option>@endforeach</select><small>برای انتخاب چند مورد از کلید `Ctrl` یا `Command` استفاده کنید.</small></div></div>
+    <div class="article-gallery-editor__source" data-gallery-source-panel="category" @if($gallerySource!=='category') hidden @endif><div class="article-field"><label>دسته‌بندی محصول</label><select class="article-select" name="galleries[{{ $galleryIndex }}][product_category_id]"><option value="">انتخاب دسته...</option>@foreach($productCategories as $productCategory)<option value="{{ $productCategory->id }}" @selected((int)($galleryData['product_category_id'] ?? 0)===$productCategory->id)>{{ $productCategory->name_fa }}</option>@endforeach</select></div></div>
+    <div class="article-gallery-editor__source" data-gallery-source-panel="generated" @if($gallerySource!=='generated') hidden @endif><div class="article-field"><label>خروجی‌های ساخته‌شده</label><select class="article-select" name="galleries[{{ $galleryIndex }}][generated_image_ids][]" multiple size="7">@foreach($generatedImages as $generatedImage)<option value="{{ $generatedImage->id }}" @selected(in_array($generatedImage->id,$galleryGenerated,true))>خروجی #{{ $generatedImage->id }} {{ $generatedImage->product?->name_fa ? '— '.$generatedImage->product->name_fa : '' }}</option>@endforeach</select><small>آخرین خروجی‌های قابل انتشار وطن نمایش داده شده‌اند.</small></div></div>
+  </div>
+</article>

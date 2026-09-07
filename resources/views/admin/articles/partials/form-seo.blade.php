@@ -1,0 +1,15 @@
+<section class="article-card-admin">
+  <div class="article-card-admin__head"><div><h2>سئو و اشتراک‌گذاری</h2><p>در حالت خودکار، عنوان، توضیح، کلیدواژه، هشتگ و زمان مطالعه ساخته می‌شود.</p></div></div>
+  <div class="article-card-admin__body article-admin">
+    <label class="article-check"><input type="checkbox" name="seo_auto_fill" value="1" @checked(old('seo_auto_fill',$article->exists ? $article->seo_auto_fill : true)) data-seo-auto> تکمیل خودکار سئو هنگام ذخیره</label>
+    <label class="article-check"><input type="checkbox" name="is_indexable" value="1" @checked(old('is_indexable',$article->exists ? $article->is_indexable : true))> اجازه ایندکس در موتور جست‌وجو</label>
+    <div class="article-field"><label for="article-slug">نامک</label><input class="article-input" id="article-slug" dir="ltr" name="slug" value="{{ old('slug',$article->slug) }}" maxlength="190" data-seo-slug><small>نشانی نهایی: <span dir="ltr">/articles/<b data-slug-preview>{{ old('slug',$article->slug ?: 'article-slug') }}</b></span></small></div>
+    <div class="article-field"><label for="article-meta-title">عنوان سئو</label><input class="article-input" id="article-meta-title" name="meta_title" value="{{ old('meta_title',$article->meta_title) }}" maxlength="180" data-seo-meta-title></div>
+    <div class="article-field"><label for="article-meta-description">توضیح سئو</label><textarea class="article-textarea" id="article-meta-description" name="meta_description" maxlength="500" data-seo-meta-description>{{ old('meta_description',$article->meta_description) }}</textarea></div>
+    <div class="article-seo-preview"><small data-seo-url>{{ url('/articles') }}/{{ $article->slug ?: 'article-slug' }}</small><strong data-seo-preview-title>{{ $article->meta_title ?: ($article->title ?: 'عنوان مقاله') }}</strong><p data-seo-preview-description>{{ $article->meta_description ?: ($article->excerpt ?: 'توضیح کوتاه نتیجه جست‌وجو اینجا دیده می‌شود.') }}</p></div>
+    <div class="article-field"><label for="article-keywords">کلیدواژه‌ها</label><textarea class="article-textarea" id="article-keywords" name="seo_keywords_text" placeholder="با ویرگول جدا کنید">{{ old('seo_keywords_text',implode('، ', $article->seo_keywords ?? [])) }}</textarea></div>
+    <div class="article-field"><label for="article-hashtags">هشتگ‌ها</label><input class="article-input" id="article-hashtags" name="hashtags_text" value="{{ old('hashtags_text',implode('، ', $article->hashtags ?? [])) }}" placeholder="#هوش_مصنوعی، #وطن"></div>
+    <div class="article-field"><label for="article-canonical">نشانی مرجع</label><input class="article-input" id="article-canonical" dir="ltr" name="canonical_url" value="{{ old('canonical_url',$article->canonical_url) }}" placeholder="در حالت عادی خالی بماند"></div>
+    <div class="article-field"><label for="article-og-image">تصویر اشتراک‌گذاری</label><input class="article-input" id="article-og-image" type="file" name="og_image" accept="image/jpeg,image/png,image/webp,image/avif"><small>در حالت خودکار، تصویر اصلی مقاله استفاده می‌شود.</small></div>
+  </div>
+</section>

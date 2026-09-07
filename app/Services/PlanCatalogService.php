@@ -59,4 +59,34 @@ class PlanCatalogService
 
         return $catalog['plans']->take($limit);
     }
+
+    /**
+     * پلن‌های بخش قیمت‌گذاری صفحه‌ی اصلی را برمی‌گرداند. این مسیر باید در زمان
+     * دیپلوی ناقص یا قبل از اجرای migrationها هم صفحه‌ی عمومی را از کار نیندازد؛
+     * بنابراین نبود ستون تنظیمات قیمت‌گذاری به fallback عمومی برمی‌گردد.
+     */
+    public function homePricingPlans(?User $user = null): Collection
+    {
+        try {
+            $plans = Plan::query()
+                ->published()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->filter(function (Plan $plan) use ($user): bool {
+                    $config = is_array($plan->home_pricing_config) ? $plan->home_pricing_config : [];
+
+                    return ($config['is_active'] ?? true) && $plan->offerFor($user)['visible'];
+                })
+                ->values();
+
+            return $plans->isNotEmpty() ? $plans : $this->homePlans($user);
+        } catch (\Throwable $exception) {
+            // در نسخه‌ای که migration ستون home_pricing_config هنوز اجرا نشده،
+            // کارت‌های عمومی قدیمی همچنان باید قابل نمایش باشند.
+            report($exception);
+
+            return $this->homePlans($user);
+        }
+    }
 }

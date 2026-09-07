@@ -36,8 +36,14 @@ class ReferralSetting extends Model
     public static function current(): self
     {
         return once(function () {
-            if (Schema::hasTable('referral_settings')) {
-                return static::query()->firstOrCreate([], static::defaults());
+            try {
+                if (Schema::hasTable('referral_settings')) {
+                    return static::query()->firstOrCreate([], static::defaults());
+                }
+            } catch (\Throwable $exception) {
+                // تنظیمات ارجاع نباید در زمان اختلال یا عقب‌بودن migrationها
+                // رندر هدر و صفحه‌ی عمومی را با خطای ۵۰۰ متوقف کند.
+                report($exception);
             }
 
             return new static(static::defaults());

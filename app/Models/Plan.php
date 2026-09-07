@@ -49,6 +49,7 @@ class Plan extends Model
         'tags' => 'array',
         'features' => 'array',
         'audience_overrides' => 'array',
+        'home_pricing_config' => 'array',
         'is_unlimited' => 'boolean',
         'is_featured' => 'boolean',
         'starts_at' => 'datetime',

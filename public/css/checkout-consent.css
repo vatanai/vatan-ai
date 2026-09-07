@@ -1,0 +1,10 @@
+.checkout-consent { margin: 20px 0; }
+.checkout-terms { display: flex; align-items: flex-start; gap: 10px; margin: 0; color: var(--vp-text-soft); font-size: 11px; line-height: 1.9; cursor: pointer; }
+.checkout-terms input { width: 18px; height: 18px; flex: 0 0 18px; margin-top: 2px; accent-color: var(--vp-primary); cursor: pointer; }
+.checkout-terms span { margin: 0 !important; }
+.checkout-terms a { color: var(--vp-primary); font-weight: 800; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--vp-primary) 45%, transparent); text-underline-offset: 3px; }
+.checkout-terms a:hover { text-decoration-color: var(--vp-primary); }
+.checkout-terms__hint { margin: 7px 28px 0; color: var(--vp-text-muted); font-size: 10px; line-height: 1.8; }
+.has-accepted-terms .checkout-terms__hint { color: var(--vp-primary); }
+.checkout-submit:disabled { cursor: not-allowed; opacity: .46; filter: saturate(.25); box-shadow: none !important; transform: none !important; }
+.checkout-submit:disabled:hover { background: var(--vp-primary); box-shadow: none; transform: none; }
