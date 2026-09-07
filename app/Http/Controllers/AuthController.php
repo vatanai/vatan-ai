@@ -126,6 +126,11 @@ class AuthController extends Controller
         return view('auth.index');
     }
 
+    public function showForgotPassword()
+    {
+        return view('auth.forgot-password');
+    }
+
     /**
      * مرحله اول: بررسی شماره موبایل برای ورود یا ثبت‌نام
      */

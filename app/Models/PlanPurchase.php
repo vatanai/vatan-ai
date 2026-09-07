@@ -57,4 +57,17 @@ class PlanPurchase extends Model
     {
         return $this->status === self::COMPLETED;
     }
+
+    public static function statusLabel(?string $status): string
+    {
+        return match ($status) {
+            self::COMPLETED => 'تکمیل‌شده',
+            self::PENDING => 'در انتظار پرداخت',
+            self::REDIRECTED => 'در انتظار بازگشت از درگاه',
+            self::VERIFYING => 'در حال بررسی',
+            self::FAILED => 'ناموفق',
+            self::EXPIRED => 'منقضی‌شده',
+            default => 'نامشخص',
+        };
+    }
 }
