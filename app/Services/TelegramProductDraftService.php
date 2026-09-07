@@ -179,7 +179,7 @@ class TelegramProductDraftService
 
     private function photo(TelegramProductManager $manager, ?TelegramProductDraft $draft, string $chatId, array $input, ?UploadedFile $image): array
     {
-        if (! $draft || $draft->state !== 'awaiting_image') {
+        if (! $draft || ! in_array($draft->state, ['awaiting_image', 'awaiting_prompt'], true)) {
             return $this->response($chatId, 'ابتدا روی «ثبت محصول جدید» یا دستور شروع بزنید.', [], ['status' => 'no_draft']);
         }
 
