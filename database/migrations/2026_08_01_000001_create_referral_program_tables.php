@@ -18,7 +18,7 @@ return new class extends Migration
             $table->boolean('registration_gift_review_repeated_ip')->default(true);
             $table->boolean('registration_gift_review_repeated_device')->default(true);
             $table->unsignedSmallInteger('registration_gift_cooldown_days')->default(90);
-            $table->boolean('referral_enabled')->default(false);
+            $table->boolean('referral_enabled')->default(true);
             $table->unsignedInteger('invitee_reward_tokens')->default(0);
             $table->unsignedInteger('inviter_reward_tokens')->default(5);
             $table->string('reward_trigger', 32)->default('first_purchase');

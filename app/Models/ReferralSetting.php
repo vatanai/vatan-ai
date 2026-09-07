@@ -59,7 +59,9 @@ class ReferralSetting extends Model
             'registration_gift_review_repeated_ip' => true,
             'registration_gift_review_repeated_device' => true,
             'registration_gift_cooldown_days' => 90,
-            'referral_enabled' => false,
+            // لینک رفرال باید در نصب تازه از ابتدا قابلیت ثبت بازدید و انتساب داشته باشد.
+            // خاموش‌کردن کمپین همچنان از بخش تنظیمات داشبورد ممکن است.
+            'referral_enabled' => true,
             'invitee_reward_tokens' => 0,
             'inviter_reward_tokens' => 5,
             'reward_trigger' => 'first_purchase',

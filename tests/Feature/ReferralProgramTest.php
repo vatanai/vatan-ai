@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
+use App\Models\ReferralConversion;
 use App\Models\PlanPurchase;
 use App\Models\TokenLog;
 use App\Models\User;
@@ -19,7 +20,7 @@ class ReferralProgramTest extends TestCase
 
     public function test_referral_link_keeps_the_first_valid_attribution_in_session(): void
     {
-        ReferralSetting::current()->update(['referral_enabled' => true]);
+        self::assertTrue(ReferralSetting::current()->referral_enabled);
         $firstInviter = User::factory()->create(['status' => 'active']);
         $secondInviter = User::factory()->create(['status' => 'active']);
 
@@ -56,6 +57,11 @@ class ReferralProgramTest extends TestCase
         self::assertSame(5, (int) $invitee->fresh()->tokens);
         self::assertSame(5, (int) $inviter->fresh()->tokens);
         self::assertSame($inviter->id, $invitee->fresh()->referred_by);
+        self::assertSame(1, ReferralConversion::query()->where('inviter_id', $inviter->id)->count());
+        self::assertDatabaseHas('referral_visits', [
+            'inviter_id' => $inviter->id,
+            'converted_user_id' => $invitee->id,
+        ]);
         self::assertSame(3, ReferralReward::query()->where('status', 'paid')->count());
         self::assertSame(3, TokenLog::query()->whereNotNull('event_key')->count());
     }
