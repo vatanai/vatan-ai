@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ReferralConversion;
+use App\Models\ReferralEvent;
+use App\Models\ReferralLink;
 use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +58,7 @@ public function gallery()
                 'referralSettings' => $referralSettings,
                 'referralProfileEnabled' => $referralProfileEnabled,
                 'referralData' => $this->emptyReferralData(),
+                'referralProducts' => collect(),
             ]);
         }
 
@@ -81,6 +85,7 @@ public function gallery()
         $createdCount  = $createdImages->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
         $referralData  = $this->referralData($user, $referralSettings);
+        $referralProducts = Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'name_en']);
         $earnings      = $referralData['paid_tokens'];
         $isGuest       = false;
 
@@ -98,6 +103,7 @@ public function gallery()
             'referralSettings',
             'referralProfileEnabled',
             'referralData'
+            ,'referralProducts'
         ));
     }
 
@@ -110,6 +116,7 @@ public function gallery()
                 'code' => $user->referral_code,
                 'link' => $user->referral_url,
                 'share_message' => $this->shareMessage($settings, $user->referral_url),
+                'links' => collect(),
             ]);
         }
 
@@ -128,6 +135,17 @@ public function gallery()
             ->where('user_id', $user->id)
             ->where('reward_type', 'inviter_reward');
 
+        $links = Schema::hasTable('referral_links')
+            ? ReferralLink::query()->where('inviter_id', $user->id)->with('product:id,name_fa,slug,thumbnail')->latest()->limit(30)->get()
+            : collect();
+        $commissionRewards = ReferralReward::query()
+            ->where('user_id', $user->id)
+            ->whereIn('reward_type', ['purchase_commission', 'purchase_commission_reversal']);
+        $commissionRows = (clone $commissionRewards)->get(['amount', 'status', 'direction']);
+        $commissionTotal = static fn (string $status): int => (int) $commissionRows
+            ->where('status', $status)
+            ->sum(fn ($reward) => ($reward->direction ?? 'credit') === 'debit' ? -((int) $reward->amount) : (int) $reward->amount);
+
         return [
             'code' => $user->referral_code,
             'link' => $user->referral_url,
@@ -138,8 +156,12 @@ public function gallery()
                 ->where('inviter_id', $user->id)
                 ->whereHas('invitee.planPurchases', fn ($query) => $query->where('status', 'completed'))
                 ->count(),
+            'first_images' => ReferralConversion::query()->where('inviter_id', $user->id)->whereNotNull('first_image_at')->count(),
             'paid_tokens' => (int) (clone $inviterRewards)->where('status', 'paid')->sum('amount'),
             'pending_tokens' => (int) (clone $inviterRewards)->where('status', 'pending')->sum('amount'),
+            'pending_commission' => $commissionTotal('pending'),
+            'paid_commission' => $commissionTotal('paid'),
+            'links' => $links,
             'recent_invites' => $recentInvites,
         ];
     }
@@ -155,6 +177,10 @@ public function gallery()
             'successful_purchases' => 0,
             'paid_tokens' => 0,
             'pending_tokens' => 0,
+            'first_images' => 0,
+            'pending_commission' => 0,
+            'paid_commission' => 0,
+            'links' => collect(),
             'recent_invites' => collect(),
         ];
     }

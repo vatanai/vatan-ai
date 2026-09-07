@@ -191,6 +191,7 @@ class AuthController extends Controller
             'birth_day'   => ['required', 'integer', 'between:1,31'],
             'birth_month' => ['required', 'integer', 'between:1,12'],
             'birth_year'  => ['required', 'integer', 'between:1250,1500'],
+            'referral_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{6,20}$/'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -219,6 +220,16 @@ class AuthController extends Controller
 
         if (!Cache::pull('registration_otp_verified_' . $request->phone)) {
             return response()->json(['status' => 'error', 'message' => 'ابتدا شماره موبایل را با کد پیامکی تأیید کنید.'], 422);
+        }
+
+        if ($request->filled('referral_code')) {
+            $referralInviter = User::query()
+                ->where('referral_code', strtoupper(trim((string) $request->input('referral_code'))))
+                ->where('status', 'active')
+                ->exists();
+            if (! $referralInviter) {
+                return response()->json(['status' => 'error', 'message' => 'کد دعوت واردشده معتبر نیست.'], 422);
+            }
         }
 
         // بررسی لایه دوم امنیتی (جلوگیری از هک یا دور زدن فرانت)
@@ -467,6 +478,13 @@ class AuthController extends Controller
     private function pullIntendedUrl(Request $request): string
     {
         $intended = $request->session()->pull('url.intended');
+
+        if (! is_string($intended) || $intended === '') {
+            $referralDestination = app(ReferralProgramService::class)->pullDestination($request);
+            if ($referralDestination) {
+                return $this->safeLocalUrl($request, $referralDestination, '/app/home');
+            }
+        }
 
         return $this->safeLocalUrl($request, is_string($intended) ? $intended : null, '/app/home');
     }

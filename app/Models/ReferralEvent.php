@@ -5,13 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ReferralVisit extends Model
+class ReferralEvent extends Model
 {
     protected $guarded = [];
 
     protected function casts(): array
     {
-        return ['visited_at' => 'datetime', 'converted_at' => 'datetime'];
+        return [
+            'amount' => 'integer',
+            'metadata' => 'array',
+            'occurred_at' => 'datetime',
+        ];
     }
 
     public function inviter(): BelongsTo
@@ -19,9 +23,9 @@ class ReferralVisit extends Model
         return $this->belongsTo(User::class, 'inviter_id');
     }
 
-    public function convertedUser(): BelongsTo
+    public function invitee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'converted_user_id');
+        return $this->belongsTo(User::class, 'invitee_id');
     }
 
     public function link(): BelongsTo
@@ -32,5 +36,10 @@ class ReferralVisit extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function purchase(): BelongsTo
+    {
+        return $this->belongsTo(PlanPurchase::class, 'plan_purchase_id');
     }
 }

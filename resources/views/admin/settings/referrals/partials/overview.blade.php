@@ -15,6 +15,14 @@
     <span class="stat-card-icon is-warning"><i class="fa-solid fa-shield-halved"></i></span>
     <div><div class="stat-card-value">{{ number_format($stats['pending']) }}</div><div class="stat-card-label">در انتظار بررسی</div></div>
   </article>
+  <article class="stat-card referral-stat-card">
+    <span class="stat-card-icon is-info"><i class="fa-solid fa-image"></i></span>
+    <div><div class="stat-card-value">{{ number_format($stats['first_images']) }}</div><div class="stat-card-label">اولین تصویر دعوت‌شده</div></div>
+  </article>
+  <article class="stat-card referral-stat-card">
+    <span class="stat-card-icon is-warning"><i class="fa-solid fa-wallet"></i></span>
+    <div><div class="stat-card-value">{{ number_format($stats['pending_commission']) }}</div><div class="stat-card-label">کمیسیون در انتظار تسویه (تومان)</div></div>
+  </article>
 </section>
 
 <section class="content-card referral-hub-card">
@@ -24,7 +32,7 @@
   </div>
   <div class="referral-hub-grid">
     @foreach([
-      ['route' => 'admin.referrals.settings', 'icon' => 'fa-sliders', 'title' => 'تنظیمات برنامه', 'text' => 'مقدار هدیه، شرط پرداخت و محتوای پروفایل'],
+      ['route' => 'admin.referrals.settings', 'icon' => 'fa-sliders', 'title' => 'تنظیمات برنامه', 'text' => 'مقدار هدیه، تخفیف خرید، کمیسیون و محتوای پروفایل'],
       ['route' => 'admin.referrals.conversions', 'icon' => 'fa-user-group', 'title' => 'فهرست دعوت‌ها', 'text' => 'وضعیت ثبت‌نام، خرید و دعوت‌کننده'],
       ['route' => 'admin.referrals.rewards', 'icon' => 'fa-coins', 'title' => 'گزارش پاداش‌ها', 'text' => 'ریز توکن‌های پرداخت‌شده و معلق'],
       ['route' => 'admin.referrals.visits', 'icon' => 'fa-arrow-pointer', 'title' => 'بازدید لینک‌ها', 'text' => 'ورودی لینک‌ها و نتیجه تبدیل'],

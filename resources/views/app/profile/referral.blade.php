@@ -19,6 +19,9 @@
           <span><i class="fa-solid fa-sparkles"></i> هدیه دعوت‌شده: <b>{{ number_format($referralSettings->invitee_reward_tokens) }} توکن</b></span>
         @endif
         <span><i class="fa-solid fa-coins"></i> پاداش هر دعوت موفق: <b>{{ number_format($referralSettings->inviter_reward_tokens) }} توکن</b></span>
+        @if((float) ($referralSettings->referral_discount_percent ?? 0) > 0)
+          <span><i class="fa-solid fa-percent"></i> تخفیف خرید دعوت‌شده: <b>{{ rtrim(rtrim(number_format((float) $referralSettings->referral_discount_percent, 2), '0'), '.') }}٪</b></span>
+        @endif
       </div>
     </div>
     <div class="referral-program-visual" aria-hidden="true">
@@ -45,7 +48,33 @@
       <article class="referral-user-stat"><span><i class="fa-solid fa-arrow-pointer"></i></span><strong>{{ number_format($referralData['visits']) }}</strong><small>ورود از لینک تو</small></article>
       <article class="referral-user-stat"><span><i class="fa-solid fa-user-check"></i></span><strong>{{ number_format($referralData['registrations']) }}</strong><small>ثبت‌نام با دعوت</small></article>
       <article class="referral-user-stat"><span><i class="fa-solid fa-bag-shopping"></i></span><strong>{{ number_format($referralData['successful_purchases']) }}</strong><small>خرید موفق</small></article>
+      <article class="referral-user-stat"><span><i class="fa-solid fa-image"></i></span><strong>{{ number_format($referralData['first_images']) }}</strong><small>اولین تصویر ساخته‌شده</small></article>
       <article class="referral-user-stat is-highlight"><span><i class="fa-solid fa-coins"></i></span><strong>{{ number_format($referralData['paid_tokens']) }}</strong><small>توکن دریافت‌شده</small></article>
+      <article class="referral-user-stat"><span><i class="fa-solid fa-wallet"></i></span><strong>{{ number_format($referralData['pending_commission']) }}</strong><small>کمیسیون در انتظار تسویه</small></article>
+    </section>
+
+    <section class="referral-link-card">
+      <div class="referral-section-heading"><div><span>لینک اختصاصی هر محصول</span><small>برای هر محصول یک لینک جدا بساز؛ کلیک، ثبت‌نام و خرید همان مسیر قابل گزارش است.</small></div></div>
+      <form method="POST" action="{{ route('profile.referral-links.store') }}" class="referral-link-box" dir="rtl">
+        @csrf
+        <select name="product_id" required aria-label="محصول برای لینک رفرال">
+          <option value="">انتخاب محصول فعال</option>
+          @foreach(($referralProducts ?? collect()) as $product)
+            <option value="{{ $product->id }}">{{ $product->name_fa ?: $product->name_en }}</option>
+          @endforeach
+        </select>
+        <button type="submit"><i class="fa-solid fa-plus"></i><span>ساخت لینک</span></button>
+      </form>
+      <div class="referral-invite-list">
+        @forelse($referralData['links'] as $link)
+          <article class="referral-invite-row">
+            <div class="referral-invite-user"><span><i class="fa-solid fa-link"></i></span><div><strong>{{ $link->product?->name_fa ?: 'محصول وطن' }}</strong><small dir="ltr">{{ route('referral.link', $link->slug) }}</small></div></div>
+            <div class="referral-invite-state {{ $link->isActive() ? 'is-paid' : 'is-rejected' }}"><span>{{ $link->isActive() ? 'فعال' : 'غیرفعال' }}</span>@if($link->isActive())<form method="POST" action="{{ route('profile.referral-links.deactivate', $link) }}">@csrf @method('PATCH')<button type="submit">غیرفعال‌سازی</button></form>@endif</div>
+          </article>
+        @empty
+          <div class="referral-invites-empty"><i class="fa-solid fa-layer-group"></i><p>هنوز لینک محصولی نساخته‌ای.</p></div>
+        @endforelse
+      </div>
     </section>
 
     <section class="referral-link-card {{ $programActive ? '' : 'is-disabled' }}">

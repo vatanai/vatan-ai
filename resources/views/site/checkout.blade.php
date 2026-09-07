@@ -23,6 +23,10 @@
                     <div><dt>اعتبار دریافتی</dt><dd>{{ number_format((int) $offer['tokens'] + (int) $offer['bonus_tokens']) }} اعتبار</dd></div>
                     @if((int) $offer['bonus_tokens'] > 0)<div><dt>اعتبار هدیه</dt><dd>{{ number_format((int) $offer['bonus_tokens']) }} اعتبار</dd></div>@endif
                     <div><dt>تاریخ انقضا</dt><dd>ندارد</dd></div>
+                    @if((int) ($offer['discount_amount'] ?? 0) > 0)
+                        <div><dt>مبلغ اصلی</dt><dd><s>{{ number_format((int) $offer['original_price']) }}</s> تومان</dd></div>
+                        <div><dt>تخفیف دعوت</dt><dd>{{ number_format((int) $offer['discount_amount']) }} تومان</dd></div>
+                    @endif
                     <div class="checkout-summary__total"><dt>مبلغ قابل پرداخت</dt><dd>{{ number_format((int) $offer['price']) }} <small>تومان</small></dd></div>
                 </dl>
                 <p><i class="fa-solid fa-shield-halved"></i> پرداخت فقط در صفحه امن درگاه انجام می‌شود.</p>
@@ -35,6 +39,7 @@
                     <label><span>نام و نام خانوادگی</span><input name="name" value="{{ old('name', trim(($user->name ?? '') . ' ' . ($user->last_name ?? ''))) }}" required autocomplete="name"></label>
                     <label><span>شماره همراه</span><input name="phone" value="{{ old('phone', $user->phone) }}" dir="ltr" inputmode="tel" autocomplete="tel"></label>
                     <label><span>ایمیل برای دریافت رسید <em>اختیاری</em></span><input name="email" value="{{ old('email', $user->email) }}" dir="ltr" inputmode="email" autocomplete="email"></label>
+                    <label><span>کد دعوت <em>اختیاری</em></span><input name="referral_code" value="{{ old('referral_code') }}" dir="ltr" maxlength="20" autocomplete="off" placeholder="اگر کد دعوت داری وارد کن"></label>
                 </section>
                 <section>
                     <h2>روش پرداخت</h2>

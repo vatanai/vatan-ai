@@ -13,6 +13,8 @@ class ReferralReward extends Model
     {
         return [
             'amount' => 'integer',
+            'currency' => 'string',
+            'direction' => 'string',
             'balance_before' => 'integer',
             'balance_after' => 'integer',
             'settings_snapshot' => 'array',
@@ -34,5 +36,10 @@ class ReferralReward extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'reviewed_by');
+    }
+
+    public function purchase(): BelongsTo
+    {
+        return $this->belongsTo(PlanPurchase::class, 'plan_purchase_id');
     }
 }

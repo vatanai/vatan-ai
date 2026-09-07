@@ -155,6 +155,30 @@ class User extends Authenticatable
         return $this->hasMany(UserUpload::class, 'user_id');
     }
 
+    /** ورودی‌های ذخیره‌شدهٔ گالری خصوصی کاربر. */
+    public function galleryItems(): HasMany
+    {
+        return $this->hasMany(UserGalleryItem::class, 'user_id');
+    }
+
+    /** تنظیمات رضایت و فعال‌سازی گالری خصوصی کاربر. */
+    public function gallerySetting(): HasOne
+    {
+        return $this->hasOne(UserGallerySetting::class, 'user_id');
+    }
+
+    /** تنظیمات ترجیحات رشد و پیشنهادهای گالری کاربر. */
+    public function galleryPreference(): HasOne
+    {
+        return $this->hasOne(UserGalleryPreference::class, 'user_id');
+    }
+
+    /** بازساخت‌های انجام‌شده از ورودی‌های گالری کاربر. */
+    public function galleryRecreations(): HasMany
+    {
+        return $this->hasMany(UserGalleryRecreation::class, 'user_id');
+    }
+
     public function faceProfiles(): HasMany
     {
         return $this->hasMany(FaceProfile::class);

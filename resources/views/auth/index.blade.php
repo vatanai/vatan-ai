@@ -215,6 +215,15 @@
             </div>
             <div class="hidden text-[10.5px] text-[#f05c5c]" id="email-error">لطفاً یک ایمیل معتبر وارد کنید</div>
           </div>
+
+          <div class="flex flex-col gap-[6px]">
+            <label class="text-[11px] font-semibold text-[#a8c4a8] flex items-center gap-1">کد دعوت <span class="text-[10px] font-normal text-[#4d7a56]">(اختیاری)</span></label>
+            <div class="w-full flex items-center gap-2 bg-[#16161c] border border-[#222230] rounded-[10px] px-[14px] h-11 max-[480px]:h-[42px] transition-colors duration-150 focus-within:border-[#cffe00]" id="referral-code-wrap">
+              <i class="fa-solid fa-link text-[#4d7a56] text-[13px]"></i>
+              <input class="w-full bg-transparent border-0 outline-none text-base text-white placeholder:text-[#4d7a56]" type="text" id="referral-code-input" maxlength="20" autocomplete="off" placeholder="کد دعوت دوستت را وارد کن" dir="ltr" />
+            </div>
+            <div class="text-[10.5px] text-[#4d7a56]">اگر با لینک دعوت وارد شده‌ای، این بخش را خالی بگذار.</div>
+          </div>
         </div>
 
         <button class="flex w-full py-3 border-0 rounded-[10px] bg-[#cffe00] text-[#04170c] text-[13.5px] font-black cursor-pointer items-center justify-center gap-2 transition-all hover:bg-[#b8e600] active:scale-[0.99]" onclick="completeProfile()">

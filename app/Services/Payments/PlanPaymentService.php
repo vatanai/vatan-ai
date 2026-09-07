@@ -19,9 +19,9 @@ class PlanPaymentService
     }
 
     /** @param array{name:string,email:?string,phone:?string} $billing */
-    public function initiate(User $user, Plan $plan, array $billing, string $callbackUrl): PlanPurchase
+    public function initiate(User $user, Plan $plan, array $billing, string $callbackUrl, ?string $referralCode = null): PlanPurchase
     {
-        $offer = $plan->offerFor($user);
+        $offer = app(ReferralProgramService::class)->purchaseOffer($user, $plan, $plan->offerFor($user));
         $this->ensurePurchasable($user, $plan, $offer);
 
         $purchase = PlanPurchase::query()->create([
@@ -32,6 +32,13 @@ class PlanPaymentService
             'plan_name' => $plan->name,
             'customer_segment' => $offer['segment'],
             'paid_amount' => (int) $offer['price'],
+            'original_amount' => (int) ($offer['original_price'] ?? $offer['price']),
+            'discount_amount' => (int) ($offer['discount_amount'] ?? 0),
+            'referral_conversion_id' => $offer['referral_conversion_id'] ?? null,
+            'referral_snapshot' => $offer['referral_conversion_id'] ? [
+                'discount_percent' => $offer['referral_discount_percent'] ?? 0,
+                'code' => $referralCode,
+            ] : null,
             'granted_tokens' => (int) $offer['tokens'] + (int) $offer['bonus_tokens'],
             'plan_snapshot' => $this->snapshot($plan, $offer),
             'status' => PlanPurchase::PENDING,
@@ -43,6 +50,8 @@ class PlanPaymentService
             // ستون قدیمی nullable نیست؛ پس تا زمان تأیید، زمان آغاز نگه‌داری می‌شود.
             'purchased_at' => now(),
         ]);
+
+        app(ReferralProgramService::class)->attachPurchaseReferral($purchase, $referralCode);
 
         try {
             $request = $this->gateway->request(
@@ -167,6 +176,7 @@ class PlanPaymentService
         if ($newlyCompleted) {
             try {
                 app(ReferralProgramService::class)->handleFirstPurchase($completed->user);
+                app(ReferralProgramService::class)->handleCompletedPurchase($completed);
             } catch (\Throwable $exception) {
                 report($exception);
             }

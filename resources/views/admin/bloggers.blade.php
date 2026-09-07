@@ -305,4 +305,3 @@
   </main>
 </div>
 @endsection
-@endsection

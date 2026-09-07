@@ -203,7 +203,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             <div class="detail-row">
               <div class="detail-key">Prompt Template</div>
               <div class="detail-val" style="padding-top:4px;">
-                <div class="prompt-box">Professional LinkedIn profile photo, formal attire, <span class="prompt-var">{{clothing_style}}</span>, clean background, high resolution, 4K, <span class="prompt-var">{{background_color}}</span>, confident expression</div>
+                <div class="prompt-box">Professional LinkedIn profile photo, formal attire, <span class="prompt-var">@{{ clothing_style }}</span>, clean background, high resolution, 4K, <span class="prompt-var">@{{ background_color }}</span>, confident expression</div>
               </div>
             </div>
             <div class="detail-row">

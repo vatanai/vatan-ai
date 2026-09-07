@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\PlanPurchase;
 use App\Models\Product;
+use App\Support\Jalali;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Services\SmsEventService;
+use Illuminate\Database\Eloquent\Builder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
 {
@@ -24,6 +29,86 @@ class OrderController extends Controller
     public function failed(Request $request)
     {
         return $this->listing($request, 'failed');
+    }
+
+    public function planPurchases(Request $request)
+    {
+        $purchases = $this->planPurchasesQuery($request)->latest()->paginate(20)->withQueryString();
+        if (! Schema::hasTable('finance_cases')) {
+            $purchases->getCollection()->each->setRelation('financeCase', null);
+        }
+
+        $stats = [
+            'total' => PlanPurchase::count(),
+            'completed' => PlanPurchase::where('status', PlanPurchase::COMPLETED)->count(),
+            'active' => PlanPurchase::whereIn('status', [PlanPurchase::PENDING, PlanPurchase::REDIRECTED, 'verifying'])->count(),
+            'failed' => PlanPurchase::whereIn('status', [PlanPurchase::FAILED, PlanPurchase::EXPIRED, 'cancelled'])->count(),
+            'revenue' => (int) PlanPurchase::where('status', PlanPurchase::COMPLETED)->sum('paid_amount'),
+        ];
+
+        return view('admin.orders.plan-purchases', compact('purchases', 'stats'));
+    }
+
+    public function exportPlanPurchases(Request $request): StreamedResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', 'string', 'max:30'],
+            'ids' => ['nullable', 'array', 'max:1000'],
+            'ids.*' => ['integer', 'exists:plan_purchases,id'],
+        ]);
+        $ids = collect($data['ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $purchases = $this->planPurchasesQuery($request)
+            ->when($ids !== [], fn (Builder $query) => $query->whereIn('id', $ids))
+            ->latest('id')->get();
+
+        return response()->streamDownload(function () use ($purchases): void {
+            $stream = fopen('php://output', 'w');
+            fwrite($stream, "\xEF\xBB\xBF");
+            fputcsv($stream, ['شماره سفارش', 'شناسه کاربر', 'نام', 'نام خانوادگی', 'شماره تماس', 'ایمیل', 'پلن', 'مبلغ', 'اعتبار', 'درگاه', 'کد پیگیری', 'وضعیت', 'زمان ایجاد', 'زمان تایید']);
+            foreach ($purchases as $purchase) {
+                $user = $purchase->user;
+                fputcsv($stream, [
+                    $purchase->order_number, $user?->id ?: '—', $user?->name ?: '—', $user?->last_name ?: '—',
+                    $user?->phone ?: '—', $user?->email ?: '—', $purchase->plan_name,
+                    (int) $purchase->paid_amount, (int) $purchase->granted_tokens,
+                    $purchase->gateway ?: '—', $purchase->gateway_reference ?: $purchase->gateway_track_id ?: '—',
+                    PlanPurchase::statusLabel($purchase->status),
+                    Jalali::formatNumeric($purchase->initiated_at ?: $purchase->created_at),
+                    Jalali::formatNumeric($purchase->verified_at ?: $purchase->purchased_at),
+                ]);
+            }
+            fclose($stream);
+        }, 'vatan-plan-purchases-' . now()->format('Ymd-His') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function planPurchasesQuery(Request $request): Builder
+    {
+        $hasFinanceCases = Schema::hasTable('finance_cases');
+        $relations = [
+            'plan:id,name,slug',
+            'user' => function ($userQuery) use ($hasFinanceCases): void {
+                $userQuery->select(['id', 'name', 'last_name', 'email', 'phone', 'avatar', 'birth_date', 'status', 'plan_id', 'customer_segment', 'tokens', 'tokens_purchased', 'tokens_used', 'registered_at', 'last_login_at', 'login_count', 'created_at', 'referred_by'])
+                    ->with(['plan:id,name', 'referrer:id,name,last_name,phone,referral_code'])
+                    ->withCount('generatedImages');
+                if ($hasFinanceCases) $userQuery->withCount('financeCases');
+            },
+        ];
+        if ($hasFinanceCases) $relations[] = 'financeCase:id,anchor_plan_purchase_id,case_number';
+        $query = PlanPurchase::query()->with($relations);
+        $query->when($request->filled('q'), function (Builder $purchaseQuery) use ($request): void {
+            $term = trim((string) $request->q);
+            $purchaseQuery->where(function (Builder $subQuery) use ($term): void {
+                $subQuery->where('order_number', 'like', "%{$term}%")
+                    ->orWhere('payment_reference', 'like', "%{$term}%")
+                    ->orWhere('gateway_reference', 'like', "%{$term}%")
+                    ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', "%{$term}%")
+                        ->orWhere('last_name', 'like', "%{$term}%")
+                        ->orWhere('phone', 'like', "%{$term}%")
+                        ->orWhere('email', 'like', "%{$term}%"));
+            });
+        });
+        return $query->when($request->filled('status'), fn (Builder $purchaseQuery) => $purchaseQuery->where('status', $request->status));
     }
 
     private function listing(Request $request, string $view)

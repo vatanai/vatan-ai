@@ -1,4 +1,4 @@
-@extends('admin.layouts.admin')
+@extends('layouts.admin')
 
 @section('content')
 <div class="min-h-screen w-full bg-[#0a0a0c] text-white font-vazir p-4 md:p-10" dir="rtl">

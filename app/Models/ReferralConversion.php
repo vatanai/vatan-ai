@@ -14,7 +14,12 @@ class ReferralConversion extends Model
     {
         return [
             'qualified_at' => 'datetime',
+            'first_image_at' => 'datetime',
+            'first_purchase_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'purchase_amount' => 'integer',
+            'discount_amount' => 'integer',
+            'commission_amount' => 'integer',
         ];
     }
 
@@ -41,5 +46,15 @@ class ReferralConversion extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'reviewed_by');
+    }
+
+    public function link(): BelongsTo
+    {
+        return $this->belongsTo(ReferralLink::class, 'link_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 }

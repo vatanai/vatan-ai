@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Jalali;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class GeneratedImage extends Model
 {
@@ -57,5 +58,21 @@ class GeneratedImage extends Model
         }
 
         return route('app.product', $this->product->route_slug);
+    }
+
+    /** لینک عمومی خروجی ذخیره‌شده برای گزارش‌ها و پروفایل کاربر. */
+    public function imageUrl(): ?string
+    {
+        if (!$this->image_path) {
+            return null;
+        }
+
+        if (filter_var($this->image_path, FILTER_VALIDATE_URL)) {
+            return $this->image_path;
+        }
+
+        return Storage::disk('public')->exists($this->image_path)
+            ? asset('storage/' . ltrim($this->image_path, '/'))
+            : asset('storage/' . ltrim($this->image_path, '/'));
     }
 }

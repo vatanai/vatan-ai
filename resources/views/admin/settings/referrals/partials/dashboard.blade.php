@@ -47,6 +47,9 @@
           <div class="referral-fields two-columns">
             <label class="referral-field"><span>هدیه کاربر دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="invitee_reward_tokens" value="{{ old('invitee_reward_tokens', $settings->invitee_reward_tokens) }}"><b>توکن</b></div></label>
             <label class="referral-field"><span>پاداش دعوت‌کننده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="inviter_reward_tokens" value="{{ old('inviter_reward_tokens', $settings->inviter_reward_tokens) }}"><b>توکن</b></div></label>
+            <label class="referral-field"><span>تخفیف خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="referral_discount_percent" value="{{ old('referral_discount_percent', $settings->referral_discount_percent ?? 10) }}"><b>٪</b></div><small>روی مبلغ نهایی خرید اعمال می‌شود.</small></label>
+            <label class="referral-field"><span>کمیسیون خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="purchase_commission_percent" value="{{ old('purchase_commission_percent', $settings->purchase_commission_percent ?? 10) }}"><b>٪</b></div><small>به‌صورت دفتر مالی در انتظار تسویه ثبت می‌شود.</small></label>
+            <label class="referral-field"><span>حداقل مبلغ مشمول تخفیف</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="minimum_purchase_amount" value="{{ old('minimum_purchase_amount', $settings->minimum_purchase_amount) }}"><b>تومان</b></div><small>خالی یعنی همه خریدهای واجد شرایط.</small></label>
           </div>
         </div>
       </section>

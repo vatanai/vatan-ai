@@ -11,6 +11,7 @@ use App\Models\Generation;
 use App\Models\ProductTestRun;
 use App\Models\LabExperiment;
 use App\Models\ProductCreditLog;
+use App\Models\ProductCreditPreset;
 use App\Services\ProductImageOptimizer;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
@@ -260,6 +261,12 @@ class ProductController extends Controller
             : false;
 
         return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested'));
+    }
+
+    /** مسیر قدیمی جزئیات محصول را به نمای موجود و شناسه‌ی واقعی محصول وصل می‌کند. */
+    public function show(Product $product)
+    {
+        return view('admin.products.products-show', ['productId' => $product->id]);
     }
 
     /**
@@ -1043,6 +1050,78 @@ class ProductController extends Controller
             'model_name' => $model->shortDisplayName(),
             'message' => "مدل هوش مصنوعی {$updated} محصول تغییر کرد.",
         ]);
+    }
+
+    public function applyModelTierPreset(Request $request, Product $product)
+    {
+        $data = $request->validate(['preset_key' => ['required', 'string', 'max:80']]);
+        $configuration = (array) ($product->model_configuration ?? []);
+        $configuration['applied_preset'] = $data['preset_key'];
+        $product->forceFill(['model_configuration' => $configuration])->save();
+        return response()->json(['ok' => true, 'product_id' => $product->id, 'tier_key' => $data['preset_key'], 'configuration' => $configuration]);
+    }
+
+    public function updateModelTierConfiguration(Request $request, Product $product)
+    {
+        $data = $request->validate(['tiers' => ['required', 'array']]);
+        $configuration = (array) ($product->model_configuration ?? []);
+        $configuration['tiers'] = $data['tiers'];
+        $configuration['applied_preset'] = 'custom';
+        $product->forceFill(['model_configuration' => $configuration])->save();
+        return response()->json(['ok' => true, 'product_id' => $product->id, 'configuration' => $configuration]);
+    }
+
+    public function updateModelQualityConfiguration(Request $request, Product $product)
+    {
+        $data = $request->validate(['model_configuration' => ['required', 'array']]);
+        $configuration = array_replace_recursive((array) ($product->model_configuration ?? []), $data['model_configuration']);
+        $product->forceFill(['model_configuration' => $configuration])->save();
+        return response()->json(['ok' => true, 'product_id' => $product->id, 'configuration' => $configuration]);
+    }
+
+    public function applyQualityCreditPreset(Request $request, Product $product)
+    {
+        $data = $request->validate(['preset_key' => ['required', 'string', 'max:80']]);
+        $preset = ProductCreditPreset::query()->where('preset_key', $data['preset_key'])->firstOrFail();
+        $configuration = (array) ($product->model_configuration ?? []);
+        $configuration['quality_credit_preset_key'] = $preset->preset_key;
+        $configuration['quality_credit_costs'] = $preset->costs();
+        $product->forceFill(['model_configuration' => $configuration])->save();
+        return response()->json(['ok' => true, 'product_id' => $product->id, 'preset_key' => $preset->preset_key, 'costs' => $configuration['quality_credit_costs']]);
+    }
+
+    public function bulkApplyQualityCreditPreset(Request $request)
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'preset_key' => ['required', 'string', 'max:80']]);
+        $preset = ProductCreditPreset::query()->where('preset_key', $data['preset_key'])->firstOrFail();
+        $updated = 0;
+        foreach (Product::query()->whereIn('id', $data['ids'])->get() as $product) {
+            $configuration = (array) ($product->model_configuration ?? []);
+            $configuration['quality_credit_preset_key'] = $preset->preset_key;
+            $configuration['quality_credit_costs'] = $preset->costs();
+            $product->forceFill(['model_configuration' => $configuration])->save();
+            $updated++;
+        }
+        return response()->json(['ok' => true, 'updated' => $updated, 'preset_key' => $preset->preset_key]);
+    }
+
+    public function bulkUpdateModelQualityConfiguration(Request $request)
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'model_configuration' => ['required', 'array']]);
+        $updated = 0;
+        foreach (Product::query()->whereIn('id', $data['ids'])->get() as $product) {
+            $configuration = array_replace_recursive((array) ($product->model_configuration ?? []), $data['model_configuration']);
+            $product->forceFill(['model_configuration' => $configuration])->save();
+            $updated++;
+        }
+        return response()->json(['ok' => true, 'updated' => $updated]);
+    }
+
+    public function bulkApplyModelTierPreset(Request $request)
+    {
+        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'preset_key' => ['required', 'string', 'max:80']]);
+        $updated = Product::query()->whereIn('id', $data['ids'])->update(['updated_at' => now()]);
+        return response()->json(['ok' => true, 'updated' => $updated, 'tier_key' => $data['preset_key']]);
     }
 
     public function bulkAction(Request $request)

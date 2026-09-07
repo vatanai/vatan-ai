@@ -55,6 +55,11 @@ class AiModelController extends Controller
         return view('admin.ai-models.create-provider', ['providers' => ProviderStatus::PROVIDERS]);
     }
 
+    public function show(AiModel $aiModel)
+    {
+        return redirect()->route('admin.ai-models.edit', $aiModel);
+    }
+
     /**
      * تغییر وضعیت روشن/خاموش هر provider.
      *
@@ -90,6 +95,16 @@ class AiModelController extends Controller
 
         return $this->modelActionRedirect($request, $aiModel)
             ->with('success', 'وضعیت مدل با موفقیت تغییر کرد.');
+    }
+
+    public function toggleProductSelection(Request $request, AiModel $aiModel)
+    {
+        $aiModel->update(['featured_in_lab' => ! $aiModel->featured_in_lab]);
+
+        return $this->modelActionRedirect($request, $aiModel)
+            ->with('success', $aiModel->featured_in_lab
+                ? 'مدل در انتخاب‌های محصول نمایش داده می‌شود.'
+                : 'مدل از انتخاب‌های محصول حذف شد.');
     }
 
     public function updateProviderSettings(Request $request)

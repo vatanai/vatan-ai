@@ -25,7 +25,7 @@
       <label><span>وضعیت خرید</span><select class="input-pro" name="purchase"><option value="">همه کاربران</option><option value="completed" @selected(request('purchase') === 'completed')>خرید موفق داشته</option><option value="waiting" @selected(request('purchase') === 'waiting')>هنوز خرید نکرده</option></select></label>
     @elseif($tab === 'rewards')
       <label><span>وضعیت پاداش</span><select class="input-pro" name="status"><option value="">همه وضعیت‌ها</option><option value="paid" @selected(request('status') === 'paid')>پرداخت‌شده</option><option value="pending" @selected(request('status') === 'pending')>در انتظار بررسی</option><option value="rejected" @selected(request('status') === 'rejected')>ردشده</option></select></label>
-      <label><span>نوع پاداش</span><select class="input-pro" name="reward_type"><option value="">همه پاداش‌ها</option><option value="registration_gift" @selected(request('reward_type') === 'registration_gift')>هدیه ثبت‌نام</option><option value="invitee_reward" @selected(request('reward_type') === 'invitee_reward')>هدیه دعوت‌شده</option><option value="inviter_reward" @selected(request('reward_type') === 'inviter_reward')>پاداش دعوت‌کننده</option></select></label>
+      <label><span>نوع پاداش</span><select class="input-pro" name="reward_type"><option value="">همه پاداش‌ها</option><option value="registration_gift" @selected(request('reward_type') === 'registration_gift')>هدیه ثبت‌نام</option><option value="invitee_reward" @selected(request('reward_type') === 'invitee_reward')>هدیه دعوت‌شده</option><option value="inviter_reward" @selected(request('reward_type') === 'inviter_reward')>پاداش دعوت‌کننده</option><option value="purchase_commission" @selected(request('reward_type') === 'purchase_commission')>کمیسیون خرید</option></select></label>
     @else
       <label><span>نتیجه بازدید</span><select class="input-pro" name="conversion"><option value="">همه بازدیدها</option><option value="converted" @selected(request('conversion') === 'converted')>منجر به ثبت‌نام</option><option value="not_converted" @selected(request('conversion') === 'not_converted')>بدون ثبت‌نام</option></select></label>
     @endif
@@ -78,14 +78,14 @@
         <tbody>
         @forelse($records as $item)
           @php
-            $rewardLabel = ['registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده'][$item->reward_type] ?? $item->reward_type;
+            $rewardLabel = ['registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', 'purchase_commission' => 'کمیسیون خرید'][$item->reward_type] ?? $item->reward_type;
             $rewardStatusLabel = ['paid' => 'پرداخت‌شده', 'pending' => 'در انتظار بررسی', 'processing' => 'در حال پردازش', 'rejected' => 'ردشده'][$item->status] ?? $item->status;
             $rewardStatusClass = ['paid' => 'badge-success', 'pending' => 'badge-warning', 'processing' => 'badge-info', 'rejected' => 'badge-danger'][$item->status] ?? 'badge-neutral';
           @endphp
           <tr>
             <td data-label="کاربر"><strong>{{ trim(($item->user?->name ?? '').' '.($item->user?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->user?->phone }}</small></td>
             <td data-label="نوع پاداش">{{ $rewardLabel }}</td>
-            <td data-label="مقدار"><strong>{{ number_format($item->amount) }}</strong> توکن</td>
+            <td data-label="مقدار"><strong>{{ ($item->direction ?? 'credit') === 'debit' ? '−' : '+' }}{{ number_format($item->amount) }}</strong> {{ ($item->currency ?? 'token') === 'IRT' ? 'تومان' : 'توکن' }}</td>
             <td data-label="وضعیت"><span class="badge-pro {{ $rewardStatusClass }}">{{ $rewardStatusLabel }}</span></td>
             <td data-label="دلیل / یادداشت"><span class="referral-cell-note">{{ $item->reason ?: '—' }}</span></td>
             <td data-label="زمان">{{ $item->created_at?->format('Y/m/d H:i') }}</td>
@@ -94,7 +94,7 @@
                 <form class="referral-review-form" method="POST" action="{{ route('admin.referrals.rewards.review', $item) }}">
                   @csrf @method('PATCH')
                   <input class="input-pro" name="note" maxlength="255" placeholder="یادداشت اختیاری">
-                  <div><button class="referral-action is-approve" name="action" value="approve" type="submit" onclick="return confirm('این پاداش به موجودی کاربر افزوده شود؟')"><i class="fa-solid fa-check"></i> تأیید</button><button class="referral-action is-reject" name="action" value="reject" type="submit" onclick="return confirm('این پاداش رد شود؟')"><i class="fa-solid fa-xmark"></i> رد</button></div>
+                  <div><button class="referral-action is-approve" name="action" value="approve" type="submit" onclick="return confirm('{{ ($item->currency ?? 'token') === 'IRT' ? 'این کمیسیون به‌عنوان تسویه مالی ثبت شود؟' : 'این پاداش به موجودی کاربر افزوده شود؟' }}')"><i class="fa-solid fa-check"></i> تأیید</button><button class="referral-action is-reject" name="action" value="reject" type="submit" onclick="return confirm('این پاداش رد شود؟')"><i class="fa-solid fa-xmark"></i> رد</button></div>
                 </form>
               @else
                 <span class="referral-no-action">ثبت‌شده</span>

@@ -7,11 +7,13 @@ use App\Models\GeneratedImage;
 use App\Models\LabRun;
 use App\Models\Order;
 use App\Models\ServiceCreditTransaction;
+use App\Models\UserGalleryItem;
 use App\Support\Jalali;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -186,7 +188,8 @@ class ServiceCreditTransactionReport
                 'credits' => $order?->final_credits, 'occurred_at' => $providerRequest->completed_at ?: $providerRequest->submitted_at ?: $providerRequest->created_at,
                 'reference' => $providerRequest->external_request_id,
                 'note' => $order ? null : 'درخواست قدیمی provider بدون سفارش متصل؛ برای تکمیل جزئیات، از این پس order_id ثبت می‌شود.',
-                'error' => $providerRequest->error_message, 'output_urls' => (array) $providerRequest->output_urls,
+                'error' => $providerRequest->error_message, 'output_urls' => $this->providerOutputUrls($providerRequest->output_urls),
+                'input_media' => $order ? $this->inputMediaForOrder($order) : [],
                 'latency_seconds' => $providerRequest->submitted_at && $providerRequest->completed_at ? round($providerRequest->submitted_at->diffInMilliseconds($providerRequest->completed_at) / 1000, 1) : null,
                 'retries' => $order?->attempts, 'is_success' => $providerRequest->status === 'completed',
                 'detail_url' => $order ? route('admin.orders.show', $order) : null,
@@ -211,6 +214,7 @@ class ServiceCreditTransactionReport
                 'credits' => $order->final_credits, 'occurred_at' => $order->completed_at ?: $order->created_at,
                 'reference' => $order->order_number, 'note' => 'جزئیات هزینه provider برای این سفارش ثبت نشده است.',
                 'error' => $order->error_message, 'output_urls' => $this->orderOutputUrls($order),
+                'input_media' => $this->inputMediaForOrder($order),
                 'latency_seconds' => $order->processing_duration_ms ? round($order->processing_duration_ms / 1000, 1) : null,
                 'retries' => $order->attempts, 'is_success' => $order->processing_status === 'completed',
                 'detail_url' => route('admin.orders.show', $order),
@@ -251,16 +255,20 @@ class ServiceCreditTransactionReport
         $row['occurred_at'] = $date;
         $row['date_jalali'] = $date ? Jalali::formatNumeric($date) : '—';
         $row['date_gregorian'] = $date?->format('Y/m/d H:i') ?: '—';
-        $row['user_name'] = $row['user_name'] ?: '—';
-        $row['user_contact'] = $row['user_contact'] ?: '—';
+        $row['user_name'] = $this->displayText($row['user_name'] ?? null) ?: '—';
+        $row['user_contact'] = $this->displayText($row['user_contact'] ?? null) ?: '—';
         $row['actor_type'] = $row['actor_type'] ?? 'system';
-        $row['actor_label'] = $row['actor_label'] ?? 'سیستم';
-        $row['product_name'] = $row['product_name'] ?: '—';
-        $row['provider'] = $row['provider'] ?: '—';
-        $row['model'] = $row['model'] ?: '—';
-        $row['reference'] = $row['reference'] ?: '—';
-        $row['error'] = $row['error'] ?: null;
+        $row['actor_label'] = $this->displayText($row['actor_label'] ?? null) ?: 'سیستم';
+        $row['product_name'] = $this->displayText($row['product_name'] ?? null) ?: '—';
+        $row['provider'] = $this->displayText($row['provider'] ?? null) ?: '—';
+        $row['model'] = $this->displayText($row['model'] ?? null) ?: '—';
+        $row['reference'] = $this->displayText($row['reference'] ?? null) ?: '—';
+        $row['error'] = $this->errorText($row['error'] ?? null);
+        $row['note'] = $this->displayText($row['note'] ?? null);
         $row['output_urls'] = array_values(array_filter((array) $row['output_urls']));
+        $row['input_media'] = collect((array) ($row['input_media'] ?? []))
+            ->filter(fn ($media): bool => is_array($media) && filled($media['url'] ?? null))
+            ->take(6)->values()->all();
         $row['detail_url'] = $row['detail_url'] ?? null;
         return $row;
     }
@@ -290,6 +298,105 @@ class ServiceCreditTransactionReport
             if (!$path) return null;
             return filter_var($path, FILTER_VALIDATE_URL) ? $path : asset('storage/' . ltrim($path, '/'));
         })->filter()->values()->all();
+    }
+
+    /** ورودی‌های واقعی همان سفارش را برای نمایش در گزارش اعتبار سرویس‌ها آماده می‌کند. */
+    private function inputMediaForOrder(Order $order): array
+    {
+        if (Schema::hasTable('user_gallery_items')) {
+            $items = UserGalleryItem::query()
+                ->where('user_id', $order->user_id)
+                ->whereIn('source_type', ['upload', 'input_image', 'input_text', 'input_video'])
+                ->latest('id')
+                ->get()
+                ->filter(fn (UserGalleryItem $item): bool => (int) data_get($item->metadata, 'order_id') === (int) $order->id)
+                ->map(function (UserGalleryItem $item) use ($order): array {
+                    $mime = strtolower((string) $item->mime_type);
+                    $type = str_starts_with($mime, 'video/') ? 'video' : (str_starts_with($mime, 'text/') ? 'text' : 'image');
+                    return [
+                        'type' => $type,
+                        'url' => $type === 'image'
+                            ? route('admin.users.gallery.preview', [$order->user_id, $item->id])
+                            : route('admin.users.gallery.original', [$order->user_id, $item->id]),
+                        'label' => $type === 'video' ? 'ویدیوی ورودی' : ($type === 'text' ? 'متن ورودی' : 'عکس ورودی'),
+                        'text' => $type === 'text' ? data_get($item->metadata, 'text') : null,
+                    ];
+                })->values()->all();
+
+            if ($items !== []) {
+                return $items;
+            }
+        }
+
+        $payload = (array) $order->input_payload;
+        $paths = array_merge(
+            (array) data_get($payload, 'source_upload_paths', []),
+            [data_get($payload, 'source_upload_path')]
+        );
+        $media = collect($paths)
+            ->filter(fn ($path): bool => is_scalar($path) && filled($path))
+            ->map(fn ($path): array => [
+                'type' => 'image',
+                'url' => filter_var($path, FILTER_VALIDATE_URL) ? (string) $path : asset('storage/' . ltrim((string) $path, '/')),
+                'label' => 'عکس ورودی',
+                'text' => null,
+            ]);
+
+        if (filled(data_get($payload, 'source_video_url'))) {
+            $media->push([
+                'type' => 'video',
+                'url' => (string) data_get($payload, 'source_video_url'),
+                'label' => 'ویدیوی ورودی',
+                'text' => null,
+            ]);
+        }
+
+        return $media->take(6)->values()->all();
+    }
+
+    private function providerOutputUrls(mixed $payload): array
+    {
+        return collect((array) $payload)->map(function ($item) {
+            $path = is_string($item)
+                ? $item
+                : (is_array($item) ? ($item['url'] ?? $item['path'] ?? null) : null);
+
+            if (!is_string($path) || trim($path) === '') {
+                return null;
+            }
+
+            return filter_var($path, FILTER_VALIDATE_URL)
+                ? $path
+                : asset('storage/' . ltrim($path, '/'));
+        })->filter()->values()->all();
+    }
+
+    private function displayText(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
+    }
+
+    private function errorText(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            foreach (['message', 'error', 'detail'] as $key) {
+                if (isset($value[$key]) && is_scalar($value[$key])) {
+                    return (string) $value[$key];
+                }
+            }
+
+            return 'خطای سرویس در دریافت جزئیات';
+        }
+
+        return $this->displayText($value);
     }
 
     private function statusLabel(?string $status): string

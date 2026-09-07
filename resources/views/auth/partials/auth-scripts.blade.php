@@ -332,6 +332,7 @@ function completeProfile() {
   const emailInput = document.getElementById('email-input');
   const emailWrap = document.getElementById('email-wrap');
   const emailError = document.getElementById('email-error');
+  const referralCodeInput = document.getElementById('referral-code-input');
   const birthDayInput = document.getElementById('birth-day-input');
   const birthMonthInput = document.getElementById('birth-month-input');
   const birthYearInput = document.getElementById('birth-year-input');
@@ -406,7 +407,8 @@ function completeProfile() {
       birth_day: birthDay,
       birth_month: birthMonth,
       birth_year: birthYear,
-      phone: currentPhone
+      phone: currentPhone,
+      referral_code: referralCodeInput?.value.trim() || null
     })
   })
   .then(res => res.json())

@@ -159,7 +159,10 @@ class ReferralSettingController extends Controller
         $stats = [
             'visits' => ReferralVisit::query()->count(),
             'conversions' => ReferralConversion::query()->count(),
-            'paid_tokens' => (int) ReferralReward::query()->where('status', 'paid')->sum('amount'),
+            'paid_tokens' => (int) ReferralReward::query()->where(fn ($query) => $query->whereNull('currency')->orWhere('currency', 'token'))->where('status', 'paid')->sum('amount'),
+            'first_images' => ReferralConversion::query()->whereNotNull('first_image_at')->count(),
+            'paid_commission' => (int) ReferralReward::query()->whereIn('reward_type', ['purchase_commission', 'purchase_commission_reversal'])->where('currency', 'IRT')->where('status', 'paid')->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) as total")->value('total'),
+            'pending_commission' => (int) ReferralReward::query()->whereIn('reward_type', ['purchase_commission', 'purchase_commission_reversal'])->where('currency', 'IRT')->where('status', 'pending')->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) as total")->value('total'),
             'pending' => ReferralReward::query()->where('status', 'pending')->count()
                 + ReferralConversion::query()->where('status', 'under_review')->count(),
         ];
@@ -220,6 +223,9 @@ class ReferralSettingController extends Controller
             'invitee_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'inviter_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'reward_trigger' => ['required', Rule::in(['registration', 'first_purchase'])],
+            'referral_discount_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            'purchase_commission_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            'minimum_purchase_amount' => ['nullable', 'integer', 'min:0'],
             'attribution_window_days' => ['required', 'integer', 'min:1', 'max:365'],
             'daily_inviter_reward_limit' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'monthly_inviter_reward_limit' => ['nullable', 'integer', 'min:1', 'max:1000000'],
@@ -321,7 +327,7 @@ class ReferralSettingController extends Controller
     {
         $query = ReferralConversion::query()
             ->with(['inviter:id,name,last_name,phone,referral_code', 'invitee:id,name,last_name,phone', 'reviewer:id,name'])
-            ->withSum(['rewards as paid_tokens' => fn ($q) => $q->where('status', 'paid')], 'amount')
+            ->withSum(['rewards as paid_tokens' => fn ($q) => $q->where('status', 'paid')->where(fn ($currency) => $currency->whereNull('currency')->orWhere('currency', 'token'))], 'amount')
             ->withExists(['invitee as purchase_completed' => fn ($q) => $q->whereHas('planPurchases', fn ($p) => $p->where('status', 'completed'))]);
         $this->applyDatesAndSort($query, $request);
 
@@ -379,7 +385,7 @@ class ReferralSettingController extends Controller
 
     private function rewardTypeLabel(string $type): string
     {
-        return match ($type) { 'registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', default => $type };
+        return match ($type) { 'registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', 'purchase_commission' => 'کمیسیون خرید', default => $type };
     }
 
     private function rewardStatusLabel(string $status): string

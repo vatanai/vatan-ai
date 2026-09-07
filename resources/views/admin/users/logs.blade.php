@@ -1,4 +1,4 @@
-@extends('admin.layouts.admin')
+@extends('layouts.admin')
 
 @section('content')
 <div class="min-h-screen w-full bg-[#0a0a0c] text-white font-vazir p-6 md:p-12" dir="rtl">
@@ -160,8 +160,8 @@
                             </span>
 
                             <div class="bg-black/40 p-3 rounded-xl border border-white/[0.03] overflow-x-auto max-h-40 custom-scrollbar" dir="ltr">
-                                <pre class="text-[10px] text-indigo-300 font-mono leading-relaxed select-all">@if(json_decode($log->prompt)){{ json_encode(json_decode($log->prompt), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}@else{
-    "text_prompt": "{{ $log->prompt ?? 'N/A' }}",
+                                <pre class="text-[10px] text-indigo-300 font-mono leading-relaxed select-all">@if(filled($log->user_prompt) && json_decode($log->user_prompt)){{ json_encode(json_decode($log->user_prompt), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}@else{
+    "text_prompt": "{{ $log->user_prompt ?? 'N/A' }}",
     "warning": "دیتا در قالب فرمت قدیمی ذخیره شده است."
 }@endif</pre>
                             </div>

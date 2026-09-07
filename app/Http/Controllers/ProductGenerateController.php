@@ -952,7 +952,7 @@ class ProductGenerateController extends Controller
                 }
 
                 foreach ($generated as $g) {
-                    GeneratedImage::create([
+                    $generatedImage = GeneratedImage::create([
                         'user_id'     => $user->id,
                         'product_id'  => $product->id,
                         'order_id' => $order?->id,
@@ -962,6 +962,7 @@ class ProductGenerateController extends Controller
                         'cost'        => $g['cost'],
                         'size'        => $g['size'],
                     ]);
+                    app(\App\Services\ReferralProgramService::class)->handleSuccessfulGeneration($generatedImage);
                 }
 
             }

@@ -121,7 +121,7 @@
       </form>
 
       <div class="credit-table-wrap"><table class="credit-table credit-report-table"><thead><tr>
-        <th>زمان / منبع</th><th>اجراکننده</th><th>محصول</th><th>پرووایدر و مدل</th><th>وضعیت</th><th>خروجی</th><th>هزینه</th><th>جزئیات</th>
+        <th>زمان / منبع</th><th>اجراکننده</th><th>محصول</th><th>پرووایدر و مدل</th><th>وضعیت</th><th>عکس ورودی</th><th>خروجی</th><th>هزینه</th><th>جزئیات</th>
       </tr></thead><tbody>
         @forelse($transactions as $transaction)
           @php($statusClass = in_array($transaction['status_key'], ['completed','charge','refund'], true) ? 'success' : (in_array($transaction['status_key'], ['failed','usage'], true) ? 'danger' : 'warning'))
@@ -131,13 +131,30 @@
             <td><div class="credit-entity-cell"><strong>{{ $transaction['product_name'] }}</strong>@if($transaction['order_number'])<small>{{ $transaction['order_number'] }}</small>@elseif($transaction['reference'] !== '—')<small>{{ $transaction['reference'] }}</small>@endif</div></td>
             <td><div class="credit-entity-cell"><strong>{{ $transaction['provider'] }}</strong><small>{{ $transaction['model'] }}</small>@if($transaction['latency_seconds'] !== null)<small>{{ number_format($transaction['latency_seconds'], 1) }} ثانیه · {{ $transaction['retries'] ?? 0 }} تلاش</small>@endif</div></td>
             <td><span class="credit-status-badge {{ $statusClass }}"><span></span>{{ $transaction['status_label'] }}</span>@if($transaction['error'])<small class="credit-error-text" title="{{ $transaction['error'] }}"><i class="fa-solid fa-circle-exclamation"></i> خطا</small>@endif</td>
+            <td>
+              @if(!empty($transaction['input_media']))
+                <div class="credit-input-cell">
+                  @foreach($transaction['input_media'] as $input)
+                    @if(($input['type'] ?? 'image') === 'video')
+                      <a class="credit-input-thumb" href="{{ $input['url'] }}" target="_blank" rel="noopener" title="{{ $input['label'] }}"><video src="{{ $input['url'] }}" preload="metadata" muted playsinline></video><span class="credit-input-type"><i class="fa-solid fa-play"></i></span></a>
+                    @elseif(($input['type'] ?? 'image') === 'text')
+                      <a class="credit-input-text" href="{{ $input['url'] }}" target="_blank" rel="noopener" title="{{ $input['text'] ?: $input['label'] }}"><i class="fa-solid fa-align-right"></i><span>{{ $input['text'] ?: $input['label'] }}</span></a>
+                    @else
+                      <a class="credit-input-thumb" href="{{ $input['url'] }}" target="_blank" rel="noopener" title="{{ $input['label'] }}"><img src="{{ $input['url'] }}" alt="{{ $input['label'] }}" loading="lazy"></a>
+                    @endif
+                  @endforeach
+                </div>
+              @else
+                <span class="credit-muted">ثبت نشده</span>
+              @endif
+            </td>
             <td>@if(count($transaction['output_urls']))<div class="credit-output-cell"><a href="{{ $transaction['output_urls'][0] }}" target="_blank" rel="noopener"><img src="{{ $transaction['output_urls'][0] }}" alt="خروجی"></a><span>{{ count($transaction['output_urls']) }} فایل</span></div>@else<span class="credit-muted">بدون خروجی</span>@endif</td>
             <td><div class="credit-cost-cell">@if($transaction['amount_usd'] !== null)<strong>${{ number_format($transaction['amount_usd'], 6) }}</strong><small>{{ number_format($transaction['amount_toman']) }} تومان</small>@elseif($transaction['credits'] !== null)<strong>{{ number_format($transaction['credits']) }} اعتبار</strong><small>هزینه provider ثبت نشده</small>@else<span class="credit-muted">—</span>@endif</div></td>
             <td>@if($transaction['detail_url'])<a class="credit-detail-link" href="{{ $transaction['detail_url'] }}" target="_blank">مشاهده <i class="fa-solid fa-arrow-up-left-from-circle"></i></a>@else<span class="credit-muted">—</span>@endif</td>
           </tr>
-          @if($transaction['note'])<tr class="credit-report-note"><td colspan="8"><i class="fa-solid fa-circle-info"></i> {{ $transaction['note'] }}</td></tr>@endif
+          @if($transaction['note'])<tr class="credit-report-note"><td colspan="9"><i class="fa-solid fa-circle-info"></i> {{ $transaction['note'] }}</td></tr>@endif
         @empty
-          <tr><td colspan="8" class="credit-empty-state"><i class="fa-solid fa-receipt"></i><strong>رکوردی با این فیلتر پیدا نشد.</strong><span>با پاک‌کردن فیلترها یا اجرای یک تولید جدید، گزارش اینجا نمایش داده می‌شود.</span></td></tr>
+          <tr><td colspan="9" class="credit-empty-state"><i class="fa-solid fa-receipt"></i><strong>رکوردی با این فیلتر پیدا نشد.</strong><span>با پاک‌کردن فیلترها یا اجرای یک تولید جدید، گزارش اینجا نمایش داده می‌شود.</span></td></tr>
         @endforelse
       </tbody></table></div>
       @if($transactions->hasPages())<div class="credit-report-pagination">{{ $transactions->onEachSide(1)->links() }}</div>@endif

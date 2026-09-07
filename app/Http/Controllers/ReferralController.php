@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ReferralLink;
 use App\Models\User;
 use App\Services\ReferralProgramService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ReferralController extends Controller
 {
@@ -20,12 +22,63 @@ class ReferralController extends Controller
     public function productVisit(Request $request, string $code, Product $product, ReferralProgramService $referrals): RedirectResponse
     {
         abort_unless($product->status === 'active', 404);
-        $this->capture($request, $code, $referrals);
+        $this->capture($request, $code, $referrals, $product);
 
         return redirect()->route('app.product', $product->route_slug);
     }
 
-    private function capture(Request $request, string $code, ReferralProgramService $referrals): void
+    public function linkVisit(Request $request, ReferralLink $referralLink, ReferralProgramService $referrals): RedirectResponse
+    {
+        if (! $referralLink->isActive()) {
+            abort(404);
+        }
+
+        $referralLink->loadMissing(['inviter', 'product']);
+        $visit = $referrals->captureLinkVisit($request, $referralLink);
+        if (! $visit) {
+            abort(404);
+        }
+
+        return $referralLink->product
+            ? redirect()->route('app.product', $referralLink->product->route_slug)
+            : redirect()->to($referralLink->destination_url);
+    }
+
+    public function createLink(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+        ]);
+        $product = Product::query()->whereKey($data['product_id'])->where('status', 'active')->firstOrFail();
+
+        do {
+            $slug = Str::lower(Str::random(12));
+        } while (ReferralLink::query()->where('slug', $slug)->exists());
+
+        ReferralLink::query()->create([
+            'inviter_id' => $request->user()->id,
+            'product_id' => $product->id,
+            'slug' => $slug,
+            'destination_url' => route('app.product', $product->route_slug),
+            'status' => 'active',
+        ]);
+
+        return back()->with('success', 'لینک رفرال محصول ساخته شد.');
+    }
+
+    public function deactivateLink(Request $request, ReferralLink $referralLink): RedirectResponse
+    {
+        abort_unless((int) $referralLink->inviter_id === (int) $request->user()->id, 403);
+
+        $referralLink->update([
+            'status' => 'inactive',
+            'deactivated_at' => now(),
+        ]);
+
+        return back()->with('success', 'لینک رفرال غیرفعال شد و سوابق آن حفظ شد.');
+    }
+
+    private function capture(Request $request, string $code, ReferralProgramService $referrals, ?Product $product = null): void
     {
         $inviter = User::query()
             ->where('referral_code', strtoupper($code))
@@ -33,7 +86,7 @@ class ReferralController extends Controller
             ->first();
 
         if ($inviter) {
-            $referrals->captureVisit($inviter, $request);
+            $referrals->captureVisit($inviter, $request, null, $product);
         }
     }
 }

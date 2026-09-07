@@ -129,6 +129,11 @@ class CategoryController extends Controller
         return view('admin.categories.create');
     }
 
+    public function show(Category $category)
+    {
+        return redirect()->route('admin.categories.edit', $category);
+    }
+
     /**
      * ذخیره دسته‌بندی جدید در دیتابیس
      */

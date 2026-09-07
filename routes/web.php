@@ -55,10 +55,16 @@ Route::get('/', [PublicHomeController::class, 'index'])->middleware('site.page')
 Route::get('/site', fn() => redirect('/'));
 Route::get('/r/{code}', [ReferralController::class, 'visit'])
     ->where('code', '[A-Za-z0-9]{6,20}')
+    ->middleware('throttle:120,1')
     ->name('referral.visit');
 Route::get('/r/{code}/product/{product:route_slug}', [ReferralController::class, 'productVisit'])
     ->where('code', '[A-Za-z0-9]{6,20}')
+    ->middleware('throttle:120,1')
     ->name('referral.product');
+Route::get('/r/link/{referralLink:slug}', [ReferralController::class, 'linkVisit'])
+    ->where('referralLink', '[A-Za-z0-9]{8,32}')
+    ->middleware('throttle:120,1')
+    ->name('referral.link');
 
 // رهگیری رشد مستقل از سیستم دعوت: کلیک و بازشدن مقصد دو رویداد جدا هستند.
 Route::get('/g/{growthLink}', [GrowthTrackingController::class, 'redirect'])
@@ -149,6 +155,8 @@ Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::post('/profile/referral-links', [ReferralController::class, 'createLink'])->name('profile.referral-links.store');
+    Route::patch('/profile/referral-links/{referralLink}/deactivate', [ReferralController::class, 'deactivateLink'])->name('profile.referral-links.deactivate');
     Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
     Route::delete('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'destroyFaceProfile'])->name('profile.face-profiles.destroy');
     Route::get('/my-gallery/{item}/preview', [\App\Http\Controllers\UserGalleryController::class, 'preview'])->name('profile.gallery.preview');
@@ -505,8 +513,8 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('/video-studio/jobs/{job}/revise', [VideoStudioController::class, 'reviseJob'])->name('video-studio.jobs.revise');
     Route::post('/video-studio/jobs/bulk', [VideoStudioController::class, 'bulkAction'])->name('video-studio.jobs.bulk');
     Route::post('/video-studio/jobs/{job}/retry', [VideoStudioController::class, 'retryJob'])->name('video-studio.jobs.retry');
-    Route::get('/products/categories', fn() => view('admin.products-categories'))->name('products.categories');
-    Route::get('/products/pricing',    fn() => view('admin.products-pricing'))->name('products.pricing');
+    Route::get('/products/categories', fn() => view('admin.products.products-categories'))->name('products.categories');
+    Route::get('/products/pricing',    fn() => view('admin.products.products-pricing'))->name('products.pricing');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
