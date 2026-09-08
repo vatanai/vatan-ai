@@ -102,6 +102,25 @@ class TelegramProductDraftServiceTest extends TestCase
         $this->assertSame(1, TelegramProductDraft::query()->count());
     }
 
+    public function test_welcome_response_has_two_lines_and_inline_product_actions(): void
+    {
+        TelegramProductManager::query()->create(['telegram_id' => 991006, 'name' => 'مدیر تست']);
+
+        $response = app(TelegramProductDraftService::class)->handle([
+            'update_id' => 1008,
+            'event' => 'start',
+            'text' => '/start',
+            'telegram' => ['id' => 991006],
+            'chat_id' => '991006',
+        ]);
+
+        $this->assertSame("سلام عزیز، خوش اومدی به سیستم\nهوشمند ثبت محصول پلتفرم وطن", $response['text']);
+        $this->assertSame([
+            ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
+            ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
+        ], $response['reply_markup']['inline_keyboard'][0]);
+    }
+
     public function test_the_same_update_id_returns_the_cached_response_without_creating_a_second_draft(): void
     {
         TelegramProductManager::query()->create(['telegram_id' => 991003, 'name' => 'مدیر تست']);

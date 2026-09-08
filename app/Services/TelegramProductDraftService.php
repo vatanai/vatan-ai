@@ -140,12 +140,19 @@ class TelegramProductDraftService
     private function start(TelegramProductManager $manager, string $chatId, array $input): array
     {
         if (trim((string) ($input['text'] ?? '')) === '/start') {
-            return $this->response($chatId, 'سلام عزیز، خوش اومدی به سیستم هوشمند ثبت محصول پلتفرم وطن', [
-                ['text' => 'ثبت محصول جدید'],
+            return $this->response($chatId, "سلام عزیز، خوش اومدی به سیستم\nهوشمند ثبت محصول پلتفرم وطن", [
+                ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
+                ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
             ], [
                 'status' => 'welcome',
                 'welcome' => true,
                 'photo_url' => 'https://placehold.co/1200x630/0d1b2a/ffffff.png?text=Vatan',
+                'reply_markup' => [
+                    'inline_keyboard' => [[
+                        ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
+                        ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
+                    ]],
+                ],
             ]);
         }
 
@@ -259,6 +266,13 @@ class TelegramProductDraftService
         }
         if (($action[1] ?? '') === 'education') {
             return $this->education($chatId);
+        }
+        if (($action[1] ?? '') === 'edit' && blank($action[2] ?? '')) {
+            if (! $manager->can('edit_product')) {
+                return $this->response($chatId, 'دسترسی ویرایش محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
+            }
+
+            return $this->beginProductEdit($manager, $draft, $chatId, $input);
         }
         if (! $draft) {
             return $this->response($chatId, 'فرآیند فعالی وجود ندارد. ابتدا ثبت محصول جدید را شروع کنید.');
