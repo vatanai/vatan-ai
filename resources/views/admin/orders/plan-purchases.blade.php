@@ -43,10 +43,13 @@
       @else
         <div class="order-attention-list">
           @foreach($gatewayAttempts as $attempt)
-            @php($attemptClass = in_array($attempt->status, [\App\Models\PlanPurchase::EXPIRED, \App\Models\PlanPurchase::FAILED], true) ? 'danger' : 'warning')
+            @php
+              $attemptClass = in_array($attempt->status, [\App\Models\PlanPurchase::EXPIRED, \App\Models\PlanPurchase::FAILED], true) ? 'danger' : 'warning';
+              $attemptFollowedUp = $attempt->followUps->whereNotNull('completed_at')->isNotEmpty();
+            @endphp
             <a class="order-attention-item" href="{{ route('admin.orders.plan-purchases.show', $attempt) }}">
               <span class="order-attention-icon {{ $attemptClass }}"><i class="fa-solid {{ $attempt->status === \App\Models\PlanPurchase::EXPIRED ? 'fa-hourglass-end' : 'fa-arrow-up-right-from-square' }}"></i></span>
-              <span class="order-attention-main"><strong>{{ trim(($attempt->user?->name ?: 'کاربر') . ' ' . ($attempt->user?->last_name ?: '')) }}</strong><small>{{ $attempt->plan_name }} · {{ number_format((int) $attempt->paid_amount) }} تومان · {{ \App\Models\PlanPurchase::statusLabel($attempt->status) }}</small><em class="order-follow-up-mini {{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'is-done' : '' }}"><i class="fa-solid {{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'fa-check' : 'fa-circle-exclamation' }}"></i>{{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'پیگیری ثبت شده' : 'بدون پیگیری' }}</em></span>
+              <span class="order-attention-main"><strong>{{ trim(($attempt->user?->name ?: 'کاربر') . ' ' . ($attempt->user?->last_name ?: '')) }}</strong><small>{{ $attempt->plan_name }} · {{ number_format((int) $attempt->paid_amount) }} تومان · {{ \App\Models\PlanPurchase::statusLabel($attempt->status) }}</small><em class="order-follow-up-mini {{ $attemptFollowedUp ? 'is-done' : '' }}"><i class="fa-solid {{ $attemptFollowedUp ? 'fa-check' : 'fa-circle-exclamation' }}"></i>{{ $attemptFollowedUp ? 'پیگیری ثبت شده' : 'بدون پیگیری' }}</em></span>
               <span class="order-attention-time">{{ \App\Support\Jalali::formatNumeric($attempt->updated_at ?: $attempt->created_at) }} <i class="fa-solid fa-angle-left"></i></span>
             </a>
           @endforeach
