@@ -66,7 +66,7 @@
           <div class="product-grid">
             @forelse($products as $product)
               <a class="product-card" href="{{ route('app.product', $product->route_slug) }}">
-                <div class="product-image"><img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" loading="lazy">
+                <div class="product-image"><img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" loading="lazy" decoding="async">
                   <span class="product-type">{{ match($product->media_type) { 'video' => 'ویدیو', 'text' => 'متن', default => 'تصویر' } }}</span>
                 </div>
                 <div class="product-info"><h2>{{ $product->name_fa }}</h2><p>{{ \Illuminate\Support\Str::limit($product->description_fa, 78) }}</p>

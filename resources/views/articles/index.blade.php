@@ -5,7 +5,7 @@
   @if(request()->filled('q'))<meta name="robots" content="noindex,follow">@endif
   <link rel="alternate" type="application/rss+xml" title="خوراک مقالات وطن" href="{{ route('articles.feed') }}">
 @endpush
-@push('styles')<link rel="stylesheet" href="{{ asset('assets/site/css/articles.css') }}?v={{ filemtime(public_path('assets/site/css/articles.css')) }}">@endpush
+@push('styles')<link rel="stylesheet" href="{{ \App\Support\AppAsset::url('assets/site/css/articles.css') }}">@endpush
 
 @section('content')
 <div class="articles-shell">

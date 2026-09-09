@@ -28,8 +28,7 @@ class ArticleController extends Controller
         $sitePage = $this->pages->forRoute($request->route()?->getName());
         $query = Article::query()
             ->published()
-            ->with(['category', 'author', 'tags'])
-            ->withCount(['approvedComments as comments_count']);
+            ->with('category');
 
         if ($search = trim((string) $request->query('q'))) {
             $query->where(function ($articles) use ($search) {
@@ -42,7 +41,7 @@ class ArticleController extends Controller
 
         $perPage = min(24, max(6, (int) ($sitePage?->content('items_per_page', 12) ?? 12)));
         $articles = $query->orderByDesc('is_featured')->latest('published_at')->paginate($perPage)->withQueryString();
-        $featuredArticles = Article::published()->where('is_featured', true)->with(['category', 'author'])->latest('published_at')->limit(3)->get();
+        $featuredArticles = Article::published()->where('is_featured', true)->with('category')->latest('published_at')->limit(3)->get();
         $categories = ArticleCategory::query()->where('is_active', true)
             ->withCount(['articles' => fn ($articles) => $articles->published()])
             ->orderBy('sort_order')->get();
@@ -57,8 +56,7 @@ class ArticleController extends Controller
     public function category(Request $request, string $slug): View
     {
         $category = ArticleCategory::query()->where('slug', $slug)->where('is_active', true)->firstOrFail();
-        $articles = $category->articles()->published()->with(['author', 'tags'])
-            ->withCount(['approvedComments as comments_count'])->paginate(12)->withQueryString();
+        $articles = $category->articles()->published()->with('category')->paginate(12)->withQueryString();
         $categories = ArticleCategory::query()->where('is_active', true)->withCount([
             'articles' => fn ($articles) => $articles->published(),
         ])->orderBy('sort_order')->get();

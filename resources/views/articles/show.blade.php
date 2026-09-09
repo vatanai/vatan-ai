@@ -9,7 +9,7 @@
   <script type="application/ld+json">{!! json_encode(['@context'=>'https://schema.org','@type'=>$article->content_type === 'news' ? 'NewsArticle' : 'BlogPosting','mainEntityOfPage'=>$article->canonicalUrl(),'headline'=>$article->title,'description'=>$article->excerpt,'image'=>array_values(array_filter([$article->imageUrl($article->og_image ?: $article->featured_image)])),'datePublished'=>$article->published_at?->toIso8601String(),'dateModified'=>$article->updated_at?->toIso8601String(),'author'=>['@type'=>'Organization','name'=>$article->author->name,'url'=>$article->author->publicUrl()],'publisher'=>['@type'=>'Organization','name'=>'وطن','url'=>route('site.home.root')]], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) !!}</script>
   <script type="application/ld+json">{!! json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>[['@type'=>'ListItem','position'=>1,'name'=>'مقالات','item'=>route('articles.index')],['@type'=>'ListItem','position'=>2,'name'=>$article->category->name,'item'=>$article->category->publicUrl()],['@type'=>'ListItem','position'=>3,'name'=>$article->title,'item'=>$article->canonicalUrl()]]], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) !!}</script>
 @endpush
-@push('styles')<link rel="stylesheet" href="{{ asset('assets/site/css/articles.css') }}?v={{ filemtime(public_path('assets/site/css/articles.css')) }}">@endpush
+@push('styles')<link rel="stylesheet" href="{{ \App\Support\AppAsset::url('assets/site/css/articles.css') }}">@endpush
 
 @section('content')
 <article class="article-detail" data-article-id="{{ $article->id }}" data-event-url="{{ route('articles.events', $article) }}">
@@ -26,4 +26,4 @@
   </div>
 </article>
 @endsection
-@push('scripts')<script src="{{ asset('assets/site/js/articles.js') }}?v={{ filemtime(public_path('assets/site/js/articles.js')) }}" defer></script>@endpush
+@push('scripts')<script src="{{ \App\Support\AppAsset::url('assets/site/js/articles.js') }}" defer></script>@endpush

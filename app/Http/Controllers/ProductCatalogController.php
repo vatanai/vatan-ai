@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductCatalogController extends Controller
 {
@@ -39,6 +40,7 @@ class ProductCatalogController extends Controller
             ->all();
 
         $query = Product::query()
+            ->select(['id', 'name_fa', 'description_fa', 'media_type', 'credit_cost', 'slug', 'product_code', 'cover', 'sample_outputs', 'thumbnail'])
             ->with('categories:id,name,name_fa,slug,path')
             ->where('status', 'active');
 
@@ -119,14 +121,21 @@ class ProductCatalogController extends Controller
 
         $products = $query->paginate(18)->withQueryString();
         $categories = Category::active()->orderBy('sort_order')->orderBy('name_fa')->get();
-        $categories->each(function (Category $category) {
-            $category->setAttribute('products_count', Product::query()
-                ->where('status', 'active')
-                ->where(function (Builder $query) use ($category) {
-                    $query->where('category_id', $category->id)
-                        ->orWhereHas('categories', fn (Builder $relation) => $relation->where('categories.id', $category->id));
-                })->count());
-        });
+        $directProducts = DB::table('products')
+            ->where('status', 'active')
+            ->whereNotNull('category_id')
+            ->selectRaw('category_id, id as product_id');
+        $linkedProducts = DB::table('category_product as cp')
+            ->join('products as p', 'p.id', '=', 'cp.product_id')
+            ->where('p.status', 'active')
+            ->selectRaw('cp.category_id, p.id as product_id');
+        $categoryCounts = DB::query()
+            ->fromSub($directProducts->unionAll($linkedProducts), 'category_products')
+            ->select('category_id')
+            ->selectRaw('COUNT(DISTINCT product_id) as products_count')
+            ->groupBy('category_id')
+            ->pluck('products_count', 'category_id');
+        $categories->each(fn (Category $category) => $category->setAttribute('products_count', (int) ($categoryCounts[$category->id] ?? 0)));
         $categories = $categories->filter(fn (Category $category) => (int) $category->products_count > 0)->values();
 
         return view('app.products.index', compact('products', 'categories', 'selectedCategories', 'pageCategory'));
