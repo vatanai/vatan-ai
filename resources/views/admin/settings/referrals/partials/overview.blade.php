@@ -25,14 +25,60 @@
   </article>
 </section>
 
+<script>
+  window.copyReferralUrl = async function (url) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(url);
+      else {
+        const input = document.createElement('textarea'); input.value = url; input.setAttribute('readonly', ''); input.style.position = 'fixed'; input.style.opacity = '0'; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
+      }
+      if (typeof window.showAdminToast === 'function') window.showAdminToast('لینک کامل کپی شد.', 'success');
+    } catch (error) { if (typeof window.showAdminToast === 'function') window.showAdminToast('کپی لینک انجام نشد.', 'error'); }
+  };
+</script>
+
+<section class="content-card referral-hub-card">
+  <div class="referral-card-head">
+    <span class="referral-card-icon is-primary"><i class="fa-solid fa-table-cells-large"></i></span>
+    <div><h2>مدیریت برنامه</h2><p>دسترسی سریع به تنظیمات، دعوت‌ها، بازدیدها، پاداش‌ها و بررسی‌های همکاری در فروش.</p></div>
+  </div>
+  <div class="referral-hub-grid">
+    @foreach([
+      ['route' => 'admin.referrals.settings', 'icon' => 'fa-sliders', 'title' => 'تنظیمات برنامه', 'text' => 'مقدار هدیه، تخفیف خرید، کمیسیون و محتوای پروفایل'],
+      ['route' => 'admin.referrals.conversions', 'icon' => 'fa-user-group', 'title' => 'فهرست دعوت‌ها', 'text' => 'وضعیت ثبت‌نام، خرید و دعوت‌کننده'],
+      ['route' => 'admin.referrals.rewards', 'icon' => 'fa-coins', 'title' => 'گزارش پاداش‌ها', 'text' => 'ریز توکن‌های پرداخت‌شده و معلق'],
+      ['route' => 'admin.referrals.visits', 'icon' => 'fa-arrow-pointer', 'title' => 'بازدید لینک‌ها', 'text' => 'ورودی لینک‌ها و نتیجه تبدیل'],
+      ['route' => 'admin.referrals.reviews', 'icon' => 'fa-shield-halved', 'title' => 'صف بررسی', 'text' => 'تصمیم‌گیری روی موارد مشکوک و تکراری'],
+    ] as $item)
+      <a href="{{ route($item['route']) }}" class="referral-hub-link">
+        <span><i class="fa-solid {{ $item['icon'] }}"></i></span>
+        <div><strong>{{ $item['title'] }}</strong><small>{{ $item['text'] }}</small></div>
+        <i class="fa-solid fa-chevron-left"></i>
+      </a>
+    @endforeach
+  </div>
+</section>
+
 <section class="content-card referral-inviter-card">
   <div class="referral-card-head">
     <span class="referral-card-icon is-info"><i class="fa-solid fa-users-viewfinder"></i></span>
     <div>
       <h2>عملکرد کاربران رفرال</h2>
-      <p>تعداد لینک‌های محصول، کلیک، ثبت‌نام و خرید هر دعوت‌کننده را یکجا ببینید.</p>
+      <p>فقط کاربرانی که لینک، کلیک، ثبت‌نام یا پاداش رفرالی دارند در این فهرست نمایش داده می‌شوند.</p>
     </div>
   </div>
+
+  <form class="referral-inviter-search" method="GET" action="{{ route('admin.referrals.overview') }}">
+    <label class="referral-filter-search" for="referral-inviter-search">
+      <span>جست‌وجوی کاربر دارای عملکرد رفرالی</span>
+      <div><i class="fa-solid fa-magnifying-glass"></i><input class="input-pro" id="referral-inviter-search" name="inviter_search" value="{{ $inviterSearch }}" placeholder="نام، شماره، کد دعوت یا شناسه کاربر" autocomplete="off"></div>
+    </label>
+    <div class="referral-inviter-search-actions">
+      <button class="referral-action is-approve" type="submit"><i class="fa-solid fa-magnifying-glass"></i> جست‌وجو</button>
+      @if($inviterSearch !== '')<a class="referral-action is-neutral" href="{{ route('admin.referrals.overview') }}"><i class="fa-solid fa-rotate-left"></i> پاک‌کردن</a>@endif
+      <span class="referral-search-result">{{ number_format($inviterCards->count()) }} کاربر دارای عملکرد</span>
+    </div>
+  </form>
 
   <div class="referral-inviter-grid">
     @forelse($inviterCards as $inviter)
@@ -75,7 +121,7 @@
         <div class="referral-card-section">
           <div class="referral-card-section-head">
             <strong><i class="fa-solid fa-link"></i> لینک‌های محصول</strong>
-            <button type="button" class="referral-action is-approve" onclick="window.openReferralLinkDialog({{ $inviter->id }}, @js($inviterName))"><i class="fa-solid fa-plus"></i> ساخت لینک</button>
+            <a class="referral-action is-approve" href="{{ route('admin.referrals.users.links.create', $inviter) }}"><i class="fa-solid fa-plus"></i> ساخت لینک دعوت برای کاربر</a>
           </div>
           @forelse($inviter->referralLinks as $productLink)
             @php
@@ -122,6 +168,9 @@
         </div>
 
         <div class="referral-inviter-actions">
+          <a class="referral-action is-primary" href="{{ route('admin.users.index', ['show_user' => $inviter->id]) }}"><i class="fa-solid fa-user"></i> کاربران</a>
+          <a class="referral-action is-info" href="{{ route('admin.finance.cases.index', ['user_id' => $inviter->id]) }}"><i class="fa-solid fa-chart-pie"></i> مالی</a>
+          <a class="referral-action is-warning" href="{{ route('admin.orders.plan-purchases', ['q' => $inviter->phone ?: $inviterName]) }}"><i class="fa-solid fa-receipt"></i> سفارشات</a>
           <a class="referral-action is-approve" href="{{ route('admin.referrals.visits', ['search' => $inviter->phone ?: $inviter->referral_code]) }}">
             <i class="fa-solid fa-arrow-pointer"></i> بازدیدها
           </a>
@@ -137,62 +186,5 @@
         <span>با اولین کلیک یا ثبت‌نام از لینک دعوت، کارت کاربر اینجا نمایش داده می‌شود.</span>
       </div>
     @endforelse
-  </div>
-</section>
-
-<dialog id="admin-referral-link-dialog" class="referral-link-dialog">
-  <form method="POST" id="admin-referral-link-form" action="">
-    @csrf
-    <button type="button" class="referral-dialog-close" onclick="window.closeReferralLinkDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
-    <span class="referral-card-icon is-primary"><i class="fa-solid fa-link"></i></span>
-    <h2>ساخت لینک دعوت محصولی</h2>
-    <p>برای <strong id="admin-referral-link-user"></strong> یک لینک فعال بسازید.</p>
-    <label class="referral-field"><span>محصول مقصد</span><select name="product_id" class="input-pro" required><option value="">انتخاب محصول</option>@foreach($referralProducts as $referralProduct)<option value="{{ $referralProduct->id }}">{{ $referralProduct->name_fa ?: $referralProduct->name_en }}</option>@endforeach</select></label>
-    <div class="referral-dialog-actions"><button type="button" class="referral-action is-neutral" onclick="window.closeReferralLinkDialog()">انصراف</button><button type="submit" class="referral-action is-approve"><i class="fa-solid fa-plus"></i> ساخت لینک</button></div>
-  </form>
-</dialog>
-
-<script>
-  window.copyReferralUrl = async function (url) {
-    try {
-      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(url);
-      else {
-        const input = document.createElement('textarea'); input.value = url; input.setAttribute('readonly', ''); input.style.position = 'fixed'; input.style.opacity = '0'; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove();
-      }
-      if (typeof window.showAdminToast === 'function') window.showAdminToast('لینک کامل کپی شد.', 'success');
-    } catch (error) { if (typeof window.showAdminToast === 'function') window.showAdminToast('کپی لینک انجام نشد.', 'error'); }
-  };
-  window.openReferralLinkDialog = function (userId, userName) {
-    const dialog = document.getElementById('admin-referral-link-dialog');
-    const form = document.getElementById('admin-referral-link-form');
-    const name = document.getElementById('admin-referral-link-user');
-    if (!dialog || !form || !name) return;
-    form.action = '{{ url('/admin/referrals/users') }}/' + encodeURIComponent(userId) + '/links';
-    name.textContent = userName;
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', 'open');
-  };
-  window.closeReferralLinkDialog = function () { const dialog = document.getElementById('admin-referral-link-dialog'); if (dialog?.open) dialog.close(); else dialog?.removeAttribute('open'); };
-</script>
-
-<section class="content-card referral-hub-card">
-  <div class="referral-card-head">
-    <span class="referral-card-icon is-primary"><i class="fa-solid fa-table-cells-large"></i></span>
-    <div><h2>مدیریت برنامه</h2><p>هر بخش صفحه و ابزارهای مخصوص خودش را دارد.</p></div>
-  </div>
-  <div class="referral-hub-grid">
-    @foreach([
-      ['route' => 'admin.referrals.settings', 'icon' => 'fa-sliders', 'title' => 'تنظیمات برنامه', 'text' => 'مقدار هدیه، تخفیف خرید، کمیسیون و محتوای پروفایل'],
-      ['route' => 'admin.referrals.conversions', 'icon' => 'fa-user-group', 'title' => 'فهرست دعوت‌ها', 'text' => 'وضعیت ثبت‌نام، خرید و دعوت‌کننده'],
-      ['route' => 'admin.referrals.rewards', 'icon' => 'fa-coins', 'title' => 'گزارش پاداش‌ها', 'text' => 'ریز توکن‌های پرداخت‌شده و معلق'],
-      ['route' => 'admin.referrals.visits', 'icon' => 'fa-arrow-pointer', 'title' => 'بازدید لینک‌ها', 'text' => 'ورودی لینک‌ها و نتیجه تبدیل'],
-      ['route' => 'admin.referrals.reviews', 'icon' => 'fa-shield-halved', 'title' => 'صف بررسی', 'text' => 'تصمیم‌گیری روی موارد مشکوک و تکراری'],
-    ] as $item)
-      <a href="{{ route($item['route']) }}" class="referral-hub-link">
-        <span><i class="fa-solid {{ $item['icon'] }}"></i></span>
-        <div><strong>{{ $item['title'] }}</strong><small>{{ $item['text'] }}</small></div>
-        <i class="fa-solid fa-chevron-left"></i>
-      </a>
-    @endforeach
   </div>
 </section>

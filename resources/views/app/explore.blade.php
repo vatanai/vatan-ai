@@ -41,7 +41,7 @@
     @forelse ($trendsTiles as $tile)
       <a href="{{ $tile['link'] ?? '#' }}" class="trends-card" @if(!$tile['video']) style="background-image:url('{{ $tile['src'] }}');" @endif>
         @if($tile['video'])
-          <video class="trends-card-media" src="{{ $tile['src'] }}" autoplay muted loop playsinline preload="metadata"></video>
+          <video class="trends-card-media" src="{{ $tile['src'] }}" autoplay muted loop playsinline preload="none"></video>
         @endif
         <div class="trends-card-overlay"></div>
         @if($loop->index < 3)

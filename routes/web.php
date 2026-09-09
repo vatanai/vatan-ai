@@ -661,6 +661,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
         Route::get('/visits', [ReferralSettingController::class, 'visits'])->name('visits');
         Route::get('/reviews', [ReferralSettingController::class, 'reviews'])->name('reviews');
         Route::get('/export', [ReferralSettingController::class, 'export'])->name('export');
+        Route::get('/users/{user}/links/create', [ReferralSettingController::class, 'createUserLinkPage'])->name('users.links.create');
         Route::post('/users/{user}/links', [ReferralSettingController::class, 'createUserLink'])->name('users.links.store');
         Route::patch('/links/{referralLink}/toggle', [ReferralSettingController::class, 'toggleUserLink'])->name('links.toggle');
         Route::patch('/conversions/{conversion}/review', [ReferralSettingController::class, 'reviewConversion'])->name('conversions.review');

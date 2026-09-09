@@ -16,7 +16,6 @@
   const cost = root.querySelector('[data-studio-cost]');
   const videoContent = root.querySelector('[data-studio-video-content]');
   const imageContent = root.querySelector('[data-studio-image-content]');
-  const stageVideo = root.querySelector('[data-studio-stage-video]');
   const progress = root.querySelector('[data-studio-progress]');
   const progressTitle = root.querySelector('[data-studio-progress-title]');
   const progressText = root.querySelector('[data-studio-progress-text]');
@@ -130,7 +129,7 @@
       if (key === 'duration') return Array.from({length: 15}, (_, index) => index + 1).map((value) => ({value: String(value), label: `${formatNumber(value)} ثانیه`}));
       if (key === 'ratio') return (video.aspect_ratios || [])
         .filter((value) => String(value) !== '4:3')
-        .map((value) => ({value, label: formatRatio(value)}));
+        .map((value) => ({value, label: formatRatio(value), meta: ratioNames[String(value)] || ''}));
       if (key === 'quality') return (video.resolutions || []).map((value) => ({value, label: qualityLabel(value), meta: value === video.default_resolution ? 'پیشنهادی' : ''}));
       if (key === 'motion') return [{value: '', label: 'بر اساس پرامپت', meta: 'تنظیم خودکار'}].concat((video.motion_presets || []).map((item) => ({value: item.key, label: item.label, meta: item.description})));
     } else {
@@ -140,7 +139,7 @@
           const supported = (selectedModel?.supported_aspect_ratios || []).map((item) => String(item).toLowerCase());
           return supported.length === 0 || supported.includes(String(value).toLowerCase());
         });
-        return ratios.map((value) => ({value, label: formatRatio(value)}));
+        return ratios.map((value) => ({value, label: formatRatio(value), meta: ratioNames[String(value)] || ''}));
       }
       if (key === 'quality') {
         const qualities = (activeConfig.output_resolutions || []).filter((value) => {
@@ -158,10 +157,13 @@
   }
 
   function defaultValueFor(key, options) {
-    if (key === 'model' || key === 'ratio') return '';
+    if (key === 'model') return '';
+    if (key === 'ratio') {
+      const preferred = '16:9';
+      return options.some((option) => String(option.value) === preferred) ? preferred : (options[0]?.value ?? '');
+    }
     if (key === 'count') return '1';
     if (key === 'duration') return String(activeConfig.video?.default_duration ?? options[0]?.value ?? '');
-    if (key === 'ratio') return currentMode === 'video' ? activeConfig.video?.default_aspect_ratio : activeConfig.default_output_aspect_ratio;
     if (key === 'quality') return currentMode === 'video' ? activeConfig.video?.default_resolution : activeConfig.default_output_resolution;
     if (key === 'motion') return '';
     if (key === 'style') return fieldOption('style', options[0]?.value ?? '');
@@ -446,7 +448,6 @@
     selectedValues = {};
     renderDynamicFields();
     setupSelects(); updateCost();
-    if (stageVideo) { if (currentMode === 'video') stageVideo.play().catch(() => {}); else stageVideo.pause(); }
     if (outputVideo) outputVideo.hidden = currentMode !== 'video'; if (outputImage) outputImage.hidden = currentMode === 'video';
     if (videoPlay) videoPlay.hidden = currentMode !== 'video';
   }

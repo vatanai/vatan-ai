@@ -37,6 +37,24 @@ class ReferralSettingController extends Controller
         return $this->renderPage($request, 'overview');
     }
 
+    public function createUserLinkPage(User $user): View
+    {
+        abort_unless(request()->user('admin')?->isLeader(), 403);
+
+        $products = Product::query()
+            ->where('status', 'active')
+            ->orderBy('name_fa')
+            ->get(['id', 'name_fa', 'name_en', 'slug', 'product_code']);
+        $user->load(['referralLinks' => function ($query): void {
+            $query
+                ->with('product:id,name_fa,name_en,slug,product_code')
+                ->withCount(['visits', 'conversions'])
+                ->latest('id');
+        }]);
+
+        return view('admin.settings.referrals.links.create', compact('user', 'products'));
+    }
+
     public function settings(Request $request): View
     {
         return $this->renderPage($request, 'settings');
@@ -173,6 +191,7 @@ class ReferralSettingController extends Controller
     private function renderPage(Request $request, string $page, ?string $tab = null): View
     {
         $settings = ReferralSetting::current();
+        $inviterSearch = trim(Numeral::toAscii((string) $request->input('inviter_search', '')));
         $stats = [
             'visits' => ReferralVisit::query()->count(),
             'conversions' => ReferralConversion::query()->count(),
@@ -202,14 +221,8 @@ class ReferralSettingController extends Controller
         $reviewConversions = null;
         $reviewRewards = null;
         $inviterCards = collect();
-        $referralProducts = collect();
 
         if ($page === 'overview') {
-            $referralProducts = Product::query()
-                ->where('status', 'active')
-                ->orderBy('name_fa')
-                ->get(['id', 'name_fa', 'name_en', 'slug', 'product_code']);
-
             $inviterCards = User::query()
                 ->select(['users.id', 'users.name', 'users.last_name', 'users.phone', 'users.referral_code', 'users.avatar'])
                 ->with([
@@ -265,6 +278,7 @@ class ReferralSettingController extends Controller
                         ->selectRaw('COALESCE(SUM(amount), 0)')
                         ->whereColumn('referral_rewards.user_id', 'users.id')
                         ->where('status', 'paid')
+                        ->whereIn('reward_type', ['invitee_reward', 'inviter_reward', 'purchase_commission', 'purchase_commission_reversal'])
                         ->where(fn ($query) => $query->whereNull('currency')->orWhere('currency', 'token')),
                     'referral_paid_tokens'
                 )
@@ -293,7 +307,21 @@ class ReferralSettingController extends Controller
                         ->orWhereExists(fn ($subquery) => $subquery
                             ->selectRaw('1')
                             ->from('referral_rewards')
-                            ->whereColumn('referral_rewards.user_id', 'users.id'));
+                            ->whereColumn('referral_rewards.user_id', 'users.id')
+                            ->whereIn('referral_rewards.reward_type', ['invitee_reward', 'inviter_reward', 'purchase_commission', 'purchase_commission_reversal']));
+                })
+                ->when($inviterSearch !== '', function ($query) use ($inviterSearch): void {
+                    $query->where(function ($searchQuery) use ($inviterSearch): void {
+                        $searchQuery
+                            ->where('users.name', 'like', "%{$inviterSearch}%")
+                            ->orWhere('users.last_name', 'like', "%{$inviterSearch}%")
+                            ->orWhere('users.phone', 'like', "%{$inviterSearch}%")
+                            ->orWhere('users.referral_code', 'like', "%{$inviterSearch}%");
+
+                        if (ctype_digit($inviterSearch)) {
+                            $searchQuery->orWhere('users.id', (int) $inviterSearch);
+                        }
+                    });
                 })
                 ->orderByDesc('referral_clicks_count')
                 ->orderByDesc('referral_registrations_count')
@@ -320,7 +348,7 @@ class ReferralSettingController extends Controller
 
         return view('admin.settings.referrals', compact(
             'settings', 'stats', 'page', 'pageMeta', 'tab', 'tabCounts',
-            'records', 'reviewConversions', 'reviewRewards', 'inviterCards', 'referralProducts'
+            'records', 'reviewConversions', 'reviewRewards', 'inviterCards', 'inviterSearch'
         ));
     }
 
@@ -341,7 +369,8 @@ class ReferralSettingController extends Controller
             ->first();
 
         if ($existing) {
-            return back()->with('success', 'برای این کاربر و محصول، لینک فعال از قبل وجود دارد.');
+            return redirect()->route('admin.referrals.overview', ['inviter_search' => $user->id])
+                ->with('success', 'برای این کاربر و محصول، لینک فعال از قبل وجود دارد.');
         }
 
         do {
@@ -356,7 +385,8 @@ class ReferralSettingController extends Controller
             'status' => 'active',
         ]);
 
-        return back()->with('success', 'لینک دعوت برای کاربر ساخته شد.');
+        return redirect()->route('admin.referrals.overview', ['inviter_search' => $user->id])
+            ->with('success', 'لینک دعوت برای کاربر ساخته شد.');
     }
 
     /** فعال یا غیرفعال کردن لینک محصولی از پنل مدیریت. */

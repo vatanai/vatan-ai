@@ -624,6 +624,11 @@ html.light .custom-products-total { background:rgba(255,255,255,.55); }
   gap: 2px;
 }
 
+/* موبایل: جدیدترین خروجی از سمت چپ ردیف اول شروع می‌شود، مشابه اینستاگرام */
+@media (max-width: 639px) {
+  .panel-grid { direction: ltr; }
+}
+
 /* سیو ۲ ستونه */
 .panel-saved {
   display: grid;

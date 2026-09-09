@@ -37,7 +37,7 @@
   <div id="files-created" class="files-grid">
     @forelse ($createdImages ?? [] as $item)
       @php $createdPath = $item->image_path ?? ''; @endphp
-      <div class="files-cell"><img src="{{ filter_var($createdPath, FILTER_VALIDATE_URL) ? $createdPath : asset('storage/' . ltrim($createdPath, '/')) }}" alt="تصویر خلق‌شده" class="grid-img" loading="lazy"></div>
+      <div class="files-cell"><img src="{{ filter_var($createdPath, FILTER_VALIDATE_URL) ? $createdPath : asset('storage/' . ltrim($createdPath, '/')) }}" alt="تصویر خلق‌شده" class="grid-img" loading="lazy" decoding="async"></div>
     @empty
       <div class="grid-empty"><p>هنوز تصویری خلق نکردی</p></div>
     @endforelse
@@ -46,7 +46,7 @@
   <div id="files-personal" class="files-grid" style="display:none;">
     @forelse (($personalImages ?? collect())->filter(fn ($upload) => blank($upload->mime_type) || str_starts_with((string) $upload->mime_type, 'image/')) as $upload)
       @php $personalPath = $upload->file_path ?? ''; @endphp
-      <div class="files-cell"><img src="{{ filter_var($personalPath, FILTER_VALIDATE_URL) ? $personalPath : asset('storage/' . ltrim($personalPath, '/')) }}" alt="عکس شخصی آپلودشده" class="grid-img" loading="lazy"></div>
+      <div class="files-cell"><img src="{{ filter_var($personalPath, FILTER_VALIDATE_URL) ? $personalPath : asset('storage/' . ltrim($personalPath, '/')) }}" alt="عکس شخصی آپلودشده" class="grid-img" loading="lazy" decoding="async"></div>
     @empty
       <div class="grid-empty"><p>هنوز عکس ورودی برای ساخت وارد نکردی</p></div>
     @endforelse
@@ -60,7 +60,7 @@
           <img src="{{ route('profile.gallery.preview', $item) }}" alt="عکس ورودی آزمایش" class="grid-img" loading="lazy">
         </a>
       @elseif (str_starts_with($galleryMime, 'video/'))
-        <div class="files-cell"><video src="{{ route('profile.gallery.original', $item) }}" controls preload="metadata" style="width:100%;height:100%;object-fit:contain;"></video></div>
+        <div class="files-cell"><video src="{{ route('profile.gallery.original', $item) }}" controls preload="none" style="width:100%;height:100%;object-fit:contain;"></video></div>
       @else
         <div class="files-cell" style="padding:14px;line-height:2;white-space:pre-wrap;overflow:auto;">{{ $item->display_text ?? data_get($item->metadata, 'text', 'متن ورودی') }}</div>
       @endif

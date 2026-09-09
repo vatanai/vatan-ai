@@ -6,6 +6,7 @@ use App\Models\HomePageGallery;
 use App\Models\Product;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class HomePageGalleryService
 {
@@ -21,7 +22,22 @@ class HomePageGalleryService
             }
 
             $gallery = HomePageGallery::query()->where('key', $key)->where('is_active', true)->first();
-            $items = is_array($gallery?->items) ? $gallery->items : [];
+            if ($gallery) {
+                $cacheKey = 'public-home-gallery:' . $key . ':' . ($gallery->updated_at?->timestamp ?? 'current');
+                return Cache::remember($cacheKey, now()->addMinutes(2), fn () => $this->resolveItems($gallery->items, $fallback));
+            }
+            return $fallback;
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return $fallback;
+        }
+    }
+
+    private function resolveItems(mixed $rawItems, array $fallback): array
+    {
+        try {
+            $items = is_array($rawItems) ? $rawItems : [];
 
             $resolved = collect($items)->map(function (array $item) {
                 if (($item['type'] ?? null) === 'product' && !empty($item['product_id'])) {

@@ -81,13 +81,21 @@ public function gallery()
 
         // واکشی تصاویر با لود به ترتیب جدیدترین‌ها بر اساس رابطه‌های مدل User
         // with('product') برای جلوگیری از N+1 کوئری موقع تشخیص نوع محتوا (عکس/ویدیو)
-        $createdImages = $user->generatedImages()->with('product')->latest()->get();
-        $personalImages = $user->uploadedImages()->latest()->get();
-        $galleryItems = $user->galleryItems()->latest()->get();
+        $createdImages = $user->generatedImages()
+            ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
+            ->with('product:id,name_fa,name_en,slug,product_code,media_type')
+            ->latest()->get();
+        $personalImages = $user->uploadedImages()
+            ->select(['id', 'user_id', 'file_path', 'mime_type', 'size', 'created_at'])
+            ->latest()->get();
+        $galleryItems = $user->galleryItems()
+            ->select(['id', 'user_id', 'disk', 'mime_type', 'original_path', 'preview_path', 'metadata', 'created_at'])
+            ->latest()->get();
         $galleryItems->each(function ($item): void {
             if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
                 try {
-                    $item->setAttribute('display_text', Storage::disk($item->disk ?: 'user_gallery')->get($item->original_path));
+                    $item->setAttribute('display_text', data_get($item->metadata, 'text')
+                        ?: Storage::disk($item->disk ?: 'user_gallery')->get($item->original_path));
                 } catch (\Throwable) {
                     $item->setAttribute('display_text', data_get($item->metadata, 'text', 'متن ورودی در دسترس نیست.'));
                 }
@@ -95,7 +103,9 @@ public function gallery()
         });
 
         // محصولات ذخیره‌شده (سیو) کاربر — بخش «ذخیره شده‌ها» در صفحه پروفایل
-        $savedProducts = $user->savedProducts()->latest('saved_products.created_at')->get();
+        $savedProducts = $user->savedProducts()
+            ->select(['products.id', 'products.name_fa', 'products.slug', 'products.product_code', 'products.cover', 'products.sample_outputs', 'products.thumbnail'])
+            ->latest('saved_products.created_at')->get();
 
         // محاسبه حجم مصرفی واقعی کاربر بر حسب بایت
         $createdImagesSize = $user->generatedImages()->sum('size') ?? 0;
@@ -111,10 +121,14 @@ public function gallery()
         $tokenBalance  = $user->token_balance;
         $createdCount  = $createdImages->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
-        $referralData  = $this->referralData($user, $referralSettings);
-        $referralProducts = Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'name_en']);
+        $referralData  = $referralProfileEnabled ? $this->referralData($user, $referralSettings) : $this->emptyReferralData();
+        $referralProducts = $referralProfileEnabled
+            ? Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'name_en'])
+            : collect();
         $earnings      = $referralData['paid_tokens'];
-        [$creatorRewardProducts, $creatorRewardCredits] = $this->creatorRewardData($user);
+        [$creatorRewardProducts, $creatorRewardCredits] = $referralProfileEnabled
+            ? $this->creatorRewardData($user)
+            : [collect(), 0];
         $profileRewardTotal = (int) $earnings + (int) $creatorRewardCredits;
         $isGuest       = false;
 

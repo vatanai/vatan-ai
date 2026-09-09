@@ -18,9 +18,9 @@
                     @php($galleryLink = $item['link_url'] ?? route('app.home'))
                     <a class="vp-gallery-card__link" href="{{ $galleryLink }}" @if(!empty($item['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif aria-label="{{ $item['link_label'] ?? $item['title'] }}">
                     @if(($item['media_type'] ?? 'image') === 'video')
-                        <video src="{{ $item['url'] }}" poster="{{ $item['poster'] ?? '' }}" autoplay muted loop playsinline preload="metadata" aria-label="{{ $item['title'] }}"></video>
+                        <video src="{{ $item['url'] }}" poster="{{ $item['poster'] ?? '' }}" muted loop playsinline preload="none" aria-label="{{ $item['title'] }}"></video>
                     @else
-                        <img src="{{ $item['url'] }}" alt="{{ $item['title'] }}" loading="lazy">
+                        <img src="{{ $item['url'] }}" alt="{{ $item['title'] }}" loading="lazy" decoding="async">
                     @endif
                     <div class="vp-gallery-card__caption"><span>{{ $item['tag'] ?? 'نمونه وطن' }}</span><strong>{{ !empty($item['show_text']) ? ($item['display_text'] ?? $item['title']) : $item['title'] }}</strong></div>
                     <span class="vp-gallery-card__action">{{ $item['link_label'] ?? 'ساخت مشابه' }} <b>←</b></span>

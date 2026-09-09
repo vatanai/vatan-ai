@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Services\HomePageGalleryService;
 use App\Services\PlanCatalogService;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class PublicHomeController extends Controller
@@ -21,10 +22,13 @@ class PublicHomeController extends Controller
         $currentUser = auth()->user();
 
         try {
-            $homeArticles = Schema::hasTable('articles')
-                ? Article::query()->published()->with(['category', 'author'])
-                    ->orderByDesc('is_featured')->latest('published_at')->limit(4)->get()
-                : collect();
+            $loadArticles = function () {
+                return Schema::hasTable('articles')
+                    ? Article::query()->published()->with(['category', 'author'])
+                        ->orderByDesc('is_featured')->latest('published_at')->limit(4)->get()
+                    : collect();
+            };
+            $homeArticles = $currentUser ? $loadArticles() : Cache::remember('public-home:articles:v1', now()->addMinutes(2), $loadArticles);
         } catch (\Throwable $exception) {
             report($exception);
             $homeArticles = collect();

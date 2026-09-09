@@ -19,7 +19,7 @@
                 @php($ideaLink = $ideaItem['link_url'] ?? route('app.home'))
                 <article class="vp-idea-card vp-reveal" style="--delay: {{ $index * 65 }}ms">
                     <a class="vp-idea-card__link" href="{{ $ideaLink }}" @if(!empty($ideaItem['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif aria-label="{{ $ideaItem['link_label'] ?? $ideaItem['title'] ?? $title }}">
-                        <img src="{{ $imageUrl }}" alt="{{ $ideaItem['title'] ?? $title }}" loading="lazy">
+                        <img src="{{ $imageUrl }}" alt="{{ $ideaItem['title'] ?? $title }}" loading="lazy" decoding="async">
                         <div class="vp-idea-card__shade"></div>
                         <div class="vp-idea-card__content"><span>{{ $ideaItem['tag'] ?? 'ایده آماده' }}</span><h3>{{ !empty($ideaItem['show_text']) ? ($ideaItem['display_text'] ?? $ideaItem['title'] ?? $title) : $title }}</h3><p>{{ $description }}</p></div>
                         <span class="vp-idea-card__action">{{ $ideaItem['link_label'] ?? 'امتحان کن' }} <b>←</b></span>

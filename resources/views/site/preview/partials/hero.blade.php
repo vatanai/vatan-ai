@@ -42,7 +42,7 @@
                 <figure class="vp-showcase-card">
                     @php($showcaseLink = $item['link_url'] ?? null)
                     @if($showcaseLink)<a class="vp-showcase-card__link" href="{{ $showcaseLink }}" @if(!empty($item['open_in_new_tab'])) target="_blank" rel="noopener noreferrer" @endif aria-label="{{ $item['link_label'] ?? $item['title'] ?? 'مشاهده نمونه' }}">@endif
-                    <img src="{{ $item['url'] }}" alt="{{ $item['title'] ?? 'نمونه تولیدشده با وطن' }}" draggable="false" loading="{{ $index < 5 ? 'eager' : 'lazy' }}">
+                    <img src="{{ $item['url'] }}" alt="{{ $item['title'] ?? 'نمونه تولیدشده با وطن' }}" draggable="false" loading="{{ $index < 2 ? 'eager' : 'lazy' }}" decoding="async" @if($index === 0) fetchpriority="high" @endif>
                     @if(!empty($item['show_text']) && ($item['display_text'] ?? $item['title'] ?? null))<span class="vp-showcase-card__text">{{ $item['display_text'] ?? $item['title'] }}</span>@endif
                     @if($showcaseLink)</a>@endif
                 </figure>

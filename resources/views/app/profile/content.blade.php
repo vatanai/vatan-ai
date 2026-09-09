@@ -36,7 +36,7 @@
             data-product-create-url="{{ optional($item->product)->route_slug ? route('app.create.product', optional($item->product)->route_slug) : '' }}"
             data-product-download-url="{{ optional($item->product)->slug ? route('app.product.download', optional($item->product)->slug) : '' }}"
             aria-label="نمایش عکس ساخته‌شده">
-      <img src="{{ asset('storage/' . $item->image_path) }}" alt="" class="grid-img" loading="lazy">
+      <img src="{{ asset('storage/' . $item->image_path) }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
       @if(optional($item->product)->media_type === 'video')
         <i class="fa-solid fa-video cell-badge"></i>
       @endif
@@ -54,7 +54,7 @@
 <div class="profile-panel panel-saved" data-panel="saved" style="display:none;">
   @forelse ($savedProducts ?? [] as $product)
     <a href="{{ route('app.product', $product->route_slug) }}" class="grid-cell" style="display:block;">
-      <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" class="grid-img">
+      <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" class="grid-img" loading="lazy" decoding="async">
       <div class="saved-badge">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="#ffffff"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z"/></svg>
       </div>
