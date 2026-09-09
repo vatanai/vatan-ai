@@ -11,7 +11,7 @@
     <div class="orders-head">
       <div>
         <div class="orders-title">خرید پلن‌ها و پرداخت‌ها</div>
-        <div class="orders-subtitle">همهٔ تلاش‌های پرداخت همراه با وضعیت خرید و اطلاعات کامل کاربر</div>
+        <div class="orders-subtitle">مرکز پیگیری رفتار مالی کاربر؛ از ورود به درگاه تا تأیید، شکست یا رهاشدن پرداخت</div>
       </div>
       <div class="orders-actions">
         <a class="order-btn" href="{{ route('admin.orders.index') }}"><i class="fa-solid fa-receipt"></i> سفارش‌های ساخت</a>
@@ -33,9 +33,30 @@
       @endforeach
     </div>
 
+    <section class="order-panel order-attention-panel">
+      <div class="order-panel-head">
+        <div><div class="order-panel-title"><i class="fa-solid fa-bell" style="color:var(--warning);margin-left:6px"></i> نیازمند پیگیری مالی</div><div class="order-meta">کاربرانی که به درگاه رفته‌اند اما هنوز خرید موفق برایشان ثبت نشده است.</div></div>
+        <span class="order-badge warning"><i class="order-dot"></i>{{ number_format($stats['gateway_attempts']) }} مورد</span>
+      </div>
+      @if($gatewayAttempts->isEmpty())
+        <div class="order-empty order-empty-compact"><i class="fa-solid fa-circle-check"></i>مورد باز یا رهاشده‌ای برای پیگیری وجود ندارد.</div>
+      @else
+        <div class="order-attention-list">
+          @foreach($gatewayAttempts as $attempt)
+            @php($attemptClass = in_array($attempt->status, [\App\Models\PlanPurchase::EXPIRED, \App\Models\PlanPurchase::FAILED], true) ? 'danger' : 'warning')
+            <a class="order-attention-item" href="{{ route('admin.orders.plan-purchases.show', $attempt) }}">
+              <span class="order-attention-icon {{ $attemptClass }}"><i class="fa-solid {{ $attempt->status === \App\Models\PlanPurchase::EXPIRED ? 'fa-hourglass-end' : 'fa-arrow-up-right-from-square' }}"></i></span>
+              <span class="order-attention-main"><strong>{{ trim(($attempt->user?->name ?: 'کاربر') . ' ' . ($attempt->user?->last_name ?: '')) }}</strong><small>{{ $attempt->plan_name }} · {{ number_format((int) $attempt->paid_amount) }} تومان · {{ \App\Models\PlanPurchase::statusLabel($attempt->status) }}</small><em class="order-follow-up-mini {{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'is-done' : '' }}"><i class="fa-solid {{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'fa-check' : 'fa-circle-exclamation' }}"></i>{{ $attempt->followUps->whereNotNull('completed_at')->isNotEmpty() ? 'پیگیری ثبت شده' : 'بدون پیگیری' }}</em></span>
+              <span class="order-attention-time">{{ \App\Support\Jalali::formatNumeric($attempt->updated_at ?: $attempt->created_at) }} <i class="fa-solid fa-angle-left"></i></span>
+            </a>
+          @endforeach
+        </div>
+      @endif
+    </section>
+
     <form class="order-panel order-filters" method="GET" action="{{ route('admin.orders.plan-purchases') }}">
       <div class="order-field"><label>جستجو</label><input class="order-input" name="q" value="{{ request('q') }}" placeholder="شماره سفارش، کد پیگیری یا کاربر"></div>
-      <div class="order-field"><label>وضعیت پرداخت</label><select class="order-select" name="status"><option value="">همه وضعیت‌ها</option>@foreach(['pending'=>'آماده پرداخت','redirected'=>'در انتظار پرداخت','completed'=>'موفق','failed'=>'ناموفق','expired'=>'منقضی'] as $key => $label)<option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>@endforeach</select></div>
+      <div class="order-field"><label>وضعیت پرداخت</label><select class="order-select" name="status"><option value="">همه وضعیت‌ها</option>@foreach(['pending'=>'آماده پرداخت','redirected'=>'در انتظار بازگشت از درگاه','verifying'=>'در حال بررسی پرداخت','completed'=>'موفق','failed'=>'ناموفق','expired'=>'منقضی'] as $key => $label)<option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>@endforeach</select></div>
       <button type="submit" class="order-btn primary"><i class="fa-solid fa-filter"></i> اعمال فیلتر</button>
     </form>
 
@@ -110,6 +131,7 @@
                 <td>{{ \App\Support\Jalali::formatNumeric($purchase->verified_at ?: $purchase->initiated_at ?: $purchase->created_at) }}</td>
                 <td>
                   <div class="orders-row-actions">
+                    <a class="order-btn primary" href="{{ route('admin.orders.plan-purchases.show', $purchase) }}" title="مسیر مالی و جزئیات پرداخت"><i class="fa-solid fa-route"></i></a>
                     @if($user)<a class="order-btn" href="{{ route('admin.users.index', ['show_user' => $user->id]) }}" title="خروجی‌های ساخته‌شده"><i class="fa-solid fa-images"></i></a>@endif
                     @if($purchase->financeCase)
                       <a class="order-btn success" href="{{ route('admin.finance.cases.show', $purchase->financeCase) }}" title="پرونده مالی این خرید"><i class="fa-solid fa-chart-pie"></i></a>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PlanPurchase extends Model
@@ -59,6 +60,11 @@ class PlanPurchase extends Model
     public function financeCase(): HasOne
     {
         return $this->hasOne(FinanceCase::class, 'anchor_plan_purchase_id');
+    }
+
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(PlanPurchaseFollowUp::class);
     }
 
     public function isCompleted(): bool

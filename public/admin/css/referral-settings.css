@@ -96,6 +96,7 @@ html,body{overflow-x:hidden}
 .referral-card-icon.is-success{background:var(--success-l);color:var(--success)}
 .referral-card-icon.is-info{background:var(--info-l);color:var(--info)}
 .referral-card-icon.is-warning{background:var(--warning-l);color:var(--warning)}
+.referral-source-value{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:38px;padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--input-bg)}.referral-source-value strong{font-size:12px;color:var(--text-h)}.referral-source-value .btn-pro{height:28px;padding:0 9px;font-size:9px;white-space:nowrap}
 .referral-card-body{padding:16px 18px;display:grid;gap:14px}
 .referral-toggle-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer}
 .referral-toggle-row>span:first-child{display:grid;gap:3px;min-width:0;padding-left:52px}

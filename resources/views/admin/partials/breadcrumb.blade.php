@@ -98,7 +98,7 @@
         $addBreadcrumb(request()->is('admin/plans/create') ? 'افزودن پلن' : 'پلن‌ها');
     } elseif (request()->is('admin/orders*')) {
         $addBreadcrumb('فروش و مارکتینگ');
-        $addBreadcrumb(request()->is('admin/orders/plan-purchases') ? 'خرید پلن‌ها و پرداخت‌ها' : 'سفارش‌ها');
+        $addBreadcrumb(request()->is('admin/orders/plan-purchases*') ? 'خرید پلن‌ها و پرداخت‌ها' : 'سفارش‌ها');
     } elseif (request()->is('admin/discounts*')) {
         $addBreadcrumb('فروش و مارکتینگ');
         $addBreadcrumb('تخفیف‌ها');

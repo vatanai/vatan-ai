@@ -78,7 +78,13 @@
           <label class="field-label" for="email-input">ایمیل <span>(اختیاری)</span></label>
           <div class="field-wrap" id="email-wrap"><i class="fa-solid fa-envelope"></i><input type="email" id="email-input" autocomplete="email" placeholder="example@gmail.com" dir="ltr"></div>
           <div class="field-error hidden" id="email-error">ایمیل معتبر نیست</div>
-          <button type="button" class="primary-action profile-submit" onclick="completeProfile()"><span>ورود به پلتفرم وطن</span><i class="fa-solid fa-check"></i></button>
+          <label class="terms-consent" for="terms-consent">
+            <input type="checkbox" id="terms-consent" name="terms" value="1">
+            <span class="terms-consent-box" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+            <span class="terms-consent-copy">با <a href="{{ route('privacy') }}" target="_blank" rel="noopener">قوانین و شرایط استفاده</a> و سیاست حفظ حریم خصوصی وطن موافقم.</span>
+          </label>
+          <div class="field-error hidden" id="terms-error">برای ورود، پذیرش قوانین و شرایط استفاده لازم است.</div>
+          <button type="button" class="primary-action profile-submit" id="profile-submit-button" onclick="completeProfile()" disabled aria-disabled="true"><span>ورود به پلتفرم وطن</span><i id="profile-submit-icon" class="fa-solid fa-lock"></i></button>
         </div>
       </div>
     </section>

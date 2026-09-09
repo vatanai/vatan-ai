@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Plan extends Model
@@ -112,14 +113,31 @@ class Plan extends Model
         $override = $audienceOverrides[$segment] ?? [];
         $override = is_array($override) ? $override : [];
 
+        $tokens = array_key_exists('tokens', $override) && $override['tokens'] !== null
+            ? (int) $override['tokens']
+            : (int) $this->tokens;
+
+        // پلن رایگان باید همان مقدار هدیه‌ای را نشان بدهد که در تنظیمات هدیه کاربران جدید ثبت شده است.
+        // این اتصال همه مسیرهای نمایش پلن را یکسان نگه می‌دارد، حتی اگر رکورد پلن قدیمی در داشبورد ویرایش شود.
+        if (in_array($this->slug, ['free', 'vatan-gift'], true) || $this->billing_type === 'free') {
+            try {
+                if (Schema::hasTable('referral_settings')) {
+                    $giftTokens = (int) ReferralSetting::query()->value('registration_gift_tokens');
+                    if ($giftTokens >= 0) {
+                        $tokens = $giftTokens;
+                    }
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
         return [
             'segment' => $segment,
             'price' => array_key_exists('price', $override) && $override['price'] !== null
                 ? (int) $override['price']
                 : (int) $this->price,
-            'tokens' => array_key_exists('tokens', $override) && $override['tokens'] !== null
-                ? (int) $override['tokens']
-                : (int) $this->tokens,
+            'tokens' => $tokens,
             'bonus_tokens' => (int) ($override['bonus_tokens'] ?? 0),
             'visible' => (bool) ($override['visible'] ?? true),
             'purchasable' => (bool) ($override['purchasable'] ?? true),

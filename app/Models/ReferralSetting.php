@@ -58,8 +58,8 @@ class ReferralSetting extends Model
     {
         return [
             'registration_gift_enabled' => true,
-            'registration_gift_tokens' => 50,
-            'prelogin_credit_text' => 'هدیه ۵۰ اعتبار',
+            'registration_gift_tokens' => 30,
+            'prelogin_credit_text' => 'هدیه ۳۰ اعتبار',
             'registration_sms_enabled' => true,
             'registration_gift_review_repeated_ip' => true,
             'registration_gift_review_repeated_device' => true,

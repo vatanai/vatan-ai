@@ -12,10 +12,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Services\SmsEventService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
 {
+    private const PLAN_PURCHASE_FOLLOW_UP_TASKS = [
+        'retry_offer_sent' => 'پیشنهاد ویژه برای تلاش مجدد ارسال شد',
+        'contact_attempted' => 'تماس یا پیام پیگیری انجام شد',
+        'awaiting_customer' => 'در انتظار پاسخ کاربر',
+        'closed_no_purchase' => 'این فرصت فعلاً بسته شد',
+    ];
+
     public function index(Request $request)
     {
         return $this->listing($request, 'all');
@@ -37,16 +46,115 @@ class OrderController extends Controller
         if (! Schema::hasTable('finance_cases')) {
             $purchases->getCollection()->each->setRelation('financeCase', null);
         }
+        if (! Schema::hasTable('plan_purchase_follow_ups')) {
+            $purchases->getCollection()->each->setRelation('followUps', collect());
+        }
 
         $stats = [
             'total' => PlanPurchase::count(),
             'completed' => PlanPurchase::where('status', PlanPurchase::COMPLETED)->count(),
-            'active' => PlanPurchase::whereIn('status', [PlanPurchase::PENDING, PlanPurchase::REDIRECTED, 'verifying'])->count(),
+            'active' => PlanPurchase::whereIn('status', [PlanPurchase::PENDING, PlanPurchase::REDIRECTED, PlanPurchase::VERIFYING])->count(),
+            'gateway_attempts' => PlanPurchase::whereIn('status', [PlanPurchase::REDIRECTED, PlanPurchase::VERIFYING, PlanPurchase::EXPIRED])->count(),
             'failed' => PlanPurchase::whereIn('status', [PlanPurchase::FAILED, PlanPurchase::EXPIRED, 'cancelled'])->count(),
             'revenue' => (int) PlanPurchase::where('status', PlanPurchase::COMPLETED)->sum('paid_amount'),
         ];
 
-        return view('admin.orders.plan-purchases', compact('purchases', 'stats'));
+        $gatewayAttempts = PlanPurchase::query()
+            ->with(['user:id,name,last_name,phone,email', 'plan:id,name'])
+            ->whereIn('status', [PlanPurchase::REDIRECTED, PlanPurchase::VERIFYING, PlanPurchase::EXPIRED])
+            ->latest('updated_at')->limit(8)->get();
+        if (Schema::hasTable('plan_purchase_follow_ups')) {
+            $gatewayAttempts->load('followUps');
+        } else {
+            $gatewayAttempts->each->setRelation('followUps', collect());
+        }
+
+        return view('admin.orders.plan-purchases', compact('purchases', 'stats', 'gatewayAttempts'));
+    }
+
+    public function planPurchaseShow(PlanPurchase $planPurchase)
+    {
+        $planPurchase->load(['plan', 'financeCase.events', 'referralConversion.inviter', 'referralConversion.visit', 'referralConversion.link']);
+        if (Schema::hasTable('plan_purchase_follow_ups')) {
+            $planPurchase->load('followUps.admin');
+        } else {
+            $planPurchase->setRelation('followUps', collect());
+        }
+        $user = $planPurchase->user()->with(['plan', 'referrer'])->first();
+        $planPurchase->setRelation('user', $user);
+
+        $timeline = collect();
+        if ($user?->registered_at) {
+            $timeline->push(['time' => $user->registered_at, 'title' => 'ثبت حساب کاربری', 'description' => 'حساب کاربر در پلتفرم ساخته شد.', 'type' => 'success']);
+        }
+        if ($user && Schema::hasTable('auth_events')) {
+            $user->load(['authEvents' => fn ($query) => $query->latest('occurred_at')->limit(30)]);
+            $authLabels = [
+                'otp_sent' => 'ارسال کد ورود', 'otp_verified' => 'تأیید کد ورود',
+                'registration_completed' => 'تکمیل ثبت‌نام', 'login_success' => 'ورود موفق',
+            ];
+            foreach ($user->authEvents as $event) {
+                $timeline->push([
+                    'time' => $event->occurred_at ?: $event->created_at,
+                    'title' => $authLabels[$event->event] ?? 'رویداد احراز هویت',
+                    'description' => $event->successful ? 'رویداد با موفقیت ثبت شده است.' : 'رویداد ناموفق بوده است.',
+                    'type' => $event->successful ? 'success' : 'danger',
+                ]);
+            }
+        }
+        if ($planPurchase->initiated_at || $planPurchase->created_at) {
+            $timeline->push(['time' => $planPurchase->initiated_at ?: $planPurchase->created_at, 'title' => 'شروع تلاش برای خرید', 'description' => 'پلن «'.$planPurchase->plan_name.'» با مبلغ '.number_format((int) $planPurchase->paid_amount).' تومان انتخاب شد.', 'type' => 'info']);
+        }
+        if ($planPurchase->gateway_track_id || $planPurchase->gateway_reference || in_array($planPurchase->status, [PlanPurchase::REDIRECTED, PlanPurchase::VERIFYING, PlanPurchase::COMPLETED], true)) {
+            $timeline->push(['time' => $planPurchase->initiated_at ?: $planPurchase->updated_at, 'title' => 'ارجاع به درگاه پرداخت', 'description' => 'درگاه: '.($planPurchase->gateway ?: 'نامشخص').' · وضعیت فعلی: '.PlanPurchase::statusLabel($planPurchase->status), 'type' => 'warning']);
+        }
+        if ($planPurchase->verified_at || $planPurchase->purchased_at) {
+            $timeline->push(['time' => $planPurchase->verified_at ?: $planPurchase->purchased_at, 'title' => 'پرداخت تأیید شد', 'description' => 'کد پیگیری: '.($planPurchase->gateway_reference ?: $planPurchase->gateway_track_id ?: 'ثبت نشده'), 'type' => 'success']);
+        }
+        if ($planPurchase->failed_at || $planPurchase->failure_reason) {
+            $timeline->push(['time' => $planPurchase->failed_at ?: $planPurchase->updated_at, 'title' => 'پرداخت تکمیل نشد', 'description' => $planPurchase->failure_reason ?: PlanPurchase::statusLabel($planPurchase->status), 'type' => 'danger']);
+        }
+        foreach ($planPurchase->financeCase?->events ?? [] as $event) {
+            $timeline->push(['time' => $event->occurred_at ?: $event->created_at, 'title' => 'رویداد پرونده مالی', 'description' => $event->title ?: ($event->event_type ?: 'رویداد مالی'), 'type' => 'info']);
+        }
+
+        $growthAttribution = null;
+        if (Schema::hasTable('growth_attributions') && Schema::hasTable('growth_links')) {
+            $growthAttribution = DB::table('growth_attributions')
+                ->join('growth_links', 'growth_links.id', '=', 'growth_attributions.growth_link_id')
+                ->where('growth_attributions.plan_purchase_id', $planPurchase->id)
+                ->latest('growth_attributions.attributed_at')
+                ->select('growth_links.title', 'growth_links.channel', 'growth_links.campaign', 'growth_attributions.stage', 'growth_attributions.attributed_at')
+                ->first();
+        }
+
+        $timeline = $timeline->filter(fn (array $event) => $event['time'])->sortBy(fn (array $event) => $event['time']->timestamp)->values();
+        $followUpTasks = self::PLAN_PURCHASE_FOLLOW_UP_TASKS;
+        return view('admin.orders.plan-purchase-show', compact('planPurchase', 'user', 'timeline', 'growthAttribution', 'followUpTasks'));
+    }
+
+    public function storePlanPurchaseFollowUp(Request $request, PlanPurchase $planPurchase): RedirectResponse
+    {
+        abort_unless($request->user('admin'), 403);
+        abort_unless(Schema::hasTable('plan_purchase_follow_ups'), 503, 'امکان ثبت پیگیری هنوز فعال نشده است.');
+
+        $data = $request->validate([
+            'task' => ['required', Rule::in(array_keys(self::PLAN_PURCHASE_FOLLOW_UP_TASKS))],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $taskKey = $data['task'];
+        $planPurchase->followUps()->updateOrCreate(
+            ['task_key' => $taskKey],
+            [
+                'admin_id' => $request->user('admin')->id,
+                'task_label' => self::PLAN_PURCHASE_FOLLOW_UP_TASKS[$taskKey],
+                'notes' => filled($data['notes'] ?? null) ? trim($data['notes']) : null,
+                'completed_at' => now(),
+            ]
+        );
+
+        return back()->with('success', 'اقدام پیگیری برای این خرید ثبت شد.');
     }
 
     public function exportPlanPurchases(Request $request): StreamedResponse
@@ -95,6 +203,7 @@ class OrderController extends Controller
             },
         ];
         if ($hasFinanceCases) $relations[] = 'financeCase:id,anchor_plan_purchase_id,case_number';
+        if (Schema::hasTable('plan_purchase_follow_ups')) $relations[] = 'followUps';
         $query = PlanPurchase::query()->with($relations);
         $query->when($request->filled('q'), function (Builder $purchaseQuery) use ($request): void {
             $term = trim((string) $request->q);

@@ -16,7 +16,7 @@
             <span class="referral-switch" aria-hidden="true"></span>
           </label>
           <div class="referral-fields two-columns">
-            <label class="referral-field"><span>تعداد توکن هدیه</span><input class="input-pro" type="number" min="0" name="registration_gift_tokens" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}"><small>صفر یعنی بدون واریز توکن.</small></label>
+            <div class="referral-field"><span>مقدار هدیه ثبت‌نام</span><div class="referral-source-value"><strong>{{ number_format((int) $settings->registration_gift_tokens) }} اعتبار</strong><a class="btn-pro btn-pro-secondary" href="{{ route('admin.settings.new-user-gift') }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> مدیریت در هدیه کاربران جدید</a></div><small>این مقدار فقط از بخش «هدیه کاربران جدید» تغییر می‌کند تا سایت و همکاری در فروش همیشه یکسان بمانند.</small></div>
             <label class="referral-field"><span>فاصله مجاز دریافت مجدد</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" max="365" name="registration_gift_cooldown_days" value="{{ old('registration_gift_cooldown_days', $settings->registration_gift_cooldown_days) }}"><b>روز</b></div><small>برای دستگاه یا اینترنت تکراری.</small></label>
           </div>
           <label class="referral-check-row"><input type="hidden" name="registration_sms_enabled" value="0"><input type="checkbox" name="registration_sms_enabled" value="1" @checked(old('registration_sms_enabled', $settings->registration_sms_enabled))><span>پیامک خوش‌آمدگویی و مقدار هدیه ارسال شود</span></label>

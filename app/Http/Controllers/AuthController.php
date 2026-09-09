@@ -128,6 +128,7 @@ class AuthController extends Controller
             'birth_day' => ['required', 'integer', 'between:1,31'],
             'birth_month' => ['required', 'integer', 'between:1,12'],
             'birth_year' => ['required', 'integer', 'between:1250,'.$currentJalaliYear],
+            'terms' => ['accepted'],
         ], [
             'birth_day.required' => 'روز تولد را وارد کنید.',
             'birth_day.integer' => 'روز تولد را فقط با عدد وارد کنید.',
@@ -138,6 +139,7 @@ class AuthController extends Controller
             'birth_year.required' => 'سال تولد را وارد کنید.',
             'birth_year.integer' => 'سال تولد را فقط با عدد وارد کنید.',
             'birth_year.between' => 'سال تولد باید بین ۱۲۵۰ تا '.Jalali::toPersianDigits((string) $currentJalaliYear).' باشد.',
+            'terms.accepted' => 'برای ساخت حساب، پذیرش قوانین و شرایط استفاده لازم است.',
         ]);
         $validator->after(function ($validator) use ($request): void {
             if (! $validator->errors()->hasAny(['birth_day', 'birth_month', 'birth_year'])
@@ -158,6 +160,7 @@ class AuthController extends Controller
             $user = User::query()->create([
                 'name' => trim($request->name), 'last_name' => trim($request->last_name),
                 'email' => $request->filled('email') ? trim($request->email) : null,
+                'terms_accepted_at' => now(),
                 'phone' => $request->phone, 'birth_date' => sprintf('%04d-%02d-%02d', $gy, $gm, $gd),
                 'password' => Str::random(64), 'password_reveal' => null, 'status' => 'active',
                 'tokens' => 0, 'registered_at' => now(), 'last_login_at' => now(), 'login_count' => 1,
@@ -352,6 +355,7 @@ class AuthController extends Controller
             'birth_month' => ['required', 'integer', 'between:1,12'],
             'birth_year'  => ['required', 'integer', 'between:1250,1500'],
             'referral_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{6,20}$/'],
+            'terms'      => ['accepted'],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -412,6 +416,7 @@ class AuthController extends Controller
                 'name'      => $request->name,
                 'last_name' => $request->last_name,
                 'email'     => $request->filled('email') ? $request->email : null,
+                'terms_accepted_at' => now(),
                 'phone'     => $request->phone,
                 'birth_date'=> sprintf('%04d-%02d-%02d', $birthGy, $birthGm, $birthGd),
                 // ورود کاربران فقط با رمز یک‌بارمصرف انجام می‌شود؛ این مقدار تصادفی

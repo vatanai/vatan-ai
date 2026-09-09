@@ -379,7 +379,6 @@ class ReferralSettingController extends Controller
 
         $data = $request->validate([
             'registration_gift_enabled' => ['required', 'boolean'],
-            'registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'registration_sms_enabled' => ['required', 'boolean'],
             'registration_gift_review_repeated_ip' => ['required', 'boolean'],
             'registration_gift_review_repeated_device' => ['required', 'boolean'],

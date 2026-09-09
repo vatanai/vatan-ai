@@ -582,6 +582,8 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/orders/failed', [OrderController::class, 'failed'])->name('orders.failed');
     Route::get('/orders/plan-purchases', [OrderController::class, 'planPurchases'])->name('orders.plan-purchases');
     Route::get('/orders/plan-purchases/export', [OrderController::class, 'exportPlanPurchases'])->name('orders.plan-purchases.export');
+    Route::post('/orders/plan-purchases/{planPurchase}/follow-up', [OrderController::class, 'storePlanPurchaseFollowUp'])->name('orders.plan-purchases.follow-up.store');
+    Route::get('/orders/plan-purchases/{planPurchase}', [OrderController::class, 'planPurchaseShow'])->name('orders.plan-purchases.show');
     Route::get('/orders/refunds', [OrderController::class, 'refunds'])->name('orders.refunds');
     Route::get('/orders/analytics', [OrderController::class, 'analytics'])->name('orders.analytics');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');

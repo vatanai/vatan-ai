@@ -5,6 +5,9 @@
     $price = (array) ($config['price'] ?? []);
     $primaryStat = (array) ($config['primary_stat'] ?? []);
     $secondaryStat = (array) ($config['secondary_stat'] ?? []);
+    if (($plan->billing_type ?? null) === 'free' || (int) $offer['price'] === 0) {
+        $secondaryStat['value'] = number_format((int) $offer['tokens']) . '٬۰۰۰ تومان هدیه';
+    }
     $button = (array) ($config['button'] ?? []);
     $pricingPage = $pricingPage ?? false;
     $planKey = $plan->slug ?: $plan->id;

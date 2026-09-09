@@ -25,6 +25,7 @@ class User extends Authenticatable
         'name',
         'last_name',
         'email',
+        'terms_accepted_at',
         'phone',
         'birth_date',
         'password',
@@ -63,6 +64,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'birth_date' => 'date',
             'password' => 'hashed',
             'password_reveal' => 'encrypted',
@@ -218,6 +220,11 @@ class User extends Authenticatable
     public function planPurchases(): HasMany
     {
         return $this->hasMany(PlanPurchase::class);
+    }
+
+    public function authEvents(): HasMany
+    {
+        return $this->hasMany(AuthEvent::class);
     }
 
     public function financeCases(): HasMany
