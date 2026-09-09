@@ -73,6 +73,8 @@ class ServiceCreditTransactionReport
             'transactions' => $paginator,
             'summary' => $summary,
             'exchange' => $exchange,
+            'timeline' => $rows->take(12)->values(),
+            'providerStats' => $this->providerStats($rows),
             'providers' => $allRows->map(fn (array $row) => ['key' => $row['provider_key'], 'label' => $row['provider']])
                 ->unique('key')->sortBy('label')->values(),
             'sourceOptions' => [
@@ -283,6 +285,34 @@ class ServiceCreditTransactionReport
             'usd' => (float) $rows->sum(fn (array $row) => (float) ($row['amount_usd'] ?? 0)),
             'toman' => (float) $rows->sum(fn (array $row) => (float) ($row['amount_toman'] ?? 0)),
         ];
+    }
+
+    private function providerStats(Collection $rows): Collection
+    {
+        return $rows->groupBy('provider_key')->map(function (Collection $providerRows): array {
+            $latest = $providerRows->sortByDesc(fn (array $row) => $row['occurred_at']?->timestamp ?? 0)->first();
+            $key = $providerRows->first()['provider_key'] ?? 'unknown';
+
+            return [
+                'key' => $key,
+                'label' => match ($key) {
+                    'openrouter' => 'OpenRouter',
+                    'fal' => 'Fal.ai',
+                    'replicate' => 'Replicate',
+                    'cloudiva' => 'Cloudiva',
+                    'melipayamak' => 'پنل پیامک',
+                    'netafraz' => 'Netafraz',
+                    'unknown' => 'ثبت نشده',
+                    default => $providerRows->first()['provider'] ?? 'نامشخص',
+                },
+                'count' => $providerRows->count(),
+                'success' => $providerRows->where('is_success', true)->count(),
+                'failed' => $providerRows->where('status_key', 'failed')->count(),
+                'usd' => (float) $providerRows->sum(fn (array $row) => (float) ($row['amount_usd'] ?? 0)),
+                'toman' => (float) $providerRows->sum(fn (array $row) => (float) ($row['amount_toman'] ?? 0)),
+                'latest_at' => $latest['date_jalali'] ?? '—',
+            ];
+        })->sortByDesc('count')->values();
     }
 
     private function userName($user): ?string

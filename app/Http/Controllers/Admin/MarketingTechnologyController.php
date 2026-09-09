@@ -250,7 +250,71 @@ class MarketingTechnologyController extends Controller
             'ready' => Schema::hasTable('marketing_integrations'),
             'integration' => Schema::hasTable('marketing_integrations') ? MarketingIntegration::query()->where('provider', 'meta')->first() : null,
             'webhookUrl' => route('webhooks.meta.verify'),
+            'oauthReady' => filled(config('services.meta.app_id')) && filled(config('services.meta.app_secret')),
+            'oauthRedirectUri' => route('admin.marketing-technology.integrations.meta.oauth.callback'),
         ]);
+    }
+
+    public function startMetaOAuth(Request $request, MetaInstagramApiService $meta): RedirectResponse
+    {
+        abort_unless(filled(config('services.meta.app_id')) && filled(config('services.meta.app_secret')), 503, 'کلیدهای اپ `Meta` هنوز روی سرور تنظیم نشده‌اند.');
+
+        $state = Str::random(64);
+        $request->session()->put('meta_oauth_state', $state);
+
+        return redirect()->away($meta->authorizationUrl(
+            $state,
+            route('admin.marketing-technology.integrations.meta.oauth.callback')
+        ));
+    }
+
+    public function finishMetaOAuth(Request $request, MetaInstagramApiService $meta): RedirectResponse
+    {
+        $expectedState = (string) $request->session()->pull('meta_oauth_state');
+        $state = (string) $request->string('state')->toString();
+        $destination = route('admin.marketing-technology.integrations');
+
+        if ($expectedState === '' || $state === '' || ! hash_equals($expectedState, $state)) {
+            return redirect($destination)->with('error', 'اعتبارسنجی بازگشت از `Meta` ناموفق بود؛ اتصال را دوباره شروع کن.');
+        }
+
+        if ($request->filled('error')) {
+            return redirect($destination)->with('error', 'اتصال به `Meta` توسط کاربر لغو شد یا مجوز لازم صادر نشد.');
+        }
+
+        $code = (string) $request->string('code')->toString();
+        if ($code === '') {
+            return redirect($destination)->with('error', 'کد بازگشت `Meta` دریافت نشد.');
+        }
+
+        $result = $meta->completeOAuth($code, route('admin.marketing-technology.integrations.meta.oauth.callback'));
+        if (! $result['ok']) {
+            return redirect($destination)->with('error', $result['message']);
+        }
+
+        $page = collect($result['pages'])->first(fn (array $item) => filled(data_get($item, 'access_token')) && filled(data_get($item, 'instagram_business_account.id')));
+        if (! $page) {
+            return redirect($destination)->with('error', 'هیچ پیج متصل به اکانت حرفه‌ای `Instagram` در حساب `Meta` پیدا نشد.');
+        }
+
+        $integration = MarketingIntegration::query()->firstOrNew(['provider' => 'meta']);
+        $integration->fill([
+            'provider' => 'meta',
+            'name' => (string) data_get($page, 'name', 'اینستاگرام وطن'),
+            'status' => 'configured',
+            'credentials' => [
+                'instagram_user_id' => (string) data_get($page, 'instagram_business_account.id'),
+                'page_id' => (string) data_get($page, 'id'),
+                'page_name' => (string) data_get($page, 'name'),
+                'access_token' => (string) data_get($page, 'access_token'),
+                'graph_url' => (string) config('services.meta.facebook_graph_url', 'https://graph.facebook.com'),
+            ],
+            'last_error' => null,
+            'created_by' => $request->user('admin')?->id,
+        ]);
+        $integration->save();
+
+        return redirect($destination)->with('success', 'اتصال `Meta` با پیج متصل و اکانت حرفه‌ای `Instagram` ذخیره شد؛ اکنون تست خواندنی را اجرا کن.');
     }
 
     public function storeMetaIntegration(Request $request): RedirectResponse

@@ -196,9 +196,28 @@ body.light .referral-switch-input:checked+.referral-switch:after{background:var(
 .referral-existing-link code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right;color:var(--primary);font-size:8px}
 .referral-existing-link small{color:var(--text-soft);font-size:8.5px}
 .referral-existing-link small span{color:var(--border)}
+.referral-existing-link-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}.referral-existing-link-actions form{margin:0}.referral-delete-link{color:var(--danger)}.referral-delete-link:hover{border-color:var(--danger);background:var(--danger-l);color:var(--danger)}
 @media(max-width:1180px){.referral-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-config-grid{grid-template-columns:1fr}.referral-inviter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1400px){.referral-filter-form{grid-template-columns:repeat(3,minmax(0,1fr))}.referral-filter-search{grid-column:span 2}}
 @media(max-width:900px){.sidebar{transform:translateX(calc(100% + 64px))}}
 @media(max-width:767px){.referral-report-table{min-width:0}.referral-table-wrap{padding:12px;background:var(--page-bg)}.referral-report-table tbody td[data-label="عملیات"]{display:block}.referral-review-form{width:100%;min-width:0}.referral-review-form>div{justify-content:flex-start}.referral-landing-url,.referral-cell-note,.referral-risk-reason{max-width:58%;text-align:left}.referral-pagination{align-items:stretch;flex-direction:column}.referral-pagination>div{justify-content:space-between}}
 @media(max-width:640px){.referral-settings-page{padding:14px;gap:14px}.referral-page-head{align-items:flex-start}.referral-page-head h1{font-size:19px}.referral-head-status{width:100%;justify-content:center}.referral-stat-grid{grid-template-columns:1fr 1fr;gap:8px}.referral-stat-card{min-height:82px;padding:12px}.referral-stat-card .stat-card-icon{width:36px;height:36px}.referral-stat-card .stat-card-value{font-size:17px}.referral-stat-card .stat-card-label{font-size:10px;white-space:normal}.referral-hub-grid{grid-template-columns:1fr;padding:14px}.referral-inviter-grid{grid-template-columns:1fr;padding:14px}.referral-card-head,.referral-card-body{padding:14px}.referral-fields.two-columns{grid-template-columns:1fr}.referral-save-bar{bottom:8px;align-items:stretch;flex-direction:column}.referral-save-bar .btn-pro{width:100%;justify-content:center}.referral-reports-head{align-items:stretch;flex-direction:column}.referral-reports-head .btn-pro{justify-content:center}.referral-filter-form{grid-template-columns:1fr;padding:13px}.referral-filter-search{grid-column:auto}.referral-filter-actions{justify-content:stretch}.referral-filter-actions>*{flex:1;justify-content:center}.referral-report-tabs{padding:11px 13px}.referral-product-link-row,.referral-subtree-row{align-items:flex-start;flex-direction:column}.referral-product-link-actions{width:100%;justify-content:flex-end}.referral-subtree-metrics{width:100%;justify-content:flex-start}.referral-inviter-search{align-items:stretch;flex-direction:column;padding:14px}.referral-inviter-search-actions{flex-wrap:wrap}.referral-search-result{width:100%}.referral-link-create-grid{grid-template-columns:1fr}.referral-link-user-card .referral-card-head{align-items:flex-start;flex-wrap:wrap}.referral-link-user-card .referral-head-status{width:auto;margin-right:auto}.referral-dialog-actions{justify-content:stretch}.referral-dialog-actions>*{flex:1}.referral-inviter-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){.referral-stat-grid{grid-template-columns:1fr}.referral-stat-card{min-height:72px}}
+
+/* لینک عادی و لینک محصول در مدیریت هر کاربر از هم تفکیک می‌شوند. */
+.referral-normal-link-card{overflow:hidden}
+.referral-link-type-badge{margin-right:auto;padding:5px 8px;border:1px solid var(--success-m);border-radius:99px;background:var(--success-l);color:var(--success);font-size:8.5px;font-weight:800;white-space:nowrap}
+.referral-normal-link-box{display:flex;align-items:center;gap:9px;padding:10px;border:1px solid var(--border);border-radius:11px;background:var(--input-bg)}
+.referral-normal-link-main{display:grid;gap:4px;min-width:0;flex:1}
+.referral-normal-link-main span{color:var(--text-soft);font-size:9px}
+.referral-normal-link-main code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right;color:var(--primary);font-size:10px}
+.referral-copy-button{flex:0 0 auto;white-space:nowrap}
+.referral-normal-link-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.referral-normal-link-stats>div{display:grid;gap:3px;padding:9px 6px;border:1px solid var(--border);border-radius:9px;background:var(--input-bg);text-align:center}
+.referral-normal-link-stats strong{color:var(--text-h);font-size:14px;line-height:1.2}
+.referral-normal-link-stats span{color:var(--text-soft);font-size:8.5px;line-height:1.4}
+.referral-normal-link-stats .is-active{border-color:var(--success-m);background:var(--success-l)}
+.referral-normal-link-stats .is-active strong{color:var(--success);font-size:11px}
+.referral-normal-link-missing{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px dashed var(--warning);border-radius:10px;color:var(--text-soft);font-size:10px}
+.referral-normal-link-missing form{margin:0}
+@media(max-width:640px){.referral-link-type-badge{margin-right:0}.referral-normal-link-box{align-items:stretch;flex-direction:column}.referral-copy-button{width:100%}.referral-normal-link-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-normal-link-missing{align-items:stretch;flex-direction:column}.referral-normal-link-missing .referral-action{width:100%}}

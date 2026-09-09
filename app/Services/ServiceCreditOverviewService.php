@@ -82,8 +82,32 @@ class ServiceCreditOverviewService
         $account->setAttribute('balance_toman', ($account->currency === 'USD' ? $balance * $rate : $balance) / 10);
         $account->setAttribute('today_usage_toman', $account->today_usage_irr / 10);
         $account->setAttribute('month_usage_toman', $account->month_usage_irr / 10);
-        $account->setAttribute('is_low', (float) $account->low_balance_threshold > 0 && $balance <= (float) $account->low_balance_threshold);
+        $isCritical = (float) ($account->critical_balance_threshold ?? 0) > 0
+            && $balance <= (float) $account->critical_balance_threshold;
+        $isLow = (float) $account->low_balance_threshold > 0 && $balance <= (float) $account->low_balance_threshold;
+        $account->setAttribute('is_critical', $isCritical);
+        $account->setAttribute('is_low', $isLow);
+        $account->setAttribute('alert_level', $isCritical ? 'critical' : ($isLow ? 'low' : null));
+        $account->setAttribute('alert_label', $isCritical ? 'بحرانی' : ($isLow ? 'کمبود اعتبار' : null));
+        $account->setAttribute('health_label', $this->healthLabel($account, $live));
         return $account;
+    }
+
+    private function healthLabel(ServiceCreditAccount $account, ?array $live): string
+    {
+        if (($live['online'] ?? false) && ($live['balance_is_live'] ?? false)) {
+            return 'اتصال سالم و موجودی زنده';
+        }
+
+        if (($live['online'] ?? false)) {
+            return 'اتصال سالم؛ موجودی دستی';
+        }
+
+        if ($account->sync_driver === 'manual') {
+            return 'ثبت دستی؛ اتصال موجودی تعریف نشده';
+        }
+
+        return 'اتصال برقرار نیست';
     }
 
     private function openRouterCredits(): array

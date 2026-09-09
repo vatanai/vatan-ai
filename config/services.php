@@ -117,8 +117,14 @@ return [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),
         'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN'),
+        'auth_url' => env('META_AUTH_URL', 'https://www.facebook.com'),
+        'facebook_graph_url' => env('META_FACEBOOK_GRAPH_URL', 'https://graph.facebook.com'),
         'graph_url' => env('META_GRAPH_URL', 'https://graph.instagram.com'),
         'graph_version' => env('META_GRAPH_VERSION', 'v24.0'),
+        'oauth_scopes' => array_values(array_filter(array_map('trim', explode(',', (string) env(
+            'META_OAUTH_SCOPES',
+            'pages_show_list,instagram_basic,pages_read_engagement,instagram_manage_insights,instagram_manage_comments,instagram_manage_messages,instagram_content_publish'
+        ))))),
     ],
 
     'melipayamak' => [

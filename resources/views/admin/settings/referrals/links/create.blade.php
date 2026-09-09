@@ -46,11 +46,39 @@
         </div>
       </section>
 
+      <section class="content-card referral-normal-link-card">
+        <div class="referral-card-head">
+          <span class="referral-card-icon is-success"><i class="fa-solid fa-house"></i></span>
+          <div><h2>۱. لینک عادی دعوت</h2><p>مخاطب با این لینک وارد صفحهٔ اصلی سایت می‌شود؛ کلیک، ثبت‌نام، خرید و خروجی او همچنان با کد همین کاربر رصد می‌شود.</p></div>
+          <span class="referral-link-type-badge">ورود به صفحه اصلی</span>
+        </div>
+        <div class="referral-card-body">
+          @if($user->referral_code)
+            @php
+              $normalLinkUrl = route('referral.visit', ['code' => $user->referral_code]);
+            @endphp
+            <div class="referral-normal-link-box">
+              <div class="referral-normal-link-main"><span>لینک کامل</span><code dir="ltr" title="{{ $normalLinkUrl }}">{{ $normalLinkUrl }}</code></div>
+              <button type="button" class="referral-action is-approve referral-copy-button" data-copy-url="{{ $normalLinkUrl }}"><i class="fa-regular fa-copy"></i> کپی لینک کامل</button>
+            </div>
+            <div class="referral-normal-link-stats">
+              <div><strong>{{ number_format($normalLinkStats['visits']) }}</strong><span>کلیک</span></div>
+              <div><strong>{{ number_format($normalLinkStats['registrations']) }}</strong><span>ثبت‌نام</span></div>
+              <div><strong>{{ number_format($normalLinkStats['purchases']) }}</strong><span>خرید موفق</span></div>
+              <div><strong>{{ number_format($normalLinkStats['outputs']) }}</strong><span>خروجی دعوت‌شده‌ها</span></div>
+              <div class="is-active"><strong>فعال</strong><span>تا زمان فعال بودن برنامه</span></div>
+            </div>
+          @else
+            <div class="referral-normal-link-missing"><span>برای این کاربر هنوز لینک عادی ساخته نشده است.</span><form method="POST" action="{{ route('admin.referrals.users.standard-link.store', $user) }}">@csrf<button class="referral-action is-approve" type="submit"><i class="fa-solid fa-link"></i> ساخت لینک عادی</button></form></div>
+          @endif
+        </div>
+      </section>
+
       <div class="referral-link-create-grid">
         <section class="content-card referral-link-form-card">
           <div class="referral-card-head">
             <span class="referral-card-icon is-primary"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-            <div><h2>مشخصات لینک دعوت</h2><p>لینک ساخته‌شده به محصول انتخابی هدایت می‌شود و کلیک، ثبت‌نام، خرید و خروجی دعوت‌شده‌ها را ثبت می‌کند.</p></div>
+            <div><h2>۲. ساخت لینک محصول</h2><p>مخاطب با این لینک مستقیماً به محصول انتخابی می‌رسد و کلیک، ثبت‌نام، خرید و خروجی دعوت‌شده‌ها جداگانه رصد می‌شود.</p></div>
           </div>
           <form class="referral-card-body" method="POST" action="{{ route('admin.referrals.users.links.store', $user) }}">
             @csrf
@@ -80,7 +108,16 @@
               @endphp
               <div class="referral-existing-link">
                 <div><strong>{{ $linkProduct }}</strong><code title="{{ $linkUrl }}">{{ $linkUrl }}</code><small>{{ number_format((int) $link->visits_count) }} کلیک <span>•</span> {{ number_format((int) $link->conversions_count) }} ثبت‌نام</small></div>
-                <span class="referral-link-status {{ $linkActive ? 'is-active' : 'is-inactive' }}">{{ $linkActive ? 'فعال' : 'غیرفعال' }}</span>
+                <div class="referral-existing-link-actions">
+                  <form method="POST" action="{{ route('admin.referrals.links.toggle', ['referralLink' => $link->id]) }}">
+                    @csrf @method('PATCH')
+                    <button type="submit" class="referral-link-status {{ $linkActive ? 'is-active' : 'is-inactive' }}">{{ $linkActive ? 'فعال' : 'غیرفعال' }}</button>
+                  </form>
+                  <form method="POST" action="{{ route('admin.referrals.links.destroy', ['referralLink' => $link->id]) }}" onsubmit="return confirm('این لینک حذف شود؟ اگر سابقه داشته باشد به‌صورت خودکار غیرفعال می‌شود.')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="referral-icon-button referral-delete-link" title="حذف یا غیرفعال‌سازی لینک" aria-label="حذف یا غیرفعال‌سازی لینک"><i class="fa-solid fa-trash-can"></i></button>
+                  </form>
+                </div>
               </div>
             @empty
               <div class="referral-subtree-empty">هنوز لینکی برای این کاربر ساخته نشده است.</div>
@@ -91,4 +128,10 @@
     </div>
   </div>
 </main>
+@endsection
+
+@section('scripts')
+<script>
+document.querySelectorAll('[data-copy-url]').forEach(function(button){button.addEventListener('click',async function(){const url=button.dataset.copyUrl;try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(url);else{const input=document.createElement('textarea');input.value=url;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.select();document.execCommand('copy');input.remove()}button.innerHTML='<i class="fa-solid fa-check"></i> کپی شد';setTimeout(function(){button.innerHTML='<i class="fa-regular fa-copy"></i> کپی لینک کامل'},1800)}catch(error){button.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> کپی نشد'}})});
+</script>
 @endsection

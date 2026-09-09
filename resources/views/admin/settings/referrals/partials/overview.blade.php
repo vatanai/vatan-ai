@@ -121,7 +121,7 @@
         <div class="referral-card-section">
           <div class="referral-card-section-head">
             <strong><i class="fa-solid fa-link"></i> لینک‌های محصول</strong>
-            <a class="referral-action is-approve" href="{{ route('admin.referrals.users.links.create', $inviter) }}"><i class="fa-solid fa-plus"></i> ساخت لینک دعوت برای کاربر</a>
+            <a class="referral-action is-approve" href="{{ route('admin.referrals.users.links.create', $inviter) }}"><i class="fa-solid fa-sliders"></i> مدیریت و ساخت لینک‌ها</a>
           </div>
           @forelse($inviter->referralLinks as $productLink)
             @php

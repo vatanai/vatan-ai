@@ -23,39 +23,84 @@
       </div>
     </div>
 
-    @if(session('success'))<div class="credit-alert success">{{ session('success') }}</div>@endif
-    @if(isset($errors) && $errors->any())<div class="credit-alert error">{{ $errors->first() }}</div>@endif
+    @if(session('success'))<div class="credit-alert success"><i class="fa-solid fa-circle-check"></i>{{ session('success') }}</div>@endif
+    @if(isset($errors) && $errors->any())<div class="credit-alert error"><i class="fa-solid fa-triangle-exclamation"></i>{{ $errors->first() }}</div>@endif
 
     @php
       $creditBySlug = $accounts->keyBy('slug');
       $providerCards = [
-        ['slug' => 'cloudiva', 'name' => 'Cloudiva', 'icon' => 'fa-cloud'],
+        ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
         ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
         ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
-        ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
-        ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
+        ['slug' => 'cloudiva', 'name' => 'Cloudiva', 'icon' => 'fa-cloud'],
+        ['slug' => 'melipayamak', 'name' => 'پنل پیامک', 'icon' => 'fa-comment-sms'],
+        ['slug' => 'netafraz', 'name' => 'Netafraz', 'icon' => 'fa-server'],
       ];
     @endphp
-    <div class="credit-grid">
-      <div class="credit-summary credit-rate"><div class="credit-summary-label">قیمت روز دلار</div><div class="credit-summary-value">{{ $exchange['rate'] > 0 ? number_format($exchange['rate'] / 10) : '—' }}</div><div class="credit-summary-meta">تومان · {{ $exchange['source'] }} · {{ $exchange['online'] ? 'آنلاین' : 'پشتیبان' }}</div></div>
+    @if($alerts->isNotEmpty())
+      <section class="credit-alert-rail" aria-label="هشدارهای اعتبار سرویس‌ها">
+        <div class="credit-alert-rail-head"><span class="credit-section-kicker"><i class="fa-solid fa-bell"></i> مرکز هشدار</span><strong>{{ number_format($alerts->count()) }} مورد نیازمند توجه</strong></div>
+        <div class="credit-alert-list">
+          @foreach($alerts as $alert)
+            <a class="credit-alert-item {{ $alert->is_critical ? 'critical' : 'low' }}" href="#credit-account-{{ $alert->id }}">
+              <span class="credit-alert-icon"><i class="fa-solid {{ $alert->is_critical ? 'fa-triangle-exclamation' : 'fa-circle-exclamation' }}"></i></span>
+              <span><strong>{{ $alert->name }} · {{ $alert->alert_label }}</strong><small>موجودی فعلی {{ $alert->currency === 'USD' ? '$'.number_format($alert->display_balance, 4) : number_format($alert->display_balance / 10).' تومان' }}</small></span>
+              <i class="fa-solid fa-chevron-left"></i>
+            </a>
+          @endforeach
+        </div>
+      </section>
+    @else
+      <div class="credit-health-banner"><span class="credit-health-icon"><i class="fa-solid fa-shield-check"></i></span><div><strong>همهٔ آستانه‌های اعتبار در محدودهٔ امن هستند</strong><span>هشدارها بر اساس موجودی ثبت‌شده و آستانه‌های هر سرویس محاسبه می‌شوند.</span></div></div>
+    @endif
+
+    <div class="credit-overview-bar">
+      <div class="credit-rate-card"><span class="credit-rate-icon"><i class="fa-solid fa-chart-line"></i></span><div><span class="credit-summary-label">نرخ تبدیل فعلی</span><strong>{{ $exchange['rate'] > 0 ? number_format($exchange['rate'] / 10) : '—' }} <small>تومان / دلار</small></strong><em>{{ $exchange['source'] }} · {{ $exchange['online'] ? 'آنلاین' : 'پشتیبان' }}</em></div></div>
+      <div class="credit-overview-stats"><div><span>موجودی دلاری کل</span><strong>${{ number_format($totals['balance_usd'], 4) }}</strong></div><div><span>معادل تومانی کل</span><strong>{{ number_format($totals['balance_toman']) }} تومان</strong></div><div><span>هزینهٔ ماه جاری</span><strong>{{ number_format($totals['month_irr'] / 10) }} تومان</strong></div></div>
+    </div>
+
+    <section class="credit-provider-section">
+      <div class="credit-section-head"><div><span class="credit-section-kicker">نمای لحظه‌ای اتصال‌ها</span><h2>سلامت سرویس‌ها</h2><p>برای دیدن ریز رخدادها و هزینه‌های هر ارائه‌دهنده، کارت آن را انتخاب کنید.</p></div><span class="credit-refresh-note"><i class="fa-solid fa-clock-rotate-left"></i> آخرین بررسی هنگام باز شدن صفحه</span></div>
+      <div class="credit-provider-grid">
       @foreach($providerCards as $providerCard)
         @php($creditAccount = $creditBySlug->get($providerCard['slug']))
-        <a class="credit-summary credit-provider-summary" href="{{ route('admin.service-credits.index') }}">
-          <div class="credit-provider-summary-head"><span>{{ $providerCard['name'] }}</span><span class="credit-provider-mark"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span></div>
-          <div class="credit-provider-usd">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
-          <div class="credit-provider-toman">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی ثبت نشده' }}</div>
-          <div class="credit-summary-meta">{{ $creditAccount?->status_label ?? 'حساب ساخته نشده' }}</div>
+        @php($providerStat = $providerStats->firstWhere('key', $providerCard['slug']))
+        <a class="credit-provider-card {{ $creditAccount?->is_critical ? 'is-critical' : ($creditAccount?->is_low ? 'is-low' : '') }}" href="{{ route('admin.service-credits.index', ['provider' => $providerCard['slug']]) }}">
+          <div class="credit-provider-card-head"><span class="credit-provider-mark"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span><div><strong>{{ $providerCard['name'] }}</strong><small class="{{ $creditAccount?->is_online ? 'is-online' : '' }}"><span></span>{{ $creditAccount?->health_label ?? 'حساب ساخته نشده' }}</small></div><i class="fa-solid fa-arrow-up-left-from-circle credit-provider-open"></i></div>
+          <div class="credit-provider-balance">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
+          <div class="credit-provider-toman">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی دستی ثبت نشده' }}</div>
+          <div class="credit-provider-footer"><span>{{ $creditAccount?->status_label ?? 'حساب ساخته نشده' }}</span><b>{{ $providerStat ? number_format((int) $providerStat['count']) : '۰' }} رخداد</b></div>
         </a>
       @endforeach
-    </div>
+      </div>
+    </section>
+
+    <section class="credit-timeline-panel credit-panel">
+      <div class="credit-section-head"><div><span class="credit-section-kicker">ردیابی هزینه و عملیات</span><h2>تایم‌لاین رخدادهای اخیر</h2><p>تمام اجراها، هزینه‌ها و تغییرات موجودی با تبدیل هم‌زمان دلار و تومان.</p></div><a class="credit-btn" href="#credit-report"><i class="fa-solid fa-list"></i> مشاهدهٔ گزارش کامل</a></div>
+      <div class="credit-timeline-layout">
+        <div class="credit-timeline">
+          @forelse($timeline as $event)
+            @php($eventClass = $event['is_success'] ? 'success' : (in_array($event['status_key'], ['failed', 'usage'], true) ? 'danger' : 'warning'))
+            <a class="credit-timeline-item {{ $eventClass }}" href="{{ $event['detail_url'] ?: '#credit-report' }}">
+              <span class="credit-timeline-marker"><i class="fa-solid {{ $event['source_key'] === 'user' ? 'fa-user' : ($event['source_key'] === 'lab' ? 'fa-flask' : 'fa-wallet') }}"></i></span>
+              <span class="credit-timeline-content"><strong>{{ $event['provider'] }} <small>· {{ $event['status_label'] }}</small></strong><span>{{ $event['source_label'] }} @if($event['product_name'] !== '—') · {{ $event['product_name'] }} @endif</span><time>{{ $event['date_jalali'] }} · {{ $event['date_gregorian'] }}</time></span>
+              <span class="credit-timeline-cost">@if($event['amount_usd'] !== null)<strong>${{ number_format($event['amount_usd'], 6) }}</strong><small>{{ number_format($event['amount_toman']) }} تومان</small>@else<span>—</span>@endif</span>
+            </a>
+          @empty
+            <div class="credit-empty-state"><i class="fa-solid fa-timeline"></i><strong>هنوز رخدادی ثبت نشده است.</strong><span>با اولین مصرف یا ثبت تراکنش، تایم‌لاین اینجا پر می‌شود.</span></div>
+          @endforelse
+        </div>
+        <aside class="credit-provider-ledger"><div class="credit-ledger-title"><strong>دفتر هر ارائه‌دهنده</strong><span>بر اساس فیلتر فعلی</span></div>@forelse($providerStats as $provider)<a href="{{ route('admin.service-credits.index', ['provider' => $provider['key']]) }}" class="credit-ledger-row"><span><strong>{{ $provider['label'] }}</strong><small>{{ number_format($provider['count']) }} رخداد · آخرین {{ $provider['latest_at'] }}</small></span><b>${{ number_format($provider['usd'], 4) }}<small>{{ number_format($provider['toman']) }} تومان</small></b><i class="fa-solid fa-chevron-left"></i></a>@empty<span class="credit-muted">داده‌ای برای ارائه‌دهنده‌ها وجود ندارد.</span>@endforelse</aside>
+      </div>
+    </section>
 
     <div class="credit-accounts">
       @forelse($accounts as $account)
-        <article class="credit-card {{ $account->is_low ? 'low' : '' }}">
+        <article class="credit-card {{ $account->is_critical ? 'critical' : ($account->is_low ? 'low' : '') }}" id="credit-account-{{ $account->id }}">
           <div class="credit-card-head">
             <div class="credit-service">
-              <div class="credit-logo"><i class="fa-solid {{ ['openrouter' => 'fa-route', 'liara' => 'fa-cloud-arrow-up', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud'][$account->slug] ?? 'fa-wallet' }}"></i></div>
-              <div><div class="credit-name">{{ $account->name }}</div><div class="credit-status {{ $account->is_online ? 'online' : '' }}"><span class="credit-dot"></span>{{ $account->status_label }}</div></div>
+              <div class="credit-logo"><i class="fa-solid {{ ['openrouter' => 'fa-route', 'liara' => 'fa-cloud-arrow-up', 'fal' => 'fa-wand-magic-sparkles', 'replicate' => 'fa-cubes', 'cloudiva' => 'fa-cloud', 'melipayamak' => 'fa-comment-sms', 'netafraz' => 'fa-server'][$account->slug] ?? 'fa-wallet' }}"></i></div>
+              <div><div class="credit-name">{{ $account->name }}</div><div class="credit-status {{ $account->is_online ? 'online' : '' }}"><span class="credit-dot"></span>{{ $account->health_label }}</div></div>
             </div>
             <button class="credit-btn" type="button" data-open-modal="edit-{{ $account->id }}"><i class="fa-solid fa-sliders"></i></button>
           </div>
@@ -72,7 +117,7 @@
           <div class="credit-summary-meta">{{ number_format($usagePercent, 1) }}٪ از اعتبار در دسترس این دوره مصرف شده</div>
           @if($account->usage_is_estimate)<div class="credit-summary-meta">هزینه جاری ساعتی: {{ number_format($account->hourly_usage / 10) }} تومان — محاسبه آنلاین براساس منابع فعال Liara</div>@endif
           @if($account->usage_source)<div class="credit-summary-meta">منبع مصرف: {{ $account->usage_source }}</div>@endif
-          @if($account->is_low)<div class="credit-warning"><i class="fa-solid fa-triangle-exclamation"></i> موجودی از حد هشدار کمتر شده است</div>@endif
+          @if($account->alert_level)<div class="credit-warning {{ $account->is_critical ? 'critical' : '' }}"><i class="fa-solid fa-triangle-exclamation"></i> {{ $account->alert_label }} · موجودی از آستانهٔ تنظیم‌شده کمتر است</div>@endif
           @if($account->sync_error)<div class="credit-warning">{{ $account->sync_error }}</div>@endif
         </article>
 
@@ -81,10 +126,12 @@
           <form method="POST" action="{{ route('admin.service-credits.accounts.update', $account) }}">@csrf @method('PUT')
             <div class="credit-form-grid">
               <div class="credit-field"><label>موجودی دستی ({{ $account->currency }})</label><input type="number" step="0.000001" name="manual_balance" value="{{ $account->manual_balance }}" required></div>
-              <div class="credit-field"><label>حد هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="{{ $account->low_balance_threshold }}"></div>
+              <div class="credit-field"><label>آستانهٔ هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="{{ $account->low_balance_threshold }}"></div>
+              <div class="credit-field"><label>آستانهٔ بحرانی</label><input type="number" step="0.000001" name="critical_balance_threshold" value="{{ $account->critical_balance_threshold }}"></div>
               <div class="credit-field" style="grid-column:span 2"><label>یادداشت</label><input name="note" value="{{ $account->note }}"></div>
             </div>
             <label class="credit-check"><input type="checkbox" name="show_on_dashboard" value="1" {{ $account->show_on_dashboard ? 'checked' : '' }}> نمایش کارت در مرکز فرماندهی</label>
+            <label class="credit-check"><input type="checkbox" name="alerts_enabled" value="1" {{ $account->alerts_enabled ? 'checked' : '' }}> فعال‌سازی هشدار کمبود موجودی</label>
             <div class="credit-actions"><button class="credit-btn primary">ذخیره</button><button class="credit-btn" type="button" data-close-modal>انصراف</button></div>
           </form>
         </div></div>
@@ -93,10 +140,10 @@
       @endforelse
     </div>
 
-    <section class="credit-panel credit-transactions-panel">
+    <section class="credit-panel credit-transactions-panel" id="credit-report">
       <div class="credit-panel-heading">
         <div>
-          <div class="credit-panel-title">گزارش جامع مصرف و تراکنش‌ها</div>
+          <div class="credit-panel-title">گزارش کامل مصرف و تراکنش‌ها</div>
           <div class="credit-panel-caption">اجرای واقعی کاربر، آزمایشگاه، سفارش و تغییرات موجودی سرویس‌ها در یک گزارش قابل پیگیری</div>
         </div>
         <span class="credit-live-label"><span class="credit-dot"></span> داده زنده</span>
@@ -184,9 +231,10 @@
       <div class="credit-field"><label>نام سرویس</label><input name="name" required></div><div class="credit-field"><label>شناسه انگلیسی</label><input name="slug" required></div>
       <div class="credit-field"><label>واحد پول</label><select name="currency"><option value="USD">دلار</option><option value="IRR">ریال</option></select></div>
       <div class="credit-field"><label>موجودی اولیه</label><input type="number" step="0.000001" name="manual_balance" value="0" required></div>
-      <div class="credit-field"><label>حد هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="0"></div><div class="credit-field" style="grid-column:span 3"><label>یادداشت</label><input name="note"></div>
+      <div class="credit-field"><label>آستانهٔ هشدار</label><input type="number" step="0.000001" name="low_balance_threshold" value="0"></div><div class="credit-field"><label>آستانهٔ بحرانی</label><input type="number" step="0.000001" name="critical_balance_threshold" value="0"></div><div class="credit-field" style="grid-column:span 2"><label>یادداشت</label><input name="note"></div>
     </div>
     <label class="credit-check"><input type="checkbox" name="show_on_dashboard" value="1" checked> نمایش در مرکز فرماندهی</label>
+    <label class="credit-check"><input type="checkbox" name="alerts_enabled" value="1" checked> فعال‌سازی هشدار کمبود موجودی</label>
     <div class="credit-actions"><button class="credit-btn primary">افزودن اکانت</button><button class="credit-btn" type="button" data-close-modal>انصراف</button></div>
   </form>
 </div></div>

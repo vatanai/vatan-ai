@@ -662,8 +662,10 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
         Route::get('/reviews', [ReferralSettingController::class, 'reviews'])->name('reviews');
         Route::get('/export', [ReferralSettingController::class, 'export'])->name('export');
         Route::get('/users/{user}/links/create', [ReferralSettingController::class, 'createUserLinkPage'])->name('users.links.create');
+        Route::post('/users/{user}/standard-link', [ReferralSettingController::class, 'ensureUserReferralLink'])->name('users.standard-link.store');
         Route::post('/users/{user}/links', [ReferralSettingController::class, 'createUserLink'])->name('users.links.store');
         Route::patch('/links/{referralLink}/toggle', [ReferralSettingController::class, 'toggleUserLink'])->name('links.toggle');
+        Route::delete('/links/{referralLink}', [ReferralSettingController::class, 'destroyUserLink'])->name('links.destroy');
         Route::patch('/conversions/{conversion}/review', [ReferralSettingController::class, 'reviewConversion'])->name('conversions.review');
         Route::patch('/rewards/{reward}/review', [ReferralSettingController::class, 'reviewReward'])->name('rewards.review');
     });
@@ -724,6 +726,8 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
         Route::get('/costs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'costs'])->name('costs');
         Route::post('/costs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeCost'])->name('costs.store');
         Route::get('/integrations', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'integrations'])->name('integrations');
+        Route::get('/integrations/meta/oauth/start', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'startMetaOAuth'])->name('integrations.meta.oauth.start');
+        Route::get('/integrations/meta/oauth/callback', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'finishMetaOAuth'])->name('integrations.meta.oauth.callback');
         Route::post('/integrations/meta', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeMetaIntegration'])->name('integrations.meta.store');
         Route::post('/integrations/meta/{marketingIntegration}/test', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'testMetaIntegration'])->name('integrations.meta.test');
         Route::get('/logs', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'logs'])->name('logs');

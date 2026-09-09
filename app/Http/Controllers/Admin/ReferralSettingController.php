@@ -51,8 +51,33 @@ class ReferralSettingController extends Controller
                 ->withCount(['visits', 'conversions'])
                 ->latest('id');
         }]);
+        $referralInvitees = ReferralConversion::query()->where('inviter_id', $user->id)->select('invitee_id');
+        $normalLinkStats = [
+            'visits' => ReferralVisit::query()->where('inviter_id', $user->id)->count(),
+            'registrations' => ReferralConversion::query()->where('inviter_id', $user->id)->count(),
+            'purchases' => ReferralConversion::query()->where('inviter_id', $user->id)
+                ->whereHas('invitee.planPurchases', fn ($query) => $query->where('status', 'completed'))
+                ->count(),
+            'outputs' => GeneratedImage::query()->whereIn('user_id', $referralInvitees)->count(),
+        ];
 
-        return view('admin.settings.referrals.links.create', compact('user', 'products'));
+        return view('admin.settings.referrals.links.create', compact('user', 'products', 'normalLinkStats'));
+    }
+
+    /** برای کاربرانی که کد قدیمی ندارند، لینک عمومی پایدار را یک‌بار ایجاد می‌کند. */
+    public function ensureUserReferralLink(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        if (! $user->referral_code) {
+            do {
+                $code = Str::upper(Str::random(10));
+            } while (User::query()->where('referral_code', $code)->exists());
+
+            $user->forceFill(['referral_code' => $code])->save();
+        }
+
+        return back()->with('success', 'لینک عادی دعوت برای کاربر آماده شد.');
     }
 
     public function settings(Request $request): View
@@ -401,6 +426,26 @@ class ReferralSettingController extends Controller
         ]);
 
         return back()->with('success', $active ? 'لینک دعوت غیرفعال شد.' : 'لینک دعوت دوباره فعال شد.');
+    }
+
+    /** حذف لینک بدون سابقه؛ لینک‌های دارای سابقه برای حفظ گزارش‌ها فقط غیرفعال می‌شوند. */
+    public function destroyUserLink(Request $request, ReferralLink $referralLink): RedirectResponse
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        $referralLink->loadCount(['visits', 'conversions']);
+        $userId = $referralLink->inviter_id;
+
+        if ((int) $referralLink->visits_count > 0 || (int) $referralLink->conversions_count > 0) {
+            $referralLink->update(['status' => 'inactive', 'deactivated_at' => now()]);
+
+            return back()->with('success', 'این لینک سابقهٔ کلیک یا ثبت‌نام دارد؛ برای حفظ گزارش‌ها غیرفعال شد.');
+        }
+
+        $referralLink->delete();
+
+        return redirect()->route('admin.referrals.users.links.create', $userId)
+            ->with('success', 'لینک دعوت حذف شد.');
     }
 
     public function update(Request $request): RedirectResponse

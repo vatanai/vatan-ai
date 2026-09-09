@@ -73,7 +73,7 @@
 
     <section class="referral-link-card {{ $programActive ? '' : 'is-disabled' }}">
       <div class="referral-section-heading">
-        <div><span>لینک اختصاصی تو</span><small>این لینک را در شبکه‌های اجتماعی یا برای دوستانت بفرست.</small></div>
+        <div><span>۱. لینک عادی دعوت تو</span><small>مخاطب با این لینک وارد صفحهٔ اصلی سایت می‌شود و عملکردش برای تو رصد خواهد شد.</small></div>
         @if($referralData['pending_tokens'] > 0)<b><svg class="referral-icon referral-icon--xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12M6 21h12M8 3v4c0 2 4 3 4 5s-4 3-4 5v4M16 3v4c0 2-4 3-4 5s4 3 4 5v4"/></svg> {{ number_format($referralData['pending_tokens']) }} توکن در انتظار بررسی</b>@endif
       </div>
       <div class="referral-code-row"><span>کد دعوت تو</span><code dir="ltr">{{ $referralData['code'] }}</code><small>همین کد داخل همه لینک‌های کسب پاداش تو استفاده می‌شود.</small></div>
@@ -85,7 +85,7 @@
     </section>
 
     <section class="referral-link-card">
-      <div class="referral-section-heading"><div><span>لینک اختصاصی هر محصول</span><small>یک محصول را جست‌وجو و انتخاب کن؛ کلیک، ثبت‌نام، تصویرسازی و خرید همان لینک جداگانه گزارش می‌شود.</small></div></div>
+      <div class="referral-section-heading"><div><span>۲. لینک محصول</span><small>یک محصول را جست‌وجو و انتخاب کن؛ مخاطب مستقیم به همان محصول می‌رود و آمارش جداگانه گزارش می‌شود.</small></div></div>
       @if($programActive)
         <form method="POST" action="{{ route('profile.referral-links.store') }}" class="referral-product-form" id="referralProductForm" dir="rtl">
           @csrf
