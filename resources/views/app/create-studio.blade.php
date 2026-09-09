@@ -3,9 +3,9 @@
 @section('page_title', 'استودیوی ساخت | پلتفرم هوش مصنوعی وطن')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-studio.css') }}?v={{ filemtime(public_path('css/create-studio.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-studio.css') }}">
   @if($experimental ?? false)
-    <link rel="stylesheet" href="{{ asset('css/create-studio-workflows.css') }}?v={{ filemtime(public_path('css/create-studio-workflows.css')) }}">
+    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-studio-workflows.css') }}">
   @endif
 @endpush
 
@@ -64,7 +64,7 @@
     </aside>
 
     <main class="create-studio-stage" aria-label="فضای پیش‌نمایش">
-      <header class="create-studio-topbar"><div class="create-studio-top-actions"><a href="{{ route('app.profile', ['tab' => 'gallery']) }}" class="create-studio-top-button"><i class="fa-regular fa-circle-user"></i> گالری من</a><button type="button" class="create-studio-top-button" data-studio-help><i class="fa-regular fa-circle-question"></i> راهنمای ساخت</button></div><div class="create-studio-top-brand"><span><i class="fa-solid fa-circle-play"></i> پلتفرم هوش مصنوعی وطن</span></div></header>
+      <header class="create-studio-topbar"><div class="create-studio-top-actions"><a href="{{ route('profile.gallery') }}" class="create-studio-top-button"><i class="fa-regular fa-circle-user"></i> گالری من</a><button type="button" class="create-studio-top-button" data-studio-help><i class="fa-regular fa-circle-question"></i> راهنمای ساخت</button></div><div class="create-studio-top-brand"><span><i class="fa-solid fa-circle-play"></i> پلتفرم هوش مصنوعی وطن</span></div></header>
 
       <section class="create-studio-stage-panel"><div class="create-studio-stage-heading"><span class="create-studio-stage-kicker" data-studio-stage-kicker>استودیوی ساخت ویدیو</span><h1 data-studio-stage-title>ویدیو را با چند کلمه بساز</h1><p data-studio-stage-subtitle>ایده‌ات را بنویس، تنظیمات را انتخاب کن و ساخت واقعی را به وطن بسپار.</p></div>
         <div class="create-studio-steps" data-studio-video-content><article class="create-studio-step-card"><div class="create-studio-step-media create-studio-step-media--upload"><span><i class="fa-regular fa-image"></i></span><b>افزودن تصویر</b><small>تصویر مرجع برای شروع</small><div class="create-studio-fake-image"></div></div><h2>افزودن تصویر</h2><p>یک تصویر اضافه کن یا ساخت ویدیوی متنی را شروع کن.</p></article><article class="create-studio-step-card"><div class="create-studio-step-media"><img src="{{ asset('assets/img/elegant-woman-cafe-portrait-by-promptplum.avif') }}" alt="نمونه حرکت دوربین"><span class="create-studio-step-focus"><i class="fa-solid fa-crosshairs"></i></span></div><h2>انتخاب حرکت</h2><p>نسبت تصویر، مدت و حرکت دوربین را تنظیم کن.</p></article><article class="create-studio-step-card"><div class="create-studio-step-media"><video src="{{ asset('assets/videos/60ed34f8-ed85-4ae0-9b63-191dcbe11800.mp4') }}" autoplay muted loop playsinline preload="metadata" data-studio-stage-video></video><span class="create-studio-video-mark"><i class="fa-solid fa-play"></i></span></div><h2>دریافت ویدیو</h2><p>وطن درخواست را به سرویس ساخت ویدیو ارسال می‌کند.</p></article></div>
@@ -80,8 +80,8 @@
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-studio.js') }}?v={{ filemtime(public_path('js/create-studio.js')) }}"></script>
+  <script src="{{ \App\Support\AppAsset::url('js/create-studio.js') }}"></script>
   @if($experimental ?? false)
-    <script src="{{ asset('js/create-studio-workflows.js') }}?v={{ filemtime(public_path('js/create-studio-workflows.js')) }}"></script>
+    <script src="{{ \App\Support\AppAsset::url('js/create-studio-workflows.js') }}"></script>
   @endif
 @endpush

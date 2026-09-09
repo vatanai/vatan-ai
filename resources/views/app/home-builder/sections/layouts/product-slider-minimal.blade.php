@@ -3,7 +3,7 @@
   @foreach($products as $product)
     <a class="hb-minimal-card" href="{{ route('app.product', $product->route_slug) }}">
       <div class="hb-minimal-media">
-        <span class="hb-minimal-image" style="background-image:url('{{ $product->displayImageUrl() }}')"></span>
+        <span class="hb-minimal-image" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)"></span>
         <span class="hb-minimal-arrow"><i class="fa-solid fa-arrow-left"></i></span>
       </div>
       <div class="hb-minimal-copy">

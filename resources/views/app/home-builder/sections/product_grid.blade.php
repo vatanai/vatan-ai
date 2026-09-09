@@ -15,7 +15,7 @@
   @php $cols = match($section->layout) { 'two_col' => 2, 'four_col' => 4, default => 3 }; @endphp
   <div class="hb-grid hb-cols-{{ $cols }}">
     @foreach($products as $product)
-      <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
+      <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
         <div class="home-card-overlay"></div>
         <div class="home-card-info">
           <p class="home-card-name">{{ $product->name_fa }}</p>

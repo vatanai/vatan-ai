@@ -1,7 +1,7 @@
 <header class="hoosha-topbar" aria-label="ناوبری استودیوی وطن">
   <a class="hoosha-brand" href="{{ route('app.home') }}" aria-label="وطن AI">
-    <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="32" height="32">
-    <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="hoosha-brand-wordmark">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt="" width="32" height="32">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="hoosha-brand-wordmark">
   </a>
 
   <div class="hoosha-top-tools">

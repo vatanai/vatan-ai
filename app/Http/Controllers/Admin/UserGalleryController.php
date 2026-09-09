@@ -15,6 +15,7 @@ use App\Models\UserGallerySuggestion;
 use App\Models\UserGalleryRecreation;
 use App\Models\UserGalleryCampaign;
 use App\Models\UserGalleryCostEvent;
+use App\Models\Product;
 use App\Services\UserGalleryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -83,6 +84,55 @@ class UserGalleryController extends Controller
         ];
 
         return view('admin.users.gallery.show', compact('user', 'items', 'setting', 'builds', 'financeSummary', 'shortcutLinks'));
+    }
+
+    /** جستجوی محصول برای تخصیص مالک از صفحه‌ی گالری همان کاربر. */
+    public function searchCreatorRewardProducts(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+        if ($search === '') {
+            return response()->json(['data' => []]);
+        }
+
+        $products = Product::query()
+            ->with('creatorRewardOwner:id,name,last_name')
+            ->where(function ($query) use ($search): void {
+                $query->where('name_fa', 'like', "%{$search}%")
+                    ->orWhere('name_en', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+                if (is_numeric($search)) {
+                    $query->orWhere('id', (int) $search)->orWhere('product_code', $search);
+                }
+            })
+            ->latest('updated_at')
+            ->limit(10)
+            ->get(['id', 'name_fa', 'name_en', 'slug', 'status', 'media_type', 'creator_reward_enabled', 'creator_reward_owner_id']);
+
+        return response()->json([
+            'data' => $products->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->name_fa ?: $product->name_en,
+                'type' => $product->media_type === 'video' ? 'ویدیو' : ($product->media_type === 'both' ? 'عکس و ویدیو' : 'عکس'),
+                'status' => $product->status === 'active' ? 'فعال' : ($product->status === 'draft' ? 'پیش‌نویس' : 'غیرفعال'),
+                'owner' => $product->creatorRewardOwner
+                    ? trim($product->creatorRewardOwner->name . ' ' . ($product->creatorRewardOwner->last_name ?? ''))
+                    : null,
+                'reward_enabled' => (bool) $product->creator_reward_enabled,
+            ])->values(),
+        ]);
+    }
+
+    /** مالک تجاری محصول را از صفحه‌ی گالری کاربر ثبت یا جایگزین می‌کند. */
+    public function assignCreatorRewardProduct(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+        ]);
+
+        $product = Product::query()->findOrFail((int) $data['product_id']);
+        $product->forceFill(['creator_reward_owner_id' => $user->id])->save();
+
+        return back()->with('success', 'مالک محصول با موفقیت به این کاربر اختصاص داده شد. برای فعال‌شدن پرداخت پاداش، گزینه‌ی پاداش مالک محصول را در تنظیمات محصول روشن کنید.');
     }
 
     private function buildUserActivity(User $user): array
@@ -178,10 +228,19 @@ class UserGalleryController extends Controller
         }
 
         $payload = (array) $order->input_payload;
-        $fallback = collect(array_merge((array) data_get($payload, 'source_upload_paths', []), [data_get($payload, 'source_upload_path')]))
-            ->filter(fn ($path): bool => is_scalar($path) && filled($path))
+        $fallback = collect(array_values(array_unique(array_filter(
+            array_merge((array) data_get($payload, 'source_upload_paths', []), [data_get($payload, 'source_upload_path')]),
+            fn ($path): bool => is_scalar($path) && filled($path),
+        ))))
             ->map(fn ($path): array => ['type' => 'image', 'url' => filter_var($path, FILTER_VALIDATE_URL) ? (string) $path : asset('storage/' . ltrim((string) $path, '/')), 'label' => 'عکس ورودی', 'text' => null]);
-        if (filled(data_get($payload, 'source_video_url'))) {
+        $inputPrompt = data_get($payload, 'prompt') ?: data_get($payload, 'fields.prompt');
+        if (filled($inputPrompt)) {
+            $fallback->prepend(['type' => 'text', 'url' => route('admin.orders.show', $order), 'label' => 'متن ورودی', 'text' => (string) $inputPrompt]);
+        }
+        if (filled(data_get($payload, 'source_video_path'))) {
+            $fallback->push(['type' => 'video', 'url' => asset('storage/' . ltrim((string) data_get($payload, 'source_video_path'), '/')), 'label' => 'ویدیوی ورودی', 'text' => null]);
+        }
+        if (filled(data_get($payload, 'source_video_url')) && ! filled(data_get($payload, 'source_video_path'))) {
             $fallback->push(['type' => 'video', 'url' => (string) data_get($payload, 'source_video_url'), 'label' => 'ویدیوی ورودی', 'text' => null]);
         }
 

@@ -30,6 +30,11 @@ class ReferralLink extends Model
         return $this->hasMany(ReferralVisit::class, 'link_id');
     }
 
+    public function conversions(): HasMany
+    {
+        return $this->hasMany(ReferralConversion::class, 'link_id');
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active' && $this->deactivated_at === null;

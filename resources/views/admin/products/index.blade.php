@@ -30,7 +30,10 @@
       </div>
       <div class="flex items-center gap-2">
         <a href="{{ route('admin.products.create') }}" class="btn-pro btn-pro-primary">
-          <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول جدید
+          <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول عکس
+        </a>
+        <a href="{{ route('admin.products.video.create') }}" class="btn-pro btn-pro-ghost">
+          <i class="fa-solid fa-video text-[11px]"></i> ثبت محصول ویدیو
         </a>
         <a href="{{ request()->fullUrl() }}" class="btn-pro btn-pro-ghost" id="btn-refresh-products" title="بروزرسانی لیست (با حفظ فیلترهای فعلی)">
           <i class="fa-solid fa-rotate-right text-[11px]"></i> بروزرسانی

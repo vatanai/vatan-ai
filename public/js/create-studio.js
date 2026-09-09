@@ -481,7 +481,13 @@
       if (key.startsWith('field:')) data.set(`fields[${key.slice(6)}]`, value ?? '');
     });
     if (currentMode === 'video' && uploadInput.files[0]) data.append('source_image', uploadInput.files[0]);
-    if (currentMode === 'image' && uploadInput.files[0] && activeConfig.reference_upload_key) data.append(`uploads[${activeConfig.reference_upload_key}][]`, uploadInput.files[0]);
+    if (currentMode === 'image' && uploadInput.files[0] && activeConfig.reference_upload_key) {
+      const referenceField = (activeConfig.fields || []).find((field) => String(field.id) === String(activeConfig.reference_upload_key));
+      const uploadName = referenceField?.type === 'multi_image'
+        ? `uploads[${activeConfig.reference_upload_key}][]`
+        : `uploads[${activeConfig.reference_upload_key}]`;
+      data.append(uploadName, uploadInput.files[0]);
+    }
     const selectedModel = selectedValues.model ? optionsFor('model').find((option) => String(option.value) === String(selectedValues.model)) : null;
     if (selectedModel?.value) {
       data.set('studio_model', selectedModel.value);
@@ -510,7 +516,7 @@
     if (!prompt.value.trim()) { showError('ابتدا توضیحات ساخت را وارد کنید.'); prompt.focus(); return; }
     if (config.authenticated !== true) { saveStudioState(); window.location.href = config.login_url; return; }
     if (currentMode === 'image' && activeConfig.requires_reference && !uploadInput.files[0]) { showError('برای ساخت این محصول، یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
-    submit.disabled = true; submitLabel.textContent = 'در حال ساخت'; startProgress(currentMode === 'video' ? 'در حال ساخت ویدیو' : 'در حال ساخت عکس');
+    submit.disabled = true; submit.setAttribute('aria-busy', 'true'); submitLabel.textContent = 'در حال ساخت'; startProgress(currentMode === 'video' ? 'در حال ساخت ویدیو' : 'در حال ساخت عکس');
     try {
       const url = activeConfig.generate_url || `${window.location.origin}/app/create/${activeConfig.route_slug}/generate`;
       const response = await fetch(url, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json'}, body: appendDefaults(new FormData(form))});
@@ -524,8 +530,19 @@
       if (window.matchMedia('(max-width: 700px)').matches) {
         window.requestAnimationFrame(() => result.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'}));
       }
-    } catch (error) { stopProgress(); progress.hidden = true; videoContent.hidden = currentMode !== 'video'; imageContent.hidden = currentMode !== 'image'; showError(error.message || 'ارتباط با سرویس ساخت برقرار نشد.'); }
-    finally { submit.disabled = false; }
+    } catch (error) {
+      stopProgress();
+      progressBar.style.width = '0%';
+      progress.hidden = true;
+      videoContent.hidden = currentMode !== 'video';
+      imageContent.hidden = currentMode !== 'image';
+      submitLabel.textContent = 'بساز';
+      showError(error.message || 'ارتباط با سرویس ساخت برقرار نشد.');
+    }
+    finally {
+      submit.disabled = false;
+      submit.removeAttribute('aria-busy');
+    }
   }
 
   modeTabs.forEach((tab) => tab.addEventListener('click', () => setMode(tab.dataset.studioMode)));

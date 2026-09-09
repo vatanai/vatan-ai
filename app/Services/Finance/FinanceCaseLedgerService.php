@@ -648,6 +648,7 @@ class FinanceCaseLedgerService
             'gift', 'registration_gift' => 'اعتبار هدیه',
             'plan_upgrade' => 'اعتبار هدیه ارتقای پلن',
             'referral' => 'اعتبار دعوت دوستان',
+            'product_creator_reward' => 'پاداش مالک محصول',
             'paid_adjustment' => 'اصلاح اعتبار خریداری‌شده',
             default => 'اصلاح دستی اعتبار',
         };

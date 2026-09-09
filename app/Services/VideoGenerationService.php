@@ -26,6 +26,7 @@ class VideoGenerationService
         private readonly VideoProductConfigService $videoConfig,
         private readonly StudioCostService $studioCosts,
         private readonly AiProviderCredentials $credentials,
+        private readonly ProductCreatorRewardService $creatorRewards,
     ) {}
 
     public function start(Product $product, User $user, array $options): GeneratedVideo
@@ -147,6 +148,7 @@ class VideoGenerationService
             'input_payload' => [
                 'media_type' => 'video',
                 'fields' => $fieldValues,
+                'prompt' => $fieldValues['prompt'] ?: null,
                 'duration' => $duration,
                 'aspect_ratio' => $aspectRatio,
                 'resolution' => $resolution,
@@ -155,6 +157,7 @@ class VideoGenerationService
                 'face_profile_id' => $options['face_profile_id'] ?? null,
                 'source_upload_path' => $options['source_upload_path'] ?? null,
                 'source_upload_paths' => array_values(array_filter((array) ($options['source_upload_paths'] ?? []))),
+                'source_video_path' => $options['source_video_path'] ?? null,
                 'source_video_url' => $options['source_video_url'] ?? null,
                 'workflow' => $options['workflow'] ?? $config['workflow'],
                 'reference_mode' => $options['reference_mode'] ?? null,
@@ -165,6 +168,47 @@ class VideoGenerationService
             'processing_started_at' => now(),
         ]);
         $order->recordEvent('created', 'سفارش ویدیویی ثبت شد', 'درخواست برای صف تولید ویدیو آماده شد.');
+
+        // متن، عکس‌ها و ویدیوی ورودی همین آزمایش قبل از ارسال به پرووایدر
+        // در گالری خصوصی کاربر نگهداری می‌شوند.
+        $gallery = app(UserGalleryService::class);
+        $galleryPrompt = trim((string) ($options['prompt'] ?? $fieldValues['prompt'] ?? ''));
+        if ($galleryPrompt !== '') {
+            $gallery->captureText($user, $galleryPrompt, $order->id, [
+                'order_id' => $order->id,
+                'source' => 'app.create.studio',
+            ]);
+        }
+        foreach (array_values(array_filter((array) ($options['source_upload_paths'] ?? []))) as $path) {
+            $disk = Storage::disk('public');
+            if (! $disk->exists($path)) {
+                continue;
+            }
+            $gallery->capture(
+                $user,
+                'input_image',
+                $order->id,
+                $path,
+                'public',
+                (int) $disk->size($path),
+                $disk->mimeType($path),
+                ['order_id' => $order->id, 'source' => 'app.create.studio'],
+            );
+        }
+        $sourceVideoPath = (string) ($options['source_video_path'] ?? '');
+        $publicDisk = Storage::disk('public');
+        if ($sourceVideoPath !== '' && $publicDisk->exists($sourceVideoPath)) {
+            $gallery->capture(
+                $user,
+                'input_video',
+                $order->id,
+                $sourceVideoPath,
+                'public',
+                (int) $publicDisk->size($sourceVideoPath),
+                $publicDisk->mimeType($sourceVideoPath),
+                ['order_id' => $order->id, 'source' => 'app.create.studio'],
+            );
+        }
 
         $reservation = ['total' => 0, 'promotional' => 0, 'paid' => 0, 'ledger_key' => null];
         try {
@@ -279,7 +323,14 @@ class VideoGenerationService
             return $generation->fresh();
         }
         if ($status !== 'completed') return $generation;
-        if ($generation->status === 'completed' && $generation->credits_settled_at) return $generation;
+        if ($generation->status === 'completed' && $generation->credits_settled_at) {
+            try {
+                $this->creatorRewards->rewardForVideo($generation, (array) $generation->credit_reservation);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+            return $generation;
+        }
 
         $output = collect((array) ($normalized['output_urls'] ?? []))->first(fn ($item): bool => is_array($item) && filter_var($item['url'] ?? null, FILTER_VALIDATE_URL));
         if (!$output) throw new RuntimeException('سرویس‌دهنده ویدیو را تکمیل کرد اما آدرس فایل خروجی موجود نیست.');
@@ -316,6 +367,12 @@ class VideoGenerationService
             'processing_duration_ms' => $generation->order?->processing_started_at?->diffInMilliseconds(now()),
         ]);
         $generation->order?->recordEvent('completed', 'ویدیو با موفقیت ساخته شد');
+
+        try {
+            $this->creatorRewards->rewardForVideo($generation->fresh(['product', 'user', 'order']), $reservation);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         return $generation->fresh();
     }

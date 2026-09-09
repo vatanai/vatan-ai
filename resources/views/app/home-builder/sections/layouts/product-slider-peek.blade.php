@@ -15,7 +15,7 @@
   <div class="hb-peek-scroll" id="{{ $peekId }}">
     @foreach($products as $product)
       <a class="hb-peek-item" href="{{ route('app.product', $product->route_slug) }}">
-        <div class="hb-peek-card" style="background-image: url('{{ $product->displayImageUrl() }}');">
+        <div class="hb-peek-card" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
           <div class="hb-peek-overlay"></div>
           <span class="hb-peek-go"><i class="fa-solid fa-arrow-left"></i></span>
         </div>

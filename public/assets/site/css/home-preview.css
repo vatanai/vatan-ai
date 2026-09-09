@@ -169,11 +169,14 @@ html.light .vp-header .vp-brand--app img,html.light .vp-mobile-menu .vp-brand--a
 .vp-token-box{display:grid;grid-template-columns:max-content max-content;align-items:center;justify-content:center;column-gap:10.2px;direction:ltr;min-width:0;padding-inline:8px}
 .vp-token-box::after{display:none}
 .vp-token-box.is-guest{min-width:106px;padding-inline:8px;column-gap:12.75px}
+.vp-token-box.is-prelogin{min-width:0;max-width:230px;min-height:32.3px;height:auto;padding:4px 10px;align-items:center}
+.vp-token-box.is-prelogin .vp-token-box__value{max-width:180px}
+.vp-token-box.is-prelogin .vp-token-box__value b{font-size:11px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;text-align:right}
 .vp-token-box__mark{display:block;align-self:center}
 .vp-token-box__value{grid-column:2;display:inline-flex;align-items:center;justify-content:center;gap:3px;direction:rtl;min-width:0;align-self:center}
 .vp-token-box b{font-size:17.16px;line-height:1;text-align:center;position:relative;top:1px}
 .vp-token-box em{font-size:10px;line-height:1}
-@media(max-width:860px){.vp-token-box{padding-inline:6px;column-gap:10.2px}.vp-token-box.is-guest{min-width:100px;padding-inline:6px;column-gap:12.75px}.vp-token-box b{font-size:15.84px}.vp-token-box em{font-size:9.5px}}
+@media(max-width:860px){.vp-token-box{padding-inline:6px;column-gap:10.2px}.vp-token-box.is-guest{min-width:100px;padding-inline:6px;column-gap:12.75px}.vp-token-box.is-prelogin{max-width:175px;padding-inline:7px}.vp-token-box.is-prelogin .vp-token-box__value{max-width:135px}.vp-token-box.is-prelogin .vp-token-box__value b{font-size:9.5px}.vp-token-box b{font-size:15.84px}.vp-token-box em{font-size:9.5px}}
 
 /* کارت‌های پیشنهادی: یک حالت پایه مشترک و هاور اقتصادی برای کارت‌های غیرپیشنهادی. */
 .vp-proposal-plan--business{background:var(--vp-card)}

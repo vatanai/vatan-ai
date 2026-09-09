@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>پیش‌نمایش پلان لودر | وطن AI</title>
-  <link rel="stylesheet" href="{{ asset('css/fonts.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/create-loader-ad.css') }}?v={{ filemtime(public_path('css/create-loader-ad.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-loader-ad.css') }}">
 </head>
 <body>
   <div class="ad-preview" data-ad-preview>
@@ -26,7 +26,7 @@
           <div class="ad-status-bar"><span>۹:۴۱</span><span class="ad-status-icons">● ◒ ▰</span></div>
 
           <header class="ad-app-header">
-            <div class="ad-brand"><span class="ad-brand-mark"><img src="{{ asset('assets/img/icon_vatan.svg') }}" alt=""></span><img class="ad-brand-wordmark" src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI"></div>
+            <div class="ad-brand"><span class="ad-brand-mark"><img src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt=""></span><img class="ad-brand-wordmark" src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن AI"></div>
           </header>
 
           <div class="ad-screen-scroll">
@@ -53,7 +53,7 @@
             <span class="ad-tap" data-tap aria-hidden="true"></span>
 
             <section class="ad-loader" data-loader hidden>
-              <div class="ad-loader-top"><div class="ad-loader-brand"><span class="ad-loader-logo"><img src="{{ asset('assets/img/icon_vatan.svg') }}" alt=""></span><img class="ad-loader-wordmark" src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI"></div><strong data-progress>۰٪</strong></div>
+              <div class="ad-loader-top"><div class="ad-loader-brand"><span class="ad-loader-logo"><img src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt=""></span><img class="ad-loader-wordmark" src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن AI"></div><strong data-progress>۰٪</strong></div>
               <h2>در حال ساخت تصویر شما</h2>
               <p data-stage-text>در حال بررسی تصویر و ورودی‌ها</p>
               <div class="ad-timeline" role="progressbar" aria-label="پیشرفت ساخت" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-progress-bar></span><i data-progress-dot></i></div>
@@ -94,6 +94,6 @@
 
     <footer class="ad-caption"><span class="ad-caption-line"></span><span>سناریو: تصویر آماده ← کلیک روی بساز ← پرشدن تایم‌لاین</span><span class="ad-caption-line"></span></footer>
   </div>
-  <script src="{{ asset('js/create-loader-ad.js') }}?v={{ filemtime(public_path('js/create-loader-ad.js')) }}"></script>
+  <script src="{{ \App\Support\AppAsset::url('js/create-loader-ad.js') }}"></script>
 </body>
 </html>

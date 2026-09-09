@@ -21,6 +21,8 @@ use App\Services\SmsEventService;
 use App\Services\ModelTierService;
 use App\Services\VideoProductConfigService;
 use App\Services\StudioCostService;
+use App\Services\UserGalleryService;
+use App\Services\ProductCreatorRewardService;
 use App\Http\Requests\GenerateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +38,7 @@ class ProductGenerateController extends Controller
         protected AiProviderRouter $openRouter,
         protected CreditWalletService $creditWallet,
         protected ModelTierService $modelTiers,
+        protected ProductCreatorRewardService $creatorRewards,
     )
     {
     }
@@ -438,7 +441,12 @@ class ProductGenerateController extends Controller
     public function show(Product $product)
     {
         if ($product->isVideoProduct()) {
-            return app(VideoProductController::class)->show(request(), $product, app(ProductBuildSchema::class));
+            return app(VideoProductController::class)->show(
+                request(),
+                $product,
+                app(ProductBuildSchema::class),
+                app(\App\Services\VideoModelSchemaService::class),
+            );
         }
 
         $metricPayload = [
@@ -763,6 +771,7 @@ class ProductGenerateController extends Controller
                 'attempts' => 1,
                 'input_payload' => [
                     'fields' => $fieldValues,
+                    'prompt' => trim((string) ($request->input('studio_prompt') ?: $request->input('prompt') ?: data_get($fieldValues, 'prompt', ''))) ?: null,
                     'variants' => array_column($selectedVariants, 'key'),
                     'aspect_ratio' => $aspectRatio,
                     'quality' => $quality,
@@ -770,6 +779,8 @@ class ProductGenerateController extends Controller
                     'main_quality' => $mainQuality['key'],
                     'identity_preservation' => $identityRequested,
                     'face_profile_id' => $faceProfile?->id,
+                    'source_upload_path' => $uploadedPaths[0]['path'] ?? null,
+                    'source_upload_paths' => array_values(array_column($uploadedPaths, 'path')),
                     'project_name' => trim((string) $request->input('studio_project_name', '')) ?: null,
                 ],
                 'source' => 'app',
@@ -777,6 +788,31 @@ class ProductGenerateController extends Controller
                 'processing_started_at' => now(),
             ]);
             $order->recordEvent('created', 'سفارش ثبت شد', 'پردازش سفارش هوش مصنوعی آغاز شد.');
+
+            // ورودی هر آزمایش، مستقل از موفق یا ناموفق بودن خروجی، در گالری خصوصی
+            // کاربر ثبت می‌شود تا در اعتبار سرویس و گالری همان سفارش قابل پیگیری باشد.
+            if ($user) {
+                $gallery = app(UserGalleryService::class);
+                $galleryPrompt = trim((string) ($request->input('studio_prompt') ?: $request->input('prompt') ?: data_get($fieldValues, 'prompt', '')));
+                if ($galleryPrompt !== '') {
+                    $gallery->captureText($user, $galleryPrompt, $order->id, [
+                        'order_id' => $order->id,
+                        'source' => 'app.create',
+                    ]);
+                }
+                foreach ($uploadedPaths as $upload) {
+                    $gallery->capture(
+                        $user,
+                        'input_image',
+                        $order->id,
+                        $upload['path'],
+                        'public',
+                        $upload['size'],
+                        $upload['mime'],
+                        ['order_id' => $order->id, 'source' => 'app.create'],
+                    );
+                }
+            }
 
             // رزرو اتمیک اعتبار؛ از ساخت هم‌زمان بیش از موجودی جلوگیری می‌کند و
             // سهم اعتبار هدیه/خریداری‌شده را تا انتهای سفارش نگه می‌دارد.
@@ -941,6 +977,7 @@ class ProductGenerateController extends Controller
             }
 
             // ۷. ثبت نهایی سوابق در دیتابیس در صورت لاگین بودن کاربر
+            $generatedImageRecords = [];
             if ($user) {
                 foreach ($uploadedPaths as $up) {
                     UserUpload::create([
@@ -962,6 +999,7 @@ class ProductGenerateController extends Controller
                         'cost'        => $g['cost'],
                         'size'        => $g['size'],
                     ]);
+                    $generatedImageRecords[] = $generatedImage;
                     app(\App\Services\ReferralProgramService::class)->handleSuccessfulGeneration($generatedImage);
                 }
 
@@ -974,6 +1012,17 @@ class ProductGenerateController extends Controller
             if ($creditReservation['total'] > 0 && $user) {
                 $creditReservation = $this->creditWallet->settle($user, $creditReservation, $actualCredit);
                 $creditReservationSettled = true;
+            }
+
+            // پاداش مالک فقط بعد از مشخص‌شدن سهم نهایی اعتبار هر خروجی ثبت می‌شود.
+            // خطای دفتر پاداش نباید پاسخ ساخت موفق کاربر را خراب کند؛ اجرای بعدی
+            // سرویس با event_key یکتا از ثبت دوباره جلوگیری می‌کند.
+            foreach ($generatedImageRecords as $generatedImageRecord) {
+                try {
+                    $this->creatorRewards->rewardForImage($generatedImageRecord, $creditReservation);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
             }
 
             $failedMsg = !empty($failed)

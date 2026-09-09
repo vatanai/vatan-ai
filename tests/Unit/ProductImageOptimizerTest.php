@@ -9,17 +9,18 @@ use Tests\TestCase;
 
 class ProductImageOptimizerTest extends TestCase
 {
-    public function test_suitable_image_is_kept_byte_for_byte(): void
+    public function test_new_product_image_is_always_normalized_to_webp(): void
     {
         Storage::fake('public');
         $file = UploadedFile::fake()->image('suitable.jpg', 800, 600);
-        $originalHash = hash_file('sha256', $file->getRealPath());
 
         $path = app(ProductImageOptimizer::class)->store($file, 'products/main');
+        $stored = Storage::disk('public')->get($path);
+        $info = getimagesizefromstring($stored);
 
         Storage::disk('public')->assertExists($path);
-        $this->assertSame($originalHash, hash('sha256', Storage::disk('public')->get($path)));
-        $this->assertStringEndsWith('.jpg', $path);
+        $this->assertStringEndsWith('.webp', $path);
+        $this->assertSame([800, 600], [$info[0], $info[1]]);
     }
 
     public function test_large_image_is_resized_without_changing_its_ratio(): void
@@ -37,7 +38,7 @@ class ProductImageOptimizerTest extends TestCase
         $this->assertSame(2.0, $info[0] / $info[1]);
     }
 
-    public function test_existing_suitable_product_image_keeps_the_same_path(): void
+    public function test_existing_suitable_product_image_is_normalized_to_webp(): void
     {
         Storage::fake('public');
         $source = UploadedFile::fake()->image('existing.jpg', 800, 600);
@@ -45,8 +46,10 @@ class ProductImageOptimizerTest extends TestCase
 
         $result = app(ProductImageOptimizer::class)->optimizeStored($path, 'products/main');
 
-        $this->assertSame($path, $result);
+        $this->assertNotSame($path, $result);
+        $this->assertStringEndsWith('.webp', $result);
         Storage::disk('public')->assertExists($path);
+        Storage::disk('public')->assertExists($result);
     }
 
     public function test_existing_large_product_image_creates_replacement_without_deleting_original(): void

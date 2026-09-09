@@ -3,6 +3,7 @@
 return [
     'events' => [
         'otp_code' => ['label' => 'رمز یک‌بارمصرف ورود', 'group' => 'کاربران', 'variables' => ['code', 'expiry_minutes', 'brand_name']],
+        'login_otp' => ['label' => 'کد ورود کاربران بازگشتی', 'group' => 'کاربران', 'variables' => ['name', 'code']],
         'login_success' => ['label' => 'ورود موفق کاربر', 'group' => 'کاربران', 'variables' => ['name', 'phone', 'login_time']],
         'registration_success' => ['label' => 'ثبت‌نام موفق', 'group' => 'کاربران', 'variables' => ['name', 'phone', 'gift_credits']],
         'password_reset' => ['label' => 'بازیابی رمز عبور', 'group' => 'کاربران', 'variables' => ['name', 'phone']],
@@ -26,6 +27,7 @@ return [
     // تأییدشده را ذخیره کند و سرویس ارسال نیز همان قرارداد را اجرا می‌کند.
     'approved_shared_templates' => [
         'otp_code' => ['provider_template_id' => '506694', 'variables' => ['code']],
+        'login_otp' => ['provider_template_id' => '523374', 'variables' => ['name', 'code']],
         'login_success' => ['provider_template_id' => '504170', 'variables' => ['name', 'login_time']],
         'registration_success' => ['provider_template_id' => '506692', 'variables' => ['name']],
         'plan_purchase_success' => ['provider_template_id' => '506695', 'variables' => ['name', 'plan_name']],

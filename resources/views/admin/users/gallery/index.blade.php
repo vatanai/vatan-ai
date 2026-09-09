@@ -21,9 +21,9 @@
     </div>
 
     <div class="grid grid-cols-8 gap-3 mb-5 max-[1200px]:grid-cols-4 max-[700px]:grid-cols-2 max-[480px]:grid-cols-1">
-      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کل تصاویر</span><strong class="block mt-1 text-[23px] text-[var(--text-h)]">{{ number_format($stats['items']) }}</strong></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کل ورودی‌ها</span><strong class="block mt-1 text-[23px] text-[var(--text-h)]">{{ number_format($stats['items']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کاربران دارای گالری</span><strong class="block mt-1 text-[23px] text-[var(--primary)]">{{ number_format($stats['users']) }}</strong></div>
-      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">تصاویر فعال</span><strong class="block mt-1 text-[23px] text-[var(--success)]">{{ number_format($stats['active']) }}</strong></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">ورودی‌های فعال</span><strong class="block mt-1 text-[23px] text-[var(--success)]">{{ number_format($stats['active']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">حجم فایل اصلی</span><strong class="block mt-1 text-[23px] text-[var(--info)]">{{ number_format($stats['storage'] / 1048576, 1) }} مگابایت</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">پیشنهادها</span><strong class="block mt-1 text-[23px] text-[var(--warning)]">{{ number_format($stats['suggestions']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">بازآفرینی موفق</span><strong class="block mt-1 text-[23px] text-[var(--primary)]">{{ number_format($stats['recreations']) }}</strong></div>

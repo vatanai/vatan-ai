@@ -1,3 +1,19 @@
+# Only real, public UI assets are cacheable. HTML, API responses, admin assets
+# and user uploads deliberately retain their existing cache policy.
+<IfModule mod_headers.c>
+    <If "-f '%{REQUEST_FILENAME}' && %{REQUEST_URI} =~ m#^/(?:css/|js/|fonts/)[^?]+\.(?:css|js|woff2?|ttf|otf)$#">
+        Header set Cache-Control "public, no-cache"
+        Header unset Expires
+    </If>
+    <If "-f '%{REQUEST_FILENAME}' && %{REQUEST_URI} =~ m#^/(?:css/|js/|fonts/|assets/(?:img|icons)/)[^?]+\.(?:css|js|woff2?|ttf|otf|svg|png|webp|avif|jpe?g|ico)$# && %{QUERY_STRING} =~ m#^v=[a-f0-9]{16}$#">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+        Header unset Expires
+    </If>
+    <If "-f '%{REQUEST_FILENAME}' && %{REQUEST_URI} =~ m#^/build/assets/[^/]+-[A-Za-z0-9_-]{8,}\.(?:css|js|woff2?|ttf|otf|svg|png|webp|avif|jpe?g)$#">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </If>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

@@ -23,7 +23,7 @@
   <div class="hb-tabs-panel is-active" id="{{ $hbTabsId }}-panel-all">
     <div class="home-cards-scroll">
       @foreach(($allTabProducts ?? collect()) as $product)
-        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image:url('{{ $product->displayImageUrl() }}')">
+        <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
           <div class="home-card-overlay"></div>
           <div class="home-card-info">
             <p class="home-card-name">{{ $product->name_fa }}</p>
@@ -39,7 +39,7 @@
     <div class="hb-tabs-panel" id="{{ $hbTabsId }}-panel-{{ $category->id }}">
       <div class="home-cards-scroll">
         @foreach(($productsByCategory[$category->id] ?? collect()) as $product)
-          <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
+          <a class="home-card" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
             <div class="home-card-overlay"></div>
             <div class="home-card-info">
               <p class="home-card-name">{{ $product->name_fa }}</p>

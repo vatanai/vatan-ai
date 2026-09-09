@@ -47,6 +47,29 @@
       </div>
     </section>
 
+    <section class="rounded-2xl border bg-[var(--card-bg)] border-[var(--border)] overflow-visible mb-5" data-creator-product-picker>
+      <div class="p-4 border-b border-[var(--border)]">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-[12px] font-bold text-[var(--text-h)]">اختصاص مالک محصول</h2>
+            <p class="mt-1 text-[10px] leading-6 text-[var(--text-soft)]">از همین گالری یک محصول را جست‌وجو و مالک تجاری آن را این کاربر قرار بده. فعال‌سازی پاداش همچنان از تنظیمات خود محصول انجام می‌شود.</p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--primary-l)] text-[var(--primary)] text-[9px] font-bold"><i class="fa-solid fa-link"></i> مستقل از رفرال</span>
+        </div>
+      </div>
+      <form method="POST" action="{{ route('admin.users.creator-reward-product.assign', $user) }}" class="p-4 grid grid-cols-[minmax(0,1fr)_auto] gap-3 items-end max-[560px]:grid-cols-1">
+        @csrf
+        <div class="relative">
+          <label for="creator-product-search" class="block mb-1.5 text-[10px] font-bold text-[var(--text-main)]">جست‌وجوی نام، کد یا شناسه محصول</label>
+          <input type="hidden" name="product_id" id="creator-product-id" data-creator-product-id>
+          <input type="search" id="creator-product-search" autocomplete="off" placeholder="مثلاً فاز سه یا تست سایت۱" class="w-full h-10 px-3 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)] outline-none focus:border-[var(--primary)]" data-creator-product-search>
+          <div class="hidden absolute z-30 top-[68px] right-0 left-0 max-h-64 overflow-y-auto rounded-xl border bg-[var(--card-bg)] border-[var(--border)] shadow-xl" data-creator-product-results></div>
+          <div class="min-h-5 mt-1.5 text-[10px] text-[var(--text-soft)]" data-creator-product-status>یک محصول را از نتایج انتخاب کن.</div>
+        </div>
+        <button type="submit" disabled class="h-10 px-4 rounded-xl border border-[var(--primary)] bg-[var(--primary)] text-white text-[10.5px] font-bold disabled:opacity-40 disabled:cursor-not-allowed" data-creator-product-submit><i class="fa-solid fa-user-tag ml-1"></i> اختصاص مالک</button>
+      </form>
+    </section>
+
     <section class="user-gallery-builds mb-5">
       <div class="user-gallery-section-head">
         <div><h2>ساخته‌شده‌ها (ورودی و خروجی‌ها)</h2><p>هر کارت یک سفارش را با ورودی، خروجی و خلاصه مالی همان ساخت نشان می‌دهد.</p></div>
@@ -133,4 +156,70 @@
     </section>
   </div>
 </main>
+@endsection
+
+@section('scripts')
+<script>
+(() => {
+  const root = document.querySelector('[data-creator-product-picker]');
+  if (!root || root.dataset.initialized === '1') return;
+  root.dataset.initialized = '1';
+  const search = root.querySelector('[data-creator-product-search]');
+  const hidden = root.querySelector('[data-creator-product-id]');
+  const results = root.querySelector('[data-creator-product-results]');
+  const status = root.querySelector('[data-creator-product-status]');
+  const submit = root.querySelector('[data-creator-product-submit]');
+  let timer = null;
+
+  const setStatus = (message, error = false) => {
+    status.textContent = message;
+    status.classList.toggle('text-[var(--danger)]', error);
+    status.classList.toggle('text-[var(--text-soft)]', !error);
+  };
+  const selectProduct = (product) => {
+    hidden.value = product.id;
+    search.value = product.name;
+    submit.disabled = false;
+    results.classList.add('hidden');
+    setStatus(product.owner ? `مالک فعلی: ${product.owner}` : 'این محصول مالک مشخصی ندارد؛ آماده‌ی اختصاص است.');
+  };
+  const render = (products) => {
+    results.innerHTML = '';
+    if (!products.length) {
+      results.innerHTML = '<div class="px-3 py-3 text-[10px] text-[var(--text-soft)]">محصولی پیدا نشد.</div>';
+      results.classList.remove('hidden');
+      return;
+    }
+    products.forEach((product) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'w-full px-3 py-2.5 text-right border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--primary-l)]';
+      button.innerHTML = '<span class="block text-[11px] font-bold text-[var(--text-main)]"></span><span class="block mt-1 text-[9px] text-[var(--text-soft)]"></span>';
+      button.children[0].textContent = product.name;
+      button.children[1].textContent = [product.type, product.status, product.owner ? `مالک: ${product.owner}` : 'بدون مالک'].join(' · ');
+      button.addEventListener('click', () => selectProduct(product));
+      results.appendChild(button);
+    });
+    results.classList.remove('hidden');
+  };
+  search.addEventListener('input', () => {
+    hidden.value = '';
+    submit.disabled = true;
+    const value = search.value.trim();
+    if (!value) { results.classList.add('hidden'); setStatus('یک محصول را از نتایج انتخاب کن.'); return; }
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        const response = await fetch(@json(route('admin.api.products.search')) + '?q=' + encodeURIComponent(value), { headers: { Accept: 'application/json' } });
+        const payload = await response.json();
+        render(Array.isArray(payload.data) ? payload.data : []);
+      } catch (_) {
+        render([]);
+        setStatus('جست‌وجوی محصول انجام نشد؛ دوباره تلاش کن.', true);
+      }
+    }, 220);
+  });
+  document.addEventListener('click', (event) => { if (!root.contains(event.target)) results.classList.add('hidden'); });
+})();
+</script>
 @endsection

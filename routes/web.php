@@ -160,11 +160,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
     Route::delete('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'destroyFaceProfile'])->name('profile.face-profiles.destroy');
     Route::get('/my-gallery/{item}/preview', [\App\Http\Controllers\UserGalleryController::class, 'preview'])->name('profile.gallery.preview');
+    Route::get('/my-gallery/{item}/original', [\App\Http\Controllers\UserGalleryController::class, 'original'])->name('profile.gallery.original');
+    Route::post('/my-gallery/consent', [\App\Http\Controllers\UserGalleryController::class, 'updateConsent'])->name('profile.gallery.consent');
     Route::post('/app/product/{product:slug}/save', [SavedProductController::class, 'toggle'])->name('app.product.save');
     Route::post('/app/product/{product:slug}/like', [App\Http\Controllers\LikedProductController::class, 'toggle'])->name('app.product.like');
     Route::post('/app/product/{product:slug}/download', [App\Http\Controllers\ProductDownloadController::class, 'store'])->name('app.product.download');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/site/pricing/{plan}/checkout', [PlanSubscriptionController::class, 'checkout'])->name('pricing.checkout');
+    Route::post('/site/pricing/{plan}/checkout/discount', [PlanSubscriptionController::class, 'applyDiscount'])->name('pricing.checkout.discount');
     Route::post('/site/pricing/{plan}/checkout', [PlanSubscriptionController::class, 'startPayment'])->name('pricing.start-payment');
     Route::get('/site/payments/{purchase}/result', [PlanSubscriptionController::class, 'result'])->name('payments.result');
     Route::get('/site/payments/{purchase}/receipt', [PlanSubscriptionController::class, 'receipt'])->name('payments.receipt');
@@ -382,6 +385,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/dashboard/{section?}', [DashboardController::class, 'index'])
         ->name('dashboard')
         ->where('section', '[a-z0-9]+');
+    Route::get('/search', [DashboardController::class, 'search'])->name('search');
 
     Route::get('/service-credits', [ServiceCreditController::class, 'index'])->name('service-credits.index');
     Route::post('/service-credits/accounts', [ServiceCreditController::class, 'storeAccount'])->name('service-credits.accounts.store');
@@ -447,6 +451,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     // گالری ورودی‌های کاربران؛ مسیرهای فایل قبل از پارامترهای عمومی کاربران ثبت شده‌اند.
     Route::get('/users/gallery', [UserGalleryController::class, 'index'])->name('users.gallery.index');
     Route::post('/users/gallery/settings', [UserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
+    Route::post('/users/{user}/creator-reward-product', [UserGalleryController::class, 'assignCreatorRewardProduct'])->name('users.creator-reward-product.assign');
     Route::get('/users/{user}/gallery', [UserGalleryController::class, 'show'])->name('users.gallery.show');
     Route::get('/users/{user}/gallery/{item}/preview', [UserGalleryController::class, 'preview'])->name('users.gallery.preview');
     Route::get('/users/{user}/gallery/{item}/original', [UserGalleryController::class, 'original'])->name('users.gallery.original');
@@ -654,6 +659,8 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
         Route::get('/visits', [ReferralSettingController::class, 'visits'])->name('visits');
         Route::get('/reviews', [ReferralSettingController::class, 'reviews'])->name('reviews');
         Route::get('/export', [ReferralSettingController::class, 'export'])->name('export');
+        Route::post('/users/{user}/links', [ReferralSettingController::class, 'createUserLink'])->name('users.links.store');
+        Route::patch('/links/{referralLink}/toggle', [ReferralSettingController::class, 'toggleUserLink'])->name('links.toggle');
         Route::patch('/conversions/{conversion}/review', [ReferralSettingController::class, 'reviewConversion'])->name('conversions.review');
         Route::patch('/rewards/{reward}/review', [ReferralSettingController::class, 'reviewReward'])->name('rewards.review');
     });
@@ -730,6 +737,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
 // کاملاً مستقل از بخش‌های دیگر پنل عمل می‌کنند تا هیچ آسیبی به آن‌ها نرسد.
 Route::prefix('api/v1/admin')->name('admin.api.')->middleware('auth:admin')->group(function () {
     Route::get('/users/search',              [AdminUserController::class, 'search'])->name('users.search');
+    Route::get('/products/search',            [UserGalleryController::class, 'searchCreatorRewardProducts'])->name('products.search');
     Route::get('/users/{id}/token-history',  [AdminUserController::class, 'tokenHistory'])->name('users.token_history');
     Route::get('/users/{id}',                [AdminUserController::class, 'show'])->name('users.show');
     Route::post('/users/{id}/token',         [AdminUserController::class, 'updateToken'])->name('users.token.update');

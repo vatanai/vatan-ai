@@ -18,6 +18,8 @@ class PublicHomeController extends Controller
 
     public function index(): View
     {
+        $currentUser = auth()->user();
+
         try {
             $homeArticles = Schema::hasTable('articles')
                 ? Article::query()->published()->with(['category', 'author'])
@@ -60,12 +62,12 @@ class PublicHomeController extends Controller
             'media_type' => $item[3] ?? 'image',
         ])->all();
 
-        return view('site.preview.home', array_merge($this->catalog->catalog(auth()->user()), [
+        return view('site.preview.home', array_merge($this->catalog->catalog($currentUser), [
             'heroGallery' => $this->galleries->visible('hero-gallery', $heroFallback),
             'ideasGallery' => $this->galleries->visible('ideas-gallery', $ideasFallback),
             'inspirationGallery' => $this->galleries->visible('inspiration-gallery', $inspirationFallback),
             'homeArticles' => $homeArticles,
-            'homePricingPlans' => $this->catalog->homePricingPlans(),
+            'homePricingPlans' => $this->catalog->homePricingPlans($currentUser)->take(4)->values(),
             'homePricing' => \App\Models\PlanSetting::homePricing(),
         ]));
     }

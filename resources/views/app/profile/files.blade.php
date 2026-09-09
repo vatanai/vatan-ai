@@ -31,6 +31,7 @@
   <div class="files-sub-tabs" dir="rtl">
     <button type="button" class="files-sub-tab active" data-sub="created">خلق شده</button>
     <button type="button" class="files-sub-tab" data-sub="personal">عکس‌های ورودی</button>
+    <button type="button" class="files-sub-tab" data-sub="gallery-inputs">ورودی‌های آزمایش</button>
   </div>
 
   <div id="files-created" class="files-grid">
@@ -48,6 +49,23 @@
       <div class="files-cell"><img src="{{ filter_var($personalPath, FILTER_VALIDATE_URL) ? $personalPath : asset('storage/' . ltrim($personalPath, '/')) }}" alt="عکس شخصی آپلودشده" class="grid-img" loading="lazy"></div>
     @empty
       <div class="grid-empty"><p>هنوز عکس ورودی برای ساخت وارد نکردی</p></div>
+    @endforelse
+  </div>
+
+  <div id="files-gallery-inputs" class="files-grid" style="display:none;">
+    @forelse (($galleryItems ?? collect()) as $item)
+      @php($galleryMime = strtolower((string) $item->mime_type))
+      @if (str_starts_with($galleryMime, 'image/'))
+        <a href="{{ route('profile.gallery.original', $item) }}" target="_blank" rel="noopener" class="files-cell">
+          <img src="{{ route('profile.gallery.preview', $item) }}" alt="عکس ورودی آزمایش" class="grid-img" loading="lazy">
+        </a>
+      @elseif (str_starts_with($galleryMime, 'video/'))
+        <div class="files-cell"><video src="{{ route('profile.gallery.original', $item) }}" controls preload="metadata" style="width:100%;height:100%;object-fit:contain;"></video></div>
+      @else
+        <div class="files-cell" style="padding:14px;line-height:2;white-space:pre-wrap;overflow:auto;">{{ $item->display_text ?? data_get($item->metadata, 'text', 'متن ورودی') }}</div>
+      @endif
+    @empty
+      <div class="grid-empty"><p>هنوز ورودی‌ای از آزمایش‌ها در گالری ثبت نشده است</p></div>
     @endforelse
   </div>
 

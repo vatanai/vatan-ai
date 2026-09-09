@@ -6,7 +6,9 @@
     $headerTokenCount = $headerTokenCount ?? (int) (auth()->user()?->effective_token_balance ?? 0);
     $headerTokenLabel = $headerTokenLabel ?? 'اعتبار';
     $headerTokenTitle = $headerTokenTitle ?? ($profilePlanLabel ?: 'اعتبار شروع وطن');
-    $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled;
+    $referralSettings = \App\Models\ReferralSetting::current();
+    $referralProfileMenuEnabled = $referralSettings->profile_enabled;
+    $preloginCreditText = trim((string) ($referralSettings->prelogin_credit_text ?: ('هدیه ' . number_format((int) $referralSettings->registration_gift_tokens) . ' اعتبار')));
     $publicSectionUrl = fn (string $section) => $isPublicHome
         ? '#' . $section
         : route('site.home.root') . '#' . $section;
@@ -46,10 +48,17 @@
                 </div>
                 @include('partials.topnav-profile-popup-window', ['showMobileThemeSelector' => true])
             </label>
-            <span class="vp-token-box {{ auth()->guest() ? 'is-guest' : 'is-authenticated' }}" title="{{ $headerTokenTitle }}">
-                <i class="vp-token-box__mark" aria-hidden="true"></i>
-                <span class="vp-token-box__value"><b>{{ number_format($headerTokenCount) }}</b>@if($headerTokenLabel)<em>{{ $headerTokenLabel }}</em>@endif</span>
-            </span>
+            @if(auth()->guest() && $referralSettings->registration_gift_enabled && $preloginCreditText !== '')
+                <span class="vp-token-box is-guest is-prelogin" title="اعتبار هدیه قبل از ورود">
+                    <i class="vp-token-box__mark" aria-hidden="true"></i>
+                    <span class="vp-token-box__value"><b dir="rtl">{{ $preloginCreditText }}</b></span>
+                </span>
+            @else
+                <span class="vp-token-box {{ auth()->guest() ? 'is-guest' : 'is-authenticated' }}" title="{{ $headerTokenTitle }}">
+                    <i class="vp-token-box__mark" aria-hidden="true"></i>
+                    <span class="vp-token-box__value"><b>{{ number_format($headerTokenCount) }}</b>@if($headerTokenLabel)<em>{{ $headerTokenLabel }}</em>@endif</span>
+                </span>
+            @endif
             <button class="vp-theme-toggle" type="button" data-preview-theme aria-label="تغییر حالت روز و شب" title="تغییر حالت روز و شب">
                 <svg class="vp-theme-toggle__moon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
                 <svg class="vp-theme-toggle__sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>

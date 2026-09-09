@@ -64,17 +64,66 @@ class UserGalleryService
             return null;
         }
 
-        $config = $this->config();
-        if ($user->galleryItems()->count() >= $config->max_items_per_user) {
-            return null;
-        }
-
         $sourceContents = $this->sourceContents($sourcePath, $sourceDisk);
         if ($sourceContents === null || $sourceContents === '') {
             return null;
         }
 
-        $actualSize = $size ?: strlen($sourceContents);
+        return $this->storeContents(
+            $user,
+            $sourceType,
+            $sourceId,
+            $sourceContents,
+            $size ?: strlen($sourceContents),
+            $mimeType,
+            $metadata,
+            $this->extensionFor($mimeType, $sourcePath),
+        );
+    }
+
+    /** متن خامی که کاربر در صفحهٔ ساخت وارد کرده را مانند سایر ورودی‌ها ذخیره می‌کند. */
+    public function captureText(
+        User $user,
+        string $text,
+        ?int $sourceId,
+        array $metadata = [],
+    ): ?UserGalleryItem {
+        $text = trim($text);
+        if ($text === '') {
+            return null;
+        }
+
+        return $this->storeContents(
+            $user,
+            'input_text',
+            $sourceId,
+            $text,
+            strlen($text),
+            'text/plain; charset=utf-8',
+            array_merge($metadata, ['text' => $text]),
+            'txt',
+        );
+    }
+
+    private function storeContents(
+        User $user,
+        string $sourceType,
+        ?int $sourceId,
+        string $sourceContents,
+        int $actualSize,
+        ?string $mimeType,
+        array $metadata,
+        string $extension,
+    ): ?UserGalleryItem {
+        if (! $this->isEnabledFor($user) || $sourceContents === '') {
+            return null;
+        }
+
+        $config = $this->config();
+        if ($user->galleryItems()->count() >= $config->max_items_per_user) {
+            return null;
+        }
+
         $maxBytes = max(1, $config->max_storage_mb) * 1024 * 1024;
         if ((int) $user->galleryItems()->sum('size') + $actualSize > $maxBytes) {
             return null;
@@ -82,7 +131,6 @@ class UserGalleryService
 
         $disk = Storage::disk('user_gallery');
         $directory = 'users/' . $user->id . '/' . now()->format('Y/m');
-        $extension = $this->extensionFor($mimeType, $sourcePath);
         $baseName = (string) Str::uuid();
         $originalPath = $directory . '/original/' . $baseName . '.' . $extension;
         $previewPath = null;

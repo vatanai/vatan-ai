@@ -2,31 +2,47 @@
 (function () {
   window.logoutFromCurrentPage = async function (button) {
     var returnTo = window.location.pathname + window.location.search + window.location.hash;
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     if (button) button.disabled = true;
 
     try {
-      var tokenResponse = await fetch(@json(route('auth.csrf-token')), {
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
-      });
-      var tokenData = await tokenResponse.json();
-      if (!tokenResponse.ok || !tokenData.token) throw new Error('csrf');
-
-      var logoutResponse = await fetch(@json(route('logout')), {
+      // مسیرها عمداً نسبی هستند تا روی دامنهٔ فعلی صفحه اجرا شوند؛
+      // APP_URL ممکن است در لوکال با دامنه‌ای که کاربر باز کرده متفاوت باشد.
+      var logoutResponse = await fetch('/logout', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': tokenData.token
+          'X-CSRF-TOKEN': csrfToken
         },
         body: JSON.stringify({ return_to: returnTo })
       });
-      var logoutData = await logoutResponse.json();
-      window.location.replace(logoutData.redirect || returnTo);
-    } catch (error) {
-      if (button) button.disabled = false;
+      if (!logoutResponse.ok) throw new Error('logout-failed');
+
+      // خروج موفق باید فقط همان صفحه را تازه‌سازی کند.
       window.location.reload();
+    } catch (error) {
+      // اگر `fetch` در مرورگر محدود شد، فرم استاندارد همان مبدأ را اجرا می‌کنیم.
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/logout';
+      form.style.display = 'none';
+
+      var tokenInput = document.createElement('input');
+      tokenInput.type = 'hidden';
+      tokenInput.name = '_token';
+      tokenInput.value = csrfToken;
+      form.appendChild(tokenInput);
+
+      var returnInput = document.createElement('input');
+      returnInput.type = 'hidden';
+      returnInput.name = 'return_to';
+      returnInput.value = returnTo;
+      form.appendChild(returnInput);
+
+      document.body.appendChild(form);
+      form.submit();
     }
   };
 

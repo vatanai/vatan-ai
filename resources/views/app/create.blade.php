@@ -3,7 +3,7 @@
 @section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'بساز | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-ui.css') }}?v={{ filemtime(public_path('css/create-ui.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-ui.css') }}">
 @endpush
 
 @section('content')
@@ -23,5 +23,5 @@
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-ui.js') }}?v={{ filemtime(public_path('js/create-ui.js')) }}"></script>
+  <script src="{{ \App\Support\AppAsset::url('js/create-ui.js') }}"></script>
 @endpush

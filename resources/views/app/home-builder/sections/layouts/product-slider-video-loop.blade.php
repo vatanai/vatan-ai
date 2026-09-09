@@ -8,7 +8,7 @@
       @if($videoUrl)
         <video src="{{ $videoUrl }}" poster="{{ $product->displayImageUrl() }}" autoplay muted loop playsinline preload="metadata"></video>
       @else
-        <span class="hb-video-loop-fallback" style="background-image:url('{{ $product->displayImageUrl() }}')"></span>
+        <span class="hb-video-loop-fallback" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)"></span>
       @endif
       <span class="hb-video-live"><i></i> پخش زنده</span>
       <div class="hb-video-loop-info"><b>{{ $product->name_fa }}</b><small>{{ $product->subcategory ?: $product->category }}</small></div>

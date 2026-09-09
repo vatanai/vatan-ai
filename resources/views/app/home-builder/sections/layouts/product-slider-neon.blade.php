@@ -5,7 +5,7 @@
 @php $hbShowCredit = (bool) $section->setting('show_credit', true); @endphp
 <div class="hb-neon-row">
   @foreach($products as $product)
-    <a class="hb-neon-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
+    <a class="hb-neon-card" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
       @if($hbShowCredit)
         <span class="hb-neon-credit"><i class="fa-solid fa-bolt"></i> {{ number_format((int) $product->credit_cost) }}</span>
       @endif

@@ -27,24 +27,63 @@
     }
   }
 
+  var referralSubtabs = document.querySelectorAll('[data-referral-subtab]');
+  var referralSubpanels = document.querySelectorAll('[data-referral-subpanel]');
+
+  function activateReferralSubtab(target) {
+    var selected = document.querySelector('[data-referral-subtab="' + target + '"]');
+    if (!selected) return;
+
+    referralSubtabs.forEach(function (tab) {
+      var isActive = tab === selected;
+      tab.classList.toggle('is-active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    referralSubpanels.forEach(function (panel) {
+      var isVisible = panel.getAttribute('data-referral-subpanel') === target;
+      panel.classList.toggle('is-active', isVisible);
+      panel.style.display = isVisible ? 'grid' : 'none';
+    });
+  }
+
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var target = tab.getAttribute('data-tab');
       activateProfileTab(target, false);
-      if (target === 'referral') history.replaceState(null, '', '#referral-program');
+      if (target === 'referral') {
+        activateReferralSubtab('affiliate');
+        history.replaceState(null, '', '#referral-program');
+      }
+    });
+  });
+
+  referralSubtabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var target = tab.getAttribute('data-referral-subtab');
+      activateProfileTab('referral', false);
+      activateReferralSubtab(target);
+      var url = new URL(window.location.href);
+      url.searchParams.set('tab', 'referral');
+      if (target === 'custom-products') url.searchParams.set('subtab', 'custom-products');
+      else url.searchParams.delete('subtab');
+      url.hash = 'referral-program';
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
     });
   });
 
   document.querySelectorAll('[data-open-referral]').forEach(function (button) {
     button.addEventListener('click', function () {
       activateProfileTab('referral', true);
+      activateReferralSubtab('affiliate');
       history.replaceState(null, '', '#referral-program');
     });
   });
 
   var requestedTab = new URLSearchParams(window.location.search).get('tab');
-  if (window.location.hash === '#referral-program' || requestedTab === 'referral') {
+  var requestedSubtab = new URLSearchParams(window.location.search).get('subtab');
+  if (window.location.hash === '#referral-program' || requestedTab === 'referral' || requestedTab === 'custom-products') {
     activateProfileTab('referral', true);
+    activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
   }
 
   /* ───── لینک دعوت و اشتراک‌گذاری ───── */
@@ -92,6 +131,96 @@
       });
     });
   }
+
+  /* ───── جست‌وجو و انتخاب محصول برای لینک اختصاصی ───── */
+  var productForm = document.getElementById('referralProductForm');
+  var productSearch = document.getElementById('referralProductSearch');
+  var productId = document.getElementById('referralProductId');
+  var productSubmit = document.getElementById('referralProductSubmit');
+  var productOptions = document.getElementById('referralProductOptions');
+  var productSelection = document.getElementById('referralProductSelection');
+  var productButtons = productOptions ? Array.prototype.slice.call(productOptions.querySelectorAll('.referral-product-option')) : [];
+
+  function setProductOptionsVisibility(show) {
+    if (!productOptions || !productSearch) return;
+    productOptions.classList.toggle('is-open', show);
+    productSearch.setAttribute('aria-expanded', show ? 'true' : 'false');
+  }
+
+  function filterProducts() {
+    if (!productSearch || !productOptions) return;
+    var query = productSearch.value.trim().toLocaleLowerCase('fa-IR');
+    var visibleCount = 0;
+
+    productButtons.forEach(function (button) {
+      var haystack = (button.textContent || '').trim().toLocaleLowerCase('fa-IR');
+      var visible = !query || haystack.indexOf(query) !== -1;
+      button.hidden = !visible;
+      if (visible) visibleCount += 1;
+    });
+
+    var empty = productOptions.querySelector('.referral-product-filter-empty');
+    if (!visibleCount && productButtons.length) {
+      if (!empty) {
+        empty = document.createElement('div');
+        empty.className = 'referral-product-options-empty referral-product-filter-empty';
+        empty.textContent = 'محصولی با این نام پیدا نشد.';
+        productOptions.appendChild(empty);
+      }
+      empty.hidden = false;
+    } else if (empty) {
+      empty.hidden = true;
+    }
+
+    setProductOptionsVisibility(true);
+  }
+
+  if (productSearch && productId && productSubmit) {
+    productSearch.addEventListener('focus', function () {
+      filterProducts();
+    });
+    productSearch.addEventListener('input', function () {
+      productId.value = '';
+      productSubmit.disabled = true;
+      if (productSelection) productSelection.textContent = 'یک محصول را از نتایج انتخاب کن.';
+      filterProducts();
+    });
+
+    productButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        productId.value = button.getAttribute('data-product-id') || '';
+        productSearch.value = button.getAttribute('data-product-name') || button.textContent.trim();
+        productSubmit.disabled = !productId.value;
+        if (productSelection) productSelection.textContent = 'محصول انتخاب‌شده: ' + productSearch.value;
+        setProductOptionsVisibility(false);
+      });
+    });
+
+    if (productForm) {
+      productForm.addEventListener('submit', function (event) {
+        if (!productId.value) {
+          event.preventDefault();
+          productSearch.focus();
+          setProductOptionsVisibility(true);
+        }
+      });
+    }
+
+    document.addEventListener('click', function (event) {
+      if (!productForm || !productForm.contains(event.target)) setProductOptionsVisibility(false);
+    });
+  }
+
+  /* کپی لینک محصول از همان مسیر امن کپی لینک عمومی استفاده می‌کند. */
+  document.querySelectorAll('[data-copy-referral-link]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      copyText(button.getAttribute('data-copy-referral-link') || '').then(function () {
+        showReferralFeedback('لینک محصول کپی شد؛ حالا برای مخاطبانت بفرست.');
+      }).catch(function () {
+        showReferralFeedback('کپی لینک انجام نشد؛ دوباره تلاش کن.');
+      });
+    });
+  });
 
   /* ───── آپلود عکس پروفایل ───── */
   var changeAvatarBtn    = document.getElementById('changeAvatarBtn');
@@ -154,6 +283,7 @@
   var previewImg     = document.getElementById('gridPreviewImg');
   var previewDownload = document.getElementById('gridPreviewDownload');
   var previewShare    = document.getElementById('gridPreviewShare');
+  var previewRecreate = document.getElementById('gridPreviewRecreate');
   var previewDate     = document.getElementById('gridPreviewDate');
   var previewProductLink = document.getElementById('gridPreviewProductLink');
   var previewProductName = document.getElementById('gridPreviewProductName');
@@ -167,6 +297,7 @@
     var date        = cell.getAttribute('data-date') || '';
     var productName = cell.getAttribute('data-product-name') || 'نامشخص';
     var productUrl  = cell.getAttribute('data-product-url') || '';
+    var productCreateUrl = cell.getAttribute('data-product-create-url') || '';
     previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
     previewImg.src = imgUrl;
@@ -182,6 +313,18 @@
       previewProductLink.classList.add('is-disabled');
     }
 
+    if (previewRecreate) {
+      if (productCreateUrl) {
+        previewRecreate.href = productCreateUrl;
+        previewRecreate.classList.remove('is-disabled');
+        previewRecreate.setAttribute('aria-disabled', 'false');
+      } else {
+        previewRecreate.href = '#';
+        previewRecreate.classList.add('is-disabled');
+        previewRecreate.setAttribute('aria-disabled', 'true');
+      }
+    }
+
     previewModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
@@ -190,6 +333,11 @@
     if (!previewModal) return;
     previewModal.style.display = 'none';
     previewImg.src = '';
+    if (previewRecreate) {
+      previewRecreate.href = '#';
+      previewRecreate.classList.add('is-disabled');
+      previewRecreate.setAttribute('aria-disabled', 'true');
+    }
     document.body.style.overflow = '';
   }
 
@@ -247,6 +395,7 @@
       var sub = btn.getAttribute('data-sub');
       document.getElementById('files-created').style.display  = sub === 'created'  ? 'grid' : 'none';
       document.getElementById('files-personal').style.display = sub === 'personal' ? 'grid' : 'none';
+      document.getElementById('files-gallery-inputs').style.display = sub === 'gallery-inputs' ? 'grid' : 'none';
     });
   });
 

@@ -167,8 +167,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 32.3px; /* ارتفاع ۱۵٪ کمتر (۳۸px → ۳۲٫۳px) */
-    padding: 0 13px;
+    min-height: 32.3px; /* ارتفاع پایه ۱۵٪ کمتر (۳۸px → ۳۲٫۳px) */
+    height: auto;
+    padding: 4px 13px;
     border-radius: 12px; /* خمیدگی باکس: ۱۲px */
     background: #1a1a1a; /* حالت شب */
     border: 1px solid var(--border-subtle);
@@ -190,16 +191,54 @@
     display: block;
     order: 1; /* آیکون سمت چپ */
     background: #cffe00;
-    -webkit-mask: url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
-    mask: url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
+    -webkit-mask: url('{{ \App\Support\AppAsset::url('assets/icons/token-mark.png') }}') center / contain no-repeat;
+    mask: url('{{ \App\Support\AppAsset::url('assets/icons/token-mark.png') }}') center / contain no-repeat;
+  }
+  .topnav-token-label {
+    min-width: 0;
+    max-width: 190px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.35;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    order: 0;
   }
   .topnav-token-number {
-    font-size: 15.6px; /* ۲۰٪ بزرگتر نسبت به سایز پایه ۱۳px */
+    font-size: 15.6px;
     font-weight: 800;
-    color: #ffffff; /* سفید در هر دو حالت (باکس تیره #1a1a1a) */
-    font-family: 'YekanBakh', sans-serif; /* فونت عدد: یکان بخ */
+    color: #ffffff;
+    font-family: 'YekanBakh', sans-serif;
     font-feature-settings: "tnum";
-    order: 0; /* عدد سمت راست */
+    order: 0;
+  }
+
+  /* اندازهٔ لوگوی هدر مستقل از استایل صفحه‌ها باشد. */
+  #vatan-topnav > #vatan-topnav-inner > a[aria-label="رفتن به خانه اپ"] > img:first-child {
+    width: 31px;
+    height: 31px;
+    max-width: none;
+    object-fit: contain;
+  }
+  #vatan-topnav > #vatan-topnav-inner > a[aria-label="رفتن به خانه اپ"] > img:last-child {
+    width: auto;
+    height: 29px;
+    max-width: none;
+    object-fit: contain;
+  }
+  .app-mobile-header .app-mobile-brand img:first-child {
+    width: 28px;
+    height: 28px;
+    max-width: none;
+    object-fit: contain;
+  }
+  .app-mobile-header .app-mobile-brand .app-mobile-wordmark {
+    width: 65px;
+    height: auto;
+    max-width: none;
+    object-fit: contain;
   }
 
 
@@ -430,6 +469,7 @@
     .sub-btn { min-width: 0; padding: 0 13.2px; }
     .sub-btn span { font-size: 13.2px; }
     .topnav-token-box { padding: 0 10px; }
+    .topnav-token-label { max-width: 150px; font-size: 10px; }
     .topnav-create:hover { width: 88px; }
   }
   /* تبلت کوچک: متن خرید اشتراک مخفی، فقط آیکون */

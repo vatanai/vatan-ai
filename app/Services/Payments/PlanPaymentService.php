@@ -4,9 +4,11 @@ namespace App\Services\Payments;
 
 use App\Models\Plan;
 use App\Models\PlanPurchase;
+use App\Models\Discount;
 use App\Models\TokenLog;
 use App\Models\User;
 use App\Services\ReferralProgramService;
+use App\Services\PlanDiscountService;
 use App\Services\SmsEventService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,14 +16,18 @@ use RuntimeException;
 
 class PlanPaymentService
 {
-    public function __construct(private readonly ZarinpalGateway $gateway)
+    public function __construct(
+        private readonly ZarinpalGateway $gateway,
+        private readonly PlanDiscountService $discounts,
+    )
     {
     }
 
     /** @param array{name:string,email:?string,phone:?string} $billing */
-    public function initiate(User $user, Plan $plan, array $billing, string $callbackUrl, ?string $referralCode = null): PlanPurchase
+    public function initiate(User $user, Plan $plan, array $billing, string $callbackUrl, ?string $referralCode = null, ?string $discountCode = null): PlanPurchase
     {
         $offer = app(ReferralProgramService::class)->purchaseOffer($user, $plan, $plan->offerFor($user));
+        $offer = $this->discounts->apply($user, $plan, $offer, $discountCode);
         $this->ensurePurchasable($user, $plan, $offer);
 
         $purchase = PlanPurchase::query()->create([
@@ -34,6 +40,8 @@ class PlanPaymentService
             'paid_amount' => (int) $offer['price'],
             'original_amount' => (int) ($offer['original_price'] ?? $offer['price']),
             'discount_amount' => (int) ($offer['discount_amount'] ?? 0),
+            'discount_id' => $offer['discount_id'] ?? null,
+            'discount_code' => $offer['discount_code'] ?? null,
             'referral_conversion_id' => $offer['referral_conversion_id'] ?? null,
             'referral_snapshot' => $offer['referral_conversion_id'] ? [
                 'discount_percent' => $offer['referral_discount_percent'] ?? 0,
@@ -169,6 +177,10 @@ class PlanPaymentService
                     'metadata' => ['plan_purchase_id' => $lockedPurchase->id, 'order_number' => $lockedPurchase->order_number],
                 ],
             );
+
+            if ($lockedPurchase->discount_id) {
+                Discount::query()->whereKey($lockedPurchase->discount_id)->increment('used_count');
+            }
 
             return [$lockedPurchase->fresh(['user']), true];
         });

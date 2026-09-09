@@ -23,8 +23,8 @@ class UserGalleryController extends Controller
         $gallery->syncConsent($user, $enabled);
 
         return back()->with('success', $enabled
-            ? 'گالری شخصی فعال شد؛ تصاویر جدید با رضایت شما نگهداری می‌شوند.'
-            : 'گالری شخصی غیرفعال شد؛ تصاویر قبلی شما حذف نشدند.');
+            ? 'گالری شخصی فعال شد؛ ورودی‌های جدید ساخت با رضایت شما نگهداری می‌شوند.'
+            : 'گالری شخصی غیرفعال شد؛ ورودی‌های قبلی شما حذف نشدند.');
     }
 
     public function preview(Request $request, UserGalleryItem $item, UserGalleryService $gallery)
@@ -47,7 +47,7 @@ class UserGalleryController extends Controller
 
         $gallery->deleteItem($item);
 
-        return back()->with('success', 'تصویر از گالری شخصی حذف شد.');
+        return back()->with('success', 'ورودی از گالری شخصی حذف شد.');
     }
 
     public function updatePreferences(Request $request, UserGalleryGrowthService $growth)

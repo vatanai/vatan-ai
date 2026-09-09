@@ -15,7 +15,17 @@ function toFa(v) { return String(v).replace(/[0-9]/g, function (d) { return '۰�
 /* ── وضعیت تکمیل هر مرحله بر اساس فیلدهای اجباری واقعی ──
    خروجی: { total, filled, complete, dynamic }
    مرحله ۳ پویاست: بر اساس ردیف‌های واقعاً اضافه‌شده‌ی «فیلدهای ورودی کاربر» (بند ۴۵). */
+function completionMirrorSourceStep(n) {
+  const source = Number(document.getElementById('step-tab-' + n)?.dataset.completionMirrorsStep || 0);
+  return source > 0 && source !== n ? source : null;
+}
+
 function computeStepStatus(n) {
+  const mirroredFrom = completionMirrorSourceStep(n);
+  if (mirroredFrom) {
+    const sourceStatus = computeStepStatus(mirroredFrom);
+    return Object.assign({}, sourceStatus, { mirroredFrom: mirroredFrom });
+  }
   if (n === 5) {
     const ready = [1, 2, 3, 4].every(function (step) {
       const status = computeStepStatus(step);
@@ -25,20 +35,19 @@ function computeStepStatus(n) {
   }
   if (n === 3) {
     const featuresEnabled = document.getElementById('special-features-enabled')?.value === '1';
-    const identityFilled = progressReady && progressFieldValue('identity_preservation') ? 1 : 0;
     if (!featuresEnabled) {
       return {
-        total: 1,
-        filled: identityFilled,
-        complete: identityFilled === 1,
+        total: 0,
+        filled: 0,
+        complete: true,
         dynamic: true
       };
     }
     const rows = document.querySelectorAll('#input-fields-list .input-schema-row');
     if (!rows.length) {
-      return { total: 2, filled: identityFilled, complete: false, dynamic: true };
+      return { total: 1, filled: 0, complete: false, dynamic: true };
     }
-    let filled = identityFilled;
+    let filled = 0;
     rows.forEach(function (r) {
       const requiredInputsComplete = Array.from(r.querySelectorAll('[required]')).every(function (input) {
         return String(input.value || '').trim() !== '' && input.checkValidity();
@@ -46,7 +55,7 @@ function computeStepStatus(n) {
       const builderValidationPassed = !r.classList.contains('sb-invalid');
       if (requiredInputsComplete && builderValidationPassed) filled++;
     });
-    return { total: rows.length + 1, filled: filled, complete: filled === rows.length + 1, dynamic: true };
+    return { total: rows.length, filled: filled, complete: filled === rows.length, dynamic: true };
   }
   const req = STEP_REQUIRED_FIELDS[n] || [];
   let filled = 0;
@@ -110,7 +119,9 @@ function renderStepper() {
     // تیک سبز تکمیل گوشه‌ی کارت (بند ۴۲)
     if (checkEl) checkEl.classList.toggle('hidden', !(st.total > 0 && st.complete));
 
-    if (st.total > 0) { overallTotal += st.total; overallFilled += st.filled; }
+    // وضعیت گام آینه‌ای برای نمایش تیک استفاده می‌شود، اما نباید همان فیلدهای
+    // اجباری را دوباره در درصد پیشرفت و قفل ثبت نهایی حساب کند.
+    if (st.total > 0 && !st.mirroredFrom) { overallTotal += st.total; overallFilled += st.filled; }
   }
 
   // رنگ خط اتصال بین Stepها بر اساس مرحله‌ی فعلی
@@ -187,7 +198,7 @@ function lazyInitStep(n) {
   lazyInitedSteps.add(n);
   const panel = document.getElementById('panel-' + n);
   if (panel) initSearchables(panel);
-  if (n === 2 && typeof onPrimaryModelChange === 'function') onPrimaryModelChange(); // پایپ‌لاین هوش مصنوعی
+  if (n === 2 && typeof onPrimaryModelChange === 'function') onPrimaryModelChange(); // مدل اصلی هوش مصنوعی
   if (n === 3 && typeof refreshFormPreview === 'function') refreshFormPreview();     // ورودی و متغیرها
   if (n === 5 && typeof refreshFinalSummary === 'function') refreshFinalSummary();   // بازبینی نهایی
 }
@@ -200,9 +211,9 @@ const ProductCreateState = { ui: { currentStep: 1 }, validation: { 1: true, 2: t
    از قبل موجود باشد؛ تصمیم نهایی همیشه با Validation واقعی سمت سرور است. */
 const STEP_REQUIRED_FIELDS = {
   1: [ ['name_fa', 'نام فارسی'], ['name_en', 'نام انگلیسی'], ['slug', 'آدرس URL'], ['category_ids', 'دسته‌بندی'], ['main_images', 'تصویر اصلی محصول'] ],
-  2: [ ['primary_model', 'مدل اصلی هوش مصنوعی'], ['fallback_models[]', 'مدل جایگزین هوش مصنوعی'], ['prompt_template', 'متن پرامپت'] ],
-  3: [ ['identity_preservation', 'وضعیت حفظ هویت'] ],
-  4: [ ['credit_cost', 'هزینه کردیت محصول'] ],
+  2: [ ['prompt_template', 'متن پرامپت'], ['identity_preservation', 'وضعیت حفظ هویت'] ],
+  3: [],
+  4: [], // وضعیت تکمیل این گام از طریق data-completion-mirrors-step از گام دوم می‌آید
   5: [], // بازبینی نهایی: صرفاً مرور است
 };
 
@@ -238,8 +249,9 @@ function fieldValue(name) {
 }
 
 function validateStep(n) {
+  const sourceStep = completionMirrorSourceStep(n) || n;
   const missing = [];
-  (STEP_REQUIRED_FIELDS[n] || []).forEach(([name, label]) => {
+  (STEP_REQUIRED_FIELDS[sourceStep] || []).forEach(([name, label]) => {
     if (!fieldValue(name)) missing.push({ name, label });
   });
   ProductCreateState.validation[n] = missing.length === 0;
@@ -377,14 +389,12 @@ function updateFileLabel(input, id, isMultiple = false) {
 }
 
 /* ══════════════════ بهینه‌سازی ساده تصاویر محصول ══════════════════
-   - فایل مناسب بدون هیچ بازنویسی حفظ می‌شود.
+   - فایل‌های جدید برای کم‌شدن حجم آپلود مرورگر پردازش می‌شوند.
    - فایل بزرگ بدون crop و با حفظ نسبت، حداکثر تا ضلع ۱۶۰۰ کوچک می‌شود.
    - Canvas مرورگر در فضای رنگی sRGB خروجی WebP با کیفیت بصری بالا می‌دهد.
-   - بک‌اند همین قواعد را دوباره کنترل می‌کند؛ این مرحله آپلود را سریع‌تر می‌کند. */
+   - بک‌اند همین قواعد را به‌صورت قطعی دوباره اعمال می‌کند. */
 const IMAGE_OPT_MAX_EDGE = 1600;
 const IMAGE_OPT_MAX_BYTES = 450 * 1024;
-let allowUnoptimizedImageSubmit = false;
-let clientPreparedImages = false;
 const originalImageFiles = new WeakMap();
 const optimizedImageFiles = new WeakMap();
 const selectedImageIndexes = new WeakMap();
@@ -701,7 +711,6 @@ async function applyImageTargetLevel(button, factor) {
     renderImageGroupPreviews(group, output);
     await renderImageComparison(group); renderImageTargetOptions(group);
     markImageVolumeChoice(group, 'relative-' + factor);
-    clientPreparedImages = true;
     setImageOptimizeState(group, 'done', 'حجم انتخابی آماده ثبت است.');
   } catch (error) { setImageOptimizeState(group, 'failed', 'ساخت حجم انتخابی انجام نشد؛ دوباره تلاش کنید.'); }
   finally { group.querySelectorAll('.image-target-options button').forEach(function(item){ item.disabled = false; }); }
@@ -721,7 +730,6 @@ async function applySelectedImageToAbsoluteTarget(group, targetBytes, profile) {
     document.getElementById(group.dataset.input).files = imageFileList(output);
     renderImageGroupPreviews(group, output);
     await renderImageComparison(group); renderImageTargetOptions(group); markImageVolumeChoice(group, profile);
-    clientPreparedImages = true;
     setImageOptimizeState(group, 'done', 'حجم انتخابی برای همین عکس آماده ثبت است.');
   } catch (error) { setImageOptimizeState(group, 'failed', 'پردازش حجم انتخابی انجام نشد؛ دوباره تلاش کنید.'); }
 }
@@ -739,7 +747,6 @@ async function applyImageQuickPreset(button, profile) {
     document.getElementById(group.dataset.input).files = imageFileList(output);
     renderImageGroupPreviews(group, output);
     await renderImageComparison(group); renderImageTargetOptions(group); markImageVolumeChoice(group, profile);
-    clientPreparedImages = true;
     setImageOptimizeState(group, 'done', 'نسخه اورجینال برای همین عکس انتخاب شد.');
     return;
   }
@@ -906,7 +913,6 @@ async function sharpenSelectedImage(button) {
     setImageApproval(group, files.length, true);
     renderImageGroupPreviews(group, files);
     await renderImageComparison(group);
-    clientPreparedImages = true;
     setImageOptimizeState(group, 'done', 'عکس انتخاب‌شده شارپ و آماده ثبت شد.');
     document.dispatchEvent(new CustomEvent('product-images-changed'));
   } catch (error) {
@@ -918,7 +924,6 @@ async function optimizeImageGroup(buttonOrGroup) {
   const group = buttonOrGroup.closest ? buttonOrGroup.closest('.image-optimizer-group') : buttonOrGroup;
   const input = document.getElementById(group.dataset.input);
   setImageOptimizeState(group, 'processing', 'لطفاً تا پایان پردازش صبر کنید.');
-  allowUnoptimizedImageSubmit = false;
   try {
     let files = Array.from(input.files || []);
     if (!files.length) files = await existingImageFiles(group);
@@ -938,7 +943,6 @@ async function optimizeImageGroup(buttonOrGroup) {
     await renderImageComparison(group);
     renderImageTargetOptions(group);
     markImageVolumeChoice(group, '');
-    clientPreparedImages = true;
     setImageOptimizeState(group, 'done', 'تصاویر آماده ثبت هستند.');
   } catch (error) {
     setImageOptimizeState(group, 'failed', 'بهینه‌سازی انجام نشد؛ دوباره تلاش کنید.');
@@ -1317,6 +1321,12 @@ async function submitForm(statusValue) {
   const form = document.getElementById('real-product-form');
   form.querySelectorAll('[data-submit-generated="1"]').forEach(input => input.remove());
 
+  // پاداش مالک محصول، وقتی روشن است، برای پیش‌نویس و ثبت نهایی مالک و چهار مقدار معتبر می‌خواهد.
+  // این مسیر پیش از FormData کنترل می‌شود چون ثبت محصول با fetch انجام می‌شود و submit معمولی فرم اجرا نمی‌شود.
+  if (typeof window.validateCreatorRewardSettings === 'function' && !window.validateCreatorRewardSettings()) {
+    return;
+  }
+
   // ثبت نهایی تا زمان تکمیل تمام موارد اجباری متوقف می‌ماند. این بررسی پیش از
   // پردازش تصاویر انجام می‌شود تا مدیر ابتدا فهرست دقیق کمبودهای فرم را ببیند.
   if (statusValue === 'active') {
@@ -1352,10 +1362,6 @@ async function submitForm(statusValue) {
     failed.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  if ((allowUnoptimizedImageSubmit || clientPreparedImages) && !form.querySelector('[name="skip_image_optimization"]')) {
-    form.appendChild(createHiddenInput('skip_image_optimization', '1'));
-  }
-
   document.getElementById('product-status').value = statusValue;
 
   document.querySelectorAll('#tags-wrap [data-tag-chip]').forEach((chip, idx) => {

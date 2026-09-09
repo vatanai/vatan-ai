@@ -11,7 +11,7 @@
         @if(!($isGuest ?? false) && auth()->user()->avatar)
           <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="عکس پروفایل" class="avatar-img" id="profileAvatarImg">
         @else
-          <img src="{{ asset('assets/img/icons/nav-profile.svg') }}" alt="عکس پروفایل" class="avatar-img avatar-img--placeholder icon-filter" id="profileAvatarImg">
+          <img src="{{ \App\Support\AppAsset::url('assets/img/icons/nav-profile.svg') }}" alt="عکس پروفایل" class="avatar-img avatar-img--placeholder icon-filter" id="profileAvatarImg">
         @endif
       </div>
     </div>
@@ -68,8 +68,8 @@
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">{{ number_format($earnings) }}</span>
-        <span class="stat-label">توکن دعوت</span>
+        <span class="stat-number">{{ number_format($profileRewardTotal ?? $earnings) }}</span>
+        <span class="stat-label">اعتبار دعوت و درآمد</span>
       </div>
     </div>
 
@@ -113,8 +113,8 @@
       </div>
       <div class="stat-sep"></div>
       <div class="stat-col">
-        <span class="stat-number">{{ number_format($earnings) }}</span>
-        <span class="stat-label">توکن دعوت</span>
+        <span class="stat-number">{{ number_format($profileRewardTotal ?? $earnings) }}</span>
+        <span class="stat-label">اعتبار دعوت و درآمد</span>
       </div>
     </div>
 

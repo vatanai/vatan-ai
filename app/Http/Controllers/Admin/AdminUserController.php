@@ -78,10 +78,17 @@ class AdminUserController extends Controller
                 });
             })
             ->withCount('generatedImages')
+            ->withCount('generatedVideos')
             ->orderByDesc('registered_at')
             ->orderByDesc('created_at');
         if (Schema::hasTable('finance_cases')) {
             $usersQuery->withCount('financeCases');
+        }
+        if (Schema::hasTable('referral_links')) {
+            $usersQuery->withCount('referralLinks');
+        }
+        if (Schema::hasTable('referral_visits')) {
+            $usersQuery->withCount('referralVisits');
         }
 
         $users = $usersQuery->get()
@@ -108,6 +115,12 @@ class AdminUserController extends Controller
         $users->each(function (User $user) use ($financeCasesAvailable): void {
             if (! $financeCasesAvailable) {
                 $user->setAttribute('finance_cases_count', 0);
+            }
+            if (! Schema::hasTable('referral_links')) {
+                $user->setAttribute('referral_links_count', 0);
+            }
+            if (! Schema::hasTable('referral_visits')) {
+                $user->setAttribute('referral_visits_count', 0);
             }
             $user->generatedImages->each(function (GeneratedImage $image): void {
                 $image->setAttribute('jalali_created_at', Jalali::formatNumeric($image->created_at));
@@ -789,9 +802,10 @@ class AdminUserController extends Controller
         $adminId = $request->user('admin')?->id;
         $sendSms = (bool) ($data['send_sms'] ?? false);
 
-        $updated = DB::transaction(function () use ($ids, $action, $amount, $expiresAt, $creditKind, $adminId, $sendSms, $data) {
+        $result = DB::transaction(function () use ($ids, $action, $amount, $expiresAt, $creditKind, $adminId, $sendSms, $data) {
             $users = User::query()->whereIn('id', $ids)->lockForUpdate()->get();
             $count = 0;
+            $balances = [];
             foreach ($users as $user) {
                 $before = (int) $user->tokens;
                 $promotionalBefore = $user->promotionalTokenBalance();
@@ -817,6 +831,11 @@ class AdminUserController extends Controller
                     else $user->promotional_tokens = min($promotionalBefore, $after);
                 }
                 $user->save();
+                $balances[(string) $user->id] = [
+                    'tokens' => (int) $user->tokens,
+                    'tokens_purchased' => (int) $user->tokens_purchased,
+                    'tokens_used' => (int) $user->tokens_used,
+                ];
                 $log = TokenLog::create([
                     'user_id' => $user->id, 'admin_id' => $adminId, 'action' => $action,
                     'amount' => $amount, 'balance_before' => $before, 'balance_after' => $after,
@@ -830,10 +849,15 @@ class AdminUserController extends Controller
                 }
                 $count++;
             }
-            return $count;
+            return ['count' => $count, 'balances' => $balances];
         });
 
-        return response()->json(['status' => 'success', 'updated' => $updated, 'message' => "عملیات اعتبار برای {$updated} کاربر انجام شد."]);
+        return response()->json([
+            'status' => 'success',
+            'updated' => $result['count'],
+            'balances' => $result['balances'],
+            'message' => "عملیات اعتبار برای {$result['count']} کاربر انجام شد.",
+        ]);
     }
 
     /** ارسال دوباره‌ی پیامک تغییر اعتبار برای یک رکورد تاریخچه. */

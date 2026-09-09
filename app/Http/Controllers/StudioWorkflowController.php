@@ -158,6 +158,7 @@ class StudioWorkflowController extends Controller
                 'source_image_data_list' => $imageData,
                 'source_upload_path' => $imagePaths[0] ?? null,
                 'source_upload_paths' => $imagePaths,
+                'source_video_path' => $sourceVideoPath,
                 'source_video_url' => $sourceVideoUrl,
                 'workflow' => $workflow,
                 'reference_mode' => $workflow === 'image_sequence_to_video' || count($imageData) > 1 ? 'input_references' : null,

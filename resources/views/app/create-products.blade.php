@@ -3,7 +3,7 @@
 @section('page_title', 'بساز | انتخاب محصول | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-products.css') }}?v={{ filemtime(public_path('css/create-products.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-products.css') }}">
 @endpush
 
 @section('content')

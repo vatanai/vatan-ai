@@ -189,6 +189,18 @@ class User extends Authenticatable
         return $this->hasMany(GeneratedVideo::class);
     }
 
+    /** محصولاتی که مالک تجاری آن‌ها این کاربر است؛ مستقل از همکاری در فروش. */
+    public function creatorRewardProducts(): HasMany
+    {
+        return $this->hasMany(Product::class, 'creator_reward_owner_id');
+    }
+
+    /** رویدادهای پاداشی که این کاربر به‌عنوان مالک محصول دریافت کرده است. */
+    public function creatorRewardEventsReceived(): HasMany
+    {
+        return $this->hasMany(ProductCreatorRewardEvent::class, 'owner_user_id');
+    }
+
     /**
      * پلن فعلی کاربر (در صورت null، کاربر پلن رایگان محسوب می‌شود)
      */
@@ -257,6 +269,18 @@ class User extends Authenticatable
     public function referralVisits(): HasMany
     {
         return $this->hasMany(ReferralVisit::class, 'inviter_id');
+    }
+
+    /** لینک‌های اختصاصی محصولی که این کاربر ساخته است. */
+    public function referralLinks(): HasMany
+    {
+        return $this->hasMany(ReferralLink::class, 'inviter_id');
+    }
+
+    /** تمام ثبت‌نام‌هایی که به این کاربر دعوت‌کننده نسبت داده شده‌اند. */
+    public function referralConversions(): HasMany
+    {
+        return $this->hasMany(ReferralConversion::class, 'inviter_id');
     }
 
     public function referralRewards(): HasMany

@@ -8,7 +8,7 @@
   <div class="hb-intro-products">
     @foreach($products as $product)
       <a class="hb-wide-item" href="{{ route('app.product', $product->route_slug) }}">
-        <div class="hb-wide-card" style="aspect-ratio:{{ $hbRatio }};background-image:url('{{ $product->displayImageUrl() }}')">
+        <div class="hb-wide-card" data-hb-background style="aspect-ratio:{{ $hbRatio }};--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
           @if(in_array($product->media_type, ['video', 'both']))<i class="fa-solid fa-circle-play hb-wide-play"></i>@endif
         </div>
         @if($section->setting('show_credit', true) || $section->setting('show_title', true) || $section->setting('show_category', true))

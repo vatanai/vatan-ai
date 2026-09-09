@@ -24,8 +24,8 @@
   <div class="app-footer__inner">
     <div class="app-footer__identity">
       <a href="{{ route('app.home') }}" class="app-footer__brand" aria-label="وطن — صفحه اصلی اپ">
-        <img class="app-footer__brand-icon" src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="24" height="24">
-        <img class="app-footer__brand-wordmark" src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن" width="55" height="24">
+        <img class="app-footer__brand-icon" src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt="" width="24" height="24">
+        <img class="app-footer__brand-wordmark" src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن" width="55" height="24">
       </a>
       <span class="app-footer__copy">© {{ $appFooterYear }}، تمام حقوق محفوظ است.</span>
       @if($adminDashboardVersion)

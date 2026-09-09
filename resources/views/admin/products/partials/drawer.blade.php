@@ -176,6 +176,7 @@
       cardLabel: @json($product->card_label),
       pricingModel: @json($product->pricing_model),
       creditCost: @json($product->credit_cost),
+      qualityCreditCosts: @json($product->qualityCreditCosts()),
       discount: @json($product->discount_percentage),
       priceTier: @json($product->price_tier),
       minCredit: @json($product->new_min_credit_required),
@@ -216,7 +217,7 @@
       lastRun: @json($product->last_run_at ? \App\Support\Jalali::formatNumeric(\Illuminate\Support\Carbon::parse($product->last_run_at)) : null),
       createdAt: @json(\App\Support\Jalali::formatNumeric($product->created_at)),
       updatedAt: @json(\App\Support\Jalali::formatNumeric($product->updated_at)),
-      editUrl: @json(route('admin.products.create', $product->id)),
+      editUrl: @json($product->isVideoProduct() ? route('admin.products.video.create', $product) : route('admin.products.create', $product)),
     },
     @endforeach
   };
@@ -284,7 +285,7 @@
     // ── قیمت‌گذاری ──
     document.getElementById('pm-pricing').innerHTML =
       pmItem('مدل قیمت‌گذاری', pmVal(pmPricingMap[p.pricingModel] || p.pricingModel)) +
-      pmItem('هزینه هر اجرا', p.pricingModel === 'free' ? 'رایگان' : pmVal(p.creditCost !== null ? pmFa(p.creditCost) + ' کردیت' : null)) +
+      pmItem('مصرف اعتبار سه سطح', p.pricingModel === 'free' ? 'رایگان' : pmVal(p.qualityCreditCosts ? 'استاندارد ' + pmFa(p.qualityCreditCosts.standard) + ' · حرفه‌ای ' + pmFa(p.qualityCreditCosts.professional) + ' · بهترین ' + pmFa(p.qualityCreditCosts.best) + ' کردیت' : null)) +
       pmItem('درصد تخفیف', pmVal(p.discount !== null && p.discount !== undefined ? pmFa(p.discount) + '٪' : null)) +
       pmItem('رده قیمتی', pmVal(p.priceTier)) +
       pmItem('حداقل کردیت لازم', pmVal(p.minCredit !== null && p.minCredit !== undefined ? pmFa(p.minCredit) : null)) +
@@ -299,7 +300,7 @@
       pmItem('تایم‌اوت', pmVal(p.timeout !== null ? pmFa(p.timeout) + ' ثانیه' : null)) +
       pmItem('نوع سوژه', pmVal(p.subjectType)) +
       pmItem('حفظ هویت چهره', p.identityPreservation ? 'فعال' : 'غیرفعال');
-    const gradeLabels = {economic: 'اقتصادی', standard: 'استاندارد', professional: 'حرفه‌ای'};
+    const gradeLabels = {economic: 'استاندارد', standard: 'استاندارد', professional: 'حرفه‌ای', best: 'بهترین خروجی'};
     const gradeEntries = Object.entries(p.labGradeConfig || {});
     document.getElementById('pm-lab-grades').innerHTML = gradeEntries.length
       ? gradeEntries.map(([key, grade]) => pmItem(grade.label || gradeLabels[key] || key, `${pmEsc(grade.primary?.name || grade.primary?.model_id || '—')} · ${pmEsc(String(grade.primary?.score || '—'))} از ۵`)).join('')
@@ -410,9 +411,10 @@
     const notice = document.createElement('div');
     notice.id = 'product-action-notice';
     notice.className = 'admin-toast fixed left-5 bottom-5 z-[150] px-4 py-3 rounded-xl text-[12px]';
-    const color = kind === 'error' ? 'var(--danger)' : 'var(--success)';
+    const color = kind === 'error' ? 'var(--danger)' : (kind === 'warning' ? 'var(--warning)' : 'var(--success)');
+    const icon = kind === 'error' ? 'fa-triangle-exclamation' : (kind === 'warning' ? 'fa-circle-info' : 'fa-circle-check');
     notice.style.cssText += 'background:var(--card-bg);color:' + color + ';border:1px solid ' + color + ';';
-    notice.innerHTML = '<span class="admin-toast-icon"><i class="fa-solid ' + (kind === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-check') + '"></i></span><span>' + message + '</span>';
+    notice.innerHTML = '<span class="admin-toast-icon"><i class="fa-solid ' + icon + '"></i></span><span>' + message + '</span>';
     document.body.appendChild(notice);
     setTimeout(function () { notice.remove(); }, 3500);
   }
@@ -482,8 +484,8 @@
   }
 
   function openBulkAiModelDialog() {
-    const ids = [...document.querySelectorAll('.bulk-check:checked')].map(function (checkbox) { return checkbox.value; });
-    if (!ids.length) return;
+    const ids = requireBulkSelection();
+    if (!ids) return;
     productAiDialogState.mode = 'bulk';
     productAiDialogState.productId = null;
     productAiDialogState.productName = '';
@@ -495,6 +497,592 @@
     openConfiguredAiModelDialog('تغییر گروهی مدل هوش مصنوعی', ids.length.toLocaleString('fa-IR') + ' محصول انتخاب شده');
   }
 
+  /* ─── معماری کیفیت خروجیِ مشترک با گام دوم ثبت محصول ─── */
+  const productQualityConfigurationState = {
+    mode: 'single', url: '', ids: [], productName: '', configuration: {}, saving: false,
+  };
+  const productQualitySearchState = {};
+  const productQualityCards = [
+    { group: 'quality_models', key: 'standard', title: 'مدل استاندارد', description: 'مسیر متعادل برای ساخت روزمره', grade: 3, icon: 'fa-wand-magic-sparkles' },
+    { group: 'quality_models', key: 'professional', title: 'مدل حرفه‌ای', description: 'جزئیات و پایداری بیشتر برای خروجی حرفه‌ای', grade: 2, icon: 'fa-gem' },
+    { group: 'quality_models', key: 'best', title: 'مدل بهترین خروجی', description: 'بالاترین سطح کیفیت برای نتیجه‌های کلیدی', grade: 1, icon: 'fa-crown' },
+  ];
+  const productFreeQualityCards = [
+    { group: 'free_quality_models', key: 'standard', title: 'مدل استاندارد', description: 'مسیر پیش‌فرض ساخت با اعتبار هدیه', grade: 4, icon: 'fa-gift' },
+    { group: 'free_quality_models', key: 'best', title: 'حالت بهترین خروجی', description: 'مدل آماده برای فعال‌شدن دسترسی بهترین خروجی', grade: 1, icon: 'fa-star' },
+  ];
+
+  function productQualityPresets() {
+    return window.PRODUCT_MODEL_QUALITY_PRESETS || {};
+  }
+
+  function cloneProductQualityValue(value) {
+    return JSON.parse(JSON.stringify(value || {}));
+  }
+
+  function emptyQualityPair() {
+    return { primary: { model_id: '', provider: '' }, fallback: { model_id: '', provider: '' } };
+  }
+
+  function presetQualityConfiguration(key) {
+    return cloneProductQualityValue(productQualityPresets()[key]?.configuration || {});
+  }
+
+  function completeProductQualityConfiguration(configuration) {
+    const presetKey = configuration?.quality_preset_key || 'preset_1';
+    const preset = presetQualityConfiguration(presetKey);
+    const result = {
+      quality_preset_key: productQualityPresets()[presetKey] ? presetKey : 'preset_1',
+      quality_architecture_enabled: configuration?.quality_architecture_enabled !== false,
+      quality_models: {},
+      free_quality_models: {},
+    };
+    productQualityCards.concat(productFreeQualityCards).forEach(function (card) {
+      const saved = configuration?.[card.group]?.[card.key] || {};
+      const fallback = preset?.[card.group]?.[card.key] || emptyQualityPair();
+      result[card.group][card.key] = {
+        primary: {
+          model_id: saved.primary?.model_id || fallback.primary?.model_id || '',
+          provider: saved.primary?.provider || fallback.primary?.provider || '',
+        },
+        fallback: {
+          model_id: saved.fallback?.model_id || fallback.fallback?.model_id || '',
+          provider: saved.fallback?.provider || fallback.fallback?.provider || '',
+        },
+      };
+    });
+    return result;
+  }
+
+  function productQualitySelection(card, role) {
+    return productQualityConfigurationState.configuration?.[card.group]?.[card.key]?.[role] || {};
+  }
+
+  function productQualityModelsFor(card, role, provider) {
+    const all = productAiModels();
+    const sameGrade = all.filter(function (model) { return Number(model.gradeNumber) === Number(card.grade); });
+    const candidates = role === 'primary' && sameGrade.length ? sameGrade : all;
+    const primary = productQualitySelection(card, 'primary');
+    const primaryProvider = primary.provider || '';
+    return candidates.filter(function (model) {
+      // مدل جایگزین می‌تواند از همان پرووایدر باشد؛ فقط انتخاب عین مدل اصلی
+      // را می‌بندیم تا مسیر جایگزین واقعاً یک مدل متفاوت داشته باشد.
+      const isSameModel = role === 'fallback'
+        && primaryProvider
+        && model.provider === primaryProvider
+        && model.id === primary.model_id;
+      return !isSameModel && (!provider || model.provider === provider);
+    });
+  }
+
+  function productQualitySearchKey(card, role) {
+    return card.group + ':' + card.key + ':' + role;
+  }
+
+  function productQualityProviderOptions(card, role) {
+    const selection = productQualitySelection(card, role);
+    const primaryProvider = productQualitySelection(card, 'primary').provider || '';
+    const providers = [...new Set(productQualityModelsFor(card, role).map(function (model) { return model.provider; }))];
+    return '<option value="">انتخاب پرووایدر</option>' + providers.map(function (provider) {
+      const selected = provider === selection.provider ? ' selected' : '';
+      const label = productAiModels().find(function (model) { return model.provider === provider; })?.providerFa || provider;
+      return '<option value="' + pmEsc(provider) + '"' + selected + '>' + pmEsc(label) + '</option>';
+    }).join('');
+  }
+
+  function productQualityModelOptions(card, role) {
+    const selection = productQualitySelection(card, role);
+    const provider = selection.provider || '';
+    const models = provider ? productQualityModelsFor(card, role, provider) : [];
+    const selected = productAiModels().find(function (model) {
+      return model.id === selection.model_id && model.provider === selection.provider;
+    });
+    const items = selected && !models.some(function (model) { return model.id === selected.id && model.provider === selected.provider; })
+      ? [selected].concat(models)
+      : models;
+    return '<option value="">' + (provider ? 'انتخاب مدل' : 'ابتدا پرووایدر را انتخاب کنید') + '</option>' + items.map(function (model) {
+      const isSelected = model.id === selection.model_id && model.provider === selection.provider;
+      const searchText = [model.id, model.name, model.persianName, model.provider, model.providerFa].filter(Boolean).join(' ').toLowerCase();
+      return '<option value="' + pmEsc(model.id) + '" data-provider="' + pmEsc(model.provider) + '" data-search="' + pmEsc(searchText) + '"' + (isSelected ? ' selected' : '') + '>' + pmEsc(model.persianName || model.name || model.id) + ' · ' + pmEsc(model.providerFa || model.provider) + '</option>';
+    }).join('');
+  }
+
+  function filterProductQualityModelSearch(input) {
+    const query = String(input?.value || '').trim().toLowerCase();
+    const select = input?.closest('label')?.querySelector('[data-quality-model-search-select]');
+    if (!select) return;
+    Array.from(select.options).forEach(function (option) {
+      if (!option.value) return;
+      const haystack = String(option.dataset.search || option.textContent || '').toLowerCase();
+      option.hidden = Boolean(query && !haystack.includes(query));
+    });
+    const key = input.dataset.qualitySearchKey;
+    if (key) productQualitySearchState[key] = input.value || '';
+  }
+
+  function productQualityCostText(card, role) {
+    const selection = productQualitySelection(card, role);
+    const model = productAiModels().find(function (item) {
+      return item.id === selection.model_id && item.provider === selection.provider;
+    });
+    if (!model || !Number(model.usd)) return 'هزینه تقریبی هر ساخت: —';
+    const toman = Number(model.toman || 0);
+    return 'هزینه تقریبی هر ساخت: $' + Number(model.usd).toFixed(3) + (toman ? ' · ' + toman.toLocaleString('fa-IR') + ' تومان' : '');
+  }
+
+  function productQualityCardMarkup(card, dashed) {
+    const cardClass = dashed ? 'border-dashed' : '';
+    const roleMarkup = function (role, title, subtitle) {
+      const selection = productQualitySelection(card, role);
+      const disabled = selection.provider ? '' : ' disabled';
+      const searchKey = productQualitySearchKey(card, role);
+      return '<label class="block text-[10px] font-bold" style="color:var(--text-soft);">' + title + (subtitle ? ' <span class="font-normal">' + subtitle + '</span>' : '') +
+        '<span class="block mt-2 text-[9px] font-normal" style="color:var(--text-soft);">پرووایدر</span><select class="input-pro w-full mt-1" style="height:36px;" data-quality-group="' + card.group + '" data-quality-key="' + card.key + '" data-quality-role="' + role + '" onchange="updateProductQualityProvider(this)">' + productQualityProviderOptions(card, role) + '</select>' +
+        '<span class="block mt-2 text-[9px] font-normal" style="color:var(--text-soft);">مدل</span><input type="search" class="input-pro w-full mt-1" style="height:32px;" data-quality-model-search data-quality-search-key="' + pmEsc(searchKey) + '" value="' + pmEsc(productQualitySearchState[searchKey] || '') + '" placeholder="جستجوی نام یا شناسه مدل..." autocomplete="off" oninput="filterProductQualityModelSearch(this)"><select class="input-pro w-full mt-1" style="height:36px;" data-quality-model-search-select data-quality-group="' + card.group + '" data-quality-key="' + card.key + '" data-quality-role="' + role + '" onchange="updateProductQualitySelection(this)"' + disabled + '>' + productQualityModelOptions(card, role) + '</select><small class="block mt-1 font-normal" style="color:var(--text-soft);">' + productQualityCostText(card, role) + '</small></label>';
+    };
+    return '<article class="rounded-xl p-3.5 ' + cardClass + '" style="background:var(--input-bg);border:1px ' + (dashed ? 'dashed' : 'solid') + ' var(--border);">' +
+      '<div class="flex items-start gap-2.5 mb-3"><span class="w-8 h-8 grid place-items-center rounded-lg shrink-0" style="background:var(--primary-l);color:var(--primary);"><i class="fa-solid ' + pmEsc(card.icon) + '"></i></span><div><b class="text-[12px]" style="color:var(--text-h);">' + pmEsc(card.title) + '</b><p class="text-[9.5px] leading-5 mt-0.5" style="color:var(--text-soft);">' + pmEsc(card.description) + '</p></div></div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' + roleMarkup('primary', 'مدل اصلی', '') + roleMarkup('fallback', 'مدل جایگزین', '(مسیر مستقل)') + '</div>' +
+      '</article>';
+  }
+
+  function renderProductQualityConfigurationDialog() {
+    const configuration = productQualityConfigurationState.configuration;
+    const presetSelect = document.getElementById('product-quality-preset');
+    const presets = productQualityPresets();
+    if (presetSelect) {
+      const entries = Object.entries(presets);
+      presetSelect.disabled = !entries.length;
+      presetSelect.innerHTML = entries.length ? entries.map(function ([key, preset]) {
+        return '<option value="' + pmEsc(key) + '"' + (configuration.quality_preset_key === key ? ' selected' : '') + '>' + pmEsc(preset.name || key) + '</option>';
+      }).join('') : '<option value="">پیش‌فرضی در دیتابیس ثبت نشده است</option>';
+    }
+    const enabled = configuration.quality_architecture_enabled !== false;
+    document.getElementById('product-quality-architecture-content')?.classList.toggle('hidden', !enabled);
+    const toggle = document.getElementById('product-quality-architecture-toggle');
+    if (toggle) {
+      toggle.innerHTML = '<i class="fa-solid ' + (enabled ? 'fa-toggle-on' : 'fa-toggle-off') + ' text-[12px]"></i> <span>' + (enabled ? 'روشن' : 'خاموش') + '</span>';
+      toggle.style.color = enabled ? 'var(--primary)' : '';
+    }
+    const paid = document.getElementById('product-quality-paid-cards');
+    const free = document.getElementById('product-quality-free-cards');
+    if (paid) paid.innerHTML = productQualityCards.map(function (card) { return productQualityCardMarkup(card, false); }).join('');
+    if (free) free.innerHTML = productFreeQualityCards.map(function (card) { return productQualityCardMarkup(card, true); }).join('');
+    document.querySelectorAll('[data-quality-model-search]').forEach(function (input) {
+      filterProductQualityModelSearch(input);
+    });
+  }
+
+  function openProductQualityConfigurationDialog(button) {
+    closeAllDropdowns();
+    let configuration = {};
+    try { configuration = JSON.parse(button.dataset.modelConfiguration || '{}'); } catch (_) { configuration = {}; }
+    productQualityConfigurationState.mode = 'single';
+    productQualityConfigurationState.url = button.dataset.qualityUrl || '';
+    productQualityConfigurationState.ids = [];
+    productQualityConfigurationState.productName = button.dataset.productName || '';
+    productQualityConfigurationState.configuration = completeProductQualityConfiguration(configuration);
+    openProductQualityConfigurationDialogWindow('معماری کیفیت خروجی مدل', productQualityConfigurationState.productName);
+  }
+
+  function openBulkQualityConfigurationDialog() {
+    const ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
+    if (!ids.length) {
+      showProductNotice('برای اعمال تنظیمات، ابتدا حداقل یک محصول را انتخاب کنید.', 'warning');
+      return;
+    }
+    productQualityConfigurationState.mode = 'bulk';
+    productQualityConfigurationState.url = window.PRODUCT_BULK_MODEL_QUALITY_URL || '';
+    productQualityConfigurationState.ids = ids;
+    productQualityConfigurationState.productName = '';
+    const presetKeys = Object.keys(productQualityPresets());
+    const defaultPresetKey = window.PRODUCT_MODEL_QUALITY_DEFAULT_KEY || presetKeys[0] || 'preset_1';
+    productQualityConfigurationState.configuration = completeProductQualityConfiguration({ quality_preset_key: defaultPresetKey, quality_architecture_enabled: true });
+    openProductQualityConfigurationDialogWindow('تنظیم مدل‌های هوش مصنوعی', ids.length.toLocaleString('fa-IR') + ' محصول انتخاب شده');
+  }
+
+  function openProductQualityConfigurationDialogWindow(title, subtitle) {
+    const dialog = document.getElementById('product-quality-configuration-dialog');
+    document.getElementById('product-quality-configuration-title').textContent = title;
+    document.getElementById('product-quality-configuration-subtitle').textContent = subtitle;
+    document.getElementById('product-quality-configuration-state').textContent = '';
+    document.getElementById('product-quality-configuration-hint').innerHTML = productQualityConfigurationState.mode === 'bulk'
+      ? '<i class="fa-solid fa-layer-group ml-1" style="color:var(--primary);"></i> تنظیمات انتخاب‌شده برای همهٔ محصولات انتخاب‌شده ذخیره می‌شود. می‌توانید ابتدا یکی از پیش‌فرض‌ها را انتخاب و سپس جزئیات آن را تغییر دهید.'
+      : '<i class="fa-solid fa-circle-info ml-1" style="color:var(--primary);"></i> این همان معماری گام دوم ثبت محصول است. هر مسیر جایگزین باید با مدل اصلی متفاوت باشد.';
+    document.getElementById('product-quality-configuration-submit').textContent = productQualityConfigurationState.mode === 'bulk' ? 'اعمال به محصولات منتخب' : 'ذخیره تنظیمات';
+    renderProductQualityConfigurationDialog();
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', 'open');
+  }
+
+  function updateProductQualitySelection(select) {
+    const group = select.dataset.qualityGroup;
+    const key = select.dataset.qualityKey;
+    const role = select.dataset.qualityRole;
+    if (!group || !key || !role) return;
+    productQualityConfigurationState.configuration[group][key][role] = {
+      model_id: select.value || '', provider: productQualityConfigurationState.configuration[group][key][role]?.provider || '',
+    };
+    renderProductQualityConfigurationDialog();
+  }
+
+  function updateProductQualityProvider(select) {
+    const group = select.dataset.qualityGroup;
+    const key = select.dataset.qualityKey;
+    const role = select.dataset.qualityRole;
+    if (!group || !key || !role) return;
+    const pair = productQualityConfigurationState.configuration[group][key];
+    pair[role] = { model_id: '', provider: select.value || '' };
+    renderProductQualityConfigurationDialog();
+  }
+
+  function applyProductQualityPreset(key) {
+    const preset = presetQualityConfiguration(key);
+    if (!Object.keys(preset).length) {
+      showProductNotice('این پیش‌فرض در نسخه‌ی فعلی سایت موجود نیست؛ ابتدا migrationهای دیتابیس را اجرا کنید.', 'error');
+      return;
+    }
+    productQualityConfigurationState.configuration.quality_preset_key = key;
+    productQualityCards.concat(productFreeQualityCards).forEach(function (card) {
+      productQualityConfigurationState.configuration[card.group][card.key] = cloneProductQualityValue(preset?.[card.group]?.[card.key] || emptyQualityPair());
+    });
+    renderProductQualityConfigurationDialog();
+  }
+
+  function toggleProductQualityArchitecture() {
+    productQualityConfigurationState.configuration.quality_architecture_enabled = productQualityConfigurationState.configuration.quality_architecture_enabled === false;
+    renderProductQualityConfigurationDialog();
+  }
+
+  function productQualityPresetPayload() {
+    const configuration = productQualityConfigurationState.configuration;
+    return {
+      quality_models: cloneProductQualityValue(configuration.quality_models),
+      free_quality_models: cloneProductQualityValue(configuration.free_quality_models),
+    };
+  }
+
+  async function fixProductQualityPreset() {
+    const key = productQualityConfigurationState.configuration.quality_preset_key;
+    const preset = productQualityPresets()[key];
+    const state = document.getElementById('product-quality-configuration-state');
+    if (!preset?.url) {
+      state.style.color = 'var(--danger)';
+      state.textContent = 'پیش‌فرض انتخاب‌شده از سرور دریافت نشده است؛ ابتدا migrationهای دیتابیس را اجرا کنید.';
+      showProductNotice(state.textContent, 'error');
+      return;
+    }
+    state.style.color = 'var(--warning)';
+    state.textContent = 'در حال ذخیره پیش‌فرض…';
+    try {
+      const response = await fetch(preset.url, {
+        method: 'PATCH',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configuration: productQualityPresetPayload() }),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'ذخیره پیش‌فرض انجام نشد.');
+      productQualityPresets()[key].configuration = data.preset?.configuration || productQualityPresetPayload();
+      state.style.color = 'var(--success)';
+      state.textContent = data.message || 'تنظیمات این پیش‌فرض ذخیره شد.';
+    } catch (error) {
+      state.style.color = 'var(--danger)';
+      state.textContent = error.message || 'ذخیره پیش‌فرض انجام نشد.';
+      showProductNotice(state.textContent, 'error');
+    }
+  }
+
+  async function saveProductQualityConfiguration() {
+    const state = document.getElementById('product-quality-configuration-state');
+    const submit = document.getElementById('product-quality-configuration-submit');
+    if (productQualityConfigurationState.mode === 'bulk' && !productQualityConfigurationState.ids.length) {
+      showProductNotice('هیچ محصولی برای اعمال تنظیمات انتخاب نشده است.', 'warning');
+      return;
+    }
+    if (!productQualityConfigurationState.url || productQualityConfigurationState.saving) {
+      showProductNotice('مسیر ذخیره‌سازی تنظیمات در این صفحه آماده نیست. صفحه را تازه‌سازی کنید.', 'error');
+      return;
+    }
+    if (productQualityConfigurationState.mode === 'bulk' && !Object.keys(productQualityPresets()).length) {
+      state.style.color = 'var(--danger)';
+      state.textContent = 'هیچ پیش‌فرضی از سرور دریافت نشد؛ ابتدا migrationهای دیتابیس را اجرا کنید.';
+      showProductNotice(state.textContent, 'error');
+      return;
+    }
+    productQualityConfigurationState.saving = true;
+    if (submit) submit.disabled = true;
+    state.style.color = 'var(--warning)';
+    state.textContent = productQualityConfigurationState.mode === 'bulk' ? 'در حال اعمال تنظیمات…' : 'در حال ذخیره تنظیمات…';
+    const payload = { model_configuration: productQualityConfigurationState.configuration };
+    if (productQualityConfigurationState.mode === 'bulk') payload.ids = productQualityConfigurationState.ids;
+    try {
+      const response = await fetch(productQualityConfigurationState.url, {
+        method: 'PATCH',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        const firstError = Object.values(data.errors || {})[0];
+        throw new Error(Array.isArray(firstError) ? firstError[0] : (data.message || 'ذخیره تنظیمات انجام نشد.'));
+      }
+      state.style.color = 'var(--success)';
+      state.textContent = data.message || 'معماری مدل‌های هوش مصنوعی ذخیره شد.';
+      showProductNotice(state.textContent, 'success');
+      setTimeout(function () { window.location.reload(); }, 550);
+    } catch (error) {
+      state.style.color = 'var(--danger)';
+      state.textContent = error.message || 'خطا در ذخیره تنظیمات مدل.';
+      showProductNotice(state.textContent, 'error');
+    } finally {
+      productQualityConfigurationState.saving = false;
+      if (submit) submit.disabled = false;
+    }
+  }
+
+  function closeProductQualityConfigurationDialog() {
+    const dialog = document.getElementById('product-quality-configuration-dialog');
+    if (dialog?.open && typeof dialog.close === 'function') dialog.close(); else dialog?.removeAttribute('open');
+  }
+
+  /* ─── معماری چهارسطحیِ قدیمی؛ برای سازگاری مسیرهای قبلی نگه‌داری شده است ─── */
+  const productTierConfigurationState = { mode: 'single', url: '', ids: [], productName: '', tiers: {}, saving: false };
+  const productTierSearchState = {};
+  const productTierKeys = ['free', 'economy', 'pro', 'business'];
+
+  function productTierDefinitions() {
+    return window.PRODUCT_MODEL_TIER_DEFINITIONS || {};
+  }
+
+  function productTierDefaults() {
+    return window.PRODUCT_MODEL_TIER_DEFAULTS || {};
+  }
+
+  function tierClone(value) {
+    return JSON.parse(JSON.stringify(value || {}));
+  }
+
+  function defaultTierConfiguration() {
+    const defaults = productTierDefaults();
+    return productTierKeys.reduce(function (tiers, key) {
+      const item = defaults[key] || {};
+      tiers[key] = {
+        primary: { model_id: item.primary?.model_id || '', provider: item.primary?.provider || '' },
+        fallback: { model_id: item.fallback?.model_id || '', provider: item.fallback?.provider || '' },
+      };
+      return tiers;
+    }, {});
+  }
+
+  function completeTierConfiguration(configuration) {
+    const defaults = defaultTierConfiguration();
+    return productTierKeys.reduce(function (tiers, key) {
+      const saved = configuration?.[key] || {};
+      tiers[key] = {
+        primary: {
+          model_id: saved.primary?.model_id || defaults[key].primary.model_id || '',
+          provider: saved.primary?.provider || defaults[key].primary.provider || '',
+        },
+        fallback: {
+          model_id: saved.fallback?.model_id || defaults[key].fallback.model_id || '',
+          provider: saved.fallback?.provider || defaults[key].fallback.provider || '',
+        },
+      };
+      return tiers;
+    }, {});
+  }
+
+  function openProductTierConfigurationDialog(button) {
+    closeAllDropdowns();
+    let saved = {};
+    try { saved = JSON.parse(button.dataset.tierConfiguration || '{}'); } catch (_) { saved = {}; }
+    productTierConfigurationState.mode = 'single';
+    productTierConfigurationState.url = button.dataset.tierUrl || '';
+    productTierConfigurationState.ids = [];
+    productTierConfigurationState.productName = button.dataset.productName || '';
+    productTierConfigurationState.tiers = completeTierConfiguration(saved);
+    openTierConfigurationDialog('مدل‌های چهار سطحی محصول', productTierConfigurationState.productName);
+  }
+
+  function openBulkTierConfigurationDialog() {
+    const ids = typeof requireBulkSelection === 'function' ? requireBulkSelection() : [];
+    if (!ids) return;
+    productTierConfigurationState.mode = 'bulk';
+    productTierConfigurationState.url = window.PRODUCT_BULK_TIER_URL || '';
+    productTierConfigurationState.ids = ids;
+    productTierConfigurationState.productName = '';
+    productTierConfigurationState.tiers = defaultTierConfiguration();
+    openTierConfigurationDialog('اعمال چهار پیش‌فرض مدل', ids.length.toLocaleString('fa-IR') + ' محصول انتخاب شده');
+  }
+
+  function openTierConfigurationDialog(title, subtitle) {
+    const dialog = document.getElementById('product-tier-configuration-dialog');
+    document.getElementById('product-tier-configuration-title').textContent = title;
+    document.getElementById('product-tier-configuration-subtitle').textContent = subtitle;
+    document.getElementById('product-tier-configuration-state').textContent = '';
+    document.getElementById('product-tier-configuration-hint').innerHTML = productTierConfigurationState.mode === 'bulk'
+      ? '<i class="fa-solid fa-layer-group ml-1" style="color:var(--primary);"></i> برای عملیات گروهی، چهار پیش‌فرض سراسریِ هر سطح روی همهٔ محصولات انتخاب‌شده اعمال می‌شود؛ انتخاب دستی هر سطح فقط برای یک محصول انجام می‌شود.'
+      : '<i class="fa-solid fa-circle-info ml-1" style="color:var(--primary);"></i> برای هر پلن، یک مدل اصلی و یک مسیر جایگزین متفاوت انتخاب کنید. دکمهٔ پیش‌فرض، انتخاب همان سطح را به تنظیم سراسری برمی‌گرداند.';
+    const submit = document.getElementById('product-tier-configuration-submit');
+    submit.textContent = productTierConfigurationState.mode === 'bulk' ? 'اعمال به محصولات منتخب' : 'ذخیره چهار سطح';
+    renderTierConfigurationDialog();
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', 'open');
+  }
+
+  function tierModelsForDialog(tierKey, role) {
+    const grade = Number(productTierDefinitions()[tierKey]?.grade || 0);
+    const all = productAiModels();
+    const matched = all.filter(function (model) { return Number(model.gradeNumber) === grade; });
+    const candidates = role === 'primary' && matched.length ? matched : all;
+    const primary = productTierConfigurationState.tiers?.[tierKey]?.primary || {};
+    return candidates.filter(function (model) {
+      const isSameModel = role === 'fallback'
+        && primary.provider
+        && model.provider === primary.provider
+        && model.id === primary.model_id;
+      return !isSameModel;
+    });
+  }
+
+  function tierSearchKey(tierKey, role) {
+    return tierKey + ':' + role;
+  }
+
+  function filterTierModelSearch(input) {
+    const query = String(input?.value || '').trim().toLowerCase();
+    const select = input?.closest('label')?.querySelector('[data-tier-model-search-select]');
+    if (!select) return;
+    Array.from(select.options).forEach(function (option) {
+      if (!option.value) return;
+      const haystack = String(option.dataset.search || option.textContent || '').toLowerCase();
+      option.hidden = Boolean(query && !haystack.includes(query));
+    });
+    const key = input.dataset.tierSearchKey;
+    if (key) productTierSearchState[key] = input.value || '';
+  }
+
+  function tierCostText(model) {
+    if (!model || !Number(model.usd)) return 'هزینه تقریبی هر ساخت: —';
+    const usd = Number(model.usd).toFixed(3);
+    const toman = Number(model.toman || 0).toLocaleString('fa-IR');
+    return 'هزینه تقریبی هر ساخت: $' + usd + (Number(model.toman) ? ' · ' + toman + ' تومان' : '');
+  }
+
+  function tierSelectedModel(tierKey, role) {
+    const selection = productTierConfigurationState.tiers?.[tierKey]?.[role] || {};
+    return productAiModels().find(function (model) {
+      return model.id === selection.model_id && model.provider === selection.provider;
+    }) || null;
+  }
+
+  function tierModelOptions(tierKey, role) {
+    const selection = productTierConfigurationState.tiers?.[tierKey]?.[role] || {};
+    const models = tierModelsForDialog(tierKey, role);
+    const selectedIsMissing = selection.model_id && !models.some(function (model) {
+      return model.id === selection.model_id && model.provider === selection.provider;
+    });
+    const selectedModel = selectedIsMissing ? tierSelectedModel(tierKey, role) : null;
+    const rows = selectedModel ? [selectedModel].concat(models) : models;
+    return '<option value="">انتخاب مدل</option>' + rows.map(function (model) {
+      const selected = model.id === selection.model_id && model.provider === selection.provider ? ' selected' : '';
+      const searchText = [model.id, model.name, model.persianName, model.provider, model.providerFa].filter(Boolean).join(' ').toLowerCase();
+      return '<option value="' + pmEsc(model.id) + '" data-provider="' + pmEsc(model.provider) + '" data-search="' + pmEsc(searchText) + '"' + selected + '>' + pmEsc(model.persianName || model.name || model.id) + ' · ' + pmEsc(model.providerFa || model.provider) + '</option>';
+    }).join('');
+  }
+
+  function renderTierConfigurationDialog() {
+    const holder = document.getElementById('product-tier-configuration-content');
+    if (!holder) return;
+    const definitions = productTierDefinitions();
+    const defaults = productTierDefaults();
+    const locked = productTierConfigurationState.mode === 'bulk';
+    holder.innerHTML = productTierKeys.map(function (key) {
+      const meta = definitions[key] || {};
+      const defaultName = defaults[key]?.name || ('پلن ' + (meta.name || key));
+      const primary = tierSelectedModel(key, 'primary');
+      const fallback = tierSelectedModel(key, 'fallback');
+      const disabled = locked ? ' disabled' : '';
+      const primarySearchKey = tierSearchKey(key, 'primary');
+      const fallbackSearchKey = tierSearchKey(key, 'fallback');
+      return '<article class="rounded-xl p-4" style="background:var(--input-bg);border:1px solid var(--border);">' +
+        '<div class="flex items-start justify-between gap-3 mb-3"><div><b class="text-[12px]" style="color:var(--text-h);">پلن ' + pmEsc(meta.name || key) + ' <span class="font-normal" style="color:var(--text-soft);">· گرید ' + pmEsc(meta.grade || '') + '</span></b><p class="text-[10px] leading-5 mt-1" style="color:var(--text-soft);">' + pmEsc(meta.description || '') + '</p></div>' +
+        (locked ? '<span class="text-[9.5px]" style="color:var(--text-soft);">پیش‌فرض سراسری</span>' : '<button type="button" class="text-[10px] font-bold" style="color:var(--primary);" onclick="applyTierDefaultInDialog(\'' + key + '\')">پیش‌فرض این سطح</button>') + '</div>' +
+        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"><label class="block text-[10px] font-bold" style="color:var(--text-soft);">مدل اصلی<input type="search" class="input-pro w-full mt-1" style="height:32px;" data-tier-model-search data-tier-search-key="' + pmEsc(primarySearchKey) + '" value="' + pmEsc(productTierSearchState[primarySearchKey] || '') + '" placeholder="جستجوی نام یا شناسه مدل..." autocomplete="off" oninput="filterTierModelSearch(this)"><select class="input-pro w-full mt-1" style="height:38px;" data-tier-model-search-select data-tier-key="' + key + '" data-tier-role="primary" onchange="updateTierDialogSelection(this)"' + disabled + '>' + tierModelOptions(key, 'primary') + '</select><small class="block mt-1 font-normal" style="color:var(--text-soft);">' + tierCostText(primary) + '</small></label>' +
+        '<label class="block text-[10px] font-bold" style="color:var(--text-soft);">مدل جایگزین <span class="font-normal">(مسیر مستقل)</span><input type="search" class="input-pro w-full mt-1" style="height:32px;" data-tier-model-search data-tier-search-key="' + pmEsc(fallbackSearchKey) + '" value="' + pmEsc(productTierSearchState[fallbackSearchKey] || '') + '" placeholder="جستجوی نام یا شناسه مدل..." autocomplete="off" oninput="filterTierModelSearch(this)"><select class="input-pro w-full mt-1" style="height:38px;" data-tier-model-search-select data-tier-key="' + key + '" data-tier-role="fallback" onchange="updateTierDialogSelection(this)"' + disabled + '>' + tierModelOptions(key, 'fallback') + '</select><small class="block mt-1 font-normal" style="color:var(--text-soft);">' + tierCostText(fallback) + '</small></label></div>' +
+        '<div class="text-[9.5px] mt-3 pt-2" style="border-top:1px solid var(--border);color:var(--text-soft);">پیش‌فرض فعال: ' + pmEsc(defaultName) + '</div></article>';
+    }).join('');
+    holder.querySelectorAll('[data-tier-model-search]').forEach(function (input) {
+      filterTierModelSearch(input);
+    });
+  }
+
+  function updateTierDialogSelection(select) {
+    const key = select.dataset.tierKey;
+    const role = select.dataset.tierRole;
+    const option = select.options[select.selectedIndex];
+    if (!key || !role) return;
+    productTierConfigurationState.tiers[key][role] = {
+      model_id: option?.value || '',
+      provider: option?.dataset.provider || '',
+    };
+    renderTierConfigurationDialog();
+  }
+
+  function applyTierDefaultInDialog(key) {
+    const defaultValue = defaultTierConfiguration()[key];
+    if (!defaultValue) return;
+    productTierConfigurationState.tiers[key] = tierClone(defaultValue);
+    renderTierConfigurationDialog();
+  }
+
+  function applyAllTierDefaultsInDialog() {
+    productTierConfigurationState.tiers = defaultTierConfiguration();
+    renderTierConfigurationDialog();
+  }
+
+  async function saveProductTierConfiguration() {
+    const state = document.getElementById('product-tier-configuration-state');
+    if (!productTierConfigurationState.url || productTierConfigurationState.saving) return;
+    productTierConfigurationState.saving = true;
+    state.style.color = 'var(--warning)';
+    state.textContent = productTierConfigurationState.mode === 'bulk' ? 'در حال اعمال چهار پیش‌فرض...' : 'در حال ذخیره چهار سطح...';
+    const payload = productTierConfigurationState.mode === 'bulk'
+      ? { ids: productTierConfigurationState.ids, preset_key: 'global' }
+      : { tiers: productTierConfigurationState.tiers };
+    try {
+      const response = await fetch(productTierConfigurationState.url, {
+        method: 'PATCH',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) {
+        const firstError = Object.values(data.errors || {})[0];
+        throw new Error(Array.isArray(firstError) ? firstError[0] : (data.message || 'ذخیره تنظیمات انجام نشد.'));
+      }
+      state.style.color = 'var(--success)';
+      state.textContent = data.message || 'چهار سطح مدل ذخیره شد.';
+      showProductNotice(state.textContent, 'success');
+      setTimeout(function () { window.location.reload(); }, 550);
+    } catch (error) {
+      state.style.color = 'var(--danger)';
+      state.textContent = error.message || 'خطا در ذخیره تنظیمات مدل.';
+    } finally {
+      productTierConfigurationState.saving = false;
+    }
+  }
+
+  function closeProductTierConfigurationDialog() {
+    const dialog = document.getElementById('product-tier-configuration-dialog');
+    if (dialog?.open && typeof dialog.close === 'function') dialog.close(); else dialog?.removeAttribute('open');
+  }
+
+  function openProductTierPresetDialog(button) { openProductTierConfigurationDialog(button); }
+  function openBulkTierPresetDialog() { openBulkTierConfigurationDialog(); }
+
   function openConfiguredAiModelDialog(title, subtitle) {
     const dialog = document.getElementById('product-ai-model-dialog');
     const providerSelect = document.getElementById('product-ai-provider-select');
@@ -502,13 +1090,13 @@
     document.getElementById('product-ai-dialog-title').textContent = title;
     document.getElementById('product-ai-dialog-subtitle').textContent = subtitle;
     document.getElementById('product-ai-dialog-state').textContent = 'با انتخاب مدل، تغییر به‌صورت خودکار ذخیره می‌شود.';
-    providerSelect.innerHTML = ['all'].concat(providers).map(function (provider) {
-      const labels = {liara: 'لیارا', openrouter: 'OpenRouter', fal: 'Fal.ai', replicate: 'Replicate'};
-      return '<option value="' + provider + '">' + (provider === 'all' ? 'همه پرووایدرها' : (labels[provider] || provider)) + '</option>';
+    providerSelect.innerHTML = [''].concat(providers).map(function (provider) {
+      const labels = {openrouter: 'OpenRouter', fal: 'Fal.ai', replicate: 'Replicate'};
+      return '<option value="' + provider + '">' + (provider ? (labels[provider] || provider) : 'انتخاب پرووایدر') + '</option>';
     }).join('');
     providerSelect.value = providers.includes(productAiDialogState.currentProvider)
       ? productAiDialogState.currentProvider
-      : 'all';
+      : '';
     renderProductAiModelOptions();
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', 'open');
@@ -520,19 +1108,22 @@
     const search = (document.getElementById('product-ai-model-search')?.value || '').trim().toLowerCase();
     const modelSelect = document.getElementById('product-ai-model-select');
     const models = productAiModels().filter(function (model) {
-      const providerOk = provider === 'all' || model.provider === provider;
+      const providerOk = Boolean(provider) && model.provider === provider;
       const taskOk = task === 'all' || (task === 'product_image' ? model.workflow === 'product_image' : model.task === task);
       const haystack = [model.name, model.englishName, model.id, model.providerFa, model.providerEn].join(' ').toLowerCase();
       return providerOk && taskOk && (!search || haystack.includes(search));
     });
-    modelSelect.innerHTML = '<option value="">یک مدل انتخاب کنید...</option>' + models.map(function (model) {
-      const plan = model.provider === 'liara' && model.plan ? ' — ' + model.plan : '';
+    modelSelect.disabled = !provider;
+    modelSelect.innerHTML = '<option value="">' + (provider ? 'یک مدل انتخاب کنید...' : 'ابتدا پرووایدر را انتخاب کنید') + '</option>' + models.map(function (model) {
+      const plan = '';
       return '<option value="' + pmEsc(model.id) + '">' + pmEsc(model.name) + plan + '</option>';
     }).join('');
     if (provider === productAiDialogState.currentProvider) modelSelect.value = productAiDialogState.currentModel;
     const holder = document.getElementById('product-ai-model-options');
     if (holder) {
-      holder.innerHTML = models.map(function (model) {
+      holder.innerHTML = !provider
+        ? '<div class="p-4 text-center text-[10px]" style="color:var(--text-soft);">ابتدا پرووایدر را انتخاب کنید.</div>'
+        : models.map(function (model) {
         const selected = model.provider === productAiDialogState.currentProvider && model.id === productAiDialogState.currentModel;
         return '<button type="button" class="product-ai-model-row' + (selected ? ' is-selected' : '') + '" data-model-id="' + pmEsc(model.id) + '" data-model-provider="' + pmEsc(model.provider) + '" onclick="selectProductAiModel(this)">' +
           '<span dir="ltr" class="font-mono">' + pmEsc(model.englishName || model.id) + '</span>' +
@@ -541,7 +1132,7 @@
           '<span>' + pmEsc(model.usage || 'ثبت نشده') + '</span>' +
           '<span class="model-quality-grade">' + pmEsc(model.grade || 'ثبت نشده') + '</span>' +
           '</button>';
-      }).join('') || '<div class="p-4 text-center text-[10px]" style="color:var(--text-soft);">برای این فهرست مدلی وجود ندارد.</div>';
+        }).join('') || '<div class="p-4 text-center text-[10px]" style="color:var(--text-soft);">برای این پرووایدر مدلی وجود ندارد.</div>';
     }
   }
 
@@ -629,6 +1220,15 @@
     return [...document.querySelectorAll('.bulk-check:checked')].map(function (checkbox) { return checkbox.value; });
   }
 
+  function requireBulkSelection() {
+    const ids = getSelectedBulkProductIds();
+    if (!ids.length) {
+      showProductNotice('برای این عملیات، ابتدا حداقل یک محصول را انتخاب کنید.', 'warning');
+      return null;
+    }
+    return ids;
+  }
+
   function updateBulkSelectionUi() {
     var checked = document.querySelectorAll('.bulk-check:checked');
     var selectedIds = getSelectedBulkProductIds();
@@ -662,8 +1262,8 @@
     updateBulkSelectionUi();
   }
   function submitBulk(action) {
-    const checked = getSelectedBulkProductIds();
-    if (!checked.length) return;
+    const checked = requireBulkSelection();
+    if (!checked) return;
     if (action === 'delete' && !confirm(`${checked.length} محصول انتخاب‌شده حذف شود؟`)) return;
 
     const form = document.getElementById('bulk-action-form');
@@ -678,8 +1278,8 @@
   }
   function submitBulkCategory(category) {
     if (!category) return;
-    const checked = getSelectedBulkProductIds();
-    if (!checked.length) return;
+    const checked = requireBulkSelection();
+    if (!checked) return;
     const form = document.getElementById('bulk-action-form');
     form.querySelectorAll('input[name="ids[]"], input[name="category"]').forEach(el => el.remove());
     checked.forEach(id => {

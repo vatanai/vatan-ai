@@ -11,11 +11,16 @@ use App\Models\Generation;
 use App\Models\ProductTestRun;
 use App\Models\LabExperiment;
 use App\Models\ProductCreditLog;
+use App\Models\ModelTierDefault;
+use App\Models\ModelQualityPreset;
 use App\Models\ProductCreditPreset;
+use App\Models\Order;
+use App\Models\GeneratedVideo;
 use App\Services\ProductImageOptimizer;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
 use App\Services\ProviderPricingService;
+use App\Services\ProductLabCostService;
 use App\Support\ProviderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -31,6 +36,7 @@ class ProductController extends Controller
         private readonly ProductImageOptimizer $imageOptimizer,
         private readonly ExchangeRateService $exchangeRate,
         private readonly ProviderPricingService $pricing,
+        private readonly ProductLabCostService $labCosts,
     ) {}
 
     public function translateIdentityPrompt(Request $request, OpenRouterService $openRouter)
@@ -50,7 +56,9 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         // منبع مشترک مدل‌های قابل‌انتخاب در «ثبت محصول» و «تغییر سریع لیست».
-        // منبع مشترک: فقط مدل‌های فعال از تمام providerهای روشن.
+        // منبع مشترک: مدل‌های فعال و تیک‌خورده از تمام providerها.
+        // روشن/خاموش بودن provider فقط روی اجرای واقعی اثر دارد و نباید
+        // باعث ناپدیدشدن مدل از کاتالوگ و فرم تنظیم محصول شود.
         $assignableAiModels = $this->assignableAiModels()->get();
         $validAiModelsByProvider = $assignableAiModels
             ->groupBy('provider')
@@ -65,7 +73,7 @@ class ProductController extends Controller
         // - unique_users_count     : تعداد کاربران یکتایی که محصول را اجرا کرده‌اند
         // - last_run_at            : تاریخ/ساعت آخرین اجرای محصول
         $query = Product::query()
-            ->with(['categories', 'latestLabExperiment.runs.outputs.managerScore'])
+            ->with(['categories', 'creator', 'editor', 'creatorRewardOwner', 'latestLabExperiment.runs.aiModel', 'latestLabExperiment.runs.outputs.managerScore'])
             ->withCount('generations')
             ->withCount(['generations as completed_generations_count' => fn ($generationQuery) => $generationQuery->where('status', 'completed')])
             ->withCount('labExperiments')
@@ -86,6 +94,17 @@ class ProductController extends Controller
             }])
             ->withCount(['testRuns as legacy_test_runs_count'])
             ->withCount('likedByUsers')
+            ->withCount([
+                'creatorRewardEvents as creator_reward_uses_count' => fn ($rewardQuery) => $rewardQuery->where('status', 'credited'),
+            ])
+            ->withSum([
+                'creatorRewardEvents as creator_reward_credits_sum' => fn ($rewardQuery) => $rewardQuery->where('status', 'credited'),
+            ], 'reward_credits')
+            ->withSum(['orders as revenue_credits' => function ($orderQuery) {
+                $orderQuery
+                    ->whereIn('status', ['confirmed', 'processing', 'completed'])
+                    ->whereIn('payment_status', ['paid', 'partially_refunded']);
+            }], 'final_credits')
             ->addSelect([
                 'unique_users_count' => Generation::selectRaw('count(distinct user_id)')
                     ->whereColumn('generations.product_id', 'products.id'),
@@ -124,6 +143,9 @@ class ProductController extends Controller
         if ($aiProvider = $request->get('ai_provider')) {
             $query->where('ai_provider', $aiProvider);
         }
+        if ($request->get('model_tier_preset') === 'configured') {
+            $query->whereJsonContains('model_configuration->applied_preset', 'global');
+        }
         if ($aiStatus = $request->get('ai_status')) {
             $this->applyAiModelStatusFilter($query, $aiStatus, $validAiModelsByProvider);
         }
@@ -159,6 +181,7 @@ class ProductController extends Controller
             case 'least_used': $query->orderBy('generations_count')->latest(); break;
             case 'most_liked': $query->orderByRaw('(base_likes_count + (select count(*) from liked_products where liked_products.product_id = products.id)) desc')->latest(); break;
             case 'least_liked': $query->orderByRaw('(base_likes_count + (select count(*) from liked_products where liked_products.product_id = products.id)) asc')->latest(); break;
+            case 'most_revenue': $query->orderByDesc('revenue_credits')->latest(); break;
             case 'newest':
             default:           $query->latest(); break;
         }
@@ -180,13 +203,31 @@ class ProductController extends Controller
 
         $products = $query->paginate($perPage)->withQueryString();
 
+        // آخرین ساخت‌های موفق کاربر برای همان صفحه را یک‌جا می‌خوانیم تا
+        // ستون هزینه‌ی مدل منبع واقعی هم داشته باشد، بدون ایجاد N+1 در جدول.
+        $userOrdersByProduct = Order::query()
+            ->with(['providerRequests' => function ($providerRequestQuery): void {
+                $providerRequestQuery
+                    ->where('status', 'completed')
+                    ->with('aiModel');
+            }])
+            ->whereIn('product_id', $products->getCollection()->pluck('id')->all() ?: [-1])
+            ->where('source', 'app')
+            ->where('status', 'completed')
+            ->where('processing_status', 'completed')
+            ->latest('completed_at')
+            ->get()
+            ->groupBy('product_id');
+
         $activeCount   = Product::where('status', 'active')->count();
         $draftCount    = Product::where('status', 'draft')->count();
         $inactiveCount = Product::where('status', 'inactive')->count();
 
         // ── آمار واقعی اجراها برای کارت‌ها و نوار محبوبیت جدول ──
-        // کل اجراها: تعداد کل رکوردهای جدول generations (هر رکورد = یک اجرا)
-        $totalRuns = Generation::count();
+        // کل اجراها: اجراهای تصویری + رکوردهای تولید ویدیوی صف‌شده
+        $totalRuns = Generation::count() + GeneratedVideo::count();
+        $draftPhotoCount = Product::where('status', 'draft')->whereIn('media_type', ['photo', 'both'])->count();
+        $draftVideoCount = Product::where('status', 'draft')->whereIn('media_type', ['video', 'both'])->count();
         // بیشترین تعداد اجرای یک محصول (مبنای درصد نوار محبوبیت هر ردیف جدول)
         $maxRuns = (int) (Generation::selectRaw('count(*) as runs_count')
             ->groupBy('product_id')
@@ -198,18 +239,39 @@ class ProductController extends Controller
             ? Product::withCount('generations')->orderByDesc('generations_count')->first()
             : null;
 
-        // فیلترها و منوی تغییر سریع باید دقیقاً همان مدل‌های قابل‌استفاده‌ی
-        // ثبت محصول را نشان دهند؛ مدل خاموش یا متعلق به provider خاموش نمایش داده نشود.
+        // فیلترها و منوی تغییر سریع باید دقیقاً همان مدل‌های قابل‌انتخاب
+        // ثبت محصول را نشان دهند؛ وضعیت اجرایی provider جداگانه بررسی می‌شود.
+        // قیمت‌ها صرفاً برای نمایش تخمینی در پنجره‌ی چهار سطح مدل هستند. با false
+        // هیچ فراخوانی زنده‌ای به سرویس‌دهنده انجام نمی‌شود و بازشدن لیست کند نمی‌گردد.
+        $assignableAiModels->each(fn (AiModel $model) => $model->setAttribute(
+            'lab_pricing',
+            $this->pricing->estimate($model, 1, false)
+        ));
         $aiModels = $assignableAiModels;
+        $modelTierDefaults = ModelTierDefault::query()->get()->keyBy('tier_key');
+        $modelQualityPresets = ModelQualityPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
+        $qualityCreditPresets = ProductCreditPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
         $categories = Category::orderBy('name')->get();
         $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
 
         $exchange = $this->exchangeRate->usdToIrr();
+        $exchangeRateIrr = (float) ($exchange['rate'] ?? 0);
+        $products->getCollection()->each(function (Product $product) use ($exchangeRateIrr, $assignableAiModels, $userOrdersByProduct): void {
+            $product->setAttribute(
+                'lab_cost_summary',
+                $this->labCosts->summarize(
+                    $product,
+                    $exchangeRateIrr,
+                    $assignableAiModels,
+                    $userOrdersByProduct->get($product->id, collect()),
+                )
+            );
+        });
         return view('admin.products.index', compact(
             'products', 'activeCount', 'draftCount', 'inactiveCount',
-            'totalRuns', 'maxRuns', 'topProduct',
+            'totalRuns', 'maxRuns', 'topProduct', 'draftPhotoCount', 'draftVideoCount',
             'aiModels', 'assignableAiModels', 'validAiModelKeys', 'categories', 'recentlyEdited',
-            'exchange', 'matchingProductIds'
+            'exchange', 'matchingProductIds', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets'
         ));
     }
 
@@ -229,6 +291,9 @@ class ProductController extends Controller
         // قیمت‌های زنده برای ۵۰۰+ مدل Fal.ai نباید هنگام بازشدن فرم واکشی شوند؛
         // این اطلاعات هنگام اجرای واقعی آزمایش/تولید از سرویس قیمت‌گذاری خوانده می‌شود.
         $aiModels->each(fn (AiModel $model) => $model->setAttribute('lab_pricing', $this->pricing->estimate($model, 1, false)));
+        $modelTierDefaults = ModelTierDefault::query()->get()->keyBy('tier_key');
+        $modelQualityPresets = ModelQualityPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
+        $qualityCreditPresets = ProductCreditPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
 
         $duplicateFrom = null;
         if ($request->filled('duplicate')) {
@@ -260,13 +325,7 @@ class ProductController extends Controller
             ? $product->labExperiments()->where('status', 'completed')->exists()
             : false;
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested'));
-    }
-
-    /** مسیر قدیمی جزئیات محصول را به نمای موجود و شناسه‌ی واقعی محصول وصل می‌کند. */
-    public function show(Product $product)
-    {
-        return view('admin.products.products-show', ['productId' => $product->id]);
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets'));
     }
 
     /**
@@ -289,8 +348,8 @@ class ProductController extends Controller
             'category_id' => 'nullable|integer',
             'category_ids' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1'],
             'category_ids.*' => 'integer|exists:categories,id',
-            'primary_model' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
-            'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'primary_model' => ['nullable', 'string'],
+            'ai_provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'fallback_providers' => 'nullable|array',
             'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
             'fallback_enabled' => ['nullable', 'boolean'],
@@ -307,6 +366,8 @@ class ProductController extends Controller
             'model_configuration.fallback' => 'nullable|array',
             'model_configuration.fallback.model_id' => 'nullable|string|max:255',
             'model_configuration.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            ...$this->modelTierRules(),
+            ...$this->creatorRewardRules($request),
             'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
             'identity_preservation' => ['required', 'boolean'],
             'identity_model' => ['nullable', 'string'],
@@ -316,27 +377,24 @@ class ProductController extends Controller
             'identity_instructions_fa' => ['nullable', 'string'],
             'min_reference_images' => ['nullable', 'integer', 'min:0', 'max:3'],
             'max_reference_images' => ['nullable', 'integer', 'min:1', 'max:3'],
-            'pricing_model' => 'nullable|in:free,per_credit,subscription',
-            'credit_cost' => [Rule::requiredIf($isPublishing), 'nullable', 'integer', 'min:1'],
             'status' => 'nullable|in:active,draft,inactive',
             'description_fa' => 'nullable|string',
             'description_en' => 'nullable|string',
             'base_likes_count' => 'nullable|integer|min:0|max:999999999',
-            'new_min_credit_required' => 'nullable|integer|min:0',
-            'new_max_run_per_user' => 'nullable|integer|min:1',
             'allowed_aspect_ratios' => 'nullable|array',
             'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
             'allowed_resolutions' => 'nullable|array',
             'allowed_resolutions.*' => ['string', Rule::in(Product::supportedOutputResolutions())],
-            'new_price_custom_label' => 'nullable|string|max:100',
+            'output_quality_selector_enabled' => ['nullable', 'boolean'],
+            'pipeline_enabled' => ['nullable', 'boolean'],
             'main_images' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1', 'max:20'],
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
-            'skip_image_optimization' => 'nullable|boolean',
             ...$this->inputSchemaRules(),
         ]);
         $this->validateAiProviderSelection($request);
+        $this->validateModelTierConfiguration($request, $isPublishing);
 
         // ۲. ساخت یک نمونه جدید از مدل (برای دور زدن محدودیت fillable دیتابیس)
         $product = new Product();
@@ -381,7 +439,7 @@ class ProductController extends Controller
         // ستون legacy thumbnail عمداً حذف نمی‌شود تا داده محصولات قدیمی دست‌نخورده بماند.
         $duplicateSource = $request->filled('duplicate_from') ? Product::find($request->input('duplicate_from')) : null;
 
-        $mainPaths = $this->storeOptimizedImages($request->file('main_images', []), 'products/main', $request->boolean('skip_image_optimization'));
+        $mainPaths = $this->storeOptimizedImages($request->file('main_images', []), 'products/main');
         if ($mainPaths) {
             $product->cover = array_shift($mainPaths);
             $product->sample_outputs = $mainPaths;
@@ -399,9 +457,9 @@ class ProductController extends Controller
             $product->new_product_icon = $this->copyDuplicateFile($duplicateSource->new_product_icon, 'product_icons');
         }
 
-        $product->before_images = $this->storeOptimizedImages($request->file('before_images', []), 'products/before_images', $request->boolean('skip_image_optimization'));
+        $product->before_images = $this->storeOptimizedImages($request->file('before_images', []), 'products/before_images');
         if ($request->hasFile('main_images') || $request->hasFile('before_images')) {
-            $product->images_optimized_at = $request->boolean('skip_image_optimization') ? null : now();
+            $product->images_optimized_at = now();
         } elseif ($duplicateSource) {
             $product->images_optimized_at = $duplicateSource->images_optimized_at;
         }
@@ -421,6 +479,15 @@ class ProductController extends Controller
         $product->fallback_models = $fallbackEnabled ? $request->input('fallback_models', []) : [];
         $product->fallback_model_providers = $fallbackEnabled ? $request->input('fallback_providers', []) : [];
         $product->model_configuration = $this->normalizeModelConfiguration($request->input('model_configuration', []));
+        $this->applyBusinessTierAsLegacyExecution($product, $product->model_configuration);
+        $this->applyQualityCreditPricingAsLegacyFields($product, $product->model_configuration);
+        $product->creator_reward_enabled = $request->boolean('creator_reward_enabled');
+        $product->creator_reward_owner_id = $product->creator_reward_enabled
+            ? (int) $request->input('creator_reward_owner_id')
+            : null;
+        $product->creator_reward_settings = $this->normalizeCreatorRewardSettings(
+            (array) $request->input('creator_reward_settings', [])
+        );
         $product->prompt_template = $request->input('prompt_template') ?? 'A high tech digital art illustration of {prompt}';
         $product->input_schema = $validated['input_schema'] ?? [];
         $product->timeout = $request->input('timeout') ?? 60;
@@ -471,14 +538,11 @@ class ProductController extends Controller
         $product->new_is_premium = $request->has('new_is_premium');
         $product->new_is_recommended = $request->has('new_is_recommended');
         $product->new_is_beta = $request->has('new_is_beta');
-        $product->new_show_free_badge = $request->has('new_show_free_badge');
 
-        // ۸. تنظیمات ظاهری، فنی و قیمت‌گذاری
+        // ۸. تنظیمات ظاهری و فنی
         $product->media_type = $request->input('media_type') ?? 'photo';
         $product->preview_video_url = $request->input('preview_video_url');
         $product->watermark_position = $request->input('watermark_position') ?? 'corner';
-        $product->pricing_model = $request->input('pricing_model') ?? 'per_credit';
-        $product->credit_cost = $request->input('credit_cost') ?? 10;
         $product->display_mode = $request->input('display_mode') ?? 'card';
         $product->card_shape = $request->input('card_shape') ?? 'portrait';
         $product->gallery_layout = $request->input('gallery_layout') ?? 'grid';
@@ -497,6 +561,8 @@ class ProductController extends Controller
         $product->allowed_resolutions = $this->normalizedResolutions(
             $request->input('allowed_resolutions', Product::DEFAULT_OUTPUT_RESOLUTIONS)
         );
+        $product->output_quality_selector_enabled = $request->boolean('output_quality_selector_enabled');
+        $product->pipeline_enabled = $request->boolean('pipeline_enabled');
         $product->resolution = in_array('720', $product->allowed_resolutions, true)
             ? '720'
             : $product->allowed_resolutions[0];
@@ -518,10 +584,6 @@ class ProductController extends Controller
         $product->new_watermark_size = $request->input('new_watermark_size') ?? 30;
         $product->new_watermark_type = $request->input('new_watermark_type') ?? 'logo';
         $product->new_watermark_text_color = $request->input('new_watermark_text_color') ?? '#FFFFFF';
-        $product->new_min_credit_required = $request->input('new_min_credit_required') ?? 0;
-        $product->new_max_run_per_user = $request->input('new_max_run_per_user');
-        $product->new_price_custom_label = $request->input('new_price_custom_label');
-
         // ۱۰. ذخیره نهایی به‌صورت اتمیک: محصول، دسته‌بندی‌ها و تست‌ها یا همگی
         // ثبت می‌شوند یا در صورت هر خطا همگی rollback می‌شوند؛ محصول نیمه‌کاره
         // در دیتابیس باقی نمی‌ماند و محصولات قبلی نیز دست‌نخورده می‌مانند.
@@ -577,8 +639,8 @@ class ProductController extends Controller
             'category_id' => 'nullable|integer',
             'category_ids' => [Rule::requiredIf($isPublishing), 'nullable', 'array', 'min:1'],
             'category_ids.*' => 'integer|exists:categories,id',
-            'primary_model' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
-            'ai_provider' => [Rule::requiredIf($isPublishing), 'nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'primary_model' => ['nullable', 'string'],
+            'ai_provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
             'fallback_providers' => 'nullable|array',
             'fallback_providers.*' => Rule::in(ProviderStatus::PROVIDERS),
             'fallback_enabled' => ['nullable', 'boolean'],
@@ -595,6 +657,8 @@ class ProductController extends Controller
             'model_configuration.fallback' => 'nullable|array',
             'model_configuration.fallback.model_id' => 'nullable|string|max:255',
             'model_configuration.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            ...$this->modelTierRules(),
+            ...$this->creatorRewardRules($request),
             'prompt_template' => [Rule::requiredIf($isPublishing), 'nullable', 'string'],
             'system_prompt' => 'nullable|string',
             'negative_prompt' => 'nullable|string',
@@ -624,14 +688,11 @@ class ProductController extends Controller
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
-            'skip_image_optimization' => 'nullable|boolean',
             'media_type' => 'nullable|in:photo,video,both',
             'preview_video_url' => 'nullable|url',
             'pipeline_type' => 'nullable|string',
             'timeout' => 'nullable|integer',
             'watermark_position' => 'nullable|string',
-            'pricing_model' => 'nullable|in:free,per_credit,subscription',
-            'credit_cost' => [Rule::requiredIf($isPublishing), 'nullable', 'integer', 'min:1'],
             'display_mode' => 'nullable|string',
             'card_shape' => 'nullable|string',
             'gallery_layout' => 'nullable|string',
@@ -649,16 +710,16 @@ class ProductController extends Controller
             'new_watermark_size' => 'nullable|integer',
             'new_watermark_type' => 'nullable|string',
             'new_watermark_text_color' => 'nullable|string',
-            'new_min_credit_required' => 'nullable|integer|min:0',
-            'new_max_run_per_user' => 'nullable|integer|min:1',
-            'new_price_custom_label' => 'nullable|string|max:100',
             'allowed_aspect_ratios' => 'nullable|array',
             'allowed_aspect_ratios.*' => ['string', Rule::in(Product::supportedAspectRatios())],
             'allowed_resolutions' => 'nullable|array',
             'allowed_resolutions.*' => ['string', Rule::in(Product::supportedOutputResolutions())],
+            'output_quality_selector_enabled' => ['nullable', 'boolean'],
+            'pipeline_enabled' => ['nullable', 'boolean'],
             ...$this->inputSchemaRules(),
         ]);
         $this->validateAiProviderSelection($request);
+        $this->validateModelTierConfiguration($request, $isPublishing, (array) $product->model_configuration);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // محافظ حیاتی در برابر خالی‌شدن ناخواسته‌ی فیلدها (Phantom-Null Guard):
@@ -674,6 +735,16 @@ class ProductController extends Controller
         // دوباره مقداردهی می‌شوند (is_featured, category, thumbnail و غیره) از این فیلتر تأثیر
         // نمی‌پذیرند چون بعداً به‌صورت مستقیم روی $validated بازنویسی می‌شوند.
         $validated = array_intersect_key($validated, $request->all());
+
+        $creatorRewardEnabled = $request->boolean('creator_reward_enabled');
+        $validated['creator_reward_enabled'] = $creatorRewardEnabled;
+        $validated['creator_reward_owner_id'] = $creatorRewardEnabled
+            ? (int) $request->input('creator_reward_owner_id')
+            : null;
+        $validated['creator_reward_settings'] = $this->normalizeCreatorRewardSettings(
+            (array) $request->input('creator_reward_settings', []),
+            (array) ($product->creator_reward_settings ?? [])
+        );
 
         // مقدار ذخیره‌شده دقیقاً از همان رکورد مرکب provider + model گرفته
         // می‌شود؛ نه از اولین رکوردی که فقط شناسه مدل یکسان دارد.
@@ -694,7 +765,6 @@ class ProductController extends Controller
             'new_watermark_size'           => 30,
             'new_watermark_type'           => 'logo',
             'new_watermark_text_color'     => '#FFFFFF',
-            'new_min_credit_required'      => 0,
         ];
         foreach ($notNullDefaults as $__nnKey => $__nnDefault) {
             if (array_key_exists($__nnKey, $validated) && $validated[$__nnKey] === null) {
@@ -723,7 +793,7 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('main_images')) {
-            $mainPaths = $this->storeOptimizedImages($request->file('main_images'), 'products/main', $request->boolean('skip_image_optimization'));
+            $mainPaths = $this->storeOptimizedImages($request->file('main_images'), 'products/main');
             $oldMainPaths = array_filter(array_merge([$product->cover], (array) $product->sample_outputs));
             $validated['cover'] = array_shift($mainPaths);
             $validated['sample_outputs'] = $mainPaths;
@@ -731,14 +801,14 @@ class ProductController extends Controller
         }
 
         if ($request->hasFile('before_images')) {
-            $beforePaths = $this->storeOptimizedImages($request->file('before_images'), 'products/before_images', $request->boolean('skip_image_optimization'));
+            $beforePaths = $this->storeOptimizedImages($request->file('before_images'), 'products/before_images');
             $oldBeforePaths = array_filter((array) $product->before_images);
             $validated['before_images'] = $beforePaths;
             Storage::disk('public')->delete($oldBeforePaths);
         }
 
         if ($request->hasFile('main_images') || $request->hasFile('before_images')) {
-            $validated['images_optimized_at'] = $request->boolean('skip_image_optimization') ? null : now();
+            $validated['images_optimized_at'] = now();
         }
 
         if ($request->hasFile('new_product_icon')) {
@@ -756,8 +826,6 @@ class ProductController extends Controller
         $validated['is_trending'] = $request->has('is_trending');
         $validated['watermark_enabled'] = $request->has('watermark_enabled');
         $validated['card_label_enabled'] = $request->has('card_label_enabled');
-        $validated['new_show_free_badge'] = $request->has('new_show_free_badge');
-
         // حفظ هویت — چک‌باکس‌ها و provider_options
         $validated['identity_preservation'] = $request->boolean('identity_preservation');
         $validated['preserve_body'] = $request->has('preserve_body');
@@ -774,15 +842,23 @@ class ProductController extends Controller
 
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
         $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
-        // مدل‌های جایگزین و فیلدهای ورودی پویا — قبلاً اصلاً در به‌روزرسانی مقداردهی نمی‌شدند
-        // (فقط در store() ثبت می‌شدند)، در نتیجه ویرایش این دو مورد هیچ‌وقت واقعاً ذخیره نمی‌شد
-        $fallbackEnabled = $request->boolean('fallback_enabled');
-        $validated['fallback_models'] = $fallbackEnabled ? $request->input('fallback_models', []) : [];
-        $validated['fallback_model_providers'] = $fallbackEnabled ? $request->input('fallback_providers', []) : [];
+        // پایپ‌لاین و مدل جایگزین دیگر بخشی از فرم اصلی ثبت محصول نیستند.
+        // اگر فرم قدیمی یا یک endpoint تخصصی این فیلدها را صراحتاً فرستاد،
+        // رفتار قبلی حفظ می‌شود؛ در غیر این صورت مقدار ذخیره‌شده نباید با
+        // ذخیره‌ی یک ویرایش عادی پاک یا خاموش شود.
+        if ($request->hasAny(['fallback_enabled', 'fallback_models', 'fallback_providers'])) {
+            $fallbackEnabled = $request->boolean('fallback_enabled');
+            $validated['fallback_models'] = $fallbackEnabled ? $request->input('fallback_models', []) : [];
+            $validated['fallback_model_providers'] = $fallbackEnabled ? $request->input('fallback_providers', []) : [];
+        } else {
+            unset($validated['fallback_models'], $validated['fallback_model_providers'], $validated['fallback_enabled']);
+        }
         $validated['model_configuration'] = $this->normalizeModelConfiguration(
             $request->input('model_configuration', []),
             (array) ($product->model_configuration ?? [])
         );
+        $this->applyBusinessTierAsLegacyExecution($product, $validated['model_configuration'], $validated);
+        $this->applyQualityCreditPricingAsLegacyFields($product, $validated['model_configuration'], $validated);
         $validated['input_schema'] = $validated['input_schema'] ?? [];
         $validated['allowed_aspect_ratios'] = $this->normalizedAspectRatios(
             $request->input('allowed_aspect_ratios', $product->allowedAspectRatioList())
@@ -793,6 +869,12 @@ class ProductController extends Controller
         $validated['allowed_resolutions'] = $this->normalizedResolutions(
             $request->input('allowed_resolutions', $product->allowedResolutionList())
         );
+        $validated['output_quality_selector_enabled'] = $request->boolean('output_quality_selector_enabled');
+        if ($request->has('pipeline_enabled')) {
+            $validated['pipeline_enabled'] = $request->boolean('pipeline_enabled');
+        } else {
+            unset($validated['pipeline_enabled']);
+        }
         $validated['resolution'] = in_array('720', $validated['allowed_resolutions'], true)
             ? '720'
             : $validated['allowed_resolutions'][0];
@@ -1052,76 +1134,249 @@ class ProductController extends Controller
         ]);
     }
 
+    /** اعمال یکی از چهار پیش‌تنظیم مدل روی یک محصول، بدون پاک‌شدن سایر تنظیمات آن. */
     public function applyModelTierPreset(Request $request, Product $product)
     {
-        $data = $request->validate(['preset_key' => ['required', 'string', 'max:80']]);
-        $configuration = (array) ($product->model_configuration ?? []);
-        $configuration['applied_preset'] = $data['preset_key'];
-        $product->forceFill(['model_configuration' => $configuration])->save();
-        return response()->json(['ok' => true, 'product_id' => $product->id, 'tier_key' => $data['preset_key'], 'configuration' => $configuration]);
+        $tierKey = $this->validatedTierPreset($request);
+        $this->applyTierPresetToProduct($product, $tierKey);
+
+        return response()->json([
+            'ok' => true,
+            'product_id' => $product->id,
+            'tier_key' => $tierKey,
+            'message' => 'چهار سطح مدل محصول با پیش‌تنظیم انتخاب‌شده به‌روزرسانی شد.',
+        ]);
     }
 
+    /** ذخیره مستقیم چهار سطح مدل از پنجره‌ی تغییر سریع لیست محصولات. */
     public function updateModelTierConfiguration(Request $request, Product $product)
     {
-        $data = $request->validate(['tiers' => ['required', 'array']]);
-        $configuration = (array) ($product->model_configuration ?? []);
-        $configuration['tiers'] = $data['tiers'];
+        $data = $request->validate([
+            'tiers' => ['required', 'array'],
+            'tiers.*.primary.model_id' => ['nullable', 'string', 'max:255'],
+            'tiers.*.primary.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'tiers.*.fallback.model_id' => ['nullable', 'string', 'max:255'],
+            'tiers.*.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+        ]);
+        $this->validateModelTierEntries($data['tiers'], true);
+
+        $configuration = $this->normalizeModelConfiguration(
+            ['tiers' => $data['tiers']],
+            (array) ($product->model_configuration ?? [])
+        );
         $configuration['applied_preset'] = 'custom';
-        $product->forceFill(['model_configuration' => $configuration])->save();
-        return response()->json(['ok' => true, 'product_id' => $product->id, 'configuration' => $configuration]);
+        $product->model_configuration = $configuration;
+        $this->applyBusinessTierAsLegacyExecution($product, $configuration);
+        $this->applyQualityCreditPricingAsLegacyFields($product, $configuration);
+        $product->save();
+
+        return response()->json([
+            'ok' => true,
+            'product_id' => $product->id,
+            'configuration' => $product->fresh()->model_configuration,
+            'message' => 'چهار سطح مدل محصول ذخیره شد.',
+        ]);
     }
 
+    /**
+     * ذخیره معماری سه کیفیت پرداختی و دو مسیر کاربر رایگان از پنجره‌ی یکپارچه
+     * لیست محصولات. این همان ساختاری است که گام دوم فرم ثبت محصول ذخیره می‌کند.
+     */
     public function updateModelQualityConfiguration(Request $request, Product $product)
     {
-        $data = $request->validate(['model_configuration' => ['required', 'array']]);
-        $configuration = array_replace_recursive((array) ($product->model_configuration ?? []), $data['model_configuration']);
-        $product->forceFill(['model_configuration' => $configuration])->save();
-        return response()->json(['ok' => true, 'product_id' => $product->id, 'configuration' => $configuration]);
+        $data = $request->validate([
+            'model_configuration' => ['required', 'array'],
+            ...$this->modelTierRules(),
+        ]);
+
+        $configuration = $this->normalizeAndValidateQualityModelConfiguration(
+            (array) $data['model_configuration'],
+            (array) ($product->model_configuration ?? [])
+        );
+
+        $product->model_configuration = $configuration;
+        $this->applyBusinessTierAsLegacyExecution($product, $configuration);
+        $this->applyQualityCreditPricingAsLegacyFields($product, $configuration);
+        $product->save();
+
+        return response()->json([
+            'ok' => true,
+            'product_id' => $product->id,
+            'configuration' => $product->fresh()->model_configuration,
+            'message' => 'معماری مدل‌های هوش مصنوعی محصول ذخیره شد.',
+        ]);
     }
 
+    /** اعمال فقط پیش‌فرض مصرف اعتبار؛ مدل‌های اصلی و جایگزین دست‌نخورده می‌مانند. */
     public function applyQualityCreditPreset(Request $request, Product $product)
     {
-        $data = $request->validate(['preset_key' => ['required', 'string', 'max:80']]);
+        $data = $request->validate([
+            'preset_key' => ['required', Rule::exists('product_credit_presets', 'preset_key')],
+        ]);
         $preset = ProductCreditPreset::query()->where('preset_key', $data['preset_key'])->firstOrFail();
-        $configuration = (array) ($product->model_configuration ?? []);
-        $configuration['quality_credit_preset_key'] = $preset->preset_key;
-        $configuration['quality_credit_costs'] = $preset->costs();
-        $product->forceFill(['model_configuration' => $configuration])->save();
-        return response()->json(['ok' => true, 'product_id' => $product->id, 'preset_key' => $preset->preset_key, 'costs' => $configuration['quality_credit_costs']]);
+        $costs = $preset->costs();
+        $product->model_configuration = $this->normalizeModelConfiguration([
+            'quality_credit_costs' => $costs,
+            'quality_credit_preset_key' => $preset->preset_key,
+        ], (array) ($product->model_configuration ?? []));
+        $this->applyQualityCreditPricingAsLegacyFields($product, $product->model_configuration);
+        $product->save();
+
+        return response()->json([
+            'ok' => true,
+            'product_id' => $product->id,
+            'preset_key' => $preset->preset_key,
+            'costs' => $costs,
+            'message' => "پیش‌فرض مصرف اعتبار «{$preset->name}» روی محصول اعمال شد.",
+        ]);
     }
 
+    /** اعمال فقط پیش‌فرض مصرف اعتبار روی محصولات انتخاب‌شده در لیست. */
     public function bulkApplyQualityCreditPreset(Request $request)
     {
-        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'preset_key' => ['required', 'string', 'max:80']]);
-        $preset = ProductCreditPreset::query()->where('preset_key', $data['preset_key'])->firstOrFail();
-        $updated = 0;
-        foreach (Product::query()->whereIn('id', $data['ids'])->get() as $product) {
-            $configuration = (array) ($product->model_configuration ?? []);
-            $configuration['quality_credit_preset_key'] = $preset->preset_key;
-            $configuration['quality_credit_costs'] = $preset->costs();
-            $product->forceFill(['model_configuration' => $configuration])->save();
-            $updated++;
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+            'preset_key' => ['nullable', Rule::exists('product_credit_presets', 'preset_key')],
+            'costs' => ['nullable', 'array'],
+            'costs.standard' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'costs.professional' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'costs.best' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+        ]);
+        if (blank($data['preset_key'] ?? null) && ! $this->hasCompleteCreditCosts($data['costs'] ?? [])) {
+            throw ValidationException::withMessages(['costs' => 'یا یک پیش‌فرض انتخاب کنید یا هر سه مقدار اعتبار را کامل وارد کنید.']);
         }
-        return response()->json(['ok' => true, 'updated' => $updated, 'preset_key' => $preset->preset_key]);
+        $preset = filled($data['preset_key'] ?? null)
+            ? ProductCreditPreset::query()->where('preset_key', $data['preset_key'])->firstOrFail()
+            : null;
+        $costs = $preset?->costs() ?: $this->normalizeCreditCosts((array) $data['costs']);
+        $presetKey = $preset?->preset_key ?: 'custom';
+
+        $updated = DB::transaction(function () use ($data, $costs, $presetKey): int {
+            $products = Product::query()->whereIn('id', $data['ids'])->lockForUpdate()->get();
+            foreach ($products as $product) {
+                $product->model_configuration = $this->normalizeModelConfiguration([
+                    'quality_credit_costs' => $costs,
+                    'quality_credit_preset_key' => $presetKey,
+                ], (array) ($product->model_configuration ?? []));
+                $this->applyQualityCreditPricingAsLegacyFields($product, $product->model_configuration);
+                $product->save();
+            }
+            return $products->count();
+        });
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated,
+            'preset_key' => $presetKey,
+            'costs' => $costs,
+            'message' => $preset
+                ? "پیش‌فرض مصرف اعتبار «{$preset->name}» روی {$updated} محصول اعمال شد."
+                : "مصرف اعتبار سفارشی روی {$updated} محصول اعمال شد.",
+        ]);
     }
 
+    private function hasCompleteCreditCosts(array $costs): bool
+    {
+        foreach (array_keys(Product::DEFAULT_QUALITY_CREDIT_COSTS) as $quality) {
+            if (! is_numeric($costs[$quality] ?? null) || (int) $costs[$quality] < 1 || (int) $costs[$quality] > 1000000) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function normalizeCreditCosts(array $costs): array
+    {
+        return collect(Product::DEFAULT_QUALITY_CREDIT_COSTS)
+            ->mapWithKeys(fn (int $default, string $quality) => [$quality => max(1, min(1000000, (int) ($costs[$quality] ?? $default)))])
+            ->all();
+    }
+
+    /** اعمال یک معماری کیفیت واحد روی همهٔ محصولات انتخاب‌شده. */
     public function bulkUpdateModelQualityConfiguration(Request $request)
     {
-        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'model_configuration' => ['required', 'array']]);
-        $updated = 0;
-        foreach (Product::query()->whereIn('id', $data['ids'])->get() as $product) {
-            $configuration = array_replace_recursive((array) ($product->model_configuration ?? []), $data['model_configuration']);
-            $product->forceFill(['model_configuration' => $configuration])->save();
-            $updated++;
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+            // در حالت «اعمال پیش‌فرض»، فقط کلید پیش‌فرض ارسال می‌شود و
+            // پیکربندی معتبر از خود دیتابیس خوانده می‌شود؛ این کار جلوی
+            // وابستگی عملیات گروهی به داده‌ی ناقص یا قدیمیِ مرورگر را می‌گیرد.
+            'preset_key' => ['nullable', Rule::exists('model_quality_presets', 'preset_key')],
+            'model_configuration' => ['nullable', 'array'],
+            ...$this->modelTierRules(),
+        ]);
+
+        $presetKey = filled($data['preset_key'] ?? null) ? (string) $data['preset_key'] : null;
+        $rawConfiguration = (array) ($data['model_configuration'] ?? []);
+
+        if ($presetKey) {
+            $preset = ModelQualityPreset::query()->where('preset_key', $presetKey)->first();
+            if (! $preset) {
+                throw ValidationException::withMessages([
+                    'preset_key' => 'پیش‌فرض انتخاب‌شده در نسخه‌ی فعلی سایت موجود نیست. ابتدا migrationهای دیتابیس را اجرا کنید.',
+                ]);
+            }
+            $rawConfiguration = array_replace(
+                (array) $preset->configuration,
+                ['quality_preset_key' => $preset->preset_key, 'quality_architecture_enabled' => true]
+            );
         }
-        return response()->json(['ok' => true, 'updated' => $updated]);
+
+        if (! $rawConfiguration) {
+            throw ValidationException::withMessages([
+                'model_configuration' => 'ابتدا یک پیش‌فرض یا تنظیمات کامل مدل را انتخاب کنید.',
+            ]);
+        }
+
+        // اعتبارسنجی مستقل از محصول انجام می‌شود؛ سپس برای هر محصول با تنظیمات
+        // قبلی ادغام می‌کنیم تا داده‌های نامرتبط (پرامپت/سطوح قدیمی) از بین نروند.
+        $this->normalizeAndValidateQualityModelConfiguration($rawConfiguration);
+
+        $updated = DB::transaction(function () use ($data, $rawConfiguration) {
+            $products = Product::whereIn('id', $data['ids'])->lockForUpdate()->get();
+            foreach ($products as $product) {
+                $configuration = $this->normalizeAndValidateQualityModelConfiguration(
+                    $rawConfiguration,
+                    (array) ($product->model_configuration ?? [])
+                );
+                $product->model_configuration = $configuration;
+                $this->applyBusinessTierAsLegacyExecution($product, $configuration);
+                $this->applyQualityCreditPricingAsLegacyFields($product, $configuration);
+                $product->save();
+            }
+            return $products->count();
+        });
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $updated,
+            'preset_key' => $presetKey,
+            'message' => $presetKey
+                ? "پیش‌فرض مدل «{$presetKey}» روی {$updated} محصول اعمال شد."
+                : "معماری مدل‌های هوش مصنوعی {$updated} محصول ذخیره شد.",
+        ]);
     }
 
+    /** اعمال یک پیش‌تنظیم روی همه محصولات منتخب در لیست. */
     public function bulkApplyModelTierPreset(Request $request)
     {
-        $data = $request->validate(['ids' => ['required', 'array', 'max:500'], 'ids.*' => ['integer', 'distinct', 'exists:products,id'], 'preset_key' => ['required', 'string', 'max:80']]);
-        $updated = Product::query()->whereIn('id', $data['ids'])->update(['updated_at' => now()]);
-        return response()->json(['ok' => true, 'updated' => $updated, 'tier_key' => $data['preset_key']]);
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
+        $tierKey = $this->validatedTierPreset($request);
+        $products = Product::whereIn('id', $validated['ids'])->get();
+        foreach ($products as $product) {
+            $this->applyTierPresetToProduct($product, $tierKey);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'updated' => $products->count(),
+            'tier_key' => $tierKey,
+            'message' => "چهار سطح مدل {$products->count()} محصول به‌روزرسانی شد.",
+        ]);
     }
 
     public function bulkAction(Request $request)
@@ -1249,6 +1504,39 @@ class ProductController extends Controller
         return $clean !== '' ? $clean : trim($name);
     }
 
+    /** قواعد مستقل پاداش مالک محصول؛ رفرال و هزینه‌ی اجرای کاربر وارد این قرارداد نیستند. */
+    private function creatorRewardRules(Request $request): array
+    {
+        $enabled = $request->boolean('creator_reward_enabled');
+        $required = Rule::requiredIf($enabled);
+
+        return [
+            'creator_reward_enabled' => ['nullable', 'boolean'],
+            'creator_reward_owner_id' => [$required, 'nullable', 'integer', 'exists:users,id'],
+            'creator_reward_settings' => [$required, 'nullable', 'array'],
+            'creator_reward_settings.image_free' => [$required, 'nullable', 'integer', 'min:0', 'max:1000000'],
+            'creator_reward_settings.video_free' => [$required, 'nullable', 'integer', 'min:0', 'max:1000000'],
+            'creator_reward_settings.image_paid' => [$required, 'nullable', 'integer', 'min:0', 'max:1000000'],
+            'creator_reward_settings.video_paid' => [$required, 'nullable', 'integer', 'min:0', 'max:1000000'],
+        ];
+    }
+
+    /** مقدارهای پاداش با کلیدهای محدود و عددهای غیرمنفی در دیتابیس ذخیره می‌شوند. */
+    private function normalizeCreatorRewardSettings(array $settings, array $fallback = []): array
+    {
+        $defaults = [
+            'image_free' => 1,
+            'video_free' => 2,
+            'image_paid' => 2,
+            'video_paid' => 4,
+        ];
+
+        return collect($defaults)->mapWithKeys(function (int $default, string $key) use ($settings, $fallback): array {
+            $value = $settings[$key] ?? $fallback[$key] ?? $default;
+            return [$key => is_numeric($value) ? max(0, (int) $value) : $default];
+        })->all();
+    }
+
     /**
      * قرارداد بک‌اند سازنده «ویژگی‌های خاص».
      * فقط کلیدهای شناخته‌شده را وارد JSON محصول می‌کند تا ساختار ناقص یا داده
@@ -1337,11 +1625,15 @@ class ProductController extends Controller
     }
 
     /**
-     * شناسه مدل ممکن است بین Liara و OpenRouter یکسان باشد؛ بنابراین علاوه
+     * شناسه مدل ممکن است بین providerها یکسان باشد؛ بنابراین علاوه
      * بر شناسه، تعلق مدل به provider انتخاب‌شده را هم در سمت سرور قطعی می‌کنیم.
      */
     private function validateAiProviderSelection(Request $request): void
     {
+        if ((is_array($request->input('model_configuration.tiers')) && !empty($request->input('model_configuration.tiers')))
+            || (is_array($request->input('model_configuration.quality_models')) && !empty($request->input('model_configuration.quality_models')))) {
+            return;
+        }
         $provider = $request->input('ai_provider');
         $primaryModel = $request->input('primary_model');
 
@@ -1349,10 +1641,9 @@ class ProductController extends Controller
             return;
         }
 
-        $primaryIsValid = ProviderStatus::isEnabled($provider) && AiModel::query()
+        $primaryIsValid = $this->assignableAiModels()
             ->where('provider', $provider)
             ->where('openrouter_model_id', $primaryModel)
-            ->where('is_active', true)
             ->exists();
 
         if (!$request->boolean('fallback_enabled')) {
@@ -1369,10 +1660,9 @@ class ProductController extends Controller
         $fallbacksAreValid = count($fallbacks) === count($fallbackProviders);
         foreach ($fallbacks as $index => $fallbackModel) {
             $fallbackProvider = $fallbackProviders[$index] ?? null;
-            if (!$fallbackProvider || !ProviderStatus::isEnabled($fallbackProvider) || !AiModel::query()
+            if (!$fallbackProvider || !$this->assignableAiModels()
                 ->where('provider', $fallbackProvider)
                 ->where('openrouter_model_id', $fallbackModel)
-                ->where('is_active', true)
                 ->exists()) {
                 $fallbacksAreValid = false;
                 break;
@@ -1395,7 +1685,7 @@ class ProductController extends Controller
 
     /**
      * مدل اصلی را با کلید مرکب provider + model id برمی‌گرداند.
-     * شناسه مدل به‌تنهایی یکتا نیست و ممکن است در Liara و OpenRouter مشترک باشد.
+     * شناسه مدل به‌تنهایی یکتا نیست و ممکن است بین providerها مشترک باشد.
      */
     private function selectedAiModel(Request $request): ?AiModel
     {
@@ -1406,7 +1696,7 @@ class ProductController extends Controller
             return null;
         }
 
-        return AiModel::query()
+        return $this->assignableAiModels()
             ->where('provider', $provider)
             ->where('openrouter_model_id', $modelId)
             ->first();
@@ -1415,17 +1705,7 @@ class ProductController extends Controller
     /** Query واحد مدل‌های مجاز برای ثبت محصول، ویرایش و تغییر سریع از لیست. */
     private function assignableAiModels()
     {
-        return AiModel::query()
-            ->where('is_active', true)
-            ->where('output_modality', 'image')
-            // فقط مدل‌های منتخب و مناسب جریان واقعی محصول نمایش داده شوند؛
-            // کاتالوگ خام Fal.ai به‌تنهایی بیش از ۵۰۰ رکورد دارد و برای مدیر کاربردی نیست.
-            ->where('featured_in_lab', true)
-            ->where('supports_image_input', true)
-            ->whereIn('task_type', ['text_to_image', 'image_to_image', 'face_consistency'])
-            ->orderBy('lab_priority')
-            ->orderBy('provider')
-            ->orderBy('name');
+        return AiModel::query()->selectableForProduct();
     }
 
     private function validateAssignableAiModel(Request $request): AiModel
@@ -1434,12 +1714,6 @@ class ProductController extends Controller
             'ai_provider' => ['required', Rule::in(ProviderStatus::PROVIDERS)],
             'primary_model' => ['required', 'string', 'max:255'],
         ]);
-
-        if (!ProviderStatus::isEnabled($validated['ai_provider'])) {
-            throw ValidationException::withMessages([
-                'ai_provider' => 'سرویس انتخاب‌شده در حال حاضر خاموش است.',
-            ]);
-        }
 
         $model = $this->assignableAiModels()
             ->where('provider', $validated['ai_provider'])
@@ -1482,14 +1756,12 @@ class ProductController extends Controller
         }
     }
 
-    private function storeOptimizedImages(array $files, string $directory, bool $skipOptimization = false): array
+    private function storeOptimizedImages(array $files, string $directory): array
     {
         $paths = [];
         try {
             foreach ($files as $file) {
-                $paths[] = $skipOptimization
-                    ? $file->store($directory, 'public')
-                    : $this->imageOptimizer->store($file, $directory);
+                $paths[] = $this->imageOptimizer->store($file, $directory);
             }
         } catch (\Throwable $e) {
             if ($paths) Storage::disk('public')->delete($paths);
@@ -1500,6 +1772,11 @@ class ProductController extends Controller
 
     private function normalizeModelConfiguration(array $configuration, array $fallback = []): array
     {
+        // تنظیمات کیفیت ممکن است در محصولات قدیمی ناقص یا فقط بخشی از فرم
+        // ارسال شده باشد. پیش‌فرض کامل، سپس تنظیم قبلی محصول و در پایان
+        // انتخاب تازه‌ی مدیر روی هم می‌نشینند تا ذخیره‌ی یک تغییر کوچک،
+        // کیفیت‌های دیگر را خالی نکند.
+        $qualityFallback = $this->mergeQualityModelConfiguration([], $fallback);
         $levels = ['standard', 'premium', 'fallback'];
         $normalized = [
             'max_retries' => min(2, max(0, (int) data_get($configuration, 'max_retries', data_get($fallback, 'max_retries', 2)))),
@@ -1516,7 +1793,343 @@ class ProductController extends Controller
             $normalized[$level] = ['model_id' => $modelId, 'provider' => $provider ?: null];
         }
 
+        foreach (['free', 'economy', 'pro', 'business'] as $tierKey) {
+            $tier = (array) data_get($configuration, "tiers.{$tierKey}", data_get($fallback, "tiers.{$tierKey}", []));
+            $primary = (array) ($tier['primary'] ?? []);
+            $fallbackModel = (array) ($tier['fallback'] ?? []);
+            $normalized['tiers'][$tierKey] = [
+                'primary' => [
+                    'model_id' => filled($primary['model_id'] ?? null) ? trim((string) $primary['model_id']) : null,
+                    'provider' => filled($primary['provider'] ?? null) ? trim((string) $primary['provider']) : null,
+                ],
+                'fallback' => [
+                    'model_id' => filled($fallbackModel['model_id'] ?? null) ? trim((string) $fallbackModel['model_id']) : null,
+                    'provider' => filled($fallbackModel['provider'] ?? null) ? trim((string) $fallbackModel['provider']) : null,
+                ],
+            ];
+        }
+
+        $presetKey = (string) data_get($configuration, 'quality_preset_key', data_get($fallback, 'quality_preset_key', ModelQualityPreset::defaultKey()));
+        // با تغییر دستی حتی یک مدل، محصول دیگر نماینده‌ی هیچ پیش‌فرض ذخیره‌شده‌ای
+        // نیست و باید به‌عنوان تنظیم سفارشی نگه‌داری شود؛ در غیر این صورت فرم
+        // بعد از ویرایش دوباره همان نام «آزمایش شده» را نشان می‌دهد.
+        $normalized['quality_preset_key'] = $presetKey === 'custom' || in_array($presetKey, ModelQualityPreset::availableKeys(), true)
+            ? $presetKey
+            : ModelQualityPreset::defaultKey();
+        $normalized['quality_architecture_enabled'] = filter_var(
+            data_get($configuration, 'quality_architecture_enabled', data_get($fallback, 'quality_architecture_enabled', true)),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $defaultCreditCosts = ProductCreditPreset::query()
+            ->where('is_default_for_product_creation', true)
+            ->first()?->costs() ?: Product::DEFAULT_QUALITY_CREDIT_COSTS;
+        $creditFallback = (array) data_get($fallback, 'quality_credit_costs', $defaultCreditCosts);
+        $creditCosts = (array) data_get($configuration, 'quality_credit_costs', $creditFallback);
+        $normalized['quality_credit_costs'] = collect(Product::DEFAULT_QUALITY_CREDIT_COSTS)
+            ->mapWithKeys(function (int $default, string $key) use ($creditCosts): array {
+                $value = $creditCosts[$key] ?? $default;
+                return [$key => (is_numeric($value) && (int) $value > 0) ? min(1000000, (int) $value) : $default];
+            })
+            ->all();
+        $creditPresetKey = (string) data_get(
+            $configuration,
+            'quality_credit_preset_key',
+            data_get($fallback, 'quality_credit_preset_key', ProductCreditPreset::defaultKey())
+        );
+        $normalized['quality_credit_preset_key'] = $creditPresetKey === 'custom'
+            || in_array($creditPresetKey, ProductCreditPreset::availableKeys(), true)
+            ? $creditPresetKey
+            : ProductCreditPreset::defaultKey();
+
+        $resolutionDefaults = (array) data_get(
+            $configuration,
+            'output_resolution_defaults',
+            data_get($fallback, 'output_resolution_defaults', Product::DEFAULT_PLAN_OUTPUT_RESOLUTIONS)
+        );
+        $normalized['output_resolution_defaults'] = [
+            'free' => in_array((string) ($resolutionDefaults['free'] ?? ''), Product::supportedOutputResolutions(), true)
+                ? (string) $resolutionDefaults['free']
+                : Product::DEFAULT_PLAN_OUTPUT_RESOLUTIONS['free'],
+            'paid' => in_array((string) ($resolutionDefaults['paid'] ?? ''), Product::supportedOutputResolutions(), true)
+                ? (string) $resolutionDefaults['paid']
+                : Product::DEFAULT_PLAN_OUTPUT_RESOLUTIONS['paid'],
+        ];
+
+        foreach ([
+            'quality_models' => ['standard', 'professional', 'best'],
+            'free_quality_models' => ['standard', 'best'],
+        ] as $group => $qualities) {
+            foreach ($qualities as $quality) {
+                // فرم‌های ویرایش سریع ممکن است فقط یک نقش را بفرستند؛
+                // نقش و کیفیت‌های دیگر باید از تنظیم قبلی/پیش‌فرض حفظ شوند.
+                $selection = array_replace_recursive(
+                    (array) data_get($qualityFallback, "{$group}.{$quality}", []),
+                    (array) data_get($configuration, "{$group}.{$quality}", [])
+                );
+                foreach (['primary', 'fallback'] as $role) {
+                    $pair = (array) ($selection[$role] ?? []);
+                    $normalized[$group][$quality][$role] = [
+                        'model_id' => filled($pair['model_id'] ?? null) ? trim((string) $pair['model_id']) : null,
+                        'provider' => filled($pair['provider'] ?? null) ? trim((string) $pair['provider']) : null,
+                    ];
+                }
+            }
+        }
+
         return $normalized;
+    }
+
+    private function modelTierRules(): array
+    {
+        return [
+            'model_configuration.tiers' => ['nullable', 'array'],
+            'model_configuration.tiers.free' => ['nullable', 'array'],
+            'model_configuration.tiers.economy' => ['nullable', 'array'],
+            'model_configuration.tiers.pro' => ['nullable', 'array'],
+            'model_configuration.tiers.business' => ['nullable', 'array'],
+            'model_configuration.tiers.*.primary.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.tiers.*.primary.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.tiers.*.fallback.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.tiers.*.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.quality_preset_key' => ['nullable', Rule::in(array_merge(ModelQualityPreset::availableKeys(), ['custom']))],
+            'model_configuration.quality_architecture_enabled' => ['nullable', 'boolean'],
+            'model_configuration.quality_credit_preset_key' => ['nullable', Rule::in(array_merge(ProductCreditPreset::availableKeys(), ['custom']))],
+            'model_configuration.quality_credit_costs' => ['nullable', 'array'],
+            'model_configuration.quality_credit_costs.standard' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'model_configuration.quality_credit_costs.professional' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'model_configuration.quality_credit_costs.best' => ['nullable', 'integer', 'min:1', 'max:1000000'],
+            'model_configuration.output_resolution_defaults' => ['nullable', 'array'],
+            'model_configuration.output_resolution_defaults.free' => ['nullable', Rule::in(Product::supportedOutputResolutions())],
+            'model_configuration.output_resolution_defaults.paid' => ['nullable', Rule::in(Product::supportedOutputResolutions())],
+            'model_configuration.quality_models' => ['nullable', 'array'],
+            'model_configuration.free_quality_models' => ['nullable', 'array'],
+            'model_configuration.quality_models.*.primary.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.quality_models.*.primary.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.quality_models.*.fallback.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.quality_models.*.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.free_quality_models.*.primary.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.free_quality_models.*.primary.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+            'model_configuration.free_quality_models.*.fallback.model_id' => ['nullable', 'string', 'max:255'],
+            'model_configuration.free_quality_models.*.fallback.provider' => ['nullable', Rule::in(ProviderStatus::PROVIDERS)],
+        ];
+    }
+
+    private function validateModelTierConfiguration(Request $request, bool $isPublishing, array $fallback = []): void
+    {
+        $rawQualityConfiguration = (array) $request->input('model_configuration', []);
+        $completeQualityConfiguration = $this->mergeQualityModelConfiguration($rawQualityConfiguration, $fallback);
+        $qualityModels = $request->input('model_configuration.quality_models');
+        // وقتی معماری سه‌سطحی در درخواست وجود دارد، همین ساختار منبع نهایی
+        // حقیقت است؛ خاموش‌بودن فلگ قدیمی نباید اعتبارسنجی را به primary_model برگرداند.
+        if (is_array($qualityModels) && !empty($qualityModels)) {
+            $this->validateQualityModelEntries(
+                (array) data_get($completeQualityConfiguration, 'quality_models', []),
+                (array) data_get($completeQualityConfiguration, 'free_quality_models', []),
+                $isPublishing
+            );
+            return;
+        }
+
+        $tiers = $request->input('model_configuration.tiers');
+        if (!is_array($tiers) || empty($tiers)) {
+            if ($isPublishing && (!$request->filled('primary_model') || !$request->filled('ai_provider'))) {
+                throw ValidationException::withMessages(['model_configuration' => 'برای انتشار، چهار سطح مدل یا یک مدل اصلی معتبر انتخاب کنید.']);
+            }
+            return;
+        }
+
+        $this->validateModelTierEntries($tiers, $isPublishing);
+    }
+
+    /** اعتبارسنجی پنج انتخاب کیفیت جدید: سه کیفیت عمومی و دو مسیر کاربر رایگان. */
+    private function validateQualityModelEntries(array $qualityModels, array $freeQualityModels, bool $requireComplete): void
+    {
+        $errors = [];
+        $qualityLabels = [
+            'quality_models.standard' => 'استاندارد',
+            'quality_models.professional' => 'حرفه‌ای',
+            'quality_models.best' => 'بهترین خروجی',
+            'free_quality_models.standard' => 'استاندارد کاربران رایگان',
+            'free_quality_models.best' => 'بهترین خروجی کاربران رایگان',
+        ];
+        foreach ([
+            'quality_models' => ['standard', 'professional', 'best'],
+            'free_quality_models' => ['standard', 'best'],
+        ] as $group => $qualities) {
+            $source = $group === 'quality_models' ? $qualityModels : $freeQualityModels;
+            foreach ($qualities as $quality) {
+                $primary = (array) data_get($source, "{$quality}.primary", []);
+                $fallback = (array) data_get($source, "{$quality}.fallback", []);
+                $prefix = "model_configuration.{$group}.{$quality}";
+                if (empty($primary['model_id']) || empty($primary['provider']) || empty($fallback['model_id']) || empty($fallback['provider'])) {
+                    if ($requireComplete) {
+                        $label = $qualityLabels["{$group}.{$quality}"] ?? $quality;
+                        $errors[$prefix] = "مدل اصلی و جایگزین کیفیت «{$label}» را کامل انتخاب کنید.";
+                    }
+                    continue;
+                }
+                foreach (['primary' => $primary, 'fallback' => $fallback] as $role => $selection) {
+                    $valid = $this->assignableAiModels()
+                        ->where('provider', $selection['provider'])
+                        ->where('openrouter_model_id', $selection['model_id'])
+                        ->exists();
+                    if (! $valid) $errors["{$prefix}.{$role}.model_id"] = 'مدل انتخاب‌شده در کاتالوگ فعال و قابل انتخاب نیست.';
+                }
+                if (($primary['provider'] ?? null) === ($fallback['provider'] ?? null)
+                    && ($primary['model_id'] ?? null) === ($fallback['model_id'] ?? null)) {
+                    $errors["{$prefix}.fallback.model_id"] = 'مدل جایگزین نمی‌تواند همان مدل اصلی باشد.';
+                }
+            }
+        }
+        if ($errors) throw ValidationException::withMessages($errors);
+    }
+
+    /** اعتبارسنجی و نرمال‌سازی مشترک گام دوم و پنجره‌ی ویرایش سریع مدل‌ها. */
+    private function normalizeAndValidateQualityModelConfiguration(array $configuration, array $fallback = []): array
+    {
+        $enabled = filter_var(
+            data_get($configuration, 'quality_architecture_enabled', data_get($fallback, 'quality_architecture_enabled', true)),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        if ($enabled) {
+            $completeConfiguration = $this->mergeQualityModelConfiguration($configuration, $fallback);
+            $this->validateQualityModelEntries(
+                (array) data_get($completeConfiguration, 'quality_models', []),
+                (array) data_get($completeConfiguration, 'free_quality_models', []),
+                true
+            );
+        }
+
+        return $this->normalizeModelConfiguration($configuration, $fallback);
+    }
+
+    /**
+     * ساختار کیفیت کامل را برای ورودی‌های ناقص فرم آماده می‌کند.
+     * ترتیب اولویت: پیش‌فرض سراسری → تنظیم ذخیره‌شده‌ی محصول → ورودی جدید.
+     */
+    private function mergeQualityModelConfiguration(array $configuration, array $fallback = []): array
+    {
+        $default = ModelQualityPreset::query()
+            ->where('is_default_for_product_creation', true)
+            ->value('configuration');
+
+        if (!$default) {
+            $default = ModelQualityPreset::query()->orderBy('id')->value('configuration');
+        }
+
+        $default = is_string($default) ? (json_decode($default, true) ?: []) : (array) $default;
+        $groups = ['quality_models', 'free_quality_models'];
+        $merged = [];
+        foreach ($groups as $group) {
+            $merged[$group] = array_replace_recursive(
+                (array) data_get($default, $group, []),
+                (array) data_get($fallback, $group, []),
+                (array) data_get($configuration, $group, [])
+            );
+        }
+
+        return $merged;
+    }
+
+    private function validateModelTierEntries(array $tiers, bool $requireComplete): void
+    {
+        $errors = [];
+        foreach (['free', 'economy', 'pro', 'business'] as $tierKey) {
+            $primary = (array) data_get($tiers, "{$tierKey}.primary", []);
+            $fallback = (array) data_get($tiers, "{$tierKey}.fallback", []);
+            $prefix = "model_configuration.tiers.{$tierKey}";
+            if (empty($primary['model_id']) || empty($primary['provider']) || empty($fallback['model_id']) || empty($fallback['provider'])) {
+                if ($requireComplete) $errors[$prefix] = 'مدل اصلی و جایگزین این سطح را کامل انتخاب کنید.';
+                continue;
+            }
+            foreach (['primary' => $primary, 'fallback' => $fallback] as $type => $selection) {
+                $valid = $this->assignableAiModels()
+                    ->where('provider', $selection['provider'])
+                    ->where('openrouter_model_id', $selection['model_id'])
+                    ->exists();
+                if (!$valid) $errors["{$prefix}.{$type}.model_id"] = 'مدل انتخاب‌شده در کاتالوگ فعال و قابل انتخاب نیست.';
+            }
+            if (($primary['provider'] ?? null) === ($fallback['provider'] ?? null)
+                && ($primary['model_id'] ?? null) === ($fallback['model_id'] ?? null)) {
+                $errors["{$prefix}.fallback.model_id"] = 'مدل جایگزین نمی‌تواند همان مدل اصلی باشد.';
+            }
+        }
+        if ($errors) throw ValidationException::withMessages($errors);
+    }
+
+    private function applyBusinessTierAsLegacyExecution(Product $product, array $configuration, ?array &$validated = null): void
+    {
+        // برای سازگاری با مسیرهای قدیمی، بهترین خروجی به‌عنوان مدل اصلی محصول
+        // ذخیره می‌شود؛ اجرای واقعی پایین‌تر بر اساس کیفیت انتخابی کاربر تصمیم می‌گیرد.
+        $business = (array) data_get($configuration, 'quality_models.best', data_get($configuration, 'tiers.business', []));
+        $primary = (array) ($business['primary'] ?? []);
+        $fallback = (array) ($business['fallback'] ?? []);
+        if (empty($primary['model_id']) || empty($primary['provider'])) return;
+
+        $values = [
+            'primary_model' => $primary['model_id'],
+            'ai_provider' => $primary['provider'],
+            'fallback_models' => !empty($fallback['model_id']) ? [$fallback['model_id']] : [],
+            'fallback_model_providers' => !empty($fallback['provider']) ? [$fallback['provider']] : [],
+        ];
+        if ($validated !== null) {
+            $validated = array_replace($validated, $values);
+            return;
+        }
+        $product->forceFill($values);
+    }
+
+    /**
+     * منبع قطعی قیمت محصول، مصرف اعتبار سه‌سطحی است. دو ستون قدیمی فقط برای
+     * سازگاری نمایش‌ها و مسیرهای اجرای فعلی، از هزینه سطح استاندارد پر می‌شوند
+     * و مقدار مستقیم ارسالی کاربر را نمی‌پذیرند.
+     */
+    private function applyQualityCreditPricingAsLegacyFields(Product $product, array $configuration, ?array &$validated = null): void
+    {
+        $standardCreditCost = max(1, min(
+            1000000,
+            (int) data_get($configuration, 'quality_credit_costs.standard', Product::DEFAULT_QUALITY_CREDIT_COSTS['standard'])
+        ));
+        $values = [
+            'pricing_model' => 'per_credit',
+            'credit_cost' => $standardCreditCost,
+        ];
+
+        if ($validated !== null) {
+            $validated = array_replace($validated, $values);
+            return;
+        }
+
+        $product->forceFill($values);
+    }
+
+    private function validatedTierPreset(Request $request): string
+    {
+        $request->validate(['preset_key' => ['required', Rule::in(['global'])]]);
+        return 'global';
+    }
+
+    private function applyTierPresetToProduct(Product $product, string $presetKey): void
+    {
+        $defaults = ModelTierDefault::query()->get()->keyBy('tier_key');
+        $configuration = (array) ($product->model_configuration ?? []);
+        foreach (['free', 'economy', 'pro', 'business'] as $tierKey) {
+            $default = $defaults->get($tierKey);
+            if (!$default || !$default->primary_model_id || !$default->fallback_model_id) {
+                throw ValidationException::withMessages(['preset_key' => 'پیش‌تنظیم انتخاب‌شده هنوز مدل اصلی و جایگزین کامل ندارد.']);
+            }
+            $configuration['tiers'][$tierKey] = [
+                'primary' => ['model_id' => $default->primary_model_id, 'provider' => $default->primary_provider],
+                'fallback' => ['model_id' => $default->fallback_model_id, 'provider' => $default->fallback_provider],
+            ];
+        }
+        $configuration['applied_preset'] = $presetKey;
+        $product->model_configuration = $this->normalizeModelConfiguration($configuration, (array) $product->model_configuration);
+        $this->applyBusinessTierAsLegacyExecution($product, $product->model_configuration);
+        $this->applyQualityCreditPricingAsLegacyFields($product, $product->model_configuration);
+        $product->save();
     }
 
     private function normalizedAspectRatios(mixed $ratios, array $fallback = ['3:4']): array

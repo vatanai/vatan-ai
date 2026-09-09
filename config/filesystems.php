@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        // فایل‌های گالری کاربر خصوصی‌اند و فقط از مسیرهای کنترل‌شدهٔ برنامه سرو می‌شوند.
+        'user_gallery' => [
+            'driver' => 'local',
+            'root' => storage_path('app/user-gallery'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

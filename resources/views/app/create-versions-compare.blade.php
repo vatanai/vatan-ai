@@ -3,7 +3,7 @@
 @section('page_title', 'مقایسه نسخه‌های بساز | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-versions-compare.css') }}?v={{ filemtime(public_path('css/create-versions-compare.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-versions-compare.css') }}">
 @endpush
 
 @section('content')

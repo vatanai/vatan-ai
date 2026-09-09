@@ -29,8 +29,21 @@ public function gallery()
     // واکشی تصاویر بر اساس رابطه‌های مدل User
     $createdImages = $user->generatedImages()->latest()->get();
     $personalImages = $user->uploadedImages()->latest()->get();
+    $galleryItems = $user->galleryItems()->latest()->get();
+    $galleryItems->each(function ($item): void {
+        if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
+            try {
+                $item->setAttribute('display_text', Storage::disk($item->disk ?: 'user_gallery')->get($item->original_path));
+            } catch (\Throwable) {
+                $item->setAttribute('display_text', data_get($item->metadata, 'text', 'متن ورودی در دسترس نیست.'));
+            }
+        }
+    });
+    $galleryService = app(\App\Services\UserGalleryService::class);
+    $galleryConfig = $galleryService->config();
+    $gallerySetting = $galleryService->setting($user);
 
-    return view('app.gallery', compact('createdImages', 'personalImages'));
+    return view('app.gallery', compact('createdImages', 'personalImages', 'galleryItems', 'galleryConfig', 'gallerySetting'));
 }
 
     public function index()
@@ -48,6 +61,7 @@ public function gallery()
                 'isGuest'        => true,
                 'createdImages'  => collect(),
                 'personalImages' => collect(),
+                'galleryItems'   => collect(),
                 'savedProducts'  => collect(),
                 'storageUsed'    => 0,
                 'storageTotal'   => 100,
@@ -59,6 +73,9 @@ public function gallery()
                 'referralProfileEnabled' => $referralProfileEnabled,
                 'referralData' => $this->emptyReferralData(),
                 'referralProducts' => collect(),
+                'creatorRewardProducts' => collect(),
+                'creatorRewardCredits' => 0,
+                'profileRewardTotal' => 0,
             ]);
         }
 
@@ -66,6 +83,16 @@ public function gallery()
         // with('product') برای جلوگیری از N+1 کوئری موقع تشخیص نوع محتوا (عکس/ویدیو)
         $createdImages = $user->generatedImages()->with('product')->latest()->get();
         $personalImages = $user->uploadedImages()->latest()->get();
+        $galleryItems = $user->galleryItems()->latest()->get();
+        $galleryItems->each(function ($item): void {
+            if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
+                try {
+                    $item->setAttribute('display_text', Storage::disk($item->disk ?: 'user_gallery')->get($item->original_path));
+                } catch (\Throwable) {
+                    $item->setAttribute('display_text', data_get($item->metadata, 'text', 'متن ورودی در دسترس نیست.'));
+                }
+            }
+        });
 
         // محصولات ذخیره‌شده (سیو) کاربر — بخش «ذخیره شده‌ها» در صفحه پروفایل
         $savedProducts = $user->savedProducts()->latest('saved_products.created_at')->get();
@@ -87,11 +114,14 @@ public function gallery()
         $referralData  = $this->referralData($user, $referralSettings);
         $referralProducts = Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'name_en']);
         $earnings      = $referralData['paid_tokens'];
+        [$creatorRewardProducts, $creatorRewardCredits] = $this->creatorRewardData($user);
+        $profileRewardTotal = (int) $earnings + (int) $creatorRewardCredits;
         $isGuest       = false;
 
         return view('app.profile', compact(
             'createdImages',
             'personalImages',
+            'galleryItems',
             'savedProducts',
             'storageUsed',
             'storageTotal',
@@ -103,8 +133,35 @@ public function gallery()
             'referralSettings',
             'referralProfileEnabled',
             'referralData'
-            ,'referralProducts'
+            ,'referralProducts',
+            'creatorRewardProducts',
+            'creatorRewardCredits',
+            'profileRewardTotal'
         ));
+    }
+
+    /** داده‌ی نمایشی مالک محصول؛ دفتر پاداش از رفرال کاملاً جدا خوانده می‌شود. */
+    private function creatorRewardData(User $user): array
+    {
+        if (! Schema::hasTable('product_creator_reward_events')
+            || ! Schema::hasColumn('products', 'creator_reward_owner_id')
+            || ! Schema::hasColumn('products', 'creator_reward_enabled')) {
+            return [collect(), 0];
+        }
+
+        $products = Product::query()
+            ->where('creator_reward_owner_id', $user->id)
+            ->where('creator_reward_enabled', true)
+            ->withCount([
+                'creatorRewardEvents as creator_reward_uses_count' => fn ($query) => $query->where('status', 'credited'),
+                'creatorRewardEvents as creator_reward_photo_count' => fn ($query) => $query->where('status', 'credited')->where('media_type', 'photo'),
+                'creatorRewardEvents as creator_reward_video_count' => fn ($query) => $query->where('status', 'credited')->where('media_type', 'video'),
+            ])
+            ->withSum(['creatorRewardEvents as creator_reward_credits_sum' => fn ($query) => $query->where('status', 'credited')], 'reward_credits')
+            ->latest('updated_at')
+            ->get();
+
+        return [$products, (int) $products->sum('creator_reward_credits_sum')];
     }
 
     private function referralData(User $user, ReferralSetting $settings): array
@@ -136,7 +193,22 @@ public function gallery()
             ->where('reward_type', 'inviter_reward');
 
         $links = Schema::hasTable('referral_links')
-            ? ReferralLink::query()->where('inviter_id', $user->id)->with('product:id,name_fa,slug,thumbnail')->latest()->limit(30)->get()
+            ? ReferralLink::query()
+                ->where('inviter_id', $user->id)
+                ->with('product:id,name_fa,name_en,slug,thumbnail')
+                ->withCount([
+                    'visits as clicks_count',
+                    'conversions as registrations_count',
+                    'conversions as purchases_count' => fn ($query) => $query->whereHas(
+                        'invitee.planPurchases',
+                        fn ($purchase) => $purchase->where('status', 'completed'),
+                    ),
+                    'conversions as first_images_count' => fn ($query) => $query->whereNotNull('first_image_at'),
+                ])
+                ->withSum('conversions as commission_total', 'commission_amount')
+                ->latest()
+                ->limit(30)
+                ->get()
             : collect();
         $commissionRewards = ReferralReward::query()
             ->where('user_id', $user->id)

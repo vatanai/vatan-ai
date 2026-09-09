@@ -1,16 +1,27 @@
 {{-- هدر مشترک موبایل اپ: هوم، اکسپلور، ترندز و پروفایل --}}
-@php $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled; @endphp
+@php
+  $referralSettings = \App\Models\ReferralSetting::current();
+  $referralProfileMenuEnabled = $referralSettings->profile_enabled;
+  $preloginCreditText = trim((string) ($referralSettings->prelogin_credit_text ?: ('هدیه ' . number_format((int) $referralSettings->registration_gift_tokens) . ' اعتبار')));
+@endphp
 <header class="app-mobile-header" aria-label="هدر اپلیکیشن" dir="rtl">
   <a href="{{ route('app.home') }}" class="app-mobile-brand" aria-label="رفتن به خانه اپ">
-    <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="28" height="28">
-    <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="app-mobile-wordmark">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt="" width="28" height="28">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن AI" class="app-mobile-wordmark">
   </a>
 
   <div class="app-mobile-actions">
-      <div class="topnav-token-box app-mobile-token" title="موجودی توکن شما">
-        <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
-        <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
-      </div>
+      @if(auth()->check())
+        <div class="topnav-token-box app-mobile-token" title="موجودی توکن شما">
+          <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
+          <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
+        </div>
+      @elseif($referralSettings->registration_gift_enabled && $preloginCreditText !== '')
+        <div class="topnav-token-box app-mobile-token" title="اعتبار هدیه قبل از ورود">
+          <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
+          <span class="topnav-token-label" dir="rtl">{{ $preloginCreditText }}</span>
+        </div>
+      @endif
 
     <a href="{{ route('pricing.index') }}" class="sub-btn app-mobile-sub" aria-label="خرید اشتراک">
       <span><i class="fa-solid fa-crown"></i><span class="sub-label">خرید اشتراک</span></span>
@@ -79,9 +90,11 @@
     .app-mobile-brand img { display:block; flex-shrink:0; }
     .app-mobile-wordmark { width:65px; height:auto; }
     .app-mobile-actions { display:flex; align-items:center; gap:8px; min-width:0; direction:rtl; }
-    .app-mobile-header .app-mobile-token { order:1; min-width:58px; height:36px; padding:0 12px; gap:5px; }
+    .app-mobile-header .app-mobile-token { order:1; min-width:0; min-height:36px; height:auto; padding:4px 12px; gap:5px; }
     .app-mobile-header .app-mobile-token .topnav-token-icon { width:20.4px; height:20.4px; transform:translateX(-2px); }
+    .app-mobile-header .app-mobile-token { min-width:0; max-width:150px; }
     .app-mobile-header .app-mobile-token .topnav-token-number { font-size:14.4px; }
+    .app-mobile-header .app-mobile-token .topnav-token-label { max-width:110px; font-size:9px; }
     .app-mobile-header .app-mobile-sub { order:2; min-width:103.4px; width:auto; height:39.6px; padding:0 9.9px; }
     .app-mobile-header .app-mobile-sub span { font-size:11.55px; gap:4px; }
     .app-mobile-header .app-mobile-sub span i { font-size:13.2px; }
@@ -103,6 +116,9 @@
     .app-mobile-brand img:first-child { width:25px; height:25px; }
     .app-mobile-header .app-mobile-sub { min-width:83.6px; padding-inline:6.6px; }
     .app-mobile-header .app-mobile-sub .sub-label { font-size:9.9px; }
-    .app-mobile-header .app-mobile-token { min-width:54px; padding-inline:7px; }
+    .app-mobile-header .app-mobile-token { min-width:0; padding-inline:5px; gap:3px; }
+    .app-mobile-header .app-mobile-token .topnav-token-icon { width:18px; height:18px; }
+    .app-mobile-header .app-mobile-token { max-width:120px; }
+    .app-mobile-header .app-mobile-token .topnav-token-label { max-width:84px; font-size:8px; }
   }
 </style>

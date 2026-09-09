@@ -6,13 +6,11 @@
   $labFacePromptEn = trim((string) ($product?->identity_instructions ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructions()));
   $labFacePromptFa = trim((string) ($product?->identity_instructions_fa ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructionsFa()));
   $labProviderLabels = [
-    'liara' => 'لیارا',
     'openrouter' => 'OpenRouter',
     'fal' => 'Fal.ai',
     'replicate' => 'Replicate',
   ];
   $labProviderEnglishLabels = [
-    'liara' => 'Liara AI',
     'openrouter' => 'OpenRouter',
     'fal' => 'Fal.ai',
     'replicate' => 'Replicate',
@@ -162,7 +160,6 @@
           <div class="ai-model-lab-output-error hidden" id="ai-model-lab-output-error" role="alert" aria-live="polite">
             <i class="fa-solid fa-triangle-exclamation"></i><span></span>
           </div>
-          <div class="ai-model-lab-loading hidden" id="ai-model-lab-loading"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال اجرای آزمایش مدل‌ها...</span></div>
         </div>
       </div>
     </section>
@@ -317,8 +314,6 @@
   #ai-model-lab .ai-model-lab-run { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:101px; height:37px; padding:0 15px; border:1px solid var(--green); border-radius:8px; color:var(--green); background:var(--green-l); font-family:inherit; font-size:11.55px; font-weight:600; cursor:pointer; transition:all .18s ease; }
   #ai-model-lab .ai-model-lab-run:hover { color:var(--s2); background:var(--green); }
   #ai-model-lab .ai-model-lab-output-model-cards-wrap { position:relative; min-width:0; grid-column:span 2; }
-  #ai-model-lab .ai-model-lab-loading { position:absolute; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; gap:9px; min-height:260px; color:var(--text); background:color-mix(in srgb, var(--s2) 82%, transparent); font-size:12px; font-weight:900; }
-  #ai-model-lab .ai-model-lab-loading.hidden { display:none; }
   #ai-model-lab .ai-model-lab-rows { display:grid; gap:9px; }
   #ai-model-lab .ai-model-lab-row { position:relative; display:grid; grid-template-columns:minmax(0, 1.728fr) minmax(0, 1fr) minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)) minmax(0, .85fr); align-items:end; gap:9px; width:100%; min-width:0; box-sizing:border-box; padding:12px 12px 12px 54px; border:1px solid var(--b1); border-radius:11px; background:var(--s1); direction:rtl; }
   #ai-model-lab .ai-model-lab-row > * { min-width:0; }
@@ -337,6 +332,10 @@
   #ai-model-lab .ai-model-lab-model-trigger:disabled { opacity:.45; cursor:not-allowed; }
   #ai-model-lab .ai-model-lab-model-trigger i { color:var(--text3); font-size:9px; }
   #ai-model-lab .ai-model-lab-model-menu { position:absolute; z-index:45; top:calc(100% + 6px); right:0; left:0; min-width:560px; max-height:280px; overflow:auto; padding:6px; border:1px solid var(--b1); border-radius:10px; background:var(--s2); box-shadow:var(--shadow-card); }
+  #ai-model-lab .ai-model-lab-model-search { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:7px; margin:-1px -1px 5px; padding:6px; border-bottom:1px solid var(--b1); background:var(--s2); }
+  #ai-model-lab .ai-model-lab-model-search i { color:var(--text3); font-size:9px; }
+  #ai-model-lab .ai-model-lab-model-search input { width:100%; height:29px; padding:0 8px; border:1px solid var(--b1); border-radius:7px; color:var(--text); background:var(--s1); font-family:inherit; font-size:9px; outline:none; }
+  #ai-model-lab .ai-model-lab-model-search input:focus { border-color:var(--accent); }
   #ai-model-lab .ai-model-lab-model-head, #ai-model-lab .ai-model-lab-model-option { display:grid; grid-template-columns:1.55fr 1.2fr 1fr .65fr; align-items:center; gap:8px; }
   #ai-model-lab .ai-model-lab-model-head { padding:5px 7px; border-bottom:1px solid var(--b1); color:var(--text3); font-size:8px; font-weight:800; }
   #ai-model-lab .ai-model-lab-model-option { width:100%; padding:8px 7px; border:0; border-bottom:1px solid var(--b1); color:var(--text2); background:transparent; font-family:inherit; font-size:9px; line-height:1.5; text-align:right; cursor:pointer; }
@@ -396,6 +395,10 @@
   #ai-model-lab .ai-model-lab-output-placeholder { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:9px; width:100%; height:100%; min-height:260px; padding:20px; color:var(--text3); background:var(--input-bg); text-align:center; }
   #ai-model-lab .ai-model-lab-output-placeholder img { width:66px; height:auto; max-height:66px; object-fit:contain; opacity:.82; }
   #ai-model-lab .ai-model-lab-output-placeholder span { max-width:180px; font-size:9px; line-height:1.8; }
+  #ai-model-lab .ai-model-lab-output-state { position:absolute; inset:0; z-index:4; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; padding:16px; color:var(--text); background:color-mix(in srgb, var(--s2) 84%, transparent); text-align:center; font-size:9px; font-weight:800; }
+  #ai-model-lab .ai-model-lab-output-state i { color:var(--accent); font-size:22px; }
+  #ai-model-lab .ai-model-lab-output-state.is-error { color:var(--danger); background:color-mix(in srgb, var(--danger) 10%, var(--s2)); }
+  #ai-model-lab .ai-model-lab-output-state.is-error i { color:var(--danger); }
   #ai-model-lab .ai-model-lab-input-frame-hint { position:absolute; top:50%; left:50%; display:inline-flex; align-items:center; gap:5px; padding:6px 8px; border:1px solid var(--b1); border-radius:7px; color:var(--text); background:var(--s2); font-size:8px; font-weight:800; opacity:0; transform:translate(-50%, -50%); transition:opacity .18s ease; }
   #ai-model-lab .ai-model-lab-card-upload { justify-content:center; width:100%; border-width:0 0 1px; border-radius:0; background:var(--s2); }
   #ai-model-lab .ai-model-lab-output-meta { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:5px; padding:7px; }
@@ -494,7 +497,9 @@
   let currentExperiment = null;
   let labRunPollTimer = null;
   let labRunStartedAt = 0;
-  const labRunTimeoutMs = 180000;
+  // وضعیت انتظار هر مدل جدا نگه داشته می‌شود؛ لودر نباید کل آزمایشگاه را بپوشاند.
+  let pendingLabModelIds = new Set();
+  const labRunTimeoutMs = 900000;
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const faNumber = value => Number(value).toLocaleString('fa-IR');
@@ -511,8 +516,13 @@
     ? 'گزارش نشده'
     : Number(value).toLocaleString('fa-IR');
 
-  function outputPlaceholderMarkup(message) {
-    return `<div class="ai-model-lab-output-placeholder"><img src="${esc(placeholderImage)}" alt="وطن"><span>${esc(message || 'خروجی هنوز آماده نیست.')}</span></div>`;
+  function outputPlaceholderMarkup(message, state = 'waiting') {
+    const stateMarkup = state === 'loading'
+      ? `<div class="ai-model-lab-output-state" role="status" aria-live="polite"><i class="fa-solid fa-spinner fa-spin"></i><span>در حال ساخت این خروجی...</span></div>`
+      : state === 'error'
+        ? `<div class="ai-model-lab-output-state is-error" role="alert"><i class="fa-solid fa-triangle-exclamation"></i><span>${esc(message || 'ساخت این خروجی ناموفق بود.')}</span></div>`
+        : '';
+    return `<div class="ai-model-lab-output-placeholder"><img src="${esc(placeholderImage)}" alt="وطن"><span>${esc(message || 'خروجی هنوز آماده نیست.')}</span>${stateMarkup}</div>`;
   }
 
   function setLabOutputError(message) {
@@ -540,11 +550,8 @@
 
   const labPurposeOptions = [
     ['all', 'همه مدل‌ها'],
-    ['category:popular', 'پرکاربردترین'], ['category:identity', 'بیشترین شباهت'],
-    ['category:economic', 'اقتصادی'],
-    ['usecase:portrait', 'چهره و پرتره'], ['usecase:identity', 'حفظ هویت چهره'],
-    ['usecase:business', 'محصول و کسب‌وکار'], ['usecase:design', 'طراحی و متن'],
-    ['usecase:creative', 'تصویرسازی خلاق'],
+    ['category:identity', 'شباهت و حفظ هویت'], ['category:economic', 'اقتصادی'],
+    ['category:business', 'محصول و کسب‌وکار'], ['category:popular', 'پرکاربرد'],
   ];
 
   function labPurposeMarkup() {
@@ -566,9 +573,10 @@
       && modelMatchesPurpose(model, purpose))
       .sort((a, b) => Number(a.labPriority || 999) - Number(b.labPriority || 999));
     if (!filtered.length) return '<div class="text-[10px] text-[var(--text3)] text-center py-3">مدل سازگار با این فیلترها پیدا نشد.</div>';
-    return '<div class="ai-model-lab-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>قابلیت</span><span>بهترین برای</span><span>گرید</span></div>' +
+    return '<label class="ai-model-lab-model-search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-lab-model-search placeholder="جستجوی مدل یا شناسه..." autocomplete="off"></label>' +
+      '<div class="ai-model-lab-model-head"><span>اسم فارسی / اسم انگلیسی</span><span>قابلیت</span><span>بهترین برای</span><span>گرید</span></div>' +
       '<div class="ai-model-lab-model-options">' + filtered.map(model =>
-        `<button type="button" class="ai-model-lab-model-option" data-model-key="${esc(model.id)}" title="${esc(model.labDescription || '')}"><span><b>${esc(model.persianName)}</b><small dir="ltr">${esc(model.englishName)}</small></span><span><b>${esc(model.usage)}</b><small>${esc((model.capabilities || []).slice(1, 3).join(' · ') || 'قابلیت پایه')}</small></span><span>${esc(model.primaryUseCase || 'کاربری عمومی')}<small>${esc(model.labStatus === 'experimental' ? 'آزمایشی' : (labCategoryLabels[(model.labCategories || [])[0]] || ''))}</small></span><span class="model-quality-grade">${esc(model.grade)}</span></button>`
+        `<button type="button" class="ai-model-lab-model-option" data-model-key="${esc(model.id)}" data-model-search="${esc([model.persianName, model.englishName, model.externalId, model.providerLabel].join(' ').toLowerCase())}" title="${esc(model.labDescription || '')}"><span><b>${esc(model.persianName)}</b><small dir="ltr">${esc(model.englishName)}</small></span><span><b>${esc(model.usage)}</b><small>${esc((model.capabilities || []).slice(1, 3).join(' · ') || 'قابلیت پایه')}</small></span><span>${esc(model.primaryUseCase || 'کاربری عمومی')}<small>${esc(model.labStatus === 'experimental' ? 'آزمایشی' : (labCategoryLabels[(model.labCategories || [])[0]] || ''))}</small></span><span class="model-quality-grade">${esc(model.grade)}</span></button>`
       ).join('') + '</div>';
   }
 
@@ -587,9 +595,10 @@
     if (currentExperiment) {
       holder.innerHTML = (currentExperiment.runs || []).map((run, index) => {
         const output = (run.outputs || [])[0] || {};
+        const runIsLoading = ['queued', 'processing'].includes(run.status);
         const imageMarkup = output.url
           ? `<img src="${esc(output.url)}" alt="خروجی ${esc(run.model || 'مدل')}" loading="lazy">`
-          : outputPlaceholderMarkup(run.status === 'failed' ? 'خروجی برای این مدل ساخته نشد.' : 'در انتظار خروجی مدل...');
+          : outputPlaceholderMarkup(run.status === 'failed' ? (run.error_message || 'خروجی برای این مدل ساخته نشد.') : 'در انتظار خروجی مدل...', run.status === 'failed' ? 'error' : (runIsLoading ? 'loading' : 'waiting'));
         const outputMeta = output.meta || {};
         const quality = run.quality || '—';
         const size = run.size || '—';
@@ -597,7 +606,7 @@
         const toman = formatToman(run.cost_toman);
         const statusLabel = run.status === 'completed' ? 'آماده' : (run.status === 'failed' ? 'ناموفق' : 'در حال اجرا');
         return `
-          <article class="ai-model-lab-output-card ai-model-lab-model-output-card">
+          <article class="ai-model-lab-output-card ai-model-lab-model-output-card" data-model-id="${esc(run.ai_model_id || run.model_id || '')}" data-run-state="${esc(run.status || '')}">
             <div class="ai-model-lab-card-head"><span class="ai-model-lab-card-head-english" dir="ltr">${esc(run.model || '—')}</span><span class="ai-model-lab-card-head-persian">${esc(run.model || 'مدل آزمایشی')}</span></div>
             <div class="ai-model-lab-output-frame">
               ${imageMarkup}
@@ -635,7 +644,7 @@
         <article class="ai-model-lab-output-card ai-model-lab-model-output-card">
           <div class="ai-model-lab-card-head"><span class="ai-model-lab-card-head-english" dir="ltr">${esc(englishName)}</span><span class="ai-model-lab-card-head-persian">${esc(persianName)}</span></div>
           <div class="ai-model-lab-output-frame">
-            ${outputPlaceholderMarkup('خروجی بعد از اجرای آزمایش اینجا نمایش داده می‌شود.')}
+            ${outputPlaceholderMarkup('خروجی بعد از اجرای آزمایش اینجا نمایش داده می‌شود.', pendingLabModelIds.has(String(row.dataset.modelId)) ? 'loading' : 'waiting')}
             <span class="ai-model-lab-output-image-label">آزمایش مدل ${ordinalNames[index] || faNumber(index + 1)}</span>
           </div>
           <div class="ai-model-lab-output-meta">
@@ -804,6 +813,7 @@
 
   function refreshOutputPreview() {
     currentExperiment = null;
+    pendingLabModelIds = new Set();
     window.clearTimeout(labRunPollTimer);
     labRunStartedAt = 0;
     setLabLoading(false);
@@ -950,11 +960,11 @@
   bindFacePromptTranslation('ai-model-lab-face-prompt-fa', 'fa-to-en');
 
   function setLabLoading(active, message) {
-    const loading = document.getElementById('ai-model-lab-loading');
-    root.classList.toggle('is-running', active);
-    loading?.classList.toggle('hidden', !active);
-    const label = loading?.querySelector('span');
-    if (label && message) label.textContent = message;
+    // فقط کارت‌های مدل‌های انتخاب‌شده در pendingLabModelIds لودر می‌گیرند.
+    // هیچ overlay یا loading سراسری روی فرم آزمایشگاه اعمال نمی‌شود.
+    root.classList.toggle('is-running', false);
+    if (message) root.dataset.loadingMessage = message;
+    renderLabModelOutputs();
   }
 
   function setLabTestedState(tested) {
@@ -1013,6 +1023,7 @@
     setLabTestedState(labRunReady);
     if (!['queued', 'processing'].includes(currentExperiment?.status || '')) {
       window.clearTimeout(labRunPollTimer);
+      pendingLabModelIds = new Set();
       setLabLoading(false);
     }
     renderLabModelOutputs();
@@ -1023,8 +1034,9 @@
   async function pollLabStatus(url) {
     window.clearTimeout(labRunPollTimer);
     if (labRunStartedAt && Date.now() - labRunStartedAt >= labRunTimeoutMs) {
+      pendingLabModelIds = new Set();
       setLabLoading(false);
-      setLabOutputError('زمان انتظار آزمایش از سه دقیقه گذشت. وضعیت این مدل‌ها را بررسی کنید یا آزمایش را دوباره اجرا کنید.');
+      setLabOutputError('پردازش آزمایش طولانی شده است. وضعیت مدل‌ها در سرور حفظ شده؛ صفحه را تازه‌سازی کنید یا بعداً نتیجه را دوباره بررسی کنید.');
       const timeoutStatus = document.getElementById('ai-model-lab-output-status');
       if (timeoutStatus) timeoutStatus.textContent = 'زمان انتظار تمام شد';
       return;
@@ -1040,6 +1052,7 @@
         setLabLoading(false);
       }
     } catch (error) {
+      pendingLabModelIds = new Set();
       setLabLoading(false);
       setLabOutputError(error.message || 'خطا در دریافت وضعیت آزمایش.');
       const status = document.getElementById('ai-model-lab-output-status');
@@ -1066,11 +1079,13 @@
     const selectedInput = labInputItems.find(item => item.selected) || labInputItems[0];
     labRunReady = false;
     currentExperiment = null;
+    pendingLabModelIds = new Set(selectedModels.map(model => String(model.id)));
     labRunStartedAt = Date.now();
     setLabOutputError('');
     if (status) status.textContent = 'در حال ساخت خروجی‌ها...';
     if (calculationStatus) calculationStatus.textContent = 'در حال آماده‌سازی گزارش';
     setLabLoading(true, 'در حال ارسال عکس به مدل‌های انتخاب‌شده...');
+    renderLabModelOutputs();
     renderCalculationTable();
     try {
       const formData = new FormData();
@@ -1094,6 +1109,7 @@
       applyExperimentPayload(data.experiment);
       pollLabStatus(data.status_url);
     } catch (error) {
+      pendingLabModelIds = new Set();
       setLabLoading(false);
       setLabOutputError(error.message || 'خطا در اجرای آزمایش.');
       if (status) status.textContent = error.message || 'خطا در اجرای آزمایش';
@@ -1226,6 +1242,14 @@
       modelMenu.classList.add('hidden');
       modelTrigger.setAttribute('aria-expanded', 'false');
       refreshOutputPreview(row);
+    });
+    modelMenu.addEventListener('input', function (event) {
+      const input = event.target.closest('[data-lab-model-search]');
+      if (!input) return;
+      const query = String(input.value || '').trim().toLowerCase();
+      modelMenu.querySelectorAll('.ai-model-lab-model-option').forEach(option => {
+        option.classList.toggle('hidden', query !== '' && !String(option.dataset.modelSearch || '').includes(query));
+      });
     });
     row.querySelectorAll('.ai-model-lab-quality, .ai-model-lab-size').forEach(control => control.addEventListener('change', () => refreshOutputPreview(row)));
     row.querySelector('.ai-model-lab-preserve-face')?.addEventListener('change', function () {

@@ -97,6 +97,20 @@
     if (unsupported) showError('مدل فعلی برای این نوع ورودی مناسب نیست؛ یک مدل سازگار انتخاب کنید.');
   }
 
+  function selectCompatibleModel() {
+    const current = workflowModel(selectedModel());
+    if (current && modelSupportsWorkflow(current)) return true;
+    const compatible = (config.workflow_models || []).find((item) => modelSupportsWorkflow(item));
+    const option = compatible && [...root.querySelectorAll('.create-studio-select-option[data-value]')]
+      .find((button) => String(button.dataset.value) === String(compatible.value));
+    if (option) {
+      option.click();
+      return true;
+    }
+    showError('برای این نوع ورودی، مدل سازگار در دسترس نیست.');
+    return false;
+  }
+
   function updateUploadUI() {
     const isVideo = root.dataset.mode === 'video';
     const isImageWorkflow = workflow === 'image_to_video' || workflow === 'image_sequence_to_video';
@@ -145,6 +159,7 @@
       uploadInput.value = '';
       renderFiles([]);
     }
+    selectCompatibleModel();
     updateModelAvailability();
   }
 
@@ -196,13 +211,6 @@
     if (uploadInput && previousImages !== nextImages) {
       uploadInput.value = '';
       renderFiles([]);
-    }
-    const modelInput = root.querySelector('[data-studio-select="model"] [data-select-input]');
-    const modelLabel = root.querySelector('[data-studio-select="model"] [data-select-label]');
-    const currentModel = workflowModel(selectedModel());
-    if (modelInput && currentModel && !modelSupportsWorkflow(currentModel)) {
-      modelInput.value = '';
-      if (modelLabel) modelLabel.textContent = 'مدل هوش مصنوعی';
     }
     updateUploadUI();
     filterModelOptions();
@@ -330,6 +338,7 @@
     }
 
     submit.disabled = true;
+    submit.setAttribute('aria-busy', 'true');
     submitLabel.textContent = 'در حال ساخت';
     startProgress();
     try {
@@ -359,11 +368,14 @@
       }
     } catch (error) {
       stopProgress();
+      progressBar.style.width = '0%';
       if (progress) progress.hidden = true;
       root.querySelector('[data-studio-video-content]')?.removeAttribute('hidden');
+      submitLabel.textContent = 'بساز';
       showError(error.message || 'ارتباط با سرویس ساخت برقرار نشد.');
     } finally {
       submit.disabled = false;
+      submit.removeAttribute('aria-busy');
     }
   }
 

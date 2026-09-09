@@ -1,5 +1,9 @@
-@php $referralProfileMenuEnabled = \App\Models\ReferralSetting::current()->profile_enabled; @endphp
-@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'profile'))
+@php
+  $referralSettings = \App\Models\ReferralSetting::current();
+  $referralProfileMenuEnabled = $referralSettings->profile_enabled;
+  $preloginCreditText = trim((string) ($referralSettings->prelogin_credit_text ?: ('هدیه ' . number_format((int) $referralSettings->registration_gift_tokens) . ' اعتبار')));
+@endphp
+@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'app.product', 'app.product-details', 'profile'))
   @include('app.partials.mobile-header')
 @endif
 
@@ -11,8 +15,8 @@
 
     {{-- لوگو — سمت راست --}}
     <a href="{{ route('app.home') }}" class="flex items-center gap-2 no-underline shrink-0" aria-label="رفتن به خانه اپ">
-      <img src="{{ asset('assets/img/icon_vatan.svg') }}" alt="" width="31" height="31" class="shrink-0">
-      <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="height:29px; width:auto;" class="shrink-0">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/icon_vatan.svg') }}" alt="" width="31" height="31" class="shrink-0">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="وطن AI" style="height:29px; width:auto;" class="shrink-0">
     </a>
 
     {{-- لینک‌های ناوبری — وسط (دکمه «بساز» بین اکسپلور و ترندز قرار دارد) --}}
@@ -66,10 +70,17 @@
     {{-- بخش اکشن‌ها و وضعیت احراز هویت — سمت چپ --}}
     <div class="topnav-left-side flex items-center gap-3 shrink-0">
       {{-- باکس نمایش موجودی توکن — سمت چپ دکمه «بساز»، رنگ ست با تم روز/شب --}}
-        <div class="topnav-token-box order-2" title="موجودی توکن شما">
-          <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
-          <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
-        </div>
+        @if(auth()->check())
+          <div class="topnav-token-box order-2" title="موجودی توکن شما">
+            <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
+            <span class="topnav-token-number">{{ number_format(auth()->user()->token_balance ?? 0) }}</span>
+          </div>
+        @elseif($referralSettings->registration_gift_enabled && $preloginCreditText !== '')
+          <div class="topnav-token-box order-2" title="اعتبار هدیه قبل از ورود">
+            <span class="topnav-token-icon" role="img" aria-label="توکن"></span>
+            <span class="topnav-token-label" dir="rtl">{{ $preloginCreditText }}</span>
+          </div>
+        @endif
 
       {{-- دکمه تغییر تم (روز / شب / سیستم) --}}
 

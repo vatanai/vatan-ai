@@ -3,7 +3,7 @@
   @foreach($products as $editorialIndex => $product)
     <a class="hb-editorial-card {{ $editorialIndex === 0 ? 'is-featured' : '' }}"
        href="{{ route('app.product', $product->route_slug) }}"
-       style="background-image:url('{{ $product->displayImageUrl() }}')">
+       data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
       <div class="hb-editorial-shade"></div>
       <span class="hb-editorial-kicker">{{ $editorialIndex === 0 ? 'انتخاب ویژه' : str_pad($editorialIndex + 1, 2, '0', STR_PAD_LEFT) }}</span>
       <div class="hb-editorial-copy">

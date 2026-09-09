@@ -427,6 +427,7 @@
       select.value = target ? target.value : '';
       refreshSelect(select, selection.provider || '');
     });
+    document.dispatchEvent(new CustomEvent('product-quality-configuration-changed'));
   };
   const currentConfiguration = () => {
     const configuration = { quality_models: {}, free_quality_models: {} };
@@ -452,6 +453,7 @@
         const fallback = root.querySelector('[data-quality-model][data-group="' + select.dataset.group + '"][data-quality="' + select.dataset.quality + '"][data-role="fallback"]');
         if (fallback) refreshSelect(fallback);
       }
+      document.dispatchEvent(new CustomEvent('product-quality-configuration-changed'));
     });
   });
   providerSelectors.forEach((providerSelect) => {
@@ -465,6 +467,7 @@
         const fallback = root.querySelector('[data-quality-model][data-group="' + providerSelect.dataset.group + '"][data-quality="' + providerSelect.dataset.quality + '"][data-role="fallback"]');
         if (fallback) refreshSelect(fallback);
       }
+      document.dispatchEvent(new CustomEvent('product-quality-configuration-changed'));
     });
   });
   root.querySelectorAll('[data-quality-model-search]').forEach((input) => {

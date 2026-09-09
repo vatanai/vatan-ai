@@ -34,7 +34,7 @@
   @endphp
   <div class="{{ $isGridMode ? 'hb-grid hb-cols-' . $gridCols : 'home-cards-scroll' }}">
     @foreach($products as $product)
-      <a class="home-card {{ $cardClass }}" href="{{ route('app.product', $product->route_slug) }}" style="background-image: url('{{ $product->displayImageUrl() }}');">
+      <a class="home-card {{ $cardClass }}" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
         <div class="home-card-overlay"></div>
         <i class="fa-solid {{ $product->media_type === 'video' ? 'fa-video' : 'fa-image' }} home-card-badge-type"></i>
         @if($product->is_featured)

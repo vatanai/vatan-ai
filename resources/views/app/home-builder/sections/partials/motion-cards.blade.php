@@ -1,7 +1,7 @@
 <div class="hb-motion-row hb-motion-row--{{ $motionVariant }}">
   @foreach($products as $motionIndex => $product)
     <a class="hb-motion-card" href="{{ route('app.product', $product->route_slug) }}" style="--hb-motion-index:{{ $motionIndex }}">
-      <div class="hb-motion-media" style="background-image:url('{{ $product->displayImageUrl() }}')">
+      <div class="hb-motion-media" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
         <span class="hb-motion-orbit"><i class="fa-solid fa-sparkles"></i></span>
         <span class="hb-motion-shine"></span>
       </div>

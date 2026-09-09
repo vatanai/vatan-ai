@@ -2,7 +2,7 @@
 <div class="hb-cinema-row">
   @foreach($products as $cinemaIndex => $product)
     <a class="hb-cinema-card" href="{{ route('app.product', $product->route_slug) }}">
-      <div class="hb-cinema-media" style="background-image:url('{{ $product->displayImageUrl() }}')">
+      <div class="hb-cinema-media" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
         <div class="hb-cinema-shade"></div>
         <span class="hb-cinema-index">{{ str_pad($cinemaIndex + 1, 2, '0', STR_PAD_LEFT) }}</span>
         <div class="hb-cinema-copy">

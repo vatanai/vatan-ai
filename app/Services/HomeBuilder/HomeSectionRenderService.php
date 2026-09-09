@@ -14,6 +14,9 @@ use Illuminate\Support\Collection;
  */
 class HomeSectionRenderService
 {
+    /** Scoped to prepareMany only; never retained between page renders. */
+    private ?Collection $manualProducts = null;
+
     public function __construct(protected HomeSectionLinkService $linkService)
     {
     }
@@ -83,7 +86,24 @@ class HomeSectionRenderService
      */
     public function prepareMany(Collection $sections): Collection
     {
-        return $sections->map(fn (HomeSection $section) => $this->prepare($section));
+        $previous = $this->manualProducts;
+        $ids = $sections
+            ->filter(fn (HomeSection $section) => in_array($section->type, ['product_slider', 'product_grid', 'collection'], true)
+                && $section->setting('source', 'latest') === 'manual')
+            ->flatMap(function (HomeSection $section) {
+                $limit = (int) $section->setting('limit', 8);
+
+                return $this->manualProductIds($section, $limit > 0 ? min($limit, 24) : 8);
+            })->unique()->values();
+
+        try {
+            $this->manualProducts = $ids->isEmpty() ? collect() : Product::query()
+                ->where('status', 'active')->whereIn('id', $ids)->get()->keyBy('id');
+
+            return $sections->map(fn (HomeSection $section) => $this->prepare($section));
+        } finally {
+            $this->manualProducts = $previous;
+        }
     }
 
     protected function resolveProducts(HomeSection $section): Collection
@@ -235,27 +255,26 @@ class HomeSectionRenderService
      */
     protected function resolveManualProducts(HomeSection $section, int $limit): Collection
     {
-        $picked = (array) $section->setting('product_ids', []);
-        $ids = collect($picked)
-            ->map(fn ($item) => (int) (is_array($item) ? ($item['id'] ?? 0) : $item))
-            ->filter()
-            ->unique()
-            ->take($limit)
-            ->values();
-
+        $ids = $this->manualProductIds($section, $limit);
         if ($ids->isEmpty()) {
             return collect();
         }
 
-        $products = Product::query()
-            ->where('status', 'active')
-            ->whereIn('id', $ids)
-            ->get()
-            ->keyBy('id');
+        $products = $this->manualProducts ?? Product::query()
+            ->where('status', 'active')->whereIn('id', $ids)->get()->keyBy('id');
 
-        return $ids
-            ->map(fn (int $id) => $products->get($id))
+        return $ids->map(fn (int $id) => $products->get($id))->filter()->values();
+    }
+
+    private function manualProductIds(HomeSection $section, int $limit): Collection
+    {
+        $picked = (array) $section->setting('product_ids', []);
+
+        return collect($picked)
+            ->map(fn ($item) => (int) (is_array($item) ? ($item['id'] ?? 0) : $item))
             ->filter()
+            ->unique()
+            ->take($limit)
             ->values();
     }
 

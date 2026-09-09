@@ -133,114 +133,26 @@
   @endphp
   <div class="pt-1">
     <button type="button" onclick="window.location.href={{ Js::from($__buildTarget) }}" class="vatan-gen-btn" aria-label="شروع ساخت">
-      <div class="dots_border"></div>
-      <span class="vatan-gen-token-icon" aria-hidden="true"></span>
       <span class="text_button">{{ $genButtonLabel ?? 'شروع ساخت' }}</span>
+      <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
     </button>
   </div>
 
 </div>
 
 <style>
-/* دکمه «شروع ساخت» — هویت بصری اصلی دکمه هدر، منتقل‌شده به این پارشیال چون اینجا زندگی می‌کند */
+/* دکمه «شروع ساخت» — هم‌ظاهر با دکمه نهایی صفحه ساخت محصول */
 .vatan-gen-btn {
-  --black-700: hsla(0 0% 12% / 1);
-  --border_radius: 15.6px;
-  --transtion: 0.3s ease-in-out;
-  --offset: 2px;
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  box-sizing: border-box;
-  transform-origin: center;
-  padding: 1rem 2rem;
-  background-color: transparent;
-  border: none;
-  border-radius: var(--border_radius);
-  transform: scale(calc(1 + (var(--active, 0) * 0.02)));
-  transition: transform var(--transtion);
+  width:100%;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 16px;border:0;border-radius:11px;background:var(--green);color:var(--bg-page);
+  box-shadow:0 8px 25px color-mix(in srgb,var(--green) 14%,transparent);
+  cursor:pointer;direction:ltr;transition:filter .18s ease,transform .14s ease;
   font-family: 'YekanBakh', sans-serif;
 }
-.vatan-gen-btn::before {
-  content: "";
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%; height: 100%;
-  background-color: var(--black-700);
-  border-radius: var(--border_radius);
-  box-shadow: inset 0 0.5px hsl(0, 0%, 100%), inset 0 -1px 2px 0 hsl(0, 0%, 0%),
-    0px 4px 10px -4px hsla(0 0% 0% / calc(1 - var(--active, 0))),
-    0 0 0 calc(var(--active, 0) * 0.3rem) hsl(71 100% 50% / 0.7);
-  transition: all var(--transtion);
-  z-index: 0;
-}
-.vatan-gen-btn::after {
-  content: "";
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%; height: 100%;
-  background-color: hsla(71 90% 50% / 0.7);
-  background-image: radial-gradient(at 51% 89%, hsla(80, 85%, 62%, 1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(71, 100%, 50%, 1) 0px, transparent 50%),
-    radial-gradient(at 22% 91%, hsla(95, 75%, 45%, 1) 0px, transparent 50%);
-  background-position: top;
-  opacity: var(--active, 0);
-  border-radius: var(--border_radius);
-  transition: opacity var(--transtion);
-  z-index: 2;
-}
-.vatan-gen-btn:is(:hover, :focus-visible) { --active: 1; }
-.vatan-gen-btn:active { transform: scale(0.99); }
-.vatan-gen-btn .dots_border {
-  --size_border: calc(100% + 2px);
-  overflow: hidden;
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: var(--size_border); height: var(--size_border);
-  background-color: transparent;
-  border-radius: var(--border_radius);
-  z-index: -10;
-}
-.vatan-gen-btn .dots_border::before {
-  content: "";
-  position: absolute;
-  top: 30%; left: 50%;
-  transform-origin: left;
-  transform: rotate(0deg);
-  width: 100%; height: 2rem;
-  background-color: white;
-  mask: linear-gradient(transparent 0%, white 120%);
-  animation: vatanGenBtnRotate 2s linear infinite;
-}
-@keyframes vatanGenBtnRotate { to { transform: rotate(360deg); } }
-.vatan-gen-token-icon {
-  position:relative;
-  z-index:10;
-  width:1.5rem;
-  height:1.5rem;
-  flex-shrink:0;
-  display:block;
-  background:#cffe00;
-  -webkit-mask:url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
-  mask:url('{{ asset('assets/icons/token-mark.png') }}') center / contain no-repeat;
-  transition:transform .25s ease;
-}
-.vatan-gen-btn:is(:hover, :focus) .vatan-gen-token-icon { transform:scale(1.08) rotate(5deg); }
+.vatan-gen-btn:hover { filter:brightness(1.04); }
+.vatan-gen-btn:active { transform:scale(.99); }
 .vatan-gen-btn .text_button {
-  position: relative;
-  z-index: 10;
-  background-image: linear-gradient(90deg, hsla(71 100% 50% / 1) 0%, hsla(71 100% 50% / var(--active, 0)) 120%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  font-size: 1rem;
-  font-weight: 800;
-  color: transparent;
+  font-size:12px;font-weight:900;color:inherit;direction:rtl;
 }
+.vatan-gen-btn>i { font-size:12px; }
 </style>

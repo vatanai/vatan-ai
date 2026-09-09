@@ -78,8 +78,33 @@
     } elseif (request()->is('admin/ai-models*')) {
         $addBreadcrumb('مدل‌های هوشمند');
         $addBreadcrumb(request()->is('admin/ai-models/providers*') ? 'ارائه‌دهندگان' : (request()->is('admin/ai-models/create') ? 'افزودن مدل جدید' : 'مدل‌ها'));
-    } elseif (request()->is('admin/plans*') || request()->is('admin/orders*') || request()->is('admin/discounts*') || request()->is('admin/referrals*') || request()->is('admin/growth*')) {
+    } elseif (request()->is('admin/referrals*')) {
         $addBreadcrumb('فروش و مارکتینگ');
+        if (request()->is('admin/referrals/settings')) {
+            $addBreadcrumb('تنظیمات همکاری در فروش');
+        } elseif (request()->is('admin/referrals/conversions')) {
+            $addBreadcrumb('فهرست دعوت‌ها');
+        } elseif (request()->is('admin/referrals/rewards')) {
+            $addBreadcrumb('گزارش پاداش‌ها');
+        } elseif (request()->is('admin/referrals/visits')) {
+            $addBreadcrumb('بازدید لینک‌ها');
+        } elseif (request()->is('admin/referrals/reviews')) {
+            $addBreadcrumb('صف بررسی');
+        } else {
+            $addBreadcrumb('همکاری در فروش');
+        }
+    } elseif (request()->is('admin/plans*')) {
+        $addBreadcrumb('فروش و مارکتینگ');
+        $addBreadcrumb(request()->is('admin/plans/create') ? 'افزودن پلن' : 'پلن‌ها');
+    } elseif (request()->is('admin/orders*')) {
+        $addBreadcrumb('فروش و مارکتینگ');
+        $addBreadcrumb(request()->is('admin/orders/plan-purchases') ? 'خرید پلن‌ها و پرداخت‌ها' : 'سفارش‌ها');
+    } elseif (request()->is('admin/discounts*')) {
+        $addBreadcrumb('فروش و مارکتینگ');
+        $addBreadcrumb('تخفیف‌ها');
+    } elseif (request()->is('admin/growth*')) {
+        $addBreadcrumb('رشد');
+        $addBreadcrumb(request()->is('admin/growth/users*') ? 'کاربران رشد' : (request()->is('admin/growth/links*') ? 'لینک‌های رشد' : 'مرکز رشد'));
     } elseif (request()->is('admin/settings*')) {
         $addBreadcrumb('تنظیمات');
         if (request()->is('admin/settings/system')) {
@@ -88,6 +113,8 @@
             $addBreadcrumb('پشتیبان‌گیری');
         } elseif (request()->is('admin/settings/admins*')) {
             $addBreadcrumb('مدیریت ادمین‌ها');
+        } elseif (request()->is('admin/settings/new-user-gift')) {
+            $addBreadcrumb('هدیه ثبت‌نام کاربران جدید');
         }
     } elseif (request()->is('admin/telegram*') || request()->is('admin/video-studio*')) {
         $addBreadcrumb('استودیو تولید');

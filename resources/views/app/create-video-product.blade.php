@@ -3,8 +3,8 @@
 @section('page_title', 'ساخت ' . ($product->name_fa ?: $product->name_en) . ' | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-samples-workspace.css') }}?v={{ filemtime(public_path('css/create-samples-workspace.css')) }}">
-  <link rel="stylesheet" href="{{ asset('css/create-video-product.css') }}?v={{ filemtime(public_path('css/create-video-product.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-samples-workspace.css') }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-video-product.css') }}">
 @endpush
 
 @section('content')
@@ -181,5 +181,5 @@
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-video-product.js') }}?v={{ filemtime(public_path('js/create-video-product.js')) }}"></script>
+  <script src="{{ \App\Support\AppAsset::url('js/create-video-product.js') }}"></script>
 @endpush

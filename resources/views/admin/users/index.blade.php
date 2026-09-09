@@ -128,13 +128,13 @@
                 <th class="p-2 text-[10px] font-bold border-b border-[var(--border)] text-[var(--text-soft)] w-[3%] text-center"><input type="checkbox" id="select-all-users" class="cursor-pointer accent-[var(--primary)]" onchange="window.toggleAllUsers(this.checked)" aria-label="انتخاب همه کاربران"></th>
               @endif
               <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[13%] text-center"><span class="block">تعداد</span><span class="block">اطلاعات</span><span class="block">شناسه کاربر</span></th>
-              <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[10%] text-center"><span class="block">نام</span><span class="block">نام خانوادگی</span></th>
+              <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[15%] text-center"><span class="block">نام و نام خانوادگی</span><span class="block">شماره</span><span class="block">ایمیل</span></th>
               <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[14%] text-center"><span class="block">ورود و</span><span class="block">خروجی‌ها</span></th>
               
               <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[13%] text-center"><span class="block">گزارش اعتبارها</span><span class="block">خرید و مصرف</span></th>
               
-              <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[18%] text-center"><span class="block">رمز عبور</span><span class="block">دعوت از طرف</span><span class="block">عضویت</span></th>
-              <th class="admin-status-column p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[16%] text-center"><span class="block">وضعیت کاربر</span><span class="block">پلن</span><span class="block">گروه قیمت‌گذاری</span></th>
+              <th class="p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[16%] text-center"><span class="block">دعوت از طرف</span><span class="block">عضویت</span></th>
+              <th class="admin-status-column p-2 text-[10px] leading-4 font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[14%] text-center"><span class="block">وضعیت کاربر</span><span class="block">پلن</span><span class="block">گروه قیمت‌گذاری</span></th>
               <th class="p-2 text-[10px] font-bold tracking-wider border-b border-[var(--border)] text-[var(--text-soft)] w-[12%] text-center">عملیات</th>
             </tr>
           </thead>
@@ -174,28 +174,32 @@
               </td>
 
               <td class="p-2 text-center">
-                <div class="flex flex-col items-center gap-1 text-[11px] font-medium leading-4 text-[var(--text-h)]">
-                  <span class="max-w-full truncate">{{ $user->name ?: '—' }}</span>
-                  <span class="max-w-full truncate">{{ $user->last_name ?: '—' }}</span>
+                <div class="admin-user-identity">
+                  <strong title="{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) ?: 'کاربر بدون نام' }}">{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) ?: '—' }}</strong>
+                  <span><i class="fa-solid fa-mobile-screen-button"></i><b dir="ltr">{{ $user->phone ?: '—' }}</b></span>
+                  <span><i class="fa-solid fa-at"></i><b dir="ltr" title="{{ $user->email ?: 'ایمیل ثبت نشده' }}">{{ $user->email ?: '—' }}</b></span>
                 </div>
               </td>
               <td class="p-2 text-center">
                 @include('admin.users.partials.operational-snapshot', ['snapshotUser' => $user])
-                <div class="mt-1 text-[9px] text-[var(--text-soft)] font-mono dir-ltr truncate" title="{{ $user->email ?: 'ایمیل ثبت نشده' }}">{{ $user->email ?: '—' }}</div>
               </td>
               <td class="admin-credit-report p-2 text-[10px]">
                 <div class="flex flex-col gap-1 text-right select-none">
                   <div class="flex justify-between items-center bg-[var(--page-bg)]/50 p-1 px-1.5 rounded border border-[var(--border)]/40">
                     <span class="text-[var(--text-soft)] text-[10px]">موجودی فعلی:</span>
-                    <span class="font-bold text-[var(--warning)] font-mono">{{ number_format($user->effective_token_balance) }}</span>
+                    <span data-user-token-balance="{{ $user->id }}" class="font-bold text-[var(--warning)] font-mono">{{ number_format($user->effective_token_balance) }}</span>
                   </div>
                   <div class="flex justify-between items-center p-0.5 px-1.5">
                     <span class="text-[var(--text-soft)] text-[10px]">کل خریداری شده:</span>
-                    <span class="text-[var(--success)] font-mono font-medium">{{ number_format($user->tokens_purchased ?? 0) }}</span>
+                    <span data-user-token-purchased="{{ $user->id }}" class="text-[var(--success)] font-mono font-medium">{{ number_format($user->tokens_purchased ?? 0) }}</span>
                   </div>
                   <div class="flex justify-between items-center p-0.5 px-1.5">
                     <span class="text-[var(--text-soft)] text-[10px]">کل مصرف شده:</span>
                     <span class="text-[var(--danger)] font-mono font-medium">{{ number_format($user->tokens_used ?? 0) }}</span>
+                  </div>
+                  <div class="flex justify-between items-center p-0.5 px-1.5">
+                    <span class="text-[var(--text-soft)] text-[10px]">لینک دعوت:</span>
+                    <span class="text-[var(--info)] font-mono font-medium" dir="rtl">{{ number_format((int) ($user->referral_links_count ?? 0)) }} لینک | {{ number_format((int) ($user->referral_visits_count ?? 0)) }} ورود</span>
                   </div>
                 </div>
               </td>
@@ -211,12 +215,6 @@
               @endphp
               <td class="admin-status-column p-2 text-center">
                 <div class="flex flex-col items-center gap-1.5 text-[10.5px]">
-                  <div class="inline-flex items-center justify-center gap-1.5 text-[var(--text-soft)]">
-                    <span class="text-[9.5px]">رمز عبور</span>
-                    <button type="button" onclick="window.copyUserPassword(this, {{ $user->id }})" class="w-[25px] h-[25px] rounded-md border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] inline-flex items-center justify-center cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="کپی رمز عبور" aria-label="کپی رمز عبور برای {{ $user->name ?? 'کاربر' }}">
-                      <i class="fa-solid fa-copy"></i>
-                    </button>
-                  </div>
                   @if($referrer)
                     <span class="max-w-full truncate font-bold text-[var(--text-h)]" title="{{ trim(($referrer->name ?? '').' '.($referrer->last_name ?? '')) ?: 'کاربر وطن' }}">{{ trim(($referrer->name ?? '').' '.($referrer->last_name ?? '')) ?: 'کاربر وطن' }}</span>
                     @if($referralUrl)
@@ -266,7 +264,7 @@
                   <button type="button" onclick="window.openUserModal(@js(trim(($user->name ?? 'کاربر').' '.($user->last_name ?? ''))), @js($user->generatedImages), {{ $user->id }}, @js($selectedPlanId ?: ''), @js(\App\Support\Jalali::formatNumeric($joinedAt)))" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--info-l)] border-[var(--info-m)] hover:bg-[var(--info-l)] text-[var(--info)] text-[10px] font-medium transition-colors cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> نمایش</button>
                   <a href="{{ route('admin.users.logs', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مشاهده لاگ‌ها"><i class="fa-solid fa-history"></i> لاگ‌ها</a>
                   <a href="{{ route('admin.users.gallery.show', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--primary-l)] border-[var(--primary-m)] text-[var(--primary)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="گالری و پروفایل کامل ورودی‌های کاربر"><i class="fa-solid fa-images"></i> گالری</a>
-                  <button type="button" onclick='window.openUserTokenDialog({{ $user->id }}, @js(trim(($user->name ?? '')." ".($user->last_name ?? ""))), {{ (int) $user->tokens }})' class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--text-main)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مدیریت اعتبار"><i class="fa-solid fa-coins"></i> اعتبار</button>
+                  <button type="button" data-user-token-dialog data-user-id="{{ $user->id }}" data-user-name="{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) }}" data-user-token="{{ (int) $user->tokens }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--text-main)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مدیریت اعتبار"><i class="fa-solid fa-coins"></i> اعتبار</button>
                   @if((int) ($user->finance_cases_count ?? 0) > 0)
                     <a href="{{ route('admin.finance.cases.index', ['user_id' => $user->id]) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--success-l)] border-[var(--success-m)] text-[var(--success)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all" title="پرونده‌های مالی کاربر"><i class="fa-solid fa-chart-pie"></i> مالی</a>
                   @else
@@ -402,6 +400,7 @@
 @endsection
 
 @section('scripts')
+<script src="{{ asset('admin/js/user-credit-dialog.js') }}?v={{ filemtime(public_path('admin/js/user-credit-dialog.js')) }}"></script>
 <script>
 try {
   var bc = document.getElementById('breadcrumb');
@@ -819,57 +818,6 @@ window.changeUserStatus = async function(userId, select) {
     else alert(error.message);
   } finally {
     select.disabled = false;
-  }
-}
-
-window.copyUserPassword = async function(button, userId) {
-  const originalIcon = button.innerHTML;
-  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-  button.disabled = true;
-  button.classList.add('opacity-60', 'cursor-wait');
-
-  try {
-    const response = await fetch(`/admin/users/${userId}/copy-password`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': token,
-      },
-    });
-    const data = await response.json();
-    if (!response.ok || data.status !== 'success') throw new Error(data.message || 'ساخت رمز جدید انجام نشد.');
-
-    let copied = false;
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(data.password);
-      copied = true;
-    } else {
-      const input = document.createElement('textarea');
-      input.value = data.password;
-      input.setAttribute('readonly', '');
-      input.style.position = 'fixed';
-      input.style.opacity = '0';
-      document.body.appendChild(input);
-      input.select();
-      copied = document.execCommand('copy');
-      input.remove();
-    }
-    if (!copied) throw new Error('کپی خودکار رمز در این مرورگر ممکن نشد.');
-
-    button.innerHTML = '<i class="fa-solid fa-check"></i>';
-    button.title = 'رمز جدید کپی شد';
-    if (typeof window.showAdminToast === 'function') window.showAdminToast('رمز عبور کپی شد.', 'success');
-    else alert('رمز عبور کپی شد.');
-    setTimeout(() => {
-      button.innerHTML = originalIcon;
-      button.title = 'کپی رمز عبور';
-    }, 1800);
-  } catch (error) {
-    if (typeof window.showAdminToast === 'function') window.showAdminToast(error.message, 'error');
-    else alert(error.message);
-  } finally {
-    button.disabled = false;
-    button.classList.remove('opacity-60', 'cursor-wait');
   }
 }
 

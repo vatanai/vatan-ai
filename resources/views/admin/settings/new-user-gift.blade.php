@@ -8,6 +8,7 @@
 @php
   $isLeader = auth('admin')->user()?->isLeader();
   $siteGiftEnabled = (bool) old('registration_gift_enabled', $settings->registration_gift_enabled);
+  $preloginCreditText = old('prelogin_credit_text', $settings->prelogin_credit_text ?: ('هدیه ' . number_format((int) $settings->registration_gift_tokens) . ' اعتبار'));
   $telegramGiftEnabled = (bool) old('telegram_registration_gift_enabled', $settings->telegram_registration_gift_enabled);
   $startButtons = is_array($startContent->buttons) ? $startContent->buttons : [];
   $startButton = is_array($startButtons[0] ?? null) ? $startButtons[0] : [];
@@ -132,7 +133,10 @@
                 <div class="gift-card__head"><div class="gift-card__title"><span class="gift-card__icon is-primary"><i class="fa-solid fa-globe"></i></span><div><h2>هدیه ثبت‌نام سایت</h2><p>اعتباری که بعد از ثبت‌نام معمولی به کاربر جدید داده می‌شود.</p></div></div><span class="gift-card__badge">مسیر سایت</span></div>
                 <div class="gift-card__body">
                   <label class="gift-toggle"><span class="gift-toggle__copy"><strong>پرداخت هدیه سایت فعال باشد</strong><small>با خاموش‌کردن این گزینه، کاربر جدید از مسیر سایت هدیه دریافت نمی‌کند.</small></span><input type="hidden" name="registration_gift_enabled" value="0"><input class="gift-switch-input" type="checkbox" name="registration_gift_enabled" value="1" @checked($siteGiftEnabled)><span class="gift-switch" aria-hidden="true"><span></span></span></label>
-                  <label class="gift-field"><span class="gift-field__label">مقدار هدیه</span><span class="gift-number-wrap"><input class="gift-number" type="number" name="registration_gift_tokens" min="0" max="1000000" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}" required><span class="gift-number__suffix">اعتبار</span></span><small class="gift-field__hint">این مقدار در پیام خوش‌آمدگویی و نوار اعتبار کاربر نمایش داده می‌شود.</small>@error('registration_gift_tokens')<small class="gift-field__error">{{ $message }}</small>@enderror</label>
+                  <div class="gift-site-fields-grid" data-gift-amount-sync>
+                    <label class="gift-field"><span class="gift-field__label">مقدار هدیه</span><span class="gift-number-wrap"><input class="gift-number" type="number" name="registration_gift_tokens" min="0" max="1000000" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}" data-gift-amount-input required><span class="gift-number__suffix">اعتبار</span></span><small class="gift-field__hint">این مقدار اعتبار واقعی کاربر جدید بعد از ثبت‌نام است.</small>@error('registration_gift_tokens')<small class="gift-field__error">{{ $message }}</small>@enderror</label>
+                    <label class="gift-field"><span class="gift-field__label">اعتبار قبل لاگین کاربر</span><input class="gift-text" type="text" name="prelogin_credit_text" value="{{ $preloginCreditText }}" maxlength="255" placeholder="هدیه ۴۰ اعتبار" data-prelogin-credit-text required><small class="gift-field__hint">هر متنی که بنویسید دقیقاً در هدر مهمان‌ها نمایش داده می‌شود؛ اگر متن عدد داشته باشد، همان عدد هدیهٔ ثبت‌نام است.</small>@error('prelogin_credit_text')<small class="gift-field__error">{{ $message }}</small>@enderror</label>
+                  </div>
                 </div>
               </section>
 
@@ -157,7 +161,7 @@
             </div>
 
             <aside class="gift-side-column">
-              <section class="gift-preview-card"><div class="gift-side-head"><div><h2>پیش‌نمایش اعتبار</h2><p>نمایش تقریبی وضعیت در صفحه اصلی</p></div><i class="fa-solid fa-eye"></i></div><div class="gift-preview-bar"><span class="gift-preview-bar__avatar"><i class="fa-regular fa-user"></i></span><span class="gift-preview-bar__balance"><i class="fa-solid fa-sparkles"></i><strong>{{ number_format($settings->registration_gift_enabled ? $settings->registration_gift_tokens : 0) }}</strong><small>هدیه</small></span><span class="gift-preview-bar__theme"><i class="fa-regular fa-moon"></i></span></div><div class="gift-preview-note"><i class="fa-solid fa-circle-info"></i><span>عدد پیش‌نمایش از هدیه سایت خوانده می‌شود؛ مقدار تلگرام فقط در مسیر بات اعمال می‌شود.</span></div></section>
+              <section class="gift-preview-card"><div class="gift-side-head"><div><h2>پیش‌نمایش اعتبار</h2><p>نمایش اعتبار قبل از ورود در هدر سایت</p></div><i class="fa-solid fa-eye"></i></div><div class="gift-preview-bar"><span class="gift-preview-bar__avatar"><i class="fa-regular fa-user"></i></span><span class="gift-preview-bar__balance"><i class="fa-solid fa-sparkles"></i><strong>{{ $preloginCreditText }}</strong></span><span class="gift-preview-bar__theme"><i class="fa-regular fa-moon"></i></span></div><div class="gift-preview-note"><i class="fa-solid fa-circle-info"></i><span>متن این باکس برای مهمان‌ها قبل از ورود دقیقاً در هدر سایت و اپ نمایش داده می‌شود.</span></div></section>
               <section class="gift-card gift-rules-card"><div class="gift-card__head"><div class="gift-card__title"><span class="gift-card__icon is-success"><i class="fa-solid fa-shield-halved"></i></span><div><h2>قوانین ساخت</h2><p>شرط امنیتی مسیر تلگرام</p></div></div></div><div class="gift-card__body"><label class="gift-toggle gift-toggle--stacked"><span class="gift-toggle__copy"><strong>عضویت در کانال الزامی باشد</strong><small>بات قبل از ادامه ساخت محصول، عضویت کاربر در کانال اصلی را بررسی می‌کند.</small></span><input type="hidden" name="telegram_membership_required" value="0"><input class="gift-switch-input" type="checkbox" name="telegram_membership_required" value="1" @checked((bool) old('telegram_membership_required', $settings->telegram_membership_required))><span class="gift-switch" aria-hidden="true"><span></span></span></label></div></section>
               <div class="gift-stats-card"><div><span class="gift-stats-card__icon"><i class="fa-solid fa-calendar-day"></i></span><span><small>هدیه سایت امروز</small><strong>{{ number_format($todayGifts) }}</strong></span></div><div><span class="gift-stats-card__icon is-info"><i class="fa-brands fa-telegram"></i></span><span><small>هدیه تلگرام امروز</small><strong>{{ number_format($todayTelegramGifts) }}</strong></span></div></div>
             </aside>
@@ -171,4 +175,24 @@
     </div>
   </div>
 </main>
+@endsection
+
+@section('scripts')
+<script>
+  const giftAmountInput = document.querySelector('[data-gift-amount-input]');
+  const preloginCreditInput = document.querySelector('[data-prelogin-credit-text]');
+  const toAsciiDigits = (value) => value.replace(/[۰-۹]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)).replace(/[٠-٩]/g, (digit) => '٠١٢٣٤٥٦٧٨٩'.indexOf(digit));
+  const firstNumber = (value) => toAsciiDigits(value).match(/\d+/)?.[0] || '';
+
+  giftAmountInput?.addEventListener('input', () => {
+    const numberMatch = preloginCreditInput?.value.match(/[۰-۹٠-٩0-9]+/);
+    if (preloginCreditInput && numberMatch) {
+      preloginCreditInput.value = preloginCreditInput.value.replace(numberMatch[0], giftAmountInput.value);
+    }
+  });
+  preloginCreditInput?.addEventListener('input', () => {
+    const number = firstNumber(preloginCreditInput.value);
+    if (giftAmountInput && number) giftAmountInput.value = number;
+  });
+</script>
 @endsection

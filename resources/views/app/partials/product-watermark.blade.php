@@ -15,7 +15,7 @@
     @if($product->new_watermark_type === 'text')
       <strong style="color:{{ $product->new_watermark_text_color ?: '#FFFFFF' }};font-size:clamp(11px,2vw,28px);text-shadow:0 1px 5px rgba(0,0,0,.45);">VATAN AI</strong>
     @else
-      <img src="{{ asset('assets/img/vatan-logo.svg') }}" alt="Vatan AI" class="w-full h-auto object-contain">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/vatan-logo.svg') }}" alt="Vatan AI" class="w-full h-auto object-contain">
     @endif
   </span>
 @endif

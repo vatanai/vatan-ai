@@ -34,10 +34,8 @@ class ReferralController extends Controller
         }
 
         $referralLink->loadMissing(['inviter', 'product']);
-        $visit = $referrals->captureLinkVisit($request, $referralLink);
-        if (! $visit) {
-            abort(404);
-        }
+        // انتساب اول در نشست حفظ می‌شود؛ کلیک تکراری نباید لینک فعال را به ۴۰۴ تبدیل کند.
+        $referrals->captureLinkVisit($request, $referralLink);
 
         return $referralLink->product
             ? redirect()->route('app.product', $referralLink->product->route_slug)
@@ -46,13 +44,28 @@ class ReferralController extends Controller
 
     public function createLink(Request $request): RedirectResponse
     {
+        abort_unless(\App\Models\ReferralSetting::current()->referralIsActive(), 403);
+
         $data = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
         ]);
         $product = Product::query()->whereKey($data['product_id'])->where('status', 'active')->firstOrFail();
 
+        $existing = ReferralLink::query()
+            ->where('inviter_id', $request->user()->id)
+            ->where('product_id', $product->id)
+            ->where('status', 'active')
+            ->whereNull('deactivated_at')
+            ->latest('id')
+            ->first();
+
+        if ($existing) {
+            return back()->with('success', 'برای این محصول قبلاً لینک فعال ساخته‌ای.');
+        }
+
         do {
-            $slug = Str::lower(Str::random(12));
+            // لینک‌های قبلی نباید تغییر کنند؛ لینک‌های جدید با ۸ نویسه کوتاه‌تر و همچنان کم‌ریسک‌تر از کد ۵ نویسه ساخته می‌شوند.
+            $slug = Str::lower(Str::random(8));
         } while (ReferralLink::query()->where('slug', $slug)->exists());
 
         ReferralLink::query()->create([

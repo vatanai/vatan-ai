@@ -10,12 +10,11 @@ use RuntimeException;
 class ProductImageOptimizer
 {
     public const MAX_EDGE = 1600;
-    public const MAX_BYTES_WITHOUT_REENCODE = 450 * 1024;
     public const WEBP_QUALITY = 88;
 
     /**
-     * Store one final product image. Suitable files are copied byte-for-byte;
-     * oversized files are resized without cropping and encoded once as WebP.
+     * Store one final product image. Every new product image is normalized to
+     * WebP so the original upload can never become a page asset by accident.
      */
     public function store(UploadedFile $file, string $directory): string
     {
@@ -29,19 +28,9 @@ class ProductImageOptimizer
             throw new RuntimeException('ابعاد تصویر بیش از حد مجاز است.');
         }
 
-        if (max($width, $height) <= self::MAX_EDGE && $file->getSize() <= self::MAX_BYTES_WITHOUT_REENCODE) {
-            return $file->store($directory, 'public');
-        }
-
         $encoded = extension_loaded('imagick')
             ? $this->withImagick($file->getRealPath(), $width, $height)
             : $this->withGd($file->getRealPath(), $info['mime'] ?? '', $width, $height);
-
-        // If compression was only attempted because of file size and did not help,
-        // preserve the original bytes so an already-good image never loses quality.
-        if (max($width, $height) <= self::MAX_EDGE && strlen($encoded) >= $file->getSize()) {
-            return $file->store($directory, 'public');
-        }
 
         $path = trim($directory, '/') . '/' . Str::uuid() . '.webp';
         Storage::disk('public')->put($path, $encoded);
@@ -50,9 +39,8 @@ class ProductImageOptimizer
     }
 
     /**
-     * بهینه‌سازی امن یک تصویر موجود محصول. اگر فایل از قبل استاندارد باشد همان
-     * مسیر قبلی برگردانده می‌شود؛ در غیر این صورت فایل جدید ساخته می‌شود و حذف
-     * نسخه قبلی فقط پس از ذخیره موفق رکورد محصول بر عهده فراخواننده است.
+     * بهینه‌سازی یک تصویر موجود محصول. خروجی همیشه نسخهٔ استاندارد WebP است و
+     * حذف نسخهٔ قبلی فقط پس از ذخیرهٔ موفق رکورد محصول بر عهدهٔ فراخواننده است.
      */
     public function optimizeStored(string $path, string $directory): string
     {
@@ -72,18 +60,9 @@ class ProductImageOptimizer
             throw new RuntimeException('ابعاد یکی از تصاویر بیش از حد مجاز است.');
         }
 
-        $originalBytes = (int) $disk->size($path);
-        if (max($width, $height) <= self::MAX_EDGE && $originalBytes <= self::MAX_BYTES_WITHOUT_REENCODE) {
-            return $path;
-        }
-
         $encoded = extension_loaded('imagick')
             ? $this->withImagick($realPath, $width, $height)
             : $this->withGd($realPath, $info['mime'] ?? '', $width, $height);
-
-        if (max($width, $height) <= self::MAX_EDGE && strlen($encoded) >= $originalBytes) {
-            return $path;
-        }
 
         $newPath = trim($directory, '/') . '/' . Str::uuid() . '.webp';
         $disk->put($newPath, $encoded);

@@ -7,7 +7,7 @@
   @foreach($products->take(6) as $hbBentoIndex => $product)
     <a class="hb-bento-item hb-bento-item--{{ $hbBentoIndex + 1 }}"
        href="{{ route('app.product', $product->route_slug) }}"
-       style="background-image: url('{{ $product->displayImageUrl() }}');">
+       data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
       <span class="hb-bento-badge">{{ $product->subcategory ?: $product->category }}</span>
       <div class="hb-bento-overlay"></div>
     </a>

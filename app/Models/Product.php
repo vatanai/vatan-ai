@@ -48,6 +48,9 @@ class Product extends Model
         'product_code',
         'created_by',
         'updated_by',
+        'creator_reward_owner_id',
+        'creator_reward_enabled',
+        'creator_reward_settings',
         'description_fa',
         'description_en',
         'meta_title',
@@ -185,6 +188,9 @@ class Product extends Model
         'base_likes_count'  => 'integer',
         'created_by'        => 'integer',
         'updated_by'        => 'integer',
+        'creator_reward_owner_id' => 'integer',
+        'creator_reward_enabled' => 'boolean',
+        'creator_reward_settings' => 'array',
     ];
 
     protected static function booted(): void
@@ -213,6 +219,18 @@ class Product extends Model
     public function editor(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'updated_by');
+    }
+
+    /** مالک تجاری محصول؛ عمداً از ادمین سازنده‌ی رکورد و سیستم رفرال جداست. */
+    public function creatorRewardOwner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_reward_owner_id');
+    }
+
+    /** دفتر مستقل رویدادهای پاداش مالک محصول. */
+    public function creatorRewardEvents(): HasMany
+    {
+        return $this->hasMany(ProductCreatorRewardEvent::class);
     }
 
     public function orders(): HasMany

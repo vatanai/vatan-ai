@@ -3,7 +3,7 @@
 {{-- تب‌ها — موبایل: ذخیره شده‌ها | همکاری در فروش | فایل‌ها | محتوا؛ دسکتاپ با CSS برعکس می‌شود --}}
 <div class="profile-tabs" dir="rtl">
   <button type="button" class="profile-tab" data-tab="saved">
-    <img src="{{ asset('assets/img/icons/fi-sr-bookmark.svg') }}" class="tab-icon" width="19" height="19" alt="">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-bookmark.svg') }}" class="tab-icon" width="19" height="19" alt="">
     <span class="tab-label">ذخیره شده‌ها</span>
   </button>
   @if($referralProfileEnabled ?? false)
@@ -16,11 +16,11 @@
   </button>
   @endif
   <button type="button" class="profile-tab" data-tab="files">
-    <img src="{{ asset('assets/img/icons/fi-sr-file.svg') }}" class="tab-icon" width="19" height="19" alt="">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-file.svg') }}" class="tab-icon" width="19" height="19" alt="">
     <span class="tab-label">فایل‌ها</span>
   </button>
   <button type="button" class="profile-tab active" data-tab="grid">
-    <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" class="tab-icon" width="19" height="19" alt="">
+    <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-grid.svg') }}" class="tab-icon" width="19" height="19" alt="">
     <span class="tab-label">محتوا</span>
   </button>
 </div>
@@ -33,6 +33,7 @@
             data-date="{{ $item->jalali_created_at }}"
             data-product-name="{{ optional($item->product)->name_fa ?? optional($item->product)->name_en ?? 'نامشخص' }}"
             data-product-url="{{ $item->product_url ?? '' }}"
+            data-product-create-url="{{ optional($item->product)->route_slug ? route('app.create.product', optional($item->product)->route_slug) : '' }}"
             data-product-download-url="{{ optional($item->product)->slug ? route('app.product.download', optional($item->product)->slug) : '' }}"
             aria-label="نمایش عکس ساخته‌شده">
       <img src="{{ asset('storage/' . $item->image_path) }}" alt="" class="grid-img" loading="lazy">
@@ -42,7 +43,7 @@
     </button>
   @empty
     <div class="grid-empty">
-      <img src="{{ asset('assets/img/icons/fi-sr-grid.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-grid.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
       <p>هنوز محتوایی نساختی</p>
       <a href="{{ route('app.explore') }}" class="btn-empty-cta">ساخت اولین محتوا</a>
     </div>
@@ -60,7 +61,7 @@
     </a>
   @empty
     <div class="grid-empty">
-      <img src="{{ asset('assets/img/icons/fi-sr-bookmark.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-bookmark.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
       <p>هنوز هیچ محصولی سیو نکردی</p>
       <a href="{{ route('app.explore') }}" class="btn-empty-cta">مشاهده محصولات</a>
     </div>

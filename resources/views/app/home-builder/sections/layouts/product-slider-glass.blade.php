@@ -6,7 +6,7 @@
 <div class="hb-glass-row">
   @foreach($products as $product)
     <a class="hb-glass-item" href="{{ route('app.product', $product->route_slug) }}">
-      <div class="hb-glass-media" style="background-image: url('{{ $product->displayImageUrl() }}');"></div>
+      <div class="hb-glass-media" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);"></div>
       <div class="hb-glass-body">
         @if($hbShowCredit)
           <div class="hb-card-cost"><i class="fa-solid fa-bolt"></i> {{ number_format((int) $product->credit_cost) }} کردیت</div>

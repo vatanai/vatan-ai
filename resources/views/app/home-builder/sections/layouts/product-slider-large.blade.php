@@ -22,7 +22,7 @@
   @foreach($products as $product)
     @php($hbBadge = $hbLargeBadge($product))
     <a class="hb-large-card" href="{{ route('app.product', $product->route_slug) }}">
-      <div class="hb-large-media" style="background-image: url('{{ $product->displayImageUrl() }}');">
+      <div class="hb-large-media" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image);">
         @if($hbBadge && $section->setting('large_show_status_badge', true))
           <span class="hb-large-badge {{ $hbBadge['class'] }}">{{ $hbBadge['label'] }}</span>
         @endif

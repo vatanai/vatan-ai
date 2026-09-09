@@ -27,12 +27,12 @@
   @include('partials.site-icons')
 
   {{-- ۱. اولویت لود فونت‌ها --}}
-  <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
-  <link href="{{ asset('css/theme-tokens.css') }}?v={{ filemtime(public_path('css/theme-tokens.css')) }}" rel="stylesheet">
+  <link href="{{ \App\Support\AppAsset::url('css/fonts.css') }}" rel="stylesheet">
+  <link href="{{ \App\Support\AppAsset::url('css/theme-tokens.css') }}" rel="stylesheet">
   @vite(['resources/css/app.css', 'resources/js/app.js'])
   @stack('styles')
   {{-- استایل مستقل فوتر عمداً بعد از استایل صفحات لود می‌شود؛ بدون تایید کاربر جابه‌جا یا ادغام نشود. --}}
-  <link href="{{ asset('css/app-footer.css') }}?v={{ filemtime(public_path('css/app-footer.css')) }}" rel="stylesheet">
+  <link href="{{ \App\Support\AppAsset::url('css/app-footer.css') }}" rel="stylesheet">
 
   <style>
     
@@ -183,7 +183,14 @@
   </main>
 
   @if($showAppFooter)
-    @include('app.partials.footer')
+    @if(request()->routeIs('privacy'))
+      @include('site.preview.partials.footer')
+      <section class="vp-app-footer-wrap vp-app-footer-wrap--public" aria-label="فوتر اپ وطن">
+        @include('app.partials.footer')
+      </section>
+    @else
+      @include('app.partials.footer')
+    @endif
   @endif
 
   {{-- ناوبری هدر و فوتر موبایل --}}

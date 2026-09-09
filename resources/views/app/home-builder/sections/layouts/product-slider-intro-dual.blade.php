@@ -3,7 +3,7 @@
   @include('app.home-builder.sections.partials.intro-card')
   <div class="hb-intro-dual-products">
     @foreach($products as $product)
-      <a class="hb-intro-dual-card" href="{{ route('app.product', $product->route_slug) }}" style="background-image:url('{{ $product->displayImageUrl() }}')">
+      <a class="hb-intro-dual-card" href="{{ route('app.product', $product->route_slug) }}" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
         <div class="hb-neon-overlay"></div>
         @if($section->setting('show_credit', true) || $section->setting('show_title', true) || $section->setting('show_category', true))
           <div class="hb-neon-info">

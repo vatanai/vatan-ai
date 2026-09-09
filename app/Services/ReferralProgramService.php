@@ -155,6 +155,9 @@ class ReferralProgramService
             return $this->conversionFor($invitee);
         }
 
+        $attribution = $request->session()->get('referral.attribution');
+        $code = $code ?: (is_array($attribution) ? ($attribution['referral_code'] ?? null) : null);
+
         $inviter = User::query()
             ->where('referral_code', strtoupper(trim((string) $code)))
             ->where('status', 'active')
@@ -163,7 +166,6 @@ class ReferralProgramService
             return null;
         }
 
-        $attribution = $request->session()->get('referral.attribution');
         $visit = is_array($attribution)
             ? ReferralVisit::query()->whereKey($attribution['visit_id'] ?? null)->first()
             : $this->captureVisit($inviter, $request, null, null, 'manual_purchase');

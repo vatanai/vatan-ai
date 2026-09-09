@@ -13,7 +13,7 @@
   @foreach(collect($hoverLibrary)->take((int) $hoverCols * $hoverRows) as $hoverCode => $hoverName)
     @php($product = $products[$loop->index % max(1, $products->count())])
     <a class="hb-library-card hb-hover-effect--{{ $hoverCode }}" href="{{ route('app.product', $product->route_slug) }}">
-      <div class="hb-library-media hb-effect-target" style="background-image:url('{{ $product->displayImageUrl() }}')">
+      <div class="hb-library-media hb-effect-target" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
         <span class="hb-effect-shine"></span><i class="fa-solid fa-bolt hb-effect-token"></i>
         <div class="hb-library-caption"><b>{{ $hoverName }}</b><small>{{ $hoverCode }}</small></div>
       </div>

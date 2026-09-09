@@ -329,12 +329,11 @@ class ServiceCreditTransactionReport
         }
 
         $payload = (array) $order->input_payload;
-        $paths = array_merge(
+        $paths = array_values(array_unique(array_filter(array_merge(
             (array) data_get($payload, 'source_upload_paths', []),
             [data_get($payload, 'source_upload_path')]
-        );
+        ), fn ($path): bool => is_scalar($path) && filled($path))));
         $media = collect($paths)
-            ->filter(fn ($path): bool => is_scalar($path) && filled($path))
             ->map(fn ($path): array => [
                 'type' => 'image',
                 'url' => filter_var($path, FILTER_VALIDATE_URL) ? (string) $path : asset('storage/' . ltrim((string) $path, '/')),
@@ -342,7 +341,26 @@ class ServiceCreditTransactionReport
                 'text' => null,
             ]);
 
-        if (filled(data_get($payload, 'source_video_url'))) {
+        $inputPrompt = data_get($payload, 'prompt') ?: data_get($payload, 'fields.prompt');
+        if (filled($inputPrompt)) {
+            $media->prepend([
+                'type' => 'text',
+                'url' => route('admin.orders.show', $order),
+                'label' => 'متن ورودی',
+                'text' => (string) $inputPrompt,
+            ]);
+        }
+
+        if (filled(data_get($payload, 'source_video_path'))) {
+            $media->push([
+                'type' => 'video',
+                'url' => asset('storage/' . ltrim((string) data_get($payload, 'source_video_path'), '/')),
+                'label' => 'ویدیوی ورودی',
+                'text' => null,
+            ]);
+        }
+
+        if (filled(data_get($payload, 'source_video_url')) && ! filled(data_get($payload, 'source_video_path'))) {
             $media->push([
                 'type' => 'video',
                 'url' => (string) data_get($payload, 'source_video_url'),

@@ -6,6 +6,8 @@ use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
 use App\Models\ReferralConversion;
+use App\Models\ReferralLink;
+use App\Models\Product;
 use App\Models\PlanPurchase;
 use App\Models\TokenLog;
 use App\Models\User;
@@ -32,6 +34,47 @@ class ReferralProgramTest extends TestCase
             ->assertSessionHas('referral.attribution.inviter_id', $firstInviter->id);
 
         self::assertSame(1, ReferralVisit::query()->count());
+    }
+
+    public function test_product_link_redirects_to_the_product_and_remains_usable_after_attribution(): void
+    {
+        $inviter = User::factory()->create(['status' => 'active']);
+        $product = $this->createActiveProduct('referral-product-link-test');
+        $link = ReferralLink::query()->create([
+            'inviter_id' => $inviter->id,
+            'product_id' => $product->id,
+            'slug' => 'productlinktest',
+            'destination_url' => route('app.product', $product->route_slug),
+            'status' => 'active',
+        ]);
+
+        $this->get(route('referral.link', $link->slug))
+            ->assertRedirect(route('app.product', $product->route_slug));
+
+        $this->get(route('referral.link', $link->slug))
+            ->assertRedirect(route('app.product', $product->route_slug));
+
+        self::assertDatabaseHas('referral_visits', [
+            'inviter_id' => $inviter->id,
+            'link_id' => $link->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
+    public function test_existing_user_can_be_attributed_from_the_saved_link_without_entering_a_code_again(): void
+    {
+        $inviter = User::factory()->create(['status' => 'active']);
+        $invitee = User::factory()->create(['status' => 'active']);
+
+        $conversion = app(ReferralProgramService::class)->attributeExistingUser(
+            $invitee,
+            null,
+            $this->attributedRequest($inviter),
+        );
+
+        self::assertNotNull($conversion);
+        self::assertSame($inviter->id, $invitee->fresh()->referred_by);
+        self::assertSame($inviter->id, $conversion->inviter_id);
     }
 
     public function test_registration_and_referral_rewards_are_paid_once_and_logged(): void
@@ -144,5 +187,19 @@ class ReferralProgramTest extends TestCase
         app(ReferralProgramService::class)->captureVisit($inviter, $request);
 
         return $request;
+    }
+
+    private function createActiveProduct(string $slug): Product
+    {
+        return Product::query()->create([
+            'name_fa' => 'محصول تست رفرال',
+            'name_en' => 'Referral Test Product',
+            'slug' => $slug,
+            'category' => 'TEST',
+            'status' => 'active',
+            'thumbnail' => 'products/test.jpg',
+            'primary_model' => 'test-model',
+            'prompt_template' => 'یک تصویر آزمایشی بساز.',
+        ]);
     }
 }

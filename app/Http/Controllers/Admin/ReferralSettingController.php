@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ReferralLink;
 use App\Models\TelegramBotContent;
 use App\Models\ReferralConversion;
 use App\Models\ReferralReward;
@@ -10,13 +11,18 @@ use App\Models\ReferralSetting;
 use App\Models\ReferralSettingLog;
 use App\Models\ReferralVisit;
 use App\Models\TokenLog;
+use App\Models\User;
+use App\Models\Product;
+use App\Models\GeneratedImage;
 use App\Services\ReferralProgramService;
+use App\Support\Numeral;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReferralSettingController extends Controller
@@ -62,6 +68,7 @@ class ReferralSettingController extends Controller
         $data = $request->validate([
             'registration_gift_enabled' => ['required', 'boolean'],
             'registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'prelogin_credit_text' => ['required', 'string', 'max:255'],
             'telegram_registration_gift_enabled' => ['required', 'boolean'],
             'telegram_registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'telegram_channel_username' => ['nullable', 'string', 'max:120'],
@@ -77,6 +84,16 @@ class ReferralSettingController extends Controller
             'telegram_start_button_text' => ['nullable', 'string', 'max:255'],
             'telegram_start_button_url' => ['nullable', 'url', 'max:2048'],
         ]);
+
+        $preloginText = trim((string) $data['prelogin_credit_text']);
+        $normalizedPreloginText = Numeral::toAscii($preloginText);
+        if (preg_match('/(?<!\d)\d+(?!\d)/', $normalizedPreloginText, $matches)) {
+            $parsedGiftTokens = (int) $matches[0];
+            if ($parsedGiftTokens > 1000000) {
+                return back()->withErrors(['prelogin_credit_text' => 'عدد اعتبار قبل لاگین نمی‌تواند بیشتر از یک میلیون باشد.'])->withInput();
+            }
+            $data['registration_gift_tokens'] = $parsedGiftTokens;
+        }
 
         $startKeys = [
             'telegram_start_media_type',
@@ -184,6 +201,105 @@ class ReferralSettingController extends Controller
         $records = null;
         $reviewConversions = null;
         $reviewRewards = null;
+        $inviterCards = collect();
+        $referralProducts = collect();
+
+        if ($page === 'overview') {
+            $referralProducts = Product::query()
+                ->where('status', 'active')
+                ->orderBy('name_fa')
+                ->get(['id', 'name_fa', 'name_en', 'slug', 'product_code']);
+
+            $inviterCards = User::query()
+                ->select(['users.id', 'users.name', 'users.last_name', 'users.phone', 'users.referral_code', 'users.avatar'])
+                ->with([
+                    'referralLinks' => function ($query): void {
+                        $query
+                            ->with('product:id,name_fa,name_en,slug,product_code')
+                            ->withCount('visits')
+                            ->withCount('conversions')
+                            ->withCount(['conversions as purchases_count' => fn ($conversionQuery) => $conversionQuery->whereHas('invitee.planPurchases', fn ($purchaseQuery) => $purchaseQuery->where('status', 'completed'))])
+                            ->withCount(['conversions as first_images_count' => fn ($conversionQuery) => $conversionQuery->whereNotNull('first_image_at')]);
+                    },
+                    'referralConversions' => function ($query): void {
+                        $query
+                            ->latest()
+                            ->with([
+                                'invitee' => function ($inviteeQuery): void {
+                                    $inviteeQuery
+                                        ->select(['id', 'name', 'last_name', 'phone'])
+                                        ->withCount('generatedImages')
+                                        ->withExists(['planPurchases as completed_purchase_exists' => fn ($purchaseQuery) => $purchaseQuery->where('status', 'completed')]);
+                                },
+                                'link.product:id,name_fa,name_en,slug,product_code',
+                            ]);
+                    },
+                ])
+                ->selectSub(
+                    ReferralLink::query()
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('referral_links.inviter_id', 'users.id'),
+                    'referral_links_count'
+                )
+                ->selectSub(
+                    ReferralVisit::query()
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('referral_visits.inviter_id', 'users.id'),
+                    'referral_clicks_count'
+                )
+                ->selectSub(
+                    ReferralConversion::query()
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('referral_conversions.inviter_id', 'users.id'),
+                    'referral_registrations_count'
+                )
+                ->selectSub(
+                    ReferralConversion::query()
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('referral_conversions.inviter_id', 'users.id')
+                        ->whereHas('invitee.planPurchases', fn ($query) => $query->where('status', 'completed')),
+                    'referral_purchases_count'
+                )
+                ->selectSub(
+                    ReferralReward::query()
+                        ->selectRaw('COALESCE(SUM(amount), 0)')
+                        ->whereColumn('referral_rewards.user_id', 'users.id')
+                        ->where('status', 'paid')
+                        ->where(fn ($query) => $query->whereNull('currency')->orWhere('currency', 'token')),
+                    'referral_paid_tokens'
+                )
+                ->selectSub(
+                    GeneratedImage::query()
+                        ->selectRaw('COUNT(*)')
+                        ->whereIn('user_id', ReferralConversion::query()
+                            ->select('invitee_id')
+                            ->whereColumn('referral_conversions.inviter_id', 'users.id')),
+                    'referral_generated_images_count'
+                )
+                ->where(function ($query): void {
+                    $query
+                        ->whereExists(fn ($subquery) => $subquery
+                            ->selectRaw('1')
+                            ->from('referral_links')
+                            ->whereColumn('referral_links.inviter_id', 'users.id'))
+                        ->orWhereExists(fn ($subquery) => $subquery
+                            ->selectRaw('1')
+                            ->from('referral_visits')
+                            ->whereColumn('referral_visits.inviter_id', 'users.id'))
+                        ->orWhereExists(fn ($subquery) => $subquery
+                            ->selectRaw('1')
+                            ->from('referral_conversions')
+                            ->whereColumn('referral_conversions.inviter_id', 'users.id'))
+                        ->orWhereExists(fn ($subquery) => $subquery
+                            ->selectRaw('1')
+                            ->from('referral_rewards')
+                            ->whereColumn('referral_rewards.user_id', 'users.id'));
+                })
+                ->orderByDesc('referral_clicks_count')
+                ->orderByDesc('referral_registrations_count')
+                ->limit(24)
+                ->get();
+        }
 
         if ($tab) {
             $records = match ($tab) {
@@ -204,8 +320,57 @@ class ReferralSettingController extends Controller
 
         return view('admin.settings.referrals', compact(
             'settings', 'stats', 'page', 'pageMeta', 'tab', 'tabCounts',
-            'records', 'reviewConversions', 'reviewRewards'
+            'records', 'reviewConversions', 'reviewRewards', 'inviterCards', 'referralProducts'
         ));
+    }
+
+    /** ساخت لینک محصولی برای یک کاربر از داخل پنل مدیریت. */
+    public function createUserLink(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+        ]);
+        $product = Product::query()->whereKey($data['product_id'])->where('status', 'active')->firstOrFail();
+        $existing = $user->referralLinks()
+            ->where('product_id', $product->id)
+            ->where('status', 'active')
+            ->whereNull('deactivated_at')
+            ->latest('id')
+            ->first();
+
+        if ($existing) {
+            return back()->with('success', 'برای این کاربر و محصول، لینک فعال از قبل وجود دارد.');
+        }
+
+        do {
+            $slug = Str::lower(Str::random(8));
+        } while (ReferralLink::query()->where('slug', $slug)->exists());
+
+        ReferralLink::query()->create([
+            'inviter_id' => $user->id,
+            'product_id' => $product->id,
+            'slug' => $slug,
+            'destination_url' => route('app.product', $product->route_slug),
+            'status' => 'active',
+        ]);
+
+        return back()->with('success', 'لینک دعوت برای کاربر ساخته شد.');
+    }
+
+    /** فعال یا غیرفعال کردن لینک محصولی از پنل مدیریت. */
+    public function toggleUserLink(Request $request, ReferralLink $referralLink): RedirectResponse
+    {
+        abort_unless($request->user('admin')?->isLeader(), 403);
+
+        $active = $referralLink->status === 'active' && $referralLink->deactivated_at === null;
+        $referralLink->update([
+            'status' => $active ? 'inactive' : 'active',
+            'deactivated_at' => $active ? now() : null,
+        ]);
+
+        return back()->with('success', $active ? 'لینک دعوت غیرفعال شد.' : 'لینک دعوت دوباره فعال شد.');
     }
 
     public function update(Request $request): RedirectResponse

@@ -13,7 +13,7 @@
   @foreach($visibleProducts as $hoverIndex => $product)
     @php($hoverModel = $hoverModels[$hoverIndex % count($hoverModels)])
     <a class="hb-hover-card {{ $hoverModel['code'] }}" href="{{ route('app.product', $product->route_slug) }}">
-      <div class="hb-hover-media" style="background-image:url('{{ $product->displayImageUrl() }}')">
+      <div class="hb-hover-media" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)">
         <span class="hb-hover-model-name">{{ $hoverModel['name'] }}</span>
         <div class="hb-hover-shade"></div>
         <div class="hb-hover-info">

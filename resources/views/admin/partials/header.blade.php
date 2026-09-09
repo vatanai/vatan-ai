@@ -23,15 +23,12 @@
       <span class="tb-version" title="نسخه پنل مدیریت">V.{{ $adminDashboardVersion }}</span>
     @endif
 
-    <div class="tb-breadcrumb flex-1 max-[480px]:overflow-hidden">
-      <span class="max-[480px]:hidden">پنل مدیریت</span>
-      <i class="fa-solid fa-angle-left max-[480px]:hidden"></i>
-      <span class="active-crumb" id="breadcrumb">مرکز فرماندهی</span>
-    </div>
+    @include('admin.partials.breadcrumb')
 
-    <div class="tb-search w-[220px] max-[768px]:w-40 max-[600px]:hidden">
+    <div class="tb-search w-[220px] max-[768px]:w-40 max-[600px]:hidden" data-search-url="{{ route('admin.search') }}">
       <i class="fa-solid fa-magnifying-glass si"></i>
-      <input type="text" placeholder="جستجو در پنل...">
+      <input id="admin-global-search" type="search" placeholder="جستجو در پنل..." autocomplete="off" spellcheck="false" aria-label="جستجو در پنل" aria-controls="admin-global-search-results" aria-expanded="false">
+      <div id="admin-global-search-results" class="tb-search-results hidden" role="listbox" aria-label="نتیجه‌های جستجو"></div>
     </div>
 
     <div class="tb-iran-clock max-[1100px]:hidden" title="ساعت رسمی ایران">
@@ -97,5 +94,77 @@
       };
       render();
       window.setInterval(render, 1000);
+    })();
+    (function adminGlobalSearch() {
+      const wrapper = document.querySelector('.tb-search[data-search-url]');
+      const input = document.getElementById('admin-global-search');
+      const results = document.getElementById('admin-global-search-results');
+      if (!wrapper || !input || !results) return;
+
+      let timer = null;
+      let controller = null;
+      const close = function () {
+        results.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+      };
+      const showMessage = function (message, icon) {
+        results.innerHTML = '';
+        const state = document.createElement('div');
+        state.className = 'tb-search-state';
+        state.innerHTML = '<i class="fa-solid ' + icon + '"></i><span></span>';
+        state.querySelector('span').textContent = message;
+        results.appendChild(state);
+        results.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+      };
+      const render = function (items) {
+        results.innerHTML = '';
+        if (!items.length) {
+          showMessage('نتیجه‌ای پیدا نشد.', 'fa-circle-info');
+          return;
+        }
+        items.forEach(function (item) {
+          const link = document.createElement('a');
+          link.className = 'tb-search-result';
+          link.href = item.url;
+          link.setAttribute('role', 'option');
+          const icon = document.createElement('i');
+          icon.className = 'fa-solid ' + (item.icon || 'fa-magnifying-glass');
+          const text = document.createElement('span');
+          text.className = 'tb-search-result-copy';
+          const label = document.createElement('strong');
+          label.textContent = item.label || '';
+          const meta = document.createElement('small');
+          meta.textContent = item.meta || '';
+          text.append(label, meta);
+          link.append(icon, text);
+          results.appendChild(link);
+        });
+        results.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+      };
+      const search = function () {
+        const query = input.value.trim();
+        if (controller) controller.abort();
+        if (query.length < 2) { close(); return; }
+        showMessage('در حال جستجو…', 'fa-spinner fa-spin');
+        controller = new AbortController();
+        fetch(wrapper.dataset.searchUrl + '?q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' }, signal: controller.signal })
+          .then(function (response) { if (!response.ok) throw new Error('search_failed'); return response.json(); })
+          .then(function (payload) { render(Array.isArray(payload.data) ? payload.data : []); })
+          .catch(function (error) { if (error.name !== 'AbortError') showMessage('جستجو انجام نشد؛ دوباره تلاش کنید.', 'fa-triangle-exclamation'); });
+      };
+      input.addEventListener('input', function () {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(search, 220);
+      });
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { input.value = ''; close(); }
+        if (event.key === 'Enter') {
+          const first = results.querySelector('a.tb-search-result');
+          if (first && !results.classList.contains('hidden')) { event.preventDefault(); first.click(); }
+        }
+      });
+      document.addEventListener('click', function (event) { if (!wrapper.contains(event.target)) close(); });
     })();
   </script>

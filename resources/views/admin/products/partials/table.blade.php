@@ -38,6 +38,36 @@
 <style>
   .products-table-compact thead th:nth-child(7),
   .products-table-compact thead th:nth-child(10) { line-height:1.35; }
+
+  @media (min-width: 768px) {
+    .products-table-compact thead th {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .products-table-compact tbody td {
+      text-align: center;
+      vertical-align: middle;
+    }
+    .products-table-compact thead th:nth-child(3),
+    .products-table-compact tbody td.td-product {
+      text-align: right;
+    }
+    .products-table-compact tbody td[data-label="آخرین ویرایش"] > div {
+      width: max-content;
+      max-width: 100%;
+      margin-inline: auto;
+      text-align: center;
+    }
+    .products-table-compact tbody td[data-label="آخرین ویرایش"] .flex,
+    .products-table-compact tbody td[data-label^="عملیات"] > div {
+      justify-content: center !important;
+    }
+    .products-table-compact thead th:last-child,
+    .products-table-compact tbody td[data-label^="عملیات"] {
+      text-align: center;
+    }
+  }
+
   .products-table-compact .td-product .badge-success[title*="آزمایشگاه"] { display:none; }
   .products-table-compact td[data-label*="بهینه"] > div { display:grid !important; grid-template-columns:1fr; gap:5px; justify-items:center; }
   .products-table-compact td[data-label*="بهینه"] > div > button,
@@ -49,6 +79,145 @@
   .products-table-compact .product-run-token-stack span { color:var(--text-soft); font-size:9px; font-weight:700; }
   .products-table-compact .product-price-stack b,
   .products-table-compact .product-run-token-stack strong { color:var(--text-main); font-size:11px; font-weight:800; }
+  .products-table-compact .product-lab-cost-stack { display:flex; flex-direction:column; align-items:stretch; gap:4px; min-width:116px; }
+  .products-table-compact .product-lab-cost-row { display:flex; align-items:center; justify-content:space-between; gap:7px; white-space:nowrap; }
+  .products-table-compact .product-lab-cost-row > span:first-child { color:var(--text-soft); font-size:9px; font-weight:800; }
+  .products-table-compact .product-lab-cost-value { display:inline-flex; align-items:center; gap:3px; direction:ltr; color:var(--text-main); font-size:9.5px; font-weight:800; }
+  .products-table-compact .product-lab-cost-source { position:relative; cursor:help; outline:none; }
+  .products-table-compact .product-lab-cost-source--actual { color:var(--success); }
+  .products-table-compact .product-lab-cost-source--verified { color:var(--success); }
+  body.light .products-table-compact .product-lab-cost-source--actual,
+  body.light .products-table-compact .product-lab-cost-source--verified { color:var(--primary); }
+  .products-table-compact .product-lab-cost-source--estimated,
+  .products-table-compact .product-lab-cost-source--model { color:var(--warning); }
+  .products-table-compact .product-lab-cost-source--unavailable { color:var(--text-soft); }
+  .products-table-compact .product-lab-cost-tooltip { position:absolute; z-index:40; right:0; bottom:calc(100% + 7px); width:220px; padding:8px 9px; border:1px solid var(--b1); border-radius:9px; background:var(--s2); box-shadow:var(--shadow-card); color:var(--text-main); direction:rtl; text-align:right; white-space:normal; opacity:0; visibility:hidden; transform:translateY(3px); pointer-events:none; transition:opacity .15s ease,visibility .15s ease,transform .15s ease; }
+  .products-table-compact .product-lab-cost-source:hover .product-lab-cost-tooltip,
+  .products-table-compact .product-lab-cost-source:focus .product-lab-cost-tooltip,
+  .products-table-compact .product-lab-cost-source:focus-within .product-lab-cost-tooltip { opacity:1; visibility:visible; transform:translateY(0); }
+  .products-table-compact .product-lab-cost-tooltip strong { display:block; margin-bottom:3px; color:var(--text-main); font-size:9.5px; line-height:1.6; }
+  .products-table-compact .product-lab-cost-tooltip small { display:block; color:var(--text-soft); font-size:8.5px; line-height:1.65; }
+  .products-table-compact .product-lab-cost-value small { color:var(--text-soft); font-size:8px; font-weight:700; }
+  .products-table-compact .product-lab-cost-meta { display:block; margin-top:2px; color:var(--text-soft); font-size:8px; line-height:1.4; }
+  .products-table-compact .product-code-category-stack,
+  .products-table-compact .product-credit-cost-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-width:128px; }
+  .products-table-compact .product-code-category-stack > div { display:flex; align-items:center; justify-content:center; gap:5px; flex-wrap:wrap; }
+  .products-table-compact .product-code-category-stack > div:nth-child(2) { flex-direction:column; gap:4px; max-width:100%; }
+  .products-table-compact .product-category-values { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px; max-width:100%; }
+  .products-table-compact .product-category-values .badge-pro { white-space:normal; overflow-wrap:anywhere; text-align:center; }
+  .products-table-compact .product-code-category-stack .stack-label { color:var(--text-soft); font-size:9px; font-weight:700; }
+  .products-table-compact .product-code-category-stack .stack-value { color:var(--text-main); font-size:10.5px; font-weight:800; }
+  .products-table-compact .product-audit-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; min-width:0; }
+  .products-table-compact .product-audit-entry { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; line-height:1.35; }
+  .products-table-compact .product-audit-date { color:var(--text-main); font-size:10.5px; font-weight:800; white-space:nowrap; }
+  .products-table-compact .product-audit-actor { max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-soft); font-size:9.5px; font-weight:700; }
+  .products-table-compact .product-actions-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .products-table-compact .product-actions-stack > .flex { gap:8px !important; }
+  .products-table-compact .product-like-box { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:64px; min-height:30px; padding:3px 6px 3px 8px; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); direction:rtl; }
+  .products-table-compact .product-like-count { color:var(--text-main); font-size:10.5px; font-weight:800; line-height:1; }
+  .products-table-compact .product-like-icon { width:23px; height:23px; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; background:var(--danger-l); color:var(--danger); font-size:10px; }
+  .products-table-compact .product-actions-stack .dropdown-pro { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .products-table-compact .product-action-link { display:flex; width:max-content; margin-top:0; padding-top:8px; border-top:0; }
+  .products-table-compact td[data-label*="بهینه"] > .product-status-optimization-stack { display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .products-table-compact .product-status-line { display:flex; align-items:center; justify-content:center; min-height:24px; }
+  .products-table-compact .product-status-optimization-stack .icon-action-btn { width:31px; height:31px; min-height:31px; }
+  .products-table-compact .product-credit-cost-stack .product-lab-cost-stack { width:100%; min-width:0; gap:3px; }
+  .products-table-compact .product-credit-cost-stack .product-lab-cost-row { gap:5px; }
+  .products-table-compact .product-credit-cost-stack .product-lab-cost-row > span:first-child { font-size:8.5px; }
+  .products-table-compact .product-credit-cost-stack .product-lab-cost-value { font-size:9px; }
+  .products-table-compact .product-credit-cost-stack,
+  .products-table-compact .product-credit-cost-stack .product-lab-cost-stack { overflow:visible; }
+
+  /*
+   * جدول محصولات در دسکتاپ فضای ثابتی دارد؛ ستون‌های عملیاتی نباید فضای
+   * توضیحات محصول را بگیرند. محتوای طولانی نیز باید داخل سلول خودش کنترل شود.
+   */
+  @media (min-width: 768px) {
+    .products-table-compact th:nth-child(4) { width: 138px !important; }
+    .products-table-compact th:nth-child(5) { width: 118px !important; }
+    .products-table-compact th:nth-child(9) { width: 96px !important; }
+    .products-table-compact th:nth-child(10) { width: 130px !important; }
+    .products-table-compact th:nth-child(11) { width: 112px !important; }
+
+    .products-table-compact td[data-label^="کد محصول"],
+    .products-table-compact td[data-label^="ویژگی‌ها"] {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .products-table-compact .product-code-category-stack {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    /* popup قیمت باید از ارتفاع سلول بیرون بیاید و بریده نشود. */
+    .products-table-compact .product-credit-cost-stack {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: visible;
+    }
+
+    .products-table-compact .product-code-category-stack > div,
+    .products-table-compact .product-category-values {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .products-table-compact td[data-label^="ویژگی‌ها"] > div {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .products-table-compact td[data-label^="ویژگی‌ها"] .product-ai-status,
+    .products-table-compact td[data-label^="ویژگی‌ها"] > div:last-child {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .products-table-compact td[data-label^="ویژگی‌ها"] .badge-pro {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(8px, 0.52vw, 9px);
+      line-height: 1.25;
+    }
+
+    .products-table-compact td[data-label^="ویژگی‌ها"] .product-ai-status .badge-pro {
+      max-width: 100%;
+    }
+
+    .products-table-compact .product-category-values .badge-pro {
+      max-width: 100%;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.25;
+    }
+
+    .products-table-compact .product-audit-stack,
+    .products-table-compact .product-actions-stack,
+    .products-table-compact .product-status-optimization-stack {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .products-table-compact .product-audit-date,
+    .products-table-compact .product-audit-actor {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
 </style>
 
 {{-- ─── نوار عملیات گروهی (Bulk Action) — فقط وقتی چند ردیف انتخاب شود نمایش داده می‌شود ─── --}}
@@ -62,10 +231,10 @@
     <button type="button" class="btn-pro btn-pro-ghost" onclick="submitBulk('activate')"><i class="fa-solid fa-circle-check text-[11px]"></i> فعال کردن</button>
     <button type="button" class="btn-pro btn-pro-ghost" onclick="submitBulk('deactivate')"><i class="fa-solid fa-circle-xmark text-[11px]"></i> غیرفعال کردن</button>
     <span class="pro-tooltip-wrap inline-flex">
-      <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkAiModelDialog()"><i class="fa-solid fa-microchip text-[11px]"></i> تغییر مدل هوش مصنوعی <i class="fa-solid fa-circle-question text-[9px]"></i></button>
-      <span class="pro-tooltip" style="width:270px;">مدل اصلی همه محصولات انتخاب‌شده را یکجا تغییر می‌دهد. پرامپت، ویژگی‌ها و مدل‌های جایگزین محصولات تغییری نمی‌کنند.</span>
+      <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkQualityConfigurationDialog()"><i class="fa-solid fa-layer-group text-[11px]"></i> تنظیم مدل‌های هوش مصنوعی <i class="fa-solid fa-circle-question text-[9px]"></i></button>
+      <span class="pro-tooltip" style="width:295px;">مدل اصلی و جایگزینِ کیفیت‌های استاندارد، حرفه‌ای و بهترین خروجی را یکجا برای محصولات انتخاب‌شده تنظیم می‌کند.</span>
     </span>
-    <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkCreditDialog()"><i class="fa-solid fa-coins text-[11px]"></i> تغییر گروهی کردیت</button>
+    <button type="button" class="btn-pro btn-pro-ghost" onclick="openBulkQualityCreditPresetDialog()"><i class="fa-solid fa-bolt text-[11px]"></i> تنظیم مصرف اعتبار</button>
     <select class="input-pro" style="width:150px;height:34px;" onchange="submitBulkCategory(this.value)">
       <option value="">تغییر دسته به...</option>
       @foreach(($categories ?? []) as $cat)
@@ -86,16 +255,14 @@
         <th style="width:40px;"><input type="checkbox" class="row-checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
         <th style="width:64px;"></th>
         <th>محصول</th>
-        <th>کد محصول</th>
-        <th style="text-align:center;">دسته‌بندی</th>
+        <th style="text-align:center;"><span class="block">نوع محصول</span><span class="block">کد محصول</span><span class="block">دسته‌بندی</span></th>
         <th style="text-align:center;"><span class="block">ویژگی‌ها</span><span class="block">هوش مصنوعی</span></th>
-        <th style="text-align:center;"><span class="block">اعتبار</span><span class="block">قیمت</span></th>
-        <th style="text-align:center;"><span class="block">تعداد اجرا</span><span class="block">تعداد لایک</span></th>
+        <th style="text-align:center;"><span class="block">اعتبار اجرا</span><span class="block">قیمت محصول</span></th>
+        <th style="text-align:center;"><span class="block">مالک</span><span class="block">تعداد اجرا</span></th>
         <th style="text-align:center;"><span class="block">زمان اجرا</span><span class="block">اعتبار مصرفی</span></th>
-        <th style="text-align:center;">بهینه سازی آزمایش</th>
-        <th style="text-align:center;"><span class="block">وضعیت</span><span class="block">لینک</span></th>
+        <th style="text-align:center;"><span class="block">فعال</span><span class="block">بهینه سازی</span><span class="block">آزمایشگاه</span></th>
         <th>آخرین ویرایش</th>
-        <th>عملیات</th>
+        <th><span class="block">عملیات</span><span class="block">لینک</span><span class="block">تعداد لایک</span></th>
       </tr>
     </thead>
     <tbody>
@@ -128,19 +295,32 @@
             </div>
           </td>
 
-          <td data-label="کد محصول">
-            {{-- کد اصلی ۶ رقمی محصول (ستون product_code) — همان کدی که در لینک عمومی محصول استفاده می‌شود --}}
-            @if($product->product_code)
-              <span class="font-mono text-[11.5px] font-semibold" style="color:var(--text-main);" dir="ltr">{{ $product->product_code }}</span>
-            @else
-              <span class="text-[11px]" style="color:var(--text-soft);" title="این محصول قدیمی هنوز کد ندارد — با اولین ویرایش، خودکار ساخته می‌شود">—</span>
-            @endif
-          </td>
-
-          <td data-label="دسته‌بندی" style="text-align:center;">
-            <div class="flex flex-col items-center justify-center gap-1">
-              <span class="badge-pro badge-primary">{{ $product->category }}</span>
-              @if($product->subcategory)<div class="text-[10.5px]" style="color:var(--text-soft);">{{ $product->subcategory }}</div>@endif
+          <td data-label="نوع محصول / کد محصول / دسته‌بندی" style="text-align:center;">
+            @php
+              $categoryLabels = collect($product->categories ?? [])
+                ->map(fn ($category) => $category->name_fa ?? $category->name ?? null)
+                ->filter()->values();
+              if ($categoryLabels->isEmpty()) {
+                $categoryLabels = collect([$product->category, $product->subcategory])->filter()->values();
+              }
+            @endphp
+            <div class="product-code-category-stack">
+              <div><span class="stack-label">نوع</span><span class="stack-value">{{ $product->media_type === 'video' ? 'محصول ویدیو' : ($product->media_type === 'both' ? 'محصول عکس و ویدیو' : 'محصول عکس') }}</span></div>
+              <div>
+                <span class="stack-label">کد</span>
+                @if($product->product_code)
+                  <span class="stack-value font-mono" dir="ltr">{{ $product->product_code }}</span>
+                @else
+                  <span class="stack-value" title="این محصول قدیمی هنوز کد ندارد — با اولین ویرایش، خودکار ساخته می‌شود">—</span>
+                @endif
+              </div>
+              <div>
+                <div class="product-category-values">
+                  @foreach($categoryLabels as $categoryLabel)
+                    <span class="badge-pro badge-primary">{{ $categoryLabel }}</span>
+                  @endforeach
+                </div>
+              </div>
             </div>
           </td>
 
@@ -177,26 +357,59 @@
             </div>
           </td>
 
-          <td data-label="اعتبار / قیمت" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
+          <td data-label="اعتبار اجرا / قیمت محصول" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
             @php
-              $labExperiment = $product->latestLabExperiment;
-              $modelCostUsd = $assignedAiModel?->cost_per_generation_usd;
-              $modelCostIrr = $modelCostUsd !== null ? (float) $modelCostUsd * (float) ($exchange['rate'] ?? 0) : null;
-              $priceUsd = $labExperiment
-                ? (float) ($labExperiment->total_cost_usd ?: $labExperiment->actual_cost_usd ?: $labExperiment->estimated_cost_usd)
-                : ($modelCostUsd !== null ? (float) $modelCostUsd : null);
-              $priceToman = $labExperiment
-                ? (float) ($labExperiment->total_cost_toman ?: $labExperiment->actual_cost_toman ?: $labExperiment->estimated_cost_toman)
-                : ($modelCostIrr !== null ? (float) $modelCostIrr / 10 : null);
+              $productLabCosts = collect((array) ($product->lab_cost_summary ?? []));
+              $qualityCreditCosts = $product->qualityCreditCosts();
             @endphp
-            <div class="product-price-stack" title="اعتبار محصول و قیمت ثبت‌شده در آخرین آزمایش">
-              <span><small>اعتبار</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost)) }}</b></span>
-              <span dir="ltr"><small>دلار</small><b>{{ $priceUsd !== null ? '$' . number_format($priceUsd, 4) : '—' }}</b></span>
-              <span><small>تومان</small><b>{{ $priceToman !== null ? number_format($priceToman) : '—' }}</b></span>
+            <div class="product-credit-cost-stack">
+              <div class="product-price-stack" aria-label="اعتبار مصرفی محصول در هر اجرا">
+                <span><small>استاندارد</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['standard'])) }}</b></span>
+                <span><small>حرفه‌ای</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['professional'])) }}</b></span>
+                <span><small>بهترین خروجی</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['best'])) }}</b></span>
+              </div>
+              <div class="product-lab-cost-stack" aria-label="هزینه‌ی واقعی، تأییدشده یا تخمینی ساخت یک خروجی؛ تومان بر اساس نرخ روز دلار">
+              @foreach($productLabCosts as $labCost)
+                @php
+                  $costTone = in_array(($labCost['tone'] ?? 'unavailable'), ['actual', 'verified', 'estimated', 'model', 'unavailable'], true)
+                    ? $labCost['tone']
+                    : 'unavailable';
+                  $costSourceLabel = $labCost['source_label'] ?? (($labCost['source'] ?? null) === 'actual' ? 'هزینه واقعی' : 'هزینه تخمینی');
+                  $costSourceDetail = $labCost['source_detail'] ?? 'جزئیات منبع قیمت ثبت نشده است.';
+                @endphp
+                <div class="product-lab-cost-row">
+                  <span>{{ $labCost['label'] }}</span>
+                  @if(($labCost['status'] ?? null) === 'available')
+                    <span class="product-lab-cost-value product-lab-cost-source product-lab-cost-source--{{ $costTone }}" tabindex="0" aria-label="{{ $costSourceLabel }}">
+                      ${{ number_format((float) $labCost['usd'], 4) }}
+                      <small>·</small>
+                      {{ number_format((int) $labCost['toman']) }} تومان
+                      <span class="product-lab-cost-tooltip" role="tooltip">
+                        <strong>{{ $costSourceLabel }}</strong>
+                        <small>{{ $costSourceDetail }}</small>
+                        @if(!empty($labCost['model']))<small>مدل: {{ $labCost['model'] }}</small>@endif
+                        @if(!empty($labCost['provider']))<small>پرووایدر: <b dir="ltr">{{ $labCost['provider'] }}</b></small>@endif
+                      </span>
+                    </span>
+                  @else
+                    <span class="product-lab-cost-value product-lab-cost-source product-lab-cost-source--unavailable" tabindex="0" aria-label="{{ $costSourceLabel }}">
+                      —
+                      <span class="product-lab-cost-tooltip" role="tooltip">
+                        <strong>{{ $costSourceLabel }}</strong>
+                        <small>{{ $costSourceDetail }}</small>
+                      </span>
+                    </span>
+                  @endif
+                </div>
+              @endforeach
+              @if($productLabCosts->isEmpty())
+                <span class="product-lab-cost-meta">پس از آزمایش محصول نمایش داده می‌شود</span>
+              @endif
+              </div>
             </div>
           </td>
 
-          <td data-label="تعداد اجرا / تعداد لایک" style="text-align:center;">
+          <td data-label="مالک / تعداد اجرا" style="text-align:center;">
             {{-- آمار واقعی اجرا از جدول generations (generations_count در کنترلر withCount شده)
                  نوار محبوبیت = نسبت اجرای این محصول به پراجراترین محصول پلتفرم ($maxRuns) --}}
             @php
@@ -204,15 +417,15 @@
               $runsPct = ($maxRuns ?? 0) > 0 ? (int) round(($runs / $maxRuns) * 100) : 0;
             @endphp
             <div class="flex flex-col items-center justify-center gap-1.5 pro-tooltip-wrap w-full">
+              <div class="flex items-center justify-center gap-1.5 max-w-full" title="مالک محصول">
+                <i class="fa-solid fa-user-tag text-[9px]" style="color:var(--primary);"></i>
+                <span class="text-[9px] font-bold truncate max-w-[110px]" style="color:var(--text-soft);">{{ $product->creatorRewardOwner ? trim($product->creatorRewardOwner->name.' '.($product->creatorRewardOwner->last_name ?? '')) : 'مالک تعیین نشده' }}</span>
+              </div>
               <div class="flex flex-col items-center justify-center gap-1 w-full">
                 <span class="font-bold text-[12.5px] text-center" style="color:var(--text-h);">{{ number_format($runs) }}</span>
                 <div class="progress-track mx-auto">
                   <div class="progress-fill" style="width:{{ $runsPct }}%;"></div>
                 </div>
-              </div>
-              <div class="flex items-center justify-center gap-1.5" dir="rtl" title="تعداد کل لایک">
-                <i class="fa-solid fa-heart text-[9px]" style="color:var(--danger);"></i>
-                <span class="font-bold text-[11.5px]" style="color:var(--text-main);">{{ number_format($product->displayed_likes_count) }}</span>
               </div>
               <div class="pro-tooltip" style="width:190px;">این محصول {{ number_format($runs) }} بار توسط کاربران اجرا شده — معادل {{ $runsPct }}٪ پراجراترین محصول پلتفرم</div>
             </div>
@@ -220,6 +433,7 @@
 
           <td data-label="زمان اجرا / اعتبار مصرفی" style="text-align:center;">
             @php
+              $labExperiment = $product->latestLabExperiment;
               $labRuns = $labExperiment?->runs ?? collect();
               $labRunForStats = $labRuns->firstWhere('is_selected', true)
                 ?? $labRuns->filter(fn ($run) => $run->rank !== null)->sortBy('rank')->first()
@@ -229,20 +443,37 @@
                 ? (float) $labRunForStats->build_seconds
                 : ($labRunForStats?->duration_ms !== null ? (float) $labRunForStats->duration_ms / 1000 : null);
               $labRunTokens = $labRunForStats?->tokens_used;
-              $totalUserTokens = (int) ($product->completed_generations_count ?? 0) * max(0, (int) ($product->pricing_model === 'free' ? 0 : $product->credit_cost));
+              $totalUserTokens = (int) ($product->completed_generations_count ?? 0) * max(0, (int) ($product->pricing_model === 'free' ? 0 : $product->qualityCreditCost('standard')));
             @endphp
             <div class="product-run-token-stack flex flex-col items-center justify-center gap-1.5">
               <div><span>زمان اجرا</span><strong>{{ $labBuildSeconds !== null ? number_format($labBuildSeconds, 1) . ' ثانیه' : '—' }}</strong></div>
               <div><span>اعتبار مصرفی</span><strong>{{ $labRunTokens !== null ? number_format((int) $labRunTokens) : '—' }}</strong></div>
               <div><span>مجموع اعتبار</span><strong>{{ number_format($totalUserTokens) }}</strong></div>
+              <div><span>اعتبار پاداش داده‌شده</span><strong class="text-[var(--primary)]">{{ number_format((int) ($product->creator_reward_credits_sum ?? 0)) }}</strong></div>
             </div>
           </td>
 
           @php
             $hasScoredLabExperiment = (int) ($product->scored_lab_experiments_count ?? 0) > 0;
           @endphp
-          <td data-label="بهینه سازی آزمایش" style="text-align:center;">
-            <div class="flex items-center justify-center gap-1.5">
+          <td data-label="فعال / بهینه سازی / آزمایشگاه" style="text-align:center;">
+            @php
+              $statusMap = [
+                'active'   => ['label' => 'فعال',      'class' => 'badge-success'],
+                'draft'    => ['label' => 'پیش‌نویس',  'class' => 'badge-warning'],
+                'inactive' => ['label' => 'غیرفعال',   'class' => 'badge-danger'],
+              ];
+              $st = $statusMap[$product->status] ?? $statusMap['draft'];
+            @endphp
+            <div class="product-status-optimization-stack">
+              <div class="product-status-line">
+                @if($product->status === 'draft')
+                  <span class="badge-pro {{ $st['class'] }}" style="display:inline-flex;" title="برای انتشار، محصول را ویرایش کنید"><i class="fa-solid fa-circle"></i> {{ $st['label'] }}</span>
+                @else
+                  <span class="badge-pro {{ $st['class'] }} is-clickable" style="display:inline-flex;" title="برای تغییر سریع وضعیت کلیک کنید" onclick="quickToggleStatus({{ $product->id }}, this)"><i class="fa-solid fa-circle"></i> {{ $st['label'] }}</span>
+                @endif
+              </div>
+              <div class="flex items-center justify-center gap-1.5">
               <button type="button"
                       class="product-image-optimize-btn icon-action-btn {{ $product->images_optimized_at ? 'is-optimized' : '' }}"
                       data-product-id="{{ $product->id }}"
@@ -263,98 +494,60 @@
                 <i class="fa-solid fa-flask"></i>
               </a>
             </div>
-          </td>
-
-          <td data-label="وضعیت" style="text-align:center;">
-            <div class="flex flex-col items-center justify-center">
-            @php
-              $statusMap = [
-                'active'   => ['label' => 'فعال',      'class' => 'badge-success'],
-                'draft'    => ['label' => 'پیش‌نویس',  'class' => 'badge-warning'],
-                'inactive' => ['label' => 'غیرفعال',   'class' => 'badge-danger'],
-              ];
-              $st = $statusMap[$product->status] ?? $statusMap['draft'];
-            @endphp
-            @if($product->status === 'draft')
-              <span class="badge-pro {{ $st['class'] }}" style="display:inline-flex;" title="برای انتشار، محصول را ویرایش کنید"><i class="fa-solid fa-circle"></i> {{ $st['label'] }}</span>
-            @else
-              <span class="badge-pro {{ $st['class'] }} is-clickable" style="display:inline-flex;" title="برای تغییر سریع وضعیت کلیک کنید" onclick="quickToggleStatus({{ $product->id }}, this)"><i class="fa-solid fa-circle"></i> {{ $st['label'] }}</span>
-            @endif
-            @php $publicProductUrl = route('app.product', $product->route_slug); @endphp
-            <div class="mt-2 pro-tooltip-wrap" style="display:flex;width:max-content;">
-              <button type="button" class="icon-action-btn"
-                      style="width:27px;height:27px;"
-                      aria-label="کپی لینک محصول"
-                      data-product-url="{{ $publicProductUrl }}"
-                      onclick="copyProductPublicLink(this)">
-                <i class="fa-solid fa-link"></i>
-              </button>
-              <div class="pro-tooltip" dir="ltr" style="width:260px;overflow-wrap:anywhere;">{{ $publicProductUrl }}</div>
-            </div>
             </div>
           </td>
 
           <td data-label="آخرین ویرایش">
             {{-- تاریخ و ساعت شمسی ثبت + آخرین ویرایش محصول (App\Support\Jalali::formatNumeric) --}}
-            <div>
-              <div class="text-[10px] font-bold" style="color:var(--text-soft);">تاریخ و ساعت ثبت</div>
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-[11.5px] font-semibold" style="color:var(--text-main);" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->created_at) }}</span>
-                <button type="button" class="icon-action-btn" style="width:24px;height:24px;" title="نمایش ثبت‌کننده" onclick="showAdminActor('ثبت‌کننده محصول','مدیر سیستم')"><i class="fa-solid fa-user"></i></button>
+            <div class="product-audit-stack">
+              <div class="product-audit-entry">
+                <span class="product-audit-date" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->created_at) }}</span>
+                <span class="product-audit-actor" title="{{ $product->creator?->name ?: 'ثبت‌کننده ثبت نشده' }}">{{ $product->creator?->name ?: 'ثبت‌کننده ثبت نشده' }}</span>
               </div>
-              <div class="text-[10px] font-bold" style="color:var(--text-soft);">تاریخ و ساعت آخرین ویرایش</div>
-              @if($product->created_at?->equalTo($product->updated_at))
-                <div class="text-[11px] font-semibold" style="color:var(--text-soft);">ویرایش نشده</div>
-              @else
-                <div class="flex items-center gap-2">
-                  <span class="text-[11.5px] font-semibold" style="color:var(--text-main);" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->updated_at) }}</span>
-                  <button type="button" class="icon-action-btn" style="width:24px;height:24px;" title="نمایش ویرایش‌کننده" onclick="showAdminActor('آخرین ویرایش‌کننده','مدیر سیستم')"><i class="fa-solid fa-user-pen"></i></button>
-                </div>
-              @endif
+              <div class="product-audit-entry">
+                <span class="product-audit-date" dir="rtl">{{ \App\Support\Jalali::formatNumeric($product->updated_at) }}</span>
+                <span class="product-audit-actor" title="{{ $product->editor?->name ?: 'ویرایش‌کننده ثبت نشده' }}">{{ $product->editor?->name ?: 'ویرایش‌کننده ثبت نشده' }}</span>
+              </div>
             </div>
           </td>
 
-          <td data-label="عملیات">
-            <div class="flex items-center gap-1 justify-end">
-              <button type="button" class="icon-action-btn favorite" title="نشان‌کردن به‌عنوان مهم (نیاز به بررسی برنامه برای ذخیره‌سازی)" onclick="this.classList.toggle('is-active')">
-                <i class="fa-solid fa-star"></i>
-              </button>
-
-              <div class="dropdown-pro">
-                <button type="button" class="icon-action-btn" onclick="toggleRowDropdown(event, {{ $product->id }})">
-                  <i class="fa-solid fa-ellipsis-vertical"></i>
+          <td data-label="عملیات / لینک / تعداد لایک">
+            <div class="product-actions-stack">
+              <div class="product-like-box" title="تعداد کل لایک" aria-label="تعداد کل لایک">
+                <span class="product-like-count">{{ number_format($product->displayed_likes_count) }}</span>
+                <span class="product-like-icon"><i class="fa-solid fa-heart" aria-hidden="true"></i></span>
+              </div>
+              <div class="flex items-center gap-1 justify-center">
+                <button type="button" class="icon-action-btn favorite" title="نشان‌کردن به‌عنوان مهم (نیاز به بررسی برنامه برای ذخیره‌سازی)" onclick="this.classList.toggle('is-active')">
+                  <i class="fa-solid fa-star"></i>
                 </button>
-                <div class="dropdown-pro-menu" id="row-dropdown-{{ $product->id }}">
-                  <button type="button" class="dropdown-pro-item" onclick="openDrawer({{ $product->id }})"><i class="fa-solid fa-eye"></i> مشاهده</button>
-                  <a href="{{ route('admin.products.create', $product->id) }}" class="dropdown-pro-item"><i class="fa-solid fa-pen"></i> ویرایش</a>
-                  <a href="{{ route('admin.lab.create', ['product_id' => $product->id]) }}" class="dropdown-pro-item"><i class="fa-solid fa-flask"></i> بازکردن در آزمایشگاه</a>
-                  {{-- کپی محصول: به‌جای ذخیره‌ی مستقیم، وارد فرم «ثبت محصول» با تمام فیلدهای پرشده می‌شود
-                       تا ادمین قبل از ثبت نهایی بتواند مقادیر را بازبینی/ویرایش کند (مسیر کوتاه‌تر). --}}
-                  <a href="{{ route('admin.products.create') }}?duplicate={{ $product->id }}" class="dropdown-pro-item"><i class="fa-solid fa-copy"></i> کپی محصول</a>
-                  <button type="button" class="dropdown-pro-item" onclick="quickToggleStatus({{ $product->id }}, null)">
-                    <i class="fa-solid fa-toggle-on"></i> تغییر وضعیت سریع
+
+                <div class="dropdown-pro">
+                  <button type="button" class="icon-action-btn" onclick="toggleRowDropdown(event, {{ $product->id }})">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
                   </button>
-                  <button type="button" class="dropdown-pro-item"
-                          data-product-id="{{ $product->id }}"
-                          data-product-name="{{ $product->name_fa }}"
-                          data-ai-provider="{{ $product->ai_provider }}"
-                          data-ai-model="{{ $product->primary_model }}"
-                          data-ai-url="{{ route('admin.products.update_ai_model', $product) }}"
-                          onclick="openProductAiModelDialog(this)" title="تغییر سریع مدل اصلی؛ بدون تغییر پرامپت و سایر تنظیمات محصول">
-                    <i class="fa-solid fa-microchip"></i> هوش مصنوعی <i class="fa-solid fa-circle-question text-[9px] mr-auto"></i>
-                  </button>
-                  <button type="button" class="dropdown-pro-item"
-                          data-product-id="{{ $product->id }}"
-                          data-product-name="{{ $product->name_fa }}"
-                          data-credit-cost="{{ (int) $product->credit_cost }}"
-                          data-credit-url="{{ route('admin.products.update_credit', $product) }}"
-                          onclick="editProductCredit(this)">
-                    <i class="fa-solid fa-coins"></i> اصلاح تعداد کردیت
-                  </button>
-                  <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" onsubmit="return confirm('این محصول حذف شود؟')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="dropdown-pro-item danger"><i class="fa-solid fa-trash"></i> حذف</button>
-                  </form>
+                  <div class="dropdown-pro-menu" id="row-dropdown-{{ $product->id }}">
+                    <a href="{{ $product->isVideoProduct() ? route('admin.products.video.create', $product) : route('admin.products.create', $product) }}" class="dropdown-pro-item"><i class="fa-solid fa-pen"></i> ویرایش</a>
+                    {{-- تکثیر محصول: به‌جای ذخیره‌ی مستقیم، وارد فرم «ثبت محصول» با تمام فیلدهای پرشده می‌شود
+                         تا ادمین قبل از ثبت نهایی بتواند مقادیر را بازبینی/ویرایش کند (مسیر کوتاه‌تر). --}}
+                    @unless($product->isVideoProduct())
+                      <a href="{{ route('admin.products.create') }}?duplicate={{ $product->id }}" class="dropdown-pro-item"><i class="fa-solid fa-copy"></i> تکثیر محصول</a>
+                    @endunless
+                    <button type="button" class="dropdown-pro-item" onclick="quickToggleStatus({{ $product->id }}, null)">
+                      <i class="fa-solid fa-toggle-on"></i> {{ $product->status === 'active' ? 'تغییر وضعیت به غیرفعال' : 'تغییر وضعیت به فعال' }}
+                    </button>
+                    <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" onsubmit="return confirm('این محصول حذف شود؟')">
+                      @csrf @method('DELETE')
+                      <button type="submit" class="dropdown-pro-item danger"><i class="fa-solid fa-trash"></i> حذف</button>
+                    </form>
+                  </div>
+                  @php $publicProductUrl = route('app.product', $product->route_slug); @endphp
+                  <div class="pro-tooltip-wrap product-action-link">
+                    <button type="button" class="icon-action-btn" aria-label="کپی لینک محصول" data-product-url="{{ $publicProductUrl }}" onclick="copyProductPublicLink(this)">
+                      <i class="fa-solid fa-link"></i>
+                    </button>
+                    <div class="pro-tooltip" dir="ltr" style="width:260px;overflow-wrap:anywhere;">{{ $publicProductUrl }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -362,7 +555,7 @@
         </tr>
       @empty
         <tr>
-          <td colspan="13" class="td-empty">
+          <td colspan="11" class="td-empty">
             <div class="empty-state">
               <div class="empty-state-icon"><i class="fa-solid fa-box-open"></i></div>
               <div class="empty-state-title">هنوز محصولی ثبت نشده است.</div>
@@ -432,26 +625,61 @@ $assignableAiModelsForJs = ($assignableAiModels ?? collect())->map(fn ($model) =
     'englishName' => $model->englishDisplayName(),
     'persianName' => $model->name,
     'provider' => $model->provider,
-    'providerFa' => ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
-    'providerEn' => ['liara' => 'Liara AI', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
+    'providerFa' => ['openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
+    'providerEn' => ['openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$model->provider] ?? $model->provider_name,
     'usage' => $model->productWorkflowLabel(),
     'workflow' => $model->supportsProductImageWorkflow() ? 'product_image' : $model->task_type,
     'task' => $model->task_type,
     'useCases' => $model->recommendedUseCaseKeys(),
     'grade' => $model->qualityGradeLabel(),
-    'plan' => $model->liara_plan,
+    'gradeNumber' => $model->pricingGrade(),
+    'usd' => data_get($model->lab_pricing ?? [], 'usd'),
+    'toman' => is_numeric(data_get($model->lab_pricing ?? [], 'usd'))
+        ? (int) round(((float) data_get($model->lab_pricing ?? [], 'usd') * (float) data_get($exchange ?? [], 'rate', 0)) / 10)
+        : null,
   ])->values()->all();
+$modelTierDefaultsForJs = ($modelTierDefaults ?? collect())->mapWithKeys(fn ($item) => [$item->tier_key => [
+    'name' => $item->name,
+    'grade' => $item->grade,
+    'primary' => ['model_id' => $item->primary_model_id, 'provider' => $item->primary_provider],
+    'fallback' => ['model_id' => $item->fallback_model_id, 'provider' => $item->fallback_provider],
+]])->all();
+$modelTierDefinitionsForJs = \App\Services\ModelTierService::DEFINITIONS;
+$modelQualityPresetsForJs = ($modelQualityPresets ?? collect())->mapWithKeys(fn ($preset) => [$preset->preset_key => [
+    'name' => $preset->name,
+    'configuration' => $preset->configuration ?: [],
+    'url' => route('admin.model-quality-presets.update', $preset),
+]])->all();
+$qualityCreditPresetsForJs = ($qualityCreditPresets ?? collect())->mapWithKeys(fn ($preset) => [$preset->preset_key => [
+    'name' => $preset->name,
+    'costs' => $preset->costs(),
+    'is_default_for_product_creation' => (bool) $preset->is_default_for_product_creation,
+]])->all();
+$modelQualityDefaultPresetKey = ($modelQualityPresets ?? collect())->first(fn ($preset) => (bool) ($preset->is_default_for_product_creation ?? false))?->preset_key
+    ?: ($modelQualityPresets ?? collect())->first()?->preset_key;
 @endphp
 window.PRODUCT_ASSIGNABLE_AI_MODELS = @json($assignableAiModelsForJs);
 window.PRODUCT_BULK_AI_URL = @json(route('admin.products.bulk_update_ai_model'));
+window.PRODUCT_BULK_TIER_URL = @json(route('admin.products.bulk_apply_model_tier_preset'));
 window.PRODUCT_MATCHING_IDS = @json($matchingProductIds ?? []);
+window.PRODUCT_MODEL_TIER_DEFAULTS = @json($modelTierDefaultsForJs);
+window.PRODUCT_MODEL_TIER_DEFINITIONS = @json($modelTierDefinitionsForJs);
+window.PRODUCT_MODEL_QUALITY_PRESETS = @json($modelQualityPresetsForJs);
+window.PRODUCT_QUALITY_CREDIT_PRESETS = @json($qualityCreditPresetsForJs);
+window.PRODUCT_MODEL_QUALITY_DEFAULT_KEY = @json($modelQualityDefaultPresetKey);
+window.PRODUCT_BULK_MODEL_QUALITY_URL = @json(route('admin.products.bulk_update_model_quality_configuration'));
+window.PRODUCT_BULK_QUALITY_CREDIT_URL = @json(route('admin.products.bulk_apply_quality_credit_preset'));
+window.PRODUCT_QUALITY_CREDIT_PRESET_STORE_URL = @json(route('admin.product-credit-presets.store'));
 </script>
 
 <style>
-#product-credit-dialog{position:fixed;inset:0;margin:auto;}
-#product-credit-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
 #product-ai-model-dialog{position:fixed;inset:0;margin:auto;}
 #product-ai-model-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
+#product-tier-configuration-dialog{position:fixed;inset:0;margin:auto;}
+#product-tier-configuration-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
+#product-quality-configuration-dialog{position:fixed;inset:0;margin:auto;}
+#product-quality-credit-preset-dialog{position:fixed;inset:0;margin:auto;}
+#product-quality-configuration-dialog::backdrop{background:color-mix(in srgb,var(--text-h) 55%,transparent);}
 .product-ai-model-table-wrap{max-height:270px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);}
 .product-ai-model-table-head,.product-ai-model-row{display:grid;grid-template-columns:1.45fr 1.35fr .95fr 1.15fr .62fr;align-items:center;gap:8px;min-width:690px;padding:8px 9px;}
 .product-ai-model-table-head{color:var(--text-soft);font-size:8px;font-weight:800;border-bottom:1px solid var(--border);}
@@ -462,70 +690,104 @@ window.PRODUCT_MATCHING_IDS = @json($matchingProductIds ?? []);
 .product-ai-model-row>span:nth-child(3){display:flex;flex-direction:column;gap:1px;}
 .product-ai-model-row>span:nth-child(3) small{color:var(--text-soft);font-size:7.5px;}
 .product-ai-model-row .model-quality-grade{color:var(--warning);font-weight:800;}
-@media (min-width:901px){#product-credit-dialog{transform:translateX(-147px);}}
 @media (min-width:901px){#product-ai-model-dialog{transform:translateX(-147px);}}
+@media (min-width:901px){#product-tier-configuration-dialog{transform:translateX(-147px);}}
+@media (min-width:901px){#product-quality-configuration-dialog{transform:translateX(-147px);}}
+@media (min-width:901px){#product-quality-credit-preset-dialog{transform:translateX(-147px);}}
 </style>
-<dialog id="product-credit-dialog" class="rounded-2xl p-0 w-[min(92vw,420px)]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
-  <form method="dialog" id="product-credit-dialog-form" class="p-5">
-    <div class="flex items-start justify-between gap-3 mb-5">
+<dialog id="product-tier-configuration-dialog" class="rounded-2xl p-0 w-[min(96vw,930px)] max-h-[90vh]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
+  <div class="p-5 overflow-y-auto max-h-[90vh]">
+    <div class="flex items-start justify-between gap-4 mb-4">
       <div>
-        <div class="text-[14px] font-extrabold" style="color:var(--text-h);">اصلاح تعداد کردیت</div>
-        <div id="product-credit-dialog-name" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
+        <div id="product-tier-configuration-title" class="text-[14px] font-extrabold" style="color:var(--text-h);">مدل‌های چهار سطحی</div>
+        <div id="product-tier-configuration-subtitle" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
       </div>
-      <button type="button" class="icon-action-btn" onclick="closeProductCreditDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" class="icon-action-btn" onclick="closeProductTierConfigurationDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
-      <div>
-        <label for="product-credit-dialog-current" class="block text-[11.5px] font-bold mb-2">کردیت فعلی محصول</label>
-        <input id="product-credit-dialog-current" type="text" readonly
-               class="input-pro w-full" style="height:44px;opacity:.72;" aria-readonly="true">
-      </div>
-      <div>
-        <label for="product-credit-dialog-input" class="block text-[11.5px] font-bold mb-2">کردیت جدید</label>
-        <input id="product-credit-dialog-input" type="number" min="0" max="1000000" step="1" required
-               class="input-pro w-full" style="height:44px;" inputmode="numeric"
-               placeholder="تعداد دلخواه را وارد کنید">
-      </div>
+    <div id="product-tier-configuration-hint" class="text-[10.5px] leading-6 p-3 rounded-xl mb-4" style="background:var(--primary-l);color:var(--text-main);border:1px solid var(--primary-m);"></div>
+    <div id="product-tier-configuration-content" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    <div id="product-tier-configuration-state" class="text-[10.5px] mt-3 min-h-5" style="color:var(--text-soft);"></div>
+    <div class="flex items-center justify-between gap-3 flex-wrap mt-5 pt-4" style="border-top:1px solid var(--border);">
+      <button type="button" class="btn-pro btn-pro-ghost" onclick="applyAllTierDefaultsInDialog()"><i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> انتخاب چهار پیش‌فرض</button>
+      <div class="flex items-center gap-2"><button type="button" class="btn-pro btn-pro-ghost" onclick="closeProductTierConfigurationDialog()">انصراف</button><button type="button" class="btn-pro btn-pro-primary" id="product-tier-configuration-submit" onclick="saveProductTierConfiguration()">ذخیره چهار سطح</button></div>
     </div>
-    <label for="product-credit-dialog-note" class="block text-[11.5px] font-bold mt-4 mb-2">توضیح تغییر <span class="font-normal" style="color:var(--text-soft);">(اختیاری)</span></label>
-    <input id="product-credit-dialog-note" type="text" maxlength="255"
-           class="input-pro w-full" style="height:44px;" placeholder="مثلاً اصلاح هزینه اجرای محصول">
-    <div id="product-credit-dialog-error" class="hidden text-[10.5px] mt-2" style="color:var(--danger);"></div>
-    <div class="flex items-center justify-end gap-2 mt-5">
-      <button type="button" class="btn-pro btn-pro-ghost" onclick="closeProductCreditDialog()">انصراف</button>
-      <button type="submit" class="btn-pro btn-pro-primary" id="product-credit-dialog-submit"><i class="fa-solid fa-check"></i> ذخیره کردیت</button>
-    </div>
-  </form>
+  </div>
 </dialog>
-
-<dialog id="product-bulk-credit-dialog" class="rounded-2xl p-0 w-[min(92vw,440px)]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
-  <form method="dialog" id="product-bulk-credit-dialog-form" class="p-5">
+<dialog id="product-quality-configuration-dialog" class="rounded-2xl p-0 w-[min(96vw,1040px)]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
+  <div class="p-5" dir="rtl">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <div>
+        <div id="product-quality-configuration-title" class="text-[14px] font-extrabold" style="color:var(--text-h);">معماری کیفیت خروجی مدل</div>
+        <div id="product-quality-configuration-subtitle" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap shrink-0">
+        <button type="button" class="btn-pro btn-pro-ghost" onclick="closeProductQualityConfigurationDialog()">انصراف</button>
+        <button type="button" class="btn-pro btn-pro-primary" id="product-quality-configuration-submit" onclick="saveProductQualityConfiguration()"><i class="fa-solid fa-check text-[11px]"></i> ذخیره تنظیمات</button>
+        <button type="button" class="icon-action-btn" onclick="closeProductQualityConfigurationDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>
+    <section class="rounded-xl overflow-hidden mb-4" style="background:var(--input-bg);border:1px solid var(--border);">
+      <div class="flex items-center justify-between gap-3 flex-wrap p-4" style="border-bottom:1px solid var(--border);">
+        <div class="flex items-center gap-2 min-w-0"><span class="w-8 h-8 grid place-items-center rounded-lg" style="background:var(--primary-l);color:var(--primary);"><i class="fa-solid fa-layer-group"></i></span><div><b class="text-[12px]" style="color:var(--text-h);">معماری کیفیت خروجی مدل</b><p class="text-[10px] mt-1" style="color:var(--text-soft);">برای هر کیفیت، مدل اصلی و مسیر جایگزین متفاوت را مشخص کنید.</p></div></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <label class="sr-only" for="product-quality-preset">پیش‌فرض‌ها</label>
+          <select id="product-quality-preset" class="input-pro" style="height:36px;min-width:120px;" onchange="applyProductQualityPreset(this.value)"></select>
+          <button type="button" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="fixProductQualityPreset()"><i class="fa-solid fa-thumbtack text-[10px]"></i> فیکس کردن تنظیمات</button>
+          <button type="button" id="product-quality-architecture-toggle" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="toggleProductQualityArchitecture()"><i class="fa-solid fa-toggle-on text-[12px]"></i> <span>روشن</span></button>
+        </div>
+      </div>
+      <div id="product-quality-configuration-hint" class="text-[10.5px] leading-6 p-3 mx-4 mt-4 rounded-xl" style="background:var(--primary-l);color:var(--text-main);border:1px solid var(--primary-m);"></div>
+      <div id="product-quality-architecture-content" class="p-4 pt-0">
+        <div class="rounded-xl p-4 mb-3" style="background:var(--card-bg);border:1px solid var(--border);">
+          <div class="flex items-center gap-2 mb-4"><span class="w-7 h-7 grid place-items-center rounded-lg" style="background:var(--primary-l);color:var(--primary);"><i class="fa-solid fa-sliders"></i></span><div><b class="text-xs" style="color:var(--text-h);">مدل‌های انتخابی برای کاربر:</b><p class="text-[10px] mt-0.5" style="color:var(--text-soft);">مدل هر سه کیفیتِ قابل انتخاب پس از خرید پلن.</p></div></div>
+          <div id="product-quality-paid-cards" class="grid grid-cols-1 xl:grid-cols-3 gap-3"></div>
+        </div>
+        <div class="rounded-xl p-4" style="background:var(--card-bg);border:1px solid var(--border);">
+          <div class="flex items-center gap-2 mb-4"><span class="w-7 h-7 grid place-items-center rounded-lg" style="background:var(--primary-l);color:var(--orange);"><i class="fa-solid fa-user-clock"></i></span><div><b class="text-xs" style="color:var(--text-h);">کاربران بدون پلن خریداری‌شده</b><p class="text-[10px] mt-0.5" style="color:var(--text-soft);">کاربر رایگان انتخاب کیفیت نمی‌بیند و با مسیر استاندارد هدیه می‌سازد.</p></div></div>
+          <div id="product-quality-free-cards" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+        </div>
+      </div>
+    </section>
+    <div id="product-quality-configuration-state" class="text-[10.5px] mt-3 min-h-5" style="color:var(--text-soft);"></div>
+  </div>
+</dialog>
+<dialog id="product-quality-credit-preset-dialog" class="rounded-2xl p-0 w-[min(92vw,520px)]" style="background:var(--card-bg);color:var(--text-main);border:1px solid var(--border);box-shadow:var(--shadow-card);">
+  <form method="dialog" id="product-quality-credit-preset-form" class="p-5">
     <div class="flex items-start justify-between gap-3 mb-5">
       <div>
-        <div class="text-[14px] font-extrabold" style="color:var(--text-h);">تغییر گروهی هزینه‌ی کردیت</div>
-        <div id="product-bulk-credit-dialog-count" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
+        <div class="text-[14px] font-extrabold" style="color:var(--text-h);">تنظیم مصرف اعتبار</div>
+        <div id="product-quality-credit-preset-count" class="text-[11px] mt-1" style="color:var(--text-soft);"></div>
       </div>
-      <button type="button" class="icon-action-btn" onclick="closeBulkCreditDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" class="icon-action-btn" onclick="closeBulkQualityCreditPresetDialog()" aria-label="بستن"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="p-3 rounded-xl text-[10.5px] leading-6 mb-4" style="background:var(--primary-l);border:1px solid var(--primary-m);color:var(--text-main);">
-      هزینه‌ی محصول برای همه‌ی موارد انتخاب‌شده ثبت می‌شود و سابقه‌ی تغییر هر محصول نیز ذخیره خواهد شد.
+      فقط سه مقدار مصرف اعتبار تغییر می‌کند؛ مدل‌های اصلی، جایگزین و سایر تنظیمات محصولات دست‌نخورده می‌مانند.
     </div>
-    <label for="product-bulk-credit-dialog-input" class="block text-[11.5px] font-bold mb-2">هزینه‌ی جدید برای هر اجرا</label>
-    <div class="flex items-center gap-2">
-      <input id="product-bulk-credit-dialog-input" type="number" min="0" max="1000000" step="1" required
-             class="input-pro w-full" style="height:44px;" inputmode="numeric" value="10" placeholder="مثلاً ۱۰">
-      <span class="text-[11px] whitespace-nowrap" style="color:var(--text-soft);">اعتبار</span>
+    <label for="product-quality-credit-preset-select" class="block text-[11.5px] font-bold mb-2">پیش‌فرض مصرف اعتبار</label>
+    <select id="product-quality-credit-preset-select" class="input-pro w-full" style="height:44px;"></select>
+    <div id="product-quality-credit-preset-values" class="grid grid-cols-3 gap-2 mt-3"></div>
+    <div class="flex items-center gap-2 mt-4 mb-2 text-[10.5px]">
+      <button type="button" class="btn-pro btn-pro-primary" id="bulk-credit-use-preset">استفاده از پیش‌فرض</button>
+      <button type="button" class="btn-pro btn-pro-ghost" id="bulk-credit-use-manual">ورود دستی</button>
     </div>
-    <label for="product-bulk-credit-dialog-note" class="block text-[11.5px] font-bold mt-4 mb-2">توضیح تغییر <span class="font-normal" style="color:var(--text-soft);">(اختیاری)</span></label>
-    <input id="product-bulk-credit-dialog-note" type="text" maxlength="255" class="input-pro w-full" style="height:44px;" placeholder="مثلاً یکسان‌سازی قیمت محصولات عکس">
-    <div id="product-bulk-credit-dialog-error" class="hidden text-[10.5px] mt-2" style="color:var(--danger);"></div>
+    <div id="product-quality-credit-manual" class="hidden grid grid-cols-3 gap-2 mt-2">
+      @foreach(['standard' => 'استاندارد', 'professional' => 'حرفه‌ای', 'best' => 'بهترین خروجی'] as $quality => $label)
+        <label class="text-[10px] text-[var(--text-soft)]">{{ $label }}
+          <input type="number" min="1" max="1000000" step="1" data-bulk-credit-cost="{{ $quality }}" class="input-pro w-full mt-1" style="height:40px;">
+        </label>
+      @endforeach
+    </div>
+    <div class="flex items-center gap-2 mt-3">
+      <input id="product-quality-credit-new-preset-name" type="text" maxlength="100" class="input-pro flex-1" style="height:40px;" placeholder="نام پیش‌فرض جدید برای این اعداد">
+      <button type="button" class="btn-pro btn-pro-ghost" id="product-quality-credit-save-preset"><i class="fa-solid fa-plus"></i> ساخت پیش‌فرض</button>
+    </div>
+    <div id="product-quality-credit-preset-error" class="hidden text-[10.5px] mt-3" style="color:var(--danger);"></div>
     <div class="flex items-center justify-end gap-2 mt-5">
-      <button type="button" class="btn-pro btn-pro-ghost" onclick="closeBulkCreditDialog()">انصراف</button>
-      <button type="submit" class="btn-pro btn-pro-primary"><i class="fa-solid fa-check"></i> ثبت برای همه</button>
+      <button type="button" class="btn-pro btn-pro-ghost" onclick="closeBulkQualityCreditPresetDialog()">انصراف</button>
+      <button type="submit" class="btn-pro btn-pro-primary" id="product-quality-credit-preset-submit"><i class="fa-solid fa-check"></i> اعمال برای محصولات</button>
     </div>
   </form>
 </dialog>
-
 <script>
 function showAdminActor(role, name) {
   const old = document.getElementById('admin-actor-toast');
@@ -565,69 +827,6 @@ async function copyProductPublicLink(button) {
   }, 1800);
 }
 
-var productCreditTrigger = null;
-function editProductCredit(button) {
-  productCreditTrigger = button;
-  var dialog = document.getElementById('product-credit-dialog');
-  document.getElementById('product-credit-dialog-name').textContent = button.dataset.productName;
-  document.getElementById('product-credit-dialog-current').value = Number(button.dataset.creditCost || 0).toLocaleString('fa-IR') + ' کردیت';
-  document.getElementById('product-credit-dialog-input').value = '';
-  document.getElementById('product-credit-dialog-note').value = '';
-  document.getElementById('product-credit-dialog-error').classList.add('hidden');
-  dialog.showModal();
-  setTimeout(function () { document.getElementById('product-credit-dialog-input').focus(); }, 30);
-}
-function closeProductCreditDialog() {
-  document.getElementById('product-credit-dialog')?.close();
-  productCreditTrigger = null;
-}
-
-document.getElementById('product-credit-dialog-form')?.addEventListener('submit', async function (event) {
-  event.preventDefault();
-  var button = productCreditTrigger;
-  if (!button) return;
-  var value = String(document.getElementById('product-credit-dialog-input').value).trim();
-  var errorBox = document.getElementById('product-credit-dialog-error');
-  if (!/^\d+$/.test(value) || Number(value) > 1000000) {
-    errorBox.textContent = 'تعداد کردیت باید یک عدد صحیح بین صفر تا ۱٬۰۰۰٬۰۰۰ باشد.';
-    errorBox.classList.remove('hidden');
-    return;
-  }
-  var submit = document.getElementById('product-credit-dialog-submit');
-  submit.disabled = true;
-  try {
-    var response = await fetch(button.dataset.creditUrl, {
-      method: 'PATCH',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-      },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        credit_cost: Number(value),
-        note: document.getElementById('product-credit-dialog-note').value.trim() || null,
-      }),
-    });
-    var data = await response.json().catch(function () { return {}; });
-    if (!response.ok) throw new Error(data.message || 'به‌روزرسانی کردیت انجام نشد.');
-
-    button.dataset.creditCost = String(data.credit_cost);
-    var cell = document.getElementById('product-credit-cell-' + button.dataset.productId);
-    if (cell) {
-      cell.innerHTML = data.pricing_model === 'free'
-        ? '<span class="badge-pro badge-success">رایگان</span>'
-        : '<div class="font-bold" style="color:var(--text-h);">' + Number(data.credit_cost).toLocaleString('fa-IR') + ' <span class="text-[10.5px] font-normal" style="color:var(--text-soft);">کردیت</span></div>';
-    }
-    closeProductCreditDialog();
-    showProductCreditToast(data.message || 'کردیت محصول با موفقیت تغییر کرد.');
-  } catch (error) {
-    errorBox.textContent = error.message || 'خطا در به‌روزرسانی کردیت محصول.';
-    errorBox.classList.remove('hidden');
-  } finally {
-    submit.disabled = false;
-  }
-});
 function showProductCreditToast(message) {
   document.getElementById('product-credit-success-toast')?.remove();
   var toast = document.createElement('div');
@@ -642,54 +841,128 @@ function showProductCreditToast(message) {
   setTimeout(function () { toast.remove(); }, 4500);
 }
 
-function openBulkCreditDialog() {
-  var ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
-  if (!ids.length) return;
-  var dialog = document.getElementById('product-bulk-credit-dialog');
-  document.getElementById('product-bulk-credit-dialog-count').textContent = ids.length.toLocaleString('fa-IR') + ' محصول برای تغییر انتخاب شده است.';
-  document.getElementById('product-bulk-credit-dialog-input').value = '10';
-  document.getElementById('product-bulk-credit-dialog-note').value = '';
-  document.getElementById('product-bulk-credit-dialog-error').classList.add('hidden');
+function renderBulkQualityCreditPresetOptions() {
+  var select = document.getElementById('product-quality-credit-preset-select');
+  var values = document.getElementById('product-quality-credit-preset-values');
+  if (!select || !values) return;
+  var presets = window.PRODUCT_QUALITY_CREDIT_PRESETS || {};
+  var esc = function (value) { return String(value ?? '').replace(/[&<>'"]/g, function (character) { return ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'})[character]; }); };
+  select.innerHTML = Object.entries(presets).map(function (entry) {
+    return '<option value="' + esc(entry[0]) + '">' + esc(entry[1].name || entry[0]) + '</option>';
+  }).join('');
+  var draw = function () {
+    var costs = presets[select.value]?.costs || {};
+    values.innerHTML = [['standard','استاندارد'],['professional','حرفه‌ای'],['best','بهترین خروجی']].map(function (pair) {
+      return '<div class="p-2 rounded-lg" style="background:var(--input-bg);border:1px solid var(--border);"><small style="display:block;color:var(--text-soft);font-size:9px;">' + pair[1] + '</small><b style="display:block;color:var(--text-h);font-size:13px;margin-top:3px;">' + Number(costs[pair[0]] || 0).toLocaleString('fa-IR') + ' <small style="font-size:9px;font-weight:400;color:var(--text-soft);">اعتبار</small></b></div>';
+    }).join('');
+  };
+  select.onchange = draw;
+  document.getElementById('bulk-credit-use-preset')?.addEventListener('click', function () {
+    document.getElementById('product-quality-credit-manual')?.classList.add('hidden');
+    select.disabled = false;
+    draw();
+  });
+  document.getElementById('bulk-credit-use-manual')?.addEventListener('click', function () {
+    document.getElementById('product-quality-credit-manual')?.classList.remove('hidden');
+    select.disabled = true;
+    var costs = presets[select.value]?.costs || {};
+    document.querySelectorAll('[data-bulk-credit-cost]').forEach(function (input) { input.value = costs[input.dataset.bulkCreditCost] || ''; });
+    values.innerHTML = '<div class="col-span-3 text-[10px]" style="color:var(--text-soft);">سه مقدار دستی را وارد کنید و سپس اعمال را بزنید.</div>';
+  });
+  draw();
+}
+
+function openBulkQualityCreditPresetDialog() {
+  var ids = typeof requireBulkSelection === 'function' ? requireBulkSelection() : [];
+  if (!ids) return;
+  var dialog = document.getElementById('product-quality-credit-preset-dialog');
+  if (!dialog || !Object.keys(window.PRODUCT_QUALITY_CREDIT_PRESETS || {}).length) {
+    if (typeof showProductNotice === 'function') showProductNotice('پیش‌فرض‌های مصرف اعتبار از سرور دریافت نشد.', 'error');
+    return;
+  }
+  document.getElementById('product-quality-credit-preset-count').textContent = ids.length.toLocaleString('fa-IR') + ' محصول برای تغییر انتخاب شده است.';
+  document.getElementById('product-quality-credit-preset-error').classList.add('hidden');
+  renderBulkQualityCreditPresetOptions();
   dialog.showModal();
-  setTimeout(function () { document.getElementById('product-bulk-credit-dialog-input').focus(); }, 30);
 }
 
-function closeBulkCreditDialog() {
-  document.getElementById('product-bulk-credit-dialog')?.close();
+function closeBulkQualityCreditPresetDialog() {
+  document.getElementById('product-quality-credit-preset-dialog')?.close();
 }
 
-document.getElementById('product-bulk-credit-dialog-form')?.addEventListener('submit', function (event) {
+document.getElementById('product-quality-credit-preset-form')?.addEventListener('submit', async function (event) {
   event.preventDefault();
-  var value = String(document.getElementById('product-bulk-credit-dialog-input').value).trim();
-  var errorBox = document.getElementById('product-bulk-credit-dialog-error');
-  if (!/^\d+$/.test(value) || Number(value) > 1000000) {
-    errorBox.textContent = 'هزینه‌ی اعتبار باید یک عدد صحیح بین صفر تا ۱٬۰۰۰٬۰۰۰ باشد.';
+  var ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
+  var presetKey = document.getElementById('product-quality-credit-preset-select')?.value || '';
+  var manual = !document.getElementById('product-quality-credit-manual')?.classList.contains('hidden');
+  var costs = {};
+  document.querySelectorAll('[data-bulk-credit-cost]').forEach(function (input) { costs[input.dataset.bulkCreditCost] = Number(input.value || 0); });
+  var errorBox = document.getElementById('product-quality-credit-preset-error');
+  var submit = document.getElementById('product-quality-credit-preset-submit');
+  if (!ids.length || (!presetKey && !manual)) {
+    errorBox.textContent = 'حداقل یک محصول و یک پیش‌فرض یا مقادیر دستی را انتخاب کنید.';
     errorBox.classList.remove('hidden');
     return;
   }
-
-  var ids = typeof getSelectedBulkProductIds === 'function' ? getSelectedBulkProductIds() : [];
-  if (!ids.length) {
-    closeBulkCreditDialog();
+  if (manual && Object.keys(costs).some(function (key) { return !Number.isInteger(costs[key]) || costs[key] < 1 || costs[key] > 1000000; })) {
+    errorBox.textContent = 'هر سه مقدار دستی باید عدد صحیح بین ۱ تا ۱٬۰۰۰٬۰۰۰ باشند.';
+    errorBox.classList.remove('hidden');
     return;
   }
+  submit.disabled = true;
+  try {
+    var response = await fetch(window.PRODUCT_BULK_QUALITY_CREDIT_URL, {
+      method: 'PATCH',
+      headers: {'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''},
+      credentials: 'same-origin',
+      body: JSON.stringify({ids: ids, preset_key: manual ? null : presetKey, costs: manual ? costs : null}),
+    });
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'اعمال پیش‌فرض مصرف اعتبار انجام نشد.');
+    closeBulkQualityCreditPresetDialog();
+    showProductCreditToast(data.message || 'پیش‌فرض مصرف اعتبار اعمال شد.');
+    setTimeout(function () { window.location.reload(); }, 650);
+  } catch (error) {
+    errorBox.textContent = error.message || 'خطا در اعمال پیش‌فرض مصرف اعتبار.';
+    errorBox.classList.remove('hidden');
+  } finally { submit.disabled = false; }
+});
 
-  var form = document.getElementById('bulk-action-form');
-  form.querySelectorAll('input[name="ids[]"], input[name="credit_cost"], input[name="note"], input[name="category_id"]').forEach(function (el) { el.remove(); });
-  ids.forEach(function (id) {
-    var input = document.createElement('input');
-    input.type = 'hidden'; input.name = 'ids[]'; input.value = id;
-    form.appendChild(input);
-  });
-  var creditInput = document.createElement('input');
-  creditInput.type = 'hidden'; creditInput.name = 'credit_cost'; creditInput.value = Number(value);
-  form.appendChild(creditInput);
-  var noteInput = document.createElement('input');
-  noteInput.type = 'hidden'; noteInput.name = 'note'; noteInput.value = document.getElementById('product-bulk-credit-dialog-note').value.trim();
-  form.appendChild(noteInput);
-  document.getElementById('bulk-action-input').value = 'set_credit';
-  closeBulkCreditDialog();
-  form.submit();
+document.getElementById('product-quality-credit-save-preset')?.addEventListener('click', async function () {
+  var nameInput = document.getElementById('product-quality-credit-new-preset-name');
+  var name = String(nameInput?.value || '').trim();
+  var errorBox = document.getElementById('product-quality-credit-preset-error');
+  var select = document.getElementById('product-quality-credit-preset-select');
+  var manual = !document.getElementById('product-quality-credit-manual')?.classList.contains('hidden');
+  var presets = window.PRODUCT_QUALITY_CREDIT_PRESETS || {};
+  var costs = manual ? {} : (presets[select?.value]?.costs || {});
+  if (manual) document.querySelectorAll('[data-bulk-credit-cost]').forEach(function (input) { costs[input.dataset.bulkCreditCost] = Number(input.value || 0); });
+  if (!name) { errorBox.textContent = 'نام پیش‌فرض جدید را وارد کنید.'; errorBox.classList.remove('hidden'); return; }
+  if (Object.keys(costs).some(function (key) { return !Number.isInteger(Number(costs[key])) || Number(costs[key]) < 1 || Number(costs[key]) > 1000000; })) {
+    errorBox.textContent = 'برای ساخت پیش‌فرض، هر سه مقدار اعتبار باید معتبر باشد.'; errorBox.classList.remove('hidden'); return;
+  }
+  this.disabled = true;
+  try {
+    var response = await fetch(window.PRODUCT_QUALITY_CREDIT_PRESET_STORE_URL, {
+      method: 'POST', headers: {'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]')?.content || ''}, credentials: 'same-origin',
+      body: JSON.stringify({name: name, costs: costs}),
+    });
+    var data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'ساخت پیش‌فرض انجام نشد.');
+    var key = data.preset.preset_key;
+    presets[key] = {name: data.preset.name, costs: data.costs, is_default_for_product_creation: !!data.preset.is_default_for_product_creation};
+    window.PRODUCT_QUALITY_CREDIT_PRESETS = presets;
+    renderBulkQualityCreditPresetOptions();
+    if (select) select.value = key;
+    if (nameInput) nameInput.value = '';
+    errorBox.textContent = data.message || 'پیش‌فرض جدید ساخته شد.';
+    errorBox.style.color = 'var(--success)';
+    errorBox.classList.remove('hidden');
+  } catch (error) {
+    errorBox.textContent = error.message || 'ساخت پیش‌فرض انجام نشد.';
+    errorBox.style.color = 'var(--danger)';
+    errorBox.classList.remove('hidden');
+  } finally { this.disabled = false; }
 });
 
 function formatProductImageBytes(bytes) {

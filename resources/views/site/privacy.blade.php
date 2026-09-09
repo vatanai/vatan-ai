@@ -222,6 +222,7 @@
 @endphp
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('assets/site/css/home-preview.css') }}?v={{ filemtime(public_path('assets/site/css/home-preview.css')) }}">
 <style>
   .privacy-page {
     --privacy-accent: #cffe00;

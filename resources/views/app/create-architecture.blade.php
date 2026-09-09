@@ -3,7 +3,7 @@
 @section('page_title', 'نمونه‌های معماری صفحه بساز | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-architecture.css') }}?v={{ filemtime(public_path('css/create-architecture.css')) }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-architecture.css') }}">
 @endpush
 
 @section('content')

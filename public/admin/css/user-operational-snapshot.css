@@ -4,10 +4,14 @@
 .admin-user-operational-item > span { display: flex; align-items: center; gap: 4px; color: var(--text-soft); font-size: 8.5px; white-space: nowrap; }
 .admin-user-operational-item > span i { color: var(--primary); font-size: 8px; }
 .admin-user-operational-item > strong { display: block; overflow: hidden; color: var(--text-h); font-size: 9.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.admin-user-operational-summary-line { display: flex; align-items: baseline; justify-content: space-between; gap: 5px; min-width: 0; line-height: 1.2; }
+.admin-user-operational-summary-line > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; color: var(--text-soft); font-size: 8.5px; white-space: nowrap; text-overflow: ellipsis; }
+.admin-user-operational-summary-line > span i { color: var(--primary); font-size: 8px; }
+.admin-user-operational-summary-line > strong { min-width: 0; overflow: hidden; color: var(--text-h); font-size: 8.8px; font-weight: 800; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; }
 .admin-user-operational-output { text-decoration: none; transition: border-color .18s, color .18s, background .18s; }
 .admin-user-operational-output:hover { border-color: var(--info); background: var(--info-l); }
-.admin-user-operational-output > span i,
-.admin-user-operational-output > strong { color: var(--info); }
+.admin-user-operational-output .admin-user-operational-summary-line > span i,
+.admin-user-operational-output .admin-user-operational-summary-line > strong { color: var(--info); }
 .admin-user-operational-missing { color: var(--text-soft); font-size: 10px; }
 .finance-case-hero .admin-user-operational { width: min(100%, 470px); margin-top: 10px; }
 .finance-case-table .admin-user-operational { min-width: 220px; }
@@ -31,6 +35,11 @@
 .users-index-table .admin-credit-report > div > div {
   min-width: 0;
 }
+.users-index-table .admin-user-identity { display: grid; gap: 4px; min-width: 0; text-align: center; }
+.users-index-table .admin-user-identity > strong { overflow: hidden; color: var(--text-h); font-size: 10.5px; font-weight: 800; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.users-index-table .admin-user-identity > span { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; overflow: hidden; color: var(--text-soft); font-size: 9px; line-height: 1.35; }
+.users-index-table .admin-user-identity > span i { flex: 0 0 auto; color: var(--primary); font-size: 8px; }
+.users-index-table .admin-user-identity > span b { min-width: 0; overflow: hidden; color: var(--text-main); font-size: 9px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
 .users-index-table .admin-credit-report span {
   min-width: 0;
   overflow-wrap: anywhere;

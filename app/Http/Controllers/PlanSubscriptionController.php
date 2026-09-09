@@ -4,18 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\PlanPurchase;
+use App\Models\PlanSetting;
 use App\Models\TokenLog;
 use App\Services\PlanCatalogService;
+use App\Services\PlanDiscountService;
 use App\Services\SmsEventService;
 use App\Services\ReferralProgramService;
 use App\Services\Payments\PlanPaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
 use RuntimeException;
+use InvalidArgumentException;
 
 class PlanSubscriptionController extends Controller
 {
@@ -26,7 +30,11 @@ class PlanSubscriptionController extends Controller
             $user = tap($user?->replicate() ?? new \App\Models\User(), fn ($model) => $model->customer_segment = 'loyal');
         }
 
-        return view('site.pricing', $catalog->catalog($user));
+        $catalogData = $catalog->catalog($user);
+        $catalogData['plans'] = $catalog->homePricingPlans($user)->take(4)->values();
+        $catalogData['homePricing'] = PlanSetting::homePricing();
+
+        return view('site.pricing', $catalogData);
     }
 
     /** نمونه‌ی نتیجه‌ی پرداخت برای پیش‌نمایش؛ بدون ساخت سفارش یا تغییر موجودی. */
@@ -149,6 +157,7 @@ class PlanSubscriptionController extends Controller
     {
         $planModel = $this->findPublicPlan($plan, $catalog);
         $user = $request->user();
+        app(\App\Services\ReferralProgramService::class)->attributeExistingUser($user, $request->input('referral_code'), $request);
         $offer = app(ReferralProgramService::class)->purchaseOffer($user, $planModel, $planModel->offerFor($user));
 
         if ($planModel->billing_type === 'custom') {
@@ -165,30 +174,24 @@ class PlanSubscriptionController extends Controller
     public function startPayment(Request $request, string $plan, PlanCatalogService $catalog, PlanPaymentService $payments): RedirectResponse
     {
         $planModel = $this->findPublicPlan($plan, $catalog);
+        app(\App\Services\ReferralProgramService::class)->attributeExistingUser($request->user(), $request->input('referral_code'), $request);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'email' => ['nullable', 'email:rfc,dns', 'max:190'],
             'phone' => ['nullable', 'string', 'max:20'],
             'gateway' => ['required', Rule::in(['zarinpal'])],
             'terms' => ['accepted'],
-            'referral_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{6,20}$/'],
+            'discount_code' => ['nullable', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]{3,40}$/'],
         ], ['terms.accepted' => 'برای ادامه، پذیرش قوانین و شرایط استفاده لازم است.']);
 
         try {
-            if (! empty($data['referral_code'])) {
-                $user = $request->user();
-                $hadAttribution = (bool) $user->referred_by;
-                $conversion = app(ReferralProgramService::class)->attributeExistingUser($user, $data['referral_code'], $request);
-                if (! $hadAttribution && ! $conversion) {
-                    return back()->withInput()->with('error', 'کد دعوت واردشده معتبر نیست یا به این حساب تعلق ندارد.');
-                }
-            }
             $purchase = $payments->initiate(
                 $request->user(),
                 $planModel,
                 ['name' => $data['name'], 'email' => $data['email'] ?? null, 'phone' => $data['phone'] ?? null],
                 route('payments.callback', ['purchase' => '__ORDER__']),
-                $data['referral_code'] ?? null,
+                null,
+                $data['discount_code'] ?? null,
             );
 
             if (! $purchase->gateway_track_id) {
@@ -199,6 +202,32 @@ class PlanSubscriptionController extends Controller
         } catch (\Throwable $exception) {
             return back()->withInput()->with('error', $exception->getMessage());
         }
+    }
+
+    public function applyDiscount(Request $request, string $plan, PlanCatalogService $catalog, PlanDiscountService $discounts): JsonResponse
+    {
+        $data = $request->validate([
+            'discount_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9_-]{3,40}$/'],
+        ]);
+        $planModel = $this->findPublicPlan($plan, $catalog);
+        $user = $request->user();
+        $offer = app(ReferralProgramService::class)->purchaseOffer($user, $planModel, $planModel->offerFor($user));
+
+        try {
+            $offer = $discounts->apply($user, $planModel, $offer, $data['discount_code']);
+        } catch (InvalidArgumentException $exception) {
+            return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کد تخفیف با موفقیت اعمال شد.',
+            'offer' => [
+                'price' => (int) $offer['price'],
+                'discount_amount_code' => (int) ($offer['discount_amount_code'] ?? 0),
+                'discount_code' => $offer['discount_code'],
+            ],
+        ]);
     }
 
     public function callback(Request $request, string $purchase, PlanPaymentService $payments): RedirectResponse

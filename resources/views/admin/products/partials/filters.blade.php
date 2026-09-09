@@ -10,8 +10,7 @@
 
   همه‌ی فیلترها (جستجو، دسته، زیردسته، وضعیت، نوع قیمت، نوع رسانه، مدل AI،
   بازه‌ی تاریخ) روی ستون‌های واقعاً موجود در جدول products اعمال می‌شوند.
-  مرتب‌سازی «بیشترین اجرا / کمترین اجرا» به آمار واقعی جدول generations متصل است
-  (generations_count در کنترلر)؛ فقط «بیشترین درآمد» هنوز داده‌ی واقعی ندارد.
+  مرتب‌سازی‌ها به آمار واقعی جدول‌های products، generations، liked_products و orders متصل هستند.
   ══════════════════════════════════════════════════════════════════
 --}}
 @php
@@ -28,7 +27,7 @@
           ? !collect(['status','featured','is_new','trending','pricing_model','ai_status','sort'])->some(fn($k) => request()->filled($k))
           : request()->get($key) === $value;
   };
-  $hasAdvancedFilters = request()->filled('subcategory') || request()->filled('media_type') || request()->filled('ai_model') || request()->filled('ai_provider') || request()->filled('ai_status') || request()->filled('model_cost_min') || request()->filled('model_cost_max') || request()->filled('credit_min') || request()->filled('credit_max')
+  $hasAdvancedFilters = request()->filled('subcategory') || request()->filled('media_type') || request()->filled('ai_model') || request()->filled('ai_provider') || request()->filled('ai_status') || request()->filled('model_tier_preset') || request()->filled('model_cost_min') || request()->filled('model_cost_max') || request()->filled('credit_min') || request()->filled('credit_max')
       || request()->filled('created_from') || request()->filled('created_to') || request()->filled('updated_from') || request()->filled('updated_to');
 @endphp
 
@@ -142,12 +141,30 @@
     </div>
 
     <div>
-      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">مدل هوش مصنوعی</label>
-      <select name="ai_model" class="input-pro w-full">
-        <option value="">همه مدل‌ها</option>
-        @foreach(($aiModels ?? []) as $m)
-          <option value="{{ $m->openrouter_model_id }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }} — {{ ['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'][$m->provider] ?? $m->provider_name }}</option>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">پرووایدر هوش مصنوعی</label>
+      <select id="advanced-ai-provider-filter" name="ai_provider" class="input-pro w-full" onchange="filterAdvancedAiModels()">
+        <option value="">انتخاب پرووایدر</option>
+        @foreach(['openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'] as $providerKey => $providerLabel)
+          <option value="{{ $providerKey }}" {{ request('ai_provider') === $providerKey ? 'selected' : '' }}>{{ $providerLabel }}</option>
         @endforeach
+      </select>
+    </div>
+
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">مدل هوش مصنوعی</label>
+      <select id="advanced-ai-model-filter" name="ai_model" class="input-pro w-full">
+        <option value="">ابتدا پرووایدر را انتخاب کنید</option>
+        @foreach(($aiModels ?? []) as $m)
+          <option value="{{ $m->openrouter_model_id }}" data-provider="{{ $m->provider }}" {{ request('ai_model') == $m->openrouter_model_id ? 'selected' : '' }}>{{ $m->name }}</option>
+        @endforeach
+      </select>
+    </div>
+
+    <div>
+      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">پیش‌فرض چهار سطح مدل</label>
+      <select name="model_tier_preset" class="input-pro w-full">
+        <option value="">همه محصولات</option>
+        <option value="configured" @selected(request('model_tier_preset') === 'configured')>چهار سطح مدل تنظیم شده</option>
       </select>
     </div>
 
@@ -166,16 +183,6 @@
     <div>
       <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">حداکثر قیمت محصول (کردیت)</label>
       <input type="number" min="0" name="credit_max" value="{{ request('credit_max') }}" class="input-pro w-full" dir="ltr" placeholder="100">
-    </div>
-
-    <div>
-      <label class="text-[10.5px] font-bold block mb-1.5" style="color:var(--text-soft);">سرویس ارائه‌دهنده</label>
-      <select name="ai_provider" class="input-pro w-full">
-        <option value="">همه سرویس‌ها</option>
-        @foreach(['liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate'] as $providerKey => $providerLabel)
-          <option value="{{ $providerKey }}" {{ request('ai_provider') === $providerKey ? 'selected' : '' }}>{{ $providerLabel }}</option>
-        @endforeach
-      </select>
     </div>
 
     <div>
@@ -220,7 +227,7 @@
         <option value="least_used" {{ request('sort')=='least_used'?'selected':'' }}>کمترین اجرا</option>
         <option value="most_liked" {{ request('sort')=='most_liked'?'selected':'' }}>بیشترین لایک</option>
         <option value="least_liked" {{ request('sort')=='least_liked'?'selected':'' }}>کمترین لایک</option>
-        <option value="most_revenue" disabled>بیشترین درآمد — نیاز به بررسی برنامه</option>
+        <option value="most_revenue" {{ request('sort')=='most_revenue'?'selected':'' }}>بیشترین درآمد</option>
       </select>
     </div>
 
@@ -247,4 +254,28 @@
     panel.style.display = isOpen ? 'none' : '';
     chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
   }
+
+  function filterAdvancedAiModels() {
+    const providerSelect = document.getElementById('advanced-ai-provider-filter');
+    const modelSelect = document.getElementById('advanced-ai-model-filter');
+    if (!providerSelect || !modelSelect) return;
+    const provider = providerSelect.value || '';
+    const selected = modelSelect.options[modelSelect.selectedIndex];
+    const selectedProvider = selected?.dataset.provider || '';
+    if (!provider && selectedProvider) providerSelect.value = selectedProvider;
+    const activeProvider = providerSelect.value || '';
+    let hasSelectedModel = false;
+    Array.from(modelSelect.options).forEach(function (option) {
+      if (!option.value) return;
+      const visible = Boolean(activeProvider) && option.dataset.provider === activeProvider;
+      option.hidden = !visible;
+      option.disabled = !visible;
+      if (option.selected && visible) hasSelectedModel = true;
+    });
+    modelSelect.disabled = !activeProvider;
+    if (!hasSelectedModel && modelSelect.value) modelSelect.value = '';
+    modelSelect.options[0].textContent = activeProvider ? 'همه مدل‌های این پرووایدر' : 'ابتدا پرووایدر را انتخاب کنید';
+  }
+
+  document.addEventListener('DOMContentLoaded', filterAdvancedAiModels);
 </script>

@@ -3,7 +3,7 @@
 @section('page_title', 'پیش‌نمایش صفحه بساز | وطن AI')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/create-workspace.css') }}">
+  <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-workspace.css') }}">
 @endpush
 
 @section('content')
@@ -11,5 +11,5 @@
 @endsection
 
 @push('scripts')
-  <script src="{{ asset('js/create-workspace.js') }}?v={{ filemtime(public_path('js/create-workspace.js')) }}"></script>
+  <script src="{{ \App\Support\AppAsset::url('js/create-workspace.js') }}"></script>
 @endpush
