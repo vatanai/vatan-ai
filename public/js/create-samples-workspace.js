@@ -275,6 +275,7 @@
     if (generateButton) {
       generateButton.disabled = !hasPrimaryImage;
       generateButton.setAttribute('aria-disabled', hasPrimaryImage ? 'false' : 'true');
+      updateCreditState();
     }
     if (!readiness || !scoreBar || !readinessText) return;
     readiness.textContent = value.toLocaleString('fa-IR') + '٪';
@@ -359,8 +360,19 @@
   }
 
   const costElement = root.querySelector('[data-cost]');
-  const baseCostText = costElement?.textContent || root.querySelector('[name="redesign_cost"]')?.value || '0';
-  const baseCost = Number(String(baseCostText).match(/[0-9٠-٩]+/)?.[0] || 0);
+  const toNumber = (value) => Number(String(value ?? '').replace(/[۰-۹]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)).replace(/[^0-9.-]/g, '')) || 0;
+  const baseCostText = costElement?.dataset.value || root.querySelector('[name="redesign_cost"]')?.value || '0';
+  const baseCost = toNumber(baseCostText);
+  const generateButton = root.querySelector('[data-action=generate]');
+  const updateCreditState = () => {
+    if (!generateButton || root.dataset.preview === '1' || root.dataset.authenticated !== '1') return;
+    const balance = toNumber(root.dataset.balance);
+    const cost = toNumber(costElement?.dataset.value || costElement?.textContent);
+    const locked = cost > 0 && balance < cost;
+    generateButton.classList.toggle('is-credit-locked', locked);
+    generateButton.setAttribute('aria-label', locked ? 'افزایش اعتبار برای ساخت' : 'بساز');
+    generateButton.dataset.creditLocked = locked ? '1' : '0';
+  };
   function selectedMainQuality() {
     return form.querySelector('[data-main-quality]:checked') || form.querySelector('input[type="hidden"][data-main-quality]');
   }
@@ -390,9 +402,13 @@
     const identity = root.querySelector('[data-identity-toggle]');
     if (identity?.checked) extra += Number(identity.closest('[data-identity-extra]')?.dataset.identityExtra || 0);
     const total = mainQualityCreditCost() + extra;
-    if (costElement) costElement.textContent = total;
+    if (costElement) {
+      costElement.textContent = total;
+      costElement.dataset.value = String(total);
+    }
     const redesignCost = root.querySelector('[name="redesign_cost"]');
     if (redesignCost) redesignCost.value = total;
+    updateCreditState();
   }
   form.addEventListener('change', () => { recalculateCost(); updateMainQualitySummary(); });
   form.addEventListener('input', recalculateCost);
@@ -414,7 +430,7 @@
   }));
 
   root.querySelector('[data-action=reset]')?.addEventListener('click', () => window.location.reload());
-  root.querySelector('[data-action=generate]')?.addEventListener('click', async () => {
+  generateButton?.addEventListener('click', async () => {
     const requiredUploadField = [...form.querySelectorAll('.cw-field')].find((field) => field.querySelector('input[type=file]') && field.querySelector('.cw-label b'));
     const requiredUpload = requiredUploadField?.querySelector('.cw-upload')
       || root.querySelector('[data-required-upload="1"]');
@@ -427,6 +443,12 @@
     }
     if (root.dataset.authenticated !== '1' && root.dataset.preview !== '1' && root.dataset.sampleOnly !== '1') {
       window.location.href = root.dataset.loginUrl; return;
+    }
+    const currentBalance = toNumber(root.dataset.balance);
+    const requiredCredits = toNumber(costElement?.dataset.value || costElement?.textContent || root.querySelector('[name="redesign_cost"]')?.value);
+    if (root.dataset.preview !== '1' && root.dataset.sampleOnly !== '1' && requiredCredits > 0 && currentBalance < requiredCredits) {
+      window.showTokenShortageModal?.({ required: requiredCredits, balance: currentBalance });
+      return;
     }
     const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]'); const result = root.querySelector('[data-result]');
     setStageTab('upload');
@@ -452,10 +474,10 @@
     if (selectedAspectRatio?.value) data.set('output[aspect_ratio]', selectedAspectRatio.value);
     if (selectedQuality?.value) data.set('output[quality]', selectedQuality.value);
     if (selectedMainQuality?.value) data.set('output[main_quality]', selectedMainQuality.value);
+    let payload = {};
     try {
       const response = await fetch(root.dataset.generateUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content, 'Accept': 'application/json' }, body: data });
       const responseText = await response.text();
-      let payload = {};
       try { payload = responseText ? JSON.parse(responseText) : {}; } catch (_) {}
       if (response.status === 401 || response.status === 419) {
         throw new Error('نشست شما منقضی شده است؛ صفحه را تازه‌سازی کنید و دوباره وارد شوید.');
@@ -480,12 +502,14 @@
         ? 'یک خروجی آماده و در بخش پروفایل ذخیره شد'
         : `${Number(images.length).toLocaleString('fa-IR')} خروجی آماده و در بخش پروفایل ذخیره شد`;
       result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${resultMessage}`;
+      if (payload?.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
       await waitForStageImage(main);
       await completeVisualProgress();
       progress.hidden = true; result.hidden = false; revealOutputTab();
     } catch (error) {
       resetVisualProgress();
       progress.hidden = true; empty.hidden = false; setStageTab('upload'); alertText.textContent = error.message; alertBox.hidden = false;
+      if (payload?.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
     } finally { submit.disabled = false; }
   });
   root.querySelectorAll('.cw-result-strip button').forEach((button) => button.addEventListener('click', () => {

@@ -214,6 +214,7 @@ class VideoProductController extends Controller
             'status' => $generatedVideo->status,
             'video_url' => $generatedVideo->playbackUrl(),
             'error_message' => $generatedVideo->error_message,
+            'credits_returned' => (int) ($generatedVideo->order?->refunded_credits ?? 0),
             'remaining_tokens' => $request->user()->fresh()->tokens,
         ]);
     }

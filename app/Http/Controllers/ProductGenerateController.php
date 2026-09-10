@@ -770,6 +770,8 @@ class ProductGenerateController extends Controller
                     'main_quality' => $mainQuality['key'],
                     'identity_preservation' => $identityRequested,
                     'face_profile_id' => $faceProfile?->id,
+                    'resolved_prompt' => trim($finalPrompt) ?: null,
+                    'input_media_count' => count($uploadedPaths) + ($faceProfile ? count($faceProfile->referenceImageEntries()) : 0),
                     'source_upload_path' => $uploadedPaths[0]['path'] ?? null,
                     'source_upload_paths' => array_values(array_column($uploadedPaths, 'path')),
                     'project_name' => trim((string) $request->input('studio_project_name', '')) ?: null,
@@ -1000,7 +1002,9 @@ class ProductGenerateController extends Controller
             $actualOriginalCredit = $product->pricing_model === 'per_credit' ? $creditCost * count($generated) : 0;
             $actualDiscount = $discount?->calculateCredits($actualOriginalCredit) ?? 0;
             $actualCredit = max(0, $actualOriginalCredit - $actualDiscount);
+            $creditsReturned = 0;
             if ($creditReservation['total'] > 0 && $user) {
+                $creditsReturned = max(0, (int) $creditReservation['total'] - $actualCredit);
                 $creditReservation = $this->creditWallet->settle($user, $creditReservation, $actualCredit);
                 $creditReservationSettled = true;
             }
@@ -1053,13 +1057,16 @@ class ProductGenerateController extends Controller
                     ];
                 }, $generated, array_keys($generated)),
                 'failed_message'   => $failedMsg,
+                'credits_returned'  => $creditsReturned,
                 'used_model'       => $usedModels[0] ?? $executionProduct->primary_model,
                 'model_tier'       => $tierMeta,
                 'remaining_tokens' => $user ? $user->fresh()->tokens : 0,
             ]);
 
         } catch (\Throwable $e) {
+            $creditsReturned = 0;
             if ($creditReservation['total'] > 0 && $user) {
+                $creditsReturned = (int) $creditReservation['promotional'] + (int) $creditReservation['paid'];
                 $this->creditWallet->restore(
                     $user,
                     $creditReservation['promotional'],
@@ -1077,21 +1084,34 @@ class ProductGenerateController extends Controller
                 $order->update([
                     'status' => 'review', 'processing_status' => 'failed',
                     'error_message' => $e->getMessage(),
+                    'refunded_credits' => $creditsReturned,
+                    'promotional_credits_refunded' => $creditsReturned > 0 ? (int) $creditReservation['promotional'] : 0,
+                    'paid_credits_refunded' => $creditsReturned > 0 ? (int) $creditReservation['paid'] : 0,
+                    'refunded_at' => $creditsReturned > 0 ? now() : null,
                     'processing_duration_ms' => $order->processing_started_at ? $order->processing_started_at->diffInMilliseconds(now()) : null,
                 ]);
                 $order->recordEvent('failed', 'پردازش ناموفق بود', $e->getMessage());
             }
-            $providerFailure = str_contains(strtolower($e->getMessage()), 'provider')
-                || str_contains(strtolower($e->getMessage()), 'fal.ai')
-                || str_contains(strtolower($e->getMessage()), 'replicate')
-                || str_contains(strtolower($e->getMessage()), 'timeout')
-                || str_contains(strtolower($e->getMessage()), 'cURL');
+            $errorText = strtolower($e->getMessage());
+            $providerBusy = (int) $e->getCode() === 429
+                || str_contains($errorText, 'سقف درخواست‌های هم‌زمان')
+                || str_contains($errorText, 'concurrent');
+            $providerFailure = $providerBusy
+                || str_contains($errorText, 'provider')
+                || str_contains($errorText, 'fal.ai')
+                || str_contains($errorText, 'replicate')
+                || str_contains($errorText, 'timeout')
+                || str_contains($errorText, 'curl');
             return response()->json([
                 'success' => false,
-                'message' => $providerFailure
+                'message' => $providerBusy
+                    ? 'صف پردازش این سرویس در حال تکمیل است. اعتبار این تلاش محفوظ مانده؛ چند لحظه بعد دوباره امتحان کن.'
+                    : ($providerFailure
                     ? 'مدل انتخاب‌شده در زمان مقرر پاسخ نداد. اگر مدل جایگزین برای محصول ثبت شده باشد، سیستم آن را هم امتحان کرده است؛ لطفاً چند لحظه بعد دوباره تلاش کنید.'
-                    : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.',
-                'error_code' => $providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED',
+                    : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.'),
+                'error_code' => $providerBusy ? 'AI_PROVIDER_BUSY' : ($providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED'),
+                'retryable' => $providerBusy || $providerFailure,
+                'credits_returned' => $creditsReturned,
             ], $providerFailure ? 503 : 422);
         }
     }

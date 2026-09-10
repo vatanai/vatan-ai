@@ -50,7 +50,7 @@
   $resultDemo = app()->environment('local') && request()->boolean('result_demo');
 @endphp
 
-<div class="cw-page" dir="rtl" data-instance="{{ $instance }}" data-sample-only="{{ $isSampleOnly ? '1' : '0' }}" data-loader-demo="{{ $loaderDemo ? '1' : '0' }}" data-result-demo="{{ $resultDemo ? '1' : '0' }}" data-generate-url="{{ $isSampleOnly ? '' : ($product['generate_url'] ?? '') }}" data-download-track-url="{{ $isSampleOnly ? '' : ($product['download_track_url'] ?? '') }}" data-login-url="{{ $product['login_url'] ?? route('login', ['redirect' => request()->fullUrl()]) }}" data-authenticated="{{ ($product['is_authenticated'] ?? false) ? '1' : '0' }}" data-preview="{{ $isSampleOnly ? '1' : '0' }}" data-default-output-quality="{{ $defaultResolution }}" data-default-output-aspect-ratio="{{ $defaultRatio }}">
+<div class="cw-page" dir="rtl" data-instance="{{ $instance }}" data-sample-only="{{ $isSampleOnly ? '1' : '0' }}" data-loader-demo="{{ $loaderDemo ? '1' : '0' }}" data-result-demo="{{ $resultDemo ? '1' : '0' }}" data-generate-url="{{ $isSampleOnly ? '' : ($product['generate_url'] ?? '') }}" data-download-track-url="{{ $isSampleOnly ? '' : ($product['download_track_url'] ?? '') }}" data-login-url="{{ $product['login_url'] ?? route('login', ['redirect' => request()->fullUrl()]) }}" data-authenticated="{{ ($product['is_authenticated'] ?? false) ? '1' : '0' }}" data-balance="{{ auth()->user()?->tokens ?? 0 }}" data-preview="{{ $isSampleOnly ? '1' : '0' }}" data-default-output-quality="{{ $defaultResolution }}" data-default-output-aspect-ratio="{{ $defaultRatio }}">
   @if($instance !== 'redesign')
   <div class="cw-topbar page-container">
     <div class="cw-title-wrap">
@@ -193,7 +193,7 @@
 
       <div class="cw-submit-wrap">
         @if($instance !== 'redesign')
-          <div class="cw-cost-row"><span><i class="fa-solid fa-bolt"></i> هزینه این ساخت</span><strong><b data-cost>{{ $product['cost'] }}</b> اعتبار</strong></div>
+          <div class="cw-cost-row"><span><i class="fa-solid fa-bolt"></i> هزینه این ساخت</span><strong><b data-cost data-value="{{ (int) $product['cost'] }}">{{ $product['cost'] }}</b> اعتبار</strong></div>
           <div class="cw-discount-field">
             <label for="{{ $discountId }}">کد تخفیف</label>
             <input id="{{ $discountId }}" form="{{ $formId }}" name="discount_code" type="text" maxlength="40" autocomplete="off" placeholder="اختیاری" dir="ltr">
@@ -202,7 +202,7 @@
           <input type="hidden" name="redesign_cost" value="{{ $defaultMainQuality['credits'] }}">
         @endif
         <div class="cw-form-alert" data-form-alert hidden><i class="fa-solid fa-circle-exclamation"></i><span>برای ادامه، تصویر اصلی چهره را اضافه کنید.</span></div>
-        <button type="button" class="cw-generate" data-action="generate" disabled aria-disabled="true"><span>بساز</span><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+        <button type="button" class="cw-generate" data-action="generate" disabled aria-disabled="true"><span>بساز</span><i class="fa-solid fa-lock cw-credit-lock" data-credit-lock aria-hidden="true"></i><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></button>
       </div>
     </aside>
 

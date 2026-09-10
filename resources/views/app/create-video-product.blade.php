@@ -160,7 +160,7 @@
 
       <footer class="vv-submit-wrap">
         <div><span>هزینه قطعی پیش از ساخت</span><strong><b data-video-cost>{{ number_format((int) $buildProduct['cost']) }}</b> اعتبار</strong><small data-video-balance></small></div>
-        <button type="submit" class="vv-generate"><i class="fa-solid fa-clapperboard"></i><span>ساخت ویدیو</span></button>
+        <button type="submit" class="vv-generate"><span>ساخت ویدیو</span><i class="fa-solid fa-lock vv-credit-lock" data-credit-lock aria-hidden="true"></i><i class="fa-solid fa-clapperboard" aria-hidden="true"></i></button>
       </footer>
     </form>
 

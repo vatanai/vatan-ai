@@ -131,7 +131,7 @@
 
           <button type="button" onclick="triggerGeneration()" id="btnModalSubmit"
                   class="w-full h-12 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]">
-            <i class="fa-solid fa-bolt text-[11px]"></i> بساز (شروع رندر)
+            <span>بساز (شروع رندر)</span><i class="fa-solid fa-lock hidden text-[11px]" id="modalCreditLock" aria-hidden="true"></i><i class="fa-solid fa-bolt text-[11px]"></i>
           </button>
         </div>
       </div>

@@ -412,7 +412,9 @@ class VideoGenerationService
     private function failAndRestore(GeneratedVideo $generation, string $message, string $status = 'failed'): void
     {
         $reservation = (array) ($generation->credit_reservation ?? []);
+        $creditsReturned = 0;
         if (!$generation->credits_restored_at && !$generation->credits_settled_at && (int) ($reservation['total'] ?? 0) > 0 && $generation->user) {
+            $creditsReturned = (int) ($reservation['promotional'] ?? 0) + (int) ($reservation['paid'] ?? 0);
             $this->wallet->restore(
                 $generation->user,
                 (int) ($reservation['promotional'] ?? 0),
@@ -432,6 +434,10 @@ class VideoGenerationService
             'status' => 'review',
             'processing_status' => $status === 'canceled' ? 'stopped' : 'failed',
             'error_message' => $message,
+            'refunded_credits' => $creditsReturned,
+            'promotional_credits_refunded' => $creditsReturned > 0 ? (int) ($reservation['promotional'] ?? 0) : 0,
+            'paid_credits_refunded' => $creditsReturned > 0 ? (int) ($reservation['paid'] ?? 0) : 0,
+            'refunded_at' => $creditsReturned > 0 ? now() : null,
             'processing_duration_ms' => $generation->order?->processing_started_at?->diffInMilliseconds(now()),
         ]);
         $generation->order?->recordEvent('failed', 'ساخت ویدیو کامل نشد', $message);

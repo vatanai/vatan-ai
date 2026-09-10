@@ -60,8 +60,14 @@
     workspace.querySelector('[data-video-cost]').textContent = new Intl.NumberFormat('fa-IR').format(value);
     const balance = Number(config.balance || 0);
     const note = workspace.querySelector('[data-video-balance]');
-    if (note) { note.textContent = balance >= value ? `موجودی: ${new Intl.NumberFormat('fa-IR').format(balance)} اعتبار` : 'اعتبار کافی نیست'; note.classList.toggle('is-insufficient', balance < value); }
-    if (submit) submit.disabled = balance < value;
+    const authenticated = form.dataset.authenticated === '1';
+    if (note) { note.textContent = !authenticated || balance >= value ? `موجودی: ${new Intl.NumberFormat('fa-IR').format(balance)} اعتبار` : 'اعتبار کافی نیست'; note.classList.toggle('is-insufficient', authenticated && balance < value); }
+    if (submit) {
+      submit.disabled = false;
+      submit.dataset.requiredCredits = String(Math.max(0, value));
+      submit.classList.toggle('is-credit-locked', authenticated && balance < value);
+      submit.setAttribute('aria-label', authenticated && balance < value ? 'افزایش اعتبار برای ساخت ویدیو' : 'ساخت ویدیو');
+    }
   }
   form.querySelectorAll('[name="video[duration]"]').forEach((input) => input.addEventListener('change', updateCost));
   form.querySelectorAll('[name="video[resolution]"],[name="video[quality]"],[name="video[generate_audio]"],[name="face_profile_id"]').forEach((input) => input.addEventListener('change', updateCost));
@@ -181,6 +187,7 @@
         submit.disabled = false;
         submitLabel.textContent = 'تلاش دوباره';
         statusLabel.textContent = 'ساخت کامل نشد';
+        if (data.credits_returned > 0) window.showCreditsReturnedModal?.(data.credits_returned);
         return showError(data.error_message || 'ساخت ویدیو کامل نشد؛ اعتبار رزروشده بازگردانده شد.');
       }
       statusLabel.textContent = data.status === 'processing' ? 'در حال ساخت' : 'در صف پردازش';
@@ -207,6 +214,12 @@
     if (!form.reportValidity()) return;
     const sourceError = validateSource();
     if (sourceError) return showError(sourceError);
+    const requiredCredits = Number(submit.dataset.requiredCredits || 0);
+    const balance = Number(config.balance || 0);
+    if (requiredCredits > 0 && balance < requiredCredits) {
+      window.showTokenShortageModal?.({ required: requiredCredits, balance });
+      return;
+    }
     enterProcessing('درخواست در حال ارسال به موتور ساخت ویدیو است.');
 
     try {

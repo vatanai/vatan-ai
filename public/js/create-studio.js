@@ -401,7 +401,15 @@
       value *= Math.max(1, Math.min(6, Number(normalizeDigits(selectedValues.count || outputCountInput?.value || '1') || 1)));
     }
     if (cost) cost.textContent = faDigits(value);
+    updateCreditState(value);
     requestServerQuote();
+  }
+
+  function updateCreditState(value) {
+    const balance = Number(root.dataset.balance || 0);
+    const locked = config.authenticated === true && Number(value || 0) > 0 && balance < Number(value || 0);
+    submit?.classList.toggle('is-credit-locked', locked);
+    submit?.setAttribute('aria-label', locked ? 'افزایش اعتبار برای ساخت' : 'بساز');
   }
 
   function requestServerQuote() {
@@ -428,6 +436,7 @@
           return;
         }
         if (cost) cost.textContent = faDigits(payload.credits);
+        updateCreditState(Number(payload.credits || 0));
       } catch (_) {}
     }, 220);
   }
@@ -504,14 +513,17 @@
     return data;
   }
 
-  async function readPayload(response) { const text = await response.text(); let payload = {}; try { payload = text ? JSON.parse(text) : {}; } catch (_) {} if (!response.ok || !payload.success) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'ساخت خروجی انجام نشد.'); return payload; }
+  async function readPayload(response) { const text = await response.text(); let payload = {}; try { payload = text ? JSON.parse(text) : {}; } catch (_) {} if (!response.ok || !payload.success) { const error = new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'ساخت خروجی انجام نشد.'); error.payload = payload; throw error; } return payload; }
 
   async function pollVideo(statusUrl) {
     for (let attempt = 0; attempt < 160; attempt += 1) {
       await new Promise((resolve) => { pollTimer = window.setTimeout(resolve, 2500); });
       const response = await fetch(statusUrl, {headers: {'Accept': 'application/json'}}); const payload = await response.json();
       if (payload.status === 'completed' && payload.video_url) return payload.video_url;
-      if (['failed', 'canceled'].includes(payload.status)) throw new Error(payload.error_message || 'ساخت ویدیو ناموفق بود.');
+      if (['failed', 'canceled'].includes(payload.status)) {
+        if (payload.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
+        throw new Error(payload.error_message || 'ساخت ویدیو ناموفق بود.');
+      }
       progressText.textContent = payload.status === 'queued' ? 'درخواست در صف ساخت قرار دارد...' : 'مدل هوش مصنوعی در حال ساخت خروجی است...';
     }
     throw new Error('ساخت ویدیو بیشتر از زمان معمول طول کشید؛ لطفاً بعداً وضعیت گالری را بررسی کنید.');
@@ -522,11 +534,18 @@
     if (!prompt.value.trim()) { showError('ابتدا توضیحات ساخت را وارد کنید.'); prompt.focus(); return; }
     if (config.authenticated !== true) { saveStudioState(); window.location.href = config.login_url; return; }
     if (currentMode === 'image' && activeConfig.requires_reference && !uploadInput.files[0]) { showError('برای ساخت این محصول، یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
+    const requiredCredits = Number(normalizeDigits(cost?.textContent || 0));
+    const balance = Number(root.dataset.balance || 0);
+    if (requiredCredits > 0 && balance < requiredCredits) {
+      window.showTokenShortageModal?.({ required: requiredCredits, balance });
+      return;
+    }
     submit.disabled = true; submit.setAttribute('aria-busy', 'true'); submitLabel.textContent = 'در حال ساخت'; startProgress(currentMode === 'video' ? 'در حال ساخت ویدیو' : 'در حال ساخت عکس');
     try {
       const url = activeConfig.generate_url || `${window.location.origin}/app/create/${activeConfig.route_slug}/generate`;
       const response = await fetch(url, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json'}, body: appendDefaults(new FormData(form))});
       const payload = await readPayload(response);
+      if (payload.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
       if (currentMode === 'video') {
         const videoUrl = await pollVideo(payload.status_url); outputVideo.src = videoUrl; outputVideo.hidden = false; outputImage.hidden = true; videoPlay.hidden = false; outputVideo.load(); await outputVideo.play().catch(() => {});
       } else {
@@ -544,6 +563,7 @@
       imageContent.hidden = currentMode !== 'image';
       submitLabel.textContent = 'بساز';
       showError(error.message || 'ارتباط با سرویس ساخت برقرار نشد.');
+      if (error.payload?.credits_returned > 0) window.showCreditsReturnedModal?.(error.payload.credits_returned);
     }
     finally {
       submit.disabled = false;

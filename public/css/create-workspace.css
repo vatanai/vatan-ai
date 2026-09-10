@@ -116,3 +116,5 @@
   .create-section--redesign .cw-redesign-output-placeholder strong{font-size:13px}
   .create-section--redesign .cw-redesign-output-placeholder span{font-size:9px;color:var(--text-secondary)}
 }
+ .cw-generate .cw-credit-lock{display:none}.cw-generate.is-credit-locked .cw-credit-lock{display:inline-block;color:currentColor}.cw-generate.is-credit-locked{filter:saturate(.72)}
+ .cw-generate{grid-template-columns:1fr auto auto auto}

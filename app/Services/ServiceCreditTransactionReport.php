@@ -381,6 +381,17 @@ class ServiceCreditTransactionReport
             ]);
         }
 
+        // حتی برای محصولی که ورودی‌اش از تنظیمات داخلی/پروفایل چهره می‌آید،
+        // سفارش موفق نباید در گزارش بدون ورودی دیده شود.
+        if ($media->isEmpty() && filled(data_get($payload, 'resolved_prompt'))) {
+            $media->push([
+                'type' => 'text',
+                'url' => route('admin.orders.show', $order),
+                'label' => data_get($payload, 'face_profile_id') ? 'ورودی پروفایل چهره' : 'ورودی تنظیمات ساخت',
+                'text' => (string) data_get($payload, 'resolved_prompt'),
+            ]);
+        }
+
         if (filled(data_get($payload, 'source_video_path'))) {
             $media->push([
                 'type' => 'video',

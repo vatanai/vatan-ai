@@ -698,6 +698,7 @@ var _modalResultUrl = null;
 var CREDIT_COST = {{ (int) ($product->credit_cost ?? 0) }};
 var IS_PER_CREDIT = @json($product->pricing_model === 'per_credit');
 var HAS_VARIANTS = @json(count($product->outputVariantList()) > 0);
+var USER_TOKEN_BALANCE = {{ (int) (auth()->user()?->tokens ?? 0) }};
 
 function getSelectedVariantKeys() {
   return Array.prototype.map.call(
@@ -712,8 +713,7 @@ function toggleVariantCard(el) {
 }
 
 function updateVariantTotal() {
-  if (!HAS_VARIANTS) return;
-  var count = getSelectedVariantKeys().length;
+  var count = HAS_VARIANTS ? getSelectedVariantKeys().length : 1;
 
   var countEl = document.getElementById('variantPickerCount');
   if (countEl) countEl.textContent = count ? (Number(count).toLocaleString('fa-IR') + ' مدل انتخاب شده') : 'هیچ مدلی انتخاب نشده';
@@ -726,6 +726,11 @@ function updateVariantTotal() {
       numEl.textContent = Number(count * CREDIT_COST).toLocaleString('fa-IR') + ' توکن';
     }
   }
+  var submit = document.getElementById('btnModalSubmit');
+  var lock = document.getElementById('modalCreditLock');
+  var locked = IS_AUTH && IS_PER_CREDIT && CREDIT_COST > 0 && USER_TOKEN_BALANCE < (count * CREDIT_COST);
+  submit?.classList.toggle('opacity-80', locked);
+  lock?.classList.toggle('hidden', !locked);
 }
 
 function renderOutputGrid(images) {
@@ -880,6 +885,13 @@ function triggerGeneration() {
     errorTxt.textContent = 'حداقل یک مدل خروجی را انتخاب کنید.';
     return;
   }
+  var requiredCredits = IS_PER_CREDIT ? CREDIT_COST * (HAS_VARIANTS ? selectedVariantKeys.length : 1) : 0;
+  if (IS_AUTH && requiredCredits > USER_TOKEN_BALANCE) {
+    if (typeof window.showTokenShortageModal === 'function') {
+      window.showTokenShortageModal({required: requiredCredits, balance: USER_TOKEN_BALANCE});
+    }
+    return;
+  }
   errorBox.classList.add('hidden');
 
   selectedVariantKeys.forEach(function (k) { fd.append('variants[]', k); });
@@ -913,6 +925,7 @@ function triggerGeneration() {
   }
   processSteps();
 
+  var responsePayload = {};
   fetch(GEN_URL, {
     method: 'POST', body: fd,
     headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF}
@@ -926,11 +939,14 @@ function triggerGeneration() {
 
        // باز کردن پاپ‌آپ سراسری خرید بدون نیاز به رفرش
        if(typeof window.showTokenShortageModal === 'function') {
-           window.showTokenShortageModal();
+           window.showTokenShortageModal({required: CREDIT_COST * (HAS_VARIANTS ? getSelectedVariantKeys().length : 1), balance: USER_TOKEN_BALANCE});
        }
        throw new Error('موجودی اعتبار توکن شما کافی نیست.');
     }
-    return r.json();
+    return r.text().then(function(text) {
+      try { responsePayload = text ? JSON.parse(text) : {}; } catch (_) { responsePayload = {}; }
+      return responsePayload;
+    });
   })
   .then(function(d){
     _modalTimers.forEach(clearTimeout); _modalTimers = [];
@@ -946,6 +962,9 @@ function triggerGeneration() {
       if (d.images && d.images.length > 1) {
         // خروجی چندتایی — دقیقاً مدل‌هایی که کاربر تیک زده بود
         renderOutputGrid(d.images);
+        if (responsePayload && responsePayload.credits_returned > 0 && typeof window.showCreditsReturnedModal === 'function') {
+          window.showCreditsReturnedModal(responsePayload.credits_returned);
+        }
       } else {
         if (outGrid) outGrid.classList.add('hidden');
         outImg.src = d.image_url;
@@ -980,6 +999,9 @@ function triggerGeneration() {
     overlay.classList.add('hidden');
     document.getElementById('btnModalSubmit').disabled = false;
 
+    if (responsePayload && responsePayload.credits_returned > 0 && typeof window.showCreditsReturnedModal === 'function') {
+      window.showCreditsReturnedModal(responsePayload.credits_returned);
+    }
     if(err.message !== 'موجودی اعتبار توکن شما کافی نیست.') {
         errorBox.classList.remove('hidden');
         errorTxt.textContent = err.message || 'ارتباط با سرور برقرار نشد.';

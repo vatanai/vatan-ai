@@ -10,7 +10,7 @@
 @endpush
 
 @section('content')
-<div class="create-studio-page" dir="rtl" data-create-studio @if($experimental ?? false) data-workflow-studio @endif data-mode="image">
+<div class="create-studio-page" dir="rtl" data-create-studio data-balance="{{ auth()->user()?->tokens ?? 0 }}" @if($experimental ?? false) data-workflow-studio @endif data-mode="image">
   <script type="application/json" data-studio-config>@json($studioConfig + ['quote_url' => route('app.create.studio.quote')])</script>
   <div class="create-studio-shell">
     <aside class="create-studio-sidebar" aria-label="تنظیمات ساخت">
@@ -60,7 +60,7 @@
         </form>
       </div>
 
-      <div class="create-studio-generate-bar"><div class="create-studio-credit"><span>هزینه تقریبی</span><strong><i class="fa-solid fa-bolt"></i> <b data-studio-cost>۰</b> اعتبار</strong></div><button type="button" class="create-studio-generate-button" data-studio-submit><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span data-studio-submit-label>بساز</span></button></div>
+      <div class="create-studio-generate-bar"><div class="create-studio-credit"><span>هزینه تقریبی</span><strong><i class="fa-solid fa-bolt"></i> <b data-studio-cost>۰</b> اعتبار</strong></div><button type="button" class="create-studio-generate-button" data-studio-submit><span data-studio-submit-label>بساز</span><i class="fa-solid fa-lock create-studio-credit-lock" data-credit-lock aria-hidden="true"></i><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></button></div>
     </aside>
 
     <main class="create-studio-stage" aria-label="فضای پیش‌نمایش">

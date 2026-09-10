@@ -41,6 +41,7 @@ class AiProviderLimitService
     {
         $setting = AiProviderSetting::forProvider($provider);
         $limits = $this->config($provider, $setting);
+        $this->releaseStaleReservations($provider);
         $windowStart = now()->subMinutes($limits['window_minutes']);
 
         $query = AiProviderRequest::query()
@@ -74,6 +75,7 @@ class AiProviderLimitService
             $limits = $this->config($provider, $setting);
 
             if ($limits['enabled']) {
+                $this->releaseStaleReservations($provider);
                 $this->assertWithinLimits($provider, $limits, $estimatedCost, $outputs);
             }
 
@@ -103,7 +105,7 @@ class AiProviderLimitService
         }
 
         if ($limits['max_concurrent'] > 0 && $summary['active_count'] >= $limits['max_concurrent']) {
-            throw new RuntimeException('سقف درخواست‌های هم‌زمان این provider پر است؛ پس از پایان اجرای فعلی دوباره تلاش کنید.');
+            throw new RuntimeException('سقف درخواست‌های هم‌زمان این provider موقتاً پر است؛ اعتبار شما محفوظ می‌ماند و بعد از آزادشدن صف دوباره تلاش کنید.', 429);
         }
 
         if ($limits['max_cost_usd'] > 0 && $estimatedCost !== null && ($summary['spent_usd'] + $estimatedCost) > $limits['max_cost_usd']) {
@@ -121,5 +123,39 @@ class AiProviderLimitService
             : $windowMinutes . ' دقیقه';
 
         return "سقف {$kind} این provider در بازه {$window} پر شده است.";
+    }
+
+    /**
+     * اگر worker یا ارتباط شبکه قبل از ثبت نتیجه قطع شود، رزرو محلی نباید برای
+     * همیشه یک slot هم‌زمانی را اشغال کند. زمان‌های محافظه‌کارانه‌اند تا اجرای
+     * واقعی زودتر از موعد آزاد نشود.
+     */
+    private function releaseStaleReservations(string $provider): void
+    {
+        $now = now();
+
+        AiProviderRequest::query()
+            ->where('provider', $provider)
+            ->where('status', 'reserved')
+            ->whereNotNull('submitted_at')
+            ->where('submitted_at', '<', $now->copy()->subMinutes(15))
+            ->update([
+                'status' => 'failed',
+                'error_code' => 'local_reservation_expired',
+                'error_message' => 'رزرو محلی provider پیش از ارسال منقضی شد.',
+                'completed_at' => $now,
+            ]);
+
+        AiProviderRequest::query()
+            ->where('provider', $provider)
+            ->whereIn('status', ['queued', 'processing'])
+            ->whereNotNull('submitted_at')
+            ->where('submitted_at', '<', $now->copy()->subHours(6))
+            ->update([
+                'status' => 'failed',
+                'error_code' => 'local_request_expired',
+                'error_message' => 'اجرای provider برای مدت طولانی بدون نتیجه باقی ماند.',
+                'completed_at' => $now,
+            ]);
     }
 }
