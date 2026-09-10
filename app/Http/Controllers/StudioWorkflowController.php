@@ -58,7 +58,11 @@ class StudioWorkflowController extends Controller
             ->values()
             ->all();
 
-        return view('app.create-studio', $data);
+        return response()
+            ->view('app.create-studio', $data)
+            ->header('Cache-Control', 'no-store, private')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function quote(Request $request, StudioCostService $studioCosts): \Illuminate\Http\JsonResponse

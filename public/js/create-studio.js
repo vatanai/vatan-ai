@@ -4,6 +4,11 @@
   const root = document.querySelector('[data-create-studio]');
   if (!root) return;
 
+  // Never restore this workflow from the browser back/forward cache after a deploy.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) window.location.reload();
+  });
+
   let config = {};
   try { config = JSON.parse(root.querySelector('[data-studio-config]')?.textContent || '{}'); } catch (_) {}
   const faDigits = (value) => String(value).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
