@@ -198,7 +198,7 @@
       </span>
     </a>
 
-    <a href="{{ route('app.create') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="create" aria-label="بساز">
+    <a href="{{ route('app.create.studio') }}" class="vatan-nav-item group flex-1 flex items-center justify-center h-full no-underline relative z-1 select-none [-webkit-tap-highlight-color:transparent]" data-key="create" aria-label="بساز">
       <span class="vatan-nav-icon-wrap vatan-nav-icon-wrap-25">
         @include('partials.nav-svg',['key'=>'create','state'=>'off','size'=>25,'class'=>'vatan-nav-icon-off text-white [.light_&]:text-black'])
         @include('partials.nav-svg',['key'=>'create','state'=>'on','size'=>25,'class'=>'vatan-nav-icon-on text-white [.light_&]:text-black'])
