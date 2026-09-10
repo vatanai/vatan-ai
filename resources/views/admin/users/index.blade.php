@@ -197,10 +197,6 @@
                     <span class="text-[var(--text-soft)] text-[10px]">کل مصرف شده:</span>
                     <span class="text-[var(--danger)] font-mono font-medium">{{ number_format($user->tokens_used ?? 0) }}</span>
                   </div>
-                  <div class="flex justify-between items-center p-0.5 px-1.5">
-                    <span class="text-[var(--text-soft)] text-[10px]">لینک دعوت:</span>
-                    <span class="text-[var(--info)] font-mono font-medium" dir="rtl">{{ number_format((int) ($user->referral_links_count ?? 0)) }} لینک | {{ number_format((int) ($user->referral_visits_count ?? 0)) }} ورود</span>
-                  </div>
                 </div>
               </td>
 
@@ -215,6 +211,11 @@
               @endphp
               <td class="admin-status-column p-2 text-center">
                 <div class="flex flex-col items-center gap-1.5 text-[10.5px]">
+                  <div class="inline-flex items-center justify-center gap-1 text-[var(--info)] font-mono font-medium text-[10px]" dir="rtl" title="عملکرد لینک‌های دعوت این کاربر">
+                    <span class="text-[var(--text-soft)] font-sans">لینک دعوت:</span>
+                    <span>{{ number_format((int) ($user->referral_links_count ?? 0)) }} لینک | {{ number_format((int) ($user->referral_visits_count ?? 0)) }} ورود</span>
+                  </div>
+                  <span class="w-10 h-px bg-[var(--border)]"></span>
                   @if($referrer)
                     <span class="max-w-full truncate font-bold text-[var(--text-h)]" title="{{ trim(($referrer->name ?? '').' '.($referrer->last_name ?? '')) ?: 'کاربر وطن' }}">{{ trim(($referrer->name ?? '').' '.($referrer->last_name ?? '')) ?: 'کاربر وطن' }}</span>
                     @if($referralUrl)
@@ -265,7 +266,7 @@
                   <a href="{{ route('admin.users.logs', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مشاهده لاگ‌ها"><i class="fa-solid fa-history"></i> لاگ‌ها</a>
                   <a href="{{ route('admin.users.gallery.show', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--primary-l)] border-[var(--primary-m)] text-[var(--primary)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="گالری و پروفایل کامل ورودی‌های کاربر"><i class="fa-solid fa-images"></i> گالری</a>
                   <div class="admin-user-credit-action-stack">
-                    <button type="button" data-user-token-dialog data-user-id="{{ $user->id }}" data-user-name="{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) }}" data-user-token="{{ (int) $user->tokens }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--text-main)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مدیریت اعتبار"><i class="fa-solid fa-coins"></i> اعتبار</button>
+                    <button type="button" data-user-token-dialog data-user-id="{{ $user->id }}" data-user-name="{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) }}" data-user-token="{{ (int) $user->tokens }}" class="admin-user-credit-button w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--text-main)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مدیریت اعتبار"><i class="fa-solid fa-coins"></i> اعتبار</button>
                     @if($canManageUserPlans)
                       <a class="admin-user-referral-button" href="{{ route('admin.referrals.users.links.create', $user) }}" title="مدیریت لینک‌ها و عملکرد همکاری در فروش {{ trim(($user->name ?? '').' '.($user->last_name ?? '')) }}">
                         <span><i class="fa-solid fa-people-arrows"></i> همکاری</span><i class="fa-solid fa-arrow-up-left-from-circle"></i>

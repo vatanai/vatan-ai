@@ -1,4 +1,4 @@
-{{-- ===== بخش فایل‌ها: فضای ذخیره‌سازی + خلق‌شده + عکس‌های ورودی ===== --}}
+{{-- ===== بخش فایل‌ها: فضای ذخیره‌سازی + عکس‌های ورودی + محصولات استفاده‌شده ===== --}}
 <div class="profile-panel" data-panel="files" style="display:none;padding:16px;">
 
   @if($isGuest ?? false)
@@ -29,21 +29,11 @@
   </div>
 
   <div class="files-sub-tabs" dir="rtl">
-    <button type="button" class="files-sub-tab active" data-sub="created">خلق شده</button>
-    <button type="button" class="files-sub-tab" data-sub="personal">عکس‌های ورودی</button>
-    <button type="button" class="files-sub-tab" data-sub="gallery-inputs">ورودی‌های آزمایش</button>
+    <button type="button" class="files-sub-tab active" data-sub="personal">عکس‌های ورودی</button>
+    <button type="button" class="files-sub-tab" data-sub="used-products">محصولات استفاده شده</button>
   </div>
 
-  <div id="files-created" class="files-grid">
-    @forelse ($createdImages ?? [] as $item)
-      @php $createdPath = $item->image_path ?? ''; @endphp
-      <div class="files-cell"><img src="{{ filter_var($createdPath, FILTER_VALIDATE_URL) ? $createdPath : asset('storage/' . ltrim($createdPath, '/')) }}" alt="تصویر خلق‌شده" class="grid-img" loading="lazy" decoding="async"></div>
-    @empty
-      <div class="grid-empty"><p>هنوز تصویری خلق نکردی</p></div>
-    @endforelse
-  </div>
-
-  <div id="files-personal" class="files-grid" style="display:none;">
+  <div id="files-personal" class="files-grid">
     @forelse (($personalImages ?? collect())->filter(fn ($upload) => blank($upload->mime_type) || str_starts_with((string) $upload->mime_type, 'image/')) as $upload)
       @php $personalPath = $upload->file_path ?? ''; @endphp
       <div class="files-cell"><img src="{{ filter_var($personalPath, FILTER_VALIDATE_URL) ? $personalPath : asset('storage/' . ltrim($personalPath, '/')) }}" alt="عکس شخصی آپلودشده" class="grid-img" loading="lazy" decoding="async"></div>
@@ -52,20 +42,14 @@
     @endforelse
   </div>
 
-  <div id="files-gallery-inputs" class="files-grid" style="display:none;">
-    @forelse (($galleryItems ?? collect()) as $item)
-      @php($galleryMime = strtolower((string) $item->mime_type))
-      @if (str_starts_with($galleryMime, 'image/'))
-        <a href="{{ route('profile.gallery.original', $item) }}" target="_blank" rel="noopener" class="files-cell">
-          <img src="{{ route('profile.gallery.preview', $item) }}" alt="عکس ورودی آزمایش" class="grid-img" loading="lazy">
-        </a>
-      @elseif (str_starts_with($galleryMime, 'video/'))
-        <div class="files-cell"><video src="{{ route('profile.gallery.original', $item) }}" controls preload="none" style="width:100%;height:100%;object-fit:contain;"></video></div>
-      @else
-        <div class="files-cell" style="padding:14px;line-height:2;white-space:pre-wrap;overflow:auto;">{{ $item->display_text ?? data_get($item->metadata, 'text', 'متن ورودی') }}</div>
-      @endif
+  <div id="files-used-products" class="files-grid files-grid--products" style="display:none;">
+    @forelse (($usedProducts ?? collect()) as $product)
+      <a href="{{ route('app.product', $product->route_slug) }}" class="files-cell files-product-cell">
+        <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa ?: $product->name_en }}" class="grid-img" loading="lazy" decoding="async">
+        <span class="files-product-name">{{ $product->name_fa ?: $product->name_en }}</span>
+      </a>
     @empty
-      <div class="grid-empty"><p>هنوز ورودی‌ای از آزمایش‌ها در گالری ثبت نشده است</p></div>
+      <div class="grid-empty"><p>هنوز محصولی برای ساخت استفاده نکردی</p></div>
     @endforelse
   </div>
 

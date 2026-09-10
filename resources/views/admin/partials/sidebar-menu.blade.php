@@ -30,14 +30,20 @@
   <a href="/admin/dashboard" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}"><div class="nav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="nav-label">مرکز فرماندهی</div></a>
 </div>
 <div class="nav-item">
-  <a href="{{ route('admin.service-credits.index') }}" class="nav-link {{ request()->is('admin/service-credits*') ? 'active' : '' }}"><div class="nav-icon"><i class="fa-solid fa-gauge-high"></i></div><div class="nav-label">اعتبار سرویس‌ها</div>@if(isset($creditOverview) && ($creditOverview['totals']['low_count'] ?? 0) > 0)<span class="nav-status-badge warn">{{ $creditOverview['totals']['low_count'] }}</span>@endif</a>
+  @php $isCreditMenu = request()->is('admin/service-credits*'); @endphp
+  <div class="nav-link {{ $isCreditMenu ? 'active' : '' }}" onclick="toggleSub('service-credits-submenu', this)"><div class="nav-icon"><i class="fa-solid fa-gauge-high"></i></div><div class="nav-label">اعتبار سرویس‌ها</div>@if(isset($creditOverview) && ($creditOverview['totals']['low_count'] ?? 0) > 0)<span class="nav-status-badge warn">{{ $creditOverview['totals']['low_count'] }}</span>@endif<i class="fa-solid fa-chevron-down nav-chev {{ $isCreditMenu ? 'open' : '' }}"></i></div>
+  <div class="submenu {{ $isCreditMenu ? 'open' : '' }}" id="service-credits-submenu"><div class="sub-track">
+    <a href="{{ route('admin.service-credits.providers') }}" class="sub-item {{ request()->is('admin/service-credits/providers') || request()->is('admin/service-credits') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">میزان اعتبار پرووایدرها</div></a>
+    <a href="{{ route('admin.service-credits.transactions') }}" class="sub-item {{ request()->is('admin/service-credits/transactions') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">بررسی تراکنش‌ها</div></a>
+  </div></div>
 </div>
 
 {{-- مدیریت محصولات --}}
 <div class="nav-item">
   <div class="nav-link {{ $isProductsMenu ? 'active' : '' }}" onclick="toggleSub('products-submenu', this)"><div class="nav-icon"><i class="fa-solid fa-box-open"></i></div><div class="nav-label">مدیریت محصولات</div><i class="fa-solid fa-chevron-down nav-chev {{ $isProductsMenu ? 'open' : '' }}"></i></div>
   <div class="submenu {{ $isProductsMenu ? 'open' : '' }}" id="products-submenu"><div class="sub-track">
-    <a href="/admin/products" class="sub-item {{ request()->is('admin/products') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">لیست محصولات</div></a>
+    <a href="{{ route('admin.products') }}" class="sub-item {{ request()->is('admin/products') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">لیست محصولات عکس</div></a>
+    <a href="{{ route('admin.products.videos') }}" class="sub-item {{ request()->is('admin/products/videos') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">لیست محصولات ویدیو</div></a>
     <a href="{{ route('admin.products.create') }}" class="sub-item {{ request()->is('admin/products/create') || request()->is('admin/products/create/*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ثبت محصول عکس</div></a>
     <a href="{{ route('admin.products.video.create') }}" class="sub-item {{ request()->is('admin/products/videos/create') || request()->is('admin/products/videos/create/*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ثبت محصول ویدیو</div></a>
     <div class="sub-item sub-item-parent {{ request()->is('admin/lab*') ? 'active' : '' }}" onclick="toggleSubSub('products-lab-submenu-new', this)"><div class="sub-dot"></div><div class="sub-label">آزمایشگاه</div><i class="fa-solid fa-chevron-down sub-chev"></i></div>

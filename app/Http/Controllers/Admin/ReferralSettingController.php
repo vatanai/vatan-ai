@@ -16,13 +16,13 @@ use App\Models\Product;
 use App\Models\GeneratedImage;
 use App\Services\ReferralProgramService;
 use App\Support\Numeral;
+use App\Support\ReferralCode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReferralSettingController extends Controller
@@ -71,7 +71,7 @@ class ReferralSettingController extends Controller
 
         if (! $user->referral_code) {
             do {
-                $code = Str::upper(Str::random(10));
+                $code = ReferralCode::five();
             } while (User::query()->where('referral_code', $code)->exists());
 
             $user->forceFill(['referral_code' => $code])->save();
@@ -399,7 +399,7 @@ class ReferralSettingController extends Controller
         }
 
         do {
-            $slug = Str::lower(Str::random(8));
+            $slug = strtolower(ReferralCode::five());
         } while (ReferralLink::query()->where('slug', $slug)->exists());
 
         ReferralLink::query()->create([

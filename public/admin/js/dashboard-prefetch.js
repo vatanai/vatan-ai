@@ -57,6 +57,14 @@
       const anchor = event.target.closest('a');
       if (anchor && sidebar.contains(anchor)) schedule(anchor);
     }, { passive: true });
+
+    // چند صفحهٔ پرتکرار پس از آماده‌شدن داشبورد و در زمان بیکاری مرورگر گرم می‌شوند.
+    const popularPaths = ['/admin/products', '/admin/users', '/admin/finance/overview'];
+    const popular = [...sidebar.querySelectorAll('a')].filter(anchor => {
+      try { return popularPaths.includes(new URL(anchor.href, window.location.href).pathname); }
+      catch (e) { return false; }
+    });
+    popular.forEach(anchor => schedule(anchor));
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

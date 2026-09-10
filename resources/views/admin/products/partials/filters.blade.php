@@ -55,7 +55,7 @@
     </button>
 
     @if(request()->anyFilled(['search','category','subcategory','status','pricing_model','media_type','ai_model','ai_provider','ai_status','model_cost_min','model_cost_max','credit_min','credit_max','created_from','created_to','updated_from','updated_to','featured','is_new','trending','sort']))
-      <a href="{{ route('admin.products') }}" class="btn-pro btn-pro-ghost" title="پاک کردن همه فیلترها">
+      <a href="{{ ($isVideoList ?? false) ? route('admin.products.videos') : route('admin.products') }}" class="btn-pro btn-pro-ghost" title="پاک کردن همه فیلترها">
         <i class="fa-solid fa-xmark text-[11px]"></i> پاک کردن
       </a>
     @endif

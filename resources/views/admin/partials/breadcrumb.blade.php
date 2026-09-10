@@ -34,12 +34,12 @@
             $addBreadcrumb('دسته‌بندی‌ها');
         } elseif (request()->is('admin/lab*')) {
             $addBreadcrumb('آزمایشگاه');
+        } elseif (request()->is('admin/products/videos*')) {
+            $addBreadcrumb(request()->is('admin/products/videos/create*') ? 'ثبت محصول ویدیو' : 'لیست محصولات ویدیو');
         } elseif (request()->is('admin/products/create*')) {
             $addBreadcrumb('ثبت محصول عکس');
-        } elseif (request()->is('admin/products/videos*')) {
-            $addBreadcrumb('ثبت محصول ویدیو');
         } else {
-            $addBreadcrumb('لیست محصولات');
+            $addBreadcrumb('لیست محصولات عکس');
         }
     } elseif (request()->is('admin/service-credits*')) {
         $addBreadcrumb('اعتبار سرویس‌ها');

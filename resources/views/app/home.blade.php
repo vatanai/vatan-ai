@@ -41,12 +41,16 @@
           </div>
           <div class="ig-search-results" id="ig-search-results" hidden></div>
         </div>
+        <button type="submit" form="home-search-form" class="ig-generate ig-generate--mobile" data-ig="generate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <span class="ig-generate-label">جست و جوی<br><b>هوشمند</b></span>
+        </button>
       </form>
 
       {{-- ردیف کنترل‌ها --}}
       <div class="ig-controls">
         {{-- ثبت فرم، کاربر را به صفحه نتایج کامل کاتالوگ می‌برد. --}}
-        <button type="submit" form="home-search-form" class="ig-generate" data-ig="generate">
+        <button type="submit" form="home-search-form" class="ig-generate ig-generate--desktop" data-ig="generate">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <span>جست و جوی هوشمند</span>
         </button>

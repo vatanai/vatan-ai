@@ -83,8 +83,9 @@
     </div>
     <div class="min-w-0">
       @if(!empty($topProduct))
+        @php $topProductRuns = (int) ($topProduct->generations_count ?? 0) + (int) ($topProduct->generated_videos_count ?? 0); @endphp
         <div class="text-[13px] font-extrabold leading-tight truncate" style="color:var(--text-h);" title="{{ $topProduct->name_fa }}">{{ $topProduct->name_fa }}</div>
-        <div class="stat-card-label">محبوب‌ترین ({{ number_format($topProduct->generations_count ?? 0) }} اجرا)</div>
+        <div class="stat-card-label">محبوب‌ترین ({{ number_format($topProductRuns) }} اجرا)</div>
       @else
         <div class="text-[13px] font-extrabold leading-tight truncate" style="color:var(--text-soft);">—</div>
         <div class="stat-card-label">محبوب‌ترین محصول</div>

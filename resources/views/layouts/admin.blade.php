@@ -15,6 +15,7 @@
     @stack('styles')
 </head>
 <body class="font-sans" style="background:var(--page-bg);color:var(--text-main);">
+    @php($adminDailyNotifications = app(\App\Services\AdminDailyNotificationService::class)->summary())
     <script>
       /* جلوگیری از چشمک‌زدن تم هنگام بارگذاری صفحه — باید اولین چیز داخل body باشد.
          پیش‌فرض کل داشبورد «روز/روشن» است؛ فقط اگر کاربر صراحتاً شب را انتخاب کرده باشد تیره می‌شود. */
@@ -72,6 +73,9 @@
 
     @include('admin.partials.jalali-date-inputs')
     @yield('scripts')
+    @if(empty($dashboardSection) && request()->is('admin/dashboard'))
+      <script src="{{ asset('admin/js/dashboard-prefetch.js') }}" defer></script>
+    @endif
 
 </body>
 </html>

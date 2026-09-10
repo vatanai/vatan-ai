@@ -12,16 +12,10 @@
       <p class="referral-program-lead">{{ $referralSettings->profile_subtitle }}</p>
       <p class="referral-program-description">{{ $referralSettings->profile_description }}</p>
       <div class="referral-reward-summary">
-        @if($referralSettings->registration_gift_enabled && $referralSettings->registration_gift_tokens > 0)
-          <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7H8.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z"/></svg> هدیه شروع دوستت: <b>{{ number_format($referralSettings->registration_gift_tokens) }} توکن</b></span>
-        @endif
-        @if($referralSettings->invitee_reward_tokens > 0)
-          <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg> هدیه دعوت‌شده: <b>{{ number_format($referralSettings->invitee_reward_tokens) }} توکن</b></span>
-        @endif
-        <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.2c-.7-.7-1.7-1.1-3-1.1-1.5 0-2.5.8-2.5 1.8 0 2.8 5.5 1.1 5.5 4 0 1.1-1 1.9-2.7 1.9-1.2 0-2.2-.4-2.9-1.1"/></svg> پاداش هر دعوت موفق: <b>{{ number_format($referralSettings->inviter_reward_tokens) }} توکن</b></span>
-        @if((float) ($referralSettings->referral_discount_percent ?? 0) > 0)
-          <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/><path d="m6 18 12-12"/></svg> تخفیف خرید دعوت‌شده: <b>{{ rtrim(rtrim(number_format((float) $referralSettings->referral_discount_percent, 2), '0'), '.') }}٪</b></span>
-        @endif
+        <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7H8.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h3.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z"/></svg> هدیه شروع دوستت: <b>{{ $referralSettings->registration_gift_enabled ? number_format((int) $referralSettings->registration_gift_tokens).' توکن' : 'غیرفعال' }}</b></span>
+        <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5L12 2ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg> هدیه دعوت‌شده: <b>{{ number_format((int) $referralSettings->invitee_reward_tokens) }} توکن</b></span>
+        <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.2c-.7-.7-1.7-1.1-3-1.1-1.5 0-2.5.8-2.5 1.8 0 2.8 5.5 1.1 5.5 4 0 1.1-1 1.9-2.7 1.9-1.2 0-2.2-.4-2.9-1.1"/></svg> پاداش هر دعوت موفق: <b>{{ number_format((int) $referralSettings->inviter_reward_tokens) }} توکن</b></span>
+        <span><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/><path d="m6 18 12-12"/></svg> تخفیف خرید دعوت‌شده: <b>{{ rtrim(rtrim(number_format((float) ($referralSettings->referral_discount_percent ?? 0), 2), '0'), '.') }}٪</b></span>
       </div>
     </div>
     <div class="referral-program-visual" aria-hidden="true">
@@ -69,6 +63,11 @@
       <article class="referral-user-stat"><span class="referral-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 17 4-4 3 3 2-2 5 4"/></svg></span><strong>{{ number_format($referralData['first_images']) }}</strong><small>اولین تصویر ساخته‌شده</small></article>
       <article class="referral-user-stat is-highlight"><span class="referral-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.2c-.7-.7-1.7-1.1-3-1.1-1.5 0-2.5.8-2.5 1.8 0 2.8 5.5 1.1 5.5 4 0 1.1-1 1.9-2.7 1.9-1.2 0-2.2-.4-2.9-1.1"/></svg></span><strong>{{ number_format($referralData['paid_tokens']) }}</strong><small>توکن دریافت‌شده</small></article>
       <article class="referral-user-stat"><span class="referral-stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5h13.5A2.5 2.5 0 0 1 20 10v8.5A1.5 1.5 0 0 1 18.5 20h-14A2.5 2.5 0 0 1 2 17.5v-9A1 1 0 0 1 3 7.5h1Z"/><path d="M4 7.5V5a1 1 0 0 1 1-1h11M16 13h4"/><circle cx="16" cy="13" r=".5"/></svg></span><strong>{{ number_format($referralData['pending_commission']) }}</strong><small>کمیسیون در انتظار تسویه</small></article>
+    </section>
+
+    <section class="referral-cash-request" aria-disabled="true">
+      <svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="10" width="12" height="10" rx="2"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
+      <span>درخواست وجه نقد</span>
     </section>
 
     <section class="referral-link-card {{ $programActive ? '' : 'is-disabled' }}">

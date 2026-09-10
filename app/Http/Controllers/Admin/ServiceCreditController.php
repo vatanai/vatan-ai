@@ -16,20 +16,46 @@ use Illuminate\View\View;
 
 class ServiceCreditController extends Controller
 {
-    public function index(
+    public function index(): RedirectResponse
+    {
+        return redirect()->route('admin.service-credits.providers');
+    }
+
+    private function overviewData(ServiceCreditOverviewService $overview): array
+    {
+        // همگام‌سازی ثبت تراکنش‌ها در زمان‌بندی مستقل انجام می‌شود؛ باز شدن صفحه
+        // نباید منتظر تماس‌های خارجی و قفل‌های دیتابیس بماند. موجودی زنده و هشدارها
+        // همچنان توسط سرویس overview خوانده می‌شوند و دکمه تازه‌سازی دستی هم فعال است.
+        $data = $overview->get();
+        $data['alerts'] = $data['accounts']->filter(function ($account): bool {
+            return $account->alerts_enabled && ($account->alert_level ?? null) !== null;
+        })->values();
+        return $data;
+    }
+
+    public function providers(
         ServiceCreditOverviewService $overview,
-        ServiceCreditSynchronizer $synchronizer,
+    ): View
+    {
+        return view('admin.service-credits.index', [
+            ...$this->overviewData($overview),
+            'mode' => 'providers',
+            'providerStats' => collect(),
+        ]);
+    }
+
+    public function transactions(
+        ServiceCreditOverviewService $overview,
         ServiceCreditTransactionReport $transactionReport,
         Request $request
     ): View
     {
-        $synchronizer->sync();
-        $data = $overview->get();
-        $report = $transactionReport->build($request);
-        $data['alerts'] = $data['accounts']->filter(function ($account): bool {
-            return $account->alerts_enabled && ($account->alert_level ?? null) !== null;
-        })->values();
-        return view('admin.service-credits.index', [...$data, ...$report]);
+        $data = $this->overviewData($overview);
+        return view('admin.service-credits.index', [
+            ...$data,
+            ...$transactionReport->build($request),
+            'mode' => 'transactions',
+        ]);
     }
 
     public function storeAccount(Request $request): RedirectResponse

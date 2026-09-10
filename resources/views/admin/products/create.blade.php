@@ -1,5 +1,6 @@
 @extends('layouts.admin')
-@section('title', $product ? 'ویرایش محصول عکس — AIPIX Admin' : ($duplicateFrom ? 'تکثیر محصول عکس — AIPIX Admin' : 'ثبت محصولات عکس — AIPIX Admin'))
+@php $isVideoProductPage = $isVideoProductPage ?? false; @endphp
+@section('title', $product ? 'ویرایش محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') . ' — AIPIX Admin' : ($duplicateFrom ? 'تکثیر محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') . ' — AIPIX Admin' : 'ثبت محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') . ' — AIPIX Admin'))
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/products-create.css') }}">
@@ -17,9 +18,9 @@
         <div class="flex items-center gap-1.5 text-xs text-[var(--text2)]">
           <a href="/admin/dashboard" class="text-[var(--text2)] hover:text-[var(--text)] transition-colors"><i class="fa-solid fa-house text-[11px]"></i></a>
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-          <a href="/admin/products" class="text-[var(--text2)] hover:text-[var(--text)] transition-colors">محصولات</a>
+          <a href="{{ $isVideoProductPage ? route('admin.products.videos') : route('admin.products') }}" class="text-[var(--text2)] hover:text-[var(--text)] transition-colors">محصولات</a>
           <span class="text-[var(--text3)] text-[10px]"><i class="fa-solid fa-chevron-left"></i></span>
-          <span class="text-[var(--text)] font-semibold">{{ $product ? 'ویرایش محصول عکس' : ($duplicateFrom ? 'تکثیر محصول عکس' : 'ثبت محصولات عکس') }}</span>
+          <span class="text-[var(--text)] font-semibold">{{ $product ? 'ویرایش محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') : ($duplicateFrom ? 'تکثیر محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') : 'ثبت محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس')) }}</span>
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
           {{-- بند ۳۳: انتخاب نقش نمایشی (Role Preview) — فقط UI، پیش‌نمایش قفل فیلدها --}}
@@ -31,7 +32,7 @@
               <option value="viewer">Viewer</option>
             </select>
           </div>
-          <a href="/admin/products" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] transition-all hover:border-[var(--b2)] hover:text-[var(--text)] no-underline">
+          <a href="{{ $isVideoProductPage ? route('admin.products.videos') : route('admin.products') }}" class="inline-flex items-center gap-1.5 px-3.5 h-8 rounded-lg text-xs font-semibold bg-[var(--s2)] text-[var(--text2)] border border-[var(--b1)] transition-all hover:border-[var(--b2)] hover:text-[var(--text)] no-underline">
             <i class="fa-solid fa-arrow-right text-[11px]"></i>
             بازگشت به لیست
           </a>
@@ -103,7 +104,7 @@
       @endif
 
       <div class="mb-6">
-        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $product ? 'ویرایش محصول عکس' : ($duplicateFrom ? 'تکثیر محصول عکس' : 'ثبت محصولات عکس') }}</div>
+        <div class="text-xl font-extrabold tracking-tight mb-1">{{ $product ? 'ویرایش محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') : ($duplicateFrom ? 'تکثیر محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس') : 'ثبت محصول ' . ($isVideoProductPage ? 'ویدیو' : 'عکس')) }}</div>
         <div class="text-xs text-[var(--text3)]">محصول را در ۵ مرحله تنظیم کنید — هویت، رسانه، هوش مصنوعی، ورودی و خروجی</div>
       </div>
 
@@ -191,20 +192,21 @@
       {{-- در حالت ویرایش، فرم باید PUT به‌سمت update() برود نه POST به store() — وگرنه (باگ قبلی)
            هر «ویرایش» عملاً یک محصول تکراری جدید می‌ساخت و محصول اصلی هرگز به‌روزرسانی نمی‌شد. --}}
       <form id="real-product-form"
-            action="{{ $product ? route('admin.products.update', $product->id) : route('admin.products.store') }}"
+            action="{{ $product ? ($isVideoProductPage ? route('admin.products.video.update', $product->id) : route('admin.products.update', $product->id)) : ($isVideoProductPage ? route('admin.products.video.store') : route('admin.products.store')) }}"
             method="POST" enctype="multipart/form-data">
         @csrf
         @if($product)
           @method('PUT')
         @endif
         <input type="hidden" name="status" id="product-status" value="active">
+        @if($isVideoProductPage)<input type="hidden" name="video_mode" value="1"><input type="hidden" name="media_type" value="video">@endif
         <input type="hidden" name="open_lab_after_save" id="open-lab-after-save" value="0">
         @if($duplicateFrom)
           <input type="hidden" name="duplicate_from" value="{{ $duplicateFrom->id }}">
         @endif
 
         <div class="block space-y-4" id="panel-1">
-          @include('admin.products.partials.step-1', ['duplicateFrom' => $duplicateFrom, 'product' => $product])
+          @include('admin.products.partials.step-1', ['duplicateFrom' => $duplicateFrom, 'product' => $product, 'fixedMediaType' => $isVideoProductPage ? 'video' : null])
           @include('admin.products.partials.future-updates')
         </div>
 
@@ -220,7 +222,7 @@
 
         {{-- ═══ گام چهارم: خروجی و مصرف اعتبار ═══ --}}
         <div class="hidden space-y-4" id="panel-4">
-          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product, 'modelQualityPresets' => $modelQualityPresets ?? collect(), 'qualityCreditPresets' => $qualityCreditPresets ?? collect()])
+          @include('admin.products.partials.step-4', ['duplicateFrom' => $duplicateFrom, 'product' => $product, 'modelQualityPresets' => $modelQualityPresets ?? collect(), 'qualityCreditPresets' => $qualityCreditPresets ?? collect(), 'isVideoProductPage' => $isVideoProductPage, 'relatedPhotoProducts' => $relatedPhotoProducts ?? collect()])
         </div>
 
         {{-- ═══ گام پنجم: بازبینی نهایی ═══ --}}

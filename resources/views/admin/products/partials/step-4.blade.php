@@ -45,6 +45,10 @@
   $creatorRewardOwnerId = old('creator_reward_owner_id', $sourceProduct?->creator_reward_owner_id);
 @endphp
 
+@if(($isVideoProductPage ?? false) === true)
+  @include('admin.products.partials.video-settings', ['product' => $product, 'duplicateFrom' => $duplicateFrom, 'relatedPhotoProducts' => $relatedPhotoProducts ?? collect()])
+@endif
+
 {{-- ═══════════════════ Card ۰ — مصرف اعتبار سه سطحی محصول ═══════════════════ --}}
 <section class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" id="quality-credit-pricing-card" data-quality-credit-pricing
   data-credit-presets='@json($creditPresetPayloads)'

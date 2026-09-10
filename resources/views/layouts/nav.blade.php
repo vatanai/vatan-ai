@@ -3,7 +3,7 @@
   $referralProfileMenuEnabled = $referralSettings->profile_enabled;
   $preloginCreditText = trim((string) ($referralSettings->prelogin_credit_text ?: ('هدیه ' . number_format((int) $referralSettings->registration_gift_tokens) . ' اعتبار')));
 @endphp
-@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'app.product', 'app.product-details', 'profile'))
+@if(request()->routeIs('app.home', 'app.explore', 'app.trends', 'app.profile', 'app.product', 'app.product-details', 'app.create.studio', 'app.create.studio.workflows', 'app.create.product', 'profile'))
   @include('app.partials.mobile-header')
 @endif
 

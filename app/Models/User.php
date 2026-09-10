@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Support\Str;
 use App\Support\PhoneNumber;
+use App\Support\ReferralCode;
 use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
@@ -84,7 +84,7 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::creating(function (User $user) {
-            $user->referral_code ??= Str::upper(Str::random(10));
+            $user->referral_code ??= ReferralCode::five();
         });
     }
 

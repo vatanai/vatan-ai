@@ -11,6 +11,7 @@ class VideoProductConfigService
     public const ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4', '4:5', '21:9'];
     public const STUDIO_ASPECT_RATIOS = ['16:9', '9:16', '1:1', '3:4', '4:5', '21:9'];
     public const RESOLUTIONS = ['480p', '720p', '1080p', '4K'];
+    public const QUALITY_KEYS = ['standard', 'professional', 'best'];
 
     public function motionPresetCatalog(): array
     {
@@ -53,6 +54,7 @@ class VideoProductConfigService
             'durations' => $durations,
             'default_duration' => in_array((int) ($data['default_duration'] ?? 0), $durations, true) ? (int) $data['default_duration'] : $durations[0],
             'aspect_ratios' => $ratios,
+            'preserve_source_aspect_ratio' => filter_var($data['preserve_source_aspect_ratio'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'default_aspect_ratio' => in_array((string) ($data['default_aspect_ratio'] ?? ''), $ratios, true) ? (string) $data['default_aspect_ratio'] : $ratios[0],
             'resolutions' => $resolutions,
             'default_resolution' => in_array((string) ($data['default_resolution'] ?? ''), $resolutions, true) ? (string) $data['default_resolution'] : $resolutions[0],
@@ -69,6 +71,11 @@ class VideoProductConfigService
                 ['key' => 'professional', 'label' => 'حرفه‌ای', 'resolution' => '1080p', 'surcharge' => 5],
                 ['key' => 'best', 'label' => 'بهترین خروجی', 'resolution' => '4K', 'surcharge' => 10],
             ]),
+            'quality_credit_costs' => collect(self::QUALITY_KEYS)->mapWithKeys(function (string $key, int $index) use ($data): array {
+                $defaults = [12, 20, 50];
+                $value = data_get($data, "quality_credit_costs.{$key}", $defaults[$index]);
+                return [$key => max(1, min(1000000, (int) $value))];
+            })->all(),
             'model_defaults' => is_array($data['model_defaults'] ?? null) ? $data['model_defaults'] : [],
         ];
     }
@@ -83,13 +90,24 @@ class VideoProductConfigService
         };
     }
 
-    public function creditCost(Product $product, int $duration, ?string $resolution = null, bool $audio = false, bool $identity = false): int
+    public function creditCost(Product $product, int $duration, ?string $resolution = null, bool $audio = false, bool $identity = false, ?string $quality = null): int
     {
         $configured = (array) data_get($product->videoConfiguration(), 'credit_costs_by_duration', []);
         $value = $configured[(string) $duration] ?? null;
 
         $base = is_numeric($value) ? max(0, (int) $value) : max(0, (int) $product->credit_cost);
-        $quality = (array) data_get($product->videoConfiguration(), 'quality_costs', []);
-        return max(0, $base + (int) ($quality[$resolution ?: ''] ?? 0) + ($audio ? 3 : 0) + ($identity ? 2 : 0));
+        $config = $product->videoConfiguration();
+        $qualitySurcharge = (array) data_get($config, 'quality_costs', []);
+        $tierCosts = (array) data_get($config, 'quality_credit_costs', []);
+        if ($quality && isset($tierCosts[$quality])) {
+            $defaultDuration = (int) ($config['default_duration'] ?? $duration);
+            $defaultDurationBase = is_numeric($configured[(string) $defaultDuration] ?? null)
+                ? max(0, (int) $configured[(string) $defaultDuration])
+                : max(0, (int) $product->credit_cost);
+            $qualityCost = (int) $tierCosts[$quality] + ($base - $defaultDurationBase);
+        } else {
+            $qualityCost = $base + (int) ($qualitySurcharge[$resolution ?: ''] ?? 0);
+        }
+        return max(0, $qualityCost + ($audio ? 3 : 0) + ($identity ? 2 : 0));
     }
 }

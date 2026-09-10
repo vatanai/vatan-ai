@@ -60,6 +60,7 @@ public function gallery()
             return view('app.profile', [
                 'isGuest'        => true,
                 'createdImages'  => collect(),
+                'usedProducts'   => collect(),
                 'personalImages' => collect(),
                 'galleryItems'   => collect(),
                 'savedProducts'  => collect(),
@@ -81,10 +82,41 @@ public function gallery()
 
         // واکشی تصاویر با لود به ترتیب جدیدترین‌ها بر اساس رابطه‌های مدل User
         // with('product') برای جلوگیری از N+1 کوئری موقع تشخیص نوع محتوا (عکس/ویدیو)
+        $productPreviewColumns = 'id,name_fa,name_en,slug,product_code,media_type,cover,sample_outputs,thumbnail';
+
         $createdImages = $user->generatedImages()
             ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
-            ->with('product:id,name_fa,name_en,slug,product_code,media_type')
+            ->with("product:{$productPreviewColumns}")
             ->latest()->get();
+
+        // محصولات استفاده‌شده از روی آخرین خروجی‌های عکس و ویدیو استخراج می‌شوند.
+        // هر محصول فقط یک‌بار نمایش داده می‌شود و اولین رکورد همان آخرین استفاده است.
+        $usedProducts = $createdImages
+            ->filter(fn ($image) => $image->product)
+            ->map(fn ($image) => (object) [
+                'product' => $image->product,
+                'used_at' => $image->created_at,
+            ]);
+
+        if (Schema::hasTable('generated_videos')) {
+            $usedProducts = $usedProducts->concat(
+                $user->generatedVideos()
+                    ->select(['id', 'user_id', 'product_id', 'created_at'])
+                    ->with("product:{$productPreviewColumns}")
+                    ->latest()->get()
+                    ->filter(fn ($video) => $video->product)
+                    ->map(fn ($video) => (object) [
+                        'product' => $video->product,
+                        'used_at' => $video->created_at,
+                    ])
+            );
+        }
+
+        $usedProducts = $usedProducts
+            ->sortByDesc('used_at')
+            ->map(fn ($item) => $item->product)
+            ->unique('id')
+            ->values();
         $personalImages = $user->uploadedImages()
             ->select(['id', 'user_id', 'file_path', 'mime_type', 'size', 'created_at'])
             ->latest()->get();
@@ -137,6 +169,7 @@ public function gallery()
             'personalImages',
             'galleryItems',
             'savedProducts',
+            'usedProducts',
             'storageUsed',
             'storageTotal',
             'tokenBalance',

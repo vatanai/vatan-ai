@@ -466,13 +466,16 @@
       if (!response.ok || !payload.success) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'ساخت تصویر انجام نشد.');
       const images = payload.images?.length ? payload.images : [{ url: payload.image_url, title: '' }];
       const main = result.querySelector(':scope > img'); main.src = images[0].url;
+      result.dataset.generatedImageId = images[0].generated_image_id || '';
       const strip = result.querySelector('.cw-result-strip'); strip.innerHTML = '';
       images.forEach((image, index) => {
         const button = document.createElement('button'); button.type = 'button'; button.className = index === 0 ? 'active' : '';
+        button.dataset.generatedImageId = image.generated_image_id || '';
         button.innerHTML = `<img src="${image.url}" alt=""><span>${index + 1}</span>`;
-        button.addEventListener('click', () => { main.src = image.url; [...strip.children].forEach((item) => item.classList.toggle('active', item === button)); });
+        button.addEventListener('click', () => { main.src = image.url; result.dataset.generatedImageId = image.generated_image_id || ''; [...strip.children].forEach((item) => item.classList.toggle('active', item === button)); updateRelatedVideoLinks(); });
         strip.appendChild(button);
       });
+      updateRelatedVideoLinks();
       const resultMessage = images.length === 1
         ? 'یک خروجی آماده و در بخش پروفایل ذخیره شد'
         : `${Number(images.length).toLocaleString('fa-IR')} خروجی آماده و در بخش پروفایل ذخیره شد`;
@@ -505,6 +508,16 @@
     const link = document.createElement('a'); link.href = url; link.download = 'vatan-ai-output.png'; link.target = '_blank'; link.click();
   });
   root.querySelector('[data-action=regenerate]')?.addEventListener('click', () => root.querySelector('[data-action=generate]')?.click());
+  function updateRelatedVideoLinks() {
+    const id = result?.dataset.generatedImageId || '';
+    const actions = root.querySelector('[data-related-video-actions]');
+    if (!actions) return;
+    actions.hidden = !id;
+    actions.querySelectorAll('[data-convert-video]').forEach((link) => {
+      const url = link.dataset.videoUrl || link.href.split('?')[0];
+      link.href = id ? `${url}${url.includes('?') ? '&' : '?'}source_generated_image=${encodeURIComponent(id)}` : url;
+    });
+  }
   updateReadiness();
   if (root.dataset.loaderDemo === '1') {
     setStageTab('upload');

@@ -1,5 +1,6 @@
 @extends('layouts.admin')
-@section('title', 'لیست محصولات — وطن استودیو')
+@php $isVideoList = $isVideoList ?? false; @endphp
+@section('title', $isVideoList ? 'لیست محصولات ویدیو — وطن استودیو' : 'لیست محصولات عکس — وطن استودیو')
 
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
@@ -25,15 +26,15 @@
     {{-- ── سربرگ صفحه ── --}}
     <div class="mb-5 flex items-center justify-between flex-wrap gap-3">
       <div>
-        <div class="text-xl font-extrabold tracking-tight mb-1" style="color:var(--text-h);">لیست محصولات</div>
+        <div class="text-xl font-extrabold tracking-tight mb-1" style="color:var(--text-h);">{{ $isVideoList ? 'لیست محصولات ویدیو' : 'لیست محصولات عکس' }}</div>
         <div class="text-[13px]" style="color:var(--text-soft);">مدیریت، ویرایش و پیکربندی تمام محصولات هوش مصنوعی پلتفرم</div>
       </div>
       <div class="flex items-center gap-2">
-        <a href="{{ route('admin.products.create') }}" class="btn-pro btn-pro-primary">
-          <i class="fa-solid fa-plus text-[11px]"></i> ثبت محصول عکس
+        <a href="{{ $isVideoList ? route('admin.products.video.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary">
+          <i class="fa-solid {{ $isVideoList ? 'fa-video' : 'fa-plus' }} text-[11px]"></i> ثبت محصول {{ $isVideoList ? 'ویدیو' : 'عکس' }}
         </a>
-        <a href="{{ route('admin.products.video.create') }}" class="btn-pro btn-pro-ghost">
-          <i class="fa-solid fa-video text-[11px]"></i> ثبت محصول ویدیو
+        <a href="{{ $isVideoList ? route('admin.products') : route('admin.products.videos') }}" class="btn-pro btn-pro-ghost">
+          <i class="fa-solid {{ $isVideoList ? 'fa-image' : 'fa-video' }} text-[11px]"></i> لیست محصولات {{ $isVideoList ? 'عکس' : 'ویدیو' }}
         </a>
         <a href="{{ request()->fullUrl() }}" class="btn-pro btn-pro-ghost" id="btn-refresh-products" title="بروزرسانی لیست (با حفظ فیلترهای فعلی)">
           <i class="fa-solid fa-rotate-right text-[11px]"></i> بروزرسانی

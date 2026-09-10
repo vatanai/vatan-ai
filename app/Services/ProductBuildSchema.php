@@ -116,6 +116,18 @@ class ProductBuildSchema
             'is_authenticated' => auth()->check(),
             'face_profiles' => $faceProfiles,
             'profile_url' => route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']),
+            'related_video_products' => Schema::hasTable('product_video_relations') && !$product->isVideoProduct()
+                ? $product->relatedVideoProducts()
+                    ->where('products.status', 'active')
+                    ->wherePivot('is_active', true)
+                    ->get(['products.id', 'products.name_fa', 'products.name_en', 'products.product_code', 'products.slug', 'products.cover'])
+                    ->map(fn (Product $video): array => [
+                        'id' => $video->id,
+                        'name' => $video->name_fa ?: $video->name_en,
+                        'cover' => $video->displayImageUrl(),
+                        'url' => route('app.create.product', $video->route_slug),
+                    ])->values()->all()
+                : [],
         ];
     }
 

@@ -10,6 +10,10 @@
     <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css'])
+    <style>
+        html { scrollbar-width: none; }
+        html::-webkit-scrollbar { width: 0; height: 0; display: none; }
+    </style>
 
     <style>
         .step-content { display: none; }

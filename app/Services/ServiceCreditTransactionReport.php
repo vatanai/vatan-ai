@@ -100,13 +100,13 @@ class ServiceCreditTransactionReport
     public function latest(int $limit, float $rateIrr): Collection
     {
         $request = Request::create('/', 'GET', ['per_page' => $limit]);
-        return $this->collectRows($request, $rateIrr)
+        return $this->collectRows($request, $rateIrr, max(20, $limit * 4))
             ->sortByDesc(fn (array $row) => $row['occurred_at']?->timestamp ?? 0)
             ->take($limit)
             ->values();
     }
 
-    private function collectRows(Request $request, float $rateIrr): Collection
+    private function collectRows(Request $request, float $rateIrr, int $sourceLimit = 500): Collection
     {
         $from = $request->filled('date_from') ? Carbon::parse($request->input('date_from'))->startOfDay() : null;
         $to = $request->filled('date_to') ? Carbon::parse($request->input('date_to'))->endOfDay() : null;
@@ -115,7 +115,7 @@ class ServiceCreditTransactionReport
         $credits = ServiceCreditTransaction::with('account')
             ->when($from, fn ($query) => $query->where('occurred_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('occurred_at', '<=', $to))
-            ->latest('occurred_at')->limit(500)->get();
+            ->latest('occurred_at')->limit($sourceLimit)->get();
         foreach ($credits as $transaction) {
             $amount = (float) $transaction->amount;
             $isUsd = $transaction->account?->currency === 'USD';
@@ -139,7 +139,7 @@ class ServiceCreditTransactionReport
         $labRuns = LabRun::with(['experiment.product', 'experiment.admin', 'outputs', 'aiModel'])
             ->when($from, fn ($query) => $query->where('lab_runs.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('lab_runs.created_at', '<=', $to))
-            ->latest('lab_runs.created_at')->limit(500)->get();
+            ->latest('lab_runs.created_at')->limit($sourceLimit)->get();
         foreach ($labRuns as $run) {
             $usd = (float) $run->actual_cost_usd > 0 ? (float) $run->actual_cost_usd : (float) $run->estimated_cost_usd;
             $runRate = (float) ($run->exchange_rate_irr ?: $run->experiment?->exchange_rate_irr ?: $rateIrr);
@@ -170,7 +170,7 @@ class ServiceCreditTransactionReport
         $providerRequests = AiProviderRequest::with(['order.user', 'order.product', 'aiModel'])
             ->when($from, fn ($query) => $query->where('ai_provider_requests.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('ai_provider_requests.created_at', '<=', $to))
-            ->latest('ai_provider_requests.created_at')->limit(700)->get();
+            ->latest('ai_provider_requests.created_at')->limit($sourceLimit)->get();
         $requestOrderIds = $providerRequests->pluck('order_id')->filter()->unique();
         foreach ($providerRequests as $providerRequest) {
             $order = $providerRequest->order;
@@ -202,7 +202,7 @@ class ServiceCreditTransactionReport
             ->when($requestOrderIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $requestOrderIds))
             ->when($from, fn ($query) => $query->where('orders.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('orders.created_at', '<=', $to))
-            ->latest('orders.created_at')->limit(300)->get();
+            ->latest('orders.created_at')->limit($sourceLimit)->get();
         foreach ($orders as $order) {
             $rows->push($this->row([
                 'id' => 'order-' . $order->id, 'source_key' => 'order', 'source_label' => 'سفارش بدون جزئیات مدل',
@@ -229,7 +229,7 @@ class ServiceCreditTransactionReport
         $legacyImages = GeneratedImage::with(['user', 'product'])
             ->when($from, fn ($query) => $query->where('generated_images.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('generated_images.created_at', '<=', $to))
-            ->latest('generated_images.created_at')->limit(300)->get();
+            ->latest('generated_images.created_at')->limit($sourceLimit)->get();
         foreach ($legacyImages as $image) {
             $imageUrl = asset('storage/' . ltrim((string) $image->image_path, '/'));
             if ($knownPaths->contains($imageUrl) || $knownPaths->contains($image->image_path)) continue;

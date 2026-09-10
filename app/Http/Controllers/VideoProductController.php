@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FaceProfile;
 use App\Models\GeneratedVideo;
+use App\Models\GeneratedImage;
 use App\Models\Product;
 use App\Models\AiModel;
 use App\Models\ProductMetricEvent;
@@ -39,6 +40,12 @@ class VideoProductController extends Controller
             $config['resolutions'] = array_values(array_intersect((array) $config['resolutions'], $supported)) ?: [$supported[0]];
             if (!in_array($config['default_resolution'], $config['resolutions'], true)) $config['default_resolution'] = $config['resolutions'][0];
         }
+        $config['quality_tiers'] = collect((array) ($config['quality_tiers'] ?? []))->map(function (array $tier) use ($config): array {
+            if (!in_array((string) ($tier['resolution'] ?? ''), (array) $config['resolutions'], true)) {
+                $tier['resolution'] = end($config['resolutions']) ?: $config['default_resolution'];
+            }
+            return $tier;
+        })->values()->all();
         if (in_array($config['workflow'], ['image_to_video', 'video_to_video'], true)) {
             $dedicatedTypes = $config['workflow'] === 'image_to_video'
                 ? ['image_upload', 'multi_image']
@@ -48,9 +55,11 @@ class VideoProductController extends Controller
                 ->values()
                 ->all();
         }
+        $prefilledImage = $this->prefilledGeneratedImage($request, $product);
         $buildProduct['video'] = $config + [
             'preview_url' => $product->previewVideoUrl(),
             'status_url_template' => route('app.video-generation.status', ['generatedVideo' => '__ID__']),
+            'prefill_source_image' => $prefilledImage ? ['id' => $prefilledImage->id, 'url' => $prefilledImage->imageUrl()] : null,
         ];
         $buildProduct['cost'] = (int) data_get($config, 'credit_costs_by_duration.' . $config['default_duration'], $product->credit_cost);
 
@@ -66,6 +75,10 @@ class VideoProductController extends Controller
         $studioConfig = app(VideoProductConfigService::class);
         $allowedDurations = $studioMode ? range(1, 15) : array_map('intval', (array) $config['durations']);
         $allowedResolutions = $studioMode ? VideoProductConfigService::RESOLUTIONS : (array) $config['resolutions'];
+        $allowedAspectRatios = $studioMode ? VideoProductConfigService::STUDIO_ASPECT_RATIOS : (array) $config['aspect_ratios'];
+        if (!$studioMode && !empty($config['preserve_source_aspect_ratio'])) {
+            $allowedAspectRatios[] = 'source';
+        }
         $allowedMotions = $studioMode
             ? array_keys($studioConfig->motionPresetCatalog())
             : collect((array) $config['motion_presets'])->pluck('key')->all();
@@ -76,23 +89,32 @@ class VideoProductController extends Controller
             'studio_project_name' => ['nullable', 'string', 'max:120'],
             'video' => ['required', 'array'],
             'video.duration' => ['required', 'integer', Rule::in($allowedDurations)],
-            'video.aspect_ratio' => ['required', Rule::in($studioMode ? VideoProductConfigService::STUDIO_ASPECT_RATIOS : (array) $config['aspect_ratios'])],
+            'video.aspect_ratio' => ['required', Rule::in($allowedAspectRatios)],
             'video.resolution' => ['required', Rule::in($allowedResolutions)],
+            'video.quality' => ['nullable', Rule::in(VideoProductConfigService::QUALITY_KEYS)],
             'video.motion_preset' => ['nullable', Rule::in($allowedMotions)],
             'video.generate_audio' => ['nullable', 'boolean'],
             'source_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            'source_generated_image_id' => ['nullable', 'integer'],
             'source_video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'source_audio' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:20480'],
             'face_profile_id' => ['nullable', 'integer'],
             'rights_confirmed' => ['accepted'],
         ]);
 
+        $selectedQuality = (string) $request->input('video.quality', 'standard');
+        $qualityTier = collect((array) ($config['quality_tiers'] ?? []))->firstWhere('key', $selectedQuality);
+        $selectedResolution = (string) $request->input('video.resolution');
+        if (!$studioMode && is_array($qualityTier) && in_array((string) ($qualityTier['resolution'] ?? ''), $allowedResolutions, true)) {
+            $selectedResolution = (string) $qualityTier['resolution'];
+        }
+
         $user = $request->user();
         $sourceImageData = null;
         $sourceUploadPath = null;
         $faceProfile = $this->selectedFaceProfile($request, $user);
         if ($faceProfile) {
-            $entry = collect($faceProfile->referenceImageEntries())->first(fn (array $image): bool => Storage::disk('public')->exists((string) ($image['path'] ?? '')));
+            $entry = collect($faceProfile->referenceImageEntries())->first(fn (array $image): bool => Storage::disk('public')->exists($this->storagePath((string) ($image['path'] ?? ''))));
             if ($entry) $sourceImageData = $this->imageDataUri((string) $entry['path'], $entry['mime'] ?? null);
         }
         if (!$sourceImageData && $request->hasFile('source_image')) {
@@ -100,6 +122,16 @@ class VideoProductController extends Controller
             $sourceUploadPath = $file->store('uploads/video-inputs/images', 'public');
             $sourceImageData = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
             UserUpload::create(['user_id' => $user->id, 'file_path' => $sourceUploadPath, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+        }
+        if (!$sourceImageData && $request->filled('source_generated_image_id')) {
+            $generatedImage = $this->prefilledGeneratedImage($request, $product);
+            if ($generatedImage) {
+                $sourceUploadPath = $generatedImage->image_path;
+                $sourceImageData = $this->imageDataUri($generatedImage->image_path);
+            }
+        }
+        if ($request->input('video.aspect_ratio') === 'source' && !$sourceImageData) {
+            throw ValidationException::withMessages(['source_image' => 'برای حفظ نسبت اصلی، خروجی عکس مرتبط در دسترس نیست.']);
         }
 
         $sourceVideoUrl = null;
@@ -125,7 +157,8 @@ class VideoProductController extends Controller
                 'fields' => (array) $request->input('fields', []),
                 'duration' => (int) $request->input('video.duration'),
                 'aspect_ratio' => (string) $request->input('video.aspect_ratio'),
-                'resolution' => (string) $request->input('video.resolution'),
+                'resolution' => $selectedResolution,
+                'quality' => $selectedQuality,
                 'motion_preset' => (string) $request->input('video.motion_preset', ''),
                 'generate_audio' => $request->boolean('video.generate_audio'),
                 'face_profile_id' => $faceProfile?->id,
@@ -161,6 +194,7 @@ class VideoProductController extends Controller
         abort_unless($product->status === 'active' && $product->isVideoProduct(), 404);
         $quote = $videos->quote($product, $request->user(), [
             'duration' => $request->integer('duration'), 'resolution' => (string) $request->input('resolution'),
+            'quality' => (string) $request->input('quality', 'standard'),
             'generate_audio' => $request->boolean('generate_audio'), 'fields' => (array) $request->input('fields', []),
         ]);
         return response()->json($quote);
@@ -195,14 +229,32 @@ class VideoProductController extends Controller
         return $profile;
     }
 
+    private function prefilledGeneratedImage(Request $request, Product $videoProduct): ?GeneratedImage
+    {
+        $id = $request->integer('source_generated_image_id', $request->integer('source_generated_image'));
+        if ($id < 1 || !$request->user()) return null;
+
+        return GeneratedImage::query()
+            ->whereKey($id)
+            ->where('user_id', $request->user()->id)
+            ->whereHas('product.relatedVideoProducts', fn ($query) => $query->whereKey($videoProduct->id)->wherePivot('is_active', true))
+            ->first();
+    }
+
     private function imageDataUri(string $path, ?string $mime = null): ?string
     {
         $disk = Storage::disk('public');
+        $path = $this->storagePath($path);
         if (!$disk->exists($path)) return null;
         $mime = $mime ?: $disk->mimeType($path);
         if (!str_starts_with((string) $mime, 'image/')) return null;
 
         return 'data:' . $mime . ';base64,' . base64_encode($disk->get($path));
+    }
+
+    private function storagePath(string $path): string
+    {
+        return ltrim($path, '/');
     }
 
     private function applyStudioModel(Product $product, Request $request): void

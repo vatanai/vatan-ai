@@ -397,9 +397,28 @@ const IMAGE_OPT_MAX_EDGE = 1600;
 const IMAGE_OPT_MAX_BYTES = 450 * 1024;
 const originalImageFiles = new WeakMap();
 const optimizedImageFiles = new WeakMap();
+// فایل‌های صف‌شده باید بین چند انتخاب جداگانه‌ی کاربر حفظ شوند؛ انتخاب جدید
+// نباید FileList قبلی را که مرورگر روی input گذاشته است جایگزین کند.
+const selectedUploadFiles = new WeakMap();
 const selectedImageIndexes = new WeakMap();
 const imageOptimizationApproved = new WeakMap();
 const selectedImageProfiles = new WeakMap();
+
+function uploadFileKey(file) {
+  return [file.name, file.size, file.lastModified, file.type].join(':');
+}
+
+function mergeUploadFiles(previous, added) {
+  const files = [];
+  const keys = new Set();
+  [...previous, ...added].forEach(function (file) {
+    const key = uploadFileKey(file);
+    if (keys.has(key)) return;
+    keys.add(key);
+    files.push(file);
+  });
+  return files;
+}
 
 function setImageOptimizeState(group, state, message) {
   group.dataset.optimizeState = state;
@@ -867,10 +886,11 @@ function renderImageGroupPreviews(group, files) {
 async function removeSelectedImage(group, index) {
   const input = document.getElementById(group.dataset.input);
   let current = Array.from(input?.files || []);
-  if (!current.length) current = (optimizedImageFiles.get(group) || originalImageFiles.get(group) || []).slice();
+  if (!current.length) current = (selectedUploadFiles.get(group) || optimizedImageFiles.get(group) || originalImageFiles.get(group) || []).slice();
   if (!current.length) current = await existingImageFiles(group);
   current.splice(index, 1);
   if (input) input.files = imageFileList(current);
+  selectedUploadFiles.set(group, current.slice());
   group.dataset.existing = '[]';
   const originals = (originalImageFiles.get(group) || []).slice();
   const optimized = (optimizedImageFiles.get(group) || []).slice();
@@ -1592,6 +1612,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!input) return;
     if (!input.files.length && JSON.parse(group.dataset.existing || '[]').length) {
       existingImageFiles(group).then(function (files) {
+        if (selectedUploadFiles.has(group)) return;
+        selectedUploadFiles.set(group, files.slice());
         originalImageFiles.set(group, files.slice());
         optimizedImageFiles.set(group, []);
         setImageApproval(group, files.length, true);
@@ -1602,9 +1624,15 @@ document.addEventListener('DOMContentLoaded', function () {
       }).catch(function () {
         setImageOptimizeState(group, 'failed', 'نمایش تصاویر فعلی ممکن نبود؛ صفحه را دوباره بارگذاری کنید.');
       });
+    } else if (input.files.length) {
+      selectedUploadFiles.set(group, Array.from(input.files));
     }
     input.addEventListener('change', function () {
-      const selected = Array.from(input.files || []);
+      const newlySelected = Array.from(input.files || []);
+      const previous = selectedUploadFiles.get(group) || [];
+      const selected = mergeUploadFiles(previous, newlySelected);
+      if (selected.length !== newlySelected.length) input.files = imageFileList(selected);
+      selectedUploadFiles.set(group, selected.slice());
       originalImageFiles.set(group, selected.slice());
       optimizedImageFiles.set(group, []);
       setImageApproval(group, selected.length, false);

@@ -133,6 +133,12 @@
   gap:22px;
   scrollbar-width:none;
 }
+.pd-info-scroll > .pd-title{ order:1; }
+.pd-info-scroll > .pd-meta{ order:2; }
+.pd-info-scroll > .pd-desc-box{ order:3; }
+.pd-info-scroll > .pd-actions{ order:4; }
+.pd-info-scroll > #pdpOptions{ order:5; }
+.pd-info-scroll > .pd-gal{ order:6; }
 .pd-info-scroll::-webkit-scrollbar{ width:0; height:0; display:none; }
 
 /* نام محصول */
@@ -493,8 +499,25 @@
     min-height:52vh;
   }
   .pd-main img{ max-height:50vh; }
-  .pd-info{ border-inline-start:none; border-top:1px solid var(--border-subtle); }
-  .pd-info-scroll{ padding:22px 18px 40px; }
+  .pd-info-scroll > .pd-actions{ order:0; }
+  .pd-info{
+    flex:0 0 auto;
+    width:calc(100% - 20px);
+    margin:0 10px 14px;
+    border:1px solid var(--border-subtle);
+    border-radius:16px;
+    overflow:hidden;
+    display:block;
+    box-shadow:0 18px 42px -24px color-mix(in srgb,var(--bg-page) 45%,transparent);
+  }
+  .pd-info-scroll{
+    width:100%;
+    min-height:0;
+    flex:none;
+    overflow:visible;
+    padding:22px 18px 40px;
+  }
+  .pd-main{ height:auto; min-height:0; }
   .pd-title{ font-size:20px; }
   .pd-similar{ padding:36px 0 110px; } /* جا برای نویگیشن پایین موبایل */
 }
@@ -509,6 +532,29 @@
   {{-- ═══════ سمت راست: توضیحات محصول ═══════ --}}
   <aside class="pd-info">
     <div class="pd-info-scroll">
+
+      {{-- ۴) توکن مصرفی / سیو / انتشار / لایک
+           در موبایل این ردیف ابتدای کارت اطلاعات است تا بلافاصله زیر تصویر دیده شود؛
+           ترتیب دسکتاپ با orderهای بالاتر حفظ می‌شود. --}}
+      <div class="pd-actions">
+        <div class="pd-token-wrap">
+          <button type="button" class="pd-token" id="pdTokenBtn" title="میزان توکن مصرفی">
+            <i class="fa-solid fa-bolt"></i>
+            <b>{{ $__tokenLabel }}</b>
+          </button>
+          <div class="pd-token-pop" id="pdTokenPop">{{ $__tokenPopTxt }}</div>
+        </div>
+        <button type="button" class="pd-iconbtn {{ $isSaved ? 'is-on' : '' }}" id="btnBookmark" data-saved="{{ $isSaved ? '1' : '0' }}" title="ذخیره" aria-label="ذخیره">
+          <i id="iconBkm" class="fa-{{ $isSaved ? 'solid' : 'regular' }} fa-bookmark"></i>
+        </button>
+        <button type="button" class="pd-iconbtn" id="btnShare" title="انتشار" aria-label="انتشار">
+          <i class="fa-solid fa-arrow-up-from-bracket"></i>
+        </button>
+        <button type="button" class="pd-iconbtn pd-likebtn {{ ($isLiked ?? false) ? 'is-liked' : '' }}" id="btnLike" data-liked="{{ ($isLiked ?? false) ? '1' : '0' }}" data-like-count="{{ $product->displayed_likes_count }}" title="لایک" aria-label="لایک">
+          <i id="iconLike" class="fa-{{ ($isLiked ?? false) ? 'solid' : 'regular' }} fa-heart"></i>
+          <small class="pd-like-count" id="likeCount">{{ number_format($product->displayed_likes_count) }}</small>
+        </button>
+      </div>
 
       {{-- ۱) نام محصول --}}
       <h1 class="pd-title">{{ $product->name_fa }}</h1>
@@ -540,27 +586,6 @@
         <p class="pd-desc-text">{!! nl2br(e($__desc)) !!}</p>
       </div>
       @endif
-
-      {{-- ۴) توکن مصرفی / سیو / انتشار / لایک --}}
-      <div class="pd-actions">
-        <div class="pd-token-wrap">
-          <button type="button" class="pd-token" id="pdTokenBtn" title="میزان توکن مصرفی">
-            <i class="fa-solid fa-bolt"></i>
-            <b>{{ $__tokenLabel }}</b>
-          </button>
-          <div class="pd-token-pop" id="pdTokenPop">{{ $__tokenPopTxt }}</div>
-        </div>
-        <button type="button" class="pd-iconbtn {{ $isSaved ? 'is-on' : '' }}" id="btnBookmark" data-saved="{{ $isSaved ? '1' : '0' }}" title="ذخیره" aria-label="ذخیره">
-          <i id="iconBkm" class="fa-{{ $isSaved ? 'solid' : 'regular' }} fa-bookmark"></i>
-        </button>
-        <button type="button" class="pd-iconbtn" id="btnShare" title="انتشار" aria-label="انتشار">
-          <i class="fa-solid fa-arrow-up-from-bracket"></i>
-        </button>
-        <button type="button" class="pd-iconbtn pd-likebtn {{ ($isLiked ?? false) ? 'is-liked' : '' }}" id="btnLike" data-liked="{{ ($isLiked ?? false) ? '1' : '0' }}" data-like-count="{{ $product->displayed_likes_count }}" title="لایک" aria-label="لایک">
-          <i id="iconLike" class="fa-{{ ($isLiked ?? false) ? 'solid' : 'regular' }} fa-heart"></i>
-          <small class="pd-like-count" id="likeCount">{{ number_format($product->displayed_likes_count) }}</small>
-        </button>
-      </div>
 
       {{-- ۵) تنظیمات داینامیک محصول + دکمه «بساز» (همان دکمه اصلی پروژه) --}}
       {{-- باکس «تنظیمات محصول» به دستور کاربر مخفی است (hideFields) — فقط دکمه «بساز» نمایش داده می‌شود --}}

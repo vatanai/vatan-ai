@@ -44,6 +44,7 @@
     'key' => 'standard', 'name' => 'استاندارد', 'description' => 'متعادل برای ساخت روزمره', 'credits' => 10, 'grade' => 3, 'display_grade' => 3, 'available' => true,
   ]);
   $showOutputQualitySelector = (bool) ($product['show_output_quality_selector'] ?? false);
+  $relatedVideoProducts = array_values(array_filter((array) ($product['related_video_products'] ?? [])));
   $isSampleOnly = (bool) ($previewMode ?? false);
   $loaderDemo = app()->environment('local') && request()->boolean('loader_demo');
   $resultDemo = app()->environment('local') && request()->boolean('result_demo');
@@ -275,6 +276,12 @@
             @endforeach
           </div>
           <div class="cw-result-actions"><button type="button" data-action="download"><i class="fa-solid fa-download"></i><span>دانلود</span></button><button type="button" data-action="regenerate"><i class="fa-solid fa-rotate"></i><span>ساخت دوباره</span></button></div>
+          @if($relatedVideoProducts)
+            <div class="cw-related-video-actions" data-related-video-actions hidden>
+              <strong><i class="fa-solid fa-film"></i> این عکس را متحرک کنید</strong>
+              <div>@foreach($relatedVideoProducts as $videoProduct)<a href="{{ $videoProduct['url'] }}" data-convert-video data-video-url="{{ $videoProduct['url'] }}">{{ $videoProduct['name'] }} <i class="fa-solid fa-arrow-left"></i></a>@endforeach</div>
+            </div>
+          @endif
         </div>
       </div>
 

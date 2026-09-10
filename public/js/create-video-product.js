@@ -42,7 +42,21 @@
     const resolution = selected('video[resolution]');
     const audio = form.querySelector('[name="video[generate_audio]"]:checked')?.value === '1';
     const identity = !!form.querySelector('[name="face_profile_id"]')?.value;
-    const value = (Number(config.duration_costs?.[duration] ?? config.base_cost ?? 0) + Number(config.quality_costs?.[resolution] ?? 0) + (audio ? 3 : 0) + (identity ? 2 : 0));
+    const quality = selected('video[quality]') || 'standard';
+    const tierCosts = config.quality_credit_costs || {};
+    const durationBase = Number(config.duration_costs?.[duration] ?? config.base_cost ?? 0);
+    const defaultDurationBase = Number(config.duration_costs?.[config.default_duration] ?? config.base_cost ?? 0);
+    const value = (Object.prototype.hasOwnProperty.call(tierCosts, quality)
+      ? Number(tierCosts[quality]) + durationBase - defaultDurationBase
+      : durationBase + Number(config.quality_costs?.[resolution] ?? 0)) + (audio ? 3 : 0) + (identity ? 2 : 0);
+    form.querySelectorAll('[data-quality-cost-label]').forEach((label) => {
+      const key = label.dataset.qualityCostLabel || 'standard';
+      const qualityCost = Object.prototype.hasOwnProperty.call(tierCosts, key)
+        ? Number(tierCosts[key]) + durationBase - defaultDurationBase
+        : durationBase;
+      const tierInput = form.querySelector(`[name="video[quality]"][value="${CSS.escape(key)}"]`);
+      label.textContent = `${tierInput?.dataset.qualityResolution || ''} · ${new Intl.NumberFormat('fa-IR').format(Math.max(0, qualityCost))} اعتبار`;
+    });
     workspace.querySelector('[data-video-cost]').textContent = new Intl.NumberFormat('fa-IR').format(value);
     const balance = Number(config.balance || 0);
     const note = workspace.querySelector('[data-video-balance]');
@@ -50,7 +64,12 @@
     if (submit) submit.disabled = balance < value;
   }
   form.querySelectorAll('[name="video[duration]"]').forEach((input) => input.addEventListener('change', updateCost));
-  form.querySelectorAll('[name="video[resolution]"],[name="video[generate_audio]"],[name="face_profile_id"]').forEach((input) => input.addEventListener('change', updateCost));
+  form.querySelectorAll('[name="video[resolution]"],[name="video[quality]"],[name="video[generate_audio]"],[name="face_profile_id"]').forEach((input) => input.addEventListener('change', updateCost));
+  form.querySelectorAll('[name="video[quality]"]').forEach((input) => input.addEventListener('change', function () {
+    const resolution = this.dataset.qualityResolution;
+    const target = resolution ? form.querySelector(`[name="video[resolution]"][value="${CSS.escape(resolution)}"]`) : null;
+    if (target) { target.checked = true; updateCost(); }
+  }));
   updateCost();
 
   workspace.querySelector('[data-prompt-example]')?.addEventListener('click', function () {
@@ -117,7 +136,8 @@
     if (config.workflow === 'image_to_video') {
       const profileId = form.querySelector('[name="face_profile_id"]')?.value;
       const image = form.querySelector('[name="source_image"]')?.files?.[0];
-      if (!profileId && !image) return 'یک پروفایل چهره یا تصویر شروع انتخاب کنید.';
+      const generatedImageId = form.querySelector('[name="source_generated_image_id"]')?.value;
+      if (!profileId && !image && !generatedImageId) return 'یک پروفایل چهره یا تصویر شروع انتخاب کنید.';
     }
     if (config.workflow === 'video_to_video' && !form.querySelector('[name="source_video"]')?.files?.[0]) {
       return 'ویدیوی ورودی را انتخاب کنید.';

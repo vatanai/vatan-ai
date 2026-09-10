@@ -44,20 +44,21 @@
 
     html {
       font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
-      scrollbar-width: thin;
-      scrollbar-color: #222230 transparent;
+      scrollbar-width: none;
       background-color: var(--bg-color);
     }
     
-    html::-webkit-scrollbar { width: 4px; }
-    html::-webkit-scrollbar-track { background: transparent; }
-    html::-webkit-scrollbar-thumb { background: #222230; border-radius: 99px; }
+    html::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
 
     body {
       background-color: var(--bg-color);
       color: var(--text-color);
       min-height: 100vh;
-      overflow-y: scroll;
+      overflow-y: auto;
       font-family: 'YekanBakh', 'IRANSansXFaNum', sans-serif;
       transition: background-color 0.3s ease, color 0.3s ease;
     }
@@ -81,6 +82,39 @@
     /* ایجاد فضای خالی حیاتی برای هدر فیکس شده */
     @media (min-width: 640px) {
       body { padding-top: 64px !important; }
+    }
+
+    /* دکمهٔ برگشت صفحات عمومی در موبایل؛ صفحات اپ کنترل برگشت اختصاصی خودشان را دارند. */
+    .mobile-page-back {
+      display: none;
+    }
+    @media (max-width: 639px) {
+      .mobile-page-back {
+        position: fixed;
+        top: max(14px, env(safe-area-inset-top));
+        left: 14px;
+        z-index: 410;
+        width: 44px;
+        height: 44px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border-subtle);
+        border-radius: 13px;
+        background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+        color: var(--text-primary);
+        box-shadow: 0 10px 24px color-mix(in srgb, var(--bg-page) 32%, transparent);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        cursor: pointer;
+        font: inherit;
+      }
+      .mobile-page-back:hover,
+      .mobile-page-back:focus-visible {
+        border-color: var(--green);
+        color: var(--green);
+        outline: none;
+      }
+      .mobile-page-back i { font-size: 17px; }
     }
   </style>
 
@@ -154,7 +188,6 @@
       'app.create',
       'app.create.preview',
       'app.create.architecture',
-      'app.create.product',
       'app.product',
       'app.product-details'
   );
@@ -174,6 +207,21 @@
   }
 
   $managedPageLayout = isset($sitePage) ? $sitePage->display('layout_width', 'default') : 'default';
+
+  $showMobilePageBack = request()->routeIs(
+      'pricing.index',
+      'pricing.checkout',
+      'payments.*',
+      'site.about',
+      'site.sitemap',
+      'privacy',
+      'articles.*'
+  );
+  $mobileBackFallback = request()->routeIs('payments.receipt')
+      ? route('app.profile', ['tab' => 'account'])
+      : (request()->routeIs('pricing.checkout', 'payments.*')
+          ? route('pricing.index')
+          : route('site.home.root'));
 @endphp
 <body id="top" @class(['vatan-app-shell' => $showAppFooter, 'site-page-managed' => isset($sitePage), 'site-page-layout-' . $managedPageLayout => isset($sitePage)]) @if(isset($sitePage)) data-site-page="{{ $sitePage->key }}" data-site-page-version="{{ $sitePage->version }}" @endif>
 
@@ -193,9 +241,31 @@
     @endif
   @endif
 
+  @if($showMobilePageBack)
+    @include('site.partials.mobile-page-back', ['mobileBackFallback' => $mobileBackFallback])
+  @endif
+
   {{-- ناوبری هدر و فوتر موبایل --}}
   @include('layouts.nav')
   @include('partials.token-alert-modal')
+
+  @if($showMobilePageBack)
+    <script>
+      document.querySelectorAll('[data-mobile-page-back]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var sameOriginReferrer = false;
+          try {
+            sameOriginReferrer = document.referrer !== '' && new URL(document.referrer).origin === window.location.origin;
+          } catch (error) {}
+          if (sameOriginReferrer && window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+          window.location.href = button.dataset.fallbackUrl;
+        });
+      });
+    </script>
+  @endif
 
   @stack('scripts')
 

@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -40,6 +41,7 @@ class VideoGenerationService
         $duration = (int) ($options['duration'] ?? $config['default_duration']);
         $aspectRatio = (string) ($options['aspect_ratio'] ?? $config['default_aspect_ratio']);
         $resolution = (string) ($options['resolution'] ?? $config['default_resolution']);
+        $quality = (string) ($options['quality'] ?? 'standard');
         $allowedDurations = $studioMode ? range(1, 15) : array_map('intval', (array) $config['durations']);
         $allowedResolutions = $studioMode ? VideoProductConfigService::RESOLUTIONS : (array) $config['resolutions'];
         $motionCatalog = $studioMode
@@ -49,6 +51,7 @@ class VideoGenerationService
             throw ValidationException::withMessages(['video.duration' => 'مدت انتخاب‌شده برای این محصول فعال نیست.']);
         }
         $allowedAspectRatios = $studioMode ? VideoProductConfigService::STUDIO_ASPECT_RATIOS : (array) $config['aspect_ratios'];
+        if (!$studioMode && !empty($config['preserve_source_aspect_ratio'])) $allowedAspectRatios[] = 'source';
         if (!in_array($aspectRatio, $allowedAspectRatios, true)) {
             throw ValidationException::withMessages(['video.aspect_ratio' => 'نسبت تصویر انتخاب‌شده معتبر نیست.']);
         }
@@ -72,8 +75,20 @@ class VideoGenerationService
         if ($config['workflow'] === 'image_to_video' && !$hasSourceImage) {
             throw ValidationException::withMessages(['source_image' => 'سناریوی عکس به ویدیو به یک تصویر ورودی نیاز دارد.']);
         }
+        if ($aspectRatio === 'source') {
+            $aspectRatio = $this->sourceAspectRatio($sourceImageDataList[0] ?? null);
+            if ($aspectRatio === null) {
+                throw ValidationException::withMessages(['video.aspect_ratio' => 'نسبت تصویر عکس ورودی خوانده نشد.']);
+            }
+            $options['preserve_source_aspect_ratio'] = true;
+            $options['source_aspect_ratio'] = $aspectRatio;
+        }
+        $options['aspect_ratio'] = $aspectRatio;
         if ($config['workflow'] === 'video_to_video' && empty($options['source_video_url'])) {
             throw ValidationException::withMessages(['source_video' => 'سناریوی ویدیو به ویدیو به فایل ورودی نیاز دارد.']);
+        }
+        if (!in_array($quality, VideoProductConfigService::QUALITY_KEYS, true)) {
+            throw ValidationException::withMessages(['video.quality' => 'سطح کیفیت انتخاب‌شده معتبر نیست.']);
         }
 
         $model = $this->resolveModel($product);
@@ -110,12 +125,14 @@ class VideoGenerationService
                 + ($identityRequested ? 2 : 0)
                 + $featureCost);
         } else {
-            $creditCost = max(0, $this->videoConfig->creditCost($product, $duration, $resolution, (bool) ($options['generate_audio'] ?? false), $identityRequested) + $featureCost);
+            $creditCost = max(0, $this->videoConfig->creditCost($product, $duration, $resolution, (bool) ($options['generate_audio'] ?? false), $identityRequested, $quality) + $featureCost);
         }
         $studioQuote = $studioMode
             ? $this->studioCosts->quote($product, [
                 'media_type' => 'video',
                 'resolution' => $resolution,
+                'quality' => $quality,
+                'source_aspect_ratio' => $options['source_aspect_ratio'] ?? null,
                 'aspect_ratio' => $aspectRatio,
                 'duration' => $duration,
                 'count' => 1,
@@ -233,7 +250,7 @@ class VideoGenerationService
         $lastError = null;
         foreach ($this->candidateModels($product) as $candidate) {
             try {
-                $this->submitCandidate($generation, $order, $candidate, $product, $prompt, $options + ['duration' => $duration, 'aspect_ratio' => $aspectRatio, 'resolution' => $resolution]);
+                $this->submitCandidate($generation, $order, $candidate, $product, $prompt, array_merge($options, ['duration' => $duration, 'aspect_ratio' => $aspectRatio, 'resolution' => $resolution, 'quality' => $quality]));
                 $submitted = true;
                 break;
             } catch (\Throwable $error) {
@@ -255,11 +272,24 @@ class VideoGenerationService
         $config = $product->videoConfiguration();
         $duration = (int) ($options['duration'] ?? $config['default_duration']);
         $resolution = (string) ($options['resolution'] ?? $config['default_resolution']);
+        $quality = (string) ($options['quality'] ?? 'standard');
         $identity = !empty($options['source_image_data']) || !empty($options['face_profile_id']);
-        $base = $this->videoConfig->creditCost($product, $duration, $resolution, (bool) ($options['generate_audio'] ?? false), $identity);
+        $base = $this->videoConfig->creditCost($product, $duration, $resolution, (bool) ($options['generate_audio'] ?? false), $identity, $quality);
         $features = $this->buildSchema->additionalCredit($product, (array) ($options['fields'] ?? []));
         $total = max(0, $base + $features);
         return ['credits' => $total, 'balance' => (int) $user->tokens, 'can_afford' => (int) $user->tokens >= $total, 'breakdown' => ['مدت ویدیو' => $this->videoConfig->creditCost($product, $duration), 'کیفیت/امکانات' => $total - $features - $this->videoConfig->creditCost($product, $duration), 'ویژگی‌ها' => $features]];
+    }
+
+    private function sourceAspectRatio(?string $dataUri): ?string
+    {
+        if (!$dataUri || !str_contains($dataUri, 'base64,')) return null;
+        $binary = base64_decode((string) Str::after($dataUri, 'base64,'), true);
+        if ($binary === false) return null;
+        $size = @getimagesizefromstring($binary);
+        if (!$size || empty($size[0]) || empty($size[1])) return null;
+        $gcd = function (int $a, int $b) use (&$gcd): int { return $b === 0 ? $a : $gcd($b, $a % $b); };
+        $divider = $gcd((int) $size[0], (int) $size[1]);
+        return ((int) $size[0] / $divider) . ':' . ((int) $size[1] / $divider);
     }
 
     public function refresh(GeneratedVideo $generation): GeneratedVideo
@@ -481,7 +511,9 @@ class VideoGenerationService
             $input['num_frames'] = max($minimum, min($maximum, $duration * $fps + 1));
         }
         foreach (['frames_per_second', 'fps'] as $field) if (array_key_exists($field, $properties)) $input[$field] = $fps;
-        if (array_key_exists('aspect_ratio', $properties)) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
+        $aspectEnum = (array) data_get($properties, 'aspect_ratio.enum', []);
+        $aspectSupported = $aspectEnum === [] || in_array((string) $options['aspect_ratio'], $aspectEnum, true);
+        if (array_key_exists('aspect_ratio', $properties) && $aspectSupported) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
         if (array_key_exists('resolution', $properties)) $input['resolution'] = (string) $options['resolution'];
         $negativePrompt = trim(implode(', ', array_filter([$product->negative_prompt, $options['negative_prompt'] ?? ''])));
         if (array_key_exists('negative_prompt', $properties) && $negativePrompt !== '') $input['negative_prompt'] = $negativePrompt;
@@ -511,9 +543,9 @@ class VideoGenerationService
                 'prompt' => $prompt,
                 'duration' => $duration,
                 'resolution' => (string) $options['resolution'],
-                'aspect_ratio' => (string) $options['aspect_ratio'],
                 'generate_audio' => (bool) (($config['audio_allowed'] ?? false) && ($options['generate_audio'] ?? $config['audio_default'] ?? false)),
             ];
+            if ($aspectSupported) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
             if ($negativePrompt !== '') $input['negative_prompt'] = $negativePrompt;
             if (isset($options['seed'])) $input['seed'] = (int) $options['seed'];
             if ($sourceImages !== []) {

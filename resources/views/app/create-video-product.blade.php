@@ -14,11 +14,16 @@
   $needsImage = $workflow === 'image_to_video';
   $needsVideo = $workflow === 'video_to_video';
   $faceEnabled = ($video['face_profile_mode'] ?? 'disabled') !== 'disabled';
+  $prefillSource = $video['prefill_source_image'] ?? null;
+  $aspectOptions = !empty($video['preserve_source_aspect_ratio']) ? ['source'] : (array) $video['aspect_ratios'];
+  $qualityTiers = (array) ($video['quality_tiers'] ?? []);
   $durationCosts = (array) ($video['credit_costs_by_duration'] ?? []);
   $videoClientConfig = [
       'duration_costs' => $durationCosts,
+      'default_duration' => (int) ($video['default_duration'] ?? 4),
       'base_cost' => (int) $buildProduct['cost'],
       'quality_costs' => (array) ($video['quality_costs'] ?? ['480p'=>0,'580p'=>1,'720p'=>2,'1080p'=>5,'4K'=>10]),
+      'quality_credit_costs' => (array) ($video['quality_credit_costs'] ?? ['standard'=>12,'professional'=>20,'best'=>50]),
       'balance' => (int) (auth()->user()?->tokens ?? 0),
       'workflow' => $workflow,
       'face_mode' => $video['face_profile_mode'] ?? 'disabled',
@@ -50,12 +55,16 @@
         @if($needsImage)
           <section class="vv-section" data-source-section="image">
             <div class="vv-section-title"><strong>تصویر شروع</strong><small>تصویر واضح، بدون تاری و با نور مناسب</small></div>
-            <label class="vv-drop" data-source-drop>
-              <input type="file" name="source_image" accept="image/jpeg,image/png,image/webp,image/avif" data-source-image>
-              <span class="vv-drop-icon"><i class="fa-solid fa-image"></i></span>
-              <span><b>انتخاب عکس جدید</b><small>حداکثر ۱۲ مگابایت</small></span>
-              <img alt="پیش‌نمایش تصویر ورودی" data-source-preview hidden>
-            </label>
+            @if($prefillSource)
+              <div class="vv-prefilled-source"><img src="{{ $prefillSource['url'] }}" alt="خروجی عکس انتخاب‌شده"><div><b>خروجی عکس آماده است</b><small>این تصویر بدون آپلود دوباره برای ساخت ویدیو استفاده می‌شود.</small></div><input type="hidden" name="source_generated_image_id" value="{{ $prefillSource['id'] }}"></div>
+            @else
+              <label class="vv-drop" data-source-drop>
+                <input type="file" name="source_image" accept="image/jpeg,image/png,image/webp,image/avif" data-source-image>
+                <span class="vv-drop-icon"><i class="fa-solid fa-image"></i></span>
+                <span><b>انتخاب عکس جدید</b><small>حداکثر ۱۲ مگابایت</small></span>
+                <img alt="پیش‌نمایش تصویر ورودی" data-source-preview hidden>
+              </label>
+            @endif
             <div class="vv-profile-selected" data-profile-selected hidden><i class="fa-solid fa-circle-check"></i><span>تصاویر پروفایل چهره به‌عنوان مرجع استفاده می‌شوند.</span></div>
           </section>
         @elseif($needsVideo)
@@ -114,11 +123,22 @@
           <div class="vv-option-group">
             <span>نسبت تصویر</span>
             <div class="vv-chips">
-              @foreach($video['aspect_ratios'] as $ratio)
-                <label><input type="radio" name="video[aspect_ratio]" value="{{ $ratio }}" @checked($ratio === $video['default_aspect_ratio'])><span>{{ $ratio }}</span></label>
+              @foreach($aspectOptions as $ratio)
+                <label><input type="radio" name="video[aspect_ratio]" value="{{ $ratio }}" @checked($ratio === ($ratio === 'source' ? 'source' : $video['default_aspect_ratio']))><span>{{ $ratio === 'source' ? 'نسبت اصلی عکس' : $ratio }}</span></label>
               @endforeach
             </div>
           </div>
+
+          @if($qualityTiers)
+            <div class="vv-option-group">
+              <span>سطح کیفیت و اعتبار</span>
+              <div class="vv-chips vv-quality-chips">
+                @foreach($qualityTiers as $tier)
+                  <label><input type="radio" name="video[quality]" value="{{ $tier['key'] ?? 'standard' }}" data-quality-resolution="{{ $tier['resolution'] ?? '' }}" @checked(($tier['key'] ?? 'standard') === 'standard')><span>{{ $tier['label'] ?? $tier['key'] }}<small data-quality-cost-label="{{ $tier['key'] ?? 'standard' }}">{{ $tier['resolution'] ?? '' }} · {{ (int) data_get($video, 'quality_credit_costs.'.($tier['key'] ?? 'standard'), 0) }} اعتبار</small></span></label>
+                @endforeach
+              </div>
+            </div>
+          @endif
 
           <div class="vv-option-group">
             <span>کیفیت</span>
@@ -151,7 +171,7 @@
       </header>
       <div class="vv-canvas" data-video-canvas>
         @if(!empty($video['preview_url']))
-          <video src="{{ $video['preview_url'] }}" autoplay muted loop playsinline controls data-product-preview></video>
+              <video src="{{ $video['preview_url'] }}" preload="metadata" autoplay muted loop playsinline controls data-product-preview></video>
         @else
           <img src="{{ $buildProduct['cover'] }}" alt="{{ $buildProduct['name'] }}" data-product-preview>
         @endif
@@ -167,7 +187,7 @@
           <div><i></i></div>
           <small>می‌توانید این صفحه را باز نگه دارید؛ نتیجه خودکار ظاهر می‌شود.</small>
         </div>
-        <video controls playsinline data-result-video hidden></video>
+        <video controls preload="metadata" playsinline data-result-video hidden></video>
       </div>
       <footer>
         <span><i class="fa-solid fa-shield-halved"></i> پردازش امن فایل ورودی</span>

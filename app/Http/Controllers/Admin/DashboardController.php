@@ -3,48 +3,86 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Generation;
-use App\Models\Product;
 use App\Services\ServiceCreditOverviewService;
-use App\Services\ServiceCreditSynchronizer;
 use App\Services\ServiceCreditTransactionReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    private const SECTIONS = [
+        'crm' => 'crm',
+        'attendance' => 'misc',
+        'products' => 'products-dashboard',
+        'productslist' => 'products-list',
+        'createproduct' => 'products-create',
+        'categories' => 'products-categories',
+        'pricing' => 'products-pricing',
+        'ai' => 'ai-hub',
+        'models' => 'ai-models',
+        'prompts' => 'ai-prompts',
+        'logs' => 'ai-logs',
+    ];
+
+    private function viewData(): array
+    {
+        return [
+            'topProds' => [], 'products' => [], 'cats' => [], 'models' => [],
+            'actions' => [], 'cats2' => [], 'discounts' => [], 'pricingData' => [],
+        ];
+    }
+
+    private function sectionView(?string $section): ?string
+    {
+        return $section && isset(self::SECTIONS[$section])
+            ? 'admin.partials.pages.' . self::SECTIONS[$section]
+            : null;
+    }
+
     public function index(
         ServiceCreditOverviewService $creditOverview,
-        ServiceCreditSynchronizer $creditSynchronizer,
         ServiceCreditTransactionReport $transactionReport,
         $section = null
     )
     {
-        try {
-            $stats = [
-                'users_count'       => User::count(),
-                'generations_count' => Generation::count(),
-                'products_count'    => Product::count(),
-            ];
-        } catch (\Throwable $e) {
-            $stats = ['users_count' => 0, 'generations_count' => 0, 'products_count' => 0];
+        $sectionView = $this->sectionView($section);
+
+        // بخش‌های غیر از داشبورد اصلی نباید هزینهٔ آمار و اعتبار را متحمل شوند.
+        if ($sectionView) {
+            return view('admin.dashboard', [
+                ...$this->viewData(),
+                'dashboardSection' => $section,
+            ]);
         }
 
-        $creditSynchronizer->sync();
         $creditData = $creditOverview->get(true);
         $creditTransactions = $transactionReport->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
 
         return view('admin.dashboard', [
-            'stats'    => $stats,
-            'topProds' => [],
-            'products' => [],
-            'cats'     => [],
-            'models'   => [],
-            'actions'  => [],
+            ...$this->viewData(),
+            'dashboardSection' => null,
             'creditOverview' => $creditData,
             'creditTransactions' => $creditTransactions,
         ]);
+    }
+
+    public function fragment(string $section)
+    {
+        $view = $this->sectionView($section);
+        abort_unless($view, 404);
+
+        $html = view($view, [
+            ...$this->viewData(),
+            'dashboardSection' => $section,
+        ])->render();
+
+        if (in_array($section, ['crm', 'attendance'], true)) {
+            $html .= view('admin.partials.scripts.shamsi-calendar')->render();
+            $html .= view('admin.partials.scripts.dashboard-main-js')->render();
+            $html .= '<script src="' . asset('admin/js/crm-api.js') . '"></script>';
+        }
+
+        return response($html)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 
     /** جست‌وجوی یکپارچه‌ی هدر پنل: مسیرهای مدیریتی، کاربران و محصولات. */

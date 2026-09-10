@@ -18,6 +18,8 @@ use App\Models\UserGalleryCostEvent;
 use App\Models\Product;
 use App\Services\UserGalleryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -129,8 +131,19 @@ class UserGalleryController extends Controller
             'product_id' => ['required', 'integer', 'exists:products,id'],
         ]);
 
-        $product = Product::query()->findOrFail((int) $data['product_id']);
-        $product->forceFill(['creator_reward_owner_id' => $user->id])->save();
+        DB::transaction(function () use ($data, $user): void {
+            $product = Product::query()
+                ->whereKey((int) $data['product_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+            $currentOwnerId = (int) ($product->getRawOriginal('creator_reward_owner_id') ?? 0);
+            if ($currentOwnerId > 0 && $currentOwnerId !== (int) $user->id) {
+                throw ValidationException::withMessages([
+                    'product_id' => 'این محصول قبلاً به کاربر دیگری اختصاص داده شده و قابل اختصاص به کاربر دوم نیست.',
+                ]);
+            }
+            $product->forceFill(['creator_reward_owner_id' => $user->id])->save();
+        });
 
         return back()->with('success', 'مالک محصول با موفقیت به این کاربر اختصاص داده شد. برای فعال‌شدن پرداخت پاداش، گزینه‌ی پاداش مالک محصول را در تنظیمات محصول روشن کنید.');
     }

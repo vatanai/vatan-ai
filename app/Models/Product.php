@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\GeneratedImage;
 use App\Models\GeneratedVideo;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Product extends Model
 {
@@ -208,6 +210,17 @@ class Product extends Model
             if ($adminId) {
                 $product->updated_by = $adminId;
             }
+
+            // مالک تجاری یک محصول قابل جابه‌جایی مستقیم بین دو کاربر نیست.
+            // خالی‌کردن مالک برای خاموش‌کردن قابلیت مجاز است، اما انتساب به مالک
+            // دوم تا زمانی که مالک قبلی وجود دارد باید صریحاً متوقف شود.
+            $currentOwnerId = (int) ($product->getRawOriginal('creator_reward_owner_id') ?? 0);
+            $requestedOwnerId = (int) ($product->getAttribute('creator_reward_owner_id') ?? 0);
+            if ($currentOwnerId > 0 && $requestedOwnerId > 0 && $currentOwnerId !== $requestedOwnerId) {
+                throw ValidationException::withMessages([
+                    'creator_reward_owner_id' => 'این محصول قبلاً به کاربر دیگری اختصاص داده شده و هم‌زمان قابل اختصاص به کاربر دوم نیست.',
+                ]);
+            }
         });
     }
 
@@ -341,6 +354,28 @@ class Product extends Model
     public function generatedVideos(): HasMany
     {
         return $this->hasMany(GeneratedVideo::class);
+    }
+
+    /** محصولات عکسی که از خروجی آن‌ها می‌توان این محصول ویدیو را ساخت. */
+    public function sourcePhotoProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'product_video_relations',
+            'video_product_id',
+            'photo_product_id'
+        )->withPivot(['sort_order', 'is_active'])->withTimestamps()->orderBy('sort_order');
+    }
+
+    /** محصولات ویدیویی مرتبط با خروجی عکس همین محصول. */
+    public function relatedVideoProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'product_video_relations',
+            'photo_product_id',
+            'video_product_id'
+        )->withPivot(['sort_order', 'is_active'])->withTimestamps()->orderBy('sort_order');
     }
 
     /**
@@ -506,6 +541,8 @@ class Product extends Model
             'prompt_enhance' => true,
             'allow_promotional_credits' => false,
             'credit_costs_by_duration' => [],
+            'preserve_source_aspect_ratio' => false,
+            'quality_credit_costs' => self::DEFAULT_QUALITY_CREDIT_COSTS,
             'model_defaults' => [],
         ], $configured);
     }

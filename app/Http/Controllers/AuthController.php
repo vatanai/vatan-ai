@@ -354,7 +354,7 @@ class AuthController extends Controller
             'birth_day'   => ['required', 'integer', 'between:1,31'],
             'birth_month' => ['required', 'integer', 'between:1,12'],
             'birth_year'  => ['required', 'integer', 'between:1250,1500'],
-            'referral_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{6,20}$/'],
+            'referral_code' => ['nullable', 'string', 'regex:/^[A-Za-z0-9]{5,20}$/'],
             'terms'      => ['accepted'],
         ]);
 

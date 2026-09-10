@@ -440,15 +440,6 @@ class ProductGenerateController extends Controller
 
     public function show(Product $product)
     {
-        if ($product->isVideoProduct()) {
-            return app(VideoProductController::class)->show(
-                request(),
-                $product,
-                app(ProductBuildSchema::class),
-                app(\App\Services\VideoModelSchemaService::class),
-            );
-        }
-
         $metricPayload = [
             'product_id' => $product->id,
             'user_id' => auth()->id(),
@@ -1053,11 +1044,14 @@ class ProductGenerateController extends Controller
             return response()->json([
                 'success'          => true,
                 'image_url'        => $generated[0]['url'],
-                'images'           => array_map(fn ($g) => [
-                    'key'   => $g['key'],
-                    'title' => $g['title'],
-                    'url'   => $g['url'],
-                ], $generated),
+                'images'           => array_map(function (array $g, int $index) use ($generatedImageRecords): array {
+                    return [
+                        'key' => $g['key'],
+                        'title' => $g['title'],
+                        'url' => $g['url'],
+                        'generated_image_id' => ($generatedImageRecords[$index] ?? null)?->id,
+                    ];
+                }, $generated, array_keys($generated)),
                 'failed_message'   => $failedMsg,
                 'used_model'       => $usedModels[0] ?? $executionProduct->primary_model,
                 'model_tier'       => $tierMeta,

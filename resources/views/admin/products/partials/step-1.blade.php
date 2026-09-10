@@ -417,7 +417,7 @@
   {{-- نوع رسانه — Radio Card --}}
   <div class="flex flex-col gap-1.5 mb-3.5">
     <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">نوع رسانه {!! $__help('media_type', 'نوع رسانه') !!}</label>
-    @php $curMediaType = old('media_type', optional($duplicateFrom)->media_type ?? 'photo'); @endphp
+    @php $curMediaType = old('media_type', optional($duplicateFrom)->media_type ?? ($fixedMediaType ?? 'photo')); @endphp
     <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
       <label class="media-type-card flex items-center gap-2.5 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg cursor-pointer transition-all {{ $curMediaType == 'photo' ? 'border-[var(--accent)] bg-[var(--accent)]/8' : '' }}">
         <input type="radio" name="media_type" value="photo" {{ $curMediaType == 'photo' ? 'checked' : '' }} class="accent-[var(--accent)]">
@@ -440,6 +440,14 @@
       <input type="text" name="preview_video_url" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] ltr text-left" placeholder="https://..." value="{{ old('preview_video_url', optional($duplicateFrom)->preview_video_url) }}">
     </div>
   </div>
+
+  @if(($fixedMediaType ?? null) === 'video')
+    <div class="mt-4 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-3.5">
+      <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1.5">ویدیوی پیش‌نمایش محصول</label>
+      <div class="text-[10px] text-[var(--text3)] mt-1 mb-2">فایل نمایشی با فشرده‌سازی سازگار و شروع سریع ذخیره می‌شود؛ در صورت نبودن ابزار فشرده‌سازی، فایل اصلی بدون افت نگهداری خواهد شد.</div>
+      <input type="file" name="preview_video" accept="video/mp4,video/webm,video/quicktime" class="block w-full text-[10.5px] text-[var(--text2)] file:ml-3 file:rounded-lg file:border-0 file:bg-[var(--primary-l)] file:px-3 file:py-2 file:text-[10.5px] file:font-bold file:text-[var(--primary)]">
+    </div>
+  @endif
 
   {{-- ── آیکون محصول (فعال و ذخیره‌شونده) ── --}}
   <div class="border-t border-dashed border-[var(--b2)] pt-4 mt-4">

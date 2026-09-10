@@ -101,8 +101,13 @@
   .products-table-compact .product-lab-cost-meta { display:block; margin-top:2px; color:var(--text-soft); font-size:8px; line-height:1.4; }
   .products-table-compact .product-code-category-stack,
   .products-table-compact .product-credit-cost-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-width:128px; }
+  .products-table-compact .product-credit-quality-stack { display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:4px; min-width:168px; }
+  .products-table-compact .product-credit-quality-row { display:grid; grid-template-columns:minmax(58px, 1fr) auto minmax(0, 1.35fr); align-items:center; gap:5px; min-width:0; white-space:nowrap; }
+  .products-table-compact .product-quality-label { min-width:0; overflow:hidden; text-overflow:ellipsis; color:var(--text-soft); font-size:9px; font-weight:800; }
+  .products-table-compact .product-quality-credits { color:var(--text-main); font-size:10px; font-weight:900; }
+  .products-table-compact .product-quality-cost { min-width:0; justify-self:end; color:var(--text-main); font-size:9px; font-weight:800; direction:ltr; }
   .products-table-compact .product-code-category-stack > div { display:flex; align-items:center; justify-content:center; gap:5px; flex-wrap:wrap; }
-  .products-table-compact .product-code-category-stack > div:nth-child(2) { flex-direction:column; gap:4px; max-width:100%; }
+  .products-table-compact .product-code-category-stack > div:nth-child(2) { flex-direction:row; align-items:center; flex-wrap:nowrap; gap:5px; max-width:100%; white-space:nowrap; direction:rtl; }
   .products-table-compact .product-category-values { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:4px; max-width:100%; }
   .products-table-compact .product-category-values .badge-pro { white-space:normal; overflow-wrap:anywhere; text-align:center; }
   .products-table-compact .product-code-category-stack .stack-label { color:var(--text-soft); font-size:9px; font-weight:700; }
@@ -112,12 +117,28 @@
   .products-table-compact .product-audit-date { color:var(--text-main); font-size:10.5px; font-weight:800; white-space:nowrap; }
   .products-table-compact .product-audit-actor { max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-soft); font-size:9.5px; font-weight:700; }
   .products-table-compact .product-actions-stack { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
-  .products-table-compact .product-actions-stack > .flex { gap:8px !important; }
-  .products-table-compact .product-like-box { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:64px; min-height:30px; padding:3px 6px 3px 8px; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); direction:rtl; }
+  .products-table-compact .product-actions-grid { display:grid; grid-template-columns:repeat(2, 44px); grid-template-rows:repeat(2, 44px); align-items:center; justify-items:center; gap:4px 8px; margin-inline:auto; }
+  .products-table-compact .product-actions-grid > .product-like-box { grid-column:1; grid-row:1; }
+  .products-table-compact .product-actions-grid > .dropdown-pro { grid-column:2; grid-row:1; }
+  .products-table-compact .product-actions-grid > .favorite { grid-column:1; grid-row:2; }
+  .products-table-compact .product-actions-grid > .product-action-link { grid-column:2; grid-row:2; }
+  .products-table-compact .product-actions-grid > .product-like-box,
+  .products-table-compact .product-actions-grid > .dropdown-pro,
+  .products-table-compact .product-actions-grid > .favorite,
+  .products-table-compact .product-actions-grid > .product-action-link,
+  .products-table-compact .product-actions-grid > .dropdown-pro > .icon-action-btn,
+  .products-table-compact .product-actions-grid > .product-action-link > .icon-action-btn {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    box-sizing:border-box;
+  }
+  .products-table-compact .product-like-box { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:44px; min-width:44px; height:44px; min-height:44px; padding:3px 6px; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); direction:rtl; }
   .products-table-compact .product-like-count { color:var(--text-main); font-size:10.5px; font-weight:800; line-height:1; }
-  .products-table-compact .product-like-icon { width:23px; height:23px; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; background:var(--danger-l); color:var(--danger); font-size:10px; }
-  .products-table-compact .product-actions-stack .dropdown-pro { display:flex; flex-direction:column; align-items:center; gap:8px; }
-  .products-table-compact .product-action-link { display:flex; width:max-content; margin-top:0; padding-top:8px; border-top:0; }
+  .products-table-compact .product-like-icon { color:var(--danger); font-size:11px; line-height:1; }
+  .products-table-compact .product-actions-stack .dropdown-pro { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; }
+  .products-table-compact .product-action-link { display:flex; align-items:center; justify-content:center; width:44px; min-width:44px; height:44px; min-height:44px; margin-top:0; padding-top:0; border-top:0; }
   .products-table-compact td[data-label*="بهینه"] > .product-status-optimization-stack { display:flex !important; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
   .products-table-compact .product-status-line { display:flex; align-items:center; justify-content:center; min-height:24px; }
   .products-table-compact .product-status-optimization-stack .icon-action-btn { width:31px; height:31px; min-height:31px; }
@@ -128,6 +149,24 @@
   .products-table-compact .product-credit-cost-stack,
   .products-table-compact .product-credit-cost-stack .product-lab-cost-stack { overflow:visible; }
 
+  @media (max-width: 767px) {
+    .products-table-compact tbody td[data-label^="عملیات"] {
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .products-table-compact tbody td[data-label^="عملیات"]::before {
+      width:100%;
+      text-align:center;
+    }
+    .products-table-compact tbody td[data-label^="عملیات"] > .product-actions-stack {
+      width:100%;
+      align-items:center;
+      margin-inline:auto;
+    }
+  }
+
   /*
    * جدول محصولات در دسکتاپ فضای ثابتی دارد؛ ستون‌های عملیاتی نباید فضای
    * توضیحات محصول را بگیرند. محتوای طولانی نیز باید داخل سلول خودش کنترل شود.
@@ -135,9 +174,12 @@
   @media (min-width: 768px) {
     .products-table-compact th:nth-child(4) { width: 138px !important; }
     .products-table-compact th:nth-child(5) { width: 118px !important; }
-    .products-table-compact th:nth-child(9) { width: 96px !important; }
-    .products-table-compact th:nth-child(10) { width: 130px !important; }
-    .products-table-compact th:nth-child(11) { width: 112px !important; }
+    .products-table-compact th:nth-child(6) { width: 270px !important; min-width: 270px !important; }
+    .products-table-compact th:nth-child(9) { width: 84px !important; }
+    .products-table-compact th:nth-child(10) { width: 112px !important; }
+    .products-table-compact th:nth-child(11) { width: 92px !important; }
+    .products-table-compact thead th:nth-child(n+9):nth-child(-n+11),
+    .products-table-compact tbody td:nth-child(n+9):nth-child(-n+11) { padding-inline: 6px; }
 
     .products-table-compact td[data-label^="کد محصول"],
     .products-table-compact td[data-label^="ویژگی‌ها"] {
@@ -256,11 +298,11 @@
         <th style="width:64px;"></th>
         <th>محصول</th>
         <th style="text-align:center;"><span class="block">نوع محصول</span><span class="block">کد محصول</span><span class="block">دسته‌بندی</span></th>
-        <th style="text-align:center;"><span class="block">ویژگی‌ها</span><span class="block">هوش مصنوعی</span></th>
+        <th style="text-align:center;"><span class="block">{{ ($isVideoList ?? false) ? 'سناریو' : 'ویژگی‌ها' }}</span><span class="block">هوش مصنوعی</span></th>
         <th style="text-align:center;"><span class="block">اعتبار اجرا</span><span class="block">قیمت محصول</span></th>
         <th style="text-align:center;"><span class="block">مالک</span><span class="block">تعداد اجرا</span></th>
-        <th style="text-align:center;"><span class="block">زمان اجرا</span><span class="block">اعتبار مصرفی</span></th>
-        <th style="text-align:center;"><span class="block">فعال</span><span class="block">بهینه سازی</span><span class="block">آزمایشگاه</span></th>
+        <th style="text-align:center;"><span class="block">{{ ($isVideoList ?? false) ? 'مدت / قاب' : 'زمان اجرا' }}</span><span class="block">اعتبار مصرفی</span></th>
+        <th style="text-align:center;"><span class="block">فعال</span><span class="block">{{ ($isVideoList ?? false) ? 'پیش‌نمایش' : 'بهینه سازی' }}</span><span class="block">آزمایشگاه</span></th>
         <th>آخرین ویرایش</th>
         <th><span class="block">عملیات</span><span class="block">لینک</span><span class="block">تعداد لایک</span></th>
       </tr>
@@ -324,7 +366,7 @@
             </div>
           </td>
 
-          <td data-label="ویژگی‌ها / هوش مصنوعی" style="text-align:center;">
+          <td data-label="{{ ($isVideoList ?? false) ? 'سناریو / هوش مصنوعی' : 'ویژگی‌ها / هوش مصنوعی' }}" style="text-align:center;">
             @php
               $featureTitles = collect((array) $product->input_schema)
                 ->map(fn ($feature) => is_array($feature) ? ($feature['label_fa'] ?? $feature['label'] ?? null) : null)
@@ -335,7 +377,14 @@
                 ? $assignableAiModels->first(fn ($model) => $model->provider === $product->ai_provider && $model->openrouter_model_id === $product->primary_model)
                 : null;
             @endphp
-            @if($featureTitles->isNotEmpty())
+            @if(($isVideoList ?? false))
+              @php $videoListConfig = $product->videoConfiguration(); @endphp
+              <div class="flex flex-wrap items-center justify-center gap-1 max-w-[180px] mx-auto">
+                <span class="badge-pro badge-neutral">{{ ['image_to_video' => 'عکس به ویدیو', 'text_to_video' => 'متن به ویدیو', 'video_to_video' => 'ویدیو به ویدیو'][$videoListConfig['workflow'] ?? ''] ?? 'ویدیو' }}</span>
+                @if(!empty($videoListConfig['preserve_source_aspect_ratio']))<span class="badge-pro badge-success">نسبت اصلی</span>@endif
+                <span class="badge-pro badge-info">{{ (int) ($product->source_photo_products_count ?? 0) }} اتصال عکس</span>
+              </div>
+            @elseif($featureTitles->isNotEmpty())
               <div class="flex flex-wrap items-center justify-center gap-1 max-w-[180px] mx-auto">
                 @foreach($featureTitles->take(3) as $featureTitle)
                   <span class="badge-pro badge-neutral">{{ $featureTitle }}</span>
@@ -360,27 +409,29 @@
           <td data-label="اعتبار اجرا / قیمت محصول" id="product-credit-cell-{{ $product->id }}" style="text-align:center;">
             @php
               $productLabCosts = collect((array) ($product->lab_cost_summary ?? []));
+              $productLabCostsByQuality = $productLabCosts->keyBy(fn ($cost) => (string) ($cost['key'] ?? ''));
               $qualityCreditCosts = $product->qualityCreditCosts();
+              $qualityRows = [
+                'standard' => 'استاندارد',
+                'professional' => 'حرفه‌ای',
+                'best' => 'بهترین خروجی',
+              ];
             @endphp
-            <div class="product-credit-cost-stack">
-              <div class="product-price-stack" aria-label="اعتبار مصرفی محصول در هر اجرا">
-                <span><small>استاندارد</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['standard'])) }}</b></span>
-                <span><small>حرفه‌ای</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['professional'])) }}</b></span>
-                <span><small>بهترین خروجی</small><b>{{ number_format((int) ($product->pricing_model === 'free' ? 0 : $qualityCreditCosts['best'])) }}</b></span>
-              </div>
-              <div class="product-lab-cost-stack" aria-label="هزینه‌ی واقعی، تأییدشده یا تخمینی ساخت یک خروجی؛ تومان بر اساس نرخ روز دلار">
-              @foreach($productLabCosts as $labCost)
+            <div class="product-credit-quality-stack" aria-label="اعتبار مصرفی و هزینه ساخت هر کیفیت">
+              @foreach($qualityRows as $qualityKey => $qualityLabel)
                 @php
+                  $labCost = (array) $productLabCostsByQuality->get($qualityKey);
                   $costTone = in_array(($labCost['tone'] ?? 'unavailable'), ['actual', 'verified', 'estimated', 'model', 'unavailable'], true)
                     ? $labCost['tone']
                     : 'unavailable';
                   $costSourceLabel = $labCost['source_label'] ?? (($labCost['source'] ?? null) === 'actual' ? 'هزینه واقعی' : 'هزینه تخمینی');
                   $costSourceDetail = $labCost['source_detail'] ?? 'جزئیات منبع قیمت ثبت نشده است.';
                 @endphp
-                <div class="product-lab-cost-row">
-                  <span>{{ $labCost['label'] }}</span>
+                <div class="product-credit-quality-row">
+                  <span class="product-quality-label">{{ $qualityLabel }}</span>
+                  <span class="product-quality-credits">{{ number_format((int) ($product->pricing_model === 'free' ? 0 : ($qualityCreditCosts[$qualityKey] ?? 0))) }} اعتبار</span>
                   @if(($labCost['status'] ?? null) === 'available')
-                    <span class="product-lab-cost-value product-lab-cost-source product-lab-cost-source--{{ $costTone }}" tabindex="0" aria-label="{{ $costSourceLabel }}">
+                    <span class="product-quality-cost product-lab-cost-source product-lab-cost-source--{{ $costTone }}" tabindex="0" aria-label="{{ $costSourceLabel }}">
                       ${{ number_format((float) $labCost['usd'], 4) }}
                       <small>·</small>
                       {{ number_format((int) $labCost['toman']) }} تومان
@@ -392,7 +443,7 @@
                       </span>
                     </span>
                   @else
-                    <span class="product-lab-cost-value product-lab-cost-source product-lab-cost-source--unavailable" tabindex="0" aria-label="{{ $costSourceLabel }}">
+                    <span class="product-quality-cost product-lab-cost-source product-lab-cost-source--unavailable" tabindex="0" aria-label="{{ $costSourceLabel }}">
                       —
                       <span class="product-lab-cost-tooltip" role="tooltip">
                         <strong>{{ $costSourceLabel }}</strong>
@@ -402,10 +453,6 @@
                   @endif
                 </div>
               @endforeach
-              @if($productLabCosts->isEmpty())
-                <span class="product-lab-cost-meta">پس از آزمایش محصول نمایش داده می‌شود</span>
-              @endif
-              </div>
             </div>
           </td>
 
@@ -413,7 +460,7 @@
             {{-- آمار واقعی اجرا از جدول generations (generations_count در کنترلر withCount شده)
                  نوار محبوبیت = نسبت اجرای این محصول به پراجراترین محصول پلتفرم ($maxRuns) --}}
             @php
-              $runs = (int) ($product->generations_count ?? 0);
+            $runs = (int) ($product->generations_count ?? 0) + (int) ($product->generated_videos_count ?? 0);
               $runsPct = ($maxRuns ?? 0) > 0 ? (int) round(($runs / $maxRuns) * 100) : 0;
             @endphp
             <div class="flex flex-col items-center justify-center gap-1.5 pro-tooltip-wrap w-full">
@@ -431,7 +478,7 @@
             </div>
           </td>
 
-          <td data-label="زمان اجرا / اعتبار مصرفی" style="text-align:center;">
+          <td data-label="{{ ($isVideoList ?? false) ? 'مدت / قاب / اعتبار مصرفی' : 'زمان اجرا / اعتبار مصرفی' }}" style="text-align:center;">
             @php
               $labExperiment = $product->latestLabExperiment;
               $labRuns = $labExperiment?->runs ?? collect();
@@ -446,7 +493,13 @@
               $totalUserTokens = (int) ($product->completed_generations_count ?? 0) * max(0, (int) ($product->pricing_model === 'free' ? 0 : $product->qualityCreditCost('standard')));
             @endphp
             <div class="product-run-token-stack flex flex-col items-center justify-center gap-1.5">
-              <div><span>زمان اجرا</span><strong>{{ $labBuildSeconds !== null ? number_format($labBuildSeconds, 1) . ' ثانیه' : '—' }}</strong></div>
+              @if($isVideoList ?? false)
+                @php $videoListConfig = $videoListConfig ?? $product->videoConfiguration(); @endphp
+                <div><span>مدت</span><strong>{{ implode('، ', array_map(fn ($item) => $item . ' ثانیه', (array) ($videoListConfig['durations'] ?? []))) ?: '—' }}</strong></div>
+                <div><span>قاب</span><strong dir="ltr">{{ implode(' · ', (array) ($videoListConfig['aspect_ratios'] ?? [])) ?: '—' }}</strong></div>
+              @else
+                <div><span>زمان اجرا</span><strong>{{ $labBuildSeconds !== null ? number_format($labBuildSeconds, 1) . ' ثانیه' : '—' }}</strong></div>
+              @endif
               <div><span>اعتبار مصرفی</span><strong>{{ $labRunTokens !== null ? number_format((int) $labRunTokens) : '—' }}</strong></div>
               <div><span>مجموع اعتبار</span><strong>{{ number_format($totalUserTokens) }}</strong></div>
               <div><span>اعتبار پاداش داده‌شده</span><strong class="text-[var(--primary)]">{{ number_format((int) ($product->creator_reward_credits_sum ?? 0)) }}</strong></div>
@@ -456,7 +509,7 @@
           @php
             $hasScoredLabExperiment = (int) ($product->scored_lab_experiments_count ?? 0) > 0;
           @endphp
-          <td data-label="فعال / بهینه سازی / آزمایشگاه" style="text-align:center;">
+          <td data-label="فعال / {{ ($isVideoList ?? false) ? 'پیش‌نمایش / آزمایشگاه' : 'بهینه سازی / آزمایشگاه' }}" style="text-align:center;">
             @php
               $statusMap = [
                 'active'   => ['label' => 'فعال',      'class' => 'badge-success'],
@@ -474,6 +527,9 @@
                 @endif
               </div>
               <div class="flex items-center justify-center gap-1.5">
+              @if($isVideoList ?? false)
+                <a href="{{ $product->previewVideoUrl() ?: '#' }}" class="icon-action-btn inline-flex items-center justify-center" style="color:{{ $product->previewVideoUrl() ? 'var(--success)' : 'var(--text-soft)' }};" {{ $product->previewVideoUrl() ? 'target=_blank rel=noopener' : '' }} title="{{ $product->previewVideoUrl() ? 'مشاهده ویدیوی پیش‌نمایش' : 'پیش‌نمایش ثبت نشده' }}"><i class="fa-solid fa-video"></i></a>
+              @else
               <button type="button"
                       class="product-image-optimize-btn icon-action-btn {{ $product->images_optimized_at ? 'is-optimized' : '' }}"
                       data-product-id="{{ $product->id }}"
@@ -485,6 +541,7 @@
                       onclick="optimizeProductImagesFromTable(this)">
                 <i class="fa-solid {{ $product->images_optimized_at ? 'fa-circle-check' : 'fa-wand-magic-sparkles' }}"></i>
               </button>
+              @endif
               <a href="{{ $hasScoredLabExperiment ? '#' : route('admin.lab.create', ['product_id' => $product->id]) }}"
                  @if($hasScoredLabExperiment) data-summary-url="{{ route('admin.lab.products.summary', $product) }}" onclick="openProductLabSummary(event, this)" @endif
                  class="icon-action-btn inline-flex items-center justify-center"
@@ -513,11 +570,11 @@
 
           <td data-label="عملیات / لینک / تعداد لایک">
             <div class="product-actions-stack">
-              <div class="product-like-box" title="تعداد کل لایک" aria-label="تعداد کل لایک">
-                <span class="product-like-count">{{ number_format($product->displayed_likes_count) }}</span>
-                <span class="product-like-icon"><i class="fa-solid fa-heart" aria-hidden="true"></i></span>
-              </div>
-              <div class="flex items-center gap-1 justify-center">
+              <div class="product-actions-grid">
+                <div class="product-like-box" title="تعداد کل لایک" aria-label="تعداد کل لایک">
+                  <span class="product-like-count">{{ number_format($product->displayed_likes_count) }}</span>
+                  <i class="fa-solid fa-heart product-like-icon" aria-hidden="true"></i>
+                </div>
                 <button type="button" class="icon-action-btn favorite" title="نشان‌کردن به‌عنوان مهم (نیاز به بررسی برنامه برای ذخیره‌سازی)" onclick="this.classList.toggle('is-active')">
                   <i class="fa-solid fa-star"></i>
                 </button>
@@ -541,13 +598,13 @@
                       <button type="submit" class="dropdown-pro-item danger"><i class="fa-solid fa-trash"></i> حذف</button>
                     </form>
                   </div>
-                  @php $publicProductUrl = route('app.product', $product->route_slug); @endphp
-                  <div class="pro-tooltip-wrap product-action-link">
-                    <button type="button" class="icon-action-btn" aria-label="کپی لینک محصول" data-product-url="{{ $publicProductUrl }}" onclick="copyProductPublicLink(this)">
-                      <i class="fa-solid fa-link"></i>
-                    </button>
-                    <div class="pro-tooltip" dir="ltr" style="width:260px;overflow-wrap:anywhere;">{{ $publicProductUrl }}</div>
-                  </div>
+                </div>
+                @php $publicProductUrl = route('app.product', $product->route_slug); @endphp
+                <div class="pro-tooltip-wrap product-action-link">
+                  <button type="button" class="icon-action-btn" aria-label="کپی لینک محصول" data-product-url="{{ $publicProductUrl }}" onclick="copyProductPublicLink(this)">
+                    <i class="fa-solid fa-link"></i>
+                  </button>
+                  <div class="pro-tooltip" dir="ltr" style="width:260px;overflow-wrap:anywhere;">{{ $publicProductUrl }}</div>
                 </div>
               </div>
             </div>
@@ -560,8 +617,8 @@
               <div class="empty-state-icon"><i class="fa-solid fa-box-open"></i></div>
               <div class="empty-state-title">هنوز محصولی ثبت نشده است.</div>
               <div class="empty-state-desc">بعد از ایجاد اولین محصول، این بخش اطلاعات کامل محصولات را نمایش خواهد داد.</div>
-              <a href="{{ route('admin.products.create') }}" class="btn-pro btn-pro-primary" style="display:inline-flex;">
-                <i class="fa-solid fa-plus text-[11px]"></i> ثبت اولین محصول
+              <a href="{{ ($isVideoList ?? false) ? route('admin.products.video.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary" style="display:inline-flex;">
+                <i class="fa-solid {{ ($isVideoList ?? false) ? 'fa-video' : 'fa-plus' }} text-[11px]"></i> ثبت اولین محصول {{ ($isVideoList ?? false) ? 'ویدیو' : 'عکس' }}
               </a>
             </div>
           </td>

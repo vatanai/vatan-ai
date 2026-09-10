@@ -393,9 +393,8 @@
       });
       btn.classList.add('active');
       var sub = btn.getAttribute('data-sub');
-      document.getElementById('files-created').style.display  = sub === 'created'  ? 'grid' : 'none';
       document.getElementById('files-personal').style.display = sub === 'personal' ? 'grid' : 'none';
-      document.getElementById('files-gallery-inputs').style.display = sub === 'gallery-inputs' ? 'grid' : 'none';
+      document.getElementById('files-used-products').style.display = sub === 'used-products' ? 'grid' : 'none';
     });
   });
 

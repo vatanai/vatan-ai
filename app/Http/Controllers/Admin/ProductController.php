@@ -17,6 +17,8 @@ use App\Models\ProductCreditPreset;
 use App\Models\Order;
 use App\Models\GeneratedVideo;
 use App\Services\ProductImageOptimizer;
+use App\Services\VideoPreviewOptimizer;
+use App\Services\VideoProductConfigService;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
 use App\Services\ProviderPricingService;
@@ -37,6 +39,7 @@ class ProductController extends Controller
         private readonly ExchangeRateService $exchangeRate,
         private readonly ProviderPricingService $pricing,
         private readonly ProductLabCostService $labCosts,
+        private readonly VideoPreviewOptimizer $videoPreviewOptimizer,
     ) {}
 
     public function translateIdentityPrompt(Request $request, OpenRouterService $openRouter)
@@ -55,6 +58,9 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        $isVideoList = $request->routeIs('admin.products.videos');
+        $productMediaTypes = $isVideoList ? ['video', 'both'] : ['photo', 'both'];
+
         // منبع مشترک مدل‌های قابل‌انتخاب در «ثبت محصول» و «تغییر سریع لیست».
         // منبع مشترک: مدل‌های فعال و تیک‌خورده از تمام providerها.
         // روشن/خاموش بودن provider فقط روی اجرای واقعی اثر دارد و نباید
@@ -75,6 +81,8 @@ class ProductController extends Controller
         $query = Product::query()
             ->with(['categories', 'creator', 'editor', 'creatorRewardOwner', 'latestLabExperiment.runs.aiModel', 'latestLabExperiment.runs.outputs.managerScore'])
             ->withCount('generations')
+            ->withCount('generatedVideos')
+            ->withCount('sourcePhotoProducts')
             ->withCount(['generations as completed_generations_count' => fn ($generationQuery) => $generationQuery->where('status', 'completed')])
             ->withCount('labExperiments')
             ->withCount(['labExperiments as scored_lab_experiments_count' => function ($experimentQuery) {
@@ -114,6 +122,11 @@ class ProductController extends Controller
                     ->limit(1),
             ]);
 
+        // صفحه‌ی اصلی فهرست، مخصوص محصولات عکس است و صفحه‌ی جداگانه‌ی ویدیو
+        // فقط محصولات ویدیویی را نشان می‌دهد؛ فیلتر رسانه در این دو صفحه نباید
+        // بتواند دامنه‌ی اصلی فهرست را تغییر دهد.
+        $query->whereIn('media_type', $productMediaTypes);
+
         if ($search = trim((string) $request->get('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name_fa', 'like', "%{$search}%")
@@ -133,9 +146,6 @@ class ProductController extends Controller
        
         if ($status = $request->get('status')) {
             $query->where('status', $status);
-        }
-        if ($mediaType = $request->get('media_type')) {
-            $query->where('media_type', $mediaType);
         }
         if ($aiModel = $request->get('ai_model')) {
             $query->where('primary_model', $aiModel);
@@ -219,24 +229,37 @@ class ProductController extends Controller
             ->get()
             ->groupBy('product_id');
 
-        $activeCount   = Product::where('status', 'active')->count();
-        $draftCount    = Product::where('status', 'draft')->count();
-        $inactiveCount = Product::where('status', 'inactive')->count();
+        $scopedProductQuery = fn () => Product::query()->whereIn('media_type', $productMediaTypes);
+        $activeCount   = $scopedProductQuery()->where('status', 'active')->count();
+        $draftCount    = $scopedProductQuery()->where('status', 'draft')->count();
+        $inactiveCount = $scopedProductQuery()->where('status', 'inactive')->count();
 
         // ── آمار واقعی اجراها برای کارت‌ها و نوار محبوبیت جدول ──
         // کل اجراها: اجراهای تصویری + رکوردهای تولید ویدیوی صف‌شده
-        $totalRuns = Generation::count() + GeneratedVideo::count();
+        $totalRuns = Generation::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count()
+            + GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count();
         $draftPhotoCount = Product::where('status', 'draft')->whereIn('media_type', ['photo', 'both'])->count();
         $draftVideoCount = Product::where('status', 'draft')->whereIn('media_type', ['video', 'both'])->count();
         // بیشترین تعداد اجرای یک محصول (مبنای درصد نوار محبوبیت هر ردیف جدول)
-        $maxRuns = (int) (Generation::selectRaw('count(*) as runs_count')
+        $maxImageRuns = (int) (Generation::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))
+            ->selectRaw('count(*) as runs_count')
             ->groupBy('product_id')
             ->orderByDesc('runs_count')
             ->limit(1)
             ->value('runs_count') ?? 0);
+        $maxVideoRuns = (int) (GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))
+            ->selectRaw('count(*) as runs_count')
+            ->groupBy('product_id')
+            ->orderByDesc('runs_count')
+            ->limit(1)
+            ->value('runs_count') ?? 0);
+        $maxRuns = max($maxImageRuns, $maxVideoRuns);
         // محبوب‌ترین محصول (بیشترین اجرا) — فقط وقتی حداقل یک اجرا ثبت شده باشد
         $topProduct = $maxRuns > 0
-            ? Product::withCount('generations')->orderByDesc('generations_count')->first()
+            ? Product::whereIn('media_type', $productMediaTypes)
+                ->withCount(['generations', 'generatedVideos'])
+                ->orderByRaw('(generations_count + generated_videos_count) desc')
+                ->first()
             : null;
 
         // فیلترها و منوی تغییر سریع باید دقیقاً همان مدل‌های قابل‌انتخاب
@@ -252,7 +275,7 @@ class ProductController extends Controller
         $modelQualityPresets = ModelQualityPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
         $qualityCreditPresets = ProductCreditPreset::query()->orderByDesc('is_default_for_product_creation')->orderBy('id')->get();
         $categories = Category::orderBy('name')->get();
-        $recentlyEdited = Product::orderByDesc('updated_at')->take(3)->get();
+        $recentlyEdited = $scopedProductQuery()->orderByDesc('updated_at')->take(3)->get();
 
         $exchange = $this->exchangeRate->usdToIrr();
         $exchangeRateIrr = (float) ($exchange['rate'] ?? 0);
@@ -271,8 +294,14 @@ class ProductController extends Controller
             'products', 'activeCount', 'draftCount', 'inactiveCount',
             'totalRuns', 'maxRuns', 'topProduct', 'draftPhotoCount', 'draftVideoCount',
             'aiModels', 'assignableAiModels', 'validAiModelKeys', 'categories', 'recentlyEdited',
-            'exchange', 'matchingProductIds', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets'
+            'exchange', 'matchingProductIds', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets', 'isVideoList'
         ));
+    }
+
+    /** فهرست مستقل محصولات ویدیو با همان رابط کاربری فهرست محصولات عکس. */
+    public function videoIndex(Request $request)
+    {
+        return $this->index($request);
     }
 
     /**
@@ -325,7 +354,43 @@ class ProductController extends Controller
             ? $product->labExperiments()->where('status', 'completed')->exists()
             : false;
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets'));
+        $isVideoProductPage = $request->boolean('video_mode');
+        $relatedPhotoProducts = $isVideoProductPage
+            ? Product::query()
+                ->whereIn('media_type', ['photo', 'both'])
+                ->where('output_type', 'image')
+                ->whereIn('status', ['active', 'draft'])
+                ->orderBy('name_fa')
+                ->get(['id', 'name_fa', 'name_en', 'product_code', 'cover'])
+            : collect();
+        if ($product) $product->loadMissing('sourcePhotoProducts');
+
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets', 'isVideoProductPage', 'relatedPhotoProducts'));
+    }
+
+    /**
+     * فرم ثبت محصول ویدیو عمداً همان فرم کامل ثبت محصول عکس است تا دو تجربه
+     * از نظر UI و همه‌ی آیتم‌ها یکسان بمانند و اصلاحیه‌ها بعداً مرحله‌ای اعمال شوند.
+     */
+    public function videoCreate(Request $request, ?Product $product = null)
+    {
+        if ($product) abort_unless($product->isVideoProduct(), 404);
+        $request->merge(['video_mode' => true]);
+
+        return $this->create($request, $product);
+    }
+
+    public function videoStore(Request $request)
+    {
+        $this->prepareVideoAdminRequest($request);
+        return $this->store($request);
+    }
+
+    public function videoUpdate(Request $request, Product $product)
+    {
+        abort_unless($product->isVideoProduct(), 404);
+        $this->prepareVideoAdminRequest($request, $product);
+        return $this->update($request, $product);
     }
 
     /**
@@ -391,6 +456,20 @@ class ProductController extends Controller
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'preview_video' => 'nullable|file|mimes:mp4,webm,mov|max:102400',
+            'preview_video_url' => 'nullable|string|max:2048',
+            'video_config.workflow' => ['nullable', Rule::in(VideoProductConfigService::WORKFLOWS)],
+            'video_config.face_profile_mode' => ['nullable', Rule::in(['disabled', 'optional', 'required'])],
+            'video_config.durations' => 'nullable|array',
+            'video_config.durations.*' => 'integer|min:1|max:15',
+            'video_config.aspect_ratios' => 'nullable|array',
+            'video_config.aspect_ratios.*' => ['string', Rule::in(VideoProductConfigService::ASPECT_RATIOS)],
+            'video_config.resolutions' => 'nullable|array',
+            'video_config.resolutions.*' => ['string', Rule::in(VideoProductConfigService::RESOLUTIONS)],
+            'video_quality_credit_costs' => 'nullable|array',
+            'video_quality_credit_costs.*' => 'integer|min:1|max:1000000',
+            'video_related_photo_product_ids' => ['nullable', 'array', 'max:100'],
+            'video_related_photo_product_ids.*' => ['integer', 'distinct', Rule::exists('products', 'id')->where(fn ($query) => $query->whereIn('media_type', ['photo', 'both'])->where('output_type', 'image'))],
             ...$this->inputSchemaRules(),
         ]);
         $this->validateAiProviderSelection($request);
@@ -542,6 +621,9 @@ class ProductController extends Controller
         // ۸. تنظیمات ظاهری و فنی
         $product->media_type = $request->input('media_type') ?? 'photo';
         $product->preview_video_url = $request->input('preview_video_url');
+        if ($request->hasFile('preview_video')) {
+            $product->preview_video_url = $this->videoPreviewOptimizer->store($request->file('preview_video'));
+        }
         $product->watermark_position = $request->input('watermark_position') ?? 'corner';
         $product->display_mode = $request->input('display_mode') ?? 'card';
         $product->card_shape = $request->input('card_shape') ?? 'portrait';
@@ -593,13 +675,18 @@ class ProductController extends Controller
                 $product->categories()->sync($categoryIds);
             }
             $this->attachDraftTests($request, $product);
+            if ($request->boolean('video_mode')) {
+                $this->syncVideoPhotoRelations($product, $request);
+            }
         });
 
         if ($request->expectsJson()) {
             session()->flash('success', $isPublishing ? 'محصول با موفقیت ثبت و منتشر شد.' : 'پیش‌نویس محصول با موفقیت ذخیره شد.');
             return response()->json([
                 'ok' => true,
-                'redirect' => $request->boolean('open_lab_after_save') ? route('admin.lab.create', ['product_id' => $product->id]) : route('admin.products'),
+                'redirect' => $request->boolean('open_lab_after_save')
+                    ? route('admin.lab.create', ['product_id' => $product->id])
+                    : ($request->boolean('video_mode') ? route('admin.products.videos') : route('admin.products')),
                 'message' => $isPublishing ? 'محصول با موفقیت ثبت و منتشر شد.' : 'پیش‌نویس محصول با موفقیت ذخیره شد.',
             ]);
         }
@@ -608,7 +695,8 @@ class ProductController extends Controller
             return redirect()->route('admin.lab.create', ['product_id' => $product->id])->with('success', 'محصول ذخیره شد؛ حالا تصاویر و مدل‌های آزمایش را انتخاب کنید.');
         }
 
-        return redirect()->route('admin.products')->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
+        return redirect()->route($request->boolean('video_mode') ? 'admin.products.videos' : 'admin.products')
+            ->with('success', 'محصول جدید با موفقیت و بدون خطای ساختاری ثبت شد.');
     }
 
     /**
@@ -688,8 +776,21 @@ class ProductController extends Controller
             'main_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
             'before_images' => 'nullable|array|max:20',
             'before_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:12288',
+            'preview_video' => 'nullable|file|mimes:mp4,webm,mov|max:102400',
+            'video_config.workflow' => ['nullable', Rule::in(VideoProductConfigService::WORKFLOWS)],
+            'video_config.face_profile_mode' => ['nullable', Rule::in(['disabled', 'optional', 'required'])],
+            'video_config.durations' => 'nullable|array',
+            'video_config.durations.*' => 'integer|min:1|max:15',
+            'video_config.aspect_ratios' => 'nullable|array',
+            'video_config.aspect_ratios.*' => ['string', Rule::in(VideoProductConfigService::ASPECT_RATIOS)],
+            'video_config.resolutions' => 'nullable|array',
+            'video_config.resolutions.*' => ['string', Rule::in(VideoProductConfigService::RESOLUTIONS)],
+            'video_quality_credit_costs' => 'nullable|array',
+            'video_quality_credit_costs.*' => 'integer|min:1|max:1000000',
+            'video_related_photo_product_ids' => ['nullable', 'array', 'max:100'],
+            'video_related_photo_product_ids.*' => ['integer', 'distinct', Rule::exists('products', 'id')->where(fn ($query) => $query->whereIn('media_type', ['photo', 'both'])->where('output_type', 'image'))],
             'media_type' => 'nullable|in:photo,video,both',
-            'preview_video_url' => 'nullable|url',
+            'preview_video_url' => 'nullable|string|max:2048',
             'pipeline_type' => 'nullable|string',
             'timeout' => 'nullable|integer',
             'watermark_position' => 'nullable|string',
@@ -744,6 +845,10 @@ class ProductController extends Controller
         $validated['creator_reward_settings'] = $this->normalizeCreatorRewardSettings(
             (array) $request->input('creator_reward_settings', []),
             (array) ($product->creator_reward_settings ?? [])
+        );
+        $this->ensureCreatorRewardOwnerCanBeChanged(
+            $product,
+            $creatorRewardEnabled ? (int) $request->input('creator_reward_owner_id') : null
         );
 
         // مقدار ذخیره‌شده دقیقاً از همان رکورد مرکب provider + model گرفته
@@ -838,6 +943,10 @@ class ProductController extends Controller
             ?: ($product->identity_instructions_fa ?: \App\Services\ProductPromptBuilder::defaultIdentityInstructionsFa());
         $providerOptionsRaw = $request->input('provider_options');
         $validated['provider_options'] = $providerOptionsRaw ? (json_decode($providerOptionsRaw, true) ?: null) : null;
+        if ($request->hasFile('preview_video')) {
+            $validated['preview_video_url'] = $this->videoPreviewOptimizer->store($request->file('preview_video'));
+        }
+        unset($validated['preview_video'], $validated['video_related_photo_product_ids']);
         $validated['seed'] = $request->filled('seed') ? (int) $request->input('seed') : null;
 
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
@@ -897,17 +1006,21 @@ class ProductController extends Controller
         if (!empty($categoryIds)) {
             $product->categories()->sync($categoryIds);
         }
+        if ($request->boolean('video_mode')) {
+            $this->syncVideoPhotoRelations($product, $request);
+        }
 
         if ($request->expectsJson()) {
             session()->flash('success', $request->input('status') === 'draft' ? 'تغییرات محصول به‌صورت پیش‌نویس ذخیره شد.' : 'تغییرات محصول با موفقیت ثبت شد.');
             return response()->json([
                 'ok' => true,
-                'redirect' => route('admin.products'),
+                'redirect' => $request->boolean('video_mode') ? route('admin.products.videos') : route('admin.products'),
                 'message' => 'تغییرات با موفقیت ثبت شد.',
             ]);
         }
 
-        return redirect()->route('admin.products')->with('success', 'تغییرات با موفقیت ثبت شد.');
+        return redirect()->route($request->boolean('video_mode') ? 'admin.products.videos' : 'admin.products')
+            ->with('success', 'تغییرات با موفقیت ثبت شد.');
     }
 
     /**
@@ -1521,6 +1634,19 @@ class ProductController extends Controller
         ];
     }
 
+    /** مالک قبلی محصول تا زمان آزادشدن، قابل جایگزینی با کاربر دیگری نیست. */
+    private function ensureCreatorRewardOwnerCanBeChanged(Product $product, ?int $requestedOwnerId): void
+    {
+        $currentOwnerId = (int) ($product->getRawOriginal('creator_reward_owner_id') ?? 0);
+        $requestedOwnerId = (int) ($requestedOwnerId ?? 0);
+
+        if ($currentOwnerId > 0 && $requestedOwnerId > 0 && $currentOwnerId !== $requestedOwnerId) {
+            throw ValidationException::withMessages([
+                'creator_reward_owner_id' => 'این محصول قبلاً به کاربر دیگری اختصاص داده شده و قابل اختصاص به کاربر دوم نیست.',
+            ]);
+        }
+    }
+
     /** مقدارهای پاداش با کلیدهای محدود و عددهای غیرمنفی در دیتابیس ذخیره می‌شوند. */
     private function normalizeCreatorRewardSettings(array $settings, array $fallback = []): array
     {
@@ -1754,6 +1880,71 @@ class ProductController extends Controller
                     ->orWhereNot($validCondition);
             });
         }
+    }
+
+    /** تنظیمات اختصاصی ویدیو را به همان فرم اصلی محصول وصل می‌کند. */
+    private function prepareVideoAdminRequest(Request $request, ?Product $product = null): void
+    {
+        $rawVideo = (array) $request->input('video_config', []);
+        $existingVideo = $product?->videoConfiguration() ?? [];
+        $video = [
+            'workflow' => $rawVideo['workflow'] ?? data_get($existingVideo, 'workflow', 'image_to_video'),
+            'face_profile_mode' => $rawVideo['face_profile_mode'] ?? data_get($existingVideo, 'face_profile_mode', 'disabled'),
+            'durations' => $rawVideo['durations'] ?? data_get($existingVideo, 'durations', [4, 6, 8]),
+            'default_duration' => $rawVideo['default_duration'] ?? data_get($existingVideo, 'default_duration', 6),
+            'aspect_ratios' => $rawVideo['aspect_ratios'] ?? data_get($existingVideo, 'aspect_ratios', ['16:9', '9:16', '1:1']),
+            'default_aspect_ratio' => $rawVideo['default_aspect_ratio'] ?? data_get($existingVideo, 'default_aspect_ratio', '16:9'),
+            'preserve_source_aspect_ratio' => $request->boolean('video_preserve_source_aspect_ratio'),
+            'resolutions' => $rawVideo['resolutions'] ?? data_get($existingVideo, 'resolutions', ['480p', '720p', '1080p']),
+            'default_resolution' => $rawVideo['default_resolution'] ?? data_get($existingVideo, 'default_resolution', '720p'),
+            'fps' => $rawVideo['fps'] ?? data_get($existingVideo, 'fps', 24),
+            'motion_presets' => $rawVideo['motion_presets'] ?? data_get($existingVideo, 'motion_presets', ['static', 'dolly_in']),
+            'audio_allowed' => $request->boolean('video_audio_allowed'),
+            'audio_default' => $request->boolean('video_audio_default'),
+            'prompt_enhance' => $request->boolean('video_prompt_enhance'),
+            'allow_promotional_credits' => $request->boolean('video_allow_promotional_credits'),
+            'credit_costs_by_duration' => $rawVideo['credit_costs_by_duration'] ?? data_get($existingVideo, 'credit_costs_by_duration', []),
+            'quality_costs' => $rawVideo['quality_costs'] ?? data_get($existingVideo, 'quality_costs', []),
+            'quality_tiers' => $rawVideo['quality_tiers'] ?? data_get($existingVideo, 'quality_tiers', []),
+            'quality_credit_costs' => (array) $request->input('video_quality_credit_costs', $request->input('model_configuration.quality_credit_costs', data_get($existingVideo, 'quality_credit_costs', Product::DEFAULT_QUALITY_CREDIT_COSTS))),
+        ];
+        $video = app(VideoProductConfigService::class)->normalize($video);
+
+        $providerOptions = (array) (json_decode((string) $request->input('provider_options', ''), true) ?: []);
+        $providerOptions['video'] = $video;
+        $modelConfiguration = (array) $request->input('model_configuration', []);
+        $modelConfiguration['quality_credit_costs'] = $video['quality_credit_costs'];
+
+        $ratioMap = ['480p' => '480', '720p' => '720', '1080p' => '1080', '4K' => '2160'];
+        $allowedResolutions = array_values(array_unique(array_filter(array_map(
+            fn (string $value): ?string => $ratioMap[$value] ?? null,
+            $video['resolutions']
+        ))));
+        $allowedResolutions = $allowedResolutions ?: ['720'];
+        $allowedRatios = array_values(array_intersect(Product::supportedAspectRatios(), $video['aspect_ratios']));
+        $allowedRatios = $allowedRatios ?: ['16:9'];
+
+        $request->merge([
+            'video_mode' => true,
+            'media_type' => 'video',
+            'output_type' => 'video',
+            'output_format' => 'mp4',
+            'pipeline_type' => 'video_generation',
+            'delivery_method' => 'queued',
+            'output_quality_selector_enabled' => true,
+            'allowed_aspect_ratios' => $allowedRatios,
+            'allowed_resolutions' => $allowedResolutions,
+            'provider_options' => json_encode($providerOptions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'model_configuration' => $modelConfiguration,
+        ]);
+    }
+
+    private function syncVideoPhotoRelations(Product $videoProduct, Request $request): void
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array) $request->input('video_related_photo_product_ids', [])))));
+        $videoProduct->sourcePhotoProducts()->sync(
+            collect($ids)->values()->mapWithKeys(fn (int $id, int $index): array => [$id => ['sort_order' => $index, 'is_active' => true]])->all()
+        );
     }
 
     private function storeOptimizedImages(array $files, string $directory): array

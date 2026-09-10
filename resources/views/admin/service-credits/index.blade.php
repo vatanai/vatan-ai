@@ -9,19 +9,26 @@
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
   @include('admin.partials.header')
   <div class="admin-content flex-1 overflow-y-auto credit-page" id="content">
+    @php $mode = $mode ?? 'providers'; @endphp
     <div class="credit-head">
       <div>
-        <h1>مدیریت اعتبار و مصرف سرویس‌ها</h1>
-        <div class="credit-subtitle">نمای یکپارچه موجودی، مصرف روزانه، هزینه ماهانه و هشدار کمبود اعتبار</div>
+        <div class="credit-eyebrow">زیرساخت مالی و مصرف هوش مصنوعی</div>
+        <h1>{{ $mode === 'transactions' ? 'بررسی تراکنش‌ها' : 'میزان اعتبار پرووایدرها' }}</h1>
+        <div class="credit-subtitle">{{ $mode === 'transactions' ? 'جست‌وجو، فیلتر و بررسی کامل تمام رخدادهای مصرف و هزینه' : 'نمایش کامل موجودی، سلامت اتصال و هشدارهای تمام پرووایدرها' }}</div>
       </div>
       <div class="credit-head-actions">
         <form method="POST" action="{{ route('admin.service-credits.refresh') }}">@csrf
           <button class="credit-btn" type="submit"><i class="fa-solid fa-rotate"></i> تازه‌سازی آنلاین</button>
         </form>
-        <button class="credit-btn" type="button" data-open-modal="account-modal"><i class="fa-solid fa-plus"></i> اکانت جدید</button>
+        @if($mode === 'providers')<button class="credit-btn" type="button" data-open-modal="account-modal"><i class="fa-solid fa-plus"></i> اکانت جدید</button>@endif
         <button class="credit-btn primary" type="button" data-open-modal="transaction-modal"><i class="fa-solid fa-receipt"></i> ثبت تراکنش</button>
       </div>
     </div>
+
+    <nav class="credit-subnav" aria-label="بخش‌های اعتبار سرویس‌ها">
+      <a class="{{ $mode === 'providers' ? 'active' : '' }}" href="{{ route('admin.service-credits.providers') }}"><i class="fa-solid fa-chart-pie"></i><span><strong>میزان اعتبار پرووایدرها</strong><small>موجودی و سلامت اتصال</small></span></a>
+      <a class="{{ $mode === 'transactions' ? 'active' : '' }}" href="{{ route('admin.service-credits.transactions') }}"><i class="fa-solid fa-receipt"></i><span><strong>بررسی تراکنش‌ها</strong><small>گزارش کامل و فیلترپذیر</small></span></a>
+    </nav>
 
     @if(session('success'))<div class="credit-alert success"><i class="fa-solid fa-circle-check"></i>{{ session('success') }}</div>@endif
     @if(isset($errors) && $errors->any())<div class="credit-alert error"><i class="fa-solid fa-triangle-exclamation"></i>{{ $errors->first() }}</div>@endif
@@ -65,7 +72,7 @@
       @foreach($providerCards as $providerCard)
         @php($creditAccount = $creditBySlug->get($providerCard['slug']))
         @php($providerStat = $providerStats->firstWhere('key', $providerCard['slug']))
-        <a class="credit-provider-card {{ $creditAccount?->is_critical ? 'is-critical' : ($creditAccount?->is_low ? 'is-low' : '') }}" href="{{ route('admin.service-credits.index', ['provider' => $providerCard['slug']]) }}">
+        <a class="credit-provider-card {{ $creditAccount?->is_critical ? 'is-critical' : ($creditAccount?->is_low ? 'is-low' : '') }}" href="{{ route('admin.service-credits.providers', ['provider' => $providerCard['slug']]) }}">
           <div class="credit-provider-card-head"><span class="credit-provider-mark"><i class="fa-solid {{ $providerCard['icon'] }}"></i></span><div><strong>{{ $providerCard['name'] }}</strong><small class="{{ $creditAccount?->is_online ? 'is-online' : '' }}"><span></span>{{ $creditAccount?->health_label ?? 'حساب ساخته نشده' }}</small></div><i class="fa-solid fa-arrow-up-left-from-circle credit-provider-open"></i></div>
           <div class="credit-provider-balance">{{ $creditAccount?->balance_usd !== null ? '$'.number_format((float) $creditAccount->balance_usd, 4) : '—' }}</div>
           <div class="credit-provider-toman">{{ $creditAccount?->balance_toman !== null ? number_format((float) $creditAccount->balance_toman).' تومان' : 'موجودی دستی ثبت نشده' }}</div>
@@ -75,6 +82,7 @@
       </div>
     </section>
 
+    @if($mode === 'transactions')
     <section class="credit-timeline-panel credit-panel">
       <div class="credit-section-head"><div><span class="credit-section-kicker">ردیابی هزینه و عملیات</span><h2>تایم‌لاین رخدادهای اخیر</h2><p>تمام اجراها، هزینه‌ها و تغییرات موجودی با تبدیل هم‌زمان دلار و تومان.</p></div><a class="credit-btn" href="#credit-report"><i class="fa-solid fa-list"></i> مشاهدهٔ گزارش کامل</a></div>
       <div class="credit-timeline-layout">
@@ -90,10 +98,12 @@
             <div class="credit-empty-state"><i class="fa-solid fa-timeline"></i><strong>هنوز رخدادی ثبت نشده است.</strong><span>با اولین مصرف یا ثبت تراکنش، تایم‌لاین اینجا پر می‌شود.</span></div>
           @endforelse
         </div>
-        <aside class="credit-provider-ledger"><div class="credit-ledger-title"><strong>دفتر هر ارائه‌دهنده</strong><span>بر اساس فیلتر فعلی</span></div>@forelse($providerStats as $provider)<a href="{{ route('admin.service-credits.index', ['provider' => $provider['key']]) }}" class="credit-ledger-row"><span><strong>{{ $provider['label'] }}</strong><small>{{ number_format($provider['count']) }} رخداد · آخرین {{ $provider['latest_at'] }}</small></span><b>${{ number_format($provider['usd'], 4) }}<small>{{ number_format($provider['toman']) }} تومان</small></b><i class="fa-solid fa-chevron-left"></i></a>@empty<span class="credit-muted">داده‌ای برای ارائه‌دهنده‌ها وجود ندارد.</span>@endforelse</aside>
+        <aside class="credit-provider-ledger"><div class="credit-ledger-title"><strong>دفتر هر ارائه‌دهنده</strong><span>بر اساس فیلتر فعلی</span></div>@forelse($providerStats as $provider)<a href="{{ route('admin.service-credits.transactions', ['provider' => $provider['key']]) }}" class="credit-ledger-row"><span><strong>{{ $provider['label'] }}</strong><small>{{ number_format($provider['count']) }} رخداد · آخرین {{ $provider['latest_at'] }}</small></span><b>${{ number_format($provider['usd'], 4) }}<small>{{ number_format($provider['toman']) }} تومان</small></b><i class="fa-solid fa-chevron-left"></i></a>@empty<span class="credit-muted">داده‌ای برای ارائه‌دهنده‌ها وجود ندارد.</span>@endforelse</aside>
       </div>
     </section>
+    @endif
 
+    @if($mode === 'providers')
     <div class="credit-accounts">
       @forelse($accounts as $account)
         <article class="credit-card {{ $account->is_critical ? 'critical' : ($account->is_low ? 'low' : '') }}" id="credit-account-{{ $account->id }}">
@@ -139,7 +149,9 @@
         <div class="credit-panel">پس از اجرای migration، اکانت‌های پیش‌فرض OpenRouter و Liara ساخته می‌شوند.</div>
       @endforelse
     </div>
+    @endif
 
+    @if($mode === 'transactions')
     <section class="credit-panel credit-transactions-panel" id="credit-report">
       <div class="credit-panel-heading">
         <div>
@@ -157,14 +169,14 @@
         <div class="credit-report-stat"><span>هزینه تومانی</span><strong>{{ number_format($summary['toman']) }} تومان</strong></div>
       </div>
 
-      <form method="GET" action="{{ route('admin.service-credits.index') }}" class="credit-report-filters">
+      <form method="GET" action="{{ route('admin.service-credits.transactions') }}" class="credit-report-filters">
         <div class="credit-field credit-filter-search"><label for="credit-report-q">جست‌وجو</label><div class="credit-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="credit-report-q" name="q" value="{{ request('q') }}" placeholder="کاربر، محصول، سفارش، مدل یا شناسه درخواست"></div></div>
         <div class="credit-field"><label>منبع</label><select name="source"><option value="">همه منابع</option>@foreach($sourceOptions as $key => $label)<option value="{{ $key }}" @selected(request('source') === $key)>{{ $label }}</option>@endforeach</select></div>
         <div class="credit-field"><label>پرووایدر</label><select name="provider"><option value="">همه پرووایدرها</option>@foreach($providers as $provider)<option value="{{ $provider['key'] }}" @selected(request('provider') === $provider['key'])>{{ $provider['label'] }}</option>@endforeach</select></div>
         <div class="credit-field"><label>وضعیت</label><select name="status"><option value="">همه وضعیت‌ها</option>@foreach($statusOptions as $key => $label)<option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>@endforeach</select></div>
         <div class="credit-field"><label>از تاریخ</label><input type="date" name="date_from" value="{{ request('date_from') }}"></div>
         <div class="credit-field"><label>تا تاریخ</label><input type="date" name="date_to" value="{{ request('date_to') }}"></div>
-        <div class="credit-filter-actions"><button class="credit-btn primary" type="submit"><i class="fa-solid fa-filter"></i> اعمال فیلتر</button><a class="credit-btn" href="{{ route('admin.service-credits.index') }}">پاک‌کردن</a></div>
+        <div class="credit-filter-actions"><button class="credit-btn primary" type="submit"><i class="fa-solid fa-filter"></i> اعمال فیلتر</button><a class="credit-btn" href="{{ route('admin.service-credits.transactions') }}">پاک‌کردن</a></div>
       </form>
 
       <div class="credit-table-wrap"><table class="credit-table credit-report-table"><thead><tr>
@@ -206,6 +218,7 @@
       </tbody></table></div>
       @if($transactions->hasPages())<div class="credit-report-pagination">{{ $transactions->onEachSide(1)->links() }}</div>@endif
     </section>
+    @endif
   </div>
 </main>
 

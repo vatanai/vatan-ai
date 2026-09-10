@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GeneratedImage;
 use App\Models\ServiceCreditAccount;
+use App\Models\ServiceCreditTransaction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -25,17 +26,35 @@ class ServiceCreditOverviewService
 
         $query = ServiceCreditAccount::query()->where('is_active', true);
         if ($dashboardOnly) $query->where('show_on_dashboard', true);
-        $accounts = $query->orderBy('id')->get()->map(fn ($account) => $this->decorate($account, $exchange['rate']));
+        $accounts = $query->orderBy('id')->get();
+        $accountIds = $accounts->pluck('id');
+        $usageTotals = $accountIds->isEmpty()
+            ? collect()
+            : ServiceCreditTransaction::query()
+                ->whereIn('service_credit_account_id', $accountIds)
+                ->selectRaw(
+                    'service_credit_account_id, SUM(amount) as total_usage, '
+                    . 'SUM(CASE WHEN type = ? AND occurred_at >= ? AND occurred_at <= ? THEN amount ELSE 0 END) as month_usage, '
+                    . 'SUM(CASE WHEN type = ? AND occurred_at >= ? AND occurred_at <= ? THEN amount ELSE 0 END) as today_usage',
+                    ['usage', now()->startOfMonth(), now()->endOfMonth(), 'usage', today()->startOfDay(), today()->endOfDay()]
+                )
+                ->groupBy('service_credit_account_id')
+                ->get()
+                ->keyBy('service_credit_account_id');
+
+        $accounts = $accounts->map(fn ($account) => $this->decorate(
+            $account,
+            $exchange['rate'],
+            (array) ($usageTotals->get($account->id)?->getAttributes() ?? [])
+        ));
 
         return ['accounts' => $accounts, 'exchange' => $exchange, 'totals' => $this->totals($accounts)];
     }
 
-    private function decorate(ServiceCreditAccount $account, float $rate): ServiceCreditAccount
+    private function decorate(ServiceCreditAccount $account, float $rate, array $usage): ServiceCreditAccount
     {
-        $todayUsage = (float) $account->transactions()->where('type', 'usage')
-            ->whereDate('occurred_at', today())->sum('amount');
-        $monthUsage = (float) $account->transactions()->where('type', 'usage')
-            ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('amount');
+        $todayUsage = (float) ($usage['today_usage'] ?? 0);
+        $monthUsage = (float) ($usage['month_usage'] ?? 0);
         $live = null;
 
         if ($account->sync_driver === 'openrouter') {
@@ -64,7 +83,7 @@ class ServiceCreditOverviewService
         $account->setAttribute('display_balance', $balance);
         $account->setAttribute('today_usage', $todayUsage);
         $account->setAttribute('month_usage', $monthUsage);
-        $account->setAttribute('total_usage', $live['total_usage'] ?? (float) $account->transactions()->where('type', 'usage')->sum('amount'));
+        $account->setAttribute('total_usage', $live['total_usage'] ?? (float) ($usage['total_usage'] ?? 0));
         $account->setAttribute('is_online', (bool) ($live['online'] ?? false));
         $account->setAttribute('balance_is_live', $balanceIsLive);
         $account->setAttribute('status_label', $live['online'] ?? false

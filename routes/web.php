@@ -54,15 +54,15 @@ use App\Http\Controllers\TelegramProductWebhookController;
 Route::get('/', [PublicHomeController::class, 'index'])->middleware('site.page')->name('site.home.root');
 Route::get('/site', fn() => redirect('/'));
 Route::get('/r/{code}', [ReferralController::class, 'visit'])
-    ->where('code', '[A-Za-z0-9]{6,20}')
+    ->where('code', '[A-Za-z0-9]{5,20}')
     ->middleware('throttle:120,1')
     ->name('referral.visit');
 Route::get('/r/{code}/product/{product:route_slug}', [ReferralController::class, 'productVisit'])
-    ->where('code', '[A-Za-z0-9]{6,20}')
+    ->where('code', '[A-Za-z0-9]{5,20}')
     ->middleware('throttle:120,1')
     ->name('referral.product');
 Route::get('/r/link/{referralLink:slug}', [ReferralController::class, 'linkVisit'])
-    ->where('referralLink', '[A-Za-z0-9]{8,32}')
+    ->where('referralLink', '[A-Za-z0-9]{5,32}')
     ->middleware('throttle:120,1')
     ->name('referral.link');
 
@@ -382,12 +382,17 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('product-tests/{run}', [AiTestController::class, 'updateRun'])->name('product-tests.update');
 
     // داشبورد مرکزی
+    Route::get('/dashboard/fragment/{section}', [DashboardController::class, 'fragment'])
+        ->name('dashboard.fragment')
+        ->where('section', '[a-z0-9]+');
     Route::get('/dashboard/{section?}', [DashboardController::class, 'index'])
         ->name('dashboard')
         ->where('section', '[a-z0-9]+');
     Route::get('/search', [DashboardController::class, 'search'])->name('search');
 
     Route::get('/service-credits', [ServiceCreditController::class, 'index'])->name('service-credits.index');
+    Route::get('/service-credits/providers', [ServiceCreditController::class, 'providers'])->name('service-credits.providers');
+    Route::get('/service-credits/transactions', [ServiceCreditController::class, 'transactions'])->name('service-credits.transactions');
     Route::post('/service-credits/accounts', [ServiceCreditController::class, 'storeAccount'])->name('service-credits.accounts.store');
     Route::put('/service-credits/accounts/{account}', [ServiceCreditController::class, 'updateAccount'])->name('service-credits.accounts.update');
     Route::post('/service-credits/transactions', [ServiceCreditController::class, 'storeTransaction'])->name('service-credits.transactions.store');
@@ -461,9 +466,10 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     // توجه: مسیر ویرایش دیگر جدا نیست و کامل از پروژه حذف شده — ویرایش هم از همین صفحه «ثبت محصول»
     // با پارامتر اختیاری محصول انجام می‌شود (مثال: /admin/products/create/52)
     Route::get('/products', [ProductController::class, 'index'])->name('products');
-    Route::get('/products/videos/create/{product?}', [\App\Http\Controllers\Admin\VideoProductController::class, 'create'])->name('products.video.create');
-    Route::post('/products/videos', [\App\Http\Controllers\Admin\VideoProductController::class, 'store'])->name('products.video.store');
-    Route::put('/products/videos/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'update'])->name('products.video.update');
+    Route::get('/products/videos', [ProductController::class, 'videoIndex'])->name('products.videos');
+    Route::get('/products/videos/create/{product?}', [ProductController::class, 'videoCreate'])->name('products.video.create');
+    Route::post('/products/videos', [ProductController::class, 'videoStore'])->name('products.video.store');
+    Route::put('/products/videos/{product}', [ProductController::class, 'videoUpdate'])->name('products.video.update');
     Route::get('/products/create/{product?}', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::redirect('/products/settings', '/admin/settings/telegram/product-bot')->name('products.settings');

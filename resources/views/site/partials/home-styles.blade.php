@@ -48,11 +48,9 @@
 
     html {
       scroll-behavior: smooth;
-      scrollbar-width: thin;
-      scrollbar-color: #222230 transparent;
+      scrollbar-width: none;
     }
-    html::-webkit-scrollbar { width: 4px; }
-    html::-webkit-scrollbar-thumb { background: #222230; border-radius: 99px; }
+    html::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
     body {
       font-family: 'IRANSansXFaNum', sans-serif;

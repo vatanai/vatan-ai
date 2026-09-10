@@ -25,20 +25,17 @@
          id="content"
          style="scrollbar-width:none;-ms-overflow-style:none;">
 
-      @include('admin.partials.pages.dashboard-main')
-      @include('admin.partials.pages.crm')
-      @include('admin.partials.pages.misc')
-      @include('admin.partials.pages.products-dashboard')
-      @include('admin.partials.pages.products-list')
-      @include('admin.partials.pages.products-create')
-      @include('admin.partials.pages.products-categories')
-      @include('admin.partials.pages.products-pricing')
-
-      {{-- ══ AI PAGES ══ --}}
-      @include('admin.partials.pages.ai-hub')
-      @include('admin.partials.pages.ai-models')
-      @include('admin.partials.pages.ai-prompts')
-      @include('admin.partials.pages.ai-logs')
+      @if(empty($dashboardSection))
+        @include('admin.partials.pages.dashboard-main')
+      @else
+        @include('admin.partials.pages.' . match($dashboardSection) {
+          'crm' => 'crm', 'attendance' => 'misc', 'products' => 'products-dashboard',
+          'productslist' => 'products-list', 'createproduct' => 'products-create',
+          'categories' => 'products-categories', 'pricing' => 'products-pricing',
+          'ai' => 'ai-hub', 'models' => 'ai-models', 'prompts' => 'ai-prompts', 'logs' => 'ai-logs',
+          default => 'misc',
+        })
+      @endif
 
     </div>{{-- #content --}}
 

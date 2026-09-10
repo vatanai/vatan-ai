@@ -445,8 +445,11 @@
     min-width: 0;
     box-sizing: border-box;
   }
+  .ig-generate > svg { order: 0; flex: 0 0 auto; }
+  .ig-generate > span { order: 1; }
+  .ig-generate--mobile { display: none; }
   .ig-generate:hover { filter: brightness(0.92); }
-  .ig-generate svg { width: 18px; height: 18px; }
+  .ig-generate svg { width: 19.8px; height: 19.8px; }
 
   /* ═══════════════ آیتم‌های سریع (جایگزین پیل‌های مدل/نسبت/...) ═══════════════ */
   .ig-quick-row {
@@ -603,7 +606,25 @@
 
   @media (max-width: 639px) {
     .ig-box { padding: 12px; }
-    .ig-controls { gap: 9px; }
+    .ig-controls { gap: 0; display: block; }
+    .ig-generate--desktop { display: none; }
+    .ig-generate--mobile {
+      display: flex;
+      flex: 0 0 calc((100% - 20px) / 5);
+      width: calc((100% - 20px) / 5);
+      height: 36px;
+      min-height: 36px;
+      gap: 2px;
+      flex-direction: row;
+      line-height: 1.1;
+    }
+    .ig-generate--mobile .ig-generate-label {
+      font-size: 8.8px;
+      line-height: 1.15;
+      text-align: center;
+    }
+    .ig-generate--mobile .ig-generate-label b { display: block; font-weight: 800; }
+    .ig-left { width: 100%; flex: 0 0 auto; }
     .ig-quick-row { gap: 5px; }
     .ig-generate,
     .ig-quick-item {
@@ -613,11 +634,12 @@
       border-radius: 9px;
     }
     .ig-generate { font-size: 9px; gap: 3px; }
-    .ig-generate { flex: 0.65 1 0; }
-    .ig-generate svg { width: 13px; height: 13px; }
+    .ig-generate--desktop { flex: 0.65 1 0; }
+    .ig-generate svg { width: 14.3px; height: 14.3px; }
     .ig-quick-item {
       gap: 3px;
-      flex-basis: calc(20% - 5px);
+      flex: 1 1 0;
+      flex-basis: 0;
     }
     .ig-quick-icon { width: 20px; height: 20px; right: 5px; border-radius: 6px; }
     .ig-quick-icon svg { width: 13px; height: 13px; }
@@ -625,6 +647,19 @@
     .ig-quick-title { font-size: 8px; }
     .ig-quick-sub { font-size: 6.5px; line-height: 1.15; }
     .ig-attachments { margin-right:0; }
+  }
+
+  /* تبلت همان چیدمان کامل دسکتاپ را نگه می‌دارد؛ فقط اندازه‌ها برای عرض میانه بهینه می‌شوند. */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .ig-box { padding: 16px; }
+    .ig-controls { gap: 14px; }
+    .ig-generate,
+    .ig-quick-item {
+      height: 48px;
+      min-height: 48px;
+    }
+    .ig-generate svg { width: 19.8px; height: 19.8px; }
+    .ig-quick-row { gap: 8px; }
   }
 
   /* ===== LIGHT MODE — باکس سرچ ===== */

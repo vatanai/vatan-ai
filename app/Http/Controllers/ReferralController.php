@@ -6,9 +6,9 @@ use App\Models\Product;
 use App\Models\ReferralLink;
 use App\Models\User;
 use App\Services\ReferralProgramService;
+use App\Support\ReferralCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class ReferralController extends Controller
 {
@@ -64,8 +64,8 @@ class ReferralController extends Controller
         }
 
         do {
-            // لینک‌های قبلی نباید تغییر کنند؛ لینک‌های جدید با ۸ نویسه کوتاه‌تر و همچنان کم‌ریسک‌تر از کد ۵ نویسه ساخته می‌شوند.
-            $slug = Str::lower(Str::random(8));
+            // لینک‌های قبلی نباید تغییر کنند؛ لینک‌های جدید پنج نویسهٔ حرفی/عددی هستند.
+            $slug = strtolower(ReferralCode::five());
         } while (ReferralLink::query()->where('slug', $slug)->exists());
 
         ReferralLink::query()->create([

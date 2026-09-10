@@ -13,6 +13,68 @@
     }
   @endphp
 
+  @php
+    $adminDailyNotifications = $adminDailyNotifications ?? [
+      'completed_purchases' => 0,
+      'pending_payments' => 0,
+      'generated_images' => 0,
+      'generated_videos' => 0,
+      'generated_outputs' => 0,
+      'new_users' => 0,
+      'total' => 0,
+      'day_label' => now()->format('Y/m/d'),
+    ];
+    $adminNotificationTotal = (int) ($adminDailyNotifications['total'] ?? 0);
+  @endphp
+
+  <style>
+    .admin-notification-wrap { position:relative; }
+    .admin-notification-trigger { position:relative; }
+    .admin-notification-badge {
+      position:absolute;
+      top:-5px;
+      inset-inline-start:-5px;
+      min-width:17px;
+      height:17px;
+      padding:0 4px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border:2px solid var(--topbar-bg);
+      border-radius:999px;
+      background:var(--danger);
+      color:var(--text-h);
+      font-size:9px;
+      font-weight:900;
+      line-height:1;
+    }
+    .admin-notification-popover {
+      position:absolute;
+      top:calc(100% + 12px);
+      inset-inline-end:0;
+      z-index:80;
+      width:min(320px, calc(100vw - 24px));
+      padding:14px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:var(--card-bg);
+      box-shadow:var(--shadow-card);
+    }
+    .admin-notification-popover[hidden] { display:none; }
+    .admin-notification-popover-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .admin-notification-popover-head strong { color:var(--text-h); font-size:12px; }
+    .admin-notification-popover-head span { color:var(--text-soft); font-size:9px; }
+    .admin-notification-list { display:grid; gap:7px; }
+    .admin-notification-item { display:flex; align-items:center; gap:10px; min-width:0; padding:9px 10px; border:1px solid var(--border); border-radius:11px; background:var(--page-bg); color:var(--text-main); text-decoration:none; transition:border-color .18s, background .18s; }
+    .admin-notification-item:hover { border-color:var(--info); background:var(--info-l); }
+    .admin-notification-item > i { width:26px; height:26px; flex:0 0 26px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:var(--primary-l); color:var(--primary); font-size:11px; }
+    .admin-notification-item-copy { display:grid; gap:2px; min-width:0; flex:1; }
+    .admin-notification-item-copy strong { color:var(--text-h); font-size:10.5px; }
+    .admin-notification-item-copy small { color:var(--text-soft); font-size:9px; }
+    .admin-notification-item-count { color:var(--danger); font-family:monospace; font-size:13px; font-weight:900; }
+    .admin-notification-empty { padding:12px 8px; border:1px dashed var(--border); border-radius:11px; color:var(--text-soft); font-size:10px; text-align:center; }
+  </style>
+
   <header class="topbar flex items-center px-6 gap-3 sticky top-0 z-50 flex-shrink-0 max-[768px]:px-4 max-[768px]:gap-2 max-[480px]:px-3">
 
     <button type="button" class="tb-menu-btn flex" onclick="adminToggleSidebar()" title="باز/بسته کردن منو" aria-label="باز یا بسته کردن منوی مدیریت">
@@ -45,9 +107,43 @@
       <div class="tb-btn" onclick="toggleMode()" title="تغییر تم" id="theme-btn">
         <i class="fa-solid fa-moon"></i>
       </div>
-      <div class="tb-btn" title="اعلان‌ها">
-        <i class="fa-solid fa-bell"></i>
-        <div class="tb-notif"></div>
+      <div class="admin-notification-wrap">
+        <button type="button" class="tb-btn admin-notification-trigger" title="اعلان‌های امروز" aria-label="اعلان‌های امروز" aria-controls="admin-notification-popover" aria-expanded="false">
+          <i class="fa-solid fa-bell"></i>
+          @if($adminNotificationTotal > 0)
+            <span class="admin-notification-badge">{{ $adminNotificationTotal > 99 ? '۹۹+' : number_format($adminNotificationTotal) }}</span>
+          @else
+            <span class="tb-notif" aria-hidden="true"></span>
+          @endif
+        </button>
+        <div id="admin-notification-popover" class="admin-notification-popover" hidden>
+          <div class="admin-notification-popover-head">
+            <strong>اعلان‌های امروز</strong>
+            <span>{{ $adminDailyNotifications['day_label'] }}</span>
+          </div>
+          <div class="admin-notification-list">
+            <a class="admin-notification-item" href="{{ route('admin.orders.plan-purchases') }}">
+              <i class="fa-solid fa-cart-shopping"></i>
+              <span class="admin-notification-item-copy"><strong>خریدهای تکمیل‌شده</strong><small>پرداخت‌های موفق امروز</small></span>
+              <span class="admin-notification-item-count">{{ number_format((int) $adminDailyNotifications['completed_purchases']) }}</span>
+            </a>
+            <a class="admin-notification-item" href="{{ route('admin.orders.plan-purchases') }}">
+              <i class="fa-solid fa-hourglass-half"></i>
+              <span class="admin-notification-item-copy"><strong>پرداخت‌های در انتظار</strong><small>ورود امروز به مسیر پرداخت</small></span>
+              <span class="admin-notification-item-count">{{ number_format((int) $adminDailyNotifications['pending_payments']) }}</span>
+            </a>
+            <a class="admin-notification-item" href="{{ route('admin.users.all_logs') }}">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span class="admin-notification-item-copy"><strong>خروجی‌های ساخته‌شده</strong><small>{{ number_format((int) $adminDailyNotifications['generated_images']) }} عکس · {{ number_format((int) $adminDailyNotifications['generated_videos']) }} ویدیو</small></span>
+              <span class="admin-notification-item-count">{{ number_format((int) $adminDailyNotifications['generated_outputs']) }}</span>
+            </a>
+            <a class="admin-notification-item" href="{{ route('admin.users.index') }}">
+              <i class="fa-solid fa-user-plus"></i>
+              <span class="admin-notification-item-copy"><strong>کاربران جدید</strong><small>ثبت‌نام‌های امروز</small></span>
+              <span class="admin-notification-item-count">{{ number_format((int) $adminDailyNotifications['new_users']) }}</span>
+            </a>
+          </div>
+        </div>
       </div>
       <div class="tb-divider-v"></div>
       <div class="live-chip"><div class="live-dot"></div>لایو</div>
@@ -94,6 +190,23 @@
       };
       render();
       window.setInterval(render, 1000);
+    })();
+    (function adminNotifications() {
+      const trigger = document.querySelector('.admin-notification-trigger');
+      const popover = document.getElementById('admin-notification-popover');
+      if (!trigger || !popover) return;
+      const close = function () {
+        popover.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+      };
+      trigger.addEventListener('click', function (event) {
+        event.stopPropagation();
+        popover.hidden = !popover.hidden;
+        trigger.setAttribute('aria-expanded', popover.hidden ? 'false' : 'true');
+      });
+      popover.addEventListener('click', function (event) { event.stopPropagation(); });
+      document.addEventListener('click', close);
+      document.addEventListener('keydown', function (event) { if (event.key === 'Escape') close(); });
     })();
     (function adminGlobalSearch() {
       const wrapper = document.querySelector('.tb-search[data-search-url]');

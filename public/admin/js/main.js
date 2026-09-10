@@ -38,11 +38,87 @@ const PAGE_META = {
 const URL_TO_PAGE = {};
 Object.entries(PAGE_URLS).forEach(([page, url]) => { URL_TO_PAGE[url] = page; });
 
+const PAGE_SECTIONS = {
+  'crm-page': 'crm', 'attendance-page': 'attendance',
+  'products-dashboard-page': 'products', 'products-list-page': 'productslist',
+  'products-create-page': 'createproduct', 'products-categories-page': 'categories',
+  'products-pricing-page': 'pricing', 'ai-hub-page': 'ai', 'ai-models-page': 'models',
+  'ai-prompts-page': 'prompts', 'ai-logs-page': 'logs',
+};
+
+const pageLoads = new Map();
+
+function executeFragmentScripts(container) {
+  container.querySelectorAll('script').forEach(oldScript => {
+    const script = document.createElement('script');
+    [...oldScript.attributes].forEach(attribute => script.setAttribute(attribute.name, attribute.value));
+    script.textContent = oldScript.textContent;
+    oldScript.replaceWith(script);
+  });
+}
+
+function loadExternalScript(src) {
+  const existing = document.querySelector('script[src="' + src + '"]');
+  if (existing && existing.dataset.loaded === '1') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = existing || document.createElement('script');
+    script.src = src;
+    script.onload = () => { script.dataset.loaded = '1'; resolve(); };
+    script.onerror = reject;
+    if (!existing) document.body.appendChild(script);
+  });
+}
+
+function ensurePageLoaded(pageId) {
+  if (document.getElementById(pageId)) return Promise.resolve(document.getElementById(pageId));
+  const section = PAGE_SECTIONS[pageId];
+  if (!section) return Promise.resolve(null);
+  if (pageLoads.has(pageId)) return pageLoads.get(pageId);
+
+  const content = document.getElementById('content');
+  if (!content) return Promise.resolve(null);
+  const loading = document.createElement('div');
+  loading.className = 'admin-page-loading';
+  loading.setAttribute('aria-live', 'polite');
+  loading.textContent = 'در حال آماده‌سازی بخش...';
+  content.appendChild(loading);
+
+  const request = fetch('/admin/dashboard/fragment/' + section, {
+    credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+  }).then(response => {
+    if (!response.ok) throw new Error('بارگذاری بخش با خطا روبه‌رو شد');
+    return response.text();
+  }).then(html => {
+    loading.remove();
+    const fragmentRoot = document.createElement('div');
+    fragmentRoot.className = 'admin-lazy-fragment';
+    fragmentRoot.innerHTML = html;
+    content.appendChild(fragmentRoot);
+    executeFragmentScripts(fragmentRoot);
+    const loadedPage = document.getElementById(pageId);
+    if (section === 'ai' && typeof window.Chart === 'undefined') {
+      return loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js')
+        .then(() => loadedPage);
+    }
+    return loadedPage;
+  }).catch(error => {
+    loading.textContent = error.message || 'بارگذاری بخش ناموفق بود';
+    throw error;
+  });
+  pageLoads.set(pageId, request);
+  return request;
+}
+
 // ── نمایش یک صفحه و مخفی‌کردن بقیه ───────────────────────────────────────────
 function showPage(pageId, sectionName) {
   document.querySelectorAll('[id$="-page"]').forEach(p => { p.style.display = 'none'; });
   const page = document.getElementById(pageId);
-  if (!page) return;
+  if (!page) {
+    ensurePageLoaded(pageId).then(loadedPage => {
+      if (loadedPage) showPage(pageId, sectionName);
+    }).catch(() => {});
+    return;
+  }
   page.style.display = 'block';
 
   if (pageId === 'placeholder-page') {

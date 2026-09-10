@@ -1,4 +1,14 @@
 .credit-page{padding:24px;background:var(--page-bg)}
+.credit-eyebrow{color:var(--primary);font-size:10px;font-weight:900;letter-spacing:.04em;margin-bottom:4px}
+.credit-subnav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:-4px 0 18px}
+.credit-subnav a{display:flex;align-items:center;gap:11px;min-width:0;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:var(--card-bg);color:var(--text-main);text-decoration:none;transition:border-color .18s,background .18s,transform .18s}
+.credit-subnav a:hover{border-color:var(--primary);transform:translateY(-1px)}
+.credit-subnav a.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
+.credit-subnav a>i{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border-radius:10px;background:var(--input-bg);font-size:13px}
+.credit-subnav a.active>i{background:var(--primary);color:var(--accent)}
+.credit-subnav a span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.credit-subnav strong{font-size:11px;color:var(--text-h)}
+.credit-subnav small{font-size:9px;color:var(--text-soft)}
 .credit-head,.credit-head-actions,.credit-card-head,.credit-row,.credit-status,.credit-actions{display:flex;align-items:center}
 .credit-head{justify-content:space-between;gap:16px;margin-bottom:20px}
 .credit-head h1{font-size:22px;font-weight:800;color:var(--text-h);margin:0}
@@ -138,3 +148,4 @@
 @media(max-width:1180px){.credit-provider-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.credit-timeline-layout{grid-template-columns:1fr}}
 @media(max-width:900px){.credit-overview-bar{align-items:stretch;flex-direction:column}.credit-overview-stats{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:620px){.credit-alert-list,.credit-provider-grid{grid-template-columns:1fr}.credit-overview-stats{grid-template-columns:1fr 1fr}.credit-overview-stats>div{border-right:0}.credit-section-head{align-items:flex-start;flex-direction:column}.credit-refresh-note{white-space:normal}.credit-timeline-item{grid-template-columns:30px minmax(0,1fr)}.credit-timeline-cost{grid-column:2;align-items:flex-start}.credit-form-grid,.credit-report-filters{grid-template-columns:1fr}.credit-filter-search,.credit-filter-actions{grid-column:auto}}
+@media(max-width:620px){.credit-subnav{grid-template-columns:1fr}.credit-page{padding:16px}.credit-head h1{font-size:19px}}
