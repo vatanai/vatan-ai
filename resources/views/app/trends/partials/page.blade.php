@@ -9,9 +9,7 @@
       </div>
       @endif
     </div>
-    @if(!isset($sitePage) || $sitePage->content('show_search', true))
-      @include('app.trends.partials.search')
-    @endif
+    @include('app.trends.partials.search')
   </header>
 
   <section class="trends-section trends-feed-section">
