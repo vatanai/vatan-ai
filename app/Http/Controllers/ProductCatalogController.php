@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ProductSearchService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,28 +72,7 @@ class ProductCatalogController extends Controller
         }
 
         if ($search = trim((string) $request->input('search'))) {
-            $terms = $this->expandedSearchTerms($search);
-            $matchedCategoryIds = Category::query()->active()->where(function (Builder $builder) use ($terms) {
-                foreach ($terms as $word) {
-                    $builder->orWhere('name_fa', 'like', "%{$word}%")->orWhere('name_en', 'like', "%{$word}%");
-                }
-            })->pluck('id');
-
-            $query->where(function (Builder $builder) use ($terms, $matchedCategoryIds) {
-                foreach ($terms as $word) {
-                    $builder->orWhere('name_fa', 'like', "%{$word}%")
-                        ->orWhere('name_en', 'like', "%{$word}%")
-                        ->orWhere('description_fa', 'like', "%{$word}%")
-                        ->orWhere('description_en', 'like', "%{$word}%")
-                        ->orWhere('category', 'like', "%{$word}%")
-                        ->orWhere('subcategory', 'like', "%{$word}%")
-                        ->orWhere('tags', 'like', "%{$word}%");
-                }
-                if ($matchedCategoryIds->isNotEmpty()) {
-                    $builder->orWhereIn('category_id', $matchedCategoryIds)
-                        ->orWhereHas('categories', fn (Builder $relation) => $relation->whereIn('categories.id', $matchedCategoryIds));
-                }
-            });
+            app(ProductSearchService::class)->apply($query, $search);
         }
 
         if ($selectedCategories) {
@@ -141,18 +121,4 @@ class ProductCatalogController extends Controller
         return view('app.products.index', compact('products', 'categories', 'selectedCategories', 'pageCategory'));
     }
 
-    private function expandedSearchTerms(string $term): array
-    {
-        $words = collect(preg_split('/\s+/u', $term))->map(fn ($word) => trim($word))->filter(fn ($word) => mb_strlen($word) >= 2);
-        $synonyms = [
-            'مادر' => ['خانواده', 'خانوادگی'], 'پدر' => ['خانواده', 'خانوادگی'], 'فرزند' => ['کودک', 'خانواده'],
-            'عروسی' => ['ازدواج', 'دعوت'], 'ازدواج' => ['عروسی', 'دعوت'], 'پروفایل' => ['پرتره', 'آواتار'],
-            'اینستا' => ['اینستاگرام', 'ریلز', 'استوری'], 'باشگاه' => ['ورزشی', 'تبلیغاتی'],
-        ];
-        foreach ($words->all() as $word) {
-            $words = $words->concat($synonyms[$word] ?? []);
-        }
-
-        return $words->unique()->values()->all() ?: [$term];
-    }
 }

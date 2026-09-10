@@ -10,6 +10,7 @@ use App\Models\FeedPinnedItem;
 use App\Models\FeedSetting;
 use App\Models\FeedSurface;
 use App\Models\Product;
+use App\Services\ProductSearchService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -23,6 +24,10 @@ use Illuminate\Support\Collection;
  */
 class ExploreFeedService
 {
+    public function __construct(protected ProductSearchService $productSearch)
+    {
+    }
+
     /**
      * بستر را برمی‌گرداند، اگر وجود نداشت با عنوان پیش‌فرض می‌سازد (بدون نیاز به Seeder دستی).
      */
@@ -195,7 +200,11 @@ class ExploreFeedService
             ->orderByDesc('is_trending')
             ->orderByDesc('created_at');
 
-        $this->applyAudienceFilters($productsQuery, $setting);
+        // جست‌وجوی صریح کاربر باید همه‌ی محصولات فعالِ منطبق را پیدا کند؛
+        // فیلترهای مخصوص فید عادی نباید نتیجه‌ی معتبر جست‌وجو را پنهان کنند.
+        if ($query === '') {
+            $this->applyAudienceFilters($productsQuery, $setting);
+        }
 
         // فید محدود برای بسترهای دیگر همان استخر قبلی را دارد؛ اکسپلور با limit=NULL همه را می‌گیرد.
         if ($limit !== null) {
@@ -297,31 +306,7 @@ class ExploreFeedService
     /** جستجوی کامل محصول بر اساس نام، توضیحات، سئو، تگ و دسته‌بندی‌های مستقیم/چندگانه. */
     protected function applyProductSearch(Builder $query, string $term): Builder
     {
-        $words = collect(preg_split('/\s+/u', $term))
-            ->map(fn ($word) => trim((string) $word))
-            ->filter()
-            ->values();
-
-        return $query->where(function (Builder $search) use ($words) {
-            foreach ($words as $word) {
-                $like = '%' . $word . '%';
-                $search->orWhere('name_fa', 'like', $like)
-                    ->orWhere('name_en', 'like', $like)
-                    ->orWhere('description_fa', 'like', $like)
-                    ->orWhere('description_en', 'like', $like)
-                    ->orWhere('meta_title', 'like', $like)
-                    ->orWhere('meta_description', 'like', $like)
-                    ->orWhere('meta_keywords', 'like', $like)
-                    ->orWhere('category', 'like', $like)
-                    ->orWhere('subcategory', 'like', $like)
-                    ->orWhere('tags', 'like', $like)
-                    ->orWhereHas('categories', function (Builder $categories) use ($like) {
-                        $categories->where('name_fa', 'like', $like)
-                            ->orWhere('name_en', 'like', $like)
-                            ->orWhere('name', 'like', $like);
-                    });
-            }
-        });
+        return $this->productSearch->apply($query, $term);
     }
 
     /**
