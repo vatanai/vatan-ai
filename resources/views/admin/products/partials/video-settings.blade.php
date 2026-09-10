@@ -3,7 +3,7 @@
   $videoConfig = $videoSource?->videoConfiguration() ?? [];
   $videoInput = old('video_config', []);
   $videoValue = fn (string $key, mixed $fallback = null) => data_get($videoInput, $key, data_get($videoConfig, $key, $fallback));
-  $selectedRelations = collect(old('video_related_photo_product_ids', $videoSource?->sourcePhotoProducts?->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all();
+  $selectedRelations = collect(old('video_related_photo_product_ids', $videoSource?->sourcePhotoProducts?->pluck('products.id')->all() ?? []))->map(fn ($id) => (int) $id)->all();
 @endphp
 
 <section class="bg-[var(--s2)] border border-[var(--b1)] rounded-xl p-5" data-video-admin-settings>
