@@ -186,8 +186,8 @@ class AiModel extends Model
     /**
      * کاتالوگ مستقل مدل‌های محصول ویدیویی. عمداً از scope محصول عکس جدا است
      * تا اضافه‌شدن مدل ویدیو هیچ اثری روی ویزارد و اجرای فعلی عکس نگذارد.
-     * فقط شش مدل اصلی نگه داشته می‌شوند؛ OpenRouter از صف رسمی ویدیوی خودش
-     * و دو مدل Fal برای سازگاری با محصولات قبلی استفاده می‌کنند.
+     * مدل‌های تأییدشدهٔ ساخت ویدیو در این فهرست قرار می‌گیرند؛ OpenRouter از صف
+     * رسمی ویدیوی خودش و مدل‌های سازگار قدیمی برای محصولات قبلی استفاده می‌کند.
      */
     public function scopeSelectableForVideoProduct(Builder $query): Builder
     {
@@ -213,6 +213,9 @@ class AiModel extends Model
         'fal-ai/kling-video/v3/turbo/pro/image-to-video',
         'fal-ai/kling-video/o3/pro/video-to-video/reference',
         'kwaivgi/kling-v2.5-turbo', 'runwayml/gen-4-turbo', 'luma/dream-machine-2',
+        'bytedance/seedance-2.5', 'bytedance/seedance-2.0-mini',
+        'bytedance/seedance-2.0-fast', 'bytedance/seedance-2.0',
+        'bytedance/seedance-1-5-pro',
     ];
 
     /** مدل‌های شناخته‌شده‌ی استودیو باید قبل از کاتالوگ آزمایشی نمایش داده شوند. */
