@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -15,8 +16,16 @@ return new class extends Migration
         if (!Schema::hasTable('products') || !Schema::hasTable('ai_models')) {
             return;
         }
+        if (!Schema::hasColumn('products', 'output_type')
+            || !Schema::hasColumn('products', 'primary_model')
+            || !Schema::hasColumn('products', 'ai_provider')
+            || !Schema::hasColumn('products', 'fallback_models')
+            || !Schema::hasColumn('products', 'fallback_model_providers')) {
+            return;
+        }
 
-        $preferred = [
+        try {
+            $preferred = [
             'x-ai/grok-imagine-video',
             'alibaba/wan-3.0-prime',
             'alibaba/wan-3.0',
@@ -44,7 +53,7 @@ return new class extends Migration
             $fallbackPool = $available;
         }
 
-        DB::table('products')
+            DB::table('products')
             ->where('output_type', 'video')
             ->orderBy('id')
             ->get(['id', 'primary_model', 'ai_provider'])
@@ -69,6 +78,13 @@ return new class extends Migration
                     'updated_at' => now(),
                 ]);
             });
+        } catch (\Throwable $exception) {
+            // اجرای اصلی به‌صورت تک‌پروایدر در سرویس enforce شده است؛
+            // اختلاف schema در دیتابیس قدیمی نباید کل سرویس را از کار بیندازد.
+            Log::warning('OpenRouter video route normalization skipped', [
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function down(): void
