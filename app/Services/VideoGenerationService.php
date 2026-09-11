@@ -259,6 +259,10 @@ class VideoGenerationService
                 $lastError = $error;
                 $this->markAttempted($generation, $candidate);
                 Log::warning('Video model failed; trying fallback', ['product_id' => $product->id, 'model' => $candidate->openrouter_model_id, 'provider' => $candidate->provider, 'message' => $error->getMessage()]);
+                // ردّ ایمنی به ورودی وابسته است؛ ارسال دوباره‌ی همان تصویر به
+                // پروایدرهای دیگر فقط تأخیر و لاگ اضافی ایجاد می‌کند و نباید
+                // پیام دقیق سیاست ایمنی را با خطای fallback جایگزین کند.
+                if ($this->isSafetyRejection($error->getMessage())) break;
             }
         }
         if (!$submitted) {
@@ -484,6 +488,7 @@ class VideoGenerationService
 
     private function retryFallback(GeneratedVideo $generation, string $reason): bool
     {
+        if ($this->isSafetyRejection($reason)) return false;
         $product = $generation->product;
         $payload = (array) $generation->input_payload;
         $attempted = collect((array) ($payload['attempted_models'] ?? []))->map(fn ($row) => ($row['provider'] ?? '') . '|' . ($row['model'] ?? ''))->all();
@@ -496,9 +501,18 @@ class VideoGenerationService
             } catch (\Throwable $error) {
                 $this->markAttempted($generation, $candidate);
                 $reason = $error->getMessage();
+                if ($this->isSafetyRejection($reason)) return false;
             }
         }
         return false;
+    }
+
+    private function isSafetyRejection(string $message): bool
+    {
+        $message = strtolower($message);
+        return str_contains($message, 'inputsensitivecontentdetected')
+            || str_contains($message, 'real person')
+            || str_contains($message, 'privacyinformation');
     }
 
     private function buildProviderInput(AiModel $model, Product $product, string $prompt, array $options): array

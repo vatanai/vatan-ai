@@ -81,6 +81,66 @@
     return '';
   }
 
+  function normalizeModelOption(key, value) {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    if (key === 'quality') {
+      return ({'2160': '4k', '2160p': '4k', '4k': '4k', '1440': '2k', '1440p': '2k', '2k': '2k'})[normalized] || normalized;
+    }
+    return normalized;
+  }
+
+  function modelSelectMenu(key) {
+    const select = root.querySelector(`[data-studio-select="${key}"]`);
+    return select?._studioMenu || select?.querySelector('[data-select-menu]')
+      || document.querySelector(`[data-studio-menu-key="${key}"]`);
+  }
+
+  function modelSupportedValues(item, key) {
+    const values = Array.isArray(item?.[key]) ? item[key] : [];
+    return values.map((value) => normalizeModelOption(key, value));
+  }
+
+  function syncModelConstraints() {
+    if (root.dataset.mode !== 'video') return;
+    const item = workflowModel(selectedModel());
+    if (!item) return;
+
+    const durations = modelSupportedValues(item, 'supported_durations')
+      .map((value) => Number(value)).filter((value) => Number.isFinite(value));
+    const durationSelect = root.querySelector('[data-studio-select="duration"]');
+    const durationMenu = modelSelectMenu('duration');
+    const slider = durationMenu?.querySelector('input[type="range"]');
+    if (slider && durations.length > 0) {
+      const minimum = Math.min(...durations);
+      const maximum = Math.max(...durations);
+      slider.min = String(minimum);
+      slider.max = String(maximum);
+      const current = Number(selectedValue('duration') || slider.value || minimum);
+      if (!durations.includes(current)) {
+        const next = durations.find((value) => value >= current) ?? maximum;
+        slider.value = String(next);
+        slider.dispatchEvent(new Event('input', {bubbles: true}));
+      }
+      const scale = durationMenu.querySelector('.create-studio-duration-track-scale');
+      if (scale) scale.innerHTML = `<span>${faDigits(minimum)} ثانیه</span><span>${faDigits(maximum)} ثانیه</span>`;
+      durationSelect?.setAttribute('data-model-duration-range', `${minimum}-${maximum}`);
+    }
+
+    ['ratio', 'quality'].forEach((key) => {
+      const supported = modelSupportedValues(item, key === 'ratio' ? 'supported_aspect_ratios' : 'supported_resolutions');
+      const menu = modelSelectMenu(key);
+      if (!menu || supported.length === 0) return;
+      const buttons = [...menu.querySelectorAll('.create-studio-select-option')];
+      buttons.forEach((button) => {
+        button.hidden = !supported.includes(normalizeModelOption(key, button.dataset.value));
+      });
+      const current = normalizeModelOption(key, selectedValue(key));
+      if (!buttons.some((button) => !button.hidden && normalizeModelOption(key, button.dataset.value) === current)) {
+        buttons.find((button) => !button.hidden)?.click();
+      }
+    });
+  }
+
   function filterModelOptions() {
     const menu = [...document.querySelectorAll('[data-select-menu]')]
       .find((item) => item.dataset.studioMenuKey === 'model' || item.closest('[data-studio-select="model"]'));
@@ -171,6 +231,7 @@
       renderFiles([]);
     }
     selectCompatibleModel();
+    syncModelConstraints();
     updateModelAvailability();
   }
 
@@ -225,6 +286,7 @@
     }
     updateUploadUI();
     filterModelOptions();
+    syncModelConstraints();
     requestQuote();
   }
 
@@ -237,6 +299,7 @@
       return;
     }
     updateUploadUI();
+    syncModelConstraints();
   }
 
   function startProgress() {
@@ -436,7 +499,10 @@
     filterModelOptions();
   }, 40));
   document.addEventListener('click', (event) => {
-    if (event.target.closest('.create-studio-select-option')) window.setTimeout(requestQuote, 40);
+    if (event.target.closest('.create-studio-select-option')) window.setTimeout(() => {
+      syncModelConstraints();
+      requestQuote();
+    }, 40);
   }, true);
   submit?.addEventListener('click', (event) => {
     if (root.dataset.mode !== 'video') return;
@@ -448,5 +514,6 @@
   const observer = new MutationObserver(syncMode);
   observer.observe(root, {attributes: true, attributeFilter: ['data-mode']});
   syncMode();
+  syncModelConstraints();
   requestQuote();
 }());

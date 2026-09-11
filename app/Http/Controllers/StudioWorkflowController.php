@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AiModel;
 use App\Models\Product;
 use App\Models\UserUpload;
+use App\Services\AiProviderCredentials;
 use App\Services\ProductBuildSchema;
 use App\Services\StudioCostService;
 use App\Services\VideoGenerationService;
@@ -26,15 +27,19 @@ class StudioWorkflowController extends Controller
         $data['studioConfig']['workflow_models'] = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
-            ->where('provider', '<>', 'fal')
+            // مدل‌های فال در پنجره‌ی انتخاب نمایش داده نمی‌شوند؛ فال در اجرای
+            // واقعی به‌عنوان fallback سمت سرور آماده می‌ماند تا فهرست مدل‌ها
+            // با صدها مدل کم‌کاربرد شلوغ نشود.
+            ->whereIn('provider', ['openrouter', 'replicate'])
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
             ->get()
             ->sortBy(function (AiModel $model): array {
+                $providerPriority = AiModel::STUDIO_PROVIDER_PRIORITY[$model->provider] ?? 99;
                 $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_MODEL_PRIORITY, true);
                 $taskOrder = array_search($model->task_type, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true);
-                return [$priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
+                return [$providerPriority, $priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
             })
             ->values()
             ->map(function (AiModel $model) use ($modelSchemas): array {
@@ -114,8 +119,9 @@ class StudioWorkflowController extends Controller
         $runner = clone $product;
         $runner->primary_model = $model->openrouter_model_id;
         $runner->ai_provider = $model->provider;
-        $runner->fallback_models = [];
-        $runner->fallback_model_providers = [];
+        [$fallbackModels, $fallbackProviders] = $this->fallbackRoutes($model, $workflow, $request, $modelSchemas);
+        $runner->fallback_models = $fallbackModels;
+        $runner->fallback_model_providers = $fallbackProviders;
         $providerOptions = (array) $runner->provider_options;
         $videoConfig = $runner->videoConfiguration();
         $videoConfig['workflow'] = $isImageWorkflow ? 'image_to_video' : $workflow;
@@ -236,7 +242,7 @@ class StudioWorkflowController extends Controller
         $model = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
-            ->where('provider', '<>', 'fal')
+            ->whereIn('provider', ['openrouter', 'replicate'])
             ->where('openrouter_model_id', $modelId)
             ->when($provider !== '', fn ($query) => $query->where('provider', $provider))
             ->first();
@@ -253,6 +259,71 @@ class StudioWorkflowController extends Controller
         }
 
         return $model;
+    }
+
+    /**
+     * برای هر مدل انتخاب‌شده مسیر پشتیبانِ هم‌نوع و دارای کلید می‌سازد.
+     * گزینه‌های ارسال‌شده با قابلیت واقعی هر مدل مقایسه می‌شوند تا fallback
+     * با زمان، کیفیت یا نسبت تصویر ناسازگار وارد صف نشود.
+     */
+    private function fallbackRoutes(AiModel $selected, string $workflow, Request $request, VideoModelSchemaService $modelSchemas): array
+    {
+        $candidates = AiModel::query()
+            ->where('is_active', true)
+            ->where('output_modality', 'video')
+            ->whereIn('provider', ['replicate', 'fal'])
+            ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
+            ->whereNotNull('openrouter_model_id')
+            ->where('openrouter_model_id', '<>', '')
+            ->get()
+            ->filter(function (AiModel $candidate) use ($selected, $workflow, $request, $modelSchemas): bool {
+                if ($candidate->provider === $selected->provider && $candidate->openrouter_model_id === $selected->openrouter_model_id) return false;
+                if (blank(app(AiProviderCredentials::class)->for($candidate->provider)['api_key'] ?? null)) return false;
+
+                $summary = $modelSchemas->summarize($candidate);
+                $capabilities = (array) ($candidate->capability_config ?? []);
+                $supportsWorkflow = match ($workflow) {
+                    'text_to_video' => $candidate->task_type === 'text_to_video' || data_get($capabilities, 'supports_text_to_video') === true,
+                    'video_to_video' => $candidate->task_type === 'video_to_video' || data_get($capabilities, 'supports_video_to_video') === true || $summary['supports_video'],
+                    default => $candidate->task_type === 'image_to_video' || $candidate->task_type === 'face_animation' || data_get($capabilities, 'supports_image_to_video') === true || $summary['supports_image'],
+                };
+                if (!$supportsWorkflow) return false;
+
+                $checks = [
+                    ['key' => 'supported_durations', 'value' => (string) $request->input('video.duration')],
+                    ['key' => 'supported_resolutions', 'value' => strtolower((string) $request->input('video.resolution'))],
+                    ['key' => 'supported_aspect_ratios', 'value' => strtolower((string) $request->input('video.aspect_ratio'))],
+                ];
+                foreach ($checks as $check) {
+                    $supported = data_get($capabilities, $check['key'], $summary[
+                        match ($check['key']) {
+                            'supported_durations' => 'durations',
+                            'supported_resolutions' => 'resolutions',
+                            default => 'aspect_ratios',
+                        }
+                    ] ?? []);
+                    if (!is_array($supported) || $supported === []) continue;
+                    $allowed = array_map(static fn ($value): string => strtolower((string) $value), $supported);
+                    if (!in_array(strtolower($check['value']), $allowed, true)) return false;
+                }
+
+                return true;
+            })
+            ->sortBy(function (AiModel $candidate): array {
+                return [
+                    AiModel::STUDIO_PROVIDER_PRIORITY[$candidate->provider] ?? 99,
+                    $candidate->lab_priority === null ? 999 : -((int) $candidate->lab_priority),
+                    $candidate->id,
+                ];
+            })
+            ->unique(fn (AiModel $candidate): string => $candidate->provider . '|' . $candidate->openrouter_model_id)
+            ->take(3)
+            ->values();
+
+        return [
+            $candidates->pluck('openrouter_model_id')->all(),
+            $candidates->pluck('provider')->all(),
+        ];
     }
 
     private function ensureSupportedOptions(AiModel $model, Request $request, VideoModelSchemaService $modelSchemas): void

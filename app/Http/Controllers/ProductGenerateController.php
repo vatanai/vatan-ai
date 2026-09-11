@@ -172,7 +172,7 @@ class ProductGenerateController extends Controller
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
             ->where('openrouter_model_id', $modelId)
-            ->where('provider', '<>', 'fal')
+            ->whereIn('provider', ['openrouter', 'replicate'])
             ->when(
                 $request->filled('provider'),
                 fn ($query) => $query->where('provider', (string) $request->query('provider')),
@@ -188,7 +188,7 @@ class ProductGenerateController extends Controller
             ->orderByRaw($mode === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
                 : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
-            ->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 WHEN 'fal' THEN 2 ELSE 3 END")
             ->orderByDesc('lab_priority')->first() ?: $primary;
     }
 
@@ -248,7 +248,8 @@ class ProductGenerateController extends Controller
             ->whereIn('task_type', $this->studioTaskTypes($modality))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
-            ->where('provider', '<>', 'fal')
+            ->whereIn('provider', ['openrouter', 'replicate'])
+            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
                 : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
@@ -262,9 +263,10 @@ class ProductGenerateController extends Controller
             ])
             ->when($modality === 'video', function ($models) {
                 return $models->sortBy(function (AiModel $model): array {
+                    $providerPriority = AiModel::STUDIO_PROVIDER_PRIORITY[$model->provider] ?? 99;
                     $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_MODEL_PRIORITY, true);
                     $taskOrder = array_search($model->task_type, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true);
-                    return [$priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
+                    return [$providerPriority, $priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
                 })->values();
             });
 
@@ -276,6 +278,7 @@ class ProductGenerateController extends Controller
             'supports_image_input' => (bool) $model->supports_image_input,
             'supported_aspect_ratios' => $this->studioModelSupportedOptions($model, 'aspect_ratios', $modality),
             'supported_resolutions' => $this->studioModelSupportedOptions($model, 'resolutions', $modality),
+            'supported_durations' => $modality === 'video' ? $this->studioModelSupportedOptions($model, 'durations', $modality) : [],
             'task_type' => (string) $model->task_type,
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
@@ -343,9 +346,9 @@ class ProductGenerateController extends Controller
                 }
             })
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
-            ->when($request->boolean('studio_mode'), fn ($builder) => $builder->where('provider', '<>', 'fal'))
+            ->when($request->boolean('studio_mode'), fn ($builder) => $builder->whereIn('provider', ['openrouter', 'replicate']))
             ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
-                fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")->orderByDesc('lab_priority') : $builder);
+                fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 WHEN 'fal' THEN 2 ELSE 3 END")->orderByDesc('lab_priority') : $builder);
         $model = $query->first();
         if (!$model) {
             throw ValidationException::withMessages(['studio_model' => 'مدل انتخاب‌شده برای این نوع ساخت فعال نیست.']);
@@ -1203,7 +1206,7 @@ class ProductGenerateController extends Controller
                     });
                 }
             })->where('openrouter_model_id', $modelId)
-            ->when($request->boolean('studio_mode'), fn ($query) => $query->where('provider', '<>', 'fal'))
+            ->when($request->boolean('studio_mode'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->when(
                 $request->filled('studio_provider'),
                 fn ($query) => $query->where('provider', (string) $request->input('studio_provider')),
@@ -1217,7 +1220,7 @@ class ProductGenerateController extends Controller
             ->whereIn('provider', ['openrouter', 'replicate'])
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw("CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
-            ->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 WHEN 'fal' THEN 2 ELSE 3 END")
             ->orderByDesc('lab_priority')->first() ?: $primary;
     }
 
