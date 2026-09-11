@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\AiImageProviderInterface;
 use App\Models\Product;
 use App\Models\AiModel;
+use App\Models\TelegramProductSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -66,12 +67,21 @@ class OpenRouterService implements AiImageProviderInterface
     public function generateProductMetadata(string $description, array $categoryNames = []): array
     {
         $categories = collect($categoryNames)->map(fn ($name) => trim((string) $name))->filter()->values()->implode('، ');
+        $masterPrompt = $this->productMetadataMasterPrompt();
         $response = $this->postWithFailover('/chat/completions', [
             'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'برای یک محصول تصویری در پلتفرم وطن فقط JSON معتبر برگردان. کلیدها دقیقاً name_fa، name_en، description_fa، description_en، category، tags باشند. نام‌ها کوتاه و حرفه‌ای، توضیحات کاربردی و tags آرایه‌ای از حداکثر ۸ عبارت کوتاه باشند. category را فقط از فهرست داده‌شده انتخاب کن. تصویر، مسیر فایل و هیچ فیلد فنی را تحلیل یا تولید نکن.',
+                    'content' => $masterPrompt . "\n\nقرارداد خروجی غیرقابل‌تغییر:\n"
+                        . 'فقط یک JSON معتبر برگردان و هیچ متن یا Markdown خارج از JSON ننویس. کلیدهای JSON دقیقاً این‌ها باشند: '
+                        . 'name_fa، name_en، description_fa، description_en، category، subcategory، categories، tags، '
+                        . 'is_face_oriented، subject_type، product_prompt، negative_prompt، other_details. '
+                        . 'category باید دقیقاً یکی از دسته‌های مجاز باشد؛ categories آرایه‌ای از دسته‌های انتخاب‌شده از همان فهرست باشد. '
+                        . 'is_face_oriented فقط true یا false باشد و subject_type فقط یکی از generic، face، body، product، scene باشد. '
+                        . 'tags آرایه‌ای حداکثر ۸تایی و product_prompt و negative_prompt متن انگلیسی آماده‌ی استفاده باشند. '
+                        . 'اگر محصول چهره‌محور است، is_face_oriented را true و subject_type را face قرار بده؛ در غیر این صورت false و یکی از نوع‌های مناسب غیرچهره را برگردان. '
+                        . 'همه‌ی فیلدها را تولید کن و مقدار خالی نگذار.',
                 ],
                 [
                     'role' => 'user',
@@ -96,12 +106,34 @@ class OpenRouterService implements AiImageProviderInterface
             }
         }
 
+        $isFaceOriented = $this->toBoolean($metadata['is_face_oriented'] ?? false);
+        $subjectType = trim((string) ($metadata['subject_type'] ?? ($isFaceOriented ? 'face' : 'product')));
+        if (! in_array($subjectType, ['generic', 'face', 'body', 'product', 'scene'], true)) {
+            $subjectType = $isFaceOriented ? 'face' : 'product';
+        }
+        if ($isFaceOriented) {
+            $subjectType = 'face';
+        }
+
+        $categoriesList = collect((array) ($metadata['categories'] ?? []))
+            ->map(fn ($category) => trim((string) $category))
+            ->filter()
+            ->unique()
+            ->take(5)
+            ->values()
+            ->all();
+        if ($categoriesList === []) {
+            $categoriesList = [trim((string) $metadata['category'])];
+        }
+
         return [
             'name_fa' => trim((string) $metadata['name_fa']),
             'name_en' => trim((string) $metadata['name_en']),
             'description_fa' => trim((string) $metadata['description_fa']),
             'description_en' => trim((string) $metadata['description_en']),
             'category' => trim((string) $metadata['category']),
+            'subcategory' => trim((string) ($metadata['subcategory'] ?? '')),
+            'categories' => $categoriesList,
             'tags' => collect((array) ($metadata['tags'] ?? []))
                 ->map(fn ($tag) => trim((string) $tag))
                 ->filter()
@@ -109,9 +141,31 @@ class OpenRouterService implements AiImageProviderInterface
                 ->take(8)
                 ->values()
                 ->all(),
+            'is_face_oriented' => $isFaceOriented,
+            'subject_type' => $subjectType,
+            'product_prompt' => trim((string) ($metadata['product_prompt'] ?? '')),
+            'negative_prompt' => trim((string) ($metadata['negative_prompt'] ?? '')),
+            'other_details' => trim((string) ($metadata['other_details'] ?? '')),
             'model' => (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini'),
             'usage' => (array) ($response->json('usage') ?? []),
         ];
+    }
+
+    private function productMetadataMasterPrompt(): string
+    {
+        $fallback = 'تو تحلیلگر ارشد محصول تصویری و متخصص آماده‌سازی محصولات پلتفرم وطن هستی. متن مدیر را کامل بررسی کن و از روی پرامپت، نام و توضیحات او اطلاعات دقیق و آماده‌ی ثبت محصول بساز. منظور مدیر را حفظ کن، از حدس بی‌دلیل پرهیز کن، نام فارسی و انگلیسی حرفه‌ای انتخاب کن، توضیح فارسی کاربردی بنویس، دسته‌بندی و برچسب‌های مرتبط را انتخاب کن، مشخص کن محصول چهره‌محور هست یا نه و یک پرامپت نهایی انگلیسی، دقیق و آماده‌ی بارگذاری تولید کن. اگر متن مدیر ناقص بود، فقط با حداقل اطلاعات منطقی آن را کامل کن. خروجی باید کوتاه، دقیق و قابل استفاده برای ثبت محصول باشد.';
+
+        if (! Schema::hasTable('telegram_product_settings')) {
+            return $fallback;
+        }
+
+        return TelegramProductSetting::value('metadata_prompt', $fallback) ?: $fallback;
+    }
+
+    private function toBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) return $value;
+        return in_array(mb_strtolower(trim((string) $value)), ['1', 'true', 'yes', 'بله', 'آری'], true);
     }
 
     /**

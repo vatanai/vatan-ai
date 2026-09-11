@@ -223,7 +223,8 @@ class TelegramProductDraftServiceTest extends TestCase
             'file_id' => 'telegram-file-id',
         ]);
 
-        $this->assertSame('awaiting_description', $photo['status']);
+        $this->assertSame('awaiting_prompt', $photo['status']);
+        $this->assertSame("محتوا دریافت شد ✅\nچه عکس خفنی داره محصولی که انتخاب کردی، ایول...!\nخب حالا پرامپت ساخت این محصول‌رو\nهمراه با نام و توضیحات دلخواهت در یک پیام بفرست برام", $photo['text']);
         $this->assertNotEmpty(TelegramProductDraft::query()->findOrFail($started['draft_id'])->image_paths);
         Http::assertSentCount(2);
     }

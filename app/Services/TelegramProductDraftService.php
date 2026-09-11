@@ -108,13 +108,6 @@ class TelegramProductDraftService
                 (string) $draft->description,
                 $categories->map(fn (Category $category) => $category->name_fa ?: $category->name)->all(),
             );
-            if (filled($ai['product_prompt'] ?? null)) {
-                try {
-                    $ai['product_prompt'] = $this->openRouter->optimizeProductPrompt((string) $ai['product_prompt']);
-                } catch (\Throwable $optimizerException) {
-                    report($optimizerException);
-                }
-            }
             $category = $this->matchCategory((string) $ai['category'], $categories);
             $duplicate = $this->duplicateProduct($ai['name_fa'], $ai['name_en']);
             $ai['category_id'] = $category?->id;
@@ -210,7 +203,7 @@ class TelegramProductDraftService
 
         $text = $hasPreviousImage
             ? "محتوای دیگه از این محصول دریافت شد ✅\nمرسی که دقت نظر داری و محتوای بیشتری می‌فرستی برام\nخب حالا پرامپت ساخت این محصول‌رو همراه با نام و توضیحات دلخواهت در یک پیام بفرست برام"
-            : "محتوا دریافت شد ✅\nچه محصول خفنی، ایول...!\nخب حالا پرامپت ساخت این محصول‌رو همراه با نام و توضیحات دلخواهت در یک پیام بفرست برام";
+            : "محتوا دریافت شد ✅\nچه عکس خفنی داره محصولی که انتخاب کردی، ایول...!\nخب حالا پرامپت ساخت این محصول‌رو\nهمراه با نام و توضیحات دلخواهت در یک پیام بفرست برام";
 
         return $this->response($chatId, $text, [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
@@ -305,7 +298,7 @@ class TelegramProductDraftService
         if ($text === 'تنظیمات') return $this->settingsMenu($manager, $chatId);
         if ($text === 'آموزش') return $this->education($chatId);
         if ($text === 'دریافت نتیجه' && $draft) return $this->statusResponse($draft, $chatId);
-        if ($text === 'تنظیمات پرامپت اسم و توضیحات محصول') return $this->settingsAction($manager, $chatId, 'metadata');
+        if (in_array($text, ['تنظیمات پرامپت اسم و توضیحات محصول', 'تنظیمات پرامپت مادر محصول'], true)) return $this->settingsAction($manager, $chatId, 'metadata');
         if ($text === 'تنظیمات پرامپت اصلاح پرامپت محصول') return $this->settingsAction($manager, $chatId, 'optimizer');
         if ($text === 'لغو فرآیند' && $draft) {
             return $this->cancel($draft, $chatId);
@@ -496,7 +489,11 @@ class TelegramProductDraftService
         }
 
         $paths = array_values(array_filter((array) $draft->image_paths));
-        $product = DB::transaction(function () use ($draft, $status, $ai, $model, $category, $slug, $paths): Product {
+        $isFaceOriented = (bool) ($ai['is_face_oriented'] ?? false);
+        $subjectType = in_array(($ai['subject_type'] ?? null), ['generic', 'face', 'body', 'product', 'scene'], true)
+            ? $ai['subject_type']
+            : ($isFaceOriented ? 'face' : 'product');
+        $product = DB::transaction(function () use ($draft, $status, $ai, $model, $category, $slug, $paths, $isFaceOriented, $subjectType): Product {
             $product = Product::query()->create([
                 'name_fa' => trim((string) $ai['name_fa']),
                 'name_en' => trim((string) $ai['name_en']),
@@ -517,9 +514,13 @@ class TelegramProductDraftService
                 'fallback_models' => [],
                 'fallback_model_providers' => [],
                 'model_configuration' => [],
-                'prompt_template' => 'Create a high quality image based on {prompt}. Product context: ' . (string) $draft->description,
+                'prompt_template' => trim((string) ($ai['product_prompt'] ?? '')) ?: 'Create a high quality image based on {prompt}. Product context: ' . (string) $draft->description,
+                'negative_prompt' => trim((string) ($ai['negative_prompt'] ?? '')),
                 'input_schema' => [],
-                'identity_preservation' => false,
+                'subject_type' => $subjectType,
+                'identity_preservation' => $isFaceOriented,
+                'identity_instructions' => $isFaceOriented ? ProductPromptBuilder::defaultIdentityInstructions() : null,
+                'identity_instructions_fa' => $isFaceOriented ? ProductPromptBuilder::defaultIdentityInstructionsFa() : null,
                 'min_reference_images' => 1,
                 'max_reference_images' => 3,
                 'new_display_order' => 1,
@@ -582,7 +583,24 @@ class TelegramProductDraftService
     {
         $ai = (array) $draft->ai_result;
         $duplicate = $draft->state === 'duplicate';
-        $text = "نام محصول:\n{$ai['name_fa']}\n\nتوضیحات محصول:\n{$ai['description_fa']}";
+        $tags = collect((array) ($ai['tags'] ?? []))
+            ->map(fn ($tag) => '#' . ltrim(str_replace([' ', '‌'], '_', trim((string) $tag)), '#'))
+            ->filter(fn ($tag) => $tag !== '#')
+            ->implode(' ');
+        $categories = collect((array) ($ai['categories'] ?? []))
+            ->merge(array_filter([(string) ($ai['category_name'] ?? ''), (string) ($ai['subcategory'] ?? '')]))
+            ->map(fn ($category) => trim((string) $category))
+            ->filter()
+            ->unique()
+            ->implode('، ');
+        $text = "نام محصول:\n" . trim((string) ($ai['name_fa'] ?? ''))
+            . "\nنام انگلیسی:\n" . trim((string) ($ai['name_en'] ?? ''))
+            . "\n\nتوضیحات فارسی:\n" . trim((string) ($ai['description_fa'] ?? ''))
+            . "\n\nهشتگ‌ها:\n" . ($tags ?: '—')
+            . "\n\nدسته‌بندی‌ها:\n" . ($categories ?: 'عمومی')
+            . "\n\nچهره‌محور بودن پرامپت:\n" . (! empty($ai['is_face_oriented']) ? 'بله' : 'خیر')
+            . "\n\nپرامپت نهایی:\n" . trim((string) ($ai['product_prompt'] ?? ''))
+            . "\n\nتوضیحات تکمیلی:\n" . (trim((string) ($ai['other_details'] ?? '')) ?: '—');
         if ($duplicate) {
             $text .= "\n\n⚠️ محصولی با عنوان مشابه قبلاً ثبت شده است؛ قبل از ثبت آن را اصلاح کنید.";
         }
@@ -590,7 +608,13 @@ class TelegramProductDraftService
             ['text' => 'تأیید', 'callback_data' => 'product:confirm'],
             ['text' => 'کپی برای ویرایش', 'callback_data' => 'product:edit:metadata'],
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ], ['status' => $draft->state, 'ready' => true, 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'keyboard' => 'review']);
+        ], ['status' => $draft->state, 'ready' => true, 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'keyboard' => 'review', 'photo_url' => $this->draftPhotoUrl($draft)]);
+    }
+
+    private function draftPhotoUrl(TelegramProductDraft $draft): ?string
+    {
+        $path = collect((array) $draft->image_paths)->filter()->first();
+        return $path ? Storage::disk('public')->url((string) $path) : null;
     }
 
     private function statusResponse(TelegramProductDraft $draft, string $chatId): array
@@ -637,7 +661,7 @@ class TelegramProductDraftService
     private function settingsMenu(TelegramProductManager $manager, string $chatId): array
     {
         return $this->response($chatId, "تنظیمات بات ثبت محصول\n\nاز این بخش می‌توانید پرامپت‌های تولید اطلاعات محصول را مدیریت کنید.", [
-            ['text' => 'تنظیمات پرامپت اسم و توضیحات محصول', 'callback_data' => 'product:settings:metadata'],
+            ['text' => 'تنظیمات پرامپت مادر محصول', 'callback_data' => 'product:settings:metadata'],
             ['text' => 'تنظیمات پرامپت اصلاح پرامپت محصول', 'callback_data' => 'product:settings:optimizer'],
         ], ['status' => 'settings']);
     }
