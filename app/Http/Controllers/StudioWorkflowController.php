@@ -187,6 +187,15 @@ class StudioWorkflowController extends Controller
             report($exception);
 
             $exceptionMessage = strtolower($exception->getMessage());
+            if (str_contains($exceptionMessage, 'inputsensitivecontentdetected')
+                || str_contains($exceptionMessage, 'real person')
+                || str_contains($exceptionMessage, 'privacyinformation')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'پروایدر به‌دلیل سیاست ایمنی، تصویر دارای چهرهٔ انسان واقعی یا اطلاعات خصوصی را نپذیرفت؛ برای ساخت ویدیو از تصویری بدون چهرهٔ واقعی استفاده کنید.',
+                    'error_code' => 'VIDEO_INPUT_SAFETY_REJECTED',
+                ], 422);
+            }
             $message = str_contains($exceptionMessage, 'exhausted balance')
                 || str_contains($exceptionMessage, 'user is locked')
                 ? 'موجودی سرویس ساخت ویدیو موقتاً تمام شده است؛ اعتبار این درخواست برگشت داده شد.'
