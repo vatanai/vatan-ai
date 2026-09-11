@@ -213,6 +213,23 @@ class AiModel extends Model
         'fal-ai/kling-video/v3/turbo/pro/image-to-video',
     ];
 
+    /** مدل‌های شناخته‌شده‌ی استودیو باید قبل از کاتالوگ آزمایشی نمایش داده شوند. */
+    public const STUDIO_VIDEO_MODEL_PRIORITY = [
+        'kwaivgi/kling-v2.5-turbo',
+        'runwayml/gen-4-turbo',
+        'luma/dream-machine-2',
+        'alibaba/wan-3.0-prime',
+        'alibaba/wan-3.0',
+        'bytedance/seedance-2.5',
+        'bytedance/seedance-2.0-mini',
+        'kwaivgi/kling-v3.0-pro',
+        'google/veo-3.1-fast',
+        'runway/gen-4.5',
+        'fal-ai/kling-video/v3/turbo/pro/image-to-video',
+        'fal-ai/kling-video/o3/pro/video-to-video/reference',
+        'fal-ai/kling-video/v3/pro/motion-control',
+    ];
+
     public function externalModelId(): string
     {
         return (string) ($this->external_model_id ?: $this->openrouter_model_id);

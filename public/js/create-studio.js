@@ -122,6 +122,7 @@
     if (!item || !item.task_type) return true;
     return imageWorkflow === 'image_to_image'
       ? ['image_to_image', 'face_consistency'].includes(String(item.task_type))
+        || (String(item.task_type) === 'text_to_image' && item.supports_image_input === true)
       : String(item.task_type) === 'text_to_image';
   }
 

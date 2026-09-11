@@ -29,9 +29,13 @@ class StudioWorkflowController extends Controller
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
-            ->orderByDesc('lab_priority')
-            ->orderBy('id')
             ->get()
+            ->sortBy(function (AiModel $model): array {
+                $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_MODEL_PRIORITY, true);
+                $taskOrder = array_search($model->task_type, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true);
+                return [$priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
+            })
+            ->values()
             ->map(function (AiModel $model) use ($modelSchemas): array {
                 $summary = $modelSchemas->summarize($model);
                 $capabilities = (array) ($model->capability_config ?? []);

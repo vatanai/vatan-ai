@@ -246,21 +246,28 @@ class ProductGenerateController extends Controller
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
                 : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
-            ->orderByDesc('lab_priority')
-            ->orderBy('id')
             ->get([
                 'name',
                 'openrouter_model_id',
                 'provider',
+                'supports_image_input',
                 'capability_config',
                 'pricing_config',
-            ]);
+            ])
+            ->when($modality === 'video', function ($models) {
+                return $models->sortBy(function (AiModel $model): array {
+                    $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_MODEL_PRIORITY, true);
+                    $taskOrder = array_search($model->task_type, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true);
+                    return [$priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
+                })->values();
+            });
 
         $options = $models->map(fn (AiModel $model): array => [
             'value' => (string) $model->openrouter_model_id,
             'label' => (string) ($model->name ?: $model->openrouter_model_id),
             'meta' => strtoupper((string) $model->provider),
             'provider' => (string) $model->provider,
+            'supports_image_input' => (bool) $model->supports_image_input,
             'supported_aspect_ratios' => $this->studioModelSupportedOptions($model, 'aspect_ratios', $modality),
             'supported_resolutions' => $this->studioModelSupportedOptions($model, 'resolutions', $modality),
             'task_type' => (string) $model->task_type,
@@ -321,7 +328,14 @@ class ProductGenerateController extends Controller
         $query = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', $modality)
-            ->whereIn('task_type', $taskTypes)
+            ->where(function ($workflow) use ($taskTypes, $request, $modality): void {
+                $workflow->whereIn('task_type', $taskTypes);
+                if ($modality === 'image' && $request->input('studio_workflow') === 'image_to_image') {
+                    $workflow->orWhere(function ($imageInputModel): void {
+                        $imageInputModel->where('task_type', 'text_to_image')->where('supports_image_input', true);
+                    });
+                }
+            })
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
             ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
                 fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")->orderByDesc('lab_priority') : $builder);
@@ -1174,7 +1188,14 @@ class ProductGenerateController extends Controller
 
         $taskTypes = $this->studioTaskTypesForRequest($request, 'image');
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', 'image')
-            ->whereIn('task_type', $taskTypes)->where('openrouter_model_id', $modelId)
+            ->where(function ($workflow) use ($taskTypes, $request): void {
+                $workflow->whereIn('task_type', $taskTypes);
+                if ($request->input('studio_workflow') === 'image_to_image') {
+                    $workflow->orWhere(function ($imageInputModel): void {
+                        $imageInputModel->where('task_type', 'text_to_image')->where('supports_image_input', true);
+                    });
+                }
+            })->where('openrouter_model_id', $modelId)
             ->when($request->filled('studio_provider'), fn ($query) => $query->where('provider', (string) $request->input('studio_provider')), fn ($query) => $query->where('provider', (string) $product->ai_provider))
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
