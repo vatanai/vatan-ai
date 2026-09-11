@@ -49,7 +49,7 @@
             aria-label="نمایش {{ $isVideo ? 'ویدیوی' : 'عکس' }} ساخته‌شده">
       @if($isVideo)
         <video data-src="{{ $mediaUrl }}" @if($item->poster_url ?? false) poster="{{ $item->poster_url }}" @endif class="grid-img" muted playsinline preload="none" aria-hidden="true"></video>
-        <span class="grid-cell-video-badge" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+        <span class="grid-cell-video-badge" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7L8 5Z"></path></svg></span>
       @else
         <img src="{{ $mediaUrl }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
       @endif

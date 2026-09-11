@@ -1530,7 +1530,7 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   box-shadow: 0 7px 18px color-mix(in srgb, var(--bg-page) 45%, transparent);
   pointer-events: none;
 }
-.grid-cell-video-badge i { margin-left: -2px; font-size: 17px; line-height: 1; }
+.grid-cell-video-badge svg { width: 18px; height: 18px; display: block; fill: currentColor; }
 .grid-preview-img-wrap { position: relative; }
 .grid-preview-play {
   position: absolute;
