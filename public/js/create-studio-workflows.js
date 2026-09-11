@@ -77,7 +77,7 @@
     };
     if (!supports('supported_durations', duration)) return 'مدل انتخاب‌شده این زمان ویدیو را پشتیبانی نمی‌کند؛ یک زمان سازگار انتخاب کنید.';
     if (!supports('supported_resolutions', resolution)) return 'مدل انتخاب‌شده این کیفیت خروجی را پشتیبانی نمی‌کند؛ کیفیت دیگری انتخاب کنید.';
-    if (!supports('supported_aspect_ratios', ratio)) return 'مدل انتخاب‌شده این نسبت تصویر را پشتیبانی نمی‌کند؛ نسبت دیگری انتخاب کنید.';
+    if (ratio !== 'source' && !supports('supported_aspect_ratios', ratio)) return 'مدل انتخاب‌شده این نسبت تصویر را پشتیبانی نمی‌کند؛ نسبت دیگری انتخاب کنید.';
     return '';
   }
 
@@ -132,10 +132,12 @@
       if (!menu || supported.length === 0) return;
       const buttons = [...menu.querySelectorAll('.create-studio-select-option')];
       buttons.forEach((button) => {
-        button.hidden = !supported.includes(normalizeModelOption(key, button.dataset.value));
+        const isSourceRatio = key === 'ratio' && button.dataset.value === 'source'
+          && ['image_to_video', 'image_sequence_to_video'].includes(workflow);
+        button.hidden = !isSourceRatio && !supported.includes(normalizeModelOption(key, button.dataset.value));
       });
       const current = normalizeModelOption(key, selectedValue(key));
-      if (!buttons.some((button) => !button.hidden && normalizeModelOption(key, button.dataset.value) === current)) {
+      if (!buttons.some((button) => !button.hidden && (button.dataset.value === 'source' ? current === 'source' : normalizeModelOption(key, button.dataset.value) === current))) {
         buttons.find((button) => !button.hidden)?.click();
       }
     });

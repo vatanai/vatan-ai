@@ -106,7 +106,7 @@ class StudioWorkflowController extends Controller
             'workflow' => ['required', Rule::in(['text_to_video', 'image_to_video', 'image_sequence_to_video', 'video_to_video'])],
             'prompt' => ['required', 'string', 'max:5000'],
             'video.duration' => ['required', 'integer', 'min:1', 'max:15'],
-            'video.aspect_ratio' => ['required', Rule::in(VideoProductConfigService::STUDIO_ASPECT_RATIOS)],
+            'video.aspect_ratio' => ['required', Rule::in(array_merge(VideoProductConfigService::STUDIO_ASPECT_RATIOS, $isImageWorkflow ? ['source'] : []))],
             'video.resolution' => ['required', Rule::in(VideoProductConfigService::RESOLUTIONS)],
             'video.motion_preset' => ['nullable', 'string', 'max:80'],
             'source_images' => [$isImageWorkflow ? 'required' : 'nullable', 'array', 'min:' . ($workflow === 'image_sequence_to_video' ? 2 : 1), 'max:4'],
@@ -126,6 +126,7 @@ class StudioWorkflowController extends Controller
         $videoConfig = $runner->videoConfiguration();
         $videoConfig['workflow'] = $isImageWorkflow ? 'image_to_video' : $workflow;
         $videoConfig['durations'] = range(1, 15);
+        $videoConfig['preserve_source_aspect_ratio'] = $isImageWorkflow && $request->input('video.aspect_ratio') === 'source';
         $videoConfig['resolutions'] = VideoProductConfigService::RESOLUTIONS;
         $videoConfig['aspect_ratios'] = VideoProductConfigService::STUDIO_ASPECT_RATIOS;
         $providerOptions['video'] = $videoConfig;
@@ -166,6 +167,7 @@ class StudioWorkflowController extends Controller
                 'fields' => [],
                 'duration' => (int) $request->input('video.duration'),
                 'aspect_ratio' => (string) $request->input('video.aspect_ratio'),
+                'preserve_source_aspect_ratio' => $isImageWorkflow && $request->input('video.aspect_ratio') === 'source',
                 'resolution' => (string) $request->input('video.resolution'),
                 'motion_preset' => (string) $request->input('video.motion_preset', ''),
                 'generate_audio' => false,
@@ -302,6 +304,7 @@ class StudioWorkflowController extends Controller
                             default => 'aspect_ratios',
                         }
                     ] ?? []);
+                    if ($check['key'] === 'supported_aspect_ratios' && $request->input('video.aspect_ratio') === 'source') continue;
                     if (!is_array($supported) || $supported === []) continue;
                     $allowed = array_map(static fn ($value): string => strtolower((string) $value), $supported);
                     if (!in_array(strtolower($check['value']), $allowed, true)) return false;
@@ -364,6 +367,7 @@ class StudioWorkflowController extends Controller
         foreach ($checks as $check) {
             $supported = data_get($capabilities, $check['capability']);
             if (!is_array($supported) || $supported === []) $supported = $check['schema'];
+            if ($check['capability'] === 'supported_aspect_ratios' && $request->input('video.aspect_ratio') === 'source') continue;
             if (!is_array($supported) || $supported === []) continue;
 
             $value = ($check['normalize'])($request->input($check['input']));

@@ -123,10 +123,10 @@ class ProductGenerateController extends Controller
         $videoData['video']['default_duration'] = 4;
         $videoData['video']['resolutions'] = VideoProductConfigService::RESOLUTIONS;
         $videoData['video']['default_resolution'] = '720p';
-        $videoData['video']['aspect_ratios'] = array_values(array_intersect(
+        $videoData['video']['aspect_ratios'] = array_values(array_unique(array_merge(
             VideoProductConfigService::STUDIO_ASPECT_RATIOS,
-            array_values(array_unique(array_merge((array) ($videoData['video']['aspect_ratios'] ?? []), VideoProductConfigService::STUDIO_ASPECT_RATIOS))),
-        ));
+            ['source'],
+        )));
         $defaultVideoDuration = max(1, (int) ($videoData['video']['default_duration'] ?? 4));
         $defaultVideoCredit = max(0, app(VideoProductConfigService::class)->creditCost($videoProduct, $defaultVideoDuration));
         $videoData['video']['credit_costs_by_duration'] = collect(range(1, 15))

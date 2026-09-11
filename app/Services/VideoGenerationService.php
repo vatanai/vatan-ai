@@ -51,7 +51,9 @@ class VideoGenerationService
             throw ValidationException::withMessages(['video.duration' => 'مدت انتخاب‌شده برای این محصول فعال نیست.']);
         }
         $allowedAspectRatios = $studioMode ? VideoProductConfigService::STUDIO_ASPECT_RATIOS : (array) $config['aspect_ratios'];
-        if (!$studioMode && !empty($config['preserve_source_aspect_ratio'])) $allowedAspectRatios[] = 'source';
+        if (($studioMode && !empty($options['preserve_source_aspect_ratio'])) || (!$studioMode && !empty($config['preserve_source_aspect_ratio']))) {
+            $allowedAspectRatios[] = 'source';
+        }
         if (!in_array($aspectRatio, $allowedAspectRatios, true)) {
             throw ValidationException::withMessages(['video.aspect_ratio' => 'نسبت تصویر انتخاب‌شده معتبر نیست.']);
         }

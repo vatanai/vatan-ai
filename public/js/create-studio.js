@@ -48,7 +48,7 @@
   let quoteTimer = null;
   let quoteSequence = 0;
 
-  const ratioNames = {'1:1': 'مربع', '16:9': 'افقی', '9:16': 'عمودی', '4:5': 'پرتره', '3:4': 'عمودی', '4:3': 'افقی', '2:3': 'عمودی', '3:2': 'افقی', '21:9': 'عریض'};
+  const ratioNames = {'1:1': 'مربع', '16:9': 'افقی', '9:16': 'عمودی', '4:5': 'پرتره', '3:4': 'عمودی', '4:3': 'افقی', '2:3': 'عمودی', '3:2': 'افقی', '21:9': 'عریض', 'source': 'بدون تغییر'};
   const formatRatio = (value) => String(value).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
   const formatNumber = (value) => Number(value || 0).toLocaleString('fa-IR');
   const qualityLabel = (value) => {
@@ -166,7 +166,7 @@
       if (key === 'duration') return Array.from({length: 15}, (_, index) => index + 1).map((value) => ({value: String(value), label: `${formatNumber(value)} ثانیه`}));
       if (key === 'ratio') return (video.aspect_ratios || [])
         .filter((value) => String(value) !== '4:3')
-        .map((value) => ({value, label: formatRatio(value), meta: ratioNames[String(value)] || ''}));
+        .map((value) => ({value, label: value === 'source' ? 'نسبت اصلی عکس' : formatRatio(value), meta: ratioNames[String(value)] || ''}));
       if (key === 'quality') return (video.resolutions || []).map((value) => ({value, label: qualityLabel(value), meta: value === video.default_resolution ? 'پیشنهادی' : ''}));
       if (key === 'motion') return [{value: '', label: 'بر اساس پرامپت', meta: 'تنظیم خودکار'}].concat((video.motion_presets || []).map((item) => ({value: item.key, label: item.label, meta: item.description})));
     } else {
