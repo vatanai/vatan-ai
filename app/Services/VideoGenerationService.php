@@ -493,6 +493,7 @@ class VideoGenerationService
         foreach ($ids as $index => $id) {
             $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
                 ->where('provider', 'openrouter')
+                ->whereNotNull('capability_config')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
                 ->where('openrouter_model_id', $id)->where('provider', $providers[$index] ?? null)->first();
             if ($model && filled($this->credentials->for($model->provider)['api_key'] ?? null)) $models[] = $model;
@@ -676,6 +677,7 @@ class VideoGenerationService
                 ->where('is_active', true)
                 ->where('output_modality', 'video')
                 ->where('provider', 'openrouter')
+                ->whereNotNull('capability_config')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
                 ->where('provider', $provider)
                 ->where('openrouter_model_id', $id)

@@ -265,6 +265,7 @@ class VideoProductController extends Controller
             ->where('is_active', true)
             ->where('output_modality', 'video')
             ->where('provider', 'openrouter')
+            ->whereNotNull('capability_config')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
             ->when($request->filled('studio_provider') && $request->input('studio_provider') === 'openrouter', fn ($builder) => $builder->where('provider', 'openrouter'),

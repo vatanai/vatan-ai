@@ -168,6 +168,7 @@ class ProductGenerateController extends Controller
 
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
+            ->when($mode === 'video', fn ($query) => $query->whereNotNull('capability_config'))
             ->where('openrouter_model_id', $modelId)
             ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->when(
@@ -180,6 +181,7 @@ class ProductGenerateController extends Controller
 
         return AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
+            ->when($mode === 'video', fn ($query) => $query->whereNotNull('capability_config'))
             ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw($mode === 'video'
@@ -243,6 +245,7 @@ class ProductGenerateController extends Controller
             ->where('is_active', true)
             ->where('output_modality', $modality)
             ->whereIn('task_type', $this->studioTaskTypes($modality))
+            ->when($modality === 'video', fn ($query) => $query->whereNotNull('capability_config'))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
             ->when($modality === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))

@@ -195,6 +195,7 @@ class AiModel extends Model
             ->where('is_active', true)
             ->where('output_modality', 'video')
             ->where('provider', 'openrouter')
+            ->whereNotNull('capability_config')
             ->whereIn('openrouter_model_id', self::VIDEO_PRODUCT_MODEL_IDS)
             ->whereIn('task_type', [
                 'text_to_video',

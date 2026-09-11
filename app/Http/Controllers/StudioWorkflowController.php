@@ -30,6 +30,7 @@ class StudioWorkflowController extends Controller
             // مسیر ساخت ویدیو در استودیو عمداً تک‌پروایدر است تا هیچ گزینه‌ای
             // خارج از قرارداد OpenRouter به صف ارسال نشود.
             ->where('provider', 'openrouter')
+            ->whereNotNull('capability_config')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
@@ -246,6 +247,7 @@ class StudioWorkflowController extends Controller
             ->where('is_active', true)
             ->where('output_modality', 'video')
             ->where('provider', 'openrouter')
+            ->whereNotNull('capability_config')
             ->where('openrouter_model_id', $modelId)
             ->when($provider !== '', fn ($query) => $query->where('provider', $provider))
             ->first();
