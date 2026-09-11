@@ -10,6 +10,7 @@ use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\GeneratedVideo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -60,6 +61,8 @@ public function gallery()
             return view('app.profile', [
                 'isGuest'        => true,
                 'createdImages'  => collect(),
+                'createdVideos'  => collect(),
+                'createdMedia'   => collect(),
                 'usedProducts'   => collect(),
                 'personalImages' => collect(),
                 'galleryItems'   => collect(),
@@ -87,7 +90,43 @@ public function gallery()
         $createdImages = $user->generatedImages()
             ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
             ->with("product:{$productPreviewColumns}")
-            ->latest()->get();
+            ->latest()->get()
+            ->filter(fn ($image): bool => filled($image->imageUrl()))
+            ->values();
+
+        // خروجی‌های ویدیویی تکمیل‌شده نیز باید در همان گرید «محتوا» دیده شوند.
+        // فقط رکوردهایی وارد نمایش می‌شوند که واقعاً مسیر یا لینک قابل پخش دارند؛
+        // درخواست‌های صف/ناموفق، فضای خالی یا کارت خراب در پروفایل نمی‌سازند.
+        $createdVideos = Schema::hasTable('generated_videos')
+            ? $user->generatedVideos()
+                ->select(['id', 'user_id', 'product_id', 'video_path', 'video_url', 'poster_path', 'size', 'status', 'created_at'])
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })
+                ->with("product:{$productPreviewColumns}")
+                ->latest()->get()
+                ->filter(fn (GeneratedVideo $video): bool => filled($video->playbackUrl()))
+                ->values()
+            : collect();
+
+        $createdMedia = $createdImages
+            ->map(function ($image): object {
+                $image->setAttribute('media_kind', 'image');
+                $image->setAttribute('media_url', $image->imageUrl());
+                return $image;
+            })
+            ->concat($createdVideos->map(function (GeneratedVideo $video): GeneratedVideo {
+                $video->setAttribute('media_kind', 'video');
+                $video->setAttribute('media_url', $video->playbackUrl());
+                $video->setAttribute('poster_url', $video->poster_path
+                    ? (filter_var($video->poster_path, FILTER_VALIDATE_URL)
+                        ? $video->poster_path
+                        : asset('storage/' . ltrim($video->poster_path, '/')))
+                    : null);
+                return $video;
+            }))
+            ->sortByDesc('created_at')
+            ->values();
 
         // محصولات استفاده‌شده از روی آخرین خروجی‌های عکس و ویدیو استخراج می‌شوند.
         // هر محصول فقط یک‌بار نمایش داده می‌شود و اولین رکورد همان آخرین استفاده است.
@@ -141,9 +180,12 @@ public function gallery()
 
         // محاسبه حجم مصرفی واقعی کاربر بر حسب بایت
         $createdImagesSize = $user->generatedImages()->sum('size') ?? 0;
+        $createdVideosSize = Schema::hasTable('generated_videos')
+            ? $user->generatedVideos()->sum('size')
+            : 0;
         $personalImagesSize = $user->uploadedImages()->sum('size') ?? 0;
 
-        $totalBytes = $createdImagesSize + $personalImagesSize;
+        $totalBytes = $createdImagesSize + $createdVideosSize + $personalImagesSize;
 
         // تبدیل دقیق بایت به مگابایت با رند کردن تا ۲ رقم اعشار
         $storageUsed = round($totalBytes / (1024 * 1024), 2);
@@ -151,7 +193,7 @@ public function gallery()
 
         // ───── داده‌های واقعی باکس‌های آمار پروفایل ─────
         $tokenBalance  = $user->token_balance;
-        $createdCount  = $createdImages->count();
+        $createdCount  = $createdMedia->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
         $referralData  = $referralProfileEnabled ? $this->referralData($user, $referralSettings) : $this->emptyReferralData();
         $referralProducts = $referralProfileEnabled
@@ -166,6 +208,8 @@ public function gallery()
 
         return view('app.profile', compact(
             'createdImages',
+            'createdVideos',
+            'createdMedia',
             'personalImages',
             'galleryItems',
             'savedProducts',

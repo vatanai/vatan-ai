@@ -41,6 +41,7 @@
         <div class="grid-preview-media-glow"></div>
         <div class="grid-preview-img-wrap">
           <img id="gridPreviewImg" src="" alt="پیش‌نمایش عکس ساخته‌شده">
+          <video id="gridPreviewVideo" controls playsinline preload="metadata" hidden></video>
         </div>
         <span class="grid-preview-media-badge">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>

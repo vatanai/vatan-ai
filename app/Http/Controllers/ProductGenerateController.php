@@ -227,6 +227,10 @@ class ProductGenerateController extends Controller
             'main_quality_options' => $data['main_quality_options'] ?? [],
             'default_main_quality' => data_get($data, 'main_quality_options.0.key', 'standard'),
             'output_count' => max(1, (int) ($data['output_count'] ?? 1)),
+            'image_workflows' => $modality === 'image' ? [
+                ['value' => 'text_to_image', 'label' => 'متن به عکس', 'help' => 'فقط توضیحات ساخت لازم است.'],
+                ['value' => 'image_to_image', 'label' => 'عکس به عکس', 'help' => 'عکس مرجع و توضیحات ساخت لازم است.'],
+            ] : [],
             'video' => $data['video'] ?? null,
         ];
     }
@@ -259,7 +263,8 @@ class ProductGenerateController extends Controller
             'provider' => (string) $model->provider,
             'supported_aspect_ratios' => $this->studioModelSupportedOptions($model, 'aspect_ratios', $modality),
             'supported_resolutions' => $this->studioModelSupportedOptions($model, 'resolutions', $modality),
-        ])->unique('value')->values();
+            'task_type' => (string) $model->task_type,
+        ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
         $primary = (string) $product->primary_model;
         if ($primary !== '' && !$options->contains('value', $primary)) {
@@ -270,6 +275,7 @@ class ProductGenerateController extends Controller
                 'provider' => (string) $product->ai_provider,
                 'supported_aspect_ratios' => [],
                 'supported_resolutions' => [],
+                'task_type' => null,
             ]);
         }
 
@@ -311,10 +317,11 @@ class ProductGenerateController extends Controller
     private function applyStudioModel(Product $product, Request $request, string $modality): void
     {
         $modelId = trim((string) $request->input('studio_model', ''));
+        $taskTypes = $this->studioTaskTypesForRequest($request, $modality);
         $query = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', $modality)
-            ->whereIn('task_type', $this->studioTaskTypes($modality))
+            ->whereIn('task_type', $taskTypes)
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
             ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
                 fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")->orderByDesc('lab_priority') : $builder);
@@ -354,6 +361,17 @@ class ProductGenerateController extends Controller
         return $modality === 'video'
             ? ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation']
             : ['text_to_image', 'image_to_image', 'face_consistency'];
+    }
+
+    private function studioTaskTypesForRequest(Request $request, string $modality): array
+    {
+        if ($modality !== 'image' || ! $request->boolean('studio_mode')) {
+            return $this->studioTaskTypes($modality);
+        }
+
+        return $request->input('studio_workflow') === 'image_to_image'
+            ? ['image_to_image', 'face_consistency']
+            : ['text_to_image'];
     }
 
     private function hasStoredModelPrice(?AiModel $model): bool
@@ -510,7 +528,10 @@ class ProductGenerateController extends Controller
         $creditReservationSettled = false;
         $order = null;
         $fieldValues = (array) $request->input('fields', []);
-        $identityRequested = (bool) $product->identity_preservation && $request->boolean('identity_preservation');
+        $studioWorkflow = (string) $request->input('studio_workflow', 'text_to_image');
+        $identityRequested = (bool) $product->identity_preservation
+            && $request->boolean('identity_preservation')
+            && (! $request->boolean('studio_mode') || $studioWorkflow === 'image_to_image');
         $creditCost = max(0, (int) $mainQuality['credits'])
             + $schema->additionalCredit($product, $fieldValues)
             + ($identityRequested ? max(0, (int) $product->identity_credit_cost) : 0);
@@ -583,6 +604,15 @@ class ProductGenerateController extends Controller
 
         // اصلاح دریافت فایل‌ها بر اساس ساختار ارسالی جاوااسکریپت (uploads)
         $allFiles = $schema->flattenUploads($request);
+        if ($request->boolean('studio_mode')
+            && $studioWorkflow === 'image_to_image'
+            && $allFiles === []
+            && ! $faceProfile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'برای حالت عکس به عکس، یک تصویر ورودی انتخاب کنید.',
+            ], 422);
+        }
         if (in_array($product->subject_type, ['face', 'body'], true) && count($allFiles) > 3) {
             return response()->json([
                 'success' => false,
@@ -1142,14 +1172,15 @@ class ProductGenerateController extends Controller
         $modelId = $requestedModelId ?: (string) $product->primary_model;
         if ($modelId === '') return null;
 
+        $taskTypes = $this->studioTaskTypesForRequest($request, 'image');
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', 'image')
-            ->whereIn('task_type', $this->studioTaskTypes('image'))->where('openrouter_model_id', $modelId)
+            ->whereIn('task_type', $taskTypes)->where('openrouter_model_id', $modelId)
             ->when($request->filled('studio_provider'), fn ($query) => $query->where('provider', (string) $request->input('studio_provider')), fn ($query) => $query->where('provider', (string) $product->ai_provider))
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', 'image')
-            ->whereIn('task_type', $this->studioTaskTypes('image'))
+            ->whereIn('task_type', $taskTypes)
             ->whereIn('provider', ['fal', 'replicate'])
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw("CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")

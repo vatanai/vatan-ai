@@ -25,20 +25,33 @@
   </button>
 </div>
 
-{{-- ===== PANEL: گرید (محتوا) — خروجی‌های واقعی کاربر از generated_images ===== --}}
+{{-- ===== PANEL: گرید (محتوا) — خروجی‌های عکس و ویدیوی واقعی کاربر ===== --}}
 <div class="profile-panel panel-grid" data-panel="grid">
-  @forelse ($createdImages as $item)
-    <button type="button" class="grid-cell grid-cell--clickable"
-            data-image="{{ asset('storage/' . $item->image_path) }}"
+  @forelse (($createdMedia ?? $createdImages ?? []) as $item)
+    @php
+      $isVideo = ($item->media_kind ?? 'image') === 'video';
+      $mediaUrl = (string) ($item->media_url ?? ($item->imageUrl() ?? ''));
+      $product = $item->product;
+      $productName = optional($product)->name_fa ?? optional($product)->name_en ?? 'نامشخص';
+      $productSlug = optional($product)->route_slug;
+    @endphp
+    <button type="button" class="grid-cell grid-cell--clickable {{ $isVideo ? 'grid-cell--video' : '' }}"
+            data-media-kind="{{ $isVideo ? 'video' : 'image' }}"
+            data-media-url="{{ $mediaUrl }}"
+            data-image="{{ $isVideo ? '' : $mediaUrl }}"
+            data-video="{{ $isVideo ? $mediaUrl : '' }}"
+            data-poster="{{ $isVideo ? ($item->poster_url ?? '') : '' }}"
             data-date="{{ $item->jalali_created_at }}"
-            data-product-name="{{ optional($item->product)->name_fa ?? optional($item->product)->name_en ?? 'نامشخص' }}"
-            data-product-url="{{ $item->product_url ?? '' }}"
-            data-product-create-url="{{ optional($item->product)->route_slug ? route('app.create.product', optional($item->product)->route_slug) : '' }}"
-            data-product-download-url="{{ optional($item->product)->slug ? route('app.product.download', optional($item->product)->slug) : '' }}"
-            aria-label="نمایش عکس ساخته‌شده">
-      <img src="{{ asset('storage/' . $item->image_path) }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
-      @if(optional($item->product)->media_type === 'video')
-        <i class="fa-solid fa-video cell-badge"></i>
+            data-product-name="{{ $productName }}"
+            data-product-url="{{ $productSlug ? route('app.product', $productSlug) : '' }}"
+            data-product-create-url="{{ $productSlug ? route('app.create.product', $productSlug) : '' }}"
+            data-product-download-url="{{ optional($product)->slug ? route('app.product.download', $product->slug) : '' }}"
+            aria-label="نمایش {{ $isVideo ? 'ویدیوی' : 'عکس' }} ساخته‌شده">
+      @if($isVideo)
+        <video src="{{ $mediaUrl }}" @if($item->poster_url ?? false) poster="{{ $item->poster_url }}" @endif class="grid-img" muted playsinline preload="metadata"></video>
+        <i class="fa-solid fa-video cell-badge" aria-hidden="true"></i>
+      @else
+        <img src="{{ $mediaUrl }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
       @endif
     </button>
   @empty

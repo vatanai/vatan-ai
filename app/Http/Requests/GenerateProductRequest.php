@@ -20,6 +20,7 @@ class GenerateProductRequest extends FormRequest
                 'studio_project_name' => ['nullable', 'string', 'max:120'],
                 'studio_model' => ['nullable', 'string', 'max:200'],
                 'studio_provider' => ['nullable', 'string', 'max:40'],
+                'studio_workflow' => ['nullable', 'in:text_to_image,image_to_image'],
                 'output.count' => ['nullable', 'integer', 'min:1', 'max:6'],
             ]
             : [];

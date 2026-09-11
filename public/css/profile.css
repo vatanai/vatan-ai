@@ -1253,13 +1253,16 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   justify-content: center;
 }
 
-.grid-preview-img-wrap img {
+.grid-preview-img-wrap img,
+.grid-preview-img-wrap video {
   width: 100%;
   max-height: min(61vh, 620px);
   border-radius: 12px;
   object-fit: contain;
   display: block;
 }
+
+.grid-preview-img-wrap video { background: #000; }
 
 .grid-preview-media-badge {
   position: absolute;

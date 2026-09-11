@@ -221,6 +221,8 @@
     if (root.dataset.mode !== 'video') {
       if (workflowTabs) workflowTabs.hidden = true;
       if (workflowNote) workflowNote.hidden = true;
+      if (workflowImageOptions) workflowImageOptions.hidden = true;
+      if (workflowFiles) workflowFiles.hidden = true;
       return;
     }
     updateUploadUI();

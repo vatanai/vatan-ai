@@ -281,6 +281,7 @@
   /* ───── مودال پیش‌نمایش عکس گرید ───── */
   var previewModal   = document.getElementById('gridPreviewModal');
   var previewImg     = document.getElementById('gridPreviewImg');
+  var previewVideo   = document.getElementById('gridPreviewVideo');
   var previewDownload = document.getElementById('gridPreviewDownload');
   var previewShare    = document.getElementById('gridPreviewShare');
   var previewRecreate = document.getElementById('gridPreviewRecreate');
@@ -293,15 +294,31 @@
   function openGridPreview(cell) {
     if (!previewModal) return;
 
+    var mediaKind   = cell.getAttribute('data-media-kind') || 'image';
+    var mediaUrl    = cell.getAttribute('data-media-url') || cell.getAttribute('data-image') || cell.getAttribute('data-video') || '';
     var imgUrl      = cell.getAttribute('data-image') || '';
+    var videoUrl    = cell.getAttribute('data-video') || '';
+    var posterUrl   = cell.getAttribute('data-poster') || '';
     var date        = cell.getAttribute('data-date') || '';
     var productName = cell.getAttribute('data-product-name') || 'نامشخص';
     var productUrl  = cell.getAttribute('data-product-url') || '';
     var productCreateUrl = cell.getAttribute('data-product-create-url') || '';
     previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
-    previewImg.src = imgUrl;
-    previewDownload.href = imgUrl;
+    var isVideo = mediaKind === 'video' && videoUrl;
+    previewImg.hidden = Boolean(isVideo);
+    previewVideo.hidden = !isVideo;
+    previewImg.src = isVideo ? '' : imgUrl;
+    if (isVideo) {
+      previewVideo.poster = posterUrl;
+      previewVideo.src = videoUrl;
+      previewVideo.load();
+    } else {
+      previewVideo.pause();
+      previewVideo.removeAttribute('src');
+      previewVideo.load();
+    }
+    previewDownload.href = mediaUrl;
     previewDate.textContent = date;
     previewProductName.textContent = productName;
 
@@ -333,6 +350,13 @@
     if (!previewModal) return;
     previewModal.style.display = 'none';
     previewImg.src = '';
+    if (previewVideo) {
+      previewVideo.pause();
+      previewVideo.removeAttribute('src');
+      previewVideo.load();
+      previewVideo.hidden = true;
+    }
+    if (previewImg) previewImg.hidden = false;
     if (previewRecreate) {
       previewRecreate.href = '#';
       previewRecreate.classList.add('is-disabled');
@@ -374,7 +398,8 @@
 
   if (previewShare) {
     previewShare.addEventListener('click', function () {
-      var url = previewImg.src;
+      var url = (previewVideo && !previewVideo.hidden ? previewVideo.src : previewImg.src) || '';
+      if (!url) return;
       if (navigator.share) {
         navigator.share({ title: 'عکس ساخته‌شده در وطن AI', url: url }).catch(function () {});
       } else if (navigator.clipboard) {

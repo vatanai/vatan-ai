@@ -34,10 +34,13 @@
   const uploadZone = root.querySelector('[data-studio-upload-zone]');
   const uploadInput = root.querySelector('[data-studio-upload-input]');
   const uploadFile = root.querySelector('[data-studio-upload-file]');
+  const imageWorkflowTabs = root.querySelector('[data-image-workflow-tabs]');
+  const imageWorkflowNote = root.querySelector('[data-image-workflow-note]');
   const negativeInput = root.querySelector('[data-studio-negative-input]');
   const outputCountInput = root.querySelector('[data-studio-output-count]');
   const stateKey = 'vatan-create-studio-state';
   let currentMode = 'image';
+  let imageWorkflow = 'text_to_image';
   let activeConfig = null;
   let selectedValues = {};
   let pollTimer = null;
@@ -68,6 +71,7 @@
     try {
       sessionStorage.setItem(stateKey, JSON.stringify({
         mode: currentMode,
+        imageWorkflow,
         prompt: prompt.value,
         negative: negativeInput?.value || '',
         project: root.querySelector('[data-studio-project]')?.value || '',
@@ -114,6 +118,13 @@
     return /[A-Za-z]/.test(text) ? text : String(value || text || 'مدل هوش مصنوعی');
   }
 
+  function modelSupportsImageWorkflow(item) {
+    if (!item || !item.task_type) return true;
+    return imageWorkflow === 'image_to_image'
+      ? ['image_to_image', 'face_consistency'].includes(String(item.task_type))
+      : String(item.task_type) === 'text_to_image';
+  }
+
   function optionsFor(key) {
     if (!activeConfig) return [];
     if (key === 'model') return (activeConfig.model_options || [{value: activeConfig.model, label: activeConfig.model, meta: activeConfig.name}]).map((item) => ({
@@ -122,7 +133,8 @@
       label: item.label || item.value,
       meta: item.meta || '',
       provider: item.provider || '',
-    }));
+      task_type: item.task_type || '',
+    })).filter((item) => currentMode !== 'image' || modelSupportsImageWorkflow(item));
     if (key === 'count') return Array.from({length: 6}, (_, index) => {
       const value = String(index + 1);
       return {value, label: `${formatNumber(value)} عدد`, meta: ''};
@@ -412,6 +424,45 @@
     submit?.setAttribute('aria-label', locked ? 'افزایش اعتبار برای ساخت' : 'بساز');
   }
 
+  function updateImageWorkflowUI() {
+    const isImageMode = currentMode === 'image';
+    const needsReference = imageWorkflow === 'image_to_image';
+    imageWorkflowTabs?.querySelectorAll('[data-image-workflow]').forEach((button) => {
+      const active = button.dataset.imageWorkflow === imageWorkflow;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (imageWorkflowTabs) imageWorkflowTabs.hidden = !isImageMode;
+    if (imageWorkflowNote) {
+      imageWorkflowNote.hidden = !isImageMode;
+      imageWorkflowNote.textContent = needsReference
+        ? 'یک عکس مرجع واضح اضافه کن تا آن را با توضیحاتت بازطراحی کنیم.'
+        : 'برای شروع، ایده‌ات را بنویس؛ تصویر ورودی لازم نیست.';
+    }
+    if (isImageMode && uploadZone) {
+      uploadZone.hidden = !needsReference;
+      uploadZone.dataset.workflowDisabled = needsReference ? 'false' : 'true';
+      const title = uploadZone.querySelector('[data-upload-title]');
+      const help = uploadZone.querySelector('[data-upload-help]');
+      if (title) title.textContent = needsReference ? 'افزودن تصویر مرجع' : 'فایل ورودی لازم نیست';
+      if (help) help.textContent = needsReference ? 'JPG، PNG یا WebP' : 'برای متن به عکس فقط توضیحات را بنویس';
+      if (!needsReference && uploadInput) {
+        uploadInput.value = '';
+        if (uploadFile) uploadFile.hidden = true;
+      }
+    }
+  }
+
+  function setImageWorkflow(nextWorkflow) {
+    imageWorkflow = nextWorkflow === 'image_to_image' ? 'image_to_image' : 'text_to_image';
+    hideError();
+    selectedValues = {};
+    updateImageWorkflowUI();
+    setupSelects();
+    updateCost();
+    saveStudioState();
+  }
+
   function requestServerQuote() {
     if (!config.quote_url) return;
     if (quoteTimer) window.clearTimeout(quoteTimer);
@@ -462,6 +513,7 @@
     selectedValues = {};
     renderDynamicFields();
     setupSelects(); updateCost();
+    updateImageWorkflowUI();
     if (outputVideo) outputVideo.hidden = currentMode !== 'video'; if (outputImage) outputImage.hidden = currentMode === 'video';
     if (videoPlay) videoPlay.hidden = currentMode !== 'video';
   }
@@ -485,11 +537,12 @@
       data.delete('studio_prompt'); data.append('prompt', prompt.value.trim());
       data.append('negative_prompt', negativeInput?.value?.trim() || '');
     } else {
+      data.set('studio_workflow', imageWorkflow);
       data.set('output[aspect_ratio]', selectedValues.ratio || activeConfig.default_output_aspect_ratio || '1:1');
       data.set('output[quality]', selectedValues.quality || activeConfig.default_output_resolution || '720');
       data.set('output[main_quality]', activeConfig.default_main_quality || 'standard');
       data.set('output[count]', normalizeDigits(selectedValues.count || outputCountInput?.value || '1') || '1');
-      data.set('identity_preservation', currentMode === 'image' && activeConfig.reference_upload_key && uploadInput.files[0] ? '1' : '0');
+      data.set('identity_preservation', imageWorkflow === 'image_to_image' && activeConfig.reference_upload_key && uploadInput.files[0] ? '1' : '0');
     }
     data.set('studio_mode', '1');
     Object.entries(selectedValues).forEach(([key, value]) => {
@@ -533,7 +586,7 @@
     hideError();
     if (!prompt.value.trim()) { showError('ابتدا توضیحات ساخت را وارد کنید.'); prompt.focus(); return; }
     if (config.authenticated !== true) { saveStudioState(); window.location.href = config.login_url; return; }
-    if (currentMode === 'image' && activeConfig.requires_reference && !uploadInput.files[0]) { showError('برای ساخت این محصول، یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
+    if (currentMode === 'image' && imageWorkflow === 'image_to_image' && !uploadInput.files[0]) { showError('برای حالت عکس به عکس، یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
     const requiredCredits = Number(normalizeDigits(cost?.textContent || 0));
     const balance = Number(root.dataset.balance || 0);
     if (requiredCredits > 0 && balance < requiredCredits) {
@@ -571,7 +624,14 @@
     }
   }
 
+  outputImage?.addEventListener('error', () => {
+    outputImage.hidden = true;
+    result.hidden = true;
+    showError('تصویر ساخته شد اما بارگذاری آن کامل نشد؛ لطفاً دوباره تلاش کنید.');
+  });
+
   modeTabs.forEach((tab) => tab.addEventListener('click', () => setMode(tab.dataset.studioMode)));
+  imageWorkflowTabs?.querySelectorAll('[data-image-workflow]').forEach((tab) => tab.addEventListener('click', () => setImageWorkflow(tab.dataset.imageWorkflow)));
   prompt.addEventListener('input', updatePromptCount);
   negativeInput?.addEventListener('input', () => root.querySelector('[data-studio-negative]').value = negativeInput.value);
   root.querySelector('[data-studio-improve]').addEventListener('click', () => { const suffix = currentMode === 'video' ? ' حرکت نرم دوربین، ریتم سینمایی و نورپردازی طبیعی' : ' ترکیب‌بندی حرفه‌ای، نورپردازی طبیعی و جزئیات دقیق'; prompt.value = prompt.value.trim() ? `${prompt.value.trim()}،${suffix}` : (currentMode === 'video' ? 'یک نمای سینمایی از تهران در شب با باران و نورهای نئون' : 'یک پرتره ادیتوریال با نور پنجره و پس‌زمینه مینیمال') + suffix; updatePromptCount(); prompt.focus(); });
@@ -605,6 +665,7 @@
 
   const savedState = readStudioState();
   updatePromptCount();
+  if (savedState?.imageWorkflow === 'image_to_image') imageWorkflow = 'image_to_image';
   setMode(savedState?.mode === 'video' ? 'video' : 'image');
   if (savedState) {
     prompt.value = String(savedState.prompt || '');
