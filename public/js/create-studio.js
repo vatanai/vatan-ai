@@ -129,21 +129,31 @@
   function optionsFor(key) {
     if (!activeConfig) return [];
     if (key === 'model') {
-      const workflowOrder = currentMode === 'video'
-        ? new Map((config.workflow_models || []).map((item, index) => [String(item.value), index]))
-        : null;
-      return (activeConfig.model_options || [{value: activeConfig.model, label: activeConfig.model, meta: activeConfig.name}]).map((item) => ({
+      const rawOptions = (activeConfig.model_options || [{value: activeConfig.model, label: activeConfig.model, meta: activeConfig.name}]).map((item) => ({
       ...item,
       value: item.value,
       label: item.label || item.value,
       meta: item.meta || '',
       provider: item.provider || '',
       task_type: item.task_type || '',
-      })).sort((left, right) => {
-        if (!workflowOrder) return 0;
-        return (workflowOrder.get(String(left.value)) ?? Number.MAX_SAFE_INTEGER)
-          - (workflowOrder.get(String(right.value)) ?? Number.MAX_SAFE_INTEGER);
-      }).filter((item) => currentMode !== 'image' || modelSupportsImageWorkflow(item));
+      }));
+      if (currentMode === 'video' && Array.isArray(config.workflow_models) && config.workflow_models.length > 0) {
+        const byValue = new Map(rawOptions.map((item) => [String(item.value), item]));
+        const workflowValues = new Set();
+        const prioritized = config.workflow_models.map((item) => {
+          const value = String(item.value);
+          workflowValues.add(value);
+          return {
+            ...(byValue.get(value) || {}),
+            ...item,
+            value,
+            label: byValue.get(value)?.label || value,
+            meta: byValue.get(value)?.meta || '',
+          };
+        });
+        return prioritized.concat(rawOptions.filter((item) => !workflowValues.has(String(item.value))));
+      }
+      return rawOptions.filter((item) => currentMode !== 'image' || modelSupportsImageWorkflow(item));
     }
     if (key === 'count') return Array.from({length: 6}, (_, index) => {
       const value = String(index + 1);
@@ -684,6 +694,9 @@
     if (projectInput) projectInput.value = String(savedState.project || '');
     if (outputCountInput) outputCountInput.value = normalizeDigits(savedState.outputCount || '1') || '1';
     selectedValues = {...(savedState.selectedValues || {})};
+    if (savedState.mode === 'video' && ['kwaivgi/kling-v2.5-turbo', 'runwayml/gen-4-turbo', 'luma/dream-machine-2'].includes(String(selectedValues.model || ''))) {
+      delete selectedValues.model;
+    }
     if (!selectedValues.count) selectedValues.count = String(Math.max(1, Math.min(6, Number(normalizeDigits(savedState.outputCount || '1') || 1))));
     setupSelects();
     updatePromptCount();
