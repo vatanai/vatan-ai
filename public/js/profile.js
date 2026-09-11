@@ -287,8 +287,6 @@
   var previewShare    = document.getElementById('gridPreviewShare');
   var previewRecreate = document.getElementById('gridPreviewRecreate');
   var previewDate     = document.getElementById('gridPreviewDate');
-  var previewProductLink = document.getElementById('gridPreviewProductLink');
-  var previewProductName = document.getElementById('gridPreviewProductName');
   var previewClose    = document.getElementById('gridPreviewClose');
   var previewDownloadTrackUrl = '';
 
@@ -308,8 +306,6 @@
     var videoUrl    = cell.getAttribute('data-video') || '';
     var posterUrl   = cell.getAttribute('data-poster') || '';
     var date        = cell.getAttribute('data-date') || '';
-    var productName = cell.getAttribute('data-product-name') || 'نامشخص';
-    var productUrl  = cell.getAttribute('data-product-url') || '';
     var productCreateUrl = cell.getAttribute('data-product-create-url') || '';
     previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
@@ -330,15 +326,6 @@
     updatePreviewPlayButton();
     previewDownload.href = mediaUrl;
     previewDate.textContent = date;
-    previewProductName.textContent = productName;
-
-    if (productUrl) {
-      previewProductLink.href = productUrl;
-      previewProductLink.classList.remove('is-disabled');
-    } else {
-      previewProductLink.href = '#';
-      previewProductLink.classList.add('is-disabled');
-    }
 
     if (previewRecreate) {
       if (productCreateUrl) {
@@ -423,7 +410,7 @@
       var url = (previewVideo && !previewVideo.hidden ? previewVideo.src : previewImg.src) || '';
       if (!url) return;
       if (navigator.share) {
-        navigator.share({ title: 'عکس ساخته‌شده در وطن AI', url: url }).catch(function () {});
+        navigator.share({ title: 'خروجی ساخته‌شده در وطن AI', url: url }).catch(function () {});
       } else if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(function () {
           alert('لینک عکس کپی شد.');

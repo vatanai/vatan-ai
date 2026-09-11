@@ -32,6 +32,7 @@
           <span class="grid-preview-eyebrow">خروجی ذخیره‌شده</span>
           <strong>پیش‌نمایش خروجی</strong>
         </div>
+        <p class="grid-preview-date" id="gridPreviewDate"></p>
         <button type="button" class="grid-preview-close" id="gridPreviewClose" aria-label="بستن">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"></path></svg>
         </button>
@@ -57,27 +58,14 @@
         </a>
         <button type="button" id="gridPreviewShare" class="grid-preview-btn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="m8.3 10.8 7.4-4.5m-7.4 7.1 7.4 4.5"></path></svg>
-          <span>اشتراک‌گذاری</span>
+          <span>اشتراک</span>
         </button>
         <a id="gridPreviewRecreate" href="#" class="grid-preview-btn grid-preview-btn--recreate is-disabled" aria-disabled="true">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 5v3.7h-3.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 19v-3.7h3.7"></path></svg>
-          <span>ساخت مجدد با همین محصول</span>
+          <span>ساخت مجدد</span>
         </a>
       </div>
 
-      <div class="grid-preview-meta">
-        <span class="grid-preview-meta-line"></span>
-        <p class="grid-preview-date" id="gridPreviewDate"></p>
-        <span class="grid-preview-meta-line"></span>
-      </div>
-
-      <a id="gridPreviewProductLink" href="#" class="grid-preview-product-link">
-        <span class="grid-preview-product-icon">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Zm6.5 12.5.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"></path></svg>
-        </span>
-        <span class="grid-preview-product-copy"><small>محصول استفاده‌شده</small><b id="gridPreviewProductName"></b></span>
-        <svg class="grid-preview-product-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg>
-      </a>
     </div>
   </div>
 
