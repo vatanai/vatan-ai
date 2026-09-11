@@ -2,11 +2,15 @@
   @foreach($products as $product)
     @php
       $videoUrl = trim((string) $product->preview_video_url);
-      if ($videoUrl !== '' && !str_starts_with($videoUrl, 'http') && !str_starts_with($videoUrl, '/')) $videoUrl = asset('storage/' . ltrim($videoUrl, '/'));
+      if ($videoUrl !== '' && !str_starts_with($videoUrl, 'http') && !str_starts_with($videoUrl, '/')) {
+        $videoUrl = str_starts_with($videoUrl, 'assets/')
+          ? asset($videoUrl)
+          : asset('storage/' . ltrim($videoUrl, '/'));
+      }
     @endphp
     <a class="hb-video-loop-card" href="{{ route('app.product', $product->route_slug) }}">
       @if($videoUrl)
-        <video src="{{ $videoUrl }}" poster="{{ $product->displayImageUrl() }}" autoplay muted loop playsinline preload="metadata"></video>
+        <video data-hb-video-src="{{ $videoUrl }}" poster="{{ $product->displayImageUrl() }}" muted loop playsinline preload="none" aria-label="پیش‌نمایش {{ $product->name_fa }}"></video>
       @else
         <span class="hb-video-loop-fallback" data-hb-background style="--hb-card-image:url('{{ $product->displayImageUrl() }}');background-image:var(--hb-card-image)"></span>
       @endif

@@ -282,6 +282,7 @@
   var previewModal   = document.getElementById('gridPreviewModal');
   var previewImg     = document.getElementById('gridPreviewImg');
   var previewVideo   = document.getElementById('gridPreviewVideo');
+  var previewPlay    = document.getElementById('gridPreviewPlay');
   var previewDownload = document.getElementById('gridPreviewDownload');
   var previewShare    = document.getElementById('gridPreviewShare');
   var previewRecreate = document.getElementById('gridPreviewRecreate');
@@ -290,6 +291,13 @@
   var previewProductName = document.getElementById('gridPreviewProductName');
   var previewClose    = document.getElementById('gridPreviewClose');
   var previewDownloadTrackUrl = '';
+
+  function updatePreviewPlayButton() {
+    if (!previewPlay || !previewVideo) return;
+    var isVideo = !previewVideo.hidden && Boolean(previewVideo.src);
+    previewPlay.hidden = !isVideo || !previewVideo.paused;
+    previewPlay.setAttribute('aria-label', previewVideo.paused ? 'پخش ویدیو' : 'توقف ویدیو');
+  }
 
   function openGridPreview(cell) {
     if (!previewModal) return;
@@ -312,12 +320,14 @@
     if (isVideo) {
       previewVideo.poster = posterUrl;
       previewVideo.src = videoUrl;
+      previewVideo.pause();
       previewVideo.load();
     } else {
       previewVideo.pause();
       previewVideo.removeAttribute('src');
       previewVideo.load();
     }
+    updatePreviewPlayButton();
     previewDownload.href = mediaUrl;
     previewDate.textContent = date;
     previewProductName.textContent = productName;
@@ -356,6 +366,7 @@
       previewVideo.load();
       previewVideo.hidden = true;
     }
+    if (previewPlay) previewPlay.hidden = true;
     if (previewImg) previewImg.hidden = false;
     if (previewRecreate) {
       previewRecreate.href = '#';
@@ -372,6 +383,17 @@
   });
 
   if (previewClose) previewClose.addEventListener('click', closeGridPreview);
+
+  if (previewPlay && previewVideo) {
+    previewPlay.addEventListener('click', function (event) {
+      event.stopPropagation();
+      previewVideo.controls = true;
+      previewVideo.play().catch(function () {});
+    });
+    previewVideo.addEventListener('play', updatePreviewPlayButton);
+    previewVideo.addEventListener('pause', updatePreviewPlayButton);
+    previewVideo.addEventListener('ended', updatePreviewPlayButton);
+  }
 
   if (previewDownload) {
     previewDownload.addEventListener('click', function () {

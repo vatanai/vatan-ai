@@ -172,12 +172,62 @@
    * توضیحات محصول را بگیرند. محتوای طولانی نیز باید داخل سلول خودش کنترل شود.
    */
   @media (min-width: 768px) {
+    /* جدول باید داخل عرض کارت بماند؛ حداقل‌عرض‌های داخلی نباید اسکرول افقی بسازند. */
+    .products-table-scroll {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+    }
+    .products-table-compact {
+      width: 100% !important;
+      max-width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+    }
+    .products-table-compact thead th,
+    .products-table-compact tbody td {
+      min-width: 0;
+    }
+    .products-table-compact tbody td {
+      overflow: hidden;
+    }
+    .products-table-compact tbody td[class*="product-credit-cell"] {
+      overflow: visible;
+    }
+
+    /* عرض‌ها متناسب با پنل تنظیم شده‌اند؛ ستون‌ها و داده‌ها تغییری نکرده‌اند. */
+    .products-table-compact th:nth-child(3) { width: 130px !important; }
+    .products-table-compact th:nth-child(6) { width: 220px !important; min-width: 0 !important; }
+    .products-table-compact th:nth-child(7) { width: 58px !important; }
+    .products-table-compact th:nth-child(8) { width: 72px !important; }
+
+    .products-table-compact .product-lab-cost-stack,
+    .products-table-compact .product-credit-quality-stack {
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+    .products-table-compact .product-actions-grid {
+      position: relative;
+      left: 8px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .products-table-scroll {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+  }
+
+  @media (min-width: 768px) {
     .products-table-compact th:nth-child(4) { width: 138px !important; }
     .products-table-compact th:nth-child(5) { width: 118px !important; }
-    .products-table-compact th:nth-child(6) { width: 270px !important; min-width: 270px !important; }
+    .products-table-compact th:nth-child(6) { width: 220px !important; min-width: 0 !important; }
     .products-table-compact th:nth-child(9) { width: 84px !important; }
     .products-table-compact th:nth-child(10) { width: 112px !important; }
-    .products-table-compact th:nth-child(11) { width: 92px !important; }
+    .products-table-compact th:nth-child(11) { width: 116px !important; }
     .products-table-compact thead th:nth-child(n+9):nth-child(-n+11),
     .products-table-compact tbody td:nth-child(n+9):nth-child(-n+11) { padding-inline: 6px; }
 
@@ -290,7 +340,7 @@
 </form>
 
 <div class="content-card overflow-hidden">
-  <div class="overflow-x-auto">
+  <div class="overflow-x-auto products-table-scroll">
   <table class="table-pro products-table-compact">
     <thead>
       <tr>

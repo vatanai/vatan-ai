@@ -25,6 +25,7 @@
   const progressTitle = root.querySelector('[data-studio-progress-title]');
   const progressText = root.querySelector('[data-studio-progress-text]');
   const progressBar = root.querySelector('[data-studio-progress-bar]');
+  const progressValue = root.querySelector('[data-studio-progress-value]');
   const result = root.querySelector('[data-studio-result]');
   const outputImage = root.querySelector('[data-studio-output-image]');
   const outputVideo = root.querySelector('[data-studio-output-video]');
@@ -535,15 +536,21 @@
     setupSelects(); updateCost();
     updateImageWorkflowUI();
     if (outputVideo) outputVideo.hidden = currentMode !== 'video'; if (outputImage) outputImage.hidden = currentMode === 'video';
-    if (videoPlay) videoPlay.hidden = currentMode !== 'video';
+    if (videoPlay) videoPlay.hidden = currentMode !== 'video' || outputVideo.hidden;
   }
 
   function setMode(mode) { currentMode = mode === 'image' ? 'image' : 'video'; hideError(); updateModeUI(); saveStudioState(); }
 
   function updatePromptCount() { promptCount.textContent = faDigits(prompt.value.length); }
   function stopProgress() { if (progressTimer) window.clearInterval(progressTimer); progressTimer = null; }
-  function startProgress(title) { stopProgress(); progress.hidden = false; result.hidden = true; videoContent.hidden = true; imageContent.hidden = true; progressTitle.textContent = title; progressText.textContent = 'در حال آماده‌سازی و ارسال درخواست به سرویس هوش مصنوعی...'; progressBar.style.width = '8%'; let value = 8; progressTimer = window.setInterval(() => { value = Math.min(88, value + (value < 55 ? 3 : 1)); progressBar.style.width = `${value}%`; }, 900); }
-  function finishProgress() { stopProgress(); progressBar.style.width = '100%'; window.setTimeout(() => { progress.hidden = true; }, 350); }
+  function setProgress(value) {
+    const rounded = Math.max(0, Math.min(100, Math.round(value)));
+    progressBar.style.width = `${rounded}%`;
+    progressBar.parentElement?.setAttribute('aria-valuenow', String(rounded));
+    if (progressValue) progressValue.textContent = `${faDigits(rounded)}٪`;
+  }
+  function startProgress(title) { stopProgress(); progress.hidden = false; result.hidden = true; videoContent.hidden = true; imageContent.hidden = true; progressTitle.textContent = title; progressText.textContent = currentMode === 'video' ? 'در حال آماده‌سازی ورودی‌ها و ارسال درخواست به مدل...' : 'در حال بررسی ورودی‌ها و آماده‌سازی تصویر...'; setProgress(8); let value = 8; progressTimer = window.setInterval(() => { value = Math.min(88, value + (value < 55 ? 3 : 1)); setProgress(value); }, 900); }
+  function finishProgress() { stopProgress(); setProgress(100); window.setTimeout(() => { progress.hidden = true; }, 350); }
 
   function appendDefaults(data) {
     Object.entries(activeConfig.defaults || {}).forEach(([key, value]) => data.append(`fields[${key}]`, value));
@@ -620,7 +627,7 @@
       const payload = await readPayload(response);
       if (payload.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
       if (currentMode === 'video') {
-        const videoUrl = await pollVideo(payload.status_url); outputVideo.src = videoUrl; outputVideo.hidden = false; outputImage.hidden = true; videoPlay.hidden = false; outputVideo.load(); await outputVideo.play().catch(() => {});
+        const videoUrl = await pollVideo(payload.status_url); outputVideo.src = videoUrl; outputVideo.hidden = false; outputImage.hidden = true; outputVideo.controls = false; videoPlay.hidden = false; outputVideo.load();
       } else {
         const first = payload.images?.[0]?.url || payload.image_url; if (!first) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.'); outputImage.src = first; outputImage.hidden = false; outputVideo.hidden = true; videoPlay.hidden = true;
       }
@@ -630,7 +637,7 @@
       }
     } catch (error) {
       stopProgress();
-      progressBar.style.width = '0%';
+      setProgress(0);
       progress.hidden = true;
       videoContent.hidden = currentMode !== 'video';
       imageContent.hidden = currentMode !== 'image';
@@ -680,7 +687,19 @@
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeHelp(); });
   root.querySelector('[data-studio-download]').addEventListener('click', () => { const media = currentMode === 'video' ? outputVideo : outputImage; if (!media?.src) return; const link = document.createElement('a'); link.href = media.src; link.download = currentMode === 'video' ? 'vatan-ai-video.mp4' : 'vatan-ai-image.png'; link.target = '_blank'; link.click(); });
   root.querySelector('[data-studio-share]').addEventListener('click', async () => { const media = currentMode === 'video' ? outputVideo : outputImage; if (!media?.src) return; try { await navigator.clipboard.writeText(media.src); showError('لینک خروجی کپی شد.'); } catch (_) { showError('کپی لینک در این مرورگر ممکن نیست؛ از گزینه دانلود استفاده کنید.'); } });
-  videoPlay.addEventListener('click', () => { if (outputVideo.paused) { outputVideo.play().catch(() => {}); videoPlay.innerHTML = '<i class="fa-solid fa-pause"></i>'; } else { outputVideo.pause(); videoPlay.innerHTML = '<i class="fa-solid fa-play"></i>'; } });
+  const updateOutputVideoButton = () => {
+    if (!videoPlay || !outputVideo) return;
+    videoPlay.hidden = outputVideo.hidden || !outputVideo.paused;
+    videoPlay.setAttribute('aria-label', outputVideo.paused ? 'پخش ویدیوی خروجی' : 'توقف ویدیوی خروجی');
+  };
+  videoPlay.addEventListener('click', () => {
+    if (!outputVideo.src) return;
+    outputVideo.controls = true;
+    outputVideo.play().catch(() => {});
+  });
+  outputVideo.addEventListener('play', updateOutputVideoButton);
+  outputVideo.addEventListener('pause', updateOutputVideoButton);
+  outputVideo.addEventListener('ended', updateOutputVideoButton);
   window.addEventListener('beforeunload', () => { if (pollTimer) window.clearTimeout(pollTimer); stopProgress(); });
 
   const savedState = readStudioState();

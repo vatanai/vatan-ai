@@ -48,8 +48,8 @@
             data-product-download-url="{{ optional($product)->slug ? route('app.product.download', $product->slug) : '' }}"
             aria-label="نمایش {{ $isVideo ? 'ویدیوی' : 'عکس' }} ساخته‌شده">
       @if($isVideo)
-        <video src="{{ $mediaUrl }}" @if($item->poster_url ?? false) poster="{{ $item->poster_url }}" @endif class="grid-img" muted playsinline preload="metadata"></video>
-        <i class="fa-solid fa-video cell-badge" aria-hidden="true"></i>
+        <video data-src="{{ $mediaUrl }}" @if($item->poster_url ?? false) poster="{{ $item->poster_url }}" @endif class="grid-img" muted playsinline preload="none" aria-hidden="true"></video>
+        <span class="grid-cell-video-badge" aria-label="ویدیو"><i class="fa-solid fa-video" aria-hidden="true"></i></span>
       @else
         <img src="{{ $mediaUrl }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
       @endif

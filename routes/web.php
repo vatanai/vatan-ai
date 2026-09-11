@@ -336,6 +336,8 @@ Route::get('/webhooks/meta', [\App\Http\Controllers\MarketingMetaWebhookControll
     ->name('webhooks.meta.verify');
 Route::post('/webhooks/meta', [\App\Http\Controllers\MarketingMetaWebhookController::class, 'receive'])
     ->name('webhooks.meta.receive');
+Route::post('/webhooks/growth/{growthDataSource:slug}', [\App\Http\Controllers\GrowthDataWebhookController::class, 'receive'])
+    ->name('webhooks.growth.receive');
 
 // ─── Admin Authentication (Guest) ────────────────────────
 Route::middleware('guest:admin')->group(function () {

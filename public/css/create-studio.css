@@ -195,3 +195,127 @@ html.light .create-studio-stage{background:var(--bg-page)}
 @media(max-width:700px){.create-studio-select-menu--portal.create-studio-select-menu--anchored{position:absolute!important;z-index:150!important}body.vatan-app-shell:has(.create-studio-page)>.app-footer{position:relative;z-index:200}}
 @media(max-width:1100px){.create-studio-select .create-studio-select-menu{right:auto!important;left:0!important}}
  .create-studio-generate-button .create-studio-credit-lock{display:none}.create-studio-generate-button.is-credit-locked .create-studio-credit-lock{display:inline-block}.create-studio-generate-button.is-credit-locked{filter:saturate(.72)}
+
+/* لودر استودیو با همان هویت بصری لودر «بساز محصول»؛ متن آن با نوع خروجی تغییر می‌کند. */
+.create-studio-progress {
+  width: min(88%, 520px);
+  padding: 28px;
+  color: var(--text-primary);
+}
+.create-studio-loader-brand {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 0 auto 21px;
+  direction: rtl;
+}
+.create-studio-loader-mark {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.create-studio-loader-mark::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--green);
+  filter: blur(24px);
+  opacity: .16;
+  animation: createStudioLoaderBreathe 2.2s ease-in-out infinite;
+}
+.create-studio-loader-mark img {
+  position: relative;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: contain;
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--bg-card) 88%, transparent), 0 9px 28px color-mix(in srgb, var(--green) 16%, transparent);
+}
+.create-studio-loader-ring {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--green) 42%, transparent);
+  border-radius: 50%;
+  animation: createStudioLoaderOrbit 2.8s linear infinite;
+}
+.create-studio-loader-ring::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--green) 72%, transparent);
+}
+.create-studio-loader-ring--outer { inset: 0; }
+.create-studio-loader-ring--inner { inset: 12px; border-color: color-mix(in srgb, var(--green) 24%, transparent); animation-duration: 2s; animation-direction: reverse; }
+.create-studio-loader-ring--inner::after { top: auto; right: 50%; bottom: -3px; left: auto; width: 5px; height: 5px; opacity: .72; }
+.create-studio-loader-wordmark {
+  position: relative;
+  display: block;
+  width: 92px;
+  aspect-ratio: 1170.79 / 509.15;
+  flex: none;
+  background: var(--text-primary);
+  -webkit-mask: url('/assets/img/vatan-logo.svg') center / contain no-repeat;
+  mask: url('/assets/img/vatan-logo.svg') center / contain no-repeat;
+  overflow: hidden;
+  opacity: .96;
+}
+.create-studio-loader-wordmark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 120%;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--green) 32%, transparent) 8%, var(--green) 15%, var(--green) 100%);
+  transform: scaleX(0);
+  transform-origin: right center;
+  animation: createStudioWordmarkFill 6s ease-in-out infinite;
+}
+.create-studio-progress-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.create-studio-progress-heading strong { font-size: 14px; line-height: 1.7; text-align: right; }
+.create-studio-progress-heading b { flex: none; color: var(--green); font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.create-studio-progress > span { min-height: 18px; align-self: flex-start; margin: 0 0 16px; color: var(--text-secondary); font-size: 10px; line-height: 1.8; text-align: right; }
+.create-studio-progress-track { position: relative; width: 100%; height: 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--green) 11%, var(--border-subtle)); border-radius: 99px; background: color-mix(in srgb, var(--border-subtle) 72%, transparent); }
+.create-studio-progress-track b { position: absolute; inset: 0 0 0 auto; display: block; width: 0; height: 100%; border-radius: inherit; background: var(--green); box-shadow: 0 0 15px color-mix(in srgb, var(--green) 30%, transparent); transition: width .38s linear; }
+.create-studio-progress-meta { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 9px; color: var(--text-secondary); font-size: 8.5px; }
+.create-studio-progress-meta span:last-child { text-align: left; }
+.create-studio-progress-meta i { margin-right: 4px; color: var(--green); }
+.create-studio-result-media { display: flex; align-items: center; justify-content: center; }
+.create-studio-result-media video { object-fit: contain !important; background: var(--bg-page); }
+.create-studio-result-play { z-index: 3; cursor: pointer; box-shadow: 0 12px 28px color-mix(in srgb, var(--bg-page) 40%, transparent); }
+@keyframes createStudioLoaderOrbit { to { transform: rotate(360deg); } }
+@keyframes createStudioLoaderBreathe { 50% { transform: scale(1.14); opacity: .25; } }
+@keyframes createStudioWordmarkFill { 0%, 24% { transform: scaleX(0); opacity: 1; } 72%, 88% { transform: scaleX(1); opacity: 1; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--green) 28%, transparent)); } 100% { transform: scaleX(1); opacity: 0; } }
+@media (max-width: 480px) {
+  .create-studio-progress { width: 100%; padding: 22px 18px; }
+  .create-studio-loader-brand { min-height: 84px; gap: 14px; margin-bottom: 18px; }
+  .create-studio-loader-mark { width: 84px; height: 84px; }
+  .create-studio-loader-mark img { width: 46px; height: 46px; }
+  .create-studio-loader-wordmark { width: 78px; max-height: 36px; }
+  .create-studio-progress-heading strong { font-size: 12.5px; }
+  .create-studio-progress-heading b { font-size: 14px; }
+  .create-studio-progress-meta { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .create-studio-loader-mark::before,
+  .create-studio-loader-ring,
+  .create-studio-loader-wordmark::after { animation: none; }
+}

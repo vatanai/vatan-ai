@@ -3,6 +3,79 @@
 @push('styles')
   <link rel="stylesheet" href="{{ asset('admin/css/orders.css') }}">
   <link rel="stylesheet" href="{{ asset('admin/css/user-operational-snapshot.css') }}?v={{ filemtime(public_path('admin/css/user-operational-snapshot.css')) }}">
+  <style>
+    /* چیدمان اختصاصی همین لیست؛ محتوا و ستون‌های جدول دست‌نخورده می‌مانند. */
+    .orders-plan-purchases-table {
+      width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+    }
+    .orders-plan-purchases-table th {
+      text-align: center;
+      white-space: normal;
+      line-height: 1.55;
+    }
+    .orders-plan-purchases-table td {
+      overflow: hidden;
+    }
+    .orders-plan-purchases-table th:nth-child(1),
+    .orders-plan-purchases-table td:nth-child(1) { width: 42px; }
+    .orders-plan-purchases-table th:nth-child(2),
+    .orders-plan-purchases-table td:nth-child(2) { width: 118px; }
+    .orders-plan-purchases-table th:nth-child(3),
+    .orders-plan-purchases-table td:nth-child(3) { width: 31%; }
+    .orders-plan-purchases-table th:nth-child(4),
+    .orders-plan-purchases-table td:nth-child(4) { width: 148px; }
+    .orders-plan-purchases-table th:nth-child(5),
+    .orders-plan-purchases-table td:nth-child(5) { width: 112px; }
+    .orders-plan-purchases-table th:nth-child(6),
+    .orders-plan-purchases-table td:nth-child(6) { width: 122px; }
+    .orders-plan-purchases-table th:nth-child(7),
+    .orders-plan-purchases-table td:nth-child(7) { width: 116px; }
+    .orders-plan-purchases-table th:nth-child(8),
+    .orders-plan-purchases-table td:nth-child(8) { width: 104px; }
+    .orders-plan-purchases-table th:nth-child(9),
+    .orders-plan-purchases-table td:nth-child(9) { width: 104px; }
+
+    .orders-plan-purchases-table .order-user,
+    .orders-plan-purchases-table .order-user > div {
+      min-width: 0;
+    }
+    .orders-plan-purchases-table .order-user-name,
+    .orders-plan-purchases-table .order-meta {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .orders-plan-purchases-table td:nth-child(6) .order-meta {
+      max-width: 100px;
+      margin-inline: auto;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.55;
+    }
+    .orders-plan-purchases-table .orders-row-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 40px);
+      grid-auto-rows: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: max-content;
+      margin-inline: auto;
+    }
+    .orders-plan-purchases-table .orders-row-actions .order-btn {
+      width: 40px;
+      min-width: 40px;
+      height: 40px;
+      padding: 0;
+    }
+    @media (max-width: 900px) {
+      .orders-plan-purchases-table {
+        min-width: 1050px;
+      }
+    }
+  </style>
 @endpush
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">

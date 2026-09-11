@@ -21,6 +21,7 @@
   const progressTitle = root.querySelector('[data-studio-progress-title]');
   const progressText = root.querySelector('[data-studio-progress-text]');
   const progressBar = root.querySelector('[data-studio-progress-bar]');
+  const progressValue = root.querySelector('[data-studio-progress-value]');
   const result = root.querySelector('[data-studio-result]');
   const outputVideo = root.querySelector('[data-studio-output-video]');
   const outputImage = root.querySelector('[data-studio-output-image]');
@@ -317,6 +318,13 @@
     syncModelConstraints();
   }
 
+  function setProgress(value) {
+    const rounded = Math.max(0, Math.min(100, Math.round(value)));
+    progressBar.style.width = rounded + '%';
+    progressBar.parentElement?.setAttribute('aria-valuenow', String(rounded));
+    if (progressValue) progressValue.textContent = String(rounded).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]) + '٪';
+  }
+
   function startProgress() {
     if (!progress) return;
     progress.hidden = false;
@@ -325,12 +333,12 @@
     root.querySelector('[data-studio-image-content]')?.setAttribute('hidden', '');
     progressTitle.textContent = 'در حال ساخت ویدیو';
     progressText.textContent = 'در حال آماده‌سازی ورودی‌ها و ارسال درخواست به مدل...';
-    progressBar.style.width = '8%';
+    setProgress(8);
     let value = 8;
     window.clearInterval(progressTimer);
     progressTimer = window.setInterval(() => {
       value = Math.min(88, value + (value < 55 ? 3 : 1));
-      progressBar.style.width = value + '%';
+      setProgress(value);
     }, 900);
   }
 
@@ -446,11 +454,11 @@
       outputVideo.src = videoUrl;
       outputVideo.hidden = false;
       outputImage.hidden = true;
+      outputVideo.controls = false;
       videoPlay.hidden = false;
       outputVideo.load();
-      await outputVideo.play().catch(() => {});
       stopProgress();
-      progressBar.style.width = '100%';
+      setProgress(100);
       window.setTimeout(() => { progress.hidden = true; }, 350);
       result.hidden = false;
       submitLabel.textContent = 'دوباره بساز';
@@ -459,7 +467,7 @@
       }
     } catch (error) {
       stopProgress();
-      progressBar.style.width = '0%';
+      setProgress(0);
       if (progress) progress.hidden = true;
       root.querySelector('[data-studio-video-content]')?.removeAttribute('hidden');
       submitLabel.textContent = 'بساز';

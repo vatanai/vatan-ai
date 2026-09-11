@@ -25,14 +25,8 @@ class HomeController extends Controller
     {
         $pageKey = config('home_builder.default_page_key', HomeSection::DEFAULT_PAGE_KEY);
 
-        // فعلاً فقط یک سکشن معرفی ویدئو را نگه می‌داریم؛ سکشن تکراری ویدئوهای حلقه‌ای
-        // حذف شده تا در صفحه هوم هیچ فایل MP4 بارگذاری نشود.
         $sections = HomeSection::forPage($pageKey)
             ->published()
-            ->where(function (Builder $query) {
-                $query->where('type', '!=', 'product_slider')
-                    ->orWhere('layout', '!=', 'video_loop');
-            })
             ->ordered()
             ->get();
 

@@ -29,7 +29,10 @@ class HomeSectionPreviewService
 
         $item = $this->renderService->prepare($section);
 
-        if (isset($item['products']) && $item['products']->isEmpty()) {
+        $isVideoLayout = $type === 'product_slider'
+            && in_array($data['layout'], ['video_loop', 'video_spotlight'], true);
+
+        if (isset($item['products']) && $item['products']->isEmpty() && ! $isVideoLayout) {
             $section->settings = array_merge($settings, ['source' => 'latest']);
             $item = $this->renderService->prepare($section);
         }

@@ -94,6 +94,9 @@
             <div class="g-field"><label for="source-edit-api-key">کلید دسترسی جدید</label><input class="g-input" id="source-edit-api-key" dir="ltr" type="password" name="api_key" autocomplete="new-password" placeholder="برای حفظ مقدار فعلی خالی بگذارید"></div>
             <div class="g-field"><label for="source-edit-event">نام رویداد وب‌هوک</label><input class="g-input" id="source-edit-event" dir="ltr" name="webhook_event" value="{{ old('webhook_event', $sourceConfig['webhook_event'] ?? '') }}"></div>
           @endif
+          @if($selectedSource->ingestion_method === 'webhook')
+            <div class="g-note g-form-full"><strong>نشانی دریافت وب‌هوک</strong><code class="g-code-line" dir="ltr">{{ route('webhooks.growth.receive', $selectedSource) }}</code><span>کلید ذخیره‌شدهٔ منبع را در هدر <span dir="ltr">X-Webhook-Secret</span> یا به‌صورت امضای <span dir="ltr">X-Signature-256</span> بفرستید.</span></div>
+          @endif
           <div class="g-note g-form-full">شناسه داخلی: <span dir="ltr">{{ $selectedSource->slug }}</span> · تعداد نگاشت: {{ number_format($selectedSource->mappings_count) }} · داده خام واردشده: {{ number_format($selectedSource->raw_records_count) }}</div>
           <div class="g-form-actions">
             @if($selectedSource->last_error)<button class="g-btn" form="clear-source-error" type="submit"><i class="fa-solid fa-rotate"></i> پاک‌کردن خطا</button>@endif

@@ -109,13 +109,26 @@ class HomeSectionRenderService
     protected function resolveProducts(HomeSection $section): Collection
     {
         $query = Product::query()->where('status', 'active');
+        $isVideoLayout = $section->type === 'product_slider'
+            && in_array($section->layout, ['video_loop', 'video_spotlight'], true);
+
+        // سکشن‌های ویدیویی نباید با تغییر منبع در پنل، محصول عکس نمایش دهند.
+        // این محدودیت در خود Query اعمال می‌شود تا هم برای منبع خودکار و هم دستی
+        // از ورود داده‌ی نامرتبط به رندر جلوگیری شود.
+        if ($isVideoLayout) {
+            $query->whereIn('media_type', ['video', 'both']);
+        }
 
         $source = (string) $section->setting('source', 'latest');
         $limit = (int) $section->setting('limit', 8);
         $limit = $limit > 0 ? min($limit, 24) : 8;
 
         if ($source === 'manual') {
-            return $this->resolveManualProducts($section, $limit);
+            $products = $this->resolveManualProducts($section, $limit);
+
+            return $isVideoLayout
+                ? $products->filter(fn (Product $product) => in_array($product->media_type, ['video', 'both'], true))->values()
+                : $products;
         }
 
         switch ($source) {
