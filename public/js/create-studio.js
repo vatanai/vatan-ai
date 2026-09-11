@@ -361,7 +361,7 @@
     if (key === 'quality') return `کیفیت خروجی: ${option.label}`;
     if (key === 'motion') return `حرکت دوربین: ${option.label}`;
     if (key === 'duration') return `زمان ویدیو: ${option.label}`;
-    if (key === 'ratio') return `نسبت تصویر: ${formatRatio(option.value)}`;
+    if (key === 'ratio') return `نسبت تصویر: ${option.value === 'source' ? 'نسبت اصلی عکس' : formatRatio(option.value)}`;
     return option.label || 'انتخاب کنید';
   }
 
