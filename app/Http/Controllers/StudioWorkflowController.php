@@ -27,10 +27,9 @@ class StudioWorkflowController extends Controller
         $data['studioConfig']['workflow_models'] = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
-            // مدل‌های فال در پنجره‌ی انتخاب نمایش داده نمی‌شوند؛ فال در اجرای
-            // واقعی به‌عنوان fallback سمت سرور آماده می‌ماند تا فهرست مدل‌ها
-            // با صدها مدل کم‌کاربرد شلوغ نشود.
-            ->whereIn('provider', ['openrouter', 'replicate'])
+            // مسیر ساخت ویدیو در استودیو عمداً تک‌پروایدر است تا هیچ گزینه‌ای
+            // خارج از قرارداد OpenRouter به صف ارسال نشود.
+            ->where('provider', 'openrouter')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
@@ -106,7 +105,7 @@ class StudioWorkflowController extends Controller
             'workflow' => ['required', Rule::in(['text_to_video', 'image_to_video', 'image_sequence_to_video', 'video_to_video'])],
             'prompt' => ['required', 'string', 'max:5000'],
             'video.duration' => ['required', 'integer', 'min:1', 'max:15'],
-            'video.aspect_ratio' => ['required', Rule::in(array_merge(VideoProductConfigService::STUDIO_ASPECT_RATIOS, $isImageWorkflow ? ['source'] : []))],
+            'video.aspect_ratio' => ['required', Rule::in(VideoProductConfigService::STUDIO_ASPECT_RATIOS)],
             'video.resolution' => ['required', Rule::in(VideoProductConfigService::RESOLUTIONS)],
             'video.motion_preset' => ['nullable', 'string', 'max:80'],
             'source_images' => [$isImageWorkflow ? 'required' : 'nullable', 'array', 'min:' . ($workflow === 'image_sequence_to_video' ? 2 : 1), 'max:4'],
@@ -126,7 +125,7 @@ class StudioWorkflowController extends Controller
         $videoConfig = $runner->videoConfiguration();
         $videoConfig['workflow'] = $isImageWorkflow ? 'image_to_video' : $workflow;
         $videoConfig['durations'] = range(1, 15);
-        $videoConfig['preserve_source_aspect_ratio'] = $isImageWorkflow && $request->input('video.aspect_ratio') === 'source';
+        $videoConfig['preserve_source_aspect_ratio'] = false;
         $videoConfig['resolutions'] = VideoProductConfigService::RESOLUTIONS;
         $videoConfig['aspect_ratios'] = VideoProductConfigService::STUDIO_ASPECT_RATIOS;
         $providerOptions['video'] = $videoConfig;
@@ -167,7 +166,7 @@ class StudioWorkflowController extends Controller
                 'fields' => [],
                 'duration' => (int) $request->input('video.duration'),
                 'aspect_ratio' => (string) $request->input('video.aspect_ratio'),
-                'preserve_source_aspect_ratio' => $isImageWorkflow && $request->input('video.aspect_ratio') === 'source',
+                'preserve_source_aspect_ratio' => false,
                 'resolution' => (string) $request->input('video.resolution'),
                 'motion_preset' => (string) $request->input('video.motion_preset', ''),
                 'generate_audio' => false,
@@ -240,11 +239,13 @@ class StudioWorkflowController extends Controller
     private function selectedModel(Request $request, Product $product, string $workflow): AiModel
     {
         $modelId = trim((string) $request->input('studio_model', $request->query('model', $product->primary_model)));
-        $provider = trim((string) $request->input('studio_provider', $request->query('provider', $product->ai_provider)));
+        // در مسیر تک‌پروایدر، provider ذخیره‌شده‌ی قدیمی محصول نباید بتواند
+        // انتخاب OpenRouter را با مقدار قدیمی Fal یا Replicate خنثی کند.
+        $provider = trim((string) $request->input('studio_provider', $request->query('provider', '')));
         $model = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
-            ->whereIn('provider', ['openrouter', 'replicate'])
+            ->where('provider', 'openrouter')
             ->where('openrouter_model_id', $modelId)
             ->when($provider !== '', fn ($query) => $query->where('provider', $provider))
             ->first();
@@ -273,7 +274,7 @@ class StudioWorkflowController extends Controller
         $candidates = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
-            ->whereIn('provider', ['replicate', 'fal'])
+            ->where('provider', 'openrouter')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
@@ -304,7 +305,6 @@ class StudioWorkflowController extends Controller
                             default => 'aspect_ratios',
                         }
                     ] ?? []);
-                    if ($check['key'] === 'supported_aspect_ratios' && $request->input('video.aspect_ratio') === 'source') continue;
                     if (!is_array($supported) || $supported === []) continue;
                     $allowed = array_map(static fn ($value): string => strtolower((string) $value), $supported);
                     if (!in_array(strtolower($check['value']), $allowed, true)) return false;
@@ -367,7 +367,6 @@ class StudioWorkflowController extends Controller
         foreach ($checks as $check) {
             $supported = data_get($capabilities, $check['capability']);
             if (!is_array($supported) || $supported === []) $supported = $check['schema'];
-            if ($check['capability'] === 'supported_aspect_ratios' && $request->input('video.aspect_ratio') === 'source') continue;
             if (!is_array($supported) || $supported === []) continue;
 
             $value = ($check['normalize'])($request->input($check['input']));

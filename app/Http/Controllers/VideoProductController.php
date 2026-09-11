@@ -264,10 +264,11 @@ class VideoProductController extends Controller
         $query = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
+            ->where('provider', 'openrouter')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
-            ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
-                fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END")->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")->orderByDesc('lab_priority') : $builder);
+            ->when($request->filled('studio_provider') && $request->input('studio_provider') === 'openrouter', fn ($builder) => $builder->where('provider', 'openrouter'),
+                fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END")->orderByDesc('lab_priority') : $builder);
         $model = $query->first();
         if (!$model) {
             throw ValidationException::withMessages(['studio_model' => 'مدل انتخاب‌شده برای ساخت ویدیو فعال نیست.']);
@@ -281,6 +282,7 @@ class VideoProductController extends Controller
                 $candidates->put($fallback, (string) ($fallbackProviders[$index] ?? 'openrouter'));
             }
         }
+        $candidates = $candidates->filter(fn (string $provider): bool => $provider === 'openrouter');
         $candidates->forget((string) $model->openrouter_model_id);
         if ($model->allowsPromotionalCredits()) {
             $candidates = $candidates->filter(function (string $provider, string $candidateId): bool {

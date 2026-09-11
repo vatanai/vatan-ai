@@ -77,7 +77,7 @@
     };
     if (!supports('supported_durations', duration)) return 'مدل انتخاب‌شده این زمان ویدیو را پشتیبانی نمی‌کند؛ یک زمان سازگار انتخاب کنید.';
     if (!supports('supported_resolutions', resolution)) return 'مدل انتخاب‌شده این کیفیت خروجی را پشتیبانی نمی‌کند؛ کیفیت دیگری انتخاب کنید.';
-    if (ratio !== 'source' && !supports('supported_aspect_ratios', ratio)) return 'مدل انتخاب‌شده این نسبت تصویر را پشتیبانی نمی‌کند؛ نسبت دیگری انتخاب کنید.';
+    if (!supports('supported_aspect_ratios', ratio)) return 'مدل انتخاب‌شده این نسبت تصویر را پشتیبانی نمی‌کند؛ نسبت دیگری انتخاب کنید.';
     return '';
   }
 
@@ -115,6 +115,20 @@
       const maximum = Math.max(...durations);
       slider.min = String(minimum);
       slider.max = String(maximum);
+      slider.step = '1';
+      if (slider.dataset.modelDurationConstraintBound !== 'true') {
+        slider.addEventListener('input', () => {
+          const value = Number(slider.value);
+          const nearest = durations.reduce((best, candidate) =>
+            Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best,
+          durations[0]);
+          if (Number(slider.value) !== nearest) {
+            slider.value = String(nearest);
+            slider.dispatchEvent(new Event('input', {bubbles: true}));
+          }
+        });
+        slider.dataset.modelDurationConstraintBound = 'true';
+      }
       const current = Number(selectedValue('duration') || slider.value || minimum);
       if (!durations.includes(current)) {
         const next = durations.find((value) => value >= current) ?? maximum;
@@ -132,12 +146,10 @@
       if (!menu || supported.length === 0) return;
       const buttons = [...menu.querySelectorAll('.create-studio-select-option')];
       buttons.forEach((button) => {
-        const isSourceRatio = key === 'ratio' && button.dataset.value === 'source'
-          && ['image_to_video', 'image_sequence_to_video'].includes(workflow);
-        button.hidden = !isSourceRatio && !supported.includes(normalizeModelOption(key, button.dataset.value));
+        button.hidden = !supported.includes(normalizeModelOption(key, button.dataset.value));
       });
       const current = normalizeModelOption(key, selectedValue(key));
-      if (!buttons.some((button) => !button.hidden && (button.dataset.value === 'source' ? current === 'source' : normalizeModelOption(key, button.dataset.value) === current))) {
+      if (!buttons.some((button) => !button.hidden && normalizeModelOption(key, button.dataset.value) === current)) {
         buttons.find((button) => !button.hidden)?.click();
       }
     });

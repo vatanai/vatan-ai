@@ -123,10 +123,7 @@ class ProductGenerateController extends Controller
         $videoData['video']['default_duration'] = 4;
         $videoData['video']['resolutions'] = VideoProductConfigService::RESOLUTIONS;
         $videoData['video']['default_resolution'] = '720p';
-        $videoData['video']['aspect_ratios'] = array_values(array_unique(array_merge(
-            VideoProductConfigService::STUDIO_ASPECT_RATIOS,
-            ['source'],
-        )));
+        $videoData['video']['aspect_ratios'] = VideoProductConfigService::STUDIO_ASPECT_RATIOS;
         $defaultVideoDuration = max(1, (int) ($videoData['video']['default_duration'] ?? 4));
         $defaultVideoCredit = max(0, app(VideoProductConfigService::class)->creditCost($videoProduct, $defaultVideoDuration));
         $videoData['video']['credit_costs_by_duration'] = collect(range(1, 15))
@@ -172,18 +169,18 @@ class ProductGenerateController extends Controller
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
             ->where('openrouter_model_id', $modelId)
-            ->whereIn('provider', ['openrouter', 'replicate'])
+            ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->when(
-                $request->filled('provider'),
+                $mode !== 'video' && $request->filled('provider'),
                 fn ($query) => $query->where('provider', (string) $request->query('provider')),
-                fn ($query) => $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
+                fn ($query) => $mode !== 'video' && $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
             )
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
-            ->whereIn('provider', ['openrouter', 'replicate'])
+            ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw($mode === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
@@ -248,7 +245,7 @@ class ProductGenerateController extends Controller
             ->whereIn('task_type', $this->studioTaskTypes($modality))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
-            ->whereIn('provider', ['openrouter', 'replicate'])
+            ->when($modality === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'replicate']))
             ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
@@ -283,7 +280,9 @@ class ProductGenerateController extends Controller
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
         $primary = (string) $product->primary_model;
-        if ($primary !== '' && $product->ai_provider !== 'fal' && !$options->contains('value', $primary)) {
+        if ($primary !== ''
+            && ($modality !== 'video' || $product->ai_provider === 'openrouter')
+            && !$options->contains('value', $primary)) {
             $options->prepend([
                 'value' => $primary,
                 'label' => $primary,
@@ -346,8 +345,8 @@ class ProductGenerateController extends Controller
                 }
             })
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
-            ->when($request->boolean('studio_mode'), fn ($builder) => $builder->whereIn('provider', ['openrouter', 'replicate']))
-            ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
+            ->when($request->boolean('studio_mode') && $modality === 'video', fn ($builder) => $builder->where('provider', 'openrouter'))
+            ->when($request->filled('studio_provider') && ($modality !== 'video' || $request->input('studio_provider') === 'openrouter'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
                 fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'replicate' THEN 1 WHEN 'fal' THEN 2 ELSE 3 END")->orderByDesc('lab_priority') : $builder);
         $model = $query->first();
         if (!$model) {

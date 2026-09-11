@@ -51,7 +51,7 @@ class VideoGenerationService
             throw ValidationException::withMessages(['video.duration' => 'مدت انتخاب‌شده برای این محصول فعال نیست.']);
         }
         $allowedAspectRatios = $studioMode ? VideoProductConfigService::STUDIO_ASPECT_RATIOS : (array) $config['aspect_ratios'];
-        if (($studioMode && !empty($options['preserve_source_aspect_ratio'])) || (!$studioMode && !empty($config['preserve_source_aspect_ratio']))) {
+        if (!$studioMode && !empty($config['preserve_source_aspect_ratio'])) {
             $allowedAspectRatios[] = 'source';
         }
         if (!in_array($aspectRatio, $allowedAspectRatios, true)) {
@@ -103,6 +103,41 @@ class VideoGenerationService
         $supportedResolutions = (array) data_get($this->modelSchemas->properties($model), 'resolution.enum', []);
         if (!$studioMode && $supportedResolutions !== [] && !in_array($resolution, $supportedResolutions, true)) {
             throw ValidationException::withMessages(['video.resolution' => 'این مدل کیفیت انتخاب‌شده را پشتیبانی نمی‌کند؛ یک کیفیت سازگار انتخاب کنید.']);
+        }
+        $capabilityChecks = [
+            [
+                'input' => 'video.duration',
+                'values' => (array) data_get($model->capability_config, 'supported_durations', []),
+                'value' => (string) $duration,
+                'normalize' => static fn (mixed $value): string => (string) ((int) $value),
+                'message' => 'مدل انتخاب‌شده این زمان ویدیو را پشتیبانی نمی‌کند؛ یک زمان سازگار انتخاب کنید.',
+            ],
+            [
+                'input' => 'video.resolution',
+                'values' => (array) data_get($model->capability_config, 'supported_resolutions', []),
+                'value' => $resolution,
+                'normalize' => static fn (mixed $value): string => match (strtolower(trim((string) $value))) {
+                    '2160', '2160p', '4k' => '4k',
+                    '1440', '1440p', '2k' => '2k',
+                    default => strtolower(trim((string) $value)),
+                },
+                'message' => 'مدل انتخاب‌شده این کیفیت خروجی را پشتیبانی نمی‌کند؛ کیفیت دیگری انتخاب کنید.',
+            ],
+            [
+                'input' => 'video.aspect_ratio',
+                'values' => (array) data_get($model->capability_config, 'supported_aspect_ratios', []),
+                'value' => $aspectRatio,
+                'normalize' => static fn (mixed $value): string => strtolower(trim((string) $value)),
+                'message' => 'مدل انتخاب‌شده این نسبت تصویر را پشتیبانی نمی‌کند؛ نسبت دیگری انتخاب کنید.',
+            ],
+        ];
+        foreach ($capabilityChecks as $check) {
+            if ($check['values'] === []) continue;
+            $normalize = $check['normalize'];
+            $allowed = array_map($normalize, $check['values']);
+            if (!in_array($normalize($check['value']), $allowed, true)) {
+                throw ValidationException::withMessages([$check['input'] => $check['message']]);
+            }
         }
         $fieldValues = (array) ($options['fields'] ?? []);
         $fieldValues['prompt'] = trim((string) ($options['prompt'] ?? $fieldValues['prompt'] ?? ''));
@@ -373,7 +408,7 @@ class VideoGenerationService
         $output = collect((array) ($normalized['output_urls'] ?? []))->first(fn ($item): bool => is_array($item) && filter_var($item['url'] ?? null, FILTER_VALIDATE_URL));
         if (!$output) throw new RuntimeException('سرویس‌دهنده ویدیو را تکمیل کرد اما آدرس فایل خروجی موجود نیست.');
         try {
-            $stored = $this->downloadOutput((string) $output['url'], $generation->order?->ai_provider ?: 'fal');
+            $stored = $this->downloadOutput((string) $output['url'], $generation->order?->ai_provider ?: 'openrouter');
         } catch (\Throwable $error) {
             if ($this->retryFallback($generation, $error->getMessage())) return $generation->fresh();
             throw $error;
@@ -457,6 +492,7 @@ class VideoGenerationService
         $models = [];
         foreach ($ids as $index => $id) {
             $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
+                ->where('provider', 'openrouter')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
                 ->where('openrouter_model_id', $id)->where('provider', $providers[$index] ?? null)->first();
             if ($model && filled($this->credentials->for($model->provider)['api_key'] ?? null)) $models[] = $model;
@@ -536,7 +572,9 @@ class VideoGenerationService
         }
         foreach (['frames_per_second', 'fps'] as $field) if (array_key_exists($field, $properties)) $input[$field] = $fps;
         $aspectEnum = (array) data_get($properties, 'aspect_ratio.enum', []);
-        $aspectSupported = $aspectEnum === [] || in_array((string) $options['aspect_ratio'], $aspectEnum, true);
+        $configuredAspectRatios = array_map('strval', (array) data_get($model->capability_config, 'supported_aspect_ratios', []));
+        $aspectSupported = ($aspectEnum === [] || in_array((string) $options['aspect_ratio'], $aspectEnum, true))
+            && ($configuredAspectRatios === [] || in_array((string) $options['aspect_ratio'], $configuredAspectRatios, true));
         if (array_key_exists('aspect_ratio', $properties) && $aspectSupported) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
         if (array_key_exists('resolution', $properties)) $input['resolution'] = (string) $options['resolution'];
         $negativePrompt = trim(implode(', ', array_filter([$product->negative_prompt, $options['negative_prompt'] ?? ''])));
@@ -637,6 +675,7 @@ class VideoGenerationService
             $model = AiModel::query()
                 ->where('is_active', true)
                 ->where('output_modality', 'video')
+                ->where('provider', 'openrouter')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
                 ->where('provider', $provider)
                 ->where('openrouter_model_id', $id)
