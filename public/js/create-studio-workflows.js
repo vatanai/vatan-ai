@@ -498,7 +498,6 @@
     button.addEventListener('click', () => window.setTimeout(requestQuote, 40));
   });
   root.querySelector('[data-studio-select="model"] [data-select-toggle]')?.addEventListener('click', () => window.setTimeout(() => {
-    selectCompatibleModel();
     filterModelOptions();
   }, 40));
   document.addEventListener('click', (event) => {
