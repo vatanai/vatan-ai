@@ -85,10 +85,16 @@
     const menu = [...document.querySelectorAll('[data-select-menu]')]
       .find((item) => item.dataset.studioMenuKey === 'model' || item.closest('[data-studio-select="model"]'));
     if (!menu) return;
-    menu.querySelectorAll('.create-studio-select-option').forEach((button) => {
+    const workflowOrder = new Map((config.workflow_models || []).map((item, index) => [String(item.value), index]));
+    const buttons = [...menu.querySelectorAll('.create-studio-select-option')];
+    buttons.forEach((button) => {
       const item = (config.workflow_models || []).find((model) => String(model.value) === String(button.dataset.value));
       button.hidden = !modelSupportsWorkflow(item);
     });
+    buttons.sort((left, right) => {
+      return (workflowOrder.get(String(left.dataset.value)) ?? Number.MAX_SAFE_INTEGER)
+        - (workflowOrder.get(String(right.dataset.value)) ?? Number.MAX_SAFE_INTEGER);
+    }).forEach((button) => menu.appendChild(button));
   }
 
   function updateModelAvailability() {
@@ -425,7 +431,10 @@
   root.querySelectorAll('[data-select-toggle]').forEach((button) => {
     button.addEventListener('click', () => window.setTimeout(requestQuote, 40));
   });
-  root.querySelector('[data-studio-select="model"] [data-select-toggle]')?.addEventListener('click', () => window.setTimeout(filterModelOptions, 40));
+  root.querySelector('[data-studio-select="model"] [data-select-toggle]')?.addEventListener('click', () => window.setTimeout(() => {
+    selectCompatibleModel();
+    filterModelOptions();
+  }, 40));
   document.addEventListener('click', (event) => {
     if (event.target.closest('.create-studio-select-option')) window.setTimeout(requestQuote, 40);
   }, true);
