@@ -172,10 +172,11 @@
     ]);
     if (current && modelSupportsWorkflow(current) && !staleDefaults.has(String(current.value))) return true;
     const compatible = (config.workflow_models || []).find((item) => modelSupportsWorkflow(item));
-    const option = compatible && [...root.querySelectorAll('.create-studio-select-option[data-value]')]
+    const option = compatible && [...document.querySelectorAll('.create-studio-select-option[data-value]')]
       .find((button) => String(button.dataset.value) === String(compatible.value));
     if (option) {
       option.click();
+      hideError();
       return true;
     }
     showError('برای این نوع ورودی، مدل سازگار در دسترس نیست.');
