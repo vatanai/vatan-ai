@@ -43,7 +43,7 @@
         <div class="grid-preview-img-wrap">
           <img id="gridPreviewImg" src="" alt="پیش‌نمایش عکس ساخته‌شده">
           <video id="gridPreviewVideo" controls playsinline preload="metadata" hidden></video>
-          <button type="button" class="grid-preview-play" id="gridPreviewPlay" aria-label="پخش ویدیو" hidden><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+          <button type="button" class="grid-preview-play" id="gridPreviewPlay" aria-label="پخش ویدیو" hidden><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M8 5v14l11-7L8 5Z"></path></svg></button>
         </div>
         <span class="grid-preview-media-badge">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>

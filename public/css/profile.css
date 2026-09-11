@@ -1551,4 +1551,4 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   cursor: pointer;
 }
 .grid-preview-play:hover { transform: translate(-50%, -50%) scale(1.05); }
-.grid-preview-play i { margin-right: -2px; font-size: 17px; }
+.grid-preview-play svg { width: 20px; height: 20px; display: block; fill: currentColor; }
