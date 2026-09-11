@@ -581,6 +581,9 @@ class VideoGenerationService
         }
 
         $imageField = $this->modelSchemas->fieldFor($model, ['image_url', 'start_image', 'first_frame', 'input_image', 'image', 'reference_image', 'subject_image']);
+        if (!$imageField && $model->provider === 'fal' && $model->task_type === 'image_to_video') {
+            $imageField = 'image_url';
+        }
         if ($imageField && $sourceImages !== []) {
             $input[$imageField] = $sourceImages[0];
         }
@@ -589,6 +592,9 @@ class VideoGenerationService
             $input[$multipleImageField] = $sourceImages;
         }
         $videoField = $this->modelSchemas->fieldFor($model, ['video_url', 'input_video', 'source_video', 'video']);
+        if (!$videoField && $model->provider === 'fal' && $model->task_type === 'video_to_video') {
+            $videoField = 'video_url';
+        }
         if ($videoField && !empty($options['source_video_url'])) $input[$videoField] = $options['source_video_url'];
         $audioField = $this->modelSchemas->fieldFor($model, ['audio_url', 'input_audio', 'audio']);
         if ($audioField && !empty($options['audio_url'])) $input[$audioField] = $options['audio_url'];

@@ -142,12 +142,21 @@ class FalImageProvider extends AbstractQueuedImageProvider
 
         $result = (array) ($payload['result'] ?? ($payload['payload'] ?? $payload));
         $items = [];
-        foreach (['images', 'image', 'output'] as $key) {
+        foreach (['images', 'image', 'videos', 'video', 'output'] as $key) {
             $value = $result[$key] ?? null;
             if (!$value) continue;
             $values = is_array($value) && array_is_list($value) ? $value : [$value];
             foreach ($values as $item) {
                 $url = is_string($item) ? $item : ($item['url'] ?? null);
+                if (is_string($url) && filter_var($url, FILTER_VALIDATE_URL)) {
+                    $items[] = ['url' => $url, 'headers' => []];
+                }
+            }
+        }
+        foreach (['video_url', 'video_urls'] as $key) {
+            $value = $result[$key] ?? null;
+            $values = is_array($value) ? $value : [$value];
+            foreach ($values as $url) {
                 if (is_string($url) && filter_var($url, FILTER_VALIDATE_URL)) {
                     $items[] = ['url' => $url, 'headers' => []];
                 }

@@ -208,13 +208,19 @@ class AiModel extends Model
 
     /** کاتالوگ کوچک و تأییدشده‌ی فرم ویدیو؛ مدل‌های دیگر در آزمایشگاه می‌مانند. */
     public const VIDEO_PRODUCT_MODEL_IDS = [
-        'kwaivgi/kling-v2.5-turbo', 'runwayml/gen-4-turbo', 'luma/dream-machine-2',
-        'fal-ai/wan/v2.2-5b/text-to-video/fast-wan', 'fal-ai/wan/v2.2-a14b/image-to-video/turbo',
+        'fal-ai/wan/v2.2-5b/text-to-video/fast-wan',
+        'fal-ai/wan/v2.2-a14b/image-to-video/turbo',
         'fal-ai/kling-video/v3/turbo/pro/image-to-video',
+        'fal-ai/kling-video/o3/pro/video-to-video/reference',
+        'kwaivgi/kling-v2.5-turbo', 'runwayml/gen-4-turbo', 'luma/dream-machine-2',
     ];
 
     /** مدل‌های شناخته‌شده‌ی استودیو باید قبل از کاتالوگ آزمایشی نمایش داده شوند. */
     public const STUDIO_VIDEO_MODEL_PRIORITY = [
+        'fal-ai/wan/v2.2-5b/text-to-video/fast-wan',
+        'fal-ai/wan/v2.2-a14b/image-to-video/turbo',
+        'fal-ai/kling-video/v3/turbo/pro/image-to-video',
+        'fal-ai/kling-video/o3/pro/video-to-video/reference',
         'kwaivgi/kling-v2.5-turbo',
         'runwayml/gen-4-turbo',
         'luma/dream-machine-2',
