@@ -283,8 +283,8 @@ class ProductGenerateController extends Controller
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
         $primary = (string) $product->primary_model;
-        if ($primary !== ''
-            && ($modality !== 'video' || $product->ai_provider === 'openrouter')
+        if ($modality !== 'video'
+            && $primary !== ''
             && !$options->contains('value', $primary)) {
             $options->prepend([
                 'value' => $primary,
