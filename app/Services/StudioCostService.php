@@ -37,6 +37,27 @@ class StudioCostService
                 $pricingSource = $live['source'] ?? 'قیمت لحظه‌ای پروایدر';
             }
         }
+
+        // مدل‌های قدیمی ویدیو که در کاتالوگ رسمی استودیو انتخاب شده‌اند،
+        // ممکن است موقتاً قیمت دلاری قابل‌خواندن از پرووایدر نداشته باشند.
+        // در این حالت از قیمت اعتبارِ تنظیم‌شده برای همان محصول استفاده می‌کنیم
+        // تا ساخت متوقف نشود و مبلغی خارج از تنظیمات فروش محصول محاسبه نشود.
+        if (($unitUsd === null || $unitUsd <= 0)
+            && $mediaType === 'video'
+            && $model
+            && in_array((string) $model->openrouter_model_id, AiModel::VIDEO_PRODUCT_MODEL_IDS, true)) {
+            $configuredCredits = app(VideoProductConfigService::class)->creditCost(
+                $product,
+                max(1, min(15, (int) ($duration ?: 4))),
+                $resolution !== '' ? $resolution : null,
+            );
+
+            if ($configuredCredits > 0) {
+                $unitUsd = ($configuredCredits * self::CREDIT_VALUE_TOMAN) / max(1, $this->latestExchangeRate());
+                $pricingSource = 'تنظیمات اعتبار استودیو';
+            }
+        }
+
         $costKnown = $unitUsd !== null && $unitUsd > 0;
         $rate = $this->latestExchangeRate();
         $costTomanPerOutput = $costKnown ? $unitUsd * $rate : null;
