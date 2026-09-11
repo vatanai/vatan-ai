@@ -26,6 +26,7 @@ class StudioWorkflowController extends Controller
         $data['studioConfig']['workflow_models'] = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
+            ->where('provider', '<>', 'fal')
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
@@ -226,6 +227,7 @@ class StudioWorkflowController extends Controller
         $model = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
+            ->where('provider', '<>', 'fal')
             ->where('openrouter_model_id', $modelId)
             ->when($provider !== '', fn ($query) => $query->where('provider', $provider))
             ->first();

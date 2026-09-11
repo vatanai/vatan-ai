@@ -172,13 +172,18 @@ class ProductGenerateController extends Controller
         $primary = AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
             ->where('openrouter_model_id', $modelId)
-            ->when($request->filled('provider'), fn ($query) => $query->where('provider', (string) $request->query('provider')), fn ($query) => $query->where('provider', (string) $product->ai_provider))
+            ->where('provider', '<>', 'fal')
+            ->when(
+                $request->filled('provider'),
+                fn ($query) => $query->where('provider', (string) $request->query('provider')),
+                fn ($query) => $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
+            )
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
-            ->whereIn('provider', ['fal', 'replicate'])
+            ->whereIn('provider', ['openrouter', 'replicate'])
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw($mode === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
@@ -243,6 +248,7 @@ class ProductGenerateController extends Controller
             ->whereIn('task_type', $this->studioTaskTypes($modality))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
+            ->where('provider', '<>', 'fal')
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
                 : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
@@ -274,7 +280,7 @@ class ProductGenerateController extends Controller
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
         $primary = (string) $product->primary_model;
-        if ($primary !== '' && !$options->contains('value', $primary)) {
+        if ($primary !== '' && $product->ai_provider !== 'fal' && !$options->contains('value', $primary)) {
             $options->prepend([
                 'value' => $primary,
                 'label' => $primary,
@@ -337,6 +343,7 @@ class ProductGenerateController extends Controller
                 }
             })
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
+            ->when($request->boolean('studio_mode'), fn ($builder) => $builder->where('provider', '<>', 'fal'))
             ->when($request->filled('studio_provider'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
                 fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")->orderByDesc('lab_priority') : $builder);
         $model = $query->first();
@@ -1196,13 +1203,18 @@ class ProductGenerateController extends Controller
                     });
                 }
             })->where('openrouter_model_id', $modelId)
-            ->when($request->filled('studio_provider'), fn ($query) => $query->where('provider', (string) $request->input('studio_provider')), fn ($query) => $query->where('provider', (string) $product->ai_provider))
+            ->when($request->boolean('studio_mode'), fn ($query) => $query->where('provider', '<>', 'fal'))
+            ->when(
+                $request->filled('studio_provider'),
+                fn ($query) => $query->where('provider', (string) $request->input('studio_provider')),
+                fn ($query) => $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
+            )
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', 'image')
             ->whereIn('task_type', $taskTypes)
-            ->whereIn('provider', ['fal', 'replicate'])
+            ->whereIn('provider', ['openrouter', 'replicate'])
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw("CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
             ->orderByRaw("CASE provider WHEN 'fal' THEN 0 WHEN 'replicate' THEN 1 ELSE 2 END")
