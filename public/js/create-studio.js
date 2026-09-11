@@ -128,14 +128,23 @@
 
   function optionsFor(key) {
     if (!activeConfig) return [];
-    if (key === 'model') return (activeConfig.model_options || [{value: activeConfig.model, label: activeConfig.model, meta: activeConfig.name}]).map((item) => ({
+    if (key === 'model') {
+      const workflowOrder = currentMode === 'video'
+        ? new Map((config.workflow_models || []).map((item, index) => [String(item.value), index]))
+        : null;
+      return (activeConfig.model_options || [{value: activeConfig.model, label: activeConfig.model, meta: activeConfig.name}]).map((item) => ({
       ...item,
       value: item.value,
       label: item.label || item.value,
       meta: item.meta || '',
       provider: item.provider || '',
       task_type: item.task_type || '',
-    })).filter((item) => currentMode !== 'image' || modelSupportsImageWorkflow(item));
+      })).sort((left, right) => {
+        if (!workflowOrder) return 0;
+        return (workflowOrder.get(String(left.value)) ?? Number.MAX_SAFE_INTEGER)
+          - (workflowOrder.get(String(right.value)) ?? Number.MAX_SAFE_INTEGER);
+      }).filter((item) => currentMode !== 'image' || modelSupportsImageWorkflow(item));
+    }
     if (key === 'count') return Array.from({length: 6}, (_, index) => {
       const value = String(index + 1);
       return {value, label: `${formatNumber(value)} عدد`, meta: ''};

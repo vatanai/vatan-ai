@@ -99,7 +99,12 @@
 
   function selectCompatibleModel() {
     const current = workflowModel(selectedModel());
-    if (current && modelSupportsWorkflow(current)) return true;
+    const staleDefaults = new Set([
+      'kwaivgi/kling-v2.5-turbo',
+      'runwayml/gen-4-turbo',
+      'luma/dream-machine-2',
+    ]);
+    if (current && modelSupportsWorkflow(current) && !staleDefaults.has(String(current.value))) return true;
     const compatible = (config.workflow_models || []).find((item) => modelSupportsWorkflow(item));
     const option = compatible && [...root.querySelectorAll('.create-studio-select-option[data-value]')]
       .find((button) => String(button.dataset.value) === String(compatible.value));

@@ -185,9 +185,15 @@ class StudioWorkflowController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
 
+            $exceptionMessage = strtolower($exception->getMessage());
+            $message = str_contains($exceptionMessage, 'exhausted balance')
+                || str_contains($exceptionMessage, 'user is locked')
+                ? 'موجودی سرویس ساخت ویدیو موقتاً تمام شده است؛ اعتبار این درخواست برگشت داده شد.'
+                : 'ساخت ویدیو انجام نشد؛ مدل یا اتصال سرویس را بررسی کنید.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'ساخت ویدیو انجام نشد؛ مدل یا اتصال سرویس را بررسی کنید.',
+                'message' => $message,
                 'error_code' => 'STUDIO_WORKFLOW_UNAVAILABLE',
             ], 503);
         }
