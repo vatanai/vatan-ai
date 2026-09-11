@@ -214,7 +214,7 @@
     if (!container) return;
     container.innerHTML = '';
     const supportedTypes = ['select', 'radio', 'button_group', 'style_preset'];
-    (activeConfig?.fields || []).filter((field) => supportedTypes.includes(field.type) && !['style', 'background', 'duration', 'theme', 'action', 'actions'].includes(String(field.id).toLowerCase()) && !['اکشن', 'actions', 'action'].includes(String(field.label || '').trim().toLowerCase()) && !field.hidden).forEach((field) => {
+    (activeConfig?.fields || []).filter((field) => supportedTypes.includes(field.type) && !['style', 'visual_style', 'background', 'duration', 'theme', 'action', 'actions'].includes(String(field.id).toLowerCase()) && !['اکشن', 'actions', 'action'].includes(String(field.label || '').trim().toLowerCase()) && !field.hidden).forEach((field) => {
       const row = document.createElement('div');
       row.className = 'create-studio-setting-row';
       row.dataset.studioDynamicField = field.id;
