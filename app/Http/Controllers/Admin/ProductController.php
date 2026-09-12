@@ -228,9 +228,9 @@ class ProductController extends Controller
             ->where('source', 'app')
             ->where('status', 'completed')
             ->where('processing_status', 'completed')
-            ->latest('completed_at')
             ->get()
-            ->groupBy('product_id');
+            ->groupBy('product_id')
+            ->map(fn ($orders) => $orders->sortByDesc('completed_at')->values());
 
         $scopedProductQuery = fn () => Product::query()->whereIn('media_type', $productMediaTypes);
         $activeCount   = $scopedProductQuery()->where('status', 'active')->count();
