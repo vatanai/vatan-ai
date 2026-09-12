@@ -1283,7 +1283,10 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   width: auto;
   height: auto;
   flex: 0 1 auto;
+  aspect-ratio: var(--preview-video-ratio, auto);
 }
+
+.grid-preview-img-wrap.is-video { min-height: 0; }
 
 .grid-preview-img-wrap video { background: #000; }
 
@@ -1520,8 +1523,8 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 .grid-cell--video .grid-video-source { display: none; }
 .grid-cell-video-badge {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 10px;
+  left: 10px;
   z-index: 2;
   width: 24px;
   height: 24px;

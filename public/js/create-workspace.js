@@ -40,6 +40,23 @@
     setStageTab('output');
   }
 
+  function imageUrlFromPayload(image) {
+    if (typeof image === 'string') return image.trim();
+    if (!image || typeof image !== 'object') return '';
+    const nestedUrl = image.image_url && typeof image.image_url === 'object' ? image.image_url.url : image.image_url;
+    return String(image.url || nestedUrl || image.src || '').trim();
+  }
+
+  function normalizeImageOutputs(payload) {
+    const listedImages = Array.isArray(payload?.images) ? payload.images : [];
+    const images = listedImages
+      .map((image) => ({...(image && typeof image === 'object' ? image : {}), url: imageUrlFromPayload(image)}))
+      .filter((image) => image.url);
+    if (images.length) return images;
+    const fallbackUrl = imageUrlFromPayload(payload?.image_url);
+    return fallbackUrl ? [{url: fallbackUrl, title: ''}] : [];
+  }
+
   stageTabButtons.forEach((button) => button.addEventListener('click', () => setStageTab(button.dataset.stageTab)));
 
   const tabs = [...root.querySelectorAll('[data-tab]')];
@@ -267,8 +284,11 @@
         throw new Error(response.status >= 500 ? 'ارتباط با سرویس ساخت تصویر برقرار نشد. لطفاً دوباره تلاش کنید.' : 'درخواست ساخت تصویر پذیرفته نشد.');
       }
       if (!response.ok || !payload.success) throw new Error(payload.message || Object.values(payload.errors || {}).flat()[0] || 'ساخت تصویر انجام نشد.');
-      const images = payload.images?.length ? payload.images : [{ url: payload.image_url, title: '' }];
-      const main = result.querySelector(':scope > img'); main.src = images[0].url;
+      const images = normalizeImageOutputs(payload);
+      if (!images.length) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.');
+      const main = result.querySelector('[data-result-image]') || result.querySelector(':scope > img');
+      if (!main) throw new Error('فضای نمایش خروجی تصویر در صفحه پیدا نشد.');
+      main.src = images[0].url;
       const strip = result.querySelector('.cw-result-strip'); strip.innerHTML = '';
       images.forEach((image, index) => {
         const button = document.createElement('button'); button.type = 'button'; button.className = index === 0 ? 'active' : '';
@@ -289,7 +309,7 @@
     root.querySelectorAll('.cw-result-strip button').forEach((item) => item.classList.toggle('active', item === button));
   }));
   root.querySelector('[data-action=download]')?.addEventListener('click', () => {
-    const url = root.querySelector('[data-result] > img').src;
+    const url = (root.querySelector('[data-result-image]') || root.querySelector('[data-result] > img'))?.src;
     if (!url) return;
     const trackUrl = root.dataset.downloadTrackUrl;
     if (trackUrl) {

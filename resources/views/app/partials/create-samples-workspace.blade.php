@@ -268,7 +268,7 @@
           </div>
         </div>
         <div class="cw-result" data-result hidden>
-          <img src="{{ $product['cover'] }}" alt="نمونه خروجی">
+          <img src="{{ $product['cover'] }}" alt="نمونه خروجی" data-result-image>
           <div class="cw-result-count"><i class="fa-solid fa-circle-check"></i> یک خروجی آماده و در بخش پروفایل ذخیره شد</div>
           <div class="cw-result-strip">
             @foreach(range(1, $product['output_count'] ?? 4) as $outputIndex)

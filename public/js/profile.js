@@ -380,6 +380,7 @@
   var previewRecreate = document.getElementById('gridPreviewRecreate');
   var previewDate     = document.getElementById('gridPreviewDate');
   var previewClose    = document.getElementById('gridPreviewClose');
+  var previewImgWrap  = previewVideo ? previewVideo.closest('.grid-preview-img-wrap') : null;
   var previewDownloadTrackUrl = '';
 
   function updatePreviewPlayButton() {
@@ -387,6 +388,21 @@
     var isVideo = !previewVideo.hidden && Boolean(previewVideo.src);
     previewPlay.hidden = !isVideo || !previewVideo.paused;
     previewPlay.setAttribute('aria-label', previewVideo.paused ? 'پخش ویدیو' : 'توقف ویدیو');
+  }
+
+  function syncPreviewVideoFrame() {
+    if (!previewImgWrap || !previewVideo || previewVideo.hidden) {
+      if (previewImgWrap) {
+        previewImgWrap.classList.remove('is-video');
+        previewImgWrap.style.removeProperty('--preview-video-ratio');
+      }
+      return;
+    }
+
+    previewImgWrap.classList.add('is-video');
+    if (previewVideo.videoWidth && previewVideo.videoHeight) {
+      previewImgWrap.style.setProperty('--preview-video-ratio', previewVideo.videoWidth + ' / ' + previewVideo.videoHeight);
+    }
   }
 
   function openGridPreview(cell) {
@@ -404,6 +420,7 @@
     var isVideo = mediaKind === 'video' && videoUrl;
     previewImg.hidden = Boolean(isVideo);
     previewVideo.hidden = !isVideo;
+    syncPreviewVideoFrame();
     previewImg.src = isVideo ? '' : imgUrl;
     if (isVideo) {
       previewVideo.poster = posterUrl;
@@ -433,6 +450,7 @@
 
     previewModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    syncPreviewVideoFrame();
   }
 
   function closeGridPreview() {
@@ -445,6 +463,7 @@
       previewVideo.load();
       previewVideo.hidden = true;
     }
+    syncPreviewVideoFrame();
     if (previewPlay) previewPlay.hidden = true;
     if (previewImg) previewImg.hidden = false;
     if (previewRecreate) {
@@ -472,6 +491,8 @@
     previewVideo.addEventListener('play', updatePreviewPlayButton);
     previewVideo.addEventListener('pause', updatePreviewPlayButton);
     previewVideo.addEventListener('ended', updatePreviewPlayButton);
+    previewVideo.addEventListener('loadedmetadata', syncPreviewVideoFrame);
+    window.addEventListener('resize', syncPreviewVideoFrame);
   }
 
   if (previewDownload) {

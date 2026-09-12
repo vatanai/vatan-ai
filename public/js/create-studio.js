@@ -552,6 +552,19 @@
   function startProgress(title) { stopProgress(); progress.hidden = false; result.hidden = true; videoContent.hidden = true; imageContent.hidden = true; progressTitle.textContent = title; progressText.textContent = currentMode === 'video' ? 'در حال آماده‌سازی ورودی‌ها و ارسال درخواست به مدل...' : 'در حال بررسی ورودی‌ها و آماده‌سازی تصویر...'; setProgress(8); let value = 8; progressTimer = window.setInterval(() => { value = Math.min(88, value + (value < 55 ? 3 : 1)); setProgress(value); }, 900); }
   function finishProgress() { stopProgress(); setProgress(100); window.setTimeout(() => { progress.hidden = true; }, 350); }
 
+  function imageUrlFromPayload(image) {
+    if (typeof image === 'string') return image.trim();
+    if (!image || typeof image !== 'object') return '';
+    const nestedUrl = image.image_url && typeof image.image_url === 'object' ? image.image_url.url : image.image_url;
+    return String(image.url || nestedUrl || image.src || '').trim();
+  }
+
+  function firstImageUrl(payload) {
+    const listedImages = Array.isArray(payload?.images) ? payload.images : [];
+    const listedUrl = listedImages.map(imageUrlFromPayload).find(Boolean);
+    return listedUrl || imageUrlFromPayload(payload?.image_url);
+  }
+
   function appendDefaults(data) {
     Object.entries(activeConfig.defaults || {}).forEach(([key, value]) => data.append(`fields[${key}]`, value));
     if (currentMode === 'video') {
@@ -629,7 +642,7 @@
       if (currentMode === 'video') {
         const videoUrl = await pollVideo(payload.status_url); outputVideo.src = videoUrl; outputVideo.hidden = false; outputImage.hidden = true; outputVideo.controls = false; videoPlay.hidden = false; outputVideo.load();
       } else {
-        const first = payload.images?.[0]?.url || payload.image_url; if (!first) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.'); outputImage.src = first; outputImage.hidden = false; outputVideo.hidden = true; videoPlay.hidden = true;
+        const first = firstImageUrl(payload); if (!first) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.'); outputImage.src = first; outputImage.hidden = false; outputVideo.hidden = true; videoPlay.hidden = true;
       }
       finishProgress(); result.hidden = false; submitLabel.textContent = 'دوباره بساز';
       if (window.matchMedia('(max-width: 700px)').matches) {
