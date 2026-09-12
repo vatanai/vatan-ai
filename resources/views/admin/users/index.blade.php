@@ -51,11 +51,13 @@
         <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-1 min-w-[200px] items-center gap-1.5">
           @if($birthMonth)<input type="hidden" name="birth_month" value="{{ $birthMonth }}">@endif
           @if($birthDay)<input type="hidden" name="birth_day" value="{{ $birthDay }}">@endif
+          @if($quickFilter !== 'all')<input type="hidden" name="quick_filter" value="{{ $quickFilter }}">@endif
           <input type="search" name="q" value="{{ $search }}" class="min-w-0 flex-1 p-2 text-[13px] rounded-lg border outline-none transition bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-h)] focus:border-[var(--info)]" placeholder="جستجوی کاربر (نام، فامیلی، ایمیل، موبایل)..." id="searchInput">
           <button type="submit" class="w-9 h-9 shrink-0 inline-flex items-center justify-center rounded-lg border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-soft)] hover:border-[var(--info)] hover:text-[var(--info)]" title="جستجو" aria-label="جستجوی کاربر"><i class="fa-solid fa-magnifying-glass text-[11px]"></i></button>
         </form>
         <form method="GET" action="{{ route('admin.users.index') }}" class="flex items-center gap-2 flex-wrap">
           @if($search)<input type="hidden" name="q" value="{{ $search }}">@endif
+          @if($quickFilter !== 'all')<input type="hidden" name="quick_filter" value="{{ $quickFilter }}">@endif
           <span class="text-[11px] font-semibold text-[var(--text-soft)]">تولد شمسی:</span>
           <select name="birth_month" class="p-2 text-[12px] rounded-lg border outline-none bg-[var(--input-bg)] border-[var(--border)] text-[var(--text-main)] focus:border-[var(--primary)] cursor-pointer">
             <option value="">همه ماه‌ها</option>
@@ -74,11 +76,30 @@
             <a href="{{ route('admin.users.export', request()->except(['user_ids'])) }}" class="px-2.5 py-1.5 rounded-lg text-[10.5px] font-semibold text-[var(--text-main)] hover:bg-[var(--primary-l)] hover:text-[var(--primary)]"><i class="fa-solid fa-file-export ml-1 text-[10px]"></i> خروجی فیلتر</a>
             <a href="{{ route('admin.users.all_activities') }}" class="px-2.5 py-1.5 rounded-lg text-[10.5px] font-semibold text-[var(--text-main)] hover:bg-[var(--primary-l)] hover:text-[var(--primary)]"><i class="fa-solid fa-timeline ml-1 text-[10px]"></i> فعالیت‌ها</a>
             <a href="{{ route('admin.users.all_logs') }}" class="px-2.5 py-1.5 rounded-lg text-[10.5px] font-semibold text-[var(--text-main)] hover:bg-[var(--primary-l)] hover:text-[var(--primary)]"><i class="fa-solid fa-images ml-1 text-[10px]"></i> لاگ‌ها</a>
-            @if($birthMonth || $birthDay || $search)
+            @if($birthMonth || $birthDay || $search || $quickFilter !== 'all')
               <a href="{{ route('admin.users.index') }}" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-[var(--text-soft)] hover:bg-[var(--danger-l)] hover:text-[var(--danger)]" title="پاک کردن فیلترها" aria-label="پاک کردن فیلترها"><i class="fa-solid fa-xmark text-[10px]"></i></a>
             @endif
           </div>
         </form>
+      </div>
+
+      @php
+        $quickFilterUrl = function (string $value): string {
+          $query = request()->except(['quick_filter', 'show_user', 'user_ids']);
+          if ($value !== 'all') {
+            $query['quick_filter'] = $value;
+          }
+          return route('admin.users.index', $query);
+        };
+      @endphp
+      <div class="flex items-center gap-2 flex-wrap px-3 py-2.5 rounded-xl mb-4 border bg-[var(--card-bg)] border-[var(--border)]">
+        <span class="text-[11px] font-bold text-[var(--text-soft)]">فیلتر سریع:</span>
+        @foreach(['all' => 'همه کاربران', 'purchased' => 'خریداران', 'today_image' => 'ساخت عکس امروز', 'today_video' => 'ساخت ویدیوی امروز', 'today_builds' => 'ساخت‌های امروز', 'new_users' => 'کاربران جدید امروز', 'active' => 'کاربران فعال'] as $filterKey => $filterLabel)
+          <a href="{{ $quickFilterUrl($filterKey) }}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-semibold transition {{ $quickFilter === $filterKey ? 'bg-[var(--primary)] text-white border-[var(--primary)]' : 'bg-[var(--page-bg)] text-[var(--text-main)] border-[var(--border)] hover:border-[var(--primary)] hover:text-[var(--primary)]' }}">
+            @if($filterKey === 'purchased')<i class="fa-solid fa-credit-card text-[9px]"></i>@elseif(str_starts_with($filterKey, 'today_'))<i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>@elseif($filterKey === 'new_users')<i class="fa-solid fa-user-plus text-[9px]"></i>@elseif($filterKey === 'active')<i class="fa-solid fa-circle-check text-[9px]"></i>@else<i class="fa-solid fa-users text-[9px]"></i>@endif
+            {{ $filterLabel }}
+          </a>
+        @endforeach
       </div>
 
       @if($canBulkManageUsers)

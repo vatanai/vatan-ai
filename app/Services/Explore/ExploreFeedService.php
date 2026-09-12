@@ -603,10 +603,7 @@ class ExploreFeedService
         return asset('storage/' . $path);
     }
 
-    /**
-     * اندازه‌ی هر کاشی را از استخر وزن‌دار (طبق تنظیمات ادمین) تصادفی تخصیص می‌دهد.
-     * آیتم‌های Pin شده/کمپین با شانس بیشتر اندازه‌ی بزرگ‌تر می‌گیرند تا برجسته دیده شوند.
-     */
+    /** اندازهٔ کاشی را از قاب‌های مجاز محصول به‌صورت پایدار انتخاب می‌کند. */
     protected function assignTileSizes(array $tiles, FeedSetting $setting): array
     {
         $weights = $setting->tile_weights ?: FeedSetting::LAYOUT_PRESETS['classic'];
@@ -622,7 +619,7 @@ class ExploreFeedService
 
         $prominentPool = ['size-big', 'size-wide', 'size-tall'];
 
-        $assigned = array_map(function ($tile) use ($pool, $prominentPool) {
+        $assigned = array_map(function ($tile) use ($pool, $prominentPool, $setting) {
             $allowed = $tile['_allowed_sizes'] ?? null; // NULL = بدون محدودیت (مثلاً کمپین‌ها)
 
             if (! empty($tile['_campaign'])) {
@@ -641,32 +638,13 @@ class ExploreFeedService
                 }
             }
 
-            $tile['size'] = $choices[array_rand($choices)];
+            // اندازه برای یک محصول و یک نسخهٔ تنظیمات ثابت می‌ماند تا با رفرش
+            // صفحه جابه‌جا نشود؛ مهم‌تر از آن، انتخاب فقط از قاب‌های مجاز است.
+            $stableKey = (string) ($tile['_product_id'] ?? $tile['name'] ?? 'tile') . ':' . (string) $setting->id;
+            $stableIndex = hexdec(substr(md5($stableKey), 0, 8)) % count($choices);
+            $tile['size'] = $choices[$stableIndex];
             return $tile;
         }, $tiles);
-
-        // در فیدهای به‌اندازه‌ی کافی بزرگ، هر اندازه‌ای که وزن فعال دارد حداقل
-        // یک نماینده خواهد داشت؛ انتخاب فقط از محصولی انجام می‌شود که آن اندازه را مجاز کرده باشد.
-        if (count($assigned) >= 8) {
-            foreach (['size-tall', 'size-big', 'size-wide'] as $requiredSize) {
-                if (($weights[$requiredSize] ?? 0) <= 0
-                    || collect($assigned)->contains(fn (array $tile) => $tile['size'] === $requiredSize)) {
-                    continue;
-                }
-
-                foreach ($assigned as &$candidate) {
-                    $allowed = $candidate['_allowed_sizes'] ?? null;
-                    $canUseSize = ! is_array($allowed) || in_array($requiredSize, $allowed, true);
-                    if (($candidate['type'] ?? null) === 'product'
-                        && $candidate['size'] === 'size-1x1'
-                        && $canUseSize) {
-                        $candidate['size'] = $requiredSize;
-                        break;
-                    }
-                }
-                unset($candidate);
-            }
-        }
 
         return array_map(function (array $tile) {
             $tile['allowed_sizes'] = $tile['_allowed_sizes'] ?? [
@@ -686,13 +664,13 @@ class ExploreFeedService
         $map = ['1x1' => 'size-1x1', '2x2' => 'size-big', '1x2' => 'size-tall', '2x1' => 'size-wide'];
         $tiles = $product->explore_tiles;
         if (! is_array($tiles) || empty($tiles)) {
-            return null;
+            return ['size-1x1'];
         }
         $out = [];
         foreach ($tiles as $t) {
             if (isset($map[$t])) { $out[] = $map[$t]; }
         }
-        return $out ?: null;
+        return $out ?: ['size-1x1'];
     }
 
     /**

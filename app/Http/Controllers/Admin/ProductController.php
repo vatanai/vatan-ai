@@ -29,6 +29,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -81,7 +82,6 @@ class ProductController extends Controller
         $query = Product::query()
             ->with(['categories', 'creator', 'editor', 'creatorRewardOwner', 'latestLabExperiment.runs.aiModel', 'latestLabExperiment.runs.outputs.managerScore'])
             ->withCount('generations')
-            ->withCount('generatedVideos')
             ->withCount('sourcePhotoProducts')
             ->withCount(['generations as completed_generations_count' => fn ($generationQuery) => $generationQuery->where('status', 'completed')])
             ->withCount('labExperiments')
@@ -121,6 +121,9 @@ class ProductController extends Controller
                     ->latest('created_at')
                     ->limit(1),
             ]);
+        if (Schema::hasTable('generated_videos')) {
+            $query->withCount('generatedVideos');
+        }
 
         // صفحه‌ی اصلی فهرست، مخصوص محصولات عکس است و صفحه‌ی جداگانه‌ی ویدیو
         // فقط محصولات ویدیویی را نشان می‌دهد؛ فیلتر رسانه در این دو صفحه نباید
@@ -236,8 +239,10 @@ class ProductController extends Controller
 
         // ── آمار واقعی اجراها برای کارت‌ها و نوار محبوبیت جدول ──
         // کل اجراها: اجراهای تصویری + رکوردهای تولید ویدیوی صف‌شده
-        $totalRuns = Generation::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count()
-            + GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count();
+        $totalRuns = Generation::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count();
+        if (Schema::hasTable('generated_videos')) {
+            $totalRuns += GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))->count();
+        }
         $draftPhotoCount = Product::where('status', 'draft')->whereIn('media_type', ['photo', 'both'])->count();
         $draftVideoCount = Product::where('status', 'draft')->whereIn('media_type', ['video', 'both'])->count();
         // بیشترین تعداد اجرای یک محصول (مبنای درصد نوار محبوبیت هر ردیف جدول)
@@ -247,20 +252,28 @@ class ProductController extends Controller
             ->orderByDesc('runs_count')
             ->limit(1)
             ->value('runs_count') ?? 0);
-        $maxVideoRuns = (int) (GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))
-            ->selectRaw('count(*) as runs_count')
-            ->groupBy('product_id')
-            ->orderByDesc('runs_count')
-            ->limit(1)
-            ->value('runs_count') ?? 0);
+        $maxVideoRuns = 0;
+        if (Schema::hasTable('generated_videos')) {
+            $maxVideoRuns = (int) (GeneratedVideo::whereHas('product', fn ($productQuery) => $productQuery->whereIn('media_type', $productMediaTypes))
+                ->selectRaw('count(*) as runs_count')
+                ->groupBy('product_id')
+                ->orderByDesc('runs_count')
+                ->limit(1)
+                ->value('runs_count') ?? 0);
+        }
         $maxRuns = max($maxImageRuns, $maxVideoRuns);
         // محبوب‌ترین محصول (بیشترین اجرا) — فقط وقتی حداقل یک اجرا ثبت شده باشد
-        $topProduct = $maxRuns > 0
-            ? Product::whereIn('media_type', $productMediaTypes)
-                ->withCount(['generations', 'generatedVideos'])
-                ->orderByRaw('(generations_count + generated_videos_count) desc')
-                ->first()
-            : null;
+        $topProduct = null;
+        if ($maxRuns > 0) {
+            $topProductQuery = Product::whereIn('media_type', $productMediaTypes)->withCount('generations');
+            if (Schema::hasTable('generated_videos')) {
+                $topProductQuery->withCount('generatedVideos');
+                $topProductQuery->orderByRaw('(generations_count + generated_videos_count) desc');
+            } else {
+                $topProductQuery->orderByDesc('generations_count');
+            }
+            $topProduct = $topProductQuery->first();
+        }
 
         // فیلترها و منوی تغییر سریع باید دقیقاً همان مدل‌های قابل‌انتخاب
         // ثبت محصول را نشان دهند؛ وضعیت اجرایی provider جداگانه بررسی می‌شود.
@@ -656,9 +669,9 @@ class ProductController extends Controller
         $product->accent_color = $request->input('accent_color') ?? '#a07af5';
         $product->tags = $request->input('tags', []);
 
-        // حالت‌های نمایش کاشی در اکسپلور — حداقل یکی، در غیر این صورت همه
+        // حالت‌های نمایش کاشی در اکسپلور — حداقل یکی؛ مقدار خالی نباید ناخواسته همهٔ قاب‌ها را فعال کند.
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
-        $product->explore_tiles = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
+        $product->explore_tiles = $exploreTiles ?: ['1x1'];
 
         // ۹. فیلدهای فاز جدید توسعه
         $product->new_watermark_corner_precise = $request->input('new_watermark_corner_precise') ?? 'tr';
@@ -950,7 +963,7 @@ class ProductController extends Controller
         $validated['seed'] = $request->filled('seed') ? (int) $request->input('seed') : null;
 
         $exploreTiles = array_values(array_intersect(['1x1','2x2','1x2','2x1'], (array) $request->input('explore_tiles', [])));
-        $validated['explore_tiles'] = $exploreTiles ?: ['1x1','2x2','1x2','2x1'];
+        $validated['explore_tiles'] = $exploreTiles ?: ['1x1'];
         // پایپ‌لاین و مدل جایگزین دیگر بخشی از فرم اصلی ثبت محصول نیستند.
         // اگر فرم قدیمی یا یک endpoint تخصصی این فیلدها را صراحتاً فرستاد،
         // رفتار قبلی حفظ می‌شود؛ در غیر این صورت مقدار ذخیره‌شده نباید با

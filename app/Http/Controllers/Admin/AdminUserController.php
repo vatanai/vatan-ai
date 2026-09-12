@@ -32,11 +32,13 @@ class AdminUserController extends Controller
             'birth_month' => ['nullable', 'integer', 'between:1,12', 'required_with:birth_day'],
             'birth_day' => ['nullable', 'integer', 'between:1,31'],
             'show_user' => ['nullable', 'integer', 'exists:users,id'],
+            'quick_filter' => ['nullable', 'in:all,purchased,today_image,today_video,today_builds,new_users,active'],
         ]);
 
         $search = trim((string) ($filters['q'] ?? ''));
         $birthMonth = isset($filters['birth_month']) ? (int) $filters['birth_month'] : null;
         $birthDay = isset($filters['birth_day']) ? (int) $filters['birth_day'] : null;
+        $quickFilter = (string) ($filters['quick_filter'] ?? 'all');
         if ($birthMonth && $birthMonth > 6 && $birthDay === 31) {
             throw ValidationException::withMessages([
                 'birth_day' => 'ماه انتخاب‌شده روز ۳۱ ندارد.',
@@ -78,9 +80,11 @@ class AdminUserController extends Controller
                 });
             })
             ->withCount('generatedImages')
-            ->withCount('generatedVideos')
             ->orderByDesc('registered_at')
             ->orderByDesc('created_at');
+        if (Schema::hasTable('generated_videos')) {
+            $usersQuery->withCount('generatedVideos');
+        }
         if (Schema::hasTable('finance_cases')) {
             $usersQuery->withCount('financeCases');
         }
@@ -90,6 +94,7 @@ class AdminUserController extends Controller
         if (Schema::hasTable('referral_visits')) {
             $usersQuery->withCount('referralVisits');
         }
+        $this->applyQuickUserFilter($usersQuery, $quickFilter);
 
         $users = $usersQuery->get()
             ->filter(function (User $user) use ($birthMonth, $birthDay) {
@@ -152,6 +157,7 @@ class AdminUserController extends Controller
             'canManageUserStatuses',
             'canBulkManageUsers',
             'autoOpenUserId',
+            'quickFilter',
         ));
     }
 
@@ -164,6 +170,7 @@ class AdminUserController extends Controller
             'birth_day' => ['nullable', 'integer', 'between:1,31'],
             'user_ids' => ['nullable', 'array', 'max:1000'],
             'user_ids.*' => ['integer', Rule::exists('users', 'id')],
+            'quick_filter' => ['nullable', 'in:all,purchased,today_image,today_video,today_builds,new_users,active'],
         ]);
 
         $birthMonth = isset($filters['birth_month']) ? (int) $filters['birth_month'] : null;
@@ -175,6 +182,7 @@ class AdminUserController extends Controller
         }
 
         $search = trim((string) ($filters['q'] ?? ''));
+        $quickFilter = (string) ($filters['quick_filter'] ?? 'all');
         $selectedUserIds = collect($filters['user_ids'] ?? [])
             ->map(fn ($userId) => (int) $userId)
             ->unique()
@@ -199,6 +207,9 @@ class AdminUserController extends Controller
             ->when($selectedUserIds !== [], fn ($query) => $query->whereIn('id', $selectedUserIds))
             ->orderByDesc('registered_at')
             ->orderByDesc('created_at')
+            ->when($quickFilter !== 'all', function ($query) use ($quickFilter): void {
+                $this->applyQuickUserFilter($query, $quickFilter);
+            })
             ->get()
             ->filter(function (User $user) use ($birthMonth, $birthDay) {
                 if (!$birthMonth && !$birthDay) {
@@ -257,6 +268,32 @@ class AdminUserController extends Controller
         }, 'vatan-users-' . now()->format('Ymd-His') . '.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /** فیلترهای یک‌کلیکی عملیاتی فهرست کاربران. */
+    private function applyQuickUserFilter($query, string $quickFilter): void
+    {
+        $today = now()->toDateString();
+        $hasVideos = Schema::hasTable('generated_videos');
+
+        match ($quickFilter) {
+            'purchased' => $query->whereHas('planPurchases', fn ($purchaseQuery) => $purchaseQuery
+                ->where('status', \App\Models\PlanPurchase::COMPLETED)),
+            'today_image' => $query->whereHas('generatedImages', fn ($imageQuery) => $imageQuery
+                ->whereDate('created_at', $today)),
+            'today_video' => $hasVideos
+                ? $query->whereHas('generatedVideos', fn ($videoQuery) => $videoQuery->whereDate('created_at', $today))
+                : null,
+            'today_builds' => $query->where(function ($buildQuery) use ($today, $hasVideos): void {
+                $buildQuery->whereHas('generatedImages', fn ($imageQuery) => $imageQuery->whereDate('created_at', $today));
+                if ($hasVideos) {
+                    $buildQuery->orWhereHas('generatedVideos', fn ($videoQuery) => $videoQuery->whereDate('created_at', $today));
+                }
+            }),
+            'new_users' => $query->whereDate('created_at', $today),
+            'active' => $query->where('status', 'active'),
+            default => null,
+        };
     }
 
     /**

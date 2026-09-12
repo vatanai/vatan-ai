@@ -14,8 +14,8 @@
   $previewUrl = ($previewProduct && $previewProduct->exists)
       ? route('app.product', $previewProduct->route_slug) . '?admin_preview=1'
       : route('app.product-details') . '?admin_preview=1';
-  $curTiles = old('explore_tiles', optional($previewProduct)->explore_tiles ?? ['1x1','2x2','1x2','2x1']);
-  if (!is_array($curTiles) || !$curTiles) $curTiles = ['1x1','2x2','1x2','2x1'];
+  $curTiles = old('explore_tiles', optional($previewProduct)->explore_tiles ?? ['1x1']);
+  if (!is_array($curTiles) || !$curTiles) $curTiles = ['1x1'];
   $tileDefs = [
     '1x1' => ['۱ × ۱ (مربع)', '1 / 1'], '2x2' => ['۲ × ۲ (بزرگ)', '1 / 1'],
     '1x2' => ['۱ × ۲ (عمودی)', '1 / 2'], '2x1' => ['۲ × ۱ (افقی)', '2 / 1'],

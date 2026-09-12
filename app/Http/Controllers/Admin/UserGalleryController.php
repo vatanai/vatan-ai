@@ -33,6 +33,47 @@ class UserGalleryController extends Controller
         $search = trim((string) $request->query('q', ''));
         $status = (string) $request->query('status', 'all');
 
+        $hasGeneratedVideos = Schema::hasTable('generated_videos');
+
+        // صفحهٔ گالری باید صاحبان خروجی‌های واقعی را هم نشان بدهد؛ قبلاً فقط
+        // ردیف‌های ورودی از user_gallery_items در این فهرست خوانده می‌شدند.
+        $galleryUsersQuery = User::query()
+            ->where(function ($query) use ($hasGeneratedVideos): void {
+                $query->whereHas('generatedImages', fn ($imageQuery) => $imageQuery->whereNotNull('image_path'))
+                    ->orWhereHas('galleryItems', fn ($itemQuery) => $itemQuery->whereIn('source_type', self::INPUT_SOURCE_TYPES));
+                if ($hasGeneratedVideos) {
+                    $query->orWhereHas('generatedVideos', fn ($videoQuery) => $videoQuery
+                        ->where(function ($outputQuery): void {
+                            $outputQuery->whereNotNull('video_path')->orWhereNotNull('video_url');
+                        }));
+                }
+            })
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($userQuery) use ($search): void {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when(in_array($status, ['active', 'expired'], true), function ($query) use ($status): void {
+                $query->whereHas('galleryItems', function ($itemQuery) use ($status): void {
+                    $itemQuery->whereIn('source_type', self::INPUT_SOURCE_TYPES)
+                        ->when($status === 'active', fn ($activeQuery) => $activeQuery->where('expires_at', '>', now()))
+                        ->when($status === 'expired', fn ($expiredQuery) => $expiredQuery->where('expires_at', '<=', now()));
+                });
+            })
+            ->withCount(['generatedImages' => fn ($query) => $query->whereNotNull('image_path')]);
+        if ($hasGeneratedVideos) {
+            $galleryUsersQuery->withCount(['generatedVideos' => function ($query): void {
+                $query->where(function ($outputQuery): void {
+                    $outputQuery->whereNotNull('video_path')->orWhereNotNull('video_url');
+                });
+            }]);
+        }
+        $galleryUsers = $galleryUsersQuery->latest('id')->paginate(24, ['*'], 'gallery_page')->withQueryString();
+        $galleryCards = $this->buildGalleryCards($galleryUsers->getCollection(), $hasGeneratedVideos);
+
         $items = UserGalleryItem::query()
             ->whereIn('source_type', self::INPUT_SOURCE_TYPES)
             ->with('user:id,name,last_name,phone')
@@ -64,7 +105,97 @@ class UserGalleryController extends Controller
             'costs' => (int) UserGalleryCostEvent::sum('cost_toman'),
         ];
 
-        return view('admin.users.gallery.index', compact('items', 'config', 'stats', 'search', 'status'));
+        return view('admin.users.gallery.index', compact('items', 'config', 'stats', 'search', 'status', 'galleryUsers', 'galleryCards'));
+    }
+
+    /** کارت‌های قبل/بعد را برای همهٔ کاربران دارای خروجی ساخت آماده می‌کند. */
+    private function buildGalleryCards($users, bool $hasGeneratedVideos): array
+    {
+        $userIds = collect($users)->pluck('id')->values();
+        if ($userIds->isEmpty()) {
+            return [];
+        }
+
+        $images = GeneratedImage::query()
+            ->whereIn('user_id', $userIds)
+            ->whereNotNull('image_path')
+            ->latest('id')
+            ->get();
+        $videos = $hasGeneratedVideos
+            ? GeneratedVideo::query()->whereIn('user_id', $userIds)
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })
+                ->latest('id')->get()
+            : collect();
+        $outputOrderIds = $images->pluck('order_id')->merge($videos->pluck('order_id'))->filter()->unique()->values();
+        // فقط سفارش‌هایی را بخوان که واقعاً خروجیِ همین صفحه به آن‌ها متصل است؛
+        // مرتب‌سازی کل جدول orders روی دیتاست بزرگ باعث خطای sort memory می‌شد.
+        $ordersByUser = $outputOrderIds->isNotEmpty()
+            ? Order::query()->whereIn('id', $outputOrderIds)->with('product')->get()->sortByDesc('created_at')->groupBy('user_id')
+            : collect();
+        $inputItems = UserGalleryItem::query()
+            ->whereIn('user_id', $userIds)
+            ->whereIn('source_type', self::INPUT_SOURCE_TYPES)
+            ->latest('id')
+            ->get()
+            ->groupBy('user_id');
+        $imagesByOrder = $images->filter(fn (GeneratedImage $image): bool => filled($image->order_id))->groupBy('order_id');
+        $videosByOrder = $videos->filter(fn (GeneratedVideo $video): bool => filled($video->order_id))->groupBy('order_id');
+
+        return collect($users)->map(function (User $user) use ($ordersByUser, $images, $videos, $inputItems, $imagesByOrder, $videosByOrder): array {
+            $userImages = $images->where('user_id', $user->id);
+            $userVideos = $videos->where('user_id', $user->id);
+            $consumedImageIds = collect();
+            $consumedVideoIds = collect();
+            $pairs = collect($ordersByUser->get($user->id, collect()))->map(function (Order $order) use ($inputItems, $imagesByOrder, $videosByOrder, &$consumedImageIds, &$consumedVideoIds): ?array {
+                $orderImages = collect($imagesByOrder->get($order->id, collect()));
+                $orderVideos = collect($videosByOrder->get($order->id, collect()));
+                $outputs = $orderImages->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس', 'id' => $image->id])
+                    ->concat($orderVideos->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو', 'id' => $video->id]))
+                    ->filter(fn (array $output): bool => filled($output['url']))->values();
+                if ($outputs->isEmpty()) {
+                    return null;
+                }
+                $consumedImageIds = $consumedImageIds->merge($orderImages->pluck('id'));
+                $consumedVideoIds = $consumedVideoIds->merge($orderVideos->pluck('id'));
+                $before = collect($this->inputItemsForBuild($order, collect($inputItems->get($order->user_id, collect()))
+                    ->filter(fn (UserGalleryItem $item): bool => (int) data_get($item->metadata, 'order_id') === (int) $order->id)))
+                    ->filter(fn (array $media): bool => in_array($media['type'], ['image', 'video'], true))->values();
+
+                return [
+                    'product_name' => $order->product?->name_fa ?: $order->product?->name_en ?: 'ساخت بدون محصول',
+                    'date' => $order->completed_at ?: $order->created_at,
+                    'order_url' => route('admin.orders.show', $order),
+                    'before' => $before->take(4)->all(),
+                    'after' => $outputs->take(4)->all(),
+                ];
+            })->filter()->values();
+
+            // خروجی‌هایی که سفارششان حذف شده یا به سفارش متصل نشده‌اند نیز گم نشوند.
+            $orphanOutputs = $userImages->reject(fn (GeneratedImage $image): bool => $consumedImageIds->contains($image->id))
+                ->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس'])
+                ->concat($userVideos->reject(fn (GeneratedVideo $video): bool => $consumedVideoIds->contains($video->id))
+                    ->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو']))
+                ->filter(fn (array $output): bool => filled($output['url']))->values();
+            if ($orphanOutputs->isNotEmpty()) {
+                $pairs->push([
+                    'product_name' => 'خروجی‌های بدون سفارش متصل',
+                    'date' => $orphanOutputs->first()['type'] === 'image' ? $userImages->first()?->created_at : $userVideos->first()?->created_at,
+                    'order_url' => route('admin.users.gallery.show', $user),
+                    'before' => [],
+                    'after' => $orphanOutputs->take(4)->all(),
+                ]);
+            }
+
+            return [
+                'user_id' => $user->id,
+                'user_name' => trim(($user->name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'کاربر بدون نام',
+                'user_phone' => $user->phone,
+                'output_count' => (int) $user->generated_images_count + (int) ($user->generated_videos_count ?? 0),
+                'pairs' => $pairs->take(6)->all(),
+            ];
+        })->values()->all();
     }
 
     public function show(User $user)

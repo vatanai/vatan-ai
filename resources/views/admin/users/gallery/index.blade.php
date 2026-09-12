@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'ورودی‌های کاربران — وطن استودیو')
+@section('title', 'گالری کاربران — وطن استودیو')
 
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
@@ -12,8 +12,8 @@
 
     <div class="flex items-start justify-between gap-3 flex-wrap mb-5">
       <div>
-        <h1 class="text-[17px] font-extrabold text-[var(--text-h)]">ورودی‌های کاربران</h1>
-        <p class="mt-1 text-[11px] text-[var(--text-soft)]">عکس، متن و ویدیوی ورودی فقط با رضایت کاربر ذخیره می‌شوند و فایل اصلی در فضای خصوصی نگهداری می‌شود.</p>
+        <h1 class="text-[17px] font-extrabold text-[var(--text-h)]">گالری کاربران</h1>
+        <p class="mt-1 text-[11px] text-[var(--text-soft)]">ورودی و خروجی هر ساخت کنار هم نمایش داده می‌شود؛ فایل‌های اصلی فقط در فضای خصوصی نگهداری می‌شوند.</p>
       </div>
       <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]">
         <i class="fa-solid fa-users"></i> فهرست کاربران
@@ -54,6 +54,66 @@
         <label class="block text-[10px] text-[var(--text-soft)]">بازآفرینی رایگان ماهانه<input type="number" name="free_recreations_per_month" min="0" max="100" value="{{ $config->free_recreations_per_month ?? 1 }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
         <button type="submit" class="max-[1100px]:col-span-3 max-[480px]:col-span-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--primary)] text-white text-[11px] font-bold hover:opacity-90"><i class="fa-solid fa-check"></i> ذخیره تنظیمات</button>
       </form>
+    </section>
+
+    <section class="rounded-2xl border bg-[var(--card-bg)] border-[var(--border)] overflow-hidden mb-5">
+      <div class="p-4 border-b border-[var(--border)] flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 class="text-[12px] font-bold text-[var(--text-h)]">گالری کاربران</h2>
+          <p class="mt-1 text-[10px] text-[var(--text-soft)]">ورودی و خروجی هر ساخت کنار هم نمایش داده می‌شود؛ برای دیدن همهٔ جزئیات روی کارت کاربر بزنید.</p>
+        </div>
+        <span class="text-[10px] text-[var(--text-soft)]">{{ number_format($galleryUsers->total()) }} کاربر</span>
+      </div>
+      <div class="grid grid-cols-4 gap-3 p-4 max-[1280px]:grid-cols-3 max-[1000px]:grid-cols-2 max-[650px]:grid-cols-1">
+        @forelse($galleryCards as $card)
+          <article class="rounded-2xl border bg-[var(--page-bg)] border-[var(--border)] overflow-hidden">
+            <a href="{{ route('admin.users.gallery.show', $card['user_id']) }}" class="flex items-center justify-between gap-3 p-3 border-b border-[var(--border)] hover:bg-[var(--primary-l)] no-underline">
+              <div class="min-w-0">
+                <strong class="block truncate text-[11px] text-[var(--text-h)]">{{ $card['user_name'] }}</strong>
+                @if($card['user_phone'])<span class="block mt-1 text-[9px] text-[var(--text-soft)]" dir="ltr">{{ $card['user_phone'] }}</span>@endif
+              </div>
+              <span class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--primary-l)] text-[var(--primary)] text-[9px] font-bold"><i class="fa-solid fa-images"></i>{{ number_format($card['output_count']) }} خروجی</span>
+            </a>
+            @php($pair = $card['pairs'][0] ?? null)
+            <div class="p-3">
+              @if($pair)
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <span class="truncate text-[9.5px] font-bold text-[var(--text-main)]">{{ $pair['product_name'] }}</span>
+                  <span class="shrink-0 text-[9px] text-[var(--text-soft)]">{{ \App\Support\Jalali::formatNumeric($pair['date']) }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-0 aspect-square rounded-xl overflow-hidden border border-[var(--border)] bg-[var(--input-bg)]">
+                  <div class="relative min-w-0 min-h-0 border-l border-[var(--border)]">
+                    @if(!empty($pair['before'][0]))
+                      @php($media = $pair['before'][0])
+                      @if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="w-full h-full object-cover" preload="metadata" muted playsinline></video>@else<img src="{{ $media['url'] }}" alt="{{ $media['label'] }}" class="w-full h-full object-cover" loading="lazy">@endif
+                      @if(count($pair['before']) > 1)<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-main)]">+{{ count($pair['before']) - 1 }}</span>@endif
+                    @else
+                      <span class="w-full h-full flex items-center justify-center text-center text-[9px] text-[var(--text-soft)]">ورودی ثبت نشده</span>
+                    @endif
+                    <span class="absolute top-1 right-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-soft)]">قبل</span>
+                  </div>
+                  <div class="relative min-w-0 min-h-0">
+                    @if(!empty($pair['after'][0]))
+                      @php($media = $pair['after'][0])
+                      <a href="{{ $media['url'] }}" target="_blank" rel="noopener" class="block w-full h-full">@if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="w-full h-full object-cover" preload="metadata" muted playsinline></video>@else<img src="{{ $media['url'] }}" alt="{{ $media['label'] }}" class="w-full h-full object-cover" loading="lazy">@endif</a>
+                      @if(count($pair['after']) > 1)<span class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-main)]">+{{ count($pair['after']) - 1 }}</span>@endif
+                    @else
+                      <span class="w-full h-full flex items-center justify-center text-center text-[9px] text-[var(--text-soft)]">خروجی ثبت نشده</span>
+                    @endif
+                    <span class="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-[var(--primary)]/90 text-[8px] text-white">بعد</span>
+                  </div>
+                </div>
+                <a href="{{ route('admin.users.gallery.show', $card['user_id']) }}" class="inline-flex items-center gap-1 mt-2 text-[9px] text-[var(--info)] hover:text-[var(--primary)]">همه جزئیات گالری <i class="fa-solid fa-arrow-left"></i></a>
+              @else
+                <div class="aspect-square flex items-center justify-center text-center text-[10px] text-[var(--text-soft)]">برای این کاربر هنوز خروجی قابل نمایش ثبت نشده است.</div>
+              @endif
+            </div>
+          </article>
+        @empty
+          <div class="col-span-full p-12 text-center text-[11px] text-[var(--text-soft)]"><i class="fa-regular fa-images text-[24px] mb-2"></i><p>کاربری با ورودی یا خروجی گالری پیدا نشد.</p></div>
+        @endforelse
+      </div>
+      <div class="p-4 border-t border-[var(--border)]">{{ $galleryUsers->appends(request()->except('gallery_page'))->links() }}</div>
     </section>
 
     <section class="rounded-2xl border bg-[var(--card-bg)] border-[var(--border)] overflow-hidden">

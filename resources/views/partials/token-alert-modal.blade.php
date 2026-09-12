@@ -9,7 +9,7 @@
         </button>
 
         {{-- آیکون متحرک و افکت نئون سکه/توکن --}}
-        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.15)] animate-pulse mb-2">
+        <div class="w-16 h-16 rounded-2xl bg-[var(--green)]/10 border border-[var(--green)]/30 flex items-center justify-center text-[var(--green)] shadow-[0_0_20px_var(--green)] animate-pulse mb-2">
             <i class="fa-solid fa-coins text-2xl"></i>
         </div>
 
@@ -19,15 +19,9 @@
             موجودی شما برای این ساخت کافی نیست، اما ورودی‌ها و مسیر ساختت حفظ شده است. با افزایش اعتبار، همین محصول را دوباره اجرا کن و ادامه بده.
         </p>
 
-        {{-- آمار وضعیت فعلی --}}
-        <div class="w-full bg-white/[0.02] border border-white/[0.04] rounded-xl py-2.5 px-4 flex items-center justify-between text-xs my-1">
-            <span class="text-gray-500 font-bold">موجودی / هزینه ساخت:</span>
-            <span class="text-red-400 font-black bg-red-500/10 px-2 py-0.5 rounded-md"><b data-token-balance>۰</b> / <b data-token-required>۰</b></span>
-        </div>
-
         {{-- دکمه‌های عملیاتی --}}
         <div class="w-full grid grid-cols-1 gap-2 mt-2">
-            <a href="{{ route('pricing.index') }}" class="w-full h-11 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/10 active:scale-[0.99] no-underline">
+            <a href="{{ route('pricing.index') }}" class="w-full h-11 bg-[var(--green)] hover:brightness-95 text-black font-black text-[12px] rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-[var(--green)]/20 active:scale-[0.99] no-underline">
                 <i class="fa-solid fa-basket-shopping text-xs"></i>
                 افزایش اعتبار و ادامه ساخت
             </a>
