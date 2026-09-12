@@ -77,6 +77,8 @@ class User extends Authenticatable
             'registered_at' => 'datetime',
             'telegram_gift_claimed_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'first_image_followup_due_at' => 'datetime',
+            'first_image_followup_sent_at' => 'datetime',
             'login_count' => 'integer',
         ];
     }

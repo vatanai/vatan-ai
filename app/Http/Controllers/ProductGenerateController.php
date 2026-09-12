@@ -1050,6 +1050,9 @@ class ProductGenerateController extends Controller
                     ]);
                     $generatedImageRecords[] = $generatedImage;
                     app(\App\Services\ReferralProgramService::class)->handleSuccessfulGeneration($generatedImage);
+                    if ($user) {
+                        app(SmsEventService::class)->markFirstImageFollowupPending($user);
+                    }
                 }
 
             }

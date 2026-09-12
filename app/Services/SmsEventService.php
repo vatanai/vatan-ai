@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\SmsSetting;
 use App\Models\SmsTemplate;
+use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -103,5 +105,58 @@ class SmsEventService
         } elseif ($user?->id) {
             Cache::forget('sms-credit-low:' . $user->id);
         }
+    }
+
+    /**
+     * اولین ساخت موفق را برای ارسال پیگیری پنج ساعت بعد علامت‌گذاری می‌کند.
+     * شرط whereNull باعث می‌شود چند خروجی یک ساخت یا درخواست‌های هم‌زمان،
+     * زمان ارسال را جابه‌جا نکنند.
+     */
+    public function markFirstImageFollowupPending(User $user): void
+    {
+        if (! Schema::hasColumn('users', 'first_image_followup_due_at')) {
+            return;
+        }
+
+        User::query()
+            ->whereKey($user->id)
+            ->whereNull('first_image_followup_due_at')
+            ->update(['first_image_followup_due_at' => now()->addHours(5)]);
+    }
+
+    /** ارسال پیگیری‌های سررسیدشده؛ هر کاربر فقط یک‌بار موفق ارسال می‌شود. */
+    public function sendDueFirstImageFollowups(int $limit = 100): array
+    {
+        if (! Schema::hasColumn('users', 'first_image_followup_due_at')) {
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        }
+
+        $users = User::query()
+            ->whereNotNull('first_image_followup_due_at')
+            ->whereNull('first_image_followup_sent_at')
+            ->where('first_image_followup_due_at', '<=', now())
+            ->whereNotNull('phone')
+            ->orderBy('first_image_followup_due_at')
+            ->limit(max(1, $limit))
+            ->get(['id', 'name', 'phone']);
+
+        $result = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        foreach ($users as $user) {
+            $sent = $this->send('first_image_followup', (string) $user->phone, [
+                'name' => $user->name,
+            ]);
+
+            if ($sent) {
+                User::query()
+                    ->whereKey($user->id)
+                    ->whereNull('first_image_followup_sent_at')
+                    ->update(['first_image_followup_sent_at' => now()]);
+                $result['sent']++;
+            } else {
+                $result['failed']++;
+            }
+        }
+
+        return $result;
     }
 }

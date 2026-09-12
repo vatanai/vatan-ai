@@ -9,6 +9,10 @@ Schedule::command('credits:sync')
     ->everyMinute()
     ->withoutOverlapping(10);
 
+Schedule::command('sms:send-first-image-followups')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
+
 Artisan::command('ai:sync-catalog {provider=all}', function (string $provider, AiCatalogSyncService $syncer) {
     $this->info('همگام‌سازی کاتالوگ مدل‌های عکس و ویدیو شروع شد.');
     $result = $syncer->sync($provider);
