@@ -29,7 +29,7 @@ return [
         'otp_code' => ['provider_template_id' => '506694', 'variables' => ['code']],
         'login_otp' => ['provider_template_id' => '523374', 'variables' => ['name', 'code']],
         'login_success' => ['provider_template_id' => '504170', 'variables' => ['name', 'login_time']],
-        'registration_success' => ['provider_template_id' => '506692', 'variables' => ['name']],
+        'registration_success' => ['provider_template_id' => '529239', 'variables' => ['name']],
         'plan_purchase_success' => ['provider_template_id' => '506695', 'variables' => ['name', 'plan_name']],
         'plan_purchase_failed' => ['provider_template_id' => '506696', 'variables' => ['name', 'plan_name']],
         'credit_low' => ['provider_template_id' => '504178', 'variables' => ['name', 'balance']],
