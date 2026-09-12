@@ -60,6 +60,21 @@ class HomeController extends Controller
                 'url' => route('app.product', $product->route_slug),
             ]);
 
+        // مسیر محتوایی افزایش کیفیت باید برای جست‌وجوهای مرتبط همیشه نتیجه‌ی اول باشد.
+        $normalizedTerm = mb_strtolower($term, 'UTF-8');
+        $isQualityIntent = str_contains($normalizedTerm, 'کیفیت')
+            || str_contains($normalizedTerm, 'upscale')
+            || str_contains($normalizedTerm, 'enhance');
+        if ($isQualityIntent) {
+            $products->prepend([
+                'name' => 'افزایش کیفیت عکس با هوش مصنوعی',
+                'meta' => 'راهنمای کامل + ۴ محصول آماده',
+                'image' => asset('assets/img/ai-photo-editor-prompt.webp'),
+                'url' => route('landing.image-quality'),
+                'kind' => 'landing',
+            ]);
+        }
+
         return response()->json([
             'items' => $products,
             'all_results_url' => route('products.index', ['search' => $term]),

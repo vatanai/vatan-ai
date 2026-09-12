@@ -20,6 +20,7 @@ class SitemapService
             ['loc' => route('site.home.root'), 'section' => 'core', 'page_key' => 'landing', 'title' => 'صفحه اصلی وطن', 'description' => 'آشنایی با وطن و شروع ساخت محتوای خلاقانه با هوش مصنوعی.', 'icon' => 'fa-house'],
             ['loc' => route('pricing.index'), 'section' => 'core', 'title' => 'تعرفه‌ها', 'description' => 'مقایسه پلن‌ها و انتخاب مسیر مناسب برای استفاده از وطن.', 'icon' => 'fa-tags'],
             ['loc' => route('site.about'), 'section' => 'core', 'title' => 'درباره وطن', 'description' => 'آشنایی بیشتر با پلتفرم و مسیر توسعه وطن.', 'icon' => 'fa-circle-info'],
+            ['loc' => route('landing.image-quality'), 'section' => 'discover', 'title' => 'افزایش کیفیت عکس', 'description' => 'راهنمای افزایش وضوح و رزولوشن عکس با چهار محصول آماده وطن.', 'icon' => 'fa-wand-magic-sparkles'],
             ['loc' => route('privacy'), 'section' => 'core', 'title' => 'حریم خصوصی و قوانین', 'description' => 'اطلاعات مربوط به حریم خصوصی و استفاده از خدمات وطن.', 'icon' => 'fa-shield-halved'],
             ['loc' => route('articles.index'), 'section' => 'articles', 'page_key' => 'articles', 'title' => 'همه مقالات', 'description' => 'آموزش‌ها، ایده‌ها و تازه‌های هوش مصنوعی.', 'icon' => 'fa-newspaper'],
             ['loc' => route('products.index'), 'section' => 'discover', 'title' => 'همه محصولات', 'description' => 'مرور محصولات آماده برای ساخت عکس و ویدیو.', 'icon' => 'fa-grid-2'],

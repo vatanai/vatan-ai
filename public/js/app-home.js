@@ -113,7 +113,7 @@
       igResults.innerHTML = '';
       (data.items || []).forEach(function (item) {
         var link = document.createElement('a');
-        link.className = 'ig-search-result';
+        link.className = 'ig-search-result' + (item.kind === 'landing' ? ' ig-search-result--landing' : '');
         link.href = item.url;
         var image = document.createElement('img');
         image.src = item.image;

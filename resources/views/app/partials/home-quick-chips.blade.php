@@ -4,7 +4,7 @@
 --}}
 <div class="ig-quick-row" dir="rtl">
 
-  <button type="button" class="ig-quick-item" data-quick="upscale" aria-label="افزایش کیفیت عکس">
+  <a class="ig-quick-item" data-quick="upscale" href="{{ route('landing.image-quality') }}" aria-label="افزایش کیفیت عکس">
     <span class="ig-quick-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 4h6"/>
@@ -19,7 +19,7 @@
       <span class="ig-quick-title">افزایش کیفیت</span>
       <span class="ig-quick-sub">عکس را واضح کن</span>
     </span>
-  </button>
+  </a>
 
   <button type="button" class="ig-quick-item" data-quick="remove-background" aria-label="حذف پس‌زمینه عکس">
     <span class="ig-quick-icon">
