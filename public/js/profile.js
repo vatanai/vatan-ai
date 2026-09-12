@@ -86,6 +86,98 @@
     activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
   }
 
+  /* ───── تصویر بندانگشتی خروجی‌های ویدیویی گرید ───── */
+  function initVideoGridPosters() {
+    var cards = document.querySelectorAll('.grid-cell--video');
+    if (!cards.length) return;
+
+    function renderPoster(card) {
+      var poster = card.querySelector('.grid-video-poster');
+      var sourceVideo = card.querySelector('.grid-video-source');
+      if (!poster || !sourceVideo || poster.dataset.posterReady === 'loading') return;
+
+      var existingPoster = poster.getAttribute('src');
+      if (existingPoster) {
+        poster.dataset.posterReady = 'ready';
+        poster.addEventListener('error', function () {
+          poster.removeAttribute('src');
+          poster.dataset.posterReady = '';
+          renderPoster(card);
+        }, { once: true });
+        return;
+      }
+
+      var source = poster.getAttribute('data-video-source') || sourceVideo.getAttribute('data-src') || '';
+      if (!source) return;
+
+      poster.dataset.posterReady = 'loading';
+      var cleanUp = function () {
+        sourceVideo.pause();
+        sourceVideo.removeAttribute('src');
+        sourceVideo.load();
+      };
+      var fail = function () {
+        poster.dataset.posterReady = 'failed';
+        cleanUp();
+      };
+      var capture = function () {
+        if (!sourceVideo.videoWidth || !sourceVideo.videoHeight) {
+          fail();
+          return;
+        }
+
+        var width = Math.min(sourceVideo.videoWidth, 640);
+        var height = Math.max(1, Math.round(width * sourceVideo.videoHeight / sourceVideo.videoWidth));
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        try {
+          var context = canvas.getContext('2d');
+          context.drawImage(sourceVideo, 0, 0, width, height);
+          poster.src = canvas.toDataURL('image/jpeg', .82);
+          poster.dataset.posterReady = 'ready';
+        } catch (error) {
+          fail();
+          return;
+        }
+
+        cleanUp();
+      };
+      var seekToFifthFrame = function () {
+        var fifthFrameTime = 5 / 30;
+        var duration = Number.isFinite(sourceVideo.duration) ? sourceVideo.duration : fifthFrameTime;
+        sourceVideo.addEventListener('seeked', capture, { once: true });
+        try {
+          sourceVideo.currentTime = Math.min(fifthFrameTime, Math.max(0, duration - .01));
+        } catch (error) {
+          fail();
+        }
+      };
+
+      sourceVideo.addEventListener('loadedmetadata', seekToFifthFrame, { once: true });
+      sourceVideo.addEventListener('error', fail, { once: true });
+      sourceVideo.src = source;
+      sourceVideo.preload = 'metadata';
+      sourceVideo.load();
+    }
+
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          renderPoster(entry.target);
+          observer.unobserve(entry.target);
+        });
+      }, { rootMargin: '220px 0px' });
+      cards.forEach(function (card) { observer.observe(card); });
+    } else {
+      Array.prototype.slice.call(cards, 0, 4).forEach(renderPoster);
+    }
+  }
+
+  initVideoGridPosters();
+
   /* ───── لینک دعوت و اشتراک‌گذاری ───── */
   var referralLinkInput = document.getElementById('referralLinkInput');
   var copyReferralLink = document.getElementById('copyReferralLink');

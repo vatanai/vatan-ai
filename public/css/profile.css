@@ -1513,6 +1513,11 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   object-fit: contain;
   background: var(--bg-page);
 }
+.grid-cell--video .grid-video-poster {
+  object-fit: cover;
+  background: var(--bg-surface);
+}
+.grid-cell--video .grid-video-source { display: none; }
 .grid-cell-video-badge {
   position: absolute;
   top: 14px;
