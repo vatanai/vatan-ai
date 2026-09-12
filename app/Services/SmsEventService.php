@@ -108,7 +108,7 @@ class SmsEventService
     }
 
     /**
-     * اولین ساخت موفق را برای ارسال پیگیری پنج ساعت بعد علامت‌گذاری می‌کند.
+     * اولین ساخت موفق را برای ارسال پیگیری علامت‌گذاری می‌کند.
      * شرط whereNull باعث می‌شود چند خروجی یک ساخت یا درخواست‌های هم‌زمان،
      * زمان ارسال را جابه‌جا نکنند.
      */
@@ -121,13 +121,24 @@ class SmsEventService
         User::query()
             ->whereKey($user->id)
             ->whereNull('first_image_followup_due_at')
-            ->update(['first_image_followup_due_at' => now()->addHours(5)]);
+            ->update([
+                'first_image_followup_due_at' => now()->addMinutes((int) config('sms_events.events.first_image_followup.delay_minutes', 30)),
+            ]);
     }
 
     /** ارسال پیگیری‌های سررسیدشده؛ هر کاربر فقط یک‌بار موفق ارسال می‌شود. */
     public function sendDueFirstImageFollowups(int $limit = 100): array
     {
         if (! Schema::hasColumn('users', 'first_image_followup_due_at')) {
+            return ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        }
+
+        $window = (array) config('sms_events.events.first_image_followup.send_window', []);
+        $now = now();
+        $from = (string) ($window['from'] ?? '10:00');
+        $until = (string) ($window['until'] ?? '23:00');
+        $currentTime = $now->format('H:i');
+        if ($currentTime < $from || $currentTime >= $until) {
             return ['sent' => 0, 'failed' => 0, 'skipped' => 0];
         }
 

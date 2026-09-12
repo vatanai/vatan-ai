@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 class SendFirstImageFollowups extends Command
 {
     protected $signature = 'sms:send-first-image-followups {--limit=100}';
-    protected $description = 'ارسال پیام پیگیری پنج ساعت بعد از اولین ساخت تصویر';
+    protected $description = 'ارسال پیام پیگیری سی دقیقه بعد از اولین ساخت تصویر در بازه مجاز';
 
     public function handle(SmsEventService $sms): int
     {
