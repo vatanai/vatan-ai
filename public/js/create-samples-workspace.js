@@ -14,6 +14,7 @@
   const outputPlaceholder = root.querySelector('[data-output-placeholder]');
   const progressStage = root.querySelector('[data-progress]');
   const resultStage = root.querySelector('[data-result]');
+  const result = resultStage;
   let hasGeneratedOutput = false;
   let progressAnimationFrame = null;
   let progressStartedAt = 0;
@@ -478,7 +479,7 @@
       window.showTokenShortageModal?.({ required: requiredCredits, balance: currentBalance });
       return;
     }
-    const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]'); const result = root.querySelector('[data-result]');
+    const empty = root.querySelector('[data-empty]'); const progress = root.querySelector('[data-progress]');
     setStageTab('upload');
     empty.hidden = true; result.hidden = true; progress.hidden = false;
     startVisualProgress();
