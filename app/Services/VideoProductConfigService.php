@@ -8,10 +8,21 @@ use App\Models\Product;
 class VideoProductConfigService
 {
     public const WORKFLOWS = ['text_to_video', 'image_to_video', 'video_to_video'];
+    public const PRODUCT_FAMILIES = ['shop', 'face', 'hybrid', 'music_ready'];
     public const ASPECT_RATIOS = ['16:9', '9:16', '1:1', '4:3', '3:4', '4:5', '21:9'];
     public const STUDIO_ASPECT_RATIOS = ['16:9', '9:16', '1:1', '3:4', '4:5', '21:9'];
     public const RESOLUTIONS = ['480p', '720p', '1080p', '4K'];
     public const QUALITY_KEYS = ['standard', 'professional', 'best'];
+
+    public function productFamilyCatalog(): array
+    {
+        return [
+            'shop' => ['label' => 'محصول فروشگاهی', 'description' => 'یک عکس محصول به ویدیوی تبلیغاتی تبدیل می‌شود.'],
+            'face' => ['label' => 'محصول چهره‌محور', 'description' => 'عکس چهره یا پروفایل چهره به ویدیو تبدیل می‌شود.'],
+            'hybrid' => ['label' => 'محصول ترکیبی', 'description' => 'عکس چهره و عکس محصول هم‌زمان استفاده می‌شوند.'],
+            'music_ready' => ['label' => 'ویدیوی آماده با موزیک', 'description' => 'چند پلان با موسیقی ساخته و در یک خروجی مونتاژ می‌شوند.'],
+        ];
+    }
 
     public function motionPresetCatalog(): array
     {
@@ -33,6 +44,29 @@ class VideoProductConfigService
         $workflow = in_array($data['workflow'] ?? null, self::WORKFLOWS, true)
             ? (string) $data['workflow']
             : 'text_to_video';
+        $productFamily = $this->normalizeProductFamily($data);
+        $inputContract = $this->normalizeInputContract($data, $productFamily);
+        $promptMode = ($data['prompt_mode'] ?? 'locked') === 'custom' ? 'custom' : 'locked';
+        $showPromptToUser = array_key_exists('show_prompt_to_user', $data)
+            ? filter_var($data['show_prompt_to_user'], FILTER_VALIDATE_BOOLEAN)
+            : $promptMode === 'custom';
+        $musicMode = ($data['music_mode'] ?? null) === 'required' || $productFamily === 'music_ready'
+            ? 'required'
+            : (($data['music_mode'] ?? null) === 'optional' ? 'optional' : 'disabled');
+        $videoStructure = in_array($data['video_structure'] ?? null, ['single_shot', 'multi_shot'], true)
+            ? (string) $data['video_structure']
+            : null;
+        $multiShotEnabled = $productFamily === 'music_ready'
+            ? true
+            : ($videoStructure === 'multi_shot'
+                ? true
+                : ($videoStructure === 'single_shot'
+                    ? false
+                    : filter_var($data['multi_shot_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)));
+        $maxShots = max(1, min(10, (int) ($data['max_shots'] ?? 6)));
+        $qualityTier = in_array($data['quality_tier'] ?? null, self::QUALITY_KEYS, true)
+            ? (string) $data['quality_tier']
+            : 'standard';
         $durations = collect((array) ($data['durations'] ?? []))
             ->map(fn ($value): int => max(1, min(15, (int) $value)))
             ->unique()->sort()->values()->all();
@@ -50,6 +84,16 @@ class VideoProductConfigService
 
         return [
             'workflow' => $workflow,
+            'product_family' => $productFamily,
+            'input_contract' => $inputContract,
+            'prompt_mode' => $promptMode,
+            'show_prompt_to_user' => $showPromptToUser,
+            'customer_prompt_allowed' => $promptMode === 'custom' && $showPromptToUser,
+            'music_mode' => $musicMode,
+            'video_structure' => $multiShotEnabled ? 'multi_shot' : 'single_shot',
+            'multi_shot_enabled' => $multiShotEnabled,
+            'max_shots' => $maxShots,
+            'timeline' => $this->normalizeTimeline($data['timeline'] ?? $data['shots'] ?? [], $maxShots),
             'face_profile_mode' => in_array($data['face_profile_mode'] ?? null, ['disabled', 'optional', 'required'], true) ? $data['face_profile_mode'] : 'disabled',
             'durations' => $durations,
             'default_duration' => in_array((int) ($data['default_duration'] ?? 0), $durations, true) ? (int) $data['default_duration'] : $durations[0],
@@ -58,6 +102,7 @@ class VideoProductConfigService
             'default_aspect_ratio' => in_array((string) ($data['default_aspect_ratio'] ?? ''), $ratios, true) ? (string) $data['default_aspect_ratio'] : $ratios[0],
             'resolutions' => $resolutions,
             'default_resolution' => in_array((string) ($data['default_resolution'] ?? ''), $resolutions, true) ? (string) $data['default_resolution'] : $resolutions[0],
+            'quality_tier' => $qualityTier,
             'fps' => max(4, min(60, (int) ($data['fps'] ?? 24))),
             'motion_presets' => collect($selectedMotion)->map(fn (string $key): array => ['key' => $key] + $catalog[$key])->values()->all(),
             'audio_allowed' => filter_var($data['audio_allowed'] ?? false, FILTER_VALIDATE_BOOLEAN),
@@ -77,6 +122,62 @@ class VideoProductConfigService
                 return [$key => max(1, min(1000000, (int) $value))];
             })->all(),
             'model_defaults' => is_array($data['model_defaults'] ?? null) ? $data['model_defaults'] : [],
+        ];
+    }
+
+    public function normalizeTimeline(mixed $timeline, int $maxShots = 10): array
+    {
+        if (is_string($timeline)) {
+            $timeline = json_decode($timeline, true);
+        }
+        if (!is_array($timeline)) return [];
+
+        return collect($timeline)->filter(fn ($shot): bool => is_array($shot))->take($maxShots)->values()->map(
+            fn (array $shot, int $index): array => [
+                'id' => (string) ($shot['id'] ?? 'shot_' . ($index + 1)),
+                'title' => trim((string) ($shot['title'] ?? 'پلان ' . ($index + 1))),
+                'duration' => max(1, min(15, (int) ($shot['duration'] ?? 4))),
+                'prompt' => trim((string) ($shot['prompt'] ?? '')),
+                'input_roles' => array_values(array_intersect(['face', 'product', 'reference'], array_map('strval', (array) ($shot['input_roles'] ?? [])))),
+                'transition' => trim((string) ($shot['transition'] ?? 'cut')) ?: 'cut',
+                'music_start' => max(0, (float) ($shot['music_start'] ?? 0)),
+            ],
+        )->all();
+    }
+
+    private function normalizeProductFamily(array $data): string
+    {
+        $family = (string) ($data['product_family'] ?? '');
+        if (in_array($family, self::PRODUCT_FAMILIES, true)) return $family;
+        if (($data['music_mode'] ?? null) === 'required' || filter_var($data['multi_shot_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)) return 'music_ready';
+        if (($data['face_profile_mode'] ?? 'disabled') !== 'disabled') return 'face';
+        return ($data['workflow'] ?? '') === 'image_to_video' ? 'shop' : 'shop';
+    }
+
+    private function normalizeInputContract(array $data, string $family): array
+    {
+        $raw = (array) ($data['input_contract'] ?? []);
+        $productImage = array_key_exists('product_image', $raw)
+            ? filter_var($raw['product_image'], FILTER_VALIDATE_BOOLEAN)
+            : filter_var($data['input_product_image'] ?? null, FILTER_VALIDATE_BOOLEAN);
+        $faceImage = array_key_exists('face_image', $raw)
+            ? filter_var($raw['face_image'], FILTER_VALIDATE_BOOLEAN)
+            : filter_var($data['input_face_image'] ?? null, FILTER_VALIDATE_BOOLEAN);
+        $faceProfile = array_key_exists('face_profile', $raw)
+            ? filter_var($raw['face_profile'], FILTER_VALIDATE_BOOLEAN)
+            : filter_var($data['allow_face_profile'] ?? null, FILTER_VALIDATE_BOOLEAN);
+
+        if ($family === 'shop') [$productImage, $faceImage] = [true, false];
+        if ($family === 'face') [$productImage, $faceImage] = [false, true];
+        if ($family === 'hybrid') [$productImage, $faceImage] = [true, true];
+        if ($family === 'music_ready' && !$productImage && !$faceImage) $productImage = true;
+
+        return [
+            'product_image' => $productImage,
+            'face_image' => $faceImage,
+            'face_profile' => $faceProfile && $faceImage,
+            'product_required' => $productImage,
+            'face_required' => $faceImage,
         ];
     }
 

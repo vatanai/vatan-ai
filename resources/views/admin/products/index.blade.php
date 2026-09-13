@@ -30,7 +30,7 @@
         <div class="text-[13px]" style="color:var(--text-soft);">مدیریت، ویرایش و پیکربندی تمام محصولات هوش مصنوعی پلتفرم</div>
       </div>
       <div class="flex items-center gap-2">
-        <a href="{{ $isVideoList ? route('admin.products.video.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary">
+        <a href="{{ $isVideoList ? route('admin.products.video.v2.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary">
           <i class="fa-solid {{ $isVideoList ? 'fa-video' : 'fa-plus' }} text-[11px]"></i> ثبت محصول {{ $isVideoList ? 'ویدیو' : 'عکس' }}
         </a>
         <a href="{{ $isVideoList ? route('admin.products') : route('admin.products.videos') }}" class="btn-pro btn-pro-ghost">

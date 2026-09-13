@@ -41,6 +41,7 @@ class VideoModelSchemaService
     public function summarize(AiModel $model): array
     {
         $properties = $this->properties($model);
+        $capabilityConfig = is_array($model->capability_config) ? $model->capability_config : [];
         $fields = array_keys($properties);
         $imageFields = $this->matchingFields($fields, [
             'image_url', 'image_urls', 'image', 'images', 'input_image', 'start_image',
@@ -59,9 +60,14 @@ class VideoModelSchemaService
             'supports_video' => $videoFields !== [] || $model->supports_video_input || $model->task_type === 'video_to_video',
             'supports_audio' => $audioFields !== [] || array_key_exists('generate_audio', $properties) || $model->supports_audio,
             'supports_first_last_frame' => collect($fields)->contains(fn (string $field): bool => in_array($field, ['end_image', 'last_frame', 'end_frame'], true)),
-            'durations' => $this->enumValues($properties['duration'] ?? null),
-            'resolutions' => $this->enumValues($properties['resolution'] ?? null),
-            'aspect_ratios' => $this->enumValues($properties['aspect_ratio'] ?? null),
+            // بعضی مدل‌های `OpenRouter` محدودیت‌های واقعی را در schema
+            // اعلام نمی‌کنند و فقط در capability_config ثبت شده‌اند.
+            'durations' => $this->enumValues($properties['duration'] ?? null)
+                ?: array_values(array_map('intval', (array) ($capabilityConfig['supported_durations'] ?? []))),
+            'resolutions' => $this->enumValues($properties['resolution'] ?? null)
+                ?: array_values(array_map('strval', (array) ($capabilityConfig['supported_resolutions'] ?? []))),
+            'aspect_ratios' => $this->enumValues($properties['aspect_ratio'] ?? null)
+                ?: array_values(array_map('strval', (array) ($capabilityConfig['supported_aspect_ratios'] ?? []))),
             'defaults' => collect($properties)
                 ->mapWithKeys(fn ($schema, $field): array => is_array($schema) && array_key_exists('default', $schema) ? [$field => $schema['default']] : [])
                 ->all(),

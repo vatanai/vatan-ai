@@ -12,6 +12,10 @@
   const publishButton = document.getElementById('vpc-publish');
   const previousButton = document.getElementById('vpc-prev');
   const modelSelect = document.getElementById('vpc-model');
+  const timelineInput = document.getElementById('vpc-timeline-json');
+  const timelineList = document.getElementById('vpc-timeline-list');
+  const maxShotsInput = document.getElementById('vpc-max-shots');
+  let timeline = (() => { try { const value = JSON.parse(timelineInput?.value || '[]'); return Array.isArray(value) ? value : []; } catch (_) { return []; } })();
   let currentStep = 1;
   let features = Array.isArray(config.features) ? config.features.map(normalizeFeature) : [];
 
@@ -204,6 +208,24 @@
     const caps = model.capabilities || {};
     const chips = [model.provider, workflowLabel(caps.task_type), caps.supports_image ? 'ورودی عکس' : null, caps.supports_video ? 'ورودی ویدیو' : null, caps.supports_audio ? 'صدا' : null, caps.supports_first_last_frame ? 'فریم اول و آخر' : null].filter(Boolean);
     summary.innerHTML = `<strong>${escapeHtml(model.name)}</strong>${chips.map((chip) => `<span>${escapeHtml(chip)}</span>`).join('')}`;
+    syncCapabilityOptions(caps);
+  }
+
+  function syncCapabilityOptions(caps) {
+    const restrict = (selector, values) => {
+      const allowed = (values || []).map(String);
+      if (!allowed.length) return;
+      form.querySelectorAll(selector).forEach((input) => {
+        const okay = allowed.includes(String(input.value));
+        input.disabled = !okay;
+        input.closest('label,.vpc-duration')?.classList.toggle('is-unsupported', !okay);
+        if (!okay) input.checked = false;
+      });
+    };
+    restrict('[name="durations[]"]', caps.durations);
+    restrict('[name="aspect_ratios[]"]', caps.aspect_ratios);
+    restrict('[name="resolutions[]"]', caps.resolutions);
+    syncDurationDefaults();
   }
 
   function workflowLabel(value) {
@@ -212,6 +234,57 @@
 
   form.querySelectorAll('[name="workflow"]').forEach((input) => input.addEventListener('change', filterModels));
   modelSelect.addEventListener('change', updateModelSummary);
+
+  function selectedFamily() { return form.querySelector('[name="product_family"]:checked')?.value || 'shop'; }
+
+  function applyFamilyDefaults() {
+    const family = selectedFamily();
+    const product = form.querySelector('[name="input_product_image"]:not([type="hidden"])');
+    const face = form.querySelector('[name="input_face_image"]:not([type="hidden"])');
+    const profile = form.querySelector('[name="allow_face_profile"]:not([type="hidden"])');
+    const workflowImage = form.querySelector('[name="workflow"][value="image_to_video"]');
+    const faceModeDisabled = form.querySelector('[name="face_profile_mode"][value="disabled"]');
+    const faceModeOptional = form.querySelector('[name="face_profile_mode"][value="optional"]');
+    if (['face', 'hybrid'].includes(family)) { workflowImage.checked = true; if (faceModeDisabled.checked) faceModeOptional.checked = true; }
+    if (['shop', 'music_ready'].includes(family)) faceModeDisabled.checked = true;
+    if (family === 'shop') { product.checked = true; face.checked = false; profile.checked = false; }
+    if (family === 'face') { product.checked = false; face.checked = true; profile.checked = true; }
+    if (family === 'hybrid') { product.checked = true; face.checked = true; profile.checked = true; }
+    if (family === 'music_ready') { product.checked = true; document.getElementById('vpc-multi-shot').checked = true; document.getElementById('vpc-music-mode').value = 'required'; }
+    syncStepStates();
+  }
+  form.querySelectorAll('[name="product_family"]').forEach((input) => input.addEventListener('change', applyFamilyDefaults));
+
+  function renderTimeline() {
+    if (!timelineList) return;
+    const max = Math.max(1, Math.min(6, Number(maxShotsInput?.value || 6)));
+    timeline = timeline.slice(0, max);
+    timelineList.innerHTML = timeline.map((shot, index) => `
+      <div class="vpc-shot-row" data-shot-index="${index}">
+        <label>عنوان پلان<input data-shot-key="title" value="${escapeHtml(shot.title || `پلان ${index + 1}`)}"></label>
+        <label>ثانیه<input data-shot-key="duration" type="number" min="1" max="15" value="${Number(shot.duration || 4)}"></label>
+        <label>پرامپت پلان<textarea data-shot-key="prompt" dir="ltr">${escapeHtml(shot.prompt || '')}</textarea></label>
+        <button type="button" class="vpc-shot-remove" data-shot-remove title="حذف پلان"><i class="fa-solid fa-trash"></i></button>
+      </div>`).join('');
+    syncTimeline();
+  }
+  function readTimeline() {
+    timeline = [...(timelineList?.querySelectorAll('[data-shot-index]') || [])].map((row, index) => ({
+      id: timeline[index]?.id || `shot_${index + 1}`,
+      title: row.querySelector('[data-shot-key="title"]').value.trim() || `پلان ${index + 1}`,
+      duration: Math.max(1, Math.min(15, Number(row.querySelector('[data-shot-key="duration"]').value || 4))),
+      prompt: row.querySelector('[data-shot-key="prompt"]').value.trim(),
+      input_roles: timeline[index]?.input_roles || [],
+      transition: timeline[index]?.transition || 'cut',
+      music_start: timeline[index]?.music_start || 0,
+    }));
+    syncTimeline();
+  }
+  function syncTimeline() { if (timelineInput) timelineInput.value = JSON.stringify(timeline); }
+  timelineList?.addEventListener('input', readTimeline);
+  timelineList?.addEventListener('click', (event) => { const button = event.target.closest('[data-shot-remove]'); if (!button) return; readTimeline(); timeline.splice(Number(button.closest('[data-shot-index]').dataset.shotIndex), 1); renderTimeline(); });
+  document.getElementById('vpc-add-shot')?.addEventListener('click', () => { readTimeline(); const max = Number(maxShotsInput?.value || 6); if (timeline.length >= max) return window.alert(`حداکثر ${max} پلان مجاز است.`); timeline.push({ title: `پلان ${timeline.length + 1}`, duration: 4, prompt: '', input_roles: [], transition: 'cut', music_start: 0 }); renderTimeline(); });
+  maxShotsInput?.addEventListener('change', renderTimeline);
 
   document.querySelectorAll('.vpc-duration').forEach((item) => {
     const checkbox = item.querySelector('[name="durations[]"]');
@@ -248,9 +321,9 @@
   function stepComplete(step) {
     const value = (name) => String(form.elements[name]?.value || '').trim();
     if (step === 1) return !!(value('name_fa') && value('name_en') && value('slug') && form.querySelector('[name="category_ids[]"]:checked'));
-    if (step === 2) return !!(form.querySelector('[name="workflow"]:checked') && form.querySelector('[name="face_profile_mode"]:checked'));
+    if (step === 2) return !!(form.querySelector('[name="workflow"]:checked') && form.querySelector('[name="product_family"]:checked') && form.querySelector('[name="face_profile_mode"]:checked'));
     if (step === 3) return !!(value('model_id') && value('prompt_template'));
-    if (step === 4) { readFeatures(); return features.some((item) => item.required === '1' || item.required === 1 || item.required === true); }
+    if (step === 4) { readFeatures(); return form.querySelector('[name="prompt_mode"]:checked')?.value === 'locked' || features.some((item) => item.required === '1' || item.required === 1 || item.required === true); }
     if (step === 5) return !!(form.querySelector('[name="durations[]"]:checked') && form.querySelector('[name="aspect_ratios[]"]:checked') && form.querySelector('[name="resolutions[]"]:checked') && [...form.querySelectorAll('[name^="credit_costs_by_duration"]')].some((input) => Number(input.value) >= 0 && input.value !== ''));
     return [1, 2, 3, 4, 5].every(stepComplete);
   }
@@ -271,10 +344,13 @@
     }
     if (currentStep === 4) {
       readFeatures();
-      if (!features.length) { window.alert('حداقل یک ویژگی برای فرم کاربر اضافه کنید.'); return false; }
+      if (!features.length && form.querySelector('[name="prompt_mode"]:checked')?.value !== 'locked') { window.alert('حداقل یک ویژگی برای فرم کاربر اضافه کنید یا پرامپت محصول را ثابت کنید.'); return false; }
     }
     if (currentStep === 5 && (!form.querySelector('[name="aspect_ratios[]"]:checked') || !form.querySelector('[name="resolutions[]"]:checked'))) {
       window.alert('حداقل یک نسبت تصویر و یک کیفیت خروجی انتخاب کنید.'); return false;
+    }
+    if (currentStep === 5 && form.querySelector('[name="product_family"]:checked')?.value === 'music_ready' && timeline.length === 0) {
+      window.alert('برای محصول آماده با موزیک حداقل یک پلان اضافه کنید.'); return false;
     }
     return true;
   }
@@ -287,6 +363,7 @@
     const review = [
       ['fa-cube', 'نام محصول', form.elements.name_fa.value || '—'],
       ['fa-route', 'سناریو', workflowLabel(selectedWorkflow())],
+      ['fa-shapes', 'نوع محصول', ({shop:'فروشگاهی', face:'چهره‌محور', hybrid:'ترکیبی', music_ready:'آماده با موزیک'})[selectedFamily()] || selectedFamily()],
       ['fa-microchip', 'مدل اصلی', model?.name || 'انتخاب نشده'],
       ['fa-sliders', 'ویژگی‌ها', `${features.length} ویژگی`],
       ['fa-clock', 'مدت‌های فعال', durations || '—'],
@@ -326,6 +403,7 @@
   });
 
   renderFeatures();
+  renderTimeline();
   filterModels();
   syncDurationDefaults();
   showStep(1);

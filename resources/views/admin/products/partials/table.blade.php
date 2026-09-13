@@ -634,7 +634,7 @@
                     <i class="fa-solid fa-ellipsis-vertical"></i>
                   </button>
                   <div class="dropdown-pro-menu" id="row-dropdown-{{ $product->id }}">
-                    <a href="{{ $product->isVideoProduct() ? route('admin.products.video.create', $product) : route('admin.products.create', $product) }}" class="dropdown-pro-item"><i class="fa-solid fa-pen"></i> ویرایش</a>
+                    <a href="{{ $product->isVideoProduct() ? route('admin.products.video.v2.create', $product) : route('admin.products.create', $product) }}" class="dropdown-pro-item"><i class="fa-solid fa-pen"></i> ویرایش</a>
                     {{-- تکثیر محصول: به‌جای ذخیره‌ی مستقیم، وارد فرم «ثبت محصول» با تمام فیلدهای پرشده می‌شود
                          تا ادمین قبل از ثبت نهایی بتواند مقادیر را بازبینی/ویرایش کند (مسیر کوتاه‌تر). --}}
                     @unless($product->isVideoProduct())
@@ -667,7 +667,7 @@
               <div class="empty-state-icon"><i class="fa-solid fa-box-open"></i></div>
               <div class="empty-state-title">هنوز محصولی ثبت نشده است.</div>
               <div class="empty-state-desc">بعد از ایجاد اولین محصول، این بخش اطلاعات کامل محصولات را نمایش خواهد داد.</div>
-              <a href="{{ ($isVideoList ?? false) ? route('admin.products.video.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary" style="display:inline-flex;">
+              <a href="{{ ($isVideoList ?? false) ? route('admin.products.video.v2.create') : route('admin.products.create') }}" class="btn-pro btn-pro-primary" style="display:inline-flex;">
                 <i class="fa-solid {{ ($isVideoList ?? false) ? 'fa-video' : 'fa-plus' }} text-[11px]"></i> ثبت اولین محصول {{ ($isVideoList ?? false) ? 'ویدیو' : 'عکس' }}
               </a>
             </div>

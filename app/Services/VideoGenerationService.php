@@ -140,12 +140,24 @@ class VideoGenerationService
             }
         }
         $fieldValues = (array) ($options['fields'] ?? []);
-        $fieldValues['prompt'] = trim((string) ($options['prompt'] ?? $fieldValues['prompt'] ?? ''));
+        $promptAllowed = (bool) ($config['customer_prompt_allowed'] ?? (($config['prompt_mode'] ?? 'custom') === 'custom'));
+        $fieldValues['prompt'] = $promptAllowed
+            ? trim((string) ($options['prompt'] ?? $fieldValues['prompt'] ?? ''))
+            : '';
         $identityRequested = $faceMode !== 'disabled' && $hasSourceImage;
         $prompt = $this->promptBuilder->build($product, $fieldValues, $identityRequested);
         $motion = collect($motionCatalog)->firstWhere('key', (string) ($options['motion_preset'] ?? ''));
         if ($motion && !empty($motion['prompt'])) $prompt .= "\n\nCamera direction: " . $motion['prompt'];
-        if (!empty($options['prompt']) && !str_contains($prompt, trim((string) $options['prompt']))) {
+        if (!empty($config['multi_shot_enabled']) && !empty($config['timeline'])) {
+            $timelinePrompt = collect((array) $config['timeline'])->map(function (array $shot): string {
+                $title = trim((string) ($shot['title'] ?? 'Shot'));
+                $duration = (int) ($shot['duration'] ?? 1);
+                $shotPrompt = trim((string) ($shot['prompt'] ?? ''));
+                return "{$title} ({$duration}s)" . ($shotPrompt !== '' ? ": {$shotPrompt}" : '');
+            })->implode("\n");
+            if ($timelinePrompt !== '') $prompt .= "\n\nShot plan:\n" . $timelinePrompt;
+        }
+        if ($promptAllowed && !empty($options['prompt']) && !str_contains($prompt, trim((string) $options['prompt']))) {
             $prompt .= "\n\nUser direction: " . trim((string) $options['prompt']);
         }
         $negativePrompt = trim((string) ($options['negative_prompt'] ?? ''));
@@ -208,6 +220,9 @@ class VideoGenerationService
                 'source_aspect_ratio' => $options['source_aspect_ratio'] ?? null,
                 'resolution' => $resolution,
                 'quality' => $quality,
+                'product_family' => $config['product_family'] ?? null,
+                'music_mode' => $config['music_mode'] ?? 'disabled',
+                'timeline' => (array) ($config['timeline'] ?? []),
                 'motion_preset' => $options['motion_preset'] ?? null,
                 'project_name' => $options['project_name'] ?? null,
                 'face_profile_id' => $options['face_profile_id'] ?? null,
@@ -492,7 +507,6 @@ class VideoGenerationService
         $models = [];
         foreach ($ids as $index => $id) {
             $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
-                ->where('provider', 'openrouter')
                 ->whereNotNull('capability_config')
                 ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
                 ->where('openrouter_model_id', $id)->where('provider', $providers[$index] ?? null)->first();
@@ -632,6 +646,7 @@ class VideoGenerationService
                     'video_url' => ['url' => $options['source_video_url']],
                 ];
             }
+            if (!empty($options['audio_url'])) $input['audio_url'] = $options['audio_url'];
             return $input;
         }
 

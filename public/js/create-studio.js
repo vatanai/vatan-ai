@@ -552,6 +552,15 @@
   function startProgress(title) { stopProgress(); progress.hidden = false; result.hidden = true; videoContent.hidden = true; imageContent.hidden = true; progressTitle.textContent = title; progressText.textContent = currentMode === 'video' ? 'در حال آماده‌سازی ورودی‌ها و ارسال درخواست به مدل...' : 'در حال بررسی ورودی‌ها و آماده‌سازی تصویر...'; setProgress(8); let value = 8; progressTimer = window.setInterval(() => { value = Math.min(88, value + (value < 55 ? 3 : 1)); setProgress(value); }, 900); }
   function finishProgress() { stopProgress(); setProgress(100); window.setTimeout(() => { progress.hidden = true; }, 350); }
 
+  function revealGeneratedResult() {
+    if (!result) return;
+    result.hidden = false;
+    result.removeAttribute('hidden');
+    window.requestAnimationFrame(() => {
+      result.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'});
+    });
+  }
+
   function imageUrlFromPayload(image) {
     if (typeof image === 'string') return image.trim();
     if (!image || typeof image !== 'object') return '';
@@ -644,10 +653,7 @@
       } else {
         const first = firstImageUrl(payload); if (!first) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.'); outputImage.src = first; outputImage.hidden = false; outputVideo.hidden = true; videoPlay.hidden = true;
       }
-      finishProgress(); result.hidden = false; submitLabel.textContent = 'دوباره بساز';
-      if (window.matchMedia('(max-width: 700px)').matches) {
-        window.requestAnimationFrame(() => result.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'}));
-      }
+      finishProgress(); revealGeneratedResult(); submitLabel.textContent = 'دوباره بساز';
     } catch (error) {
       stopProgress();
       setProgress(0);

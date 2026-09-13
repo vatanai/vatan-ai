@@ -525,8 +525,25 @@ class Product extends Model
         $configured = data_get((array) $this->provider_options, 'video', []);
         $configured = is_array($configured) ? $configured : [];
 
-        return array_replace_recursive([
+        $defaults = [
             'workflow' => 'text_to_video',
+            // پیش‌فرض‌های جدید فقط برای محصولات تازه تعریف‌شده استفاده می‌شوند؛
+            // مقدار custom برای محصولات قدیمی رفتار قبلیِ پرامپت را حفظ می‌کند.
+            'product_family' => 'shop',
+            'input_contract' => [
+                'product_image' => true,
+                'face_image' => false,
+                'face_profile' => false,
+                'product_required' => true,
+                'face_required' => false,
+            ],
+            'prompt_mode' => 'custom',
+            'show_prompt_to_user' => true,
+            'customer_prompt_allowed' => true,
+            'music_mode' => 'disabled',
+            'multi_shot_enabled' => false,
+            'max_shots' => 6,
+            'timeline' => [],
             'face_profile_mode' => 'disabled',
             'durations' => [4],
             'default_duration' => 4,
@@ -544,7 +561,21 @@ class Product extends Model
             'preserve_source_aspect_ratio' => false,
             'quality_credit_costs' => self::DEFAULT_QUALITY_CREDIT_COSTS,
             'model_defaults' => [],
-        ], $configured);
+        ];
+        $result = array_replace_recursive($defaults, $configured);
+        // مهاجرت رفتاریِ بدون migration: محصولات قدیمیِ دارای پروفایل چهره
+        // به‌صورت خودکار به قرارداد ورودی چهره نگاشت می‌شوند.
+        if (!array_key_exists('product_family', $configured) && ($result['face_profile_mode'] ?? 'disabled') !== 'disabled') {
+            $result['product_family'] = 'face';
+            $result['input_contract'] = [
+                'product_image' => false,
+                'face_image' => true,
+                'face_profile' => true,
+                'product_required' => false,
+                'face_required' => $result['face_profile_mode'] === 'required',
+            ];
+        }
+        return $result;
     }
 
     public function previewVideoUrl(): ?string

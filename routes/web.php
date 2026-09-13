@@ -474,6 +474,9 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     // با پارامتر اختیاری محصول انجام می‌شود (مثال: /admin/products/create/52)
     Route::get('/products', [ProductController::class, 'index'])->name('products');
     Route::get('/products/videos', [ProductController::class, 'videoIndex'])->name('products.videos');
+    Route::get('/products/videos/v2/create/{product?}', [\App\Http\Controllers\Admin\VideoProductController::class, 'createV2'])->name('products.video.v2.create');
+    Route::post('/products/videos/v2', [\App\Http\Controllers\Admin\VideoProductController::class, 'storeV2'])->name('products.video.v2.store');
+    Route::put('/products/videos/v2/{product}', [\App\Http\Controllers\Admin\VideoProductController::class, 'updateV2'])->name('products.video.v2.update');
     Route::get('/products/videos/create/{product?}', [ProductController::class, 'videoCreate'])->name('products.video.create');
     Route::post('/products/videos', [ProductController::class, 'videoStore'])->name('products.video.store');
     Route::put('/products/videos/{product}', [ProductController::class, 'videoUpdate'])->name('products.video.update');

@@ -13,7 +13,13 @@
   $workflow = $video['workflow'];
   $needsImage = $workflow === 'image_to_video';
   $needsVideo = $workflow === 'video_to_video';
-  $faceEnabled = ($video['face_profile_mode'] ?? 'disabled') !== 'disabled';
+  $family = $video['product_family'] ?? 'shop';
+  $contract = (array) ($video['input_contract'] ?? []);
+  $showProductInput = $needsImage && (bool) ($contract['product_image'] ?? true);
+  $showFaceInput = $needsImage && (bool) ($contract['face_image'] ?? false);
+  $faceEnabled = $showFaceInput && (($video['face_profile_mode'] ?? 'disabled') !== 'disabled') && (bool) ($contract['face_profile'] ?? true);
+  $promptAllowed = (bool) ($video['customer_prompt_allowed'] ?? (($video['prompt_mode'] ?? 'custom') === 'custom'));
+  $musicReady = $family === 'music_ready' || (bool) ($video['multi_shot_enabled'] ?? false);
   $prefillSource = $video['prefill_source_image'] ?? null;
   $aspectOptions = !empty($video['preserve_source_aspect_ratio']) ? ['source'] : (array) $video['aspect_ratios'];
   $qualityTiers = (array) ($video['quality_tiers'] ?? []);
@@ -27,6 +33,11 @@
       'balance' => (int) (auth()->user()?->tokens ?? 0),
       'workflow' => $workflow,
       'face_mode' => $video['face_profile_mode'] ?? 'disabled',
+      'product_family' => $family,
+      'input_contract' => $contract,
+      'prompt_allowed' => $promptAllowed,
+      'music_mode' => $video['music_mode'] ?? 'disabled',
+      'multi_shot_enabled' => (bool) ($video['multi_shot_enabled'] ?? false),
       'status_url_template' => $video['status_url_template'],
   ];
 @endphp
@@ -54,17 +65,29 @@
 
         @if($needsImage)
           <section class="vv-section" data-source-section="image">
-            <div class="vv-section-title"><strong>تصویر شروع</strong><small>تصویر واضح، بدون تاری و با نور مناسب</small></div>
-            @if($prefillSource)
-              <div class="vv-prefilled-source"><img src="{{ $prefillSource['url'] }}" alt="خروجی عکس انتخاب‌شده"><div><b>خروجی عکس آماده است</b><small>این تصویر بدون آپلود دوباره برای ساخت ویدیو استفاده می‌شود.</small></div><input type="hidden" name="source_generated_image_id" value="{{ $prefillSource['id'] }}"></div>
-            @else
-              <label class="vv-drop" data-source-drop>
-                <input type="file" name="source_image" accept="image/jpeg,image/png,image/webp,image/avif" data-source-image>
-                <span class="vv-drop-icon"><i class="fa-solid fa-image"></i></span>
-                <span><b>انتخاب عکس جدید</b><small>حداکثر ۱۲ مگابایت</small></span>
-                <img alt="پیش‌نمایش تصویر ورودی" data-source-preview hidden>
-              </label>
-            @endif
+            <div class="vv-section-title"><strong>{{ $showFaceInput && $showProductInput ? 'ورودی‌های ساخت' : ($showFaceInput ? 'تصویر چهره' : 'تصویر محصول') }}</strong><small>تصویر واضح، بدون تاری و با نور مناسب</small></div>
+            <div class="vv-source-grid {{ $showFaceInput && $showProductInput ? 'is-dual' : '' }}">
+              @if($showFaceInput)
+                <label class="vv-drop" data-source-drop data-source-slot="face">
+                  <input type="file" name="source_face_image" accept="image/jpeg,image/png,image/webp,image/avif" data-source-image>
+                  <span class="vv-drop-icon"><i class="fa-solid fa-user"></i></span>
+                  <span><b>انتخاب عکس چهره</b><small>حداکثر ۱۲ مگابایت</small></span>
+                  <img alt="پیش‌نمایش چهره" data-source-preview hidden>
+                </label>
+              @endif
+              @if($showProductInput)
+                @if($prefillSource)
+                  <div class="vv-prefilled-source" data-source-slot="product"><img src="{{ $prefillSource['url'] }}" alt="خروجی عکس انتخاب‌شده"><div><b>خروجی عکس آماده است</b><small>این تصویر بدون آپلود دوباره برای ساخت ویدیو استفاده می‌شود.</small></div><input type="hidden" name="source_generated_image_id" value="{{ $prefillSource['id'] }}"></div>
+                @else
+                  <label class="vv-drop" data-source-drop data-source-slot="product">
+                    <input type="file" name="source_product_image" accept="image/jpeg,image/png,image/webp,image/avif" data-source-image>
+                    <span class="vv-drop-icon"><i class="fa-solid fa-box-open"></i></span>
+                    <span><b>انتخاب عکس محصول</b><small>حداکثر ۱۲ مگابایت</small></span>
+                    <img alt="پیش‌نمایش محصول" data-source-preview hidden>
+                  </label>
+                @endif
+              @endif
+            </div>
             <div class="vv-profile-selected" data-profile-selected hidden><i class="fa-solid fa-circle-check"></i><span>تصاویر پروفایل چهره به‌عنوان مرجع استفاده می‌شوند.</span></div>
           </section>
         @elseif($needsVideo)
@@ -79,11 +102,15 @@
           </section>
         @endif
 
-        <section class="vv-section">
-          <label class="vv-section-title" for="vv-prompt"><strong>شرح صحنه و حرکت</strong><small>سوژه، محیط، حرکت و حال‌وهوا را کوتاه و روشن بنویسید</small></label>
-          <textarea id="vv-prompt" name="prompt" class="cw-input vv-prompt" rows="4" placeholder="مثلاً دوربین آرام به سوژه نزدیک شود، نور طلایی غروب و حرکت طبیعی لباس..." maxlength="5000"></textarea>
-          <button type="button" class="vv-enhance" data-prompt-example><i class="fa-solid fa-wand-magic-sparkles"></i> پیشنهاد یک دستور استاندارد</button>
-        </section>
+        @if($promptAllowed)
+          <section class="vv-section">
+            <label class="vv-section-title" for="vv-prompt"><strong>شرح صحنه و حرکت</strong><small>سوژه، محیط، حرکت و حال‌وهوا را کوتاه و روشن بنویسید</small></label>
+            <textarea id="vv-prompt" name="prompt" class="cw-input vv-prompt" rows="4" placeholder="مثلاً دوربین آرام به سوژه نزدیک شود، نور طلایی غروب و حرکت طبیعی لباس..." maxlength="5000"></textarea>
+            <button type="button" class="vv-enhance" data-prompt-example><i class="fa-solid fa-wand-magic-sparkles"></i> پیشنهاد یک دستور استاندارد</button>
+          </section>
+        @else
+          <section class="vv-section vv-locked-prompt"><div class="vv-section-title"><strong>دستور ساخت آماده</strong><small>پرامپت این محصول برای خروجی یکدست و حرفه‌ای از قبل تنظیم شده است.</small></div><div><i class="fa-solid fa-lock"></i><span>شما فقط ورودی‌ها و تنظیمات مجاز محصول را انتخاب می‌کنید.</span></div></section>
+        @endif
 
         @if(!empty($buildProduct['fields']))
           <section class="vv-section vv-schema-fields">
@@ -105,6 +132,21 @@
                 </label>
               @endforeach
             </div>
+          </section>
+        @endif
+
+        @if(($video['music_mode'] ?? 'disabled') !== 'disabled')
+          <section class="vv-section">
+            @if(($video['music_mode'] ?? '') === 'required')
+              <div class="vv-music-ready-note"><i class="fa-solid fa-music"></i><span><b>موسیقی از قبل برای این محصول تنظیم شده است</b><small>موسیقی ثابت محصول همراه با پلان‌های آن در خروجی نهایی استفاده می‌شود.</small></span></div>
+            @else
+              <div class="vv-section-title"><strong>موسیقی اختیاری</strong><small>در صورت تمایل موسیقی اضافه کنید.</small></div>
+              <label class="vv-drop">
+                <input type="file" name="source_audio" accept="audio/mpeg,audio/wav,audio/mp4,audio/ogg,.mp3,.wav,.m4a,.ogg">
+                <span class="vv-drop-icon"><i class="fa-solid fa-music"></i></span>
+                <span><b>افزودن موسیقی اختیاری</b><small>حداکثر ۲۰ مگابایت</small></span>
+              </label>
+            @endif
           </section>
         @endif
 
@@ -152,6 +194,9 @@
           @if($video['audio_allowed'] ?? false)
             <input type="hidden" name="video[generate_audio]" value="0">
             <label class="vv-switch"><span><b>تولید صدای هماهنگ</b><small>در صورت پشتیبانی مدل، صدا همراه ویدیو ساخته می‌شود</small></span><input type="checkbox" name="video[generate_audio]" value="1" @checked($video['audio_default'] ?? false)><i></i></label>
+          @endif
+          @if($musicReady)
+            <div class="vv-music-ready-note"><i class="fa-solid fa-music"></i><span><b>محصول آماده با موزیک</b><small>این محصول بر اساس پلان‌های از پیش تعریف‌شده ساخته می‌شود و موسیقی آن در روند نهایی حفظ خواهد شد.</small></span></div>
           @endif
         </section>
 

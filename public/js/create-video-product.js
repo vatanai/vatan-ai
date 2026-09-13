@@ -15,6 +15,7 @@
   const placeholder = workspace.querySelector('[data-result-placeholder]');
   const resultVideo = workspace.querySelector('[data-result-video]');
   const productPreview = workspace.querySelector('[data-product-preview]');
+  const resultCanvas = workspace.querySelector('[data-video-canvas]');
   let polling = false;
 
   workspace.querySelector('[data-video-close]')?.addEventListener('click', function () {
@@ -35,6 +36,10 @@
 
   function selected(name) {
     return form.querySelector(`[name="${name}"]:checked`)?.value || '';
+  }
+
+  function hasFile(name) {
+    return !!form.querySelector(`[name="${name}"]`)?.files?.[0];
   }
 
   function updateCost() {
@@ -80,6 +85,7 @@
 
   workspace.querySelector('[data-prompt-example]')?.addEventListener('click', function () {
     const prompt = form.querySelector('[name="prompt"]');
+    if (!prompt) return;
     if (prompt.value.trim()) return prompt.focus();
     prompt.value = 'حرکت طبیعی و نرم سوژه، دوربین سینمایی آرام، نورپردازی واقع‌گرایانه، جزئیات پایدار و بدون تغییر ناگهانی چهره یا پس‌زمینه';
     prompt.focus();
@@ -94,7 +100,9 @@
       if (preview.tagName === 'VIDEO') preview.load();
     });
   }
-  bindPreview(form.querySelector('[data-source-image]'), form.querySelector('[data-source-preview]'));
+  form.querySelectorAll('[data-source-image]').forEach(function (input) {
+    bindPreview(input, input.closest('[data-source-slot]')?.querySelector('[data-source-preview]'));
+  });
   bindPreview(form.querySelector('[data-source-video]'), form.querySelector('[data-source-video-preview]'));
 
   const faceRoot = form.querySelector('[data-face-source]');
@@ -103,9 +111,9 @@
     const menu = faceRoot.querySelector('[data-face-source-menu]');
     const hidden = faceRoot.querySelector('[data-face-profile-input]');
     const label = faceRoot.querySelector('[data-face-source-label]');
-    const sourceSection = form.querySelector('[data-source-section="image"]');
+    const faceSlot = form.querySelector('[data-source-slot="face"]');
     const profileNotice = form.querySelector('[data-profile-selected]');
-    const sourceInput = form.querySelector('[data-source-image]');
+    const sourceInput = faceSlot?.querySelector('[data-source-image]');
 
     function closeMenu() {
       menu.hidden = true;
@@ -127,7 +135,7 @@
         hidden.value = option.dataset.faceProfileId || '';
         label.textContent = option.querySelector('b')?.textContent || 'عکس جدید';
         const hasProfile = hidden.value !== '';
-        if (sourceSection) sourceSection.hidden = hasProfile;
+        if (faceSlot) faceSlot.hidden = hasProfile;
         if (profileNotice) profileNotice.hidden = !hasProfile;
         if (sourceInput) sourceInput.disabled = hasProfile;
         closeMenu();
@@ -141,9 +149,13 @@
   function validateSource() {
     if (config.workflow === 'image_to_video') {
       const profileId = form.querySelector('[name="face_profile_id"]')?.value;
-      const image = form.querySelector('[name="source_image"]')?.files?.[0];
+      const productImage = hasFile('source_product_image') || hasFile('source_image');
+      const faceImage = hasFile('source_face_image');
       const generatedImageId = form.querySelector('[name="source_generated_image_id"]')?.value;
-      if (!profileId && !image && !generatedImageId) return 'یک پروفایل چهره یا تصویر شروع انتخاب کنید.';
+      const contract = config.input_contract || {};
+      if (contract.product_image && contract.product_required && !productImage && !generatedImageId) return 'تصویر محصول را انتخاب کنید.';
+      if (contract.face_image && contract.face_required && !profileId && !faceImage) return 'یک پروفایل چهره یا تصویر چهره انتخاب کنید.';
+      if (!contract.product_image && !contract.face_image && !profileId && !productImage && !faceImage && !generatedImageId) return 'تصویر شروع را انتخاب کنید.';
     }
     if (config.workflow === 'video_to_video' && !form.querySelector('[name="source_video"]')?.files?.[0]) {
       return 'ویدیوی ورودی را انتخاب کنید.';
@@ -166,13 +178,19 @@
   function showResult(url) {
     polling = false;
     processing.hidden = true;
+    placeholder.hidden = true;
+    if (productPreview) productPreview.hidden = true;
     resultVideo.src = url;
     resultVideo.hidden = false;
+    resultVideo.removeAttribute('hidden');
     resultVideo.load();
     resultVideo.play().catch(function () {});
     statusLabel.textContent = 'ساخت کامل شد';
     submit.disabled = false;
     submitLabel.textContent = 'ساخت دوباره';
+    window.requestAnimationFrame(() => {
+      resultCanvas?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
   }
 
   async function poll(url, attempt) {

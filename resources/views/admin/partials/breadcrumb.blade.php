@@ -35,7 +35,7 @@
         } elseif (request()->is('admin/lab*')) {
             $addBreadcrumb('آزمایشگاه');
         } elseif (request()->is('admin/products/videos*')) {
-            $addBreadcrumb(request()->is('admin/products/videos/create*') ? 'ثبت محصول ویدیو' : 'لیست محصولات ویدیو');
+            $addBreadcrumb(request()->is('admin/products/videos/v2/create*') ? 'ثبت محصول ویدیو — نسخه جدید' : (request()->is('admin/products/videos/create*') ? 'ثبت محصول ویدیو — نسخه پشتیبان' : 'لیست محصولات ویدیو'));
         } elseif (request()->is('admin/products/create*')) {
             $addBreadcrumb('ثبت محصول عکس');
         } else {

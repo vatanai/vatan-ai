@@ -12,6 +12,9 @@
   $features = old('features_json') ? json_decode(old('features_json'), true) : (array)($product?->input_schema ?? []);
   $selectedMotionKeys = collect($configuration['motion_presets'] ?? [])->map(fn($preset) => is_array($preset) ? ($preset['key'] ?? '') : $preset)->filter()->all();
   $fallbackIds = $product ? $models->filter(fn($model) => in_array($model->openrouter_model_id, (array)$product->fallback_models, true) && in_array($model->provider, (array)$product->fallback_model_providers, true))->pluck('id')->all() : [];
+  $productFamily = old('product_family', $configuration['product_family'] ?? 'shop');
+  $inputContract = (array) ($configuration['input_contract'] ?? []);
+  $timeline = (array) ($configuration['timeline'] ?? []);
   $adminClientConfig = [
       'features' => $features,
       'models' => $models->map(fn($model) => [
@@ -70,6 +73,7 @@
       @if($product) @method('PUT') @endif
       <input type="hidden" name="status" id="vpc-status" value="{{ old('status', $product?->status ?? 'active') }}">
       <input type="hidden" name="features_json" id="vpc-features-json" value="{{ json_encode($features, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}">
+      <input type="hidden" name="timeline_json" id="vpc-timeline-json" value="{{ json_encode($timeline, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}">
 
       <section class="vpc-panel is-active" data-step-panel="1">
         <div class="vpc-card">
@@ -125,6 +129,21 @@
           </div>
         </div>
 
+        <div class="vpc-card">
+          <div class="vpc-card-head"><div><i class="fa-solid fa-shapes"></i><span><b>نوع محصول ویدیویی</b><small>این انتخاب رفتار فرم کاربر و ورودی‌های لازم را کنترل می‌کند</small></span></div><span class="badge-pro badge-pro-success">معماری فاز اول</span></div>
+          <div class="vpc-choice-grid cols-2 vpc-family-grid">
+            @foreach($familyCatalog as $value => $family)
+              <label class="vpc-choice compact"><input type="radio" name="product_family" value="{{ $value }}" @checked($productFamily === $value)><span><i class="fa-solid {{ ['shop'=>'fa-bag-shopping','face'=>'fa-user-astronaut','hybrid'=>'fa-people-arrows','music_ready'=>'fa-music'][$value] }}"></i><b>{{ $family['label'] }}</b><small>{{ $family['description'] }}</small><em><i class="fa-solid fa-check"></i></em></span></label>
+            @endforeach
+          </div>
+          <div class="vpc-inline-note"><i class="fa-solid fa-circle-info"></i>با تغییر این نوع، پیشنهاد ورودی‌ها و تنظیمات موزیک/پلان در همین فرم هماهنگ می‌شود؛ کنترل‌های زیر همچنان قابل اصلاح هستند.</div>
+          <div class="vpc-toggle-list vpc-input-contract-list">
+            <label><input type="hidden" name="input_product_image" value="0"><input type="checkbox" name="input_product_image" value="1" @checked(old('input_product_image', $inputContract['product_image'] ?? true))><span><b>ورودی عکس محصول</b><small>برای محصولات فروشگاهی و پلان‌های دارای محصول</small></span><i></i></label>
+            <label><input type="hidden" name="input_face_image" value="0"><input type="checkbox" name="input_face_image" value="1" @checked(old('input_face_image', $inputContract['face_image'] ?? false))><span><b>ورودی عکس چهره</b><small>برای محصولات چهره‌محور یا ترکیبی</small></span><i></i></label>
+            <label><input type="hidden" name="allow_face_profile" value="0"><input type="checkbox" name="allow_face_profile" value="1" @checked(old('allow_face_profile', $inputContract['face_profile'] ?? false))><span><b>اجازه استفاده از پروفایل چهره</b><small>کاربر بتواند مرجع چهره ذخیره‌شده خودش را انتخاب کند</small></span><i></i></label>
+          </div>
+        </div>
+
         <div class="vpc-card" data-face-profile-card>
           <div class="vpc-card-head"><div><i class="fa-solid fa-user-check"></i><span><b>اتصال به پروفایل چهره</b><small>کاربر می‌تواند تصاویر ذخیره‌شده پروفایل را به‌جای بارگذاری دوباره استفاده کند</small></span></div><span class="badge-pro badge-pro-success">متصل به پروفایل</span></div>
           <div class="vpc-choice-grid cols-3">
@@ -163,6 +182,7 @@
         <div class="vpc-card">
           <div class="vpc-card-head"><div><i class="fa-solid fa-wand-magic-sparkles"></i><span><b>راهبری پرامپت</b><small>قالب ثابت محصول با مقادیر ویژگی‌های کاربر ترکیب می‌شود</small></span></div></div>
           <div class="vpc-grid cols-2">
+            <div class="vpc-field span-2"><span>دسترسی کاربر به پرامپت</span><div class="vpc-choice-grid cols-2 vpc-prompt-mode"><label class="vpc-choice compact"><input type="radio" name="prompt_mode" value="locked" @checked(old('prompt_mode', $configuration['prompt_mode'] ?? 'custom') === 'locked')><span><b>پرامپت ثابت محصول</b><small>کاربر فقط ورودی و تنظیمات مجاز را انتخاب می‌کند.</small><em><i class="fa-solid fa-check"></i></em></span></label><label class="vpc-choice compact"><input type="radio" name="prompt_mode" value="custom" @checked(old('prompt_mode', $configuration['prompt_mode'] ?? 'custom') === 'custom')><span><b>پرامپت قابل ویرایش</b><small>کاربر می‌تواند توضیح صحنه را تکمیل کند.</small><em><i class="fa-solid fa-check"></i></em></span></label></div></div>
             <label class="vpc-field span-2"><span>قالب پرامپت <b>*</b></span><textarea name="prompt_template" rows="6" required dir="ltr">{{ old('prompt_template', $product?->prompt_template ?? 'Create a polished cinematic video based on this direction: {creative_direction}.') }}</textarea><small>از شناسه ویژگی‌ها داخل آکولاد استفاده کنید؛ مثل <code>{creative_direction}</code></small></label>
             <label class="vpc-field"><span>دستور سیستمی</span><textarea name="system_prompt" rows="4" dir="ltr">{{ old('system_prompt', $product?->system_prompt ?? 'Preserve subject identity and geometry across all frames. Prefer coherent natural motion and stable temporal detail.') }}</textarea></label>
             <label class="vpc-field"><span>موارد منفی</span><textarea name="negative_prompt" rows="4" dir="ltr">{{ old('negative_prompt', $product?->negative_prompt ?? 'flicker, jitter, warped face, unstable geometry, abrupt camera shake') }}</textarea></label>
@@ -216,6 +236,18 @@
               @endforeach
             </div>
           </div>
+        </div>
+
+        <div class="vpc-card" data-timeline-card>
+          <div class="vpc-card-head"><div><i class="fa-solid fa-music"></i><span><b>موزیک و ساخت چندپلان</b><small>برای محصولات ویدیویی آماده، ساختار هر پلان از همین‌جا تعریف می‌شود</small></span></div><em>اختیاری</em></div>
+          <div class="vpc-grid cols-2">
+            <label class="vpc-field"><span>وضعیت موسیقی</span><select name="music_mode" id="vpc-music-mode"><option value="disabled" @selected(($configuration['music_mode'] ?? 'disabled') === 'disabled')>بدون موسیقی</option><option value="optional" @selected(($configuration['music_mode'] ?? '') === 'optional')>اختیاری برای کاربر</option><option value="required" @selected(($configuration['music_mode'] ?? '') === 'required')>الزامی برای محصول</option></select></label>
+            <label class="vpc-field"><span>حداکثر تعداد پلان</span><input type="number" name="max_shots" id="vpc-max-shots" min="1" max="6" value="{{ old('max_shots', $configuration['max_shots'] ?? 6) }}"><small>هر پلان زمان، پرامپت و ورودی موردنیاز خودش را دارد.</small></label>
+          </div>
+          <div class="vpc-toggle-list"><label><input type="hidden" name="multi_shot_enabled" value="0"><input type="checkbox" name="multi_shot_enabled" value="1" id="vpc-multi-shot" @checked(old('multi_shot_enabled', $configuration['multi_shot_enabled'] ?? false))><span><b>فعال‌سازی ساخت چندپلان</b><small>برای محصول آماده با موزیک، پلان‌ها بعداً به خروجی نهایی مونتاژ می‌شوند.</small></span><i></i></label></div>
+          <div class="vpc-timeline-list" id="vpc-timeline-list"></div>
+          <button type="button" class="vpc-add-shot" id="vpc-add-shot"><i class="fa-solid fa-plus"></i> افزودن پلان</button>
+          <div class="vpc-inline-note"><i class="fa-solid fa-shield-halved"></i>ثبت این ساختار از ابتدا قرارداد محصول را شفاف می‌کند؛ اجرای صف‌محور مونتاژ می‌تواند بدون تغییر فرم کاربر به سرویس پردازش متصل شود.</div>
         </div>
 
         <div class="vpc-card">

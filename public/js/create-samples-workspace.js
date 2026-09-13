@@ -235,8 +235,19 @@
     hasGeneratedOutput = true;
     if (outputStageTab) {
       outputStageTab.hidden = false;
+      outputStageTab.removeAttribute('hidden');
     }
     setStageTab('output');
+  }
+
+  function revealGeneratedImage(result, image) {
+    if (!result || !image) return;
+    image.removeAttribute('hidden');
+    result.hidden = false;
+    result.removeAttribute('hidden');
+    window.requestAnimationFrame(() => {
+      result.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    });
   }
 
   stageTabButtons.forEach((button) => button.addEventListener('click', () => setStageTab(button.dataset.stageTab)));
@@ -526,7 +537,7 @@
       // نمایش خروجی نباید به زمان بارگذاری تصویر وابسته باشد؛ تصویر در همان
       // پنل خروجی شروع به بارگذاری می‌کند و اگر شبکه کند باشد، صفحه قفل نمی‌شود.
       const imageReady = waitForStageImage(main);
-      progress.hidden = true; result.hidden = false; revealOutputTab();
+      progress.hidden = true; revealGeneratedImage(result, main); revealOutputTab();
       await imageReady;
       await completeVisualProgress();
     } catch (error) {

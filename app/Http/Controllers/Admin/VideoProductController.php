@@ -23,9 +23,21 @@ class VideoProductController extends Controller
 
     public function create(Request $request, ?Product $product = null)
     {
+        return $this->renderCreateForm($request, $product, 'admin.products.video-create');
+    }
+
+    public function createV2(Request $request, ?Product $product = null)
+    {
+        return $this->renderCreateForm($request, $product, 'admin.products.video-create-v2');
+    }
+
+    private function renderCreateForm(Request $request, ?Product $product, string $view)
+    {
         if ($product) abort_unless($product->isVideoProduct(), 404);
 
-        $models = AiModel::query()->selectableForVideoProduct()->get();
+        $models = AiModel::query()->selectableForVideoProduct()->get()
+            ->sortBy(fn (AiModel $model): array => [$model->provider === 'openrouter' ? 0 : 1, -((int) ($model->lab_priority ?? 0)), (string) $model->name])
+            ->values();
         $models->each(fn (AiModel $model) => $model->setAttribute(
             'video_capabilities',
             $this->modelSchemas->summarize($model),
@@ -33,7 +45,15 @@ class VideoProductController extends Controller
         $categories = Category::query()->orderBy('name_fa')->orderBy('name')->get();
         $configuration = $product?->videoConfiguration() ?? $this->videoConfig->normalize([
             'workflow' => 'image_to_video',
-            'face_profile_mode' => 'optional',
+            'product_family' => 'shop',
+            'input_product_image' => true,
+            'input_face_image' => false,
+            'allow_face_profile' => false,
+            'prompt_mode' => 'locked',
+            'show_prompt_to_user' => false,
+            'face_profile_mode' => 'disabled',
+            'video_structure' => 'single_shot',
+            'max_shots' => 1,
             'durations' => [4, 6, 8],
             'default_duration' => 4,
             'aspect_ratios' => ['9:16', '16:9', '1:1'],
@@ -46,12 +66,13 @@ class VideoProductController extends Controller
             'allow_promotional_credits' => true,
         ]);
 
-        return view('admin.products.video-create', [
+        return view($view, [
             'product' => $product,
             'models' => $models,
             'categories' => $categories,
             'configuration' => $configuration,
             'motionCatalog' => $this->videoConfig->motionPresetCatalog(),
+            'familyCatalog' => $this->videoConfig->productFamilyCatalog(),
         ]);
     }
 
@@ -60,7 +81,19 @@ class VideoProductController extends Controller
         return $this->persist($request, new Product());
     }
 
+    public function storeV2(Request $request)
+    {
+        return $this->persist($request, new Product());
+    }
+
     public function update(Request $request, Product $product)
+    {
+        abort_unless($product->isVideoProduct(), 404);
+
+        return $this->persist($request, $product);
+    }
+
+    public function updateV2(Request $request, Product $product)
     {
         abort_unless($product->isVideoProduct(), 404);
 
@@ -88,6 +121,19 @@ class VideoProductController extends Controller
             'system_prompt' => ['nullable', 'string', 'max:5000'],
             'features_json' => ['nullable', 'string', 'max:524288', 'json'],
             'workflow' => ['required', Rule::in(VideoProductConfigService::WORKFLOWS)],
+            'product_family' => ['required', Rule::in(VideoProductConfigService::PRODUCT_FAMILIES)],
+            'input_product_image' => ['nullable', 'boolean'],
+            'input_face_image' => ['nullable', 'boolean'],
+            'allow_face_profile' => ['nullable', 'boolean'],
+            'prompt_mode' => ['required', Rule::in(['locked', 'custom'])],
+            'show_prompt_to_user' => ['nullable', 'boolean'],
+            'music_mode' => ['nullable', Rule::in(['disabled', 'optional', 'required'])],
+            // فرم قدیمی پشتیبان این فیلد را ندارد؛ برای حفظ سازگاری، مقدار خالی
+            // از ساختار قدیمی multi_shot_enabled به‌صورت خودکار استنتاج می‌شود.
+            'video_structure' => ['nullable', Rule::in(['single_shot', 'multi_shot'])],
+            'multi_shot_enabled' => ['nullable', 'boolean'],
+            'max_shots' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'timeline_json' => ['nullable', 'string', 'max:524288', 'json'],
             'face_profile_mode' => ['required', Rule::in(['disabled', 'optional', 'required'])],
             'durations' => ['required', 'array', 'min:1', 'max:8'],
             'durations.*' => ['integer', 'min:1', 'max:30', 'distinct'],
@@ -109,12 +155,22 @@ class VideoProductController extends Controller
             'prompt_enhance' => ['nullable', 'boolean'],
             'allow_promotional_credits' => ['nullable', 'boolean'],
             'cover_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            // گام ۱ نسخه‌ی جدید از همان آپلودر چندتصویری ثبت محصول عکس استفاده می‌کند؛
+            // اولین تصویر انتخاب‌شده به‌عنوان کاور ویدیو ذخیره می‌شود.
+            'main_images' => ['nullable', 'array', 'max:10'],
+            'main_images.*' => ['image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            'before_images' => ['nullable', 'array', 'max:10'],
+            'before_images.*' => ['image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
             'preview_video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'preview_video_url' => ['nullable', 'string', 'max:2048'],
             'estimated_time' => ['nullable', 'integer', 'min:10', 'max:3600'],
             'is_featured' => ['nullable', 'boolean'],
             'is_new' => ['nullable', 'boolean'],
             'is_trending' => ['nullable', 'boolean'],
+            'base_likes_count' => ['nullable', 'integer', 'min:0', 'max:999999999'],
+            'new_display_order' => ['nullable', 'integer'],
+            'new_internal_code' => ['nullable', 'string', 'max:100'],
+            'new_admin_note' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $model = !empty($data['model_id'])
@@ -123,14 +179,35 @@ class VideoProductController extends Controller
         if ($isPublishing && !$model) {
             throw ValidationException::withMessages(['model_id' => 'مدل ویدیویی انتخاب‌شده فعال یا معتبر نیست.']);
         }
+        if ($model && $model->provider !== 'openrouter') {
+            throw ValidationException::withMessages(['model_id' => 'مدل اصلی محصولات ویدیویی باید از پرووایدر OpenRouter انتخاب شود.']);
+        }
         if ($model && !$this->videoConfig->compatible($model, $data['workflow'])) {
             throw ValidationException::withMessages(['model_id' => 'مدل انتخاب‌شده با سناریوی تولید این محصول سازگار نیست.']);
         }
         if ($data['face_profile_mode'] !== 'disabled' && $data['workflow'] !== 'image_to_video') {
             throw ValidationException::withMessages(['face_profile_mode' => 'پروفایل چهره فقط در سناریوی عکس به ویدیو قابل استفاده است.']);
         }
-        if ($isPublishing && !$request->hasFile('cover_image') && !$product->cover) {
-            throw ValidationException::withMessages(['cover_image' => 'برای انتشار محصول، تصویر کاور الزامی است.']);
+        $family = (string) $data['product_family'];
+        if ($family !== 'music_ready' && $data['workflow'] !== 'image_to_video') {
+            throw ValidationException::withMessages(['workflow' => 'محصولات فروشگاهی، چهره‌محور و ترکیبی باید در سناریوی عکس به ویدیو ثبت شوند.']);
+        }
+        if ($family === 'music_ready' && $data['workflow'] !== 'image_to_video') {
+            throw ValidationException::withMessages(['workflow' => 'ویدیوی آماده با موزیک در فاز فعلی به ورودی عکس و سناریوی عکس به ویدیو نیاز دارد.']);
+        }
+        $hasProductInput = $request->boolean('input_product_image');
+        $hasFaceInput = $request->boolean('input_face_image');
+        if ($family === 'shop' && !$hasProductInput) {
+            throw ValidationException::withMessages(['input_product_image' => 'محصول فروشگاهی باید ورودی عکس محصول داشته باشد.']);
+        }
+        if ($family === 'face' && !$hasFaceInput) {
+            throw ValidationException::withMessages(['input_face_image' => 'محصول چهره‌محور باید ورودی عکس چهره داشته باشد.']);
+        }
+        if ($family === 'hybrid' && (!$hasProductInput || !$hasFaceInput)) {
+            throw ValidationException::withMessages(['product_family' => 'محصول ترکیبی باید هر دو ورودی عکس محصول و عکس چهره را داشته باشد.']);
+        }
+        if ($isPublishing && !$request->hasFile('cover_image') && !$request->hasFile('main_images.0') && !$product->cover) {
+            throw ValidationException::withMessages(['main_images' => 'برای انتشار محصول، تصویر اصلی/کاور الزامی است.']);
         }
 
         $fallbacks = AiModel::query()
@@ -145,12 +222,16 @@ class VideoProductController extends Controller
 
         $features = json_decode((string) ($data['features_json'] ?? '[]'), true);
         $features = $this->normalizeFeatures(is_array($features) ? $features : []);
-        $configuration = $this->videoConfig->normalize($data);
+        $timeline = json_decode((string) ($data['timeline_json'] ?? '[]'), true);
+        $configuration = $this->videoConfig->normalize($data + ['timeline' => is_array($timeline) ? $timeline : []]);
+        if ($configuration['product_family'] === 'music_ready' && $configuration['timeline'] === []) {
+            throw ValidationException::withMessages(['timeline_json' => 'برای محصول ویدیویی آماده با موزیک حداقل یک پلان تعریف کنید.']);
+        }
         $categoryIds = array_values(array_unique(array_map('intval', (array) ($data['category_ids'] ?? []))));
         $category = $categoryIds ? Category::find($categoryIds[0]) : null;
         $existingProviderOptions = (array) ($product->provider_options ?? []);
 
-        $slug = Str::slug((string) ($data['slug'] ?: $data['name_en'] ?: $data['name_fa']));
+        $slug = Str::slug((string) (($data['slug'] ?? '') ?: ($data['name_en'] ?? '') ?: ($data['name_fa'] ?? '')));
         if ($slug === '') $slug = 'video-product-' . Str::lower(Str::random(8));
 
         $product->forceFill([
@@ -193,12 +274,19 @@ class VideoProductController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_new' => $request->boolean('is_new'),
             'is_trending' => $request->boolean('is_trending'),
+            'base_likes_count' => $request->filled('base_likes_count') ? max(0, (int) $data['base_likes_count']) : ($product->base_likes_count ?? 0),
+            'new_display_order' => (int) ($data['new_display_order'] ?? $product->new_display_order ?? 1),
+            'new_internal_code' => $data['new_internal_code'] ?? $product->new_internal_code,
+            'new_admin_note' => $data['new_admin_note'] ?? $product->new_admin_note,
             'watermark_enabled' => false,
             'timeout' => max(180, (int) ($data['estimated_time'] ?? 180) + 120),
         ]);
 
         if ($request->hasFile('cover_image')) {
             $product->cover = $request->file('cover_image')->store('products/videos/covers', 'public');
+            $product->thumbnail = $product->cover;
+        } elseif ($request->hasFile('main_images.0')) {
+            $product->cover = $request->file('main_images.0')->store('products/videos/covers', 'public');
             $product->thumbnail = $product->cover;
         } elseif (!$product->thumbnail) {
             $product->thumbnail = $product->cover ?: 'products/thumbnails/default_placeholder.jpg';
@@ -209,6 +297,11 @@ class VideoProductController extends Controller
         } elseif (array_key_exists('preview_video_url', $data)) {
             $product->preview_video_url = trim((string) ($data['preview_video_url'] ?? '')) ?: null;
         }
+        if ($request->hasFile('before_images')) {
+            $product->before_images = collect($request->file('before_images'))
+                ->map(fn ($file) => $file->store('products/videos/before', 'public'))
+                ->values()->all();
+        }
         $product->sample_outputs = array_values(array_filter([$product->preview_video_url]));
 
         DB::transaction(function () use ($product, $categoryIds): void {
@@ -218,10 +311,10 @@ class VideoProductController extends Controller
 
         $message = $data['status'] === 'active' ? 'محصول ویدیویی با موفقیت منتشر شد.' : 'پیش‌نویس محصول ویدیویی ذخیره شد.';
         if ($request->expectsJson()) {
-            return response()->json(['ok' => true, 'message' => $message, 'product_id' => $product->id, 'redirect' => route('admin.products.video.create', $product)]);
+            return response()->json(['ok' => true, 'message' => $message, 'product_id' => $product->id, 'redirect' => route('admin.products.video.v2.create', $product)]);
         }
 
-        return redirect()->route('admin.products.video.create', $product)->with('success', $message);
+        return redirect()->route('admin.products.video.v2.create', $product)->with('success', $message);
     }
 
     private function normalizeFeatures(array $features): array

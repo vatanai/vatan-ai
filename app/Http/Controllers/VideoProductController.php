@@ -35,10 +35,21 @@ class VideoProductController extends Controller
         $buildProduct = $schema->pageData($product);
         $config = $product->videoConfiguration();
         $model = \App\Models\AiModel::where('provider', $product->ai_provider)->where('openrouter_model_id', $product->primary_model)->first();
-        $supported = (array) data_get($model ? $modelSchemas->properties($model) : [], 'resolution.enum', []);
-        if ($supported !== []) {
-            $config['resolutions'] = array_values(array_intersect((array) $config['resolutions'], $supported)) ?: [$supported[0]];
+        $capabilities = $model ? $modelSchemas->summarize($model) : [];
+        $supportedResolutions = array_values(array_map('strval', (array) ($capabilities['resolutions'] ?? [])));
+        $supportedDurations = array_values(array_map('intval', (array) ($capabilities['durations'] ?? [])));
+        $supportedAspects = array_values(array_map('strval', (array) ($capabilities['aspect_ratios'] ?? [])));
+        if ($supportedResolutions !== []) {
+            $config['resolutions'] = array_values(array_intersect((array) $config['resolutions'], $supportedResolutions)) ?: [$supportedResolutions[0]];
             if (!in_array($config['default_resolution'], $config['resolutions'], true)) $config['default_resolution'] = $config['resolutions'][0];
+        }
+        if ($supportedDurations !== []) {
+            $config['durations'] = array_values(array_intersect(array_map('intval', (array) $config['durations']), $supportedDurations)) ?: [$supportedDurations[0]];
+            if (!in_array((int) $config['default_duration'], $config['durations'], true)) $config['default_duration'] = $config['durations'][0];
+        }
+        if ($supportedAspects !== []) {
+            $config['aspect_ratios'] = array_values(array_intersect((array) $config['aspect_ratios'], $supportedAspects)) ?: [$supportedAspects[0]];
+            if (!in_array((string) $config['default_aspect_ratio'], $config['aspect_ratios'], true)) $config['default_aspect_ratio'] = $config['aspect_ratios'][0];
         }
         $config['quality_tiers'] = collect((array) ($config['quality_tiers'] ?? []))->map(function (array $tier) use ($config): array {
             if (!in_array((string) ($tier['resolution'] ?? ''), (array) $config['resolutions'], true)) {
@@ -95,6 +106,8 @@ class VideoProductController extends Controller
             'video.motion_preset' => ['nullable', Rule::in($allowedMotions)],
             'video.generate_audio' => ['nullable', 'boolean'],
             'source_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            'source_face_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            'source_product_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
             'source_generated_image_id' => ['nullable', 'integer'],
             'source_video' => ['nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'source_audio' => ['nullable', 'file', 'mimes:mp3,wav,m4a,ogg', 'max:20480'],
@@ -112,23 +125,47 @@ class VideoProductController extends Controller
         $user = $request->user();
         $sourceImageData = null;
         $sourceUploadPath = null;
+        $sourceImageDataList = [];
+        $sourceUploadPaths = [];
+        $contract = (array) ($config['input_contract'] ?? []);
         $faceProfile = $this->selectedFaceProfile($request, $user);
         if ($faceProfile) {
             $entry = collect($faceProfile->referenceImageEntries())->first(fn (array $image): bool => Storage::disk('public')->exists($this->storagePath((string) ($image['path'] ?? ''))));
-            if ($entry) $sourceImageData = $this->imageDataUri((string) $entry['path'], $entry['mime'] ?? null);
+            if ($entry) {
+                $profileData = $this->imageDataUri((string) $entry['path'], $entry['mime'] ?? null);
+                if ($profileData) $sourceImageDataList[] = $profileData;
+            }
         }
-        if (!$sourceImageData && $request->hasFile('source_image')) {
-            $file = $request->file('source_image');
-            $sourceUploadPath = $file->store('uploads/video-inputs/images', 'public');
-            $sourceImageData = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
-            UserUpload::create(['user_id' => $user->id, 'file_path' => $sourceUploadPath, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+        $storeImage = function (string $field) use ($request, $user, &$sourceUploadPath, &$sourceImageDataList, &$sourceUploadPaths): void {
+            if (!$request->hasFile($field)) return;
+            $file = $request->file($field);
+            $path = $file->store('uploads/video-inputs/images', 'public');
+            $sourceUploadPath ??= $path;
+            $sourceUploadPaths[] = $path;
+            $sourceImageDataList[] = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+            UserUpload::create(['user_id' => $user->id, 'file_path' => $path, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+        };
+        $storeImage('source_face_image');
+        $storeImage('source_product_image');
+        // محصولات قدیمی و فرم‌های تک‌ورودی همچنان از نام قبلی پشتیبانی می‌کنند.
+        if ($sourceImageDataList === [] || (!$request->hasFile('source_face_image') && !$request->hasFile('source_product_image'))) {
+            $storeImage('source_image');
         }
-        if (!$sourceImageData && $request->filled('source_generated_image_id')) {
+        if ($request->filled('source_generated_image_id') && !$request->hasFile('source_product_image')) {
             $generatedImage = $this->prefilledGeneratedImage($request, $product);
             if ($generatedImage) {
-                $sourceUploadPath = $generatedImage->image_path;
-                $sourceImageData = $this->imageDataUri($generatedImage->image_path);
+                $sourceUploadPath ??= $generatedImage->image_path;
+                $sourceUploadPaths[] = $generatedImage->image_path;
+                $generatedData = $this->imageDataUri($generatedImage->image_path);
+                if ($generatedData) $sourceImageDataList[] = $generatedData;
             }
+        }
+        $sourceImageData = $sourceImageDataList[0] ?? null;
+        if (($contract['product_required'] ?? false) && !$request->hasFile('source_product_image') && !$request->hasFile('source_image') && !$request->filled('source_generated_image_id')) {
+            throw ValidationException::withMessages(['source_product_image' => 'تصویر محصول برای این محصول الزامی است.']);
+        }
+        if (($contract['face_required'] ?? false) && !$faceProfile && !$request->hasFile('source_face_image')) {
+            throw ValidationException::withMessages(['source_face_image' => 'تصویر چهره یا پروفایل چهره برای این محصول الزامی است.']);
         }
         if ($request->input('video.aspect_ratio') === 'source' && !$sourceImageData) {
             throw ValidationException::withMessages(['source_image' => 'برای حفظ نسبت اصلی، خروجی عکس مرتبط در دسترس نیست.']);
@@ -163,9 +200,12 @@ class VideoProductController extends Controller
                 'generate_audio' => $request->boolean('video.generate_audio'),
                 'face_profile_id' => $faceProfile?->id,
                 'source_image_data' => $sourceImageData,
+                'source_image_data_list' => $sourceImageDataList,
                 'source_upload_path' => $sourceUploadPath,
+                'source_upload_paths' => $sourceUploadPaths,
                 'source_video_url' => $sourceVideoUrl,
                 'audio_url' => $audioUrl,
+                'timeline' => (array) ($config['timeline'] ?? []),
                 'studio_mode' => $studioMode,
             ]);
 

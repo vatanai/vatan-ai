@@ -217,7 +217,7 @@
       lastRun: @json($product->last_run_at ? \App\Support\Jalali::formatNumeric(\Illuminate\Support\Carbon::parse($product->last_run_at)) : null),
       createdAt: @json(\App\Support\Jalali::formatNumeric($product->created_at)),
       updatedAt: @json(\App\Support\Jalali::formatNumeric($product->updated_at)),
-      editUrl: @json($product->isVideoProduct() ? route('admin.products.video.create', $product) : route('admin.products.create', $product)),
+      editUrl: @json($product->isVideoProduct() ? route('admin.products.video.v2.create', $product) : route('admin.products.create', $product)),
     },
     @endforeach
   };
