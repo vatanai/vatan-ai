@@ -18,7 +18,7 @@
       @if(session('success'))
         <div class="referral-alert is-success"><i class="fa-solid fa-circle-check"></i>{{ session('success') }}</div>
       @endif
-      @if($errors->any())
+      @if(($errors ?? null)?->any())
         <div class="referral-alert is-error"><i class="fa-solid fa-triangle-exclamation"></i>{{ $errors->first() }}</div>
       @endif
 
@@ -92,7 +92,9 @@
                 <input type="hidden" name="product_id" value="{{ old('product_id') }}" data-product-value required>
                 <div class="referral-product-results" data-product-results role="listbox" aria-label="فهرست محصولات فعال">
                   @foreach($products as $product)
-                    @php($productLabel = trim($product->name_fa ?: $product->name_en ?: 'محصول بدون نام'))
+                    @php
+                      $productLabel = trim($product->name_fa ?: $product->name_en ?: 'محصول بدون نام');
+                    @endphp
                     <button type="button" class="referral-product-option" data-product-option data-product-id="{{ $product->id }}" data-product-search-text="{{ strtolower($productLabel.' '.$product->name_en.' '.$product->product_code.' '.$product->slug) }}" role="option" aria-selected="false">
                       <strong>{{ $productLabel }}</strong>
                       <small>{{ $product->product_code ?: ('شناسه '.$product->id) }}</small>
