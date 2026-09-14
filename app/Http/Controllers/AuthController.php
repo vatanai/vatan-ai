@@ -106,9 +106,7 @@ class AuthController extends Controller
             if ($user->status !== 'active') {
                 return response()->json(['status' => 'error', 'message' => 'امکان ورود به این حساب وجود ندارد.'], 403);
             }
-            Auth::login($user, true);
-            $request->session()->regenerate();
-            $this->trackSuccessfulLogin($request, $user, 'sms_otp');
+            $this->loginPersistently($request, $user, 'sms_otp');
             return response()->json(['status' => 'success', 'next' => 'redirect', 'redirect' => $this->pullIntendedUrl($request)]);
         }
 
@@ -169,8 +167,7 @@ class AuthController extends Controller
         });
 
         Cache::forget('unified_registration_verified_'.$request->phone);
-        Auth::login($user, true);
-        $request->session()->regenerate();
+        $this->loginPersistently($request, $user);
         app(AuthEventService::class)->record($request, 'registration_completed', $user);
         app(AuthEventService::class)->record($request, 'login_success', $user, metadata: ['first_login' => true]);
         $giftTokens = (int) $rewardResult['registration_gift'] + (int) $rewardResult['invitee_reward'];
@@ -264,8 +261,7 @@ class AuthController extends Controller
         $otp->update(['used' => true]);
         if ($data['purpose'] === 'login') {
             $user = User::where('phone', $data['phone'])->where('status', 'active')->firstOrFail();
-            Auth::login($user, true);
-            $request->session()->regenerate();
+            $this->loginPersistently($request, $user, 'sms_otp');
             return response()->json(['status' => 'success', 'redirect' => $this->pullIntendedUrl($request), 'user_name' => $user->name]);
         }
 
@@ -430,7 +426,7 @@ class AuthController extends Controller
             return [$user, app(ReferralProgramService::class)->completeRegistration($user, $request)];
         });
 
-        Auth::login($user, true);
+        $this->loginPersistently($request, $user, 'registration');
 
         $giftTokens = (int) $rewardResult['registration_gift'] + (int) $rewardResult['invitee_reward'];
 
@@ -479,7 +475,7 @@ class AuthController extends Controller
         }
 
         if (Hash::check($request->password, $user->password)) {
-            Auth::login($user, true);
+            $this->loginPersistently($request, $user, 'password');
             if (!app()->environment('local')) {
                 app(SmsEventService::class)->send('login_success', $user->phone, [
                     'name'=>$user->name, 'phone'=>$user->phone, 'login_time'=>now()->format('Y/m/d H:i'),
@@ -507,6 +503,17 @@ class AuthController extends Controller
         }
 
         return redirect($returnTo);
+    }
+
+    /** ورود همه مسیرهای احراز هویت با نشست ماندگار مرورگر انجام می‌شود. */
+    private function loginPersistently(Request $request, User $user, ?string $method = null): void
+    {
+        Auth::guard('web')->login($user, true);
+        $request->session()->regenerate();
+
+        if ($method !== null) {
+            $this->trackSuccessfulLogin($request, $user, $method);
+        }
     }
 
     /**

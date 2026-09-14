@@ -84,16 +84,28 @@
             @csrf
             <label class="referral-field">
               <span>محصول مقصد</span>
-              <select name="product_id" class="input-pro" required>
-                <option value="">انتخاب محصول</option>
-                @foreach($products as $product)
-                  <option value="{{ $product->id }}" @selected(old('product_id') == $product->id)>{{ $product->name_fa ?: $product->name_en }} @if($product->product_code) — {{ $product->product_code }} @endif</option>
-                @endforeach
-              </select>
-              <small>اگر برای همین کاربر و محصول لینک فعال وجود داشته باشد، لینک تکراری ساخته نمی‌شود.</small>
+              <div class="referral-product-picker" data-product-picker>
+                <div class="referral-product-search-wrap">
+                  <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                  <input class="input-pro referral-product-search" type="search" placeholder="نام، کد یا شناسه محصول را جست‌وجو کنید" autocomplete="off" data-product-search aria-label="جست‌وجوی محصول">
+                </div>
+                <input type="hidden" name="product_id" value="{{ old('product_id') }}" data-product-value required>
+                <div class="referral-product-results" data-product-results role="listbox" aria-label="فهرست محصولات فعال">
+                  @foreach($products as $product)
+                    @php($productLabel = trim($product->name_fa ?: $product->name_en ?: 'محصول بدون نام'))
+                    <button type="button" class="referral-product-option" data-product-option data-product-id="{{ $product->id }}" data-product-search-text="{{ strtolower($productLabel.' '.$product->name_en.' '.$product->product_code.' '.$product->slug) }}" role="option" aria-selected="false">
+                      <strong>{{ $productLabel }}</strong>
+                      <small>{{ $product->product_code ?: ('شناسه '.$product->id) }}</small>
+                    </button>
+                  @endforeach
+                </div>
+                <div class="referral-product-empty" data-product-empty hidden>محصولی با این عبارت پیدا نشد.</div>
+                <div class="referral-product-selected" data-product-selected hidden></div>
+              </div>
+              <small>از بین {{ number_format($products->count()) }} محصول فعال جست‌وجو کنید؛ اگر برای همین کاربر و محصول لینک فعال وجود داشته باشد، لینک تکراری ساخته نمی‌شود.</small>
             </label>
             <div class="referral-profile-note"><i class="fa-solid fa-circle-info"></i><span>بعد از ساخت، لینک کامل در کارت همین کاربر در نمای کلی همکاری در فروش نمایش داده می‌شود و کاربر نیز آن را در بخش لینک‌های دعوت خود خواهد دید.</span></div>
-            <div class="referral-dialog-actions"><a class="referral-action is-neutral" href="{{ route('admin.referrals.overview', ['inviter_search' => $user->id]) }}">انصراف</a><button class="referral-action is-approve" type="submit"><i class="fa-solid fa-link"></i> ساخت لینک دعوت</button></div>
+            <div class="referral-dialog-actions"><a class="referral-action is-neutral" href="{{ route('admin.referrals.overview', ['inviter_search' => $user->id]) }}">انصراف</a><button class="referral-action is-approve" type="submit" data-product-submit disabled><i class="fa-solid fa-link"></i> ساخت لینک دعوت</button></div>
           </form>
         </section>
 
@@ -133,5 +145,50 @@
 @section('scripts')
 <script>
 document.querySelectorAll('[data-copy-url]').forEach(function(button){button.addEventListener('click',async function(){const url=button.dataset.copyUrl;try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(url);else{const input=document.createElement('textarea');input.value=url;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.select();document.execCommand('copy');input.remove()}button.innerHTML='<i class="fa-solid fa-check"></i> کپی شد';setTimeout(function(){button.innerHTML='<i class="fa-regular fa-copy"></i> کپی لینک کامل'},1800)}catch(error){button.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> کپی نشد'}})});
+
+(function () {
+  const picker = document.querySelector('[data-product-picker]');
+  if (!picker) return;
+
+  const search = picker.querySelector('[data-product-search]');
+  const value = picker.querySelector('[data-product-value]');
+  const selected = picker.querySelector('[data-product-selected]');
+  const empty = picker.querySelector('[data-product-empty]');
+  const submit = document.querySelector('[data-product-submit]');
+  const options = Array.from(picker.querySelectorAll('[data-product-option]'));
+  const initialValue = String(value.value || '');
+
+  function choose(option) {
+    const productId = String(option.dataset.productId || '');
+    const label = option.querySelector('strong')?.textContent?.trim() || 'محصول انتخاب‌شده';
+    value.value = productId;
+    selected.textContent = 'محصول انتخاب‌شده: ' + label;
+    selected.hidden = false;
+    submit.disabled = !productId;
+    options.forEach(function (item) {
+      const active = item === option;
+      item.classList.toggle('is-selected', active);
+      item.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  function filter() {
+    const query = String(search.value || '').trim().toLocaleLowerCase();
+    let visible = 0;
+    options.forEach(function (option) {
+      const matches = !query || String(option.dataset.productSearchText || '').toLocaleLowerCase().includes(query);
+      option.hidden = !matches;
+      if (matches) visible++;
+    });
+    empty.hidden = visible !== 0;
+  }
+
+  options.forEach(function (option) {
+    option.addEventListener('click', function () { choose(option); });
+    if (initialValue && String(option.dataset.productId) === initialValue) choose(option);
+  });
+  search.addEventListener('input', filter);
+  filter();
+})();
 </script>
 @endsection

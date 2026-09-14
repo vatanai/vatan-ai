@@ -188,6 +188,19 @@ body.light .referral-switch-input:checked+.referral-switch:after{background:var(
 .referral-link-create-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:16px;align-items:start}
 .referral-link-form-card,.referral-link-existing-card{overflow:hidden}
 .referral-link-form-card .referral-card-body{min-height:270px}
+.referral-product-picker{display:grid;gap:8px}
+.referral-product-search-wrap{position:relative}
+.referral-product-search-wrap>i{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--primary);font-size:11px;pointer-events:none}
+.referral-product-search{padding-right:34px}
+.referral-product-results{display:grid;gap:5px;max-height:260px;overflow-y:auto;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg)}
+.referral-product-option{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:9px 10px;border:1px solid transparent;border-radius:8px;background:var(--card-bg);color:var(--text-main);text-align:right;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.referral-product-option:hover,.referral-product-option.is-selected{border-color:var(--primary-m);background:var(--primary-l);color:var(--primary)}
+.referral-product-option strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+.referral-product-option small{flex:0 0 auto;color:var(--text-soft);font-size:8.5px;direction:ltr}
+.referral-product-option.is-selected small{color:var(--primary)}
+.referral-product-empty{padding:15px 10px;border:1px dashed var(--border);border-radius:9px;color:var(--text-soft);font-size:10px;text-align:center}
+.referral-product-selected{padding:8px 10px;border:1px solid var(--success-m);border-radius:9px;background:var(--success-l);color:var(--success);font-size:10px;font-weight:800}
+.referral-dialog-actions .referral-action:disabled{border-color:var(--border);background:var(--input-bg);color:var(--text-soft);cursor:not-allowed;opacity:.55}
 .referral-dialog-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
 .referral-dialog-actions .referral-action{padding:8px 12px;text-decoration:none}
 .referral-existing-link{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg)}
