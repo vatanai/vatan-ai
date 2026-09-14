@@ -52,6 +52,16 @@
       </div>
 
       <section class="tps-card">
+        <div class="tps-card__head"><div><h2>پرامپت مادر محصول</h2><p>متن تحلیل نام، توضیحات، هشتگ‌ها و دسته‌بندی محصول را ویرایش کنید.</p></div><i class="fa-solid fa-wand-magic-sparkles tps-card__head-icon"></i></div>
+        <form class="tps-prompt-form" method="POST" action="{{ route('admin.settings.telegram.product-bot.master-prompt.update') }}">
+          @csrf @method('PUT')
+          <label class="tps-prompt-field"><span>متن پرامپت مادر</span><textarea class="tps-input tps-prompt-input" name="metadata_prompt" required minlength="30" maxlength="12000">{{ old('metadata_prompt', $metadataPrompt) }}</textarea></label>
+          <p class="tps-muted">بعد از ذخیره، بلافاصله در ثبت‌های جدید و اصلاحات بعدی بات استفاده می‌شود؛ فرآیندهای در حال پردازش تغییر نمی‌کنند.</p>
+          <div class="tps-actions"><button class="btn-pro btn-pro-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> ذخیره و اعمال پرامپت</button></div>
+        </form>
+      </section>
+
+      <section class="tps-card">
         <div class="tps-card__head"><div><h2>مدیران مجاز بات</h2><p>فقط شناسه‌های فعال این فهرست می‌توانند از بات ثبت محصول استفاده کنند.</p></div><span class="tps-badge">{{ number_format($stats['active_managers']) }} فعال</span></div>
         <div class="tps-table-wrap"><table class="tps-table"><thead><tr><th>نام مدیر</th><th>شناسه تلگرام</th><th>ثبت‌ها</th><th>وضعیت</th><th>ذخیره</th></tr></thead><tbody>
           @forelse($managers as $manager)
@@ -80,14 +90,27 @@
       </section>
 
       <section class="tps-card">
-        <div class="tps-card__head"><div><h2>آخرین فرآیندهای ثبت محصول</h2><p>وضعیت آخرین درخواست‌های ارسال‌شده از بات.</p></div><span class="tps-badge">نمایش آخرین ۱۲ مورد</span></div>
-        <div class="tps-table-wrap"><table class="tps-table"><thead><tr><th>مدیر</th><th>وضعیت</th><th>توضیح</th><th>زمان</th></tr></thead><tbody>
+        <div class="tps-card__head"><div><h2>آخرین فرآیندهای ثبت محصول</h2><p>جست‌وجو و بررسی فرآیندهای ثبت‌شده از بات.</p></div><span class="tps-badge">۳۰ مورد در هر صفحه</span></div>
+        <form class="tps-log-filters" method="GET" action="{{ route('admin.settings.telegram.product-bot') }}">
+          <label><span>جست‌وجو</span><input class="tps-input" type="search" name="log_search" value="{{ $logSearch }}" placeholder="نام محصول، کد محصول یا مدیر"></label>
+          <label><span>تاریخ ثبت</span><input class="tps-input" type="date" name="log_date" value="{{ $logDate }}"></label>
+          <button class="btn-pro btn-pro-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> جست‌وجو</button>
+          @if($logSearch !== '' || $logDate !== '')<a class="btn-pro btn-pro-ghost" href="{{ route('admin.settings.telegram.product-bot') }}">حذف فیلتر</a>@endif
+        </form>
+        <div class="tps-table-wrap"><table class="tps-table"><thead><tr><th>محصول</th><th>کد محصول</th><th>مدیر</th><th>وضعیت</th><th>توضیح</th><th>تاریخ ثبت</th></tr></thead><tbody>
           @forelse($drafts as $draft)
-            <tr><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ \Illuminate\Support\Str::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
+            <tr><td><strong>{{ $draft->product?->name_fa ?: ($draft->product?->name_en ?: 'در انتظار ساخت محصول') }}</strong></td><td dir="ltr">{{ $draft->product?->product_code ?: '—' }}</td><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_prompt' => 'در انتظار پرامپت', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'published' => 'منتشرشده', 'draft_saved' => 'پیش‌نویس', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ \Illuminate\Support\Str::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
           @empty
-            <tr><td colspan="4" class="tps-empty">هنوز فرآیندی در دیتابیس ثبت نشده است.</td></tr>
+            <tr><td colspan="6" class="tps-empty">فرآیندی با این مشخصات پیدا نشد.</td></tr>
           @endforelse
         </tbody></table></div>
+        @if($drafts instanceof \Illuminate\Pagination\LengthAwarePaginator && $drafts->hasPages())
+          <nav class="tps-pagination" aria-label="صفحه‌های فرآیندهای ثبت محصول">
+            @if($drafts->onFirstPage())<span class="tps-page-link is-disabled">قبلی</span>@else<a class="tps-page-link" href="{{ $drafts->previousPageUrl() }}">قبلی</a>@endif
+            <span class="tps-page-status">صفحه {{ $drafts->currentPage() }} از {{ $drafts->lastPage() }}</span>
+            @if($drafts->hasMorePages())<a class="tps-page-link" href="{{ $drafts->nextPageUrl() }}">بعدی</a>@else<span class="tps-page-link is-disabled">بعدی</span>@endif
+          </nav>
+        @endif
       </section>
     </div>
   </div>

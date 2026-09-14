@@ -372,6 +372,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
 
     // تنظیمات بات اختصاصی ثبت محصول مدیران
     Route::get('/settings/telegram/product-bot', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'index'])->name('settings.telegram.product-bot');
+    Route::put('/settings/telegram/product-bot/master-prompt', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateMasterPrompt'])->name('settings.telegram.product-bot.master-prompt.update');
     Route::post('/settings/telegram/product-bot/managers', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'storeManager'])->name('settings.telegram.product-bot.managers.store');
     Route::put('/settings/telegram/product-bot/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateManager'])->name('settings.telegram.product-bot.managers.update');
 // مسیرهای کامل CRUD دسته‌بندی

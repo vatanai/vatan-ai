@@ -135,7 +135,7 @@ class TelegramProductDraftService
         if (trim((string) ($input['text'] ?? '')) === '/start') {
             return $this->response($chatId, "سلام عزیز، خوش اومدی به سیستم\nهوشمند ثبت محصول پلتفرم وطن", [
                 ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
-                ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
+                ['text' => 'آموزش', 'callback_data' => 'product:education'],
             ], [
                 'status' => 'welcome',
                 'welcome' => true,
@@ -143,7 +143,7 @@ class TelegramProductDraftService
                 'reply_markup' => [
                     'inline_keyboard' => [[
                         ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
-                        ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
+                        ['text' => 'آموزش', 'callback_data' => 'product:education'],
                     ]],
                 ],
             ]);
@@ -856,9 +856,7 @@ class TelegramProductDraftService
     {
         return [
             'keyboard' => [
-                [['text' => 'ثبت محصول جدید'], ['text' => 'ویرایش محصول']],
-                [['text' => 'تنظیمات'], ['text' => 'آموزش']],
-                [['text' => 'لغو فرآیند']],
+                [['text' => 'ثبت محصول جدید'], ['text' => 'آموزش']],
             ],
             'resize_keyboard' => true,
             'is_persistent' => true,
