@@ -178,8 +178,8 @@ class TelegramProductDraftService
             return $this->response($chatId, 'ابتدا روی «ثبت محصول جدید» یا دستور شروع بزنید.', [], ['status' => 'no_draft']);
         }
 
-        $paths = (array) $draft->image_paths;
-        if (count($paths) >= (int) config('services.telegram_product.max_images', 5)) {
+        $maxImages = (int) config('services.telegram_product.max_images', 5);
+        if (count((array) $draft->image_paths) >= $maxImages) {
             return $this->response($chatId, 'تعداد تصویرها به سقف مجاز رسیده است. برای ادامه روی دکمه‌ی زیر بزنید.', [
                 ['text' => 'ادامه با همین تصویرها', 'callback_data' => 'product:describe'],
             ], ['status' => 'awaiting_description', 'draft_id' => $draft->id]);
@@ -191,10 +191,28 @@ class TelegramProductDraftService
             throw ValidationException::withMessages(['image' => 'فایل تصویر به بک‌اند تحویل داده نشده است.']);
         }
 
-        $hasPreviousImage = $paths !== [];
-        $paths[] = $this->images->store($image, 'products/telegram');
-        $draft->forceFill(['image_paths' => array_values($paths), 'state' => 'awaiting_prompt'])->save();
-        $this->rememberMessage($draft, $input['message_id'] ?? null);
+        $photoState = DB::transaction(function () use ($draft, $image, $input, $maxImages): array {
+            $lockedDraft = TelegramProductDraft::query()->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            $paths = (array) $lockedDraft->image_paths;
+            if (count($paths) >= $maxImages) {
+                return ['draft' => $lockedDraft, 'has_previous_image' => true, 'limit_reached' => true];
+            }
+
+            $hasPreviousImage = $paths !== [];
+            $paths[] = $this->images->store($image, 'products/telegram');
+            $lockedDraft->forceFill(['image_paths' => array_values($paths), 'state' => 'awaiting_prompt'])->save();
+            $this->rememberMessage($lockedDraft, $input['message_id'] ?? null);
+
+            return ['draft' => $lockedDraft, 'has_previous_image' => $hasPreviousImage, 'limit_reached' => false];
+        });
+
+        $draft = $photoState['draft'];
+        if ($photoState['limit_reached']) {
+            return $this->response($chatId, 'تعداد تصویرها به سقف مجاز رسیده است. برای ادامه روی دکمه‌ی زیر بزنید.', [
+                ['text' => 'ادامه با همین تصویرها', 'callback_data' => 'product:describe'],
+            ], ['status' => 'awaiting_description', 'draft_id' => $draft->id]);
+        }
+        $hasPreviousImage = $photoState['has_previous_image'];
 
         $text = $hasPreviousImage
             ? "محتوای دیگه از این محصول دریافت شد ✅\nمرسی که دقت نظر داری و محتوای بیشتری می‌فرستی برام\nخب حالا پرامپت ساخت این محصول‌رو همراه با نام و توضیحات دلخواهت در یک پیام بفرست برام"
