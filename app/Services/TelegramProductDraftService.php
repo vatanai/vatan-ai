@@ -134,18 +134,13 @@ class TelegramProductDraftService
     {
         if (trim((string) ($input['text'] ?? '')) === '/start') {
             return $this->response($chatId, "سلام عزیز، خوش اومدی به سیستم\nهوشمند ثبت محصول پلتفرم وطن", [
-                ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
+                ['text' => 'ثبت محصول', 'callback_data' => 'product:start'],
                 ['text' => 'آموزش', 'callback_data' => 'product:education'],
             ], [
                 'status' => 'welcome',
                 'welcome' => true,
                 'photo_url' => 'https://placehold.co/1200x630/0d1b2a/ffffff.png?text=Vatan',
-                'reply_markup' => [
-                    'inline_keyboard' => [[
-                        ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
-                        ['text' => 'آموزش', 'callback_data' => 'product:education'],
-                    ]],
-                ],
+                'reply_markup' => $this->mainMenuMarkup(),
             ]);
         }
 
@@ -296,7 +291,7 @@ class TelegramProductDraftService
     private function text(TelegramProductManager $manager, ?TelegramProductDraft $draft, string $chatId, array $input): array
     {
         $text = trim((string) ($input['text'] ?? ''));
-        if ($text === 'ثبت محصول جدید') {
+        if (in_array($text, ['ثبت محصول', 'ثبت محصول جدید'], true)) {
             return $this->start($manager, $chatId, $input);
         }
         if ($text === 'ویرایش محصول') {
@@ -782,7 +777,7 @@ class TelegramProductDraftService
 
     private function education(string $chatId): array
     {
-        return $this->response($chatId, "آموزش ثبت محصول\n\n۱) روی «ثبت محصول جدید» بزنید و عکس اصلی را ارسال کنید.\n۲) بعد از دریافت عکس، پرامپت ساخت محصول را همراه با نام و توضیحات در یک پیام بفرستید.\n۳) نام و توضیحات پیشنهادی را بررسی کنید و «تأیید» یا «کپی برای ویرایش» را بزنید.\n۴) نوع ثبت را انتخاب کنید: پیش‌نویس یا انتشار در سایت.\n۵) در پایان کد محصول و لینک نمایش آن برای شما ارسال می‌شود.\n\nبرای ویرایش محصول قبلی، «ویرایش محصول» را بزنید و کد محصول را ارسال کنید.", [], ['status' => 'education', 'reply_markup' => $this->mainMenuMarkup()]);
+        return $this->response($chatId, "آموزش ثبت محصول\n\n۱) روی «ثبت محصول» بزنید و عکس اصلی را ارسال کنید.\n۲) بعد از دریافت عکس، پرامپت ساخت محصول را همراه با نام و توضیحات در یک پیام بفرستید.\n۳) نام و توضیحات پیشنهادی را بررسی کنید و «تأیید» یا «کپی برای ویرایش» را بزنید.\n۴) نوع ثبت را انتخاب کنید: پیش‌نویس یا انتشار در سایت.\n۵) در پایان کد محصول و لینک نمایش آن برای شما ارسال می‌شود.\n\nبرای ویرایش محصول قبلی، «ویرایش محصول» را بزنید و کد محصول را ارسال کنید.", [], ['status' => 'education', 'reply_markup' => $this->mainMenuMarkup()]);
     }
 
     private function savedResponse(TelegramProductDraft $draft, Product $product, string $chatId, string $status): array
@@ -942,7 +937,7 @@ class TelegramProductDraftService
     {
         return [
             'keyboard' => [
-                [['text' => 'ثبت محصول جدید'], ['text' => 'آموزش']],
+                [['text' => 'ثبت محصول'], ['text' => 'آموزش']],
             ],
             'resize_keyboard' => true,
             'is_persistent' => true,
