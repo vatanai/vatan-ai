@@ -10,6 +10,8 @@ class TelegramProductDraft extends Model
     public const ACTIVE_STATES = [
         'awaiting_image',
         'awaiting_prompt',
+        'awaiting_prompt_confirmation',
+        'awaiting_prompt_continue',
         'awaiting_description',
         'processing',
         'review',

@@ -207,7 +207,13 @@ class TelegramProductDraftService
 
         return $this->response($chatId, $text, [
             ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-        ], ['status' => 'awaiting_prompt', 'draft_id' => $draft->id, 'delete_message_ids' => $this->messageIds($draft), 'reply_markup' => $this->mainMenuMarkup()]);
+        ], [
+            'status' => 'awaiting_prompt',
+            'draft_id' => $draft->id,
+            'delete_message_ids' => $this->messageIds($draft),
+            'reply_markup' => $this->mainMenuMarkup(),
+            'duplicate' => $hasPreviousImage,
+        ]);
     }
 
     private function downloadTelegramImage(string $fileId): UploadedFile
@@ -274,6 +280,8 @@ class TelegramProductDraftService
         return match ($action[1] ?? '') {
             'add_image' => $this->setStateResponse($draft, 'awaiting_image', $chatId, 'تصویر بعدی را ارسال کنید.'),
             'describe' => $this->setStateResponse($draft, 'awaiting_prompt', $chatId, 'پرامپت ساخت محصول را همراه با نام و توضیحات در یک پیام بفرستید.'),
+            'prompt_confirm' => $this->confirmPrompt($draft, $chatId),
+            'prompt_continue' => $this->requestPromptContinuation($draft, $chatId),
             'status' => $this->statusResponse($draft, $chatId),
             'cancel' => $this->cancel($draft, $chatId),
             'cancel_edit' => $this->cancelEdit($draft, $chatId),
@@ -298,6 +306,14 @@ class TelegramProductDraftService
         if ($text === 'تنظیمات') return $this->settingsMenu($manager, $chatId);
         if ($text === 'آموزش') return $this->education($chatId);
         if ($text === 'دریافت نتیجه' && $draft) return $this->statusResponse($draft, $chatId);
+        if ($draft && in_array($text, ['تایید و ارسال پرامپت', 'تأیید و ارسال پرامپت'], true) && in_array($draft->state, ['awaiting_prompt_confirmation', 'awaiting_prompt_continue'], true)) {
+            $this->rememberMessage($draft, $input['message_id'] ?? null);
+            return $this->confirmPrompt($draft, $chatId);
+        }
+        if ($draft && in_array($text, ['ادامه متن پرامپت', 'ادامه متن پررامپت'], true) && in_array($draft->state, ['awaiting_prompt_confirmation', 'awaiting_prompt_continue'], true)) {
+            $this->rememberMessage($draft, $input['message_id'] ?? null);
+            return $this->requestPromptContinuation($draft, $chatId);
+        }
         if (in_array($text, ['تنظیمات پرامپت اسم و توضیحات محصول', 'تنظیمات پرامپت مادر محصول'], true)) return $this->settingsAction($manager, $chatId, 'metadata');
         if ($text === 'تنظیمات پرامپت اصلاح پرامپت محصول') return $this->settingsAction($manager, $chatId, 'optimizer');
         if ($text === 'لغو فرآیند' && $draft) {
@@ -323,29 +339,99 @@ class TelegramProductDraftService
             if (mb_strlen($text) < 10) {
                 return $this->response($chatId, 'متن ورودی کمی کوتاه است؛ پرامپت، نام یا توضیحات محصول را کامل‌تر بفرستید.', [], ['status' => 'awaiting_prompt', 'draft_id' => $draft->id]);
             }
-            $draft->forceFill([
-                'description' => $text,
-                'state' => 'processing',
-                'processing_started_at' => now(),
-                'reviewed_at' => null,
-            ])->save();
             $this->rememberMessage($draft, $input['message_id'] ?? null);
-            ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
-            return $this->response($chatId, 'اطلاعات در حال آماده‌سازی است؛ چند لحظه صبر کنید.', [
-                ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-            ], [
-                'status' => 'processing',
-                'draft_id' => $draft->id,
-                'delete_message_ids' => $this->messageIds($draft),
-                'poll_after_seconds' => 3,
-                'reply_markup' => $this->mainMenuMarkup(),
-            ]);
+            return $this->storePromptPart($draft, $chatId, $text);
+        }
+        if ($draft->state === 'awaiting_prompt_continue') {
+            if ($text === '') {
+                return $this->response($chatId, 'ادامهٔ متن پرامپت را ارسال کنید.', $this->promptDecisionButtons(), ['status' => 'awaiting_prompt_continue', 'draft_id' => $draft->id]);
+            }
+            $this->rememberMessage($draft, $input['message_id'] ?? null);
+            return $this->storePromptPart($draft, $chatId, $text);
         }
         if ($draft->state === 'awaiting_edit') {
             return $this->applyEdit($draft, $chatId, $text);
         }
 
         return $this->response($chatId, 'لطفاً یکی از دکمه‌های پیام قبلی را انتخاب کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+    }
+
+    private function storePromptPart(TelegramProductDraft $draft, string $chatId, string $text): array
+    {
+        $payload = (array) $draft->input_payload;
+        $parts = array_values(array_filter(array_map(
+            static fn ($part): string => trim((string) $part),
+            (array) ($payload['prompt_parts'] ?? []),
+        ), static fn (string $part): bool => $part !== ''));
+        $parts[] = trim($text);
+        $payload['prompt_parts'] = $parts;
+        $draft->forceFill([
+            'input_payload' => $payload,
+            'state' => 'awaiting_prompt_confirmation',
+            'pending_edit_field' => null,
+        ])->save();
+
+        $partLabel = count($parts) === 1 ? 'بخش اول پرامپت' : 'بخش جدید پرامپت';
+        return $this->response($chatId, "{$partLabel} دریافت شد ✅\nاگر متن کامل است، «تایید و ارسال پرامپت» را بزنید؛ اگر ادامه دارد، «ادامه متن پرامپت» را انتخاب کنید.", $this->promptDecisionButtons(), [
+            'status' => 'awaiting_prompt_confirmation',
+            'draft_id' => $draft->id,
+            'delete_message_ids' => $this->messageIds($draft),
+        ]);
+    }
+
+    private function requestPromptContinuation(TelegramProductDraft $draft, string $chatId): array
+    {
+        if (! in_array($draft->state, ['awaiting_prompt_confirmation', 'awaiting_prompt_continue'], true)) {
+            return $this->response($chatId, 'ابتدا متن پرامپت را ارسال کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+        }
+        $draft->forceFill(['state' => 'awaiting_prompt_continue'])->save();
+        return $this->response($chatId, 'ادامهٔ متن پرامپت را در پیام بعدی ارسال کنید.', $this->promptDecisionButtons(), [
+            'status' => 'awaiting_prompt_continue',
+            'draft_id' => $draft->id,
+        ]);
+    }
+
+    private function confirmPrompt(TelegramProductDraft $draft, string $chatId): array
+    {
+        if (! in_array($draft->state, ['awaiting_prompt_confirmation', 'awaiting_prompt_continue'], true)) {
+            return $this->response($chatId, 'ابتدا متن پرامپت را ارسال کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+        }
+        $parts = array_values(array_filter(array_map(
+            static fn ($part): string => trim((string) $part),
+            (array) data_get($draft->input_payload, 'prompt_parts', []),
+        ), static fn (string $part): bool => $part !== ''));
+        $prompt = trim(implode("\n", $parts));
+        if (mb_strlen($prompt) < 10) {
+            return $this->response($chatId, 'متن پرامپت کامل نیست؛ ابتدا متن کامل‌تری ارسال کنید.', $this->promptDecisionButtons(), ['status' => 'awaiting_prompt_confirmation', 'draft_id' => $draft->id]);
+        }
+
+        $payload = (array) $draft->input_payload;
+        unset($payload['prompt_parts']);
+        $draft->forceFill([
+            'description' => $prompt,
+            'input_payload' => $payload,
+            'state' => 'processing',
+            'processing_started_at' => now(),
+            'reviewed_at' => null,
+        ])->save();
+        ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
+        return $this->response($chatId, 'اطلاعات در حال آماده‌سازی است؛ چند لحظه صبر کنید.', [
+            ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+        ], [
+            'status' => 'processing',
+            'draft_id' => $draft->id,
+            'delete_message_ids' => $this->messageIds($draft),
+            'poll_after_seconds' => 3,
+            'reply_markup' => $this->mainMenuMarkup(),
+        ]);
+    }
+
+    private function promptDecisionButtons(): array
+    {
+        return [
+            ['text' => 'تایید و ارسال پرامپت', 'callback_data' => 'product:prompt_confirm'],
+            ['text' => 'ادامه متن پرامپت', 'callback_data' => 'product:prompt_continue'],
+        ];
     }
 
     private function beginProductEdit(TelegramProductManager $manager, ?TelegramProductDraft $draft, string $chatId, array $input): array
