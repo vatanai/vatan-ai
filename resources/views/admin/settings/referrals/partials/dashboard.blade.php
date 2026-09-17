@@ -3,7 +3,8 @@
     @method('PUT')
 
     <div class="referral-config-grid">
-      <section class="content-card referral-config-card">
+      <div class="referral-config-column referral-config-column--setup">
+      <section class="content-card referral-config-card referral-config-card--onboarding">
         <div class="referral-card-head">
           <span class="referral-card-icon is-primary"><i class="fa-solid fa-sparkles"></i></span>
           <div><h2>هدیه شروع کار</h2><p>هدیه‌ای که پس از ثبت‌نام و تأیید موبایل برای کاربر جدید ثبت می‌شود.</p></div>
@@ -16,7 +17,7 @@
             <span class="referral-switch" aria-hidden="true"></span>
           </label>
           <div class="referral-fields two-columns">
-            <div class="referral-field"><span>مقدار هدیه ثبت‌نام</span><div class="referral-source-value"><strong>{{ number_format((int) $settings->registration_gift_tokens) }} اعتبار</strong><a class="btn-pro btn-pro-secondary" href="{{ route('admin.settings.new-user-gift') }}"><i class="fa-solid fa-arrow-up-right-from-square"></i> مدیریت در هدیه کاربران جدید</a></div><small>این مقدار فقط از بخش «هدیه کاربران جدید» تغییر می‌کند تا سایت و همکاری در فروش همیشه یکسان بمانند.</small></div>
+            <label class="referral-field"><span>مقدار هدیه ثبت‌نام</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="1000000" name="registration_gift_tokens" value="{{ old('registration_gift_tokens', $settings->registration_gift_tokens) }}"><b>اعتبار</b></div><small>منبع واحد مقدار هدیهٔ تمام کاربران جدید؛ تغییر آن از همین فرم در کل برنامه هماهنگ می‌شود.</small></label>
             <label class="referral-field"><span>فاصله مجاز دریافت مجدد</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="1" max="365" name="registration_gift_cooldown_days" value="{{ old('registration_gift_cooldown_days', $settings->registration_gift_cooldown_days) }}"><b>روز</b></div><small>برای دستگاه یا اینترنت تکراری.</small></label>
           </div>
           <label class="referral-check-row"><input type="hidden" name="registration_sms_enabled" value="0"><input type="checkbox" name="registration_sms_enabled" value="1" @checked(old('registration_sms_enabled', $settings->registration_sms_enabled))><span>پیامک خوش‌آمدگویی و مقدار هدیه ارسال شود</span></label>
@@ -25,10 +26,37 @@
         </div>
       </section>
 
-      <section class="content-card referral-config-card">
+      <section class="content-card referral-config-card referral-config-card--profile">
+        <div class="referral-card-head">
+          <span class="referral-card-icon is-warning"><i class="fa-solid fa-user-shield"></i></span>
+          <div><h2>کنترل تقلب و نمایش پروفایل</h2><p>دعوت‌های تکراری حذف نمی‌شوند؛ برای تصمیم مدیر در صف بررسی می‌مانند.</p></div>
+        </div>
+        <div class="referral-card-body">
+          <label class="referral-check-row"><input type="hidden" name="review_repeated_device" value="0"><input type="checkbox" name="review_repeated_device" value="1" @checked(old('review_repeated_device', $settings->review_repeated_device))><span>دعوت‌های ثبت‌شده با دستگاه تکراری بررسی شوند</span></label>
+          <label class="referral-check-row"><input type="hidden" name="review_repeated_ip" value="0"><input type="checkbox" name="review_repeated_ip" value="1" @checked(old('review_repeated_ip', $settings->review_repeated_ip))><span>دعوت‌های ثبت‌شده با اینترنت تکراری بررسی شوند</span></label>
+          <div class="referral-profile-note"><i class="fa-solid fa-circle-info"></i><span>برای پرداخت خودکار، دو گزینهٔ بررسی بالا باید خاموش بمانند. سقف‌های روزانه، ماهانه و بودجهٔ کمپین نیز باید بدون مقدار باشند.</span></div>
+          <div class="referral-divider"></div>
+          <label class="referral-toggle-row">
+            <span><strong>نمایش همکاری در فروش در پروفایل</strong><small>محتوا و پنل کامل این بخش در مرحله چهارم متصل می‌شود.</small></span>
+            <input type="hidden" name="profile_enabled" value="0">
+            <input class="referral-switch-input" type="checkbox" name="profile_enabled" value="1" @checked(old('profile_enabled', $settings->profile_enabled))>
+            <span class="referral-switch" aria-hidden="true"></span>
+          </label>
+          <label class="referral-field"><span>عنوان پنل کاربر</span><input class="input-pro" name="profile_title" maxlength="120" value="{{ old('profile_title', $settings->profile_title) }}"></label>
+          <label class="referral-field"><span>زیرعنوان ترغیب‌کننده</span><input class="input-pro" name="profile_subtitle" maxlength="180" value="{{ old('profile_subtitle', $settings->profile_subtitle) }}"></label>
+          <label class="referral-field"><span>توضیحات برنامه</span><textarea class="input-pro referral-textarea" name="profile_description" maxlength="1000" rows="4">{{ old('profile_description', $settings->profile_description) }}</textarea></label>
+          <label class="referral-field"><span>متن آماده اشتراک‌گذاری</span><textarea class="input-pro referral-textarea" name="share_message" maxlength="500" rows="3">{{ old('share_message', $settings->share_message) }}</textarea><small>متغیر <b dir="ltr">{referral_link}</b> با لینک اختصاصی هر کاربر جایگزین می‌شود.</small></label>
+          <div class="referral-profile-note"><i class="fa-solid fa-circle-check"></i><span>پنل پروفایل آماده است؛ پس از فعال‌کردن این گزینه برای کاربران نمایش داده می‌شود.</span></div>
+        </div>
+      </section>
+      </div>
+
+      <div class="referral-config-column referral-config-column--rules">
+
+      <section class="content-card referral-config-card referral-config-card--referral">
         <div class="referral-card-head">
           <span class="referral-card-icon is-success"><i class="fa-solid fa-people-arrows-left-right"></i></span>
-          <div><h2>پاداش همکاری در فروش</h2><p>کاربر لینک خود را منتشر می‌کند و پس از دعوت موفق پاداش می‌گیرد.</p></div>
+          <div><h2>قوانین ثابت پاداش همکاری در فروش</h2><p>مقدارهای این بخش مرجع اصلی پرداخت اعتبار و کمیسیون کل برنامه هستند.</p></div>
         </div>
         <div class="referral-card-body">
           <label class="referral-toggle-row">
@@ -37,16 +65,23 @@
             <input class="referral-switch-input" type="checkbox" name="referral_enabled" value="1" @checked(old('referral_enabled', $settings->referral_enabled))>
             <span class="referral-switch" aria-hidden="true"></span>
           </label>
+          <label class="referral-toggle-row">
+            <span><strong>پرداخت اعتبار نیازمند تأیید مدیر باشد</strong><small>با فعال‌بودن، پاداش کاربر دعوت‌شده و همکار تا تصمیم مدیر در صف بررسی می‌ماند.</small></span>
+            <input type="hidden" name="referral_rewards_require_admin_approval" value="0">
+            <input class="referral-switch-input" type="checkbox" name="referral_rewards_require_admin_approval" value="1" @checked(old('referral_rewards_require_admin_approval', $settings->referral_rewards_require_admin_approval))>
+            <span class="referral-switch" aria-hidden="true"></span>
+          </label>
           <label class="referral-field"><span>شرط آزادشدن پاداش</span>
             <select class="input-pro" name="reward_trigger">
-              <option value="first_purchase" @selected(old('reward_trigger', $settings->reward_trigger) === 'first_purchase')>بعد از اولین خرید موفق کاربر دعوت‌شده — پیشنهادشده</option>
               <option value="registration" @selected(old('reward_trigger', $settings->reward_trigger) === 'registration')>بلافاصله بعد از ثبت‌نام و تأیید موبایل</option>
+              <option value="first_purchase" @selected(old('reward_trigger', $settings->reward_trigger) === 'first_purchase')>بعد از اولین خرید موفق کاربر دعوت‌شده</option>
             </select>
             <small class="is-important"><i class="fa-solid fa-shield"></i> شرط اولین خرید، ساخت حساب‌های متعدد فقط برای گرفتن توکن را بی‌اثر می‌کند.</small>
           </label>
           <div class="referral-fields two-columns">
             <label class="referral-field"><span>هدیه کاربر دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="invitee_reward_tokens" value="{{ old('invitee_reward_tokens', $settings->invitee_reward_tokens) }}"><b>توکن</b></div></label>
             <label class="referral-field"><span>پاداش دعوت‌کننده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="inviter_reward_tokens" value="{{ old('inviter_reward_tokens', $settings->inviter_reward_tokens) }}"><b>توکن</b></div></label>
+            <label class="referral-field"><span>پاداش هر خرید موفق همکار</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="purchase_reward_tokens" value="{{ old('purchase_reward_tokens', $settings->purchase_reward_tokens ?? 5) }}"><b>توکن</b></div><small>برای هر خرید موفق دعوت‌شده، یک‌بار به همکار پرداخت می‌شود.</small></label>
             <label class="referral-field"><span>تخفیف خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="referral_discount_percent" value="{{ old('referral_discount_percent', $settings->referral_discount_percent ?? 10) }}"><b>٪</b></div><small>روی مبلغ نهایی خرید اعمال می‌شود.</small></label>
             <label class="referral-field"><span>کمیسیون خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="purchase_commission_percent" value="{{ old('purchase_commission_percent', $settings->purchase_commission_percent ?? 10) }}"><b>٪</b></div><small>به‌صورت دفتر مالی در انتظار تسویه ثبت می‌شود.</small></label>
             <label class="referral-field"><span>حداقل مبلغ مشمول تخفیف</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="minimum_purchase_amount" value="{{ old('minimum_purchase_amount', $settings->minimum_purchase_amount) }}"><b>تومان</b></div><small>خالی یعنی همه خریدهای واجد شرایط.</small></label>
@@ -54,7 +89,7 @@
         </div>
       </section>
 
-      <section class="content-card referral-config-card">
+      <section class="content-card referral-config-card referral-config-card--campaign">
         <div class="referral-card-head">
           <span class="referral-card-icon is-info"><i class="fa-solid fa-calendar-days"></i></span>
           <div><h2>کمپین و محدودیت پرداخت</h2><p>بازه اعتبار لینک و سقف پرداخت پاداش‌ها را کنترل کنید.</p></div>
@@ -70,29 +105,7 @@
           </div>
         </div>
       </section>
-
-      <section class="content-card referral-config-card">
-        <div class="referral-card-head">
-          <span class="referral-card-icon is-warning"><i class="fa-solid fa-user-shield"></i></span>
-          <div><h2>کنترل تقلب و نمایش پروفایل</h2><p>دعوت‌های تکراری حذف نمی‌شوند؛ برای تصمیم مدیر در صف بررسی می‌مانند.</p></div>
-        </div>
-        <div class="referral-card-body">
-          <label class="referral-check-row"><input type="hidden" name="review_repeated_device" value="0"><input type="checkbox" name="review_repeated_device" value="1" @checked(old('review_repeated_device', $settings->review_repeated_device))><span>دعوت‌های ثبت‌شده با دستگاه تکراری بررسی شوند</span></label>
-          <label class="referral-check-row"><input type="hidden" name="review_repeated_ip" value="0"><input type="checkbox" name="review_repeated_ip" value="1" @checked(old('review_repeated_ip', $settings->review_repeated_ip))><span>دعوت‌های ثبت‌شده با اینترنت تکراری بررسی شوند</span></label>
-          <div class="referral-divider"></div>
-          <label class="referral-toggle-row">
-            <span><strong>نمایش همکاری در فروش در پروفایل</strong><small>محتوا و پنل کامل این بخش در مرحله چهارم متصل می‌شود.</small></span>
-            <input type="hidden" name="profile_enabled" value="0">
-            <input class="referral-switch-input" type="checkbox" name="profile_enabled" value="1" @checked(old('profile_enabled', $settings->profile_enabled))>
-            <span class="referral-switch" aria-hidden="true"></span>
-          </label>
-          <label class="referral-field"><span>عنوان پنل کاربر</span><input class="input-pro" name="profile_title" maxlength="120" value="{{ old('profile_title', $settings->profile_title) }}"></label>
-          <label class="referral-field"><span>زیرعنوان ترغیب‌کننده</span><input class="input-pro" name="profile_subtitle" maxlength="180" value="{{ old('profile_subtitle', $settings->profile_subtitle) }}"></label>
-          <label class="referral-field"><span>توضیحات برنامه</span><textarea class="input-pro referral-textarea" name="profile_description" maxlength="1000" rows="4">{{ old('profile_description', $settings->profile_description) }}</textarea></label>
-          <label class="referral-field"><span>متن آماده اشتراک‌گذاری</span><textarea class="input-pro referral-textarea" name="share_message" maxlength="500" rows="3">{{ old('share_message', $settings->share_message) }}</textarea><small>متغیر <b dir="ltr">{referral_link}</b> با لینک اختصاصی هر کاربر جایگزین می‌شود.</small></label>
-          <div class="referral-profile-note"><i class="fa-solid fa-circle-check"></i><span>پنل پروفایل آماده است؛ پس از فعال‌کردن این گزینه برای کاربران نمایش داده می‌شود.</span></div>
-        </div>
-      </section>
+      </div>
     </div>
 
     <footer class="referral-save-bar">

@@ -761,6 +761,7 @@ html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
   color: var(--green);
   font-weight: 700;
 }
+.files-sub-tab i { margin-inline-end: 5px; font-size: 12px; }
 
 .files-grid {
   display: grid;
@@ -931,12 +932,12 @@ html.light .referral-invite-user small{color:#5a7a5a}
 html.light .icon-filter { filter: brightness(0) invert(0); }
 
 .profile-page i[class*="fa-"] {
-  font-family: "Font Awesome 6 Free" !important;
+  font-family: "Font Awesome 7 Free" !important;
   font-weight: 900 !important;
   display: inline-block;
 }
-.profile-page i.fa-brands{font-family:"Font Awesome 6 Brands"!important;font-weight:400!important}
-.profile-page i.fa-regular{font-weight:400!important}
+.profile-page i.fa-brands{font-family:"Font Awesome 7 Brands"!important;font-weight:400!important}
+.profile-page i.fa-regular{font-family:"Font Awesome 7 Free"!important;font-weight:400!important}
 
 /* ═══════════════════════════════════════
    SMALL TABLET — 640px+
@@ -1117,6 +1118,52 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   .panel-grid    { grid-template-columns: repeat(6, 1fr); }
   .files-grid    { grid-template-columns: repeat(6, 1fr); }
 }
+
+/* ═══════════════════════════════════════
+   FACE PROFILES — مرجع کارکتر چهره
+═══════════════════════════════════════ */
+.profile-panel[data-panel="files"]{width:100%;box-sizing:border-box;padding:16px}
+.face-profiles-panel{display:grid;gap:20px;width:100%;min-width:0;padding:0 0 22px;box-sizing:border-box}
+.face-profile-form-success{display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid rgb(87 217 138 / 25%);border-radius:10px;background:rgb(87 217 138 / 8%);color:#57d98a;font-size:11px}
+.face-profiles-intro{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;min-width:0;padding:18px;box-sizing:border-box;border:1px solid rgb(207 253 0 / 22%);border-radius:18px;background:linear-gradient(135deg,rgb(207 253 0 / 9%),var(--bg-surface))}
+.face-profiles-intro__icon{display:grid;width:46px;height:46px;place-items:center;border-radius:14px;background:var(--green);color:#111;font-size:18px}
+.face-profiles-intro__kicker,.face-profile-create-card__kicker{display:block;color:var(--green);font-size:10px;font-weight:800}
+.face-profiles-intro h2,.face-profile-create-card h3{margin:5px 0 4px;color:var(--text-primary);font-size:17px;font-weight:900}
+.face-profiles-intro p{margin:0;color:var(--text-secondary);font-size:11px;line-height:1.9;opacity:.72}
+.face-profiles-intro__cta{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid rgb(207 253 0 / 32%);border-radius:11px;color:var(--green);font-size:11px;font-weight:800;white-space:nowrap}
+.face-profile-create-card{display:grid;gap:14px;width:100%;min-width:0;padding:18px;box-sizing:border-box;border:1px solid var(--border-subtle);border-radius:18px;background:var(--bg-surface)}
+.face-profile-create-card__head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.face-profile-limit{padding:5px 8px;border-radius:8px;background:rgb(207 253 0 / 9%);color:var(--green);font-size:10px;white-space:nowrap}
+.face-profile-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto;align-items:end;gap:10px;min-width:0}
+.face-profile-form>*{min-width:0}
+.face-profile-form label{display:grid;gap:6px;color:var(--text-secondary);font-size:11px;font-weight:700}
+.face-profile-form label small{font-size:9px;opacity:.58}
+.face-profile-form input{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--bg-page);color:var(--text-primary);font:inherit;font-size:11px;outline:none}
+.face-profile-form input:focus{border-color:var(--green)}
+.face-profile-form button,.face-profile-empty a{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 13px;border:1px solid var(--green);border-radius:10px;background:var(--green);color:#111;font:inherit;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}
+.face-profile-form-error{padding:10px 12px;border:1px solid rgb(240 92 92 / 25%);border-radius:10px;background:rgb(240 92 92 / 8%);color:var(--red);font-size:11px;line-height:1.8}
+.face-profile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;min-width:0}
+.face-profile-card{overflow:hidden;border:1px solid var(--border-subtle);border-radius:16px;background:var(--bg-surface)}
+.face-profile-card__media{position:relative;aspect-ratio:1/1.05;overflow:hidden;background:var(--bg-page)}
+.face-profile-card__media img{width:100%;height:100%;display:block;object-fit:cover}
+.face-profile-card__media>span:not(.face-profile-card__badge){display:grid;width:100%;height:100%;place-items:center;color:var(--green);font-size:30px}
+.face-profile-card__badge{position:absolute;right:8px;bottom:8px;padding:5px 7px;border-radius:8px;background:rgb(0 0 0 / 65%);color:var(--green);font-size:9px;font-weight:800}
+.face-profile-card__body{display:grid;gap:7px;padding:11px 11px 7px}
+.face-profile-card__body h3{margin:0;overflow:hidden;color:var(--text-primary);font-size:13px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+.face-profile-card__body span{color:var(--text-secondary);font-size:9px;opacity:.55;white-space:nowrap}
+.face-profile-rename-form{display:flex;align-items:center;gap:6px}
+.face-profile-rename-form input{min-width:0;width:100%;padding:6px 7px;border:1px solid var(--border-subtle);border-radius:8px;background:var(--bg-page);color:var(--text-primary);font:inherit;font-size:11px;outline:none}
+.face-profile-rename-form input:focus{border-color:var(--green)}
+.face-profile-rename-form button{display:grid;width:27px;height:27px;flex:0 0 27px;place-items:center;border:1px solid rgb(87 217 138 / 28%);border-radius:8px;background:rgb(87 217 138 / 10%);color:#57d98a;font-size:10px;cursor:pointer}
+.face-profile-delete-form{padding:0 11px 11px}
+.face-profile-delete-form button{display:inline-flex;align-items:center;gap:5px;padding:4px 0;border:0;background:none;color:var(--red);font:inherit;font-size:10px;cursor:pointer}
+.face-profile-empty{grid-column:1/-1;display:grid;justify-items:center;gap:8px;padding:30px 18px;border:1px dashed var(--border-subtle);border-radius:16px;text-align:center}
+.face-profile-empty>span{display:grid;width:42px;height:42px;place-items:center;border-radius:13px;background:rgb(207 253 0 / 10%);color:var(--green)}
+.face-profile-empty strong{color:var(--text-primary);font-size:14px}
+.face-profile-empty p{max-width:360px;margin:0;color:var(--text-secondary);font-size:11px;line-height:1.9;opacity:.65}
+.face-profile-empty a{margin-top:4px;text-decoration:none}
+@media(max-width:767px){.profile-panel[data-panel="files"]{padding:12px}.face-profiles-panel{gap:18px;padding:0 0 24px}.face-profiles-intro{grid-template-columns:auto minmax(0,1fr);padding:16px}.face-profiles-intro__cta{grid-column:1/-1;width:100%;box-sizing:border-box}.face-profile-create-card{padding:16px}.face-profile-form{grid-template-columns:minmax(0,1fr)}.face-profile-form button{width:100%}.face-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+@media(max-width:420px){.face-profiles-intro{grid-template-columns:1fr;text-align:center}.face-profiles-intro__icon{margin-inline:auto}.face-profiles-intro__cta{grid-column:auto}.face-profile-grid{grid-template-columns:1fr}}
 
 /* ═══════════════════════════════════════
    مودال پیش‌نمایش عکس گرید پروفایل

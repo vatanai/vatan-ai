@@ -42,6 +42,11 @@
         </div>
       </div>
 
+      <div class="flex items-center justify-between gap-3 flex-wrap p-3 rounded-xl mb-4 border bg-[var(--primary-l)] border-[var(--primary-m)]">
+        <div class="flex items-center gap-2"><span class="w-8 h-8 rounded-lg inline-flex items-center justify-center bg-[var(--card-bg)] text-[var(--primary)]"><i class="fa-solid fa-user"></i></span><div><b class="block text-[11px] text-[var(--text-h)]">مدیریت کارکتر شیت کاربران</b><span class="block mt-1 text-[9px] text-[var(--text-soft)]">مشاهده، تغییر نام و افزودن مرجع چهره برای هر کاربر</span></div></div>
+        <a href="{{ route('admin.users.face-profiles.index') }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--primary)] text-white text-[10px] font-bold no-underline hover:opacity-90"><i class="fa-solid fa-arrow-left"></i> ورود به مدیریت کارکتر شیت</a>
+      </div>
+
       <div class="flex gap-2.5 items-center flex-wrap p-3 rounded-xl mb-4 border bg-[var(--card-bg)] border-[var(--border)]">
         @if($errors->has('birth_month') || $errors->has('birth_day'))
           <div class="w-full px-3 py-2 rounded-lg border border-[var(--danger-m)] bg-[var(--danger-l)] text-[12px] text-[var(--danger)]">

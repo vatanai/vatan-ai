@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -303,7 +304,7 @@ class ReferralSettingController extends Controller
                         ->selectRaw('COALESCE(SUM(amount), 0)')
                         ->whereColumn('referral_rewards.user_id', 'users.id')
                         ->where('status', 'paid')
-                        ->whereIn('reward_type', ['invitee_reward', 'inviter_reward', 'purchase_commission', 'purchase_commission_reversal'])
+                        ->whereIn('reward_type', ['invitee_reward', 'inviter_reward', 'purchase_reward', 'purchase_commission', 'purchase_commission_reversal'])
                         ->where(fn ($query) => $query->whereNull('currency')->orWhere('currency', 'token')),
                     'referral_paid_tokens'
                 )
@@ -333,7 +334,7 @@ class ReferralSettingController extends Controller
                             ->selectRaw('1')
                             ->from('referral_rewards')
                             ->whereColumn('referral_rewards.user_id', 'users.id')
-                            ->whereIn('referral_rewards.reward_type', ['invitee_reward', 'inviter_reward', 'purchase_commission', 'purchase_commission_reversal']));
+                            ->whereIn('referral_rewards.reward_type', ['invitee_reward', 'inviter_reward', 'purchase_reward', 'purchase_commission', 'purchase_commission_reversal']));
                 })
                 ->when($inviterSearch !== '', function ($query) use ($inviterSearch): void {
                     $query->where(function ($searchQuery) use ($inviterSearch): void {
@@ -453,14 +454,17 @@ class ReferralSettingController extends Controller
         abort_unless($request->user('admin')?->isLeader(), 403);
 
         $data = $request->validate([
+            'registration_gift_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'registration_gift_enabled' => ['required', 'boolean'],
             'registration_sms_enabled' => ['required', 'boolean'],
             'registration_gift_review_repeated_ip' => ['required', 'boolean'],
             'registration_gift_review_repeated_device' => ['required', 'boolean'],
             'registration_gift_cooldown_days' => ['required', 'integer', 'min:1', 'max:365'],
             'referral_enabled' => ['required', 'boolean'],
+            'referral_rewards_require_admin_approval' => ['required', 'boolean'],
             'invitee_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'inviter_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'purchase_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'reward_trigger' => ['required', Rule::in(['registration', 'first_purchase'])],
             'referral_discount_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'purchase_commission_percent' => ['required', 'numeric', 'min:0', 'max:100'],
@@ -486,6 +490,12 @@ class ReferralSettingController extends Controller
 
         DB::transaction(function () use ($request, $data) {
             $settings = ReferralSetting::query()->lockForUpdate()->firstOrFail();
+
+            if (array_key_exists('registration_gift_tokens', $data)
+                && Schema::hasColumn('referral_settings', 'prelogin_credit_text')) {
+                $data['prelogin_credit_text'] = 'هدیه '.(int) $data['registration_gift_tokens'].' اعتبار';
+            }
+
             $before = $settings->only(array_keys($data));
             $settings->update($data);
 
@@ -624,7 +634,7 @@ class ReferralSettingController extends Controller
 
     private function rewardTypeLabel(string $type): string
     {
-        return match ($type) { 'registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', 'purchase_commission' => 'کمیسیون خرید', default => $type };
+        return match ($type) { 'registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', 'purchase_reward' => 'پاداش خرید موفق', 'purchase_commission' => 'کمیسیون خرید', default => $type };
     }
 
     private function rewardStatusLabel(string $status): string

@@ -10,6 +10,7 @@ use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\FaceProfile;
 use App\Models\GeneratedVideo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -65,6 +66,7 @@ public function gallery()
                 'createdMedia'   => collect(),
                 'usedProducts'   => collect(),
                 'personalImages' => collect(),
+                'faceProfiles'   => collect(),
                 'galleryItems'   => collect(),
                 'savedProducts'  => collect(),
                 'storageUsed'    => 0,
@@ -159,6 +161,9 @@ public function gallery()
         $personalImages = $user->uploadedImages()
             ->select(['id', 'user_id', 'file_path', 'mime_type', 'size', 'created_at'])
             ->latest()->get();
+        $faceProfiles = Schema::hasTable('face_profiles')
+            ? $user->faceProfiles()->active()->latest()->get()
+            : collect();
         $galleryItems = $user->galleryItems()
             ->select(['id', 'user_id', 'disk', 'mime_type', 'original_path', 'preview_path', 'metadata', 'created_at'])
             ->latest()->get();
@@ -184,8 +189,12 @@ public function gallery()
             ? $user->generatedVideos()->sum('size')
             : 0;
         $personalImagesSize = $user->uploadedImages()->sum('size') ?? 0;
+        $faceProfilesSize = $faceProfiles->sum(
+            fn (FaceProfile $profile): int => collect($profile->referenceImageEntries())
+                ->sum(fn (array $image): int => (int) ($image['size'] ?? 0))
+        );
 
-        $totalBytes = $createdImagesSize + $createdVideosSize + $personalImagesSize;
+        $totalBytes = $createdImagesSize + $createdVideosSize + $personalImagesSize + $faceProfilesSize;
 
         // تبدیل دقیق بایت به مگابایت با رند کردن تا ۲ رقم اعشار
         $storageUsed = round($totalBytes / (1024 * 1024), 2);
@@ -211,6 +220,7 @@ public function gallery()
             'createdVideos',
             'createdMedia',
             'personalImages',
+            'faceProfiles',
             'galleryItems',
             'savedProducts',
             'usedProducts',
@@ -281,7 +291,7 @@ public function gallery()
 
         $inviterRewards = ReferralReward::query()
             ->where('user_id', $user->id)
-            ->where('reward_type', 'inviter_reward');
+            ->whereIn('reward_type', ['inviter_reward', 'purchase_reward']);
 
         $links = Schema::hasTable('referral_links')
             ? ReferralLink::query()
@@ -390,5 +400,92 @@ public function gallery()
         }
 
         return back()->with('success', 'عکس پروفایل با موفقیت بروزرسانی شد.');
+    }
+
+    /** ساخت پروفایل مرجع چهره برای استفاده‌ی مجدد در ساخت‌های بعدی. */
+    public function storeFaceProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        if (!Schema::hasTable('face_profiles')) {
+            return back()->withErrors(['face_profile' => 'این قابلیت هنوز در دسترس نیست.']);
+        }
+
+        $limit = $user->faceProfileLimit();
+        $activeCount = $user->faceProfiles()->active()->count();
+        if ($limit < 1 || $activeCount >= $limit) {
+            return back()->withErrors(['face_profile' => 'تعداد پروفایل چهره‌ی مجاز برای پلن شما تکمیل شده است.']);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'images' => ['required', 'array', 'min:1', 'max:3'],
+            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ]);
+
+        $referenceImages = [];
+        foreach ($request->file('images', []) as $image) {
+            $path = $image->store('face-profiles', 'public');
+            $referenceImages[] = [
+                'path' => $path,
+                'mime' => $image->getMimeType(),
+                'size' => $image->getSize(),
+            ];
+        }
+
+        $user->faceProfiles()->create([
+            'name' => trim((string) $validated['name']),
+            'reference_images' => $referenceImages,
+            'status' => 'active',
+        ]);
+
+        return redirect()->route('app.profile', [
+            'tab' => 'files',
+            'file_tab' => 'face-profiles',
+        ])->with('success', 'پروفایل چهره با موفقیت ذخیره شد.');
+    }
+
+    /** تغییر نام پروفایل مرجع چهره توسط صاحب حساب. */
+    public function updateFaceProfile(Request $request, FaceProfile $faceProfile)
+    {
+        $user = Auth::user();
+
+        abort_unless($user && (int) $faceProfile->user_id === (int) $user->id, 404);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+        ]);
+
+        $faceProfile->update(['name' => trim((string) $validated['name'])]);
+
+        return redirect()->route('app.profile', [
+            'tab' => 'files',
+            'file_tab' => 'face-profiles',
+        ])->with('success', 'نام پروفایل چهره با موفقیت تغییر کرد.');
+    }
+
+    /** غیرفعال‌سازی پروفایل و حذف فایل‌های مرجع آن. */
+    public function destroyFaceProfile(FaceProfile $faceProfile)
+    {
+        $user = Auth::user();
+
+        abort_unless($user && (int) $faceProfile->user_id === (int) $user->id, 404);
+
+        foreach ($faceProfile->referenceImageEntries() as $image) {
+            if (!empty($image['path'])) {
+                Storage::disk('public')->delete($image['path']);
+            }
+        }
+
+        $faceProfile->update(['status' => 'deleted']);
+
+        return redirect()->route('app.profile', [
+            'tab' => 'files',
+            'file_tab' => 'face-profiles',
+        ])->with('success', 'پروفایل چهره حذف شد.');
     }
 }

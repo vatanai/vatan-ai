@@ -20,9 +20,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 
 class ReferralProgramService
 {
+    private const ATTRIBUTION_COOKIE = 'vatan_referral_attribution';
+
     public function captureVisit(
         User $inviter,
         Request $request,
@@ -36,7 +39,8 @@ class ReferralProgramService
         if (! $settings->referralIsActive()
             || $inviter->status !== 'active'
             || auth()->id() === $inviter->id
-            || $request->session()->has('referral.attribution')) {
+            || $this->isLikelyLinkPreview($request)
+            || $this->attributionFromRequest($request)) {
             return null;
         }
 
@@ -73,6 +77,14 @@ class ReferralProgramService
             'source' => $source,
             'captured_at' => now()->toIso8601String(),
         ]);
+        Cookie::queue(cookie(
+            name: self::ATTRIBUTION_COOKIE,
+            value: json_encode($request->session()->get('referral.attribution'), JSON_THROW_ON_ERROR),
+            minutes: max(1, (int) $settings->attribution_window_days * 24 * 60),
+            httpOnly: true,
+            secure: $request->isSecure(),
+            sameSite: 'lax',
+        ));
 
         $this->recordEvent('click', 'visit:'.$visit->id, [
             'inviter_id' => $inviter->id,
@@ -122,8 +134,9 @@ class ReferralProgramService
             return null;
         }
 
-        $existing = $request->session()->get('referral.attribution');
+        $existing = $this->attributionFromRequest($request);
         if (is_array($existing)) {
+            $request->session()->put('referral.attribution', $existing);
             if ((int) ($existing['inviter_id'] ?? 0) !== $inviter->id) {
                 $this->recordEvent('attribution_conflict', 'manual-conflict:'.sha1($request->session()->getId().':'.$code), [
                     'inviter_id' => $inviter->id,
@@ -155,7 +168,7 @@ class ReferralProgramService
             return $this->conversionFor($invitee);
         }
 
-        $attribution = $request->session()->get('referral.attribution');
+        $attribution = $this->attributionFromRequest($request);
         $code = $code ?: (is_array($attribution) ? ($attribution['referral_code'] ?? null) : null);
 
         $inviter = User::query()
@@ -172,6 +185,8 @@ class ReferralProgramService
         if (! $visit || (int) $visit->inviter_id !== (int) $inviter->id) {
             return null;
         }
+
+        $request->session()->put('referral.attribution', $attribution);
 
         $conversion = DB::transaction(function () use ($invitee, $inviter, $visit): ReferralConversion {
             $conversion = ReferralConversion::query()->firstOrCreate(
@@ -261,19 +276,22 @@ class ReferralProgramService
             }
 
             $riskReason = $this->riskReason($settings, $inviter, $invitee, $signupIpHash, $signupDeviceHash);
+            $reviewReason = $riskReason ?: ($settings->referral_rewards_require_admin_approval
+                ? 'پرداخت پاداش همکاری در فروش نیازمند تأیید مدیر است.'
+                : null);
 
             $conversion = ReferralConversion::query()->firstOrCreate(
                 ['invitee_id' => $invitee->id],
                 [
                     'visit_id' => $visit->id,
                     'inviter_id' => $inviter->id,
-                    'status' => $riskReason ? 'under_review' : 'qualified',
+                    'status' => $reviewReason ? 'under_review' : 'qualified',
                     'link_id' => $visit->link_id,
                     'product_id' => $visit->product_id,
-                    'risk_reason' => $riskReason,
+                    'risk_reason' => $reviewReason,
                     'signup_ip_hash' => $signupIpHash,
                     'signup_device_hash' => $signupDeviceHash,
-                    'qualified_at' => $riskReason ? null : now(),
+                    'qualified_at' => $reviewReason ? null : now(),
                 ],
             );
 
@@ -303,7 +321,7 @@ class ReferralProgramService
                 return $result;
             }
 
-            $pendingReason = $riskReason ?: null;
+            $pendingReason = $reviewReason;
             if ($settings->invitee_reward_tokens > 0) {
                 $reward = $this->createAndPayReward(
                     user: $invitee,
@@ -361,9 +379,7 @@ class ReferralProgramService
                 return $result;
             }
 
-            $pendingReason = $conversion->status === 'under_review'
-                ? ($conversion->risk_reason ?: 'این دعوت نیازمند بررسی مدیر است.')
-                : null;
+            $pendingReason = $this->referralRewardPendingReason($settings, $conversion);
 
             if ($settings->invitee_reward_tokens > 0) {
                 $reward = $this->createAndPayReward(
@@ -484,12 +500,12 @@ class ReferralProgramService
         return $purchase->fresh();
     }
 
-    /** پرداخت موفق را به‌صورت idempotent ثبت و کمیسیون را در دفتر مالی رفرال pending می‌کند. */
+    /** پرداخت موفق را به‌صورت idempotent ثبت، پاداش اعتباری را پرداخت و کمیسیون را در دفتر مالی ثبت می‌کند. */
     public function handleCompletedPurchase(PlanPurchase $purchase): ?ReferralReward
     {
         return DB::transaction(function () use ($purchase): ?ReferralReward {
             $conversion = ReferralConversion::query()->where('invitee_id', $purchase->user_id)->lockForUpdate()->first();
-            if (! $conversion || $purchase->status !== PlanPurchase::COMPLETED) {
+            if (! $conversion || $conversion->status === 'rejected' || $purchase->status !== PlanPurchase::COMPLETED) {
                 return null;
             }
 
@@ -518,8 +534,21 @@ class ReferralProgramService
                 'commission_amount' => (int) $conversion->commission_amount + $commission,
             ]);
 
+            $purchaseReward = null;
+            if ($conversion->inviter_id && (int) ($settings->purchase_reward_tokens ?? 0) > 0) {
+                $purchaseReward = $this->createAndPayReward(
+                    user: $conversion->inviter,
+                    amount: (int) $settings->purchase_reward_tokens,
+                    type: 'purchase_reward',
+                    eventKey: 'referral-purchase-reward:'.$purchase->id,
+                    settings: $settings,
+                    conversion: $conversion,
+                    pendingReason: $this->referralRewardPendingReason($settings, $conversion),
+                );
+            }
+
             if ($commission < 1 || ! $conversion->inviter_id) {
-                return null;
+                return $purchaseReward;
             }
 
             return ReferralReward::query()->firstOrCreate(
@@ -759,7 +788,7 @@ class ReferralProgramService
 
         if ($type !== 'registration_gift' && ! $pendingReason && $settings->campaign_token_budget) {
             $spent = ReferralReward::query()
-                ->whereIn('reward_type', ['invitee_reward', 'inviter_reward'])
+                ->whereIn('reward_type', ['invitee_reward', 'inviter_reward', 'purchase_reward'])
                 ->where('status', 'paid')
                 ->sum('amount');
             if ($spent + $amount > $settings->campaign_token_budget) {
@@ -838,6 +867,19 @@ class ReferralProgramService
         return null;
     }
 
+    private function referralRewardPendingReason(ReferralSetting $settings, ?ReferralConversion $conversion = null): ?string
+    {
+        if ($settings->referral_rewards_require_admin_approval) {
+            return 'پرداخت پاداش همکاری در فروش نیازمند تأیید مدیر است.';
+        }
+
+        if ($conversion?->status === 'under_review') {
+            return $conversion->risk_reason ?: 'این دعوت نیازمند بررسی مدیر است.';
+        }
+
+        return null;
+    }
+
     private function registrationGiftRiskReason(
         ReferralSetting $settings,
         User $user,
@@ -890,8 +932,10 @@ class ReferralProgramService
         return $settings->only([
             'registration_gift_tokens',
             'registration_gift_cooldown_days',
+            'referral_rewards_require_admin_approval',
             'invitee_reward_tokens',
             'inviter_reward_tokens',
+            'purchase_reward_tokens',
             'reward_trigger',
             'referral_discount_percent',
             'purchase_commission_percent',
@@ -909,6 +953,7 @@ class ReferralProgramService
             'registration_gift' => 'هدیه ثبت‌نام',
             'invitee_reward' => 'هدیه ورود از لینک دعوت',
             'inviter_reward' => 'پاداش دعوت موفق',
+            'purchase_reward' => 'پاداش خرید موفق',
             default => 'پاداش سیستمی',
         };
     }
@@ -938,5 +983,55 @@ class ReferralProgramService
         }
 
         return $this->hashValue($deviceId);
+    }
+
+    /**
+     * انتساب را هم از نشست و هم از کوکی ماندگار می‌خواند تا جابه‌جایی بین
+     * صفحه‌ی لینک، صفحه‌ی ورود و فرم ثبت‌نام در مرورگرهای درون‌برنامه‌ای
+     * باعث از دست رفتن ثبت‌نام نشود.
+     */
+    private function attributionFromRequest(Request $request): ?array
+    {
+        $sessionAttribution = $request->session()->get('referral.attribution');
+        if (is_array($sessionAttribution)) {
+            return $sessionAttribution;
+        }
+
+        $raw = $request->cookie(self::ATTRIBUTION_COOKIE);
+        if (! is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! is_array($decoded)
+            || ! isset($decoded['visit_id'], $decoded['inviter_id'], $decoded['referral_code'], $decoded['captured_at'])) {
+            return null;
+        }
+
+        try {
+            if (Carbon::parse($decoded['captured_at'])->lt(now()->subDays(ReferralSetting::current()->attribution_window_days))) {
+                return null;
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    /** پیش‌نمایش لینک توسط خزنده‌ها نباید به‌عنوان کلیک واقعی گزارش شود. */
+    private function isLikelyLinkPreview(Request $request): bool
+    {
+        $userAgent = strtolower((string) $request->userAgent());
+        if ($userAgent === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/bot|crawler|spider|slurp|facebookexternalhit|facebot|twitterbot|linkedinbot|whatsapp|telegrambot|google-inspectiontool|headless|lighthouse|pingdom|gtmetrix|curl|wget/i', $userAgent);
     }
 }

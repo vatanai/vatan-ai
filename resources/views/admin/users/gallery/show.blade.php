@@ -34,6 +34,19 @@
       @endforeach
     </section>
 
+    <section class="user-gallery-referral mb-5">
+      <div class="user-gallery-section-head">
+        <div><h2>همکاری در فروش و رفرال</h2><p>خلاصه‌ی قابل استناد از لینک‌ها، ورودی‌ها، ثبت‌نام‌ها، خریدها و پاداش‌های این کاربر</p></div>
+        <a href="{{ route('admin.users.gallery.referral-report', $user) }}" class="user-gallery-section-link">گزارش کامل و خروجی <i class="fa-solid fa-arrow-left"></i></a>
+      </div>
+      <div class="user-gallery-referral-grid">
+        <div class="user-gallery-referral-card"><span>کلیک کل</span><strong>{{ number_format($referralReport['summary']['clicks']) }}</strong><small>{{ number_format($referralReport['summary']['unique_clicks']) }} بازدیدکننده یکتا</small></div>
+        <div class="user-gallery-referral-card success"><span>ثبت‌نام</span><strong>{{ number_format($referralReport['summary']['registrations']) }}</strong><small>{{ $referralReport['summary']['registration_rate'] }}٪ نرخ تبدیل</small></div>
+        <div class="user-gallery-referral-card info"><span>خرید موفق</span><strong>{{ number_format($referralReport['summary']['purchases']) }}</strong><small>{{ number_format($referralReport['summary']['outputs']) }} ساخت مخاطبان</small></div>
+        <div class="user-gallery-referral-card warning"><span>جمع پاداش پرداخت‌شده</span><strong>{{ number_format($referralReport['rewards']['combined_paid']) }}</strong><small>اعتبار برای همکار و مخاطبان</small></div>
+      </div>
+    </section>
+
     <section class="user-gallery-finance mb-5">
       <div class="user-gallery-section-head">
         <div><h2>خلاصه مالی و اعتبار</h2><p>نمایش سریع وضعیت خرید، اعتبار و مصرف مرتبط با این کاربر</p></div>
@@ -44,6 +57,55 @@
         <div class="user-gallery-finance-card success"><span>مبلغ خریدها</span><strong>{{ number_format($financeSummary['paid']) }}</strong><small>تومان</small></div>
         <div class="user-gallery-finance-card info"><span>اعتبار دریافت‌شده</span><strong>{{ number_format($financeSummary['granted']) }}</strong><small>اعتبار</small></div>
         <div class="user-gallery-finance-card warning"><span>اعتبار مصرف‌شده</span><strong>{{ number_format($financeSummary['used']) }}</strong><small>{{ number_format($financeSummary['revenue']) }} تومان درآمد تخصیص‌یافته</small></div>
+      </div>
+    </section>
+
+    <section class="user-face-profile-management mb-5" id="face-profiles">
+      <div class="user-gallery-section-head">
+        <div><h2><i class="fa-solid fa-user text-[var(--primary)]"></i> مدیریت کارکتر شیت‌های کاربر</h2><p>از این بخش می‌توانی برای کاربر پروفایل جدید اضافه کنی، نام آن را تغییر بدهی یا حذفش کنی.</p></div>
+        <div class="user-face-profile-count"><strong>{{ number_format($faceProfiles->count()) }}</strong> از <span>{{ number_format($user->faceProfileLimit()) }}</span> پروفایل فعال</div>
+      </div>
+
+      @if($faceProfiles->count() < $user->faceProfileLimit())
+        <form action="{{ route('admin.users.face-profiles.store', $user) }}" method="POST" enctype="multipart/form-data" class="user-face-profile-create">
+          @csrf
+          <label><span>نام کارکتر شیت</span><input type="text" name="name" maxlength="80" placeholder="مثلاً کارکتر اصلی کمپین" required></label>
+          <label><span>تصاویر مرجع <small>۱ تا ۳ تصویر، هرکدام حداکثر ۱۰ مگابایت</small></span><input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required></label>
+          <button type="submit"><i class="fa-solid fa-plus"></i> افزودن برای این کاربر</button>
+        </form>
+      @else
+        <div class="user-face-profile-limit"><i class="fa-solid fa-circle-info"></i> سقف ۵ کارکتر شیت فعال برای این کاربر تکمیل شده است.</div>
+      @endif
+
+      <div class="user-face-profile-list">
+        @forelse($faceProfiles as $faceProfile)
+          @php($faceProfileImages = $faceProfile->referenceImageEntries())
+          <article class="user-face-profile-item">
+            <div class="user-face-profile-item__images">
+              @forelse($faceProfileImages as $image)
+                @php($faceImagePath = (string) ($image['path'] ?? ''))
+                <img src="{{ filter_var($faceImagePath, FILTER_VALIDATE_URL) ? $faceImagePath : asset('storage/'.ltrim($faceImagePath, '/')) }}" alt="{{ $faceProfile->name }}" loading="lazy">
+              @empty
+                <span><i class="fa-solid fa-user"></i></span>
+              @endforelse
+            </div>
+            <div class="user-face-profile-item__body">
+              <form action="{{ route('admin.users.face-profiles.update', [$user, $faceProfile]) }}" method="POST" class="user-face-profile-rename">
+                @csrf
+                @method('PATCH')
+                <input type="text" name="name" value="{{ $faceProfile->name }}" maxlength="80" aria-label="نام {{ $faceProfile->name }}" required>
+                <button type="submit" title="ذخیره نام" aria-label="ذخیره نام"><i class="fa-solid fa-check"></i></button>
+              </form>
+              <span class="user-face-profile-item__meta">{{ number_format(count($faceProfileImages)) }} تصویر مرجع · {{ \App\Support\Jalali::formatNumeric($faceProfile->created_at) }}</span>
+              <div class="user-face-profile-item__actions">
+                <a href="{{ route('admin.users.face-profiles.index', ['q' => $faceProfile->name]) }}"><i class="fa-solid fa-list"></i> فهرست همه</a>
+                <form action="{{ route('admin.users.face-profiles.destroy', [$user, $faceProfile]) }}" method="POST" onsubmit="return confirm('این کارکتر شیت از حساب کاربر حذف شود؟');">@csrf @method('DELETE')<button type="submit"><i class="fa-solid fa-trash-can"></i> حذف</button></form>
+              </div>
+            </div>
+          </article>
+        @empty
+          <div class="user-face-profile-empty"><i class="fa-solid fa-user"></i><strong>هنوز کارکتر شیتی برای این کاربر ثبت نشده است.</strong><span>با فرم بالا اولین مرجع چهره را اضافه کن.</span></div>
+        @endforelse
       </div>
     </section>
 

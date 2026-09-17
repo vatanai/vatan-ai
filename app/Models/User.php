@@ -18,6 +18,8 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public const FACE_PROFILE_LIMIT = 5;
+
     /**
      * ویژگی‌هایی که به صورت گروهی قابل مقداردهی و ذخیره هستند.
      */
@@ -256,7 +258,7 @@ class User extends Authenticatable
 
     public function faceProfileLimit(): int
     {
-        return max(0, (int) ($this->plan?->face_profile_limit ?? 0));
+        return self::FACE_PROFILE_LIMIT;
     }
 
     public function referrer(): BelongsTo

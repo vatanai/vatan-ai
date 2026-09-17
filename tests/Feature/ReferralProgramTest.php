@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Admin;
 use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
@@ -59,6 +60,16 @@ class ReferralProgramTest extends TestCase
             'link_id' => $link->id,
             'product_id' => $product->id,
         ]);
+    }
+
+    public function test_known_link_preview_agents_do_not_inflate_referral_clicks(): void
+    {
+        $inviter = User::factory()->create(['status' => 'active']);
+
+        $this->withHeader('User-Agent', 'WhatsApp/2.24 Link Preview')->get(route('referral.visit', $inviter->referral_code))
+            ->assertRedirect(route('site.home.root'));
+
+        self::assertSame(0, ReferralVisit::query()->count());
     }
 
     public function test_existing_user_can_be_attributed_from_the_saved_link_without_entering_a_code_again(): void
@@ -137,6 +148,46 @@ class ReferralProgramTest extends TestCase
             'invitee_id' => $secondInvitee->id,
             'status' => 'under_review',
         ]);
+    }
+
+    public function test_global_admin_approval_holds_referral_rewards_until_approved(): void
+    {
+        ReferralSetting::current()->update([
+            'registration_gift_enabled' => false,
+            'referral_enabled' => true,
+            'referral_rewards_require_admin_approval' => true,
+            'invitee_reward_tokens' => 3,
+            'inviter_reward_tokens' => 5,
+            'reward_trigger' => 'registration',
+            'review_repeated_ip' => false,
+            'review_repeated_device' => false,
+        ]);
+
+        $inviter = User::factory()->create(['status' => 'active', 'tokens' => 0]);
+        $invitee = User::factory()->create(['status' => 'active', 'tokens' => 0]);
+        $service = app(ReferralProgramService::class);
+
+        $service->completeRegistration($invitee, $this->attributedRequest($inviter));
+
+        self::assertSame(0, (int) $invitee->fresh()->tokens);
+        self::assertSame(0, (int) $inviter->fresh()->tokens);
+
+        $conversion = ReferralConversion::query()->where('invitee_id', $invitee->id)->firstOrFail();
+        self::assertSame('under_review', $conversion->status);
+        self::assertSame(2, ReferralReward::query()->where('conversion_id', $conversion->id)->where('status', 'pending')->count());
+
+        $admin = Admin::query()->create([
+            'name' => 'مدیر تأیید رفرال',
+            'email' => 'referral-approval@example.test',
+            'password' => 'password',
+            'role' => 'leader',
+            'is_active' => true,
+        ]);
+        $service->reviewConversion($conversion, 'approve', $admin);
+
+        self::assertSame(3, (int) $invitee->fresh()->tokens);
+        self::assertSame(5, (int) $inviter->fresh()->tokens);
+        self::assertSame(2, ReferralReward::query()->where('conversion_id', $conversion->id)->where('status', 'paid')->count());
     }
 
     public function test_referral_rewards_wait_for_the_first_successful_purchase(): void

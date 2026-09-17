@@ -66,31 +66,33 @@ class FaceProfileTest extends TestCase
         });
     }
 
-    public function test_professional_plan_allows_one_face_profile_and_stores_its_images(): void
+    public function test_every_plan_allows_up_to_five_face_profiles_and_stores_its_images(): void
     {
         Storage::fake('public');
-        $plan = $this->plan('professional', 1, 'pro');
+        $plan = $this->plan('professional', 5, 'pro');
         $user = $this->user($plan);
 
-        $this->actingAs($user)->post(route('profile.face-profiles.store'), [
-            'name' => 'پروفایل اصلی',
-            'images' => [UploadedFile::fake()->image('portrait.jpg', 900, 1200)],
-        ])->assertRedirect(route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']));
+        for ($index = 1; $index <= 5; $index++) {
+            $this->actingAs($user)->post(route('profile.face-profiles.store'), [
+                'name' => $index === 1 ? 'پروفایل اصلی' : 'پروفایل '.$index,
+                'images' => [UploadedFile::fake()->image('portrait-'.$index.'.jpg', 900, 1200)],
+            ])->assertRedirect(route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']));
+        }
 
-        self::assertDatabaseCount('face_profiles', 1);
+        self::assertDatabaseCount('face_profiles', 5);
         $profile = $user->faceProfiles()->firstOrFail();
-        self::assertSame('پروفایل اصلی', $profile->name);
+        self::assertNotEmpty($profile->name);
         Storage::disk('public')->assertExists($profile->referenceImageEntries()[0]['path']);
 
         $this->actingAs($user)->post(route('profile.face-profiles.store'), [
-            'name' => 'پروفایل دوم',
-            'images' => [UploadedFile::fake()->image('portrait-2.jpg', 900, 1200)],
+            'name' => 'پروفایل ششم',
+            'images' => [UploadedFile::fake()->image('portrait-6.jpg', 900, 1200)],
         ])->assertSessionHasErrors('face_profile');
 
-        self::assertDatabaseCount('face_profiles', 1);
+        self::assertDatabaseCount('face_profiles', 5);
     }
 
-    public function test_free_plan_cannot_create_a_face_profile(): void
+    public function test_free_plan_can_create_a_face_profile(): void
     {
         Storage::fake('public');
         $user = $this->user($this->plan('gift', 0, 'free'));
@@ -98,9 +100,9 @@ class FaceProfileTest extends TestCase
         $this->actingAs($user)->post(route('profile.face-profiles.store'), [
             'name' => 'پروفایل اصلی',
             'images' => [UploadedFile::fake()->image('portrait.jpg', 900, 1200)],
-        ])->assertSessionHasErrors('face_profile');
+        ])->assertRedirect(route('app.profile', ['tab' => 'files', 'file_tab' => 'face-profiles']));
 
-        self::assertDatabaseCount('face_profiles', 0);
+        self::assertDatabaseCount('face_profiles', 1);
     }
 
     public function test_face_profile_selection_makes_identity_image_upload_optional(): void

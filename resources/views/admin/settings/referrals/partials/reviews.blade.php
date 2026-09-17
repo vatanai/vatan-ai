@@ -43,7 +43,7 @@
       <thead><tr><th>کاربر</th><th>نوع پاداش</th><th>مقدار</th><th>دلیل</th><th>زمان</th><th>تصمیم</th></tr></thead>
       <tbody>
       @forelse($reviewRewards as $item)
-        @php($rewardLabel = ['registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده'][$item->reward_type] ?? $item->reward_type)
+          @php($rewardLabel = ['registration_gift' => 'هدیه ثبت‌نام', 'invitee_reward' => 'هدیه دعوت‌شده', 'inviter_reward' => 'پاداش دعوت‌کننده', 'purchase_reward' => 'پاداش خرید موفق'][$item->reward_type] ?? $item->reward_type)
         <tr>
           <td data-label="کاربر"><strong>{{ trim(($item->user?->name ?? '').' '.($item->user?->last_name ?? '')) ?: 'بدون نام' }}</strong><small>{{ $item->user?->phone }}</small></td>
           <td data-label="نوع پاداش">{{ $rewardLabel }}</td>

@@ -18,7 +18,9 @@ class ExchangeRateService
             foreach ($sources as $source) {
                 try {
                     if (!$source['url']) continue;
-                    $json = Http::acceptJson()->timeout(8)->get($source['url'])->throw()->json();
+                    // منبع نرخ نباید رندر داشبورد را چندین ثانیه متوقف کند؛
+                    // در خطا، منبع بعدی یا نرخ کش‌شده استفاده می‌شود.
+                    $json = Http::acceptJson()->connectTimeout(2)->timeout(4)->get($source['url'])->throw()->json();
                     $latest = (float) (
                         data_get($json, 'lastTradePrice')
                         ?? data_get($json, 'result.symbols.USDTTMN.stats.lastPrice')

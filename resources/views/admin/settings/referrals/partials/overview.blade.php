@@ -171,6 +171,7 @@
           <a class="referral-action is-primary" href="{{ route('admin.users.index', ['show_user' => $inviter->id]) }}"><i class="fa-solid fa-user"></i> کاربران</a>
           <a class="referral-action is-info" href="{{ route('admin.finance.cases.index', ['user_id' => $inviter->id]) }}"><i class="fa-solid fa-chart-pie"></i> مالی</a>
           <a class="referral-action is-warning" href="{{ route('admin.orders.plan-purchases', ['q' => $inviter->phone ?: $inviterName]) }}"><i class="fa-solid fa-receipt"></i> سفارشات</a>
+          <a class="referral-action is-info" href="{{ route('admin.users.gallery.referral-report', $inviter) }}"><i class="fa-solid fa-file-lines"></i> گزارش قابل ارسال</a>
           <a class="referral-action is-approve" href="{{ route('admin.referrals.visits', ['search' => $inviter->phone ?: $inviter->referral_code]) }}">
             <i class="fa-solid fa-arrow-pointer"></i> بازدیدها
           </a>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\FinanceCase;
 use App\Models\FinanceCreditAllocation;
+use App\Models\FaceProfile;
 use App\Models\GeneratedImage;
 use App\Models\GeneratedVideo;
 use App\Models\Order;
@@ -16,8 +17,13 @@ use App\Models\UserGalleryRecreation;
 use App\Models\UserGalleryCampaign;
 use App\Models\UserGalleryCostEvent;
 use App\Models\Product;
+use App\Models\PlanPurchase;
+use App\Models\ReferralConversion;
+use App\Models\ReferralReward;
+use App\Models\ReferralVisit;
 use App\Services\UserGalleryService;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Schema;
@@ -106,6 +112,110 @@ class UserGalleryController extends Controller
         ];
 
         return view('admin.users.gallery.index', compact('items', 'config', 'stats', 'search', 'status', 'galleryUsers', 'galleryCards'));
+    }
+
+    /** فهرست مستقل کارکتر شیت‌های کاربران برای مدیریت سریع ادمین. */
+    public function faceProfiles(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+        $status = (string) $request->query('status', 'active');
+        if (! in_array($status, ['all', 'active', 'deleted'], true)) {
+            $status = 'active';
+        }
+
+        $profiles = FaceProfile::query()
+            ->with('user:id,name,last_name,phone,email')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($profileQuery) use ($search): void {
+                    $profileQuery->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($userQuery) use ($search): void {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->latest()
+            ->paginate(24, ['*'], 'profiles_page')
+            ->withQueryString();
+
+        $stats = [
+            'all' => FaceProfile::count(),
+            'active' => FaceProfile::active()->count(),
+            'deleted' => FaceProfile::where('status', 'deleted')->count(),
+            'users' => FaceProfile::active()->distinct('user_id')->count('user_id'),
+        ];
+
+        return view('admin.users.face-profiles.index', compact('profiles', 'search', 'status', 'stats'));
+    }
+
+    /** افزودن کارکتر شیت برای کاربر از صفحهٔ گالری همان کاربر. */
+    public function storeFaceProfile(Request $request, User $user)
+    {
+        $limit = $user->faceProfileLimit();
+        if ($user->faceProfiles()->active()->count() >= $limit) {
+            return back()->withErrors(['face_profile' => "این کاربر به سقف {$limit} کارکتر شیت فعال رسیده است."]);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'images' => ['required', 'array', 'min:1', 'max:3'],
+            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ]);
+
+        $referenceImages = [];
+        foreach ($request->file('images', []) as $image) {
+            $path = $image->store('face-profiles', 'public');
+            $referenceImages[] = [
+                'path' => $path,
+                'mime' => $image->getMimeType(),
+                'size' => $image->getSize(),
+            ];
+        }
+
+        $user->faceProfiles()->create([
+            'name' => trim((string) $validated['name']),
+            'reference_images' => $referenceImages,
+            'status' => 'active',
+        ]);
+
+        return back()->with('success', 'کارکتر شیت برای کاربر با موفقیت اضافه شد.');
+    }
+
+    /** تغییر نام کارکتر شیت از پنل ادمین. */
+    public function updateFaceProfile(Request $request, User $user, FaceProfile $faceProfile)
+    {
+        $this->ensureFaceProfileBelongsToUser($user, $faceProfile);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+        ]);
+        $faceProfile->update(['name' => trim((string) $validated['name'])]);
+
+        return back()->with('success', 'نام کارکتر شیت با موفقیت تغییر کرد.');
+    }
+
+    /** حذف کارکتر شیت و فایل‌های مرجع آن از پنل ادمین. */
+    public function destroyFaceProfile(User $user, FaceProfile $faceProfile)
+    {
+        $this->ensureFaceProfileBelongsToUser($user, $faceProfile);
+
+        foreach ($faceProfile->referenceImageEntries() as $image) {
+            if (! empty($image['path'])) {
+                Storage::disk('public')->delete($image['path']);
+            }
+        }
+
+        $faceProfile->update(['status' => 'deleted']);
+
+        return back()->with('success', 'کارکتر شیت از حساب کاربر حذف شد.');
+    }
+
+    private function ensureFaceProfileBelongsToUser(User $user, FaceProfile $faceProfile): void
+    {
+        abort_unless((int) $faceProfile->user_id === (int) $user->id, 404);
     }
 
     /** کارت‌های قبل/بعد را برای همهٔ کاربران دارای خروجی ساخت آماده می‌کند. */
@@ -207,16 +317,180 @@ class UserGalleryController extends Controller
             ->withQueryString();
         $this->decorateItems($items);
         $setting = app(UserGalleryService::class)->setting($user);
+        $faceProfiles = $user->faceProfiles()->active()->latest()->get();
         [$builds, $financeSummary] = $this->buildUserActivity($user);
+        $referralReport = $this->buildReferralReport($user);
         $shortcutLinks = [
             ['label' => 'پروفایل کاربر', 'description' => 'مشخصات، وضعیت و سوابق کاربر', 'icon' => 'fa-user', 'class' => 'primary', 'url' => route('admin.users.index', ['show_user' => $user->id])],
             ['label' => 'گزارش مالی', 'description' => 'پرونده‌های خرید و اعتبار', 'icon' => 'fa-chart-pie', 'class' => 'success', 'url' => route('admin.finance.cases.index', ['user_id' => $user->id])],
             ['label' => 'سفارش‌ها', 'description' => 'تمام سفارش‌ها و وضعیت ساخت', 'icon' => 'fa-receipt', 'class' => 'warning', 'url' => route('admin.orders.index', ['user_id' => $user->id])],
             ['label' => 'اعتبار سرویس‌ها', 'description' => 'مصرف مدل‌ها و هزینه اجرا', 'icon' => 'fa-bolt', 'class' => 'info', 'url' => route('admin.service-credits.index', ['q' => $user->phone ?: $user->email ?: $user->id])],
+            ['label' => 'کارکتر شیت‌ها', 'description' => 'مشاهده و مدیریت مرجع‌های چهره', 'icon' => 'fa-user', 'class' => 'success', 'url' => '#face-profiles'],
+            ['label' => 'گزارش همکاری در فروش', 'description' => 'کلیک، ثبت‌نام، خرید و پاداش قابل ارسال', 'icon' => 'fa-chart-line', 'class' => 'primary', 'url' => route('admin.users.gallery.referral-report', $user)],
             ['label' => 'لاگ فعالیت', 'description' => 'ورودها و رخدادهای حساب', 'icon' => 'fa-clock-rotate-left', 'class' => 'neutral', 'url' => route('admin.users.logs', $user->id)],
         ];
 
-        return view('admin.users.gallery.show', compact('user', 'items', 'setting', 'builds', 'financeSummary', 'shortcutLinks'));
+        return view('admin.users.gallery.show', compact('user', 'items', 'setting', 'faceProfiles', 'builds', 'financeSummary', 'referralReport', 'shortcutLinks'));
+    }
+
+    public function referralReport(User $user)
+    {
+        return view('admin.users.gallery.referral-report', [
+            'user' => $user,
+            'report' => $this->buildReferralReport($user),
+        ]);
+    }
+
+    public function referralReportCsv(User $user): StreamedResponse
+    {
+        $report = $this->buildReferralReport($user);
+        $filename = 'referral-report-'.$user->id.'.csv';
+
+        return response()->streamDownload(function () use ($report, $user): void {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['گزارش همکاری در فروش', trim(($user->name ?? '').' '.($user->last_name ?? ''))]);
+            fputcsv($handle, ['شاخص', 'مقدار']);
+            fputcsv($handle, ['کلیک کل', $report['summary']['clicks']]);
+            fputcsv($handle, ['بازدیدکننده یکتا', $report['summary']['unique_clicks']]);
+            fputcsv($handle, ['ثبت‌نام', $report['summary']['registrations']]);
+            fputcsv($handle, ['خرید موفق', $report['summary']['purchases']]);
+            fputcsv($handle, ['ساخت مخاطبان', $report['summary']['outputs']]);
+            fputcsv($handle, ['نرخ ثبت‌نام', $report['summary']['registration_rate'].'٪']);
+            fputcsv($handle, ['پاداش پرداخت‌شده همکار', $report['rewards']['own_paid'].' اعتبار']);
+            fputcsv($handle, ['پاداش پرداخت‌شده مخاطبان', $report['rewards']['invitee_paid'].' اعتبار']);
+            fputcsv($handle, ['جمع پاداش پرداخت‌شده', $report['rewards']['combined_paid'].' اعتبار']);
+            fputcsv($handle, ['کمیسیون پرداخت‌شده', $report['rewards']['commission_paid'].' تومان']);
+            fputcsv($handle, []);
+            fputcsv($handle, ['لینک', 'نوع', 'کلیک', 'ثبت‌نام', 'خرید موفق', 'ساخت مخاطبان']);
+            foreach ($report['links'] as $link) {
+                fputcsv($handle, [$link['url'] ?: 'کد دعوت ندارد', $link['label'], $link['clicks'], $link['registrations'], $link['purchases'], $link['outputs']]);
+            }
+            fputcsv($handle, []);
+            fputcsv($handle, ['مخاطب', 'لینک/محصول', 'وضعیت دعوت', 'خرید موفق', 'پاداش مخاطب', 'تاریخ']);
+            foreach ($report['conversions'] as $conversion) {
+                fputcsv($handle, [$conversion['invitee'], $conversion['link'], $conversion['status'], $conversion['purchased'] ? 'بله' : 'خیر', $conversion['invitee_reward'].' اعتبار', $conversion['date']?->format('Y/m/d H:i') ?? '']);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function buildReferralReport(User $user): array
+    {
+        $links = $user->referralLinks()->with('product:id,name_fa,name_en,slug')->latest('id')->get();
+        $visits = ReferralVisit::query()->where('inviter_id', $user->id)->get();
+        $conversions = ReferralConversion::query()
+            ->where('inviter_id', $user->id)
+            ->with(['invitee:id,name,last_name,phone', 'link.product:id,name_fa,name_en', 'rewards'])
+            ->latest('id')
+            ->get();
+        $inviteeIds = $conversions->pluck('invitee_id')->filter()->unique()->values();
+        $purchases = $inviteeIds->isNotEmpty()
+            ? PlanPurchase::query()->whereIn('user_id', $inviteeIds)->where('status', 'completed')->get(['user_id', 'paid_amount', 'purchased_at'])
+            : collect();
+        $outputs = $inviteeIds->isNotEmpty()
+            ? GeneratedImage::query()->whereIn('user_id', $inviteeIds)->whereNotNull('image_path')->get(['user_id'])
+            : collect();
+        $outputVideos = Schema::hasTable('generated_videos') && $inviteeIds->isNotEmpty()
+            ? GeneratedVideo::query()->whereIn('user_id', $inviteeIds)->where(function ($query): void { $query->whereNotNull('video_path')->orWhereNotNull('video_url'); })->get(['user_id'])
+            : collect();
+
+        $purchaseUserIds = $purchases->pluck('user_id')->unique();
+        $linkMetrics = function (?int $linkId) use ($visits, $conversions, $purchaseUserIds, $outputs, $outputVideos): array {
+            $linkConversions = $conversions->filter(fn (ReferralConversion $conversion): bool => $linkId === null
+                ? $conversion->link_id === null
+                : (int) $conversion->link_id === $linkId);
+            $linkInviteeIds = $linkConversions->pluck('invitee_id')->filter();
+
+            return [
+                'clicks' => $visits->filter(fn (ReferralVisit $visit): bool => $linkId === null ? $visit->link_id === null : (int) $visit->link_id === $linkId)->count(),
+                'registrations' => $linkConversions->count(),
+                'purchases' => $linkInviteeIds->intersect($purchaseUserIds)->count(),
+                'outputs' => $outputs->whereIn('user_id', $linkInviteeIds)->count() + $outputVideos->whereIn('user_id', $linkInviteeIds)->count(),
+            ];
+        };
+
+        $reportLinks = collect();
+        if ($user->referral_code) {
+            $metrics = $linkMetrics(null);
+            $reportLinks->push([
+                'label' => 'لینک عادی',
+                'url' => route('referral.visit', ['code' => $user->referral_code]),
+                'metrics' => $metrics,
+                'clicks' => $metrics['clicks'],
+                'registrations' => $metrics['registrations'],
+                'purchases' => $metrics['purchases'],
+                'outputs' => $metrics['outputs'],
+            ]);
+        }
+        foreach ($links as $link) {
+            $metrics = $linkMetrics((int) $link->id);
+            $reportLinks->push([
+                'label' => $link->product?->name_fa ?: $link->product?->name_en ?: 'محصول حذف‌شده',
+                'url' => route('referral.link', ['referralLink' => $link->slug]),
+                'metrics' => $metrics,
+                'clicks' => $metrics['clicks'],
+                'registrations' => $metrics['registrations'],
+                'purchases' => $metrics['purchases'],
+                'outputs' => $metrics['outputs'],
+                'active' => $link->isActive(),
+            ]);
+        }
+
+        $ownRewards = ReferralReward::query()->where('user_id', $user->id)->whereIn('reward_type', ['inviter_reward', 'purchase_reward']);
+        $inviteeRewards = $inviteeIds->isNotEmpty()
+            ? ReferralReward::query()->whereIn('user_id', $inviteeIds)->where('reward_type', 'invitee_reward')
+            : ReferralReward::query()->whereRaw('1 = 0');
+        $commissionRewards = ReferralReward::query()->where('user_id', $user->id)->whereIn('reward_type', ['purchase_commission', 'purchase_commission_reversal'])->where('currency', 'IRT');
+        $rewardSum = static function ($query, string $status, bool $signed = false): int {
+            return (int) $query->clone()->where('status', $status)->get()->sum(function (ReferralReward $reward) use ($signed): int {
+                return $signed && $reward->direction === 'debit' ? -(int) $reward->amount : (int) $reward->amount;
+            });
+        };
+        $ownPaid = $rewardSum($ownRewards, 'paid');
+        $ownPending = $rewardSum($ownRewards, 'pending');
+        $inviteePaid = $rewardSum($inviteeRewards, 'paid');
+        $inviteePending = $rewardSum($inviteeRewards, 'pending');
+        $commissionPaid = $rewardSum($commissionRewards, 'paid', true);
+        $commissionPending = $rewardSum($commissionRewards, 'pending', true);
+
+        $summary = [
+            'clicks' => $visits->count(),
+            'unique_clicks' => $visits->pluck('visitor_token')->filter()->unique()->count(),
+            'registrations' => $conversions->count(),
+            'purchases' => $purchaseUserIds->count(),
+            'outputs' => $outputs->count() + $outputVideos->count(),
+        ];
+        $summary['registration_rate'] = $summary['clicks'] > 0 ? round(($summary['registrations'] / $summary['clicks']) * 100, 1) : 0;
+
+        return [
+            'summary' => $summary,
+            'rewards' => [
+                'own_paid' => $ownPaid,
+                'own_pending' => $ownPending,
+                'invitee_paid' => $inviteePaid,
+                'invitee_pending' => $inviteePending,
+                'combined_paid' => $ownPaid + $inviteePaid,
+                'commission_paid' => $commissionPaid,
+                'commission_pending' => $commissionPending,
+            ],
+            'links' => $reportLinks->map(fn (array $link): array => $link + $link['metrics'])->all(),
+            'conversions' => $conversions->map(function (ReferralConversion $conversion): array {
+                $invitee = $conversion->invitee;
+                $inviteeReward = $conversion->rewards
+                    ->where('reward_type', 'invitee_reward')
+                    ->filter(fn (ReferralReward $reward): bool => in_array($reward->currency, [null, 'token'], true))
+                    ->sum('amount');
+                return [
+                    'invitee' => trim(($invitee?->name ?? '').' '.($invitee?->last_name ?? '')) ?: 'کاربر بدون نام',
+                    'link' => $conversion->link?->product?->name_fa ?: $conversion->link?->product?->name_en ?: 'لینک عادی',
+                    'status' => match ($conversion->status) { 'qualified' => 'معتبر', 'under_review' => 'نیازمند بررسی', 'rejected' => 'ردشده', default => $conversion->status },
+                    'purchased' => $conversion->first_purchase_at !== null,
+                    'invitee_reward' => (int) $inviteeReward,
+                    'date' => $conversion->created_at,
+                ];
+            })->all(),
+        ];
     }
 
     /** جستجوی محصول برای تخصیص مالک از صفحه‌ی گالری همان کاربر. */

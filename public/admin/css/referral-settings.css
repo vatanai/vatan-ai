@@ -96,6 +96,7 @@ html,body{overflow-x:hidden}
 .referral-inviter-empty strong{color:var(--text-h);font-size:12px}
 .referral-inviter-empty span{font-size:10px}
 .referral-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.referral-config-column{display:grid;gap:16px;align-content:start;min-width:0}
 .referral-config-card{overflow:hidden}
 .referral-card-head{display:flex;align-items:flex-start;gap:11px;padding:16px 18px;border-bottom:1px solid var(--divider)}
 .referral-card-head h2{margin:0 0 4px;font-size:14px;font-weight:900;color:var(--text-h)}

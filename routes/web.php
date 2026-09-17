@@ -33,6 +33,7 @@ use App\Http\Controllers\ProductCatalogController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ImageQualityLandingController;
+use App\Http\Controllers\CharacterSheetLandingController;
 use App\Http\Controllers\GrowthTrackingController;
 use App\Http\Controllers\Admin\GrowthController;
 use App\Http\Controllers\Admin\GrowthDataSourceController;
@@ -92,6 +93,9 @@ Route::get('/support', fn() => redirect()->away('https://t.me/vatanstudio_bot'))
 // لندینگ سئویی مستقل برای یکی از پرتکرارترین نیازهای کاربران.
 Route::get('/increase-image-quality', [ImageQualityLandingController::class, 'index'])
     ->name('landing.image-quality');
+
+Route::get('/character-sheet', [CharacterSheetLandingController::class, 'index'])
+    ->name('landing.character-sheet');
 
 // ─── مرکز عمومی مقالات وطن ──────────────────────────────
 // تمام مسیرهای محتوایی خارج از /app هستند تا ساختار عمومی، اشتراک‌پذیر و سئویی داشته باشند.
@@ -163,6 +167,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/referral-links', [ReferralController::class, 'createLink'])->name('profile.referral-links.store');
     Route::patch('/profile/referral-links/{referralLink}/deactivate', [ReferralController::class, 'deactivateLink'])->name('profile.referral-links.deactivate');
     Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
+    Route::patch('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'updateFaceProfile'])->name('profile.face-profiles.update');
     Route::delete('/profile/face-profiles/{faceProfile}', [ProfileController::class, 'destroyFaceProfile'])->name('profile.face-profiles.destroy');
     Route::get('/my-gallery/{item}/preview', [\App\Http\Controllers\UserGalleryController::class, 'preview'])->name('profile.gallery.preview');
     Route::get('/my-gallery/{item}/original', [\App\Http\Controllers\UserGalleryController::class, 'original'])->name('profile.gallery.original');
@@ -463,9 +468,15 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
 
     // گالری ورودی‌های کاربران؛ مسیرهای فایل قبل از پارامترهای عمومی کاربران ثبت شده‌اند.
     Route::get('/users/gallery', [UserGalleryController::class, 'index'])->name('users.gallery.index');
+    Route::get('/users/face-profiles', [UserGalleryController::class, 'faceProfiles'])->name('users.face-profiles.index');
     Route::post('/users/gallery/settings', [UserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
+    Route::post('/users/{user}/face-profiles', [UserGalleryController::class, 'storeFaceProfile'])->name('users.face-profiles.store');
+    Route::patch('/users/{user}/face-profiles/{faceProfile}', [UserGalleryController::class, 'updateFaceProfile'])->name('users.face-profiles.update');
+    Route::delete('/users/{user}/face-profiles/{faceProfile}', [UserGalleryController::class, 'destroyFaceProfile'])->name('users.face-profiles.destroy');
     Route::post('/users/{user}/creator-reward-product', [UserGalleryController::class, 'assignCreatorRewardProduct'])->name('users.creator-reward-product.assign');
     Route::get('/users/{user}/gallery', [UserGalleryController::class, 'show'])->name('users.gallery.show');
+    Route::get('/users/{user}/gallery/referral-report', [UserGalleryController::class, 'referralReport'])->name('users.gallery.referral-report');
+    Route::get('/users/{user}/gallery/referral-report/export', [UserGalleryController::class, 'referralReportCsv'])->name('users.gallery.referral-report.export');
     Route::get('/users/{user}/gallery/{item}/preview', [UserGalleryController::class, 'preview'])->name('users.gallery.preview');
     Route::get('/users/{user}/gallery/{item}/original', [UserGalleryController::class, 'original'])->name('users.gallery.original');
     Route::delete('/users/{user}/gallery/{item}', [UserGalleryController::class, 'destroy'])->name('users.gallery.destroy');

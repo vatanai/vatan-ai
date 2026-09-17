@@ -15,9 +15,14 @@
         <h1 class="text-[17px] font-extrabold text-[var(--text-h)]">گالری کاربران</h1>
         <p class="mt-1 text-[11px] text-[var(--text-soft)]">ورودی و خروجی هر ساخت کنار هم نمایش داده می‌شود؛ فایل‌های اصلی فقط در فضای خصوصی نگهداری می‌شوند.</p>
       </div>
-      <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]">
-        <i class="fa-solid fa-users"></i> فهرست کاربران
-      </a>
+      <div class="flex items-center gap-2 flex-wrap">
+        <a href="{{ route('admin.users.face-profiles.index') }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border bg-[var(--primary-l)] border-[var(--primary-m)] text-[var(--primary)] text-[11px] hover:border-[var(--primary)]">
+          <i class="fa-solid fa-user"></i> کارکتر شیت‌ها
+        </a>
+        <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]">
+          <i class="fa-solid fa-users"></i> فهرست کاربران
+        </a>
+      </div>
     </div>
 
     <div class="grid grid-cols-8 gap-3 mb-5 max-[1200px]:grid-cols-4 max-[700px]:grid-cols-2 max-[480px]:grid-cols-1">

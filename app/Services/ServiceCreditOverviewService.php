@@ -19,6 +19,22 @@ class ServiceCreditOverviewService
 
     public function get(bool $dashboardOnly = false): array
     {
+        // داشبورد نباید برای دریافت موجودی سرویس‌های خارجی منتظر بماند.
+        // در بازهٔ کوتاه، آخرین تصویر معتبر نمایش داده می‌شود و پس از منقضی‌شدن
+        // آن، Laravel بروزرسانی را در پایان چرخهٔ درخواست انجام می‌دهد.
+        if ($dashboardOnly) {
+            return Cache::flexible(
+                'finance.dashboard_credit_overview',
+                [30, 300],
+                fn (): array => $this->buildOverview($dashboardOnly),
+            );
+        }
+
+        return $this->buildOverview($dashboardOnly);
+    }
+
+    private function buildOverview(bool $dashboardOnly): array
+    {
         $exchange = $this->exchangeRate->usdToIrr();
         if (!Schema::hasTable('service_credit_accounts')) {
             return ['accounts' => collect(), 'exchange' => $exchange, 'totals' => $this->emptyTotals()];

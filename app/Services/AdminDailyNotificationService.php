@@ -7,6 +7,7 @@ use App\Models\GeneratedVideo;
 use App\Models\PlanPurchase;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * شمارنده‌های روزانهٔ مورد استفاده در اعلان‌های پنل مدیریت.
@@ -16,6 +17,13 @@ use Carbon\CarbonInterface;
 class AdminDailyNotificationService
 {
     public function summary(): array
+    {
+        return Cache::remember('admin.daily_notifications.' . now()->toDateString(), now()->addSeconds(30), function (): array {
+            return $this->buildSummary();
+        });
+    }
+
+    private function buildSummary(): array
     {
         $start = now()->startOfDay();
         $end = now()->endOfDay();

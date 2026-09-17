@@ -79,8 +79,13 @@
     });
   });
 
-  var requestedTab = new URLSearchParams(window.location.search).get('tab');
-  var requestedSubtab = new URLSearchParams(window.location.search).get('subtab');
+  var requestedParams = new URLSearchParams(window.location.search);
+  var requestedTab = requestedParams.get('tab');
+  var requestedSubtab = requestedParams.get('subtab');
+  var requestedFileTab = requestedParams.get('file_tab');
+  if (['grid', 'saved', 'files', 'referral'].indexOf(requestedTab) !== -1) {
+    activateProfileTab(requestedTab, true);
+  }
   if (window.location.hash === '#referral-program' || requestedTab === 'referral' || requestedTab === 'custom-products') {
     activateProfileTab('referral', true);
     activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
@@ -533,16 +538,26 @@
   }
 
   /* ───── Files Sub-Tabs ───── */
+  function activateFilesSubtab(sub) {
+    var allowed = ['face-profiles', 'personal', 'used-products'];
+    var target = allowed.indexOf(sub) !== -1 ? sub : 'face-profiles';
+    document.querySelectorAll('.files-sub-tab').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-sub') === target);
+    });
+    var facePanel = document.getElementById('files-face-profiles');
+    var personalPanel = document.getElementById('files-personal');
+    var productsPanel = document.getElementById('files-used-products');
+    if (facePanel) facePanel.style.display = target === 'face-profiles' ? 'block' : 'none';
+    if (personalPanel) personalPanel.style.display = target === 'personal' ? 'grid' : 'none';
+    if (productsPanel) productsPanel.style.display = target === 'used-products' ? 'grid' : 'none';
+  }
+
   document.querySelectorAll('.files-sub-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.files-sub-tab').forEach(function (b) {
-        b.classList.remove('active');
-      });
-      btn.classList.add('active');
-      var sub = btn.getAttribute('data-sub');
-      document.getElementById('files-personal').style.display = sub === 'personal' ? 'grid' : 'none';
-      document.getElementById('files-used-products').style.display = sub === 'used-products' ? 'grid' : 'none';
+      activateFilesSubtab(btn.getAttribute('data-sub'));
     });
   });
+
+  activateFilesSubtab(requestedTab === 'files' && requestedFileTab ? requestedFileTab : 'face-profiles');
 
 }());
