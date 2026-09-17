@@ -1155,6 +1155,10 @@ class ProductGenerateController extends Controller
             $providerBusy = (int) $e->getCode() === 429
                 || str_contains($errorText, 'سقف درخواست‌های هم‌زمان')
                 || str_contains($errorText, 'concurrent');
+            $providerCreditIssue = str_contains($errorText, 'insufficient credit')
+                || str_contains($errorText, 'exhausted balance')
+                || str_contains($errorText, 'quota')
+                || str_contains($errorText, 'اعتبار سرویس');
             $providerFailure = $providerBusy
                 || str_contains($errorText, 'provider')
                 || str_contains($errorText, 'fal.ai')
@@ -1163,13 +1167,15 @@ class ProductGenerateController extends Controller
                 || str_contains($errorText, 'curl');
             return response()->json([
                 'success' => false,
-                'message' => $providerBusy
+                'message' => $providerCreditIssue
+                    ? 'موجودی سرویس ساخت موقتاً کافی نیست؛ اعتبار این درخواست کامل به حساب شما برگشت داده شد. لطفاً بعداً دوباره تلاش کنید.'
+                    : ($providerBusy
                     ? 'صف پردازش این سرویس در حال تکمیل است. اعتبار این تلاش محفوظ مانده؛ چند لحظه بعد دوباره امتحان کن.'
                     : ($providerFailure
                     ? 'مدل انتخاب‌شده در زمان مقرر پاسخ نداد. اگر مدل جایگزین برای محصول ثبت شده باشد، سیستم آن را هم امتحان کرده است؛ لطفاً چند لحظه بعد دوباره تلاش کنید.'
-                    : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.'),
-                'error_code' => $providerBusy ? 'AI_PROVIDER_BUSY' : ($providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED'),
-                'retryable' => $providerBusy || $providerFailure,
+                    : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.')),
+                'error_code' => $providerCreditIssue ? 'AI_PROVIDER_CREDIT_UNAVAILABLE' : ($providerBusy ? 'AI_PROVIDER_BUSY' : ($providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED')),
+                'retryable' => $providerCreditIssue || $providerBusy || $providerFailure,
                 'credits_returned' => $creditsReturned,
             ], $providerFailure ? 503 : 422);
         }
