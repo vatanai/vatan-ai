@@ -172,12 +172,23 @@ class AiProviderRouter
         $lastError = null;
         $disabledProviders = [];
         $attemptedPaidProviders = [];
+        $exhaustedProviders = [];
+        $attemptedRoutes = [];
 
         foreach ($models as $index => $modelId) {
             $provider = $providers[$index] ?? $this->findModel($modelId)?->provider;
             if (!$provider) continue;
             if (!ProviderStatus::isEnabled($provider)) {
                 $disabledProviders[] = $provider;
+                continue;
+            }
+            if (isset($exhaustedProviders[$provider])) {
+                Log::warning('AiProviderRouter: skipped provider after account/availability failure', [
+                    'product_id' => $product->id,
+                    'model' => $modelId,
+                    'provider' => $provider,
+                    'reason' => $exhaustedProviders[$provider],
+                ]);
                 continue;
             }
             // یک اقدام کاربر نباید چند endpoint از Fal را پشت‌سرهم شارژ کند.
@@ -196,12 +207,53 @@ class AiProviderRouter
             $candidate->primary_model = $modelId;
             $candidate->ai_provider = $provider;
             $candidate->fallback_models = [];
+            $attemptedRoutes[$provider . '|' . $modelId] = true;
             try {
                 return $run($this->serviceForModelId($modelId, $provider), $candidate);
             } catch (\Throwable $error) {
                 $lastError = $error;
+                if ($this->isProviderExhaustionError($error)) {
+                    $exhaustedProviders[$provider] = $this->providerFailureReason($error);
+                }
                 Log::warning('AiProviderRouter: product model failed, trying next provider/model', [
                     'product_id' => $product->id, 'model' => $modelId, 'provider' => $provider,
+                    'message' => $error->getMessage(),
+                ]);
+            }
+        }
+
+        // بعضی محصولات قدیمی از یک migration آزمایشی آمده‌اند و primary و
+        // fallback هر دو روی یک provider ثبت شده‌اند. در این وضعیت، بعد از
+        // شکست حساب/سرویس، از بین مدل‌های فعال و هم‌نوع OpenRouter یک مسیر
+        // پشتیبان واقعی پیدا کن؛ این مسیر فقط برای همان درخواست ساخته می‌شود
+        // و تنظیم ذخیره‌شده‌ی محصول را تغییر نمی‌دهد.
+        foreach ($this->runtimeOpenRouterFallbacks($product, $attemptedRoutes) as $fallback) {
+            $modelId = $fallback['model'];
+            $provider = 'openrouter';
+            if (isset($exhaustedProviders[$provider])) continue;
+
+            $candidate = $product->replicate();
+            $candidate->primary_model = $modelId;
+            $candidate->ai_provider = $provider;
+            $candidate->fallback_models = [];
+            try {
+                Log::notice('AiProviderRouter: using runtime OpenRouter fallback', [
+                    'product_id' => $product->id,
+                    'model' => $modelId,
+                    'provider' => $provider,
+                    'source_provider' => $fallback['source_provider'],
+                ]);
+
+                return $run($this->serviceForModelId($modelId, $provider), $candidate);
+            } catch (\Throwable $error) {
+                $lastError = $error;
+                if ($this->isProviderExhaustionError($error)) {
+                    $exhaustedProviders[$provider] = $this->providerFailureReason($error);
+                }
+                Log::warning('AiProviderRouter: runtime OpenRouter fallback failed', [
+                    'product_id' => $product->id,
+                    'model' => $modelId,
+                    'provider' => $provider,
                     'message' => $error->getMessage(),
                 ]);
             }
@@ -221,6 +273,78 @@ class AiProviderRouter
         }
 
         throw new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
+    }
+
+    /** @return array<int, array{model:string,source_provider:string}> */
+    private function runtimeOpenRouterFallbacks(Product $product, array $attemptedRoutes): array
+    {
+        if (!ProviderStatus::isEnabled('openrouter')) return [];
+
+        $primary = $this->findModel((string) $product->primary_model, (string) $product->ai_provider);
+        $taskType = (string) ($primary?->task_type ?: 'text_to_image');
+        if (!in_array($taskType, ['text_to_image', 'image_to_image', 'face_consistency'], true)) {
+            return [];
+        }
+
+        try {
+            $credentials = app(AiProviderCredentials::class)->for('openrouter');
+            if (blank($credentials['api_key'] ?? null)) return [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $targetGrade = $primary?->pricingGrade() ?? 3;
+        $requiresImageInput = $taskType !== 'text_to_image'
+            || (int) ($product->min_reference_images ?? 0) > 0;
+
+        return AiModel::query()
+            ->where('provider', 'openrouter')
+            ->where('is_active', true)
+            ->where('output_modality', 'image')
+            ->where('task_type', 'text_to_image')
+            ->when($requiresImageInput, fn ($query) => $query->where('supports_image_input', true))
+            ->get()
+            ->filter(function (AiModel $model) use ($attemptedRoutes): bool {
+                $route = 'openrouter|' . (string) $model->openrouter_model_id;
+                return (string) $model->openrouter_model_id !== '' && !isset($attemptedRoutes[$route]);
+            })
+            ->sortBy(fn (AiModel $model): array => [
+                abs($model->pricingGrade() - $targetGrade),
+                $model->lab_priority === null ? 999 : (int) $model->lab_priority,
+                (int) $model->id,
+            ], SORT_REGULAR)
+            ->take(3)
+            ->map(fn (AiModel $model): array => [
+                'model' => (string) $model->openrouter_model_id,
+                'source_provider' => (string) ($primary?->provider ?: $product->ai_provider),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function isProviderExhaustionError(\Throwable $error): bool
+    {
+        $message = strtolower($error->getMessage());
+
+        return str_contains($message, 'http 401')
+            || str_contains($message, 'http 402')
+            || str_contains($message, 'http 403')
+            || str_contains($message, 'http 429')
+            || str_contains($message, 'http 5')
+            || str_contains($message, 'insufficient credit')
+            || str_contains($message, 'rate limit')
+            || str_contains($message, 'quota')
+            || str_contains($message, 'api_key');
+    }
+
+    private function providerFailureReason(\Throwable $error): string
+    {
+        $message = strtolower($error->getMessage());
+
+        if (str_contains($message, '402') || str_contains($message, 'insufficient credit')) return 'اعتبار سرویس کافی نیست';
+        if (str_contains($message, '429') || str_contains($message, 'rate limit')) return 'محدودیت نرخ سرویس';
+        if (str_contains($message, '401') || str_contains($message, '403') || str_contains($message, 'api_key')) return 'کلید یا دسترسی سرویس معتبر نیست';
+        return 'سرویس موقتاً در دسترس نیست';
     }
 
     public function generateImageFromPrompt(

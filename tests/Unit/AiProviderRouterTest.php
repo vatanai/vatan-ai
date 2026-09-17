@@ -56,4 +56,26 @@ class AiProviderRouterTest extends TestCase
 
         $this->assertSame('openrouter', $result['provider']);
     }
+
+    public function test_repeated_failures_from_one_provider_are_not_retried_for_every_fallback_model(): void
+    {
+        ProviderStatus::setEnabled('replicate', true);
+        ProviderStatus::setEnabled('openrouter', false);
+
+        $product = new Product([
+            'primary_model' => 'google/nano-banana-2-lite',
+            'ai_provider' => 'replicate',
+            'fallback_models' => ['google/nano-banana'],
+            'fallback_model_providers' => ['replicate'],
+        ]);
+
+        $replicate = Mockery::mock(\App\Services\Providers\ReplicateImageProvider::class);
+        $replicate->shouldReceive('generateForProduct')->once()->andThrow(new \RuntimeException('Replicate HTTP 402: Insufficient credit'));
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldNotReceive('generateForProduct');
+
+        $this->expectException(\RuntimeException::class);
+        (new AiProviderRouter($openRouter, null, $replicate))
+            ->generateForProduct($product, 'test', '1K', '1:1');
+    }
 }
