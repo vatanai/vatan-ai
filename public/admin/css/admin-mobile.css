@@ -1,0 +1,896 @@
+/*
+ * Shared mobile behaviour for the admin panel.
+ * This file only provides narrow-screen layout rules; colors come from the
+ * existing design tokens so desktop pages keep their current visual system.
+ */
+
+@media (max-width: 900px) {
+  /*
+   * مسیر اسکرول واحد موبایل
+   * body عمداً قفل است تا نوار پایین و منوی کشویی صفحه را جابه‌جا نکنند؛
+   * در عوض خود محتوای صفحه باید ارتفاع محدود و اسکرول لمسی داشته باشد.
+   */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden !important;
+  }
+
+  #admin-wrap {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  #admin-main.admin-main {
+    display: flex;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  #admin-main.admin-main > main {
+    display: flex;
+    height: 100%;
+    min-height: 0 !important;
+    max-height: 100%;
+    flex-direction: column;
+  }
+
+  #admin-main.admin-main > main > .topbar {
+    flex: 0 0 auto;
+  }
+
+  #admin-main.admin-main > main > .topbar + *,
+  #admin-main.admin-main > main > #content,
+  #admin-main.admin-main > main > .admin-content {
+    min-height: 0 !important;
+    flex: 1 1 auto;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  /* صفحات قدیمی که خود main نقش محتوای صفحه را دارد. */
+  #admin-main.admin-main > main.admin-content {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  .admin-main,
+  .admin-main main,
+  .admin-main #content {
+    min-width: 0;
+  }
+
+  .admin-main #content {
+    padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .admin-main button,
+  .admin-main a.btn-pro,
+  .admin-main .btn-pro {
+    min-height: 40px;
+  }
+
+  .admin-main input,
+  .admin-main select,
+  .admin-main textarea {
+    max-width: 100%;
+  }
+
+  /* نوارهای اقدام ثابت صفحات ساخت محصول/تنظیمات نباید زیر نوار پایین موبایل بروند. */
+  .vpc-footer,
+  .vpc2-footer {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .referral-save-bar,
+  .gift-save-bar {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .admin-dashboard-view #dashboard-page,
+  .admin-dashboard-view #dashboard-page > *,
+  .admin-dashboard-view #dashboard-page .grid,
+  .admin-dashboard-view #dashboard-page .grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-dashboard-view #dashboard-page .grid > * {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 767px) {
+  /* Users: turn the wide operational table into self-contained records. */
+  .users-index-table {
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .users-index-table #usersTable {
+    display: block;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  .users-index-table #usersTable thead {
+    display: none;
+  }
+
+  .users-index-table #usersTable tbody,
+  .users-index-table #usersTable tbody tr {
+    display: block;
+  }
+
+  .users-index-table #usersTable tbody {
+    padding: 10px;
+  }
+
+  .users-index-table #usersTable tbody tr[data-user-row] {
+    padding: 8px 11px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-card);
+  }
+
+  .users-index-table #usersTable tbody tr[data-user-row]:last-child {
+    margin-bottom: 0;
+  }
+
+  .users-index-table #usersTable td[data-label] {
+    display: grid;
+    grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 0 !important;
+    border-bottom: 1px dashed var(--border);
+    text-align: right !important;
+  }
+
+  .users-index-table #usersTable td[data-label]::before {
+    content: attr(data-label);
+    padding-top: 2px;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .users-index-table #usersTable td[data-label="انتخاب"] {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 36px;
+  }
+
+  .users-index-table #usersTable td[data-label="انتخاب"]::before {
+    margin-left: auto;
+  }
+
+  .users-index-table #usersTable td[data-label="اطلاعات"] > *,
+  .users-index-table #usersTable td[data-label="هویت کاربر"] > *,
+  .users-index-table #usersTable td[data-label="فعالیت"] > *,
+  .users-index-table #usersTable td[data-label="اعتبار"] > *,
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > *,
+  .users-index-table #usersTable td[data-label="وضعیت و پلن"] > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .users-index-table #usersTable .admin-user-identity,
+  .users-index-table #usersTable .admin-user-identity strong,
+  .users-index-table #usersTable .admin-user-identity b,
+  .users-index-table #usersTable .admin-user-identity span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] {
+    display: block;
+    padding-bottom: 3px !important;
+    border-bottom: 0;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"]::before {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] > .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    margin: 0;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] .grid > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .users-index-table #usersTable td[colspan] {
+    display: block;
+    width: 100%;
+    border: 0;
+    text-align: center !important;
+  }
+
+  .users-index-table #usersTable td[colspan]::before {
+    display: none;
+  }
+
+  /* Products: keep filters thumb-friendly and avoid narrow controls. */
+  #products-filter-form .input-pro,
+  #products-filter-form select,
+  #products-filter-form input {
+    min-height: 42px;
+  }
+
+  #products-filter-form .chip-filter {
+    min-height: 36px;
+  }
+
+  /* Dashboard cards must never force horizontal scrolling on a phone. */
+  .admin-dashboard-view #dashboard-page .grid {
+    width: 100%;
+  }
+
+  .admin-dashboard-view #dashboard-page .grid > * {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 390px) {
+  .users-index-table #usersTable td[data-label="عملیات"] > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard-view #dashboard-page .grid.grid-cols-4,
+  .admin-dashboard-view #dashboard-page .grid.grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/*
+ * فاز فشرده‌سازی موبایل
+ *
+ * این بخش عمداً فقط زیر ۷۶۸ پیکسل فعال است. جدول‌های دسکتاپ و اندازه‌گذاری
+ * اصلی آن‌ها دست‌نخورده می‌ماند؛ در موبایل، هر ردیف به یک کارت دو ستونه‌ی
+ * متراکم تبدیل می‌شود تا اطلاعات همچنان کامل بماند اما فضای خالی تکراری حذف
+ * شود.
+ */
+@media (max-width: 767px) {
+  /* نوار پایین هم‌خانواده‌ی نوار اپ اصلی: کپسول کامل، فعال سبز، بدون بنفش. */
+  body:has(#admin-mobile-nav) {
+    --accent: var(--primary);
+    --accent-hover: var(--primary);
+    --accent-soft: var(--primary-l);
+  }
+
+  .admin-mobile-nav-bar {
+    height: 70px;
+    padding: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--card-bg) 88%, transparent);
+  }
+
+  .admin-mobile-nav-item {
+    border-radius: 999px;
+  }
+
+  .admin-mobile-nav-item::before {
+    inset: 6px 3px;
+    border-radius: 999px;
+  }
+
+  .admin-mobile-nav-item.is-active::before {
+    background: var(--primary);
+  }
+
+  .admin-mobile-nav-item.is-active {
+    color: var(--card-bg);
+  }
+
+  .admin-mobile-nav-item.is-active .admin-mobile-nav-icon,
+  .admin-mobile-nav-item.is-active .admin-mobile-nav-label {
+    color: var(--card-bg);
+  }
+
+  /* کارت کاربران: سرکارت دو ستونه و بخش‌های آماری با فاصله‌ی کم. */
+  .users-index-table {
+    border-radius: 16px !important;
+  }
+
+  .users-index-table #usersTable tbody {
+    padding: 6px;
+  }
+
+  .users-index-table #usersTable tbody tr[data-user-row] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 9px;
+    padding: 8px 9px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+
+  .users-index-table #usersTable td[data-label] {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    grid-column: 1 / -1;
+    align-items: center;
+    padding: 6px 0 !important;
+    border-bottom: 1px dashed var(--border);
+    text-align: right !important;
+  }
+
+  .users-index-table #usersTable td[data-label]::before {
+    padding: 0;
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  .users-index-table #usersTable td[data-label="انتخاب"] {
+    display: flex;
+    grid-column: 1 / -1;
+    min-height: 24px;
+    padding: 0 0 4px !important;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .users-index-table #usersTable td[data-label="اطلاعات"],
+  .users-index-table #usersTable td[data-label="هویت کاربر"] {
+    grid-column: span 1;
+    align-content: start;
+    min-width: 0;
+  }
+
+  .users-index-table #usersTable td[data-label="اطلاعات"] {
+    text-align: center !important;
+  }
+
+  .users-index-table #usersTable td[data-label="اطلاعات"] > .flex.flex-col {
+    gap: 3px;
+  }
+
+  .users-index-table #usersTable td[data-label="اطلاعات"] img,
+  .users-index-table #usersTable td[data-label="اطلاعات"] .rounded-full {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .users-index-table #usersTable td[data-label="هویت کاربر"] .admin-user-identity {
+    gap: 2px;
+    text-align: right;
+  }
+
+  .users-index-table #usersTable td[data-label="هویت کاربر"] .admin-user-identity > strong {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .users-index-table #usersTable td[data-label="هویت کاربر"] .admin-user-identity > span {
+    justify-content: flex-start;
+    gap: 3px;
+    font-size: 8px;
+  }
+
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational {
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-item {
+    min-height: 36px;
+    padding: 5px 6px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-item > span,
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-summary-line > span {
+    font-size: 7.5px;
+  }
+
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-item > strong,
+  .users-index-table #usersTable td[data-label="فعالیت"] .admin-user-operational-summary-line > strong {
+    font-size: 8.5px;
+  }
+
+  .users-index-table #usersTable td[data-label="اعتبار"] > div,
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > div {
+    gap: 2px !important;
+  }
+
+  .users-index-table #usersTable td[data-label="اعتبار"] > div > div {
+    min-height: 24px;
+    padding: 3px 6px !important;
+    line-height: 1.25;
+  }
+
+  .users-index-table #usersTable td[data-label="اعتبار"] span,
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] span,
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] div {
+    font-size: 8.5px !important;
+  }
+
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > div > span.w-10 {
+    display: none;
+  }
+
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > div > :first-child,
+  .users-index-table #usersTable td[data-label="دعوت و عضویت"] > div > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .users-index-table #usersTable td[data-label="وضعیت و پلن"] > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px !important;
+  }
+
+  .users-index-table #usersTable .user-status-control {
+    width: 100%;
+    max-width: none;
+    min-height: 31px !important;
+    padding: 4px 5px !important;
+    font-size: 9px !important;
+    transform: none;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] {
+    display: block;
+    grid-column: 1 / -1;
+    padding: 7px 0 1px !important;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"]::before {
+    margin-bottom: 5px;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+    grid-auto-rows: 30px;
+  }
+
+  .users-index-table #usersTable td[data-label="عملیات"] > .grid > a,
+  .users-index-table #usersTable td[data-label="عملیات"] > .grid > button,
+  .users-index-table #usersTable .admin-user-referral-button {
+    width: 100% !important;
+    min-height: 30px !important;
+    height: 30px;
+    padding: 3px 4px !important;
+    font-size: 8.5px !important;
+    transform: none !important;
+  }
+
+  /* کارت محصولات: اطلاعات ثانویه در دو ستون، دکمه‌ها کوچک و هم‌تراز. */
+  .products-table-scroll {
+    overflow: visible !important;
+  }
+
+  .products-table-compact {
+    display: block;
+    min-width: 0 !important;
+  }
+
+  .products-table-compact tbody {
+    padding: 6px;
+  }
+
+  .products-table-compact tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+    padding: 8px 9px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+
+  .products-table-compact tbody td {
+    min-width: 0 !important;
+    width: auto !important;
+    padding: 6px 0 !important;
+    font-size: 10px;
+    border: 0;
+  }
+
+  .products-table-compact tbody td.td-select {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0 0 4px !important;
+  }
+
+  .products-table-compact tbody td.td-thumb {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    padding: 0 0 4px !important;
+  }
+
+  .products-table-compact tbody td.td-product {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding: 6px 0 8px !important;
+    border-top: 1px dashed var(--divider);
+    text-align: right !important;
+  }
+
+  .products-table-compact tbody td:not(.td-select):not(.td-thumb):not(.td-product):not(.td-empty) {
+    display: flex;
+    grid-column: span 1;
+    order: initial;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    border-top: 1px dashed var(--divider);
+  }
+
+  .products-table-compact tbody td:not(.td-select):not(.td-thumb):not(.td-product):not(.td-empty)::before {
+    font-size: 8.5px;
+    line-height: 1.3;
+  }
+
+  .products-table-compact tbody td[data-label^="عملیات"] {
+    grid-column: 1 / -1;
+    align-items: center;
+    padding-top: 7px !important;
+  }
+
+  .products-table-compact tbody td[data-label^="عملیات"]::before {
+    width: 100%;
+    text-align: right;
+  }
+
+  .products-table-compact .product-code-category-stack,
+  .products-table-compact .product-credit-quality-stack,
+  .products-table-compact .product-lab-cost-stack {
+    min-width: 0;
+    width: 100%;
+    gap: 3px;
+  }
+
+  .products-table-compact .product-code-category-stack .stack-label,
+  .products-table-compact .product-credit-quality-stack .product-quality-label {
+    font-size: 8px;
+  }
+
+  .products-table-compact .product-code-category-stack .stack-value,
+  .products-table-compact .product-credit-quality-stack .product-quality-credits,
+  .products-table-compact .product-credit-quality-stack .product-quality-cost {
+    font-size: 8.5px;
+  }
+
+  .products-table-compact .product-actions-grid {
+    grid-template-columns: repeat(2, 34px);
+    grid-template-rows: repeat(2, 34px);
+    gap: 4px;
+  }
+
+  .products-table-compact .product-actions-grid > .product-like-box,
+  .products-table-compact .product-actions-grid > .dropdown-pro,
+  .products-table-compact .product-actions-grid > .favorite,
+  .products-table-compact .product-actions-grid > .product-action-link,
+  .products-table-compact .product-actions-grid > .dropdown-pro > .icon-action-btn,
+  .products-table-compact .product-actions-grid > .product-action-link > .icon-action-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 10px;
+  }
+
+  .products-table-compact .icon-action-btn.is-active,
+  .products-table-compact .icon-action-btn.favorite.is-active,
+  .products-table-compact .product-actions-grid .is-active {
+    color: var(--primary) !important;
+    border-color: var(--primary-m) !important;
+    background: var(--primary-l) !important;
+  }
+
+  /* کارت خرید پلن: سفارش/کاربر عریض، جزئیات مالی در جفت‌های هم‌عرض. */
+  .orders-plan-purchases-table tbody {
+    padding: 6px;
+  }
+
+  .orders-plan-purchases-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 9px;
+    padding: 8px 9px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+
+  .orders-plan-purchases-table tbody tr > td {
+    display: flex;
+    grid-column: span 1;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+    width: auto !important;
+    min-width: 0;
+    padding: 6px 0 !important;
+    border-bottom: 0;
+    border-top: 1px dashed var(--border);
+  }
+
+  .orders-plan-purchases-table tbody tr > td::before {
+    font-size: 8.5px;
+    line-height: 1.3;
+  }
+
+  .orders-plan-purchases-table tbody tr > td:nth-child(1),
+  .orders-plan-purchases-table tbody tr > td:nth-child(2),
+  .orders-plan-purchases-table tbody tr > td:nth-child(3),
+  .orders-plan-purchases-table tbody tr > td:nth-child(9) {
+    grid-column: 1 / -1;
+  }
+
+  .orders-plan-purchases-table tbody tr > td:nth-child(1) {
+    min-height: 22px;
+    padding-top: 0 !important;
+    border-top: 0;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .orders-plan-purchases-table tbody tr > td:nth-child(2) {
+    padding-bottom: 7px !important;
+  }
+
+  .orders-plan-purchases-table tbody tr > td:nth-child(3) {
+    padding-top: 7px !important;
+  }
+
+  .orders-plan-purchases-table .order-user {
+    gap: 7px;
+  }
+
+  .orders-plan-purchases-table .order-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .orders-plan-purchases-table .order-user-name {
+    font-size: 10.5px;
+  }
+
+  .orders-plan-purchases-table .order-meta {
+    margin-top: 0;
+    font-size: 8.5px;
+    line-height: 1.4;
+  }
+
+  .orders-plan-purchases-table .admin-user-operational {
+    min-width: 0;
+    width: 100%;
+    margin-top: 5px;
+  }
+
+  .orders-plan-purchases-table .admin-user-operational-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .orders-plan-purchases-table .admin-user-operational-item {
+    min-height: 34px;
+    padding: 5px 6px;
+  }
+
+  .orders-plan-purchases-table .order-user-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 8px;
+    margin-top: 6px;
+    font-size: 8.5px;
+    line-height: 1.5;
+  }
+
+  .orders-plan-purchases-table .order-user-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .orders-plan-purchases-table .order-user-links a {
+    padding: 3px 6px;
+    border-radius: 8px;
+    font-size: 8px;
+  }
+
+  .orders-plan-purchases-table .orders-row-actions {
+    grid-template-columns: repeat(3, 34px);
+    grid-auto-rows: 34px;
+    gap: 4px;
+    margin-inline: 0;
+  }
+
+  .orders-plan-purchases-table .orders-row-actions .order-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  .orders-plan-purchases-table .order-btn.primary {
+    color: var(--card-bg) !important;
+  }
+}
+
+/*
+ * «بیشتر»: لایه‌ی کشویی باید بالای پرده باشد و خودش اسکرول شود؛ در غیر این
+ * صورت پرده روی لینک‌ها می‌افتد و لمس کاربر به محتوای پشت صفحه می‌رسد.
+ */
+@media (max-width: 900px) {
+  html:has(#admin-mobile-nav),
+  body:has(#admin-mobile-nav) {
+    overflow: hidden;
+  }
+
+  body:has(#admin-mobile-nav) #content {
+    overscroll-behavior: contain;
+  }
+
+  #admin-wrap.sidebar-toggled .mobile-sidebar-overlay {
+    z-index: 390 !important;
+  }
+
+  #admin-wrap.sidebar-toggled .sidebar {
+    z-index: 410 !important;
+    pointer-events: auto !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  #admin-wrap.sidebar-toggled .admin-main,
+  #admin-wrap.sidebar-toggled .mini-rail {
+    pointer-events: none;
+  }
+
+  #admin-wrap.sidebar-toggled .sidebar a,
+  #admin-wrap.sidebar-toggled .sidebar button,
+  #admin-wrap.sidebar-toggled .sidebar summary {
+    pointer-events: auto;
+  }
+
+  /* نوار پایین از منوی کشویی جدا می‌ماند و دکمه‌ی بستن/تعامل‌ها قابل لمس‌اند. */
+  #admin-wrap.sidebar-toggled + #admin-mobile-nav {
+    z-index: 500;
+  }
+}
+
+/* تبلت‌های کوچک هم از همان رنگ فعال موبایل استفاده می‌کنند. */
+@media (min-width: 768px) and (max-width: 900px) {
+  body:has(#admin-mobile-nav) {
+    --accent: var(--primary);
+    --accent-hover: var(--primary);
+    --accent-soft: var(--primary-l);
+  }
+
+  .admin-mobile-nav-item.is-active::before {
+    background: var(--primary);
+  }
+
+  .admin-mobile-nav-item.is-active,
+  .admin-mobile-nav-item.is-active .admin-mobile-nav-icon,
+  .admin-mobile-nav-item.is-active .admin-mobile-nav-label {
+    color: var(--card-bg);
+  }
+}
+
+/*
+ * سیاست نهایی اسکرول موبایل
+ *
+ * صفحات مختلف پنل، محتوای خودشان را با ساختارهای متفاوتی رندر می‌کنند؛ بعضی
+ * از آن‌ها #content دارند و بعضی ندارند. برای جلوگیری از اسکرول تو در تو و
+ * قفل‌شدن flex، در حالت عادی اسکرول را به خود صفحه می‌سپاریم. فقط وقتی یک
+ * لایه‌ی شناور باز است، صفحه قفل می‌شود تا لمس کاربر به پشت لایه نرسد.
+ */
+@media (max-width: 900px) {
+  html,
+  body {
+    height: auto !important;
+    min-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  #admin-wrap {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+
+  #admin-main.admin-main {
+    display: block !important;
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+
+  #admin-main.admin-main > main {
+    display: flex;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    flex-direction: column;
+  }
+
+  #admin-main.admin-main > main > .topbar {
+    flex: 0 0 auto;
+  }
+
+  #admin-main.admin-main > main > .topbar + *,
+  #admin-main.admin-main > main > #content,
+  #admin-main.admin-main > main > .admin-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: auto;
+    overscroll-behavior: auto;
+    touch-action: auto;
+  }
+
+  #admin-main.admin-main > main.admin-content {
+    min-height: 100vh !important;
+    overflow: visible !important;
+  }
+
+  /* درِ منوی بیشتر و شیت‌ها تنها حالت‌هایی هستند که body باید قفل باشد. */
+  body:has(#admin-wrap.sidebar-toggled),
+  body.admin-mobile-sheet-open {
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  body:has(#admin-wrap.sidebar-toggled) #admin-main,
+  body.admin-mobile-sheet-open #admin-main {
+    pointer-events: none;
+  }
+
+  body:has(#admin-wrap.sidebar-toggled) .sidebar,
+  body.admin-mobile-sheet-open .admin-mobile-sheet-panel,
+  body.admin-mobile-sheet-open .admin-mobile-sheet-panel * {
+    pointer-events: auto;
+  }
+}

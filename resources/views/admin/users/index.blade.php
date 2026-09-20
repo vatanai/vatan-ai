@@ -2,6 +2,7 @@
 @section('title', 'مدیریت کاربران — وطن استودیو')
 @push('styles')
   <link rel="stylesheet" href="{{ asset('admin/css/user-operational-snapshot.css') }}?v={{ filemtime(public_path('admin/css/user-operational-snapshot.css')) }}">
+  <link rel="stylesheet" href="{{ asset('admin/css/users-desktop.css') }}?v={{ filemtime(public_path('admin/css/users-desktop.css')) }}">
 @endpush
 
 @php
@@ -168,7 +169,7 @@
             @forelse($users as $i => $user)
             <tr class="transition-colors" data-user-row="{{ $user->id }}" style="--tw-bg-opacity:1;" onmouseenter="this.style.background='var(--primary-l)'" onmouseleave="this.style.background=''">
               @if($canBulkManageUsers)
-                <td class="p-3 text-center"><input type="checkbox" value="{{ $user->id }}" class="user-bulk-check cursor-pointer accent-[var(--primary)]" onchange="window.updateUserBulkSelection()" aria-label="انتخاب {{ trim(($user->name ?? 'کاربر').' '.($user->last_name ?? '')) }} برای عملیات گروهی"></td>
+                <td class="users-desktop-select p-3 text-center"><input type="checkbox" value="{{ $user->id }}" class="user-bulk-check cursor-pointer accent-[var(--primary)]" onchange="window.updateUserBulkSelection()" aria-label="انتخاب {{ trim(($user->name ?? 'کاربر').' '.($user->last_name ?? '')) }} برای عملیات گروهی"></td>
               @endif
               @php
                 $birthDateLabel = '—';
@@ -181,7 +182,7 @@
                   $birthDateLabel = sprintf('%04d/%02d/%02d', $birthJy, $birthJm, $birthJd);
                 }
               @endphp
-              <td class="p-2 text-center">
+              <td class="users-desktop-info p-2 text-center">
                 <div class="flex flex-col items-center gap-1">
                   @if($user->avatar)
                     <img src="{{ asset('storage/' . $user->avatar) }}" class="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-[var(--border)]">
@@ -199,17 +200,17 @@
                 </div>
               </td>
 
-              <td class="p-2 text-center">
+              <td class="users-desktop-identity p-2 text-center">
                 <div class="admin-user-identity">
                   <strong title="{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) ?: 'کاربر بدون نام' }}">{{ trim(($user->name ?? '').' '.($user->last_name ?? '')) ?: '—' }}</strong>
                   <span><i class="fa-solid fa-mobile-screen-button"></i><b dir="ltr">{{ $user->phone ?: '—' }}</b></span>
                   <span><i class="fa-solid fa-at"></i><b dir="ltr" title="{{ $user->email ?: 'ایمیل ثبت نشده' }}">{{ $user->email ?: '—' }}</b></span>
                 </div>
               </td>
-              <td class="p-2 text-center">
+              <td class="users-desktop-activity p-2 text-center">
                 @include('admin.users.partials.operational-snapshot', ['snapshotUser' => $user])
               </td>
-              <td class="admin-credit-report p-2 text-[10px]">
+              <td class="users-desktop-credit admin-credit-report p-2 text-[10px]">
                 <div class="flex flex-col gap-1 text-right select-none">
                   <div class="flex justify-between items-center bg-[var(--page-bg)]/50 p-1 px-1.5 rounded border border-[var(--border)]/40">
                     <span class="text-[var(--text-soft)] text-[10px]">موجودی فعلی:</span>
@@ -235,7 +236,7 @@
                 $joinedAt = $user->registered_at ?? $user->created_at;
                 $selectedPlanId = $user->hasFreePlan() ? '' : $user->plan_id;
               @endphp
-              <td class="admin-status-column p-2 text-center">
+              <td class="users-desktop-referral admin-status-column p-2 text-center">
                 <div class="flex flex-col items-center gap-1.5 text-[10.5px]">
                   <div class="inline-flex items-center justify-center gap-1 text-[var(--info)] font-mono font-medium text-[10px]" dir="rtl" title="عملکرد لینک‌های دعوت این کاربر">
                     <span class="text-[var(--text-soft)] font-sans">لینک دعوت:</span>
@@ -257,7 +258,7 @@
                 </div>
               </td>
 
-              <td class="p-2 text-center">
+              <td class="users-desktop-status p-2 text-center">
                 <div class="flex flex-col items-center gap-1.5">
                   @if($canManageUserStatuses)
                     <select onchange="window.changeUserStatus({{ $user->id }}, this)" data-user-status-id="{{ $user->id }}" data-current="{{ $user->status }}" class="user-status-control w-full max-w-[120px] px-2 py-1 rounded-md border outline-none bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] focus:border-[var(--info)] cursor-pointer text-[10.5px] text-center" aria-label="تغییر وضعیت {{ trim(($user->name ?? 'کاربر').' '.($user->last_name ?? '')) }}">
@@ -286,7 +287,7 @@
                   </select>
                 </div>
               </td>
-              <td class="p-2 text-center">
+              <td class="users-desktop-actions p-2 text-center">
                 <div class="grid grid-cols-2 gap-1.5 justify-center w-fit mx-auto">
                   <button type="button" onclick="window.openUserModal(@js(trim(($user->name ?? 'کاربر').' '.($user->last_name ?? ''))), @js($user->generatedImages), {{ $user->id }}, @js($selectedPlanId ?: ''), @js(\App\Support\Jalali::formatNumeric($joinedAt)))" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--info-l)] border-[var(--info-m)] hover:bg-[var(--info-l)] text-[var(--info)] text-[10px] font-medium transition-colors cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> نمایش</button>
                   <a href="{{ route('admin.users.logs', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مشاهده لاگ‌ها"><i class="fa-solid fa-history"></i> لاگ‌ها</a>

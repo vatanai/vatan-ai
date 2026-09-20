@@ -40,8 +40,7 @@ class DashboardController extends Controller
     }
 
     public function index(
-        ServiceCreditOverviewService $creditOverview,
-        ServiceCreditTransactionReport $transactionReport,
+        Request $request,
         $section = null
     )
     {
@@ -55,8 +54,19 @@ class DashboardController extends Controller
             ]);
         }
 
-        $creditData = $creditOverview->get(true);
-        $creditTransactions = $transactionReport->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
+        // در موبایل ورود اولیه فقط پوسته‌ی سبک را نمایش می‌دهد؛ مرکز فرماندهی
+        // با کلیک کاربر و پارامتر mobile_center بارگذاری می‌شود.
+        if ($this->isMobileRequest($request) && !$request->boolean('mobile_center')) {
+            return view('admin.dashboard', [
+                ...$this->viewData(),
+                'dashboardSection' => null,
+                'mobileShell' => true,
+            ]);
+        }
+
+        // سرویس‌های سنگین فقط پس از انتخاب مرکز فرماندهی resolve می‌شوند.
+        $creditData = app(ServiceCreditOverviewService::class)->get(true);
+        $creditTransactions = app(ServiceCreditTransactionReport::class)->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
 
         return view('admin.dashboard', [
             ...$this->viewData(),
@@ -68,6 +78,18 @@ class DashboardController extends Controller
 
     public function fragment(string $section)
     {
+        if ($section === 'home') {
+            $creditData = app(ServiceCreditOverviewService::class)->get(true);
+            $creditTransactions = app(ServiceCreditTransactionReport::class)->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
+
+            return response(view('admin.partials.pages.dashboard-main', [
+                ...$this->viewData(),
+                'dashboardSection' => null,
+                'creditOverview' => $creditData,
+                'creditTransactions' => $creditTransactions,
+            ])->render())->header('Content-Type', 'text/html; charset=UTF-8');
+        }
+
         $view = $this->sectionView($section);
         abort_unless($view, 404);
 
@@ -159,5 +181,15 @@ class DashboardController extends Controller
         return response()->json([
             'data' => $results->concat($userResults)->concat($productResults)->take(15)->values(),
         ]);
+    }
+
+    private function isMobileRequest(Request $request): bool
+    {
+        $clientHint = strtolower((string) $request->header('Sec-CH-UA-Mobile', ''));
+        if ($clientHint === '?1' || $clientHint === '1') {
+            return true;
+        }
+
+        return (bool) preg_match('/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i', (string) $request->userAgent());
     }
 }

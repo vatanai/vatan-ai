@@ -64,3 +64,22 @@
 @media(max-width:800px){.orders-stats{grid-template-columns:repeat(2,1fr)}.order-filters{grid-template-columns:1fr 1fr}.order-detail-grid,.discount-layout{grid-template-columns:1fr}.order-info-grid{grid-template-columns:1fr}}
 @media(max-width:800px){.order-attention-list{grid-template-columns:1fr}}
 @media(max-width:520px){.orders-stats,.order-filters,.order-form-row{grid-template-columns:1fr}.orders-head{display:block}.orders-actions{margin-top:12px}.order-stat{padding:12px}.order-attention-time{display:none}}
+@media(max-width:767px){
+  .orders-table-wrap{overflow:visible}
+  .orders-table{display:block;min-width:0 !important;width:100%;table-layout:auto}
+  .orders-table thead{display:none}
+  .orders-table tbody,.orders-table tr{display:block}
+  .orders-table tbody{padding:10px}
+  .orders-table tbody tr{padding:9px 11px;margin-bottom:10px;border:1px solid var(--border);border-radius:12px;background:var(--card-bg);box-shadow:var(--shadow-card)}
+  .orders-table tbody tr:last-child{margin-bottom:0}
+  .orders-table td{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr);align-items:center;gap:10px;width:100% !important;padding:9px 0;border-bottom:1px dashed var(--border);text-align:right;min-width:0}
+  .orders-table td:last-child{border-bottom:0}
+  .orders-table td::before{content:attr(data-label);font-size:10px;font-weight:700;color:var(--text-soft);white-space:nowrap}
+  .orders-table td[data-label="کاربر"],.orders-table td[data-label="محصول"]{align-items:start}
+  .orders-table .order-user,.orders-table .order-user-name{min-width:0;white-space:normal;overflow-wrap:anywhere}
+  .orders-table .order-user-name{line-height:1.7}
+  .orders-table td[data-label="عملیات"]{display:flex;justify-content:flex-start;align-items:center;gap:8px}
+  .orders-table td[data-label="عملیات"]::before{margin-left:auto}
+  .orders-table td[colspan]{display:block;text-align:center;border-bottom:0}
+  .orders-table td[colspan]::before{display:none}
+}

@@ -23,14 +23,69 @@ class ServiceCreditOverviewService
         // در بازهٔ کوتاه، آخرین تصویر معتبر نمایش داده می‌شود و پس از منقضی‌شدن
         // آن، Laravel بروزرسانی را در پایان چرخهٔ درخواست انجام می‌دهد.
         if ($dashboardOnly) {
-            return Cache::flexible(
-                'finance.dashboard_credit_overview',
-                [30, 300],
-                fn (): array => $this->buildOverview($dashboardOnly),
-            );
+            $cacheKey = 'finance.dashboard_credit_overview';
+
+            try {
+                $overview = Cache::flexible(
+                    $cacheKey,
+                    [30, 300],
+                    fn (): array => $this->cachePayload($this->buildOverview($dashboardOnly)),
+                );
+
+                // کش فقط داده‌ی ساده نگه می‌دارد؛ مدل‌ها قبل از رسیدن به View
+                // دوباره در حافظه ساخته می‌شوند.
+                if (!is_array($overview) || !is_array($overview['accounts'] ?? null)) {
+                    throw new \UnexpectedValueException('Invalid cached dashboard credit overview.');
+                }
+
+                return $this->hydrateCachedOverview($overview);
+            } catch (\Throwable $exception) {
+                report($exception);
+                Cache::forget($cacheKey);
+
+                $freshOverview = $this->buildOverview($dashboardOnly);
+                $safePayload = $this->cachePayload($freshOverview);
+                $rebuiltCache = Cache::flexible(
+                    $cacheKey,
+                    [30, 300],
+                    fn (): array => $safePayload,
+                );
+
+                return $this->hydrateCachedOverview($rebuiltCache);
+            }
         }
 
         return $this->buildOverview($dashboardOnly);
+    }
+
+    /**
+     * کش فایل/اشتراکی نباید آبجکت‌های Eloquent را سریال کند؛ فقط مقادیر لازم
+     * برای بازسازی نمای داشبورد را ذخیره می‌کنیم.
+     */
+    private function cachePayload(array $overview): array
+    {
+        $accounts = $overview['accounts'] ?? collect();
+
+        return [
+            'accounts' => $accounts instanceof Collection
+                ? $accounts->map(fn (ServiceCreditAccount $account): array => $account->getAttributes())->values()->all()
+                : [],
+            'exchange' => $overview['exchange'] ?? [],
+            'totals' => $overview['totals'] ?? $this->emptyTotals(),
+        ];
+    }
+
+    private function hydrateCachedOverview(array $overview): array
+    {
+        $overview['accounts'] = collect($overview['accounts'])->map(function ($attributes): ServiceCreditAccount {
+            if (!is_array($attributes)) {
+                throw new \UnexpectedValueException('Invalid cached service credit account.');
+            }
+
+            return (new ServiceCreditAccount())->forceFill($attributes);
+        });
+
+        return $overview;
     }
 
     private function buildOverview(bool $dashboardOnly): array

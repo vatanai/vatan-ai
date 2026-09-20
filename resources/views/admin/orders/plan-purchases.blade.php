@@ -167,9 +167,9 @@
                 $userStatus = match ($user?->status) { 'suspended' => 'معلق', 'deleted' => 'حذف شده', default => 'فعال' };
               @endphp
               <tr>
-                <td class="order-select-column"><input type="checkbox" class="purchase-select" value="{{ $purchase->id }}" aria-label="انتخاب خرید {{ $purchase->order_number }}"></td>
-                <td><span class="order-number">{{ $purchase->order_number }}</span></td>
-                <td>
+                <td data-label="انتخاب" class="order-select-column"><input type="checkbox" class="purchase-select" value="{{ $purchase->id }}" aria-label="انتخاب خرید {{ $purchase->order_number }}"></td>
+                <td data-label="شماره سفارش"><span class="order-number">{{ $purchase->order_number }}</span></td>
+                <td data-label="اطلاعات کامل کاربر">
                   <div class="order-user">
                     @if($user?->avatar)
                       <img class="order-avatar order-avatar-image" src="{{ asset('storage/' . $user->avatar) }}" alt="">
@@ -200,12 +200,12 @@
                     </div>
                   @endif
                 </td>
-                <td><div class="order-user-name">{{ $purchase->plan_name }}</div><div class="order-meta" dir="ltr">{{ $purchase->plan?->slug ?: $purchase->plan_code }}</div></td>
-                <td><strong>{{ number_format($purchase->paid_amount) }} تومان</strong><div class="order-meta">{{ number_format($purchase->granted_tokens) }} اعتبار</div></td>
-                <td><div class="order-user-name">{{ $purchase->gateway === 'zarinpal' ? 'زرین‌پال' : ($purchase->gateway === 'zibal' ? 'زیبال' : ($purchase->gateway ?: '—')) }}</div><div class="order-meta" dir="ltr">{{ $purchase->gateway_reference ?: $purchase->gateway_track_id ?: '—' }}</div></td>
-                <td><span class="order-badge {{ $statusClass }}"><i class="order-dot"></i>{{ \App\Models\PlanPurchase::statusLabel($purchase->status) }}</span>@if($purchase->failure_reason)<div class="order-meta" title="{{ $purchase->failure_reason }}">{{ \Illuminate\Support\Str::limit($purchase->failure_reason, 42) }}</div>@endif</td>
-                <td>{{ \App\Support\Jalali::formatNumeric($purchase->verified_at ?: $purchase->initiated_at ?: $purchase->created_at) }}</td>
-                <td>
+                <td data-label="پلن خریداری‌شده"><div class="order-user-name">{{ $purchase->plan_name }}</div><div class="order-meta" dir="ltr">{{ $purchase->plan?->slug ?: $purchase->plan_code }}</div></td>
+                <td data-label="مبلغ و اعتبار"><strong>{{ number_format($purchase->paid_amount) }} تومان</strong><div class="order-meta">{{ number_format($purchase->granted_tokens) }} اعتبار</div></td>
+                <td data-label="درگاه و پیگیری"><div class="order-user-name">{{ $purchase->gateway === 'zarinpal' ? 'زرین‌پال' : ($purchase->gateway === 'zibal' ? 'زیبال' : ($purchase->gateway ?: '—')) }}</div><div class="order-meta" dir="ltr">{{ $purchase->gateway_reference ?: $purchase->gateway_track_id ?: '—' }}</div></td>
+                <td data-label="وضعیت"><span class="order-badge {{ $statusClass }}"><i class="order-dot"></i>{{ \App\Models\PlanPurchase::statusLabel($purchase->status) }}</span>@if($purchase->failure_reason)<div class="order-meta" title="{{ $purchase->failure_reason }}">{{ \Illuminate\Support\Str::limit($purchase->failure_reason, 42) }}</div>@endif</td>
+                <td data-label="زمان">{{ \App\Support\Jalali::formatNumeric($purchase->verified_at ?: $purchase->initiated_at ?: $purchase->created_at) }}</td>
+                <td data-label="عملیات">
                   <div class="orders-row-actions">
                     <a class="order-btn primary" href="{{ route('admin.orders.plan-purchases.show', $purchase) }}" title="مسیر مالی و جزئیات پرداخت"><i class="fa-solid fa-route"></i></a>
                     @if($user)<a class="order-btn" href="{{ route('admin.users.index', ['show_user' => $user->id]) }}" title="خروجی‌های ساخته‌شده"><i class="fa-solid fa-images"></i></a>@endif

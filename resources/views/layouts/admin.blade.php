@@ -2,13 +2,14 @@
 <html dir="rtl" lang="fa">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'پنل مدیریت — وطن استودیو')</title>
     @include('partials.site-icons')
 
     <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     <link href="{{ asset('admin/css/design-tokens.css') }}?v={{ filemtime(public_path('admin/css/design-tokens.css')) }}" rel="stylesheet">
+    <link href="{{ asset('admin/css/admin-mobile.css') }}?v={{ filemtime(public_path('admin/css/admin-mobile.css')) }}" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -46,6 +47,8 @@
         </div>
     </div>
 
+    @include('admin.partials.mobile-nav')
+
     <script>
       /* باز/بسته کردن اسلایدبار منوها و مینی‌سایدبار در حالت موبایل (زیر ۹۰۰px)
          با دکمه همبرگری در هدر — resources/views/admin/partials/header.blade.php */
@@ -55,6 +58,7 @@
         if (!wrap) return;
 
         const isToggled = wrap.classList.toggle('sidebar-toggled');
+        document.querySelector('[data-admin-mobile-sidebar]')?.setAttribute('aria-expanded', isToggled ? 'true' : 'false');
         if (window.matchMedia('(min-width: 901px)').matches) {
           try { localStorage.setItem('admin-sidebar-collapsed', isToggled ? '1' : '0'); } catch (e) {}
         }
@@ -73,7 +77,7 @@
 
     @include('admin.partials.jalali-date-inputs')
     @yield('scripts')
-    @if(empty($dashboardSection) && request()->is('admin/dashboard'))
+    @if(empty($dashboardSection) && request()->is('admin/dashboard') && empty($mobileShell))
       <script src="{{ asset('admin/js/dashboard-prefetch.js') }}" defer></script>
     @endif
 

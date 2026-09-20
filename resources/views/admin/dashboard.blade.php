@@ -11,7 +11,7 @@
 
 @section('content')
 
-<div class="flex min-h-screen" dir="rtl" style="background:var(--bg);">
+<div class="flex min-h-screen admin-dashboard-view" dir="rtl" style="background:var(--bg);">
 
 
   {{-- ══ MAIN ══ --}}
@@ -21,12 +21,16 @@
     @include('admin.partials.header')
 
     {{-- ══ PAGE CONTENT ══ --}}
-    <div class="flex-1 min-h-0 p-6 overflow-y-auto max-[768px]:p-[18px] max-[480px]:p-[14px]"
+    <div class="flex-1 min-h-0 p-6 overflow-y-auto admin-dashboard-content max-[768px]:p-[18px] max-[480px]:p-[14px]"
          id="content"
          style="scrollbar-width:none;-ms-overflow-style:none;">
 
       @if(empty($dashboardSection))
-        @include('admin.partials.pages.dashboard-main')
+        @if(!empty($mobileShell))
+          @include('admin.partials.pages.mobile-dashboard-shell')
+        @else
+          @include('admin.partials.pages.dashboard-main')
+        @endif
       @else
         @include('admin.partials.pages.' . match($dashboardSection) {
           'crm' => 'crm', 'attendance' => 'misc', 'products' => 'products-dashboard',
