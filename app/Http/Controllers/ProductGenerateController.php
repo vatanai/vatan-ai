@@ -1049,9 +1049,20 @@ class ProductGenerateController extends Controller
                         'size'        => $g['size'],
                     ]);
                     $generatedImageRecords[] = $generatedImage;
-                    app(\App\Services\ReferralProgramService::class)->handleSuccessfulGeneration($generatedImage);
+                    // ثبت تصویر، منبع اصلی موفقیت ساخت است. سرویس‌های جانبی
+                    // مثل رفرال و زمان‌بندی پیامک نباید بعد از ثبت خروجی، پاسخ
+                    // موفق ساخت را به خطا تبدیل کنند.
+                    try {
+                        app(\App\Services\ReferralProgramService::class)->handleSuccessfulGeneration($generatedImage);
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
                     if ($user) {
-                        app(SmsEventService::class)->markFirstImageFollowupPending($user);
+                        try {
+                            app(SmsEventService::class)->markFirstImageFollowupPending($user);
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
                     }
                 }
 
@@ -1083,26 +1094,57 @@ class ProductGenerateController extends Controller
                 ? 'ساخت این مدل‌ها ناموفق بود: ' . implode('، ', $failed)
                 : null;
 
-            $order?->update([
-                'status' => 'completed',
-                'processing_status' => 'completed',
-                'ai_model' => $usedModels[0] ?? $executionProduct->primary_model,
-                'final_credits' => $actualCredit,
-                'original_credits' => $actualOriginalCredit,
-                'discount_credits' => $actualDiscount,
-                'promotional_credits_used' => $creditReservation['promotional'],
-                'paid_credits_used' => $creditReservation['paid'],
-                'output_payload' => array_map(fn ($g) => ['key' => $g['key'], 'title' => $g['title'], 'path' => $g['path']], $generated),
-                'completed_at' => now(),
-                'processing_duration_ms' => $order?->processing_started_at ? $order->processing_started_at->diffInMilliseconds(now()) : null,
-            ]);
-            $order?->recordEvent('completed', 'پردازش با موفقیت تکمیل شد', $failedMsg);
-            $this->markTelegramBuildCompleted($request, $product);
-            if ($user?->phone && $order) app(SmsEventService::class)->send('order_completed', $user->phone, [
-                'name'=>$user->name, 'phone'=>$user->phone, 'order_number'=>$order->order_number,
-                'product_name'=>$product->name_fa ?? $product->name ?? '', 'balance'=>(string)($user->fresh()->tokens ?? 0),
-            ]);
-            if ($discount) $discount->increment('used_count');
+            try {
+                $order?->update([
+                    'status' => 'completed',
+                    'processing_status' => 'completed',
+                    'ai_model' => $usedModels[0] ?? $executionProduct->primary_model,
+                    'final_credits' => $actualCredit,
+                    'original_credits' => $actualOriginalCredit,
+                    'discount_credits' => $actualDiscount,
+                    'promotional_credits_used' => $creditReservation['promotional'],
+                    'paid_credits_used' => $creditReservation['paid'],
+                    'output_payload' => array_map(fn ($g) => ['key' => $g['key'], 'title' => $g['title'], 'path' => $g['path']], $generated),
+                    'completed_at' => now(),
+                    'processing_duration_ms' => $order?->processing_started_at ? $order->processing_started_at->diffInMilliseconds(now()) : null,
+                ]);
+                $order?->recordEvent('completed', 'پردازش با موفقیت تکمیل شد', $failedMsg);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                $this->markTelegramBuildCompleted($request, $product);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            if ($user?->phone && $order) {
+                try {
+                    app(SmsEventService::class)->send('order_completed', $user->phone, [
+                        'name'=>$user->name, 'phone'=>$user->phone, 'order_number'=>$order->order_number,
+                        'product_name'=>$product->name_fa ?? $product->name ?? '', 'balance'=>(string)($user->fresh()->tokens ?? 0),
+                    ]);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+            if ($discount) {
+                try {
+                    $discount->increment('used_count');
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+
+            $remainingTokens = 0;
+            if ($user) {
+                try {
+                    $remainingTokens = (int) ($user->fresh()->tokens ?? 0);
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
 
             return response()->json([
                 'success'          => true,
@@ -1119,7 +1161,7 @@ class ProductGenerateController extends Controller
                 'credits_returned'  => $creditsReturned,
                 'used_model'       => $usedModels[0] ?? $executionProduct->primary_model,
                 'model_tier'       => $tierMeta,
-                'remaining_tokens' => $user ? $user->fresh()->tokens : 0,
+                'remaining_tokens' => $remainingTokens,
             ]);
 
         } catch (\Throwable $e) {
