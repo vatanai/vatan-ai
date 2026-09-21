@@ -208,6 +208,7 @@
 /* ردیف توکن / سیو / انتشار / لایک — خمیدگی ۱۲، باکس‌های کناری مربع ۴۸×۴۸ */
 .pd-actions{ display:flex; gap:10px; align-items:stretch; }
 .pd-token-wrap{ position:relative; flex:1 1 auto; min-width:0; }
+.pd-info-scroll #pdpOptions .vatan-gen-btn .text_button{ font-size:15.6px; }
 .pd-token{
   width:100%;
   height:40px;
@@ -499,6 +500,7 @@
     min-height:52vh;
   }
   .pd-main img{ max-height:50vh; }
+  .pd-info-scroll > #pdpOptions{ order:-1; }
   .pd-info-scroll > .pd-actions{ order:0; }
   .pd-info{
     flex:0 0 auto;
@@ -589,7 +591,7 @@
 
       {{-- ۵) تنظیمات داینامیک محصول + دکمه «بساز» (همان دکمه اصلی پروژه) --}}
       {{-- باکس «تنظیمات محصول» به دستور کاربر مخفی است (hideFields) — فقط دکمه «بساز» نمایش داده می‌شود --}}
-      @include('app.partials.product-options', ['product' => $product, 'genButtonLabel' => 'بساز', 'hideFields' => true])
+      @include('app.partials.product-options', ['product' => $product, 'genButtonLabel' => auth()->check() ? 'بساز' : 'رایگان این محصول رو بساز', 'hideFields' => true])
 
       {{-- ۶) تصاویر محصول --}}
       @if(count($__productImages))

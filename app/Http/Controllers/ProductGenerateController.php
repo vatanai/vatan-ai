@@ -639,7 +639,9 @@ class ProductGenerateController extends Controller
                 'message' => 'برای حالت عکس به عکس، یک تصویر ورودی انتخاب کنید.',
             ], 422);
         }
-        if (in_array($product->subject_type, ['face', 'body'], true) && count($allFiles) > 3) {
+        if (! ($request->boolean('studio_mode') && $studioWorkflow === 'image_to_image')
+            && in_array($product->subject_type, ['face', 'body'], true)
+            && count($allFiles) > 3) {
             return response()->json([
                 'success' => false,
                 'message' => 'برای محصولات چهره‌محور حداکثر ۳ عکس مرجع قابل استفاده است.',

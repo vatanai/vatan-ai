@@ -132,7 +132,7 @@
       : route('login', ['redirect' => $__buildUrl]);
   @endphp
   <div class="pt-1">
-    <button type="button" onclick="window.location.href={{ Js::from($__buildTarget) }}" class="vatan-gen-btn" aria-label="شروع ساخت">
+    <button type="button" onclick="window.location.href={{ Js::from($__buildTarget) }}" class="vatan-gen-btn" aria-label="{{ $genButtonLabel ?? 'شروع ساخت' }}">
       <span class="text_button">{{ $genButtonLabel ?? 'شروع ساخت' }}</span>
       <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
     </button>
@@ -152,7 +152,7 @@
 .vatan-gen-btn:hover { filter:brightness(1.04); }
 .vatan-gen-btn:active { transform:scale(.99); }
 .vatan-gen-btn .text_button {
-  font-size:12px;font-weight:900;color:inherit;direction:rtl;
+  font-size:12px;font-weight:800;color:inherit;direction:rtl;
 }
 .vatan-gen-btn>i { font-size:12px; }
 </style>

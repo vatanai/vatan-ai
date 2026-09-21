@@ -44,6 +44,7 @@
   let imageWorkflow = 'text_to_image';
   let activeConfig = null;
   let selectedValues = {};
+  let selectedUploadFiles = [];
   let pollTimer = null;
   let progressTimer = null;
   let quoteTimer = null;
@@ -448,6 +449,9 @@
   function updateImageWorkflowUI() {
     const isImageMode = currentMode === 'image';
     const needsReference = imageWorkflow === 'image_to_image';
+    const maxUploadFiles = isImageMode && needsReference
+      ? Number(uploadInput?.dataset.imageMaxFiles || 5)
+      : 1;
     imageWorkflowTabs?.querySelectorAll('[data-image-workflow]').forEach((button) => {
       const active = button.dataset.imageWorkflow === imageWorkflow;
       button.classList.toggle('is-active', active);
@@ -460,14 +464,20 @@
         ? 'یک عکس مرجع واضح اضافه کن تا آن را با توضیحاتت بازطراحی کنیم.'
         : 'برای شروع، ایده‌ات را بنویس؛ تصویر ورودی لازم نیست.';
     }
-    if (isImageMode && uploadZone) {
-      uploadZone.hidden = !needsReference;
-      uploadZone.dataset.workflowDisabled = needsReference ? 'false' : 'true';
+    if (uploadInput) {
+      uploadInput.multiple = maxUploadFiles > 1;
+      uploadInput.dataset.maxFiles = String(maxUploadFiles);
+      uploadInput.accept = isImageMode ? 'image/png,image/jpeg,image/webp,image/avif' : 'image/png,image/jpeg,image/webp,video/mp4';
+    }
+    if (uploadZone) {
+      uploadZone.hidden = !isImageMode || !needsReference;
+      uploadZone.dataset.workflowDisabled = isImageMode && needsReference ? 'false' : 'true';
       const title = uploadZone.querySelector('[data-upload-title]');
       const help = uploadZone.querySelector('[data-upload-help]');
-      if (title) title.textContent = needsReference ? 'افزودن تصویر مرجع' : 'فایل ورودی لازم نیست';
-      if (help) help.textContent = needsReference ? 'JPG، PNG یا WebP' : 'برای متن به عکس فقط توضیحات را بنویس';
-      if (!needsReference && uploadInput) {
+      if (title) title.textContent = isImageMode && needsReference ? 'افزودن تصویر مرجع' : 'فایل ورودی لازم نیست';
+      if (help) help.textContent = isImageMode && needsReference ? 'JPG، PNG یا WebP · تا ۵ تصویر' : 'برای متن به عکس فقط توضیحات را بنویس';
+      if (!isImageMode || !needsReference) {
+        selectedUploadFiles = [];
         uploadInput.value = '';
         if (uploadFile) uploadFile.hidden = true;
       }
@@ -575,6 +585,7 @@
   }
 
   function appendDefaults(data) {
+    const uploadFiles = selectedUploadFiles.length ? selectedUploadFiles : [...(uploadInput?.files || [])];
     Object.entries(activeConfig.defaults || {}).forEach(([key, value]) => data.append(`fields[${key}]`, value));
     if (currentMode === 'video') {
       data.set('video[duration]', selectedValues.duration || activeConfig.video.default_duration);
@@ -591,19 +602,19 @@
       data.set('output[quality]', selectedValues.quality || activeConfig.default_output_resolution || '720');
       data.set('output[main_quality]', activeConfig.default_main_quality || 'standard');
       data.set('output[count]', normalizeDigits(selectedValues.count || outputCountInput?.value || '1') || '1');
-      data.set('identity_preservation', imageWorkflow === 'image_to_image' && activeConfig.reference_upload_key && uploadInput.files[0] ? '1' : '0');
+      data.set('identity_preservation', imageWorkflow === 'image_to_image' && activeConfig.reference_upload_key && uploadFiles.length > 0 ? '1' : '0');
     }
     data.set('studio_mode', '1');
     Object.entries(selectedValues).forEach(([key, value]) => {
       if (key.startsWith('field:')) data.set(`fields[${key.slice(6)}]`, value ?? '');
     });
     if (currentMode === 'video' && uploadInput.files[0]) data.append('source_image', uploadInput.files[0]);
-    if (currentMode === 'image' && uploadInput.files[0] && activeConfig.reference_upload_key) {
+    if (currentMode === 'image' && uploadFiles.length > 0 && activeConfig.reference_upload_key) {
       const referenceField = (activeConfig.fields || []).find((field) => String(field.id) === String(activeConfig.reference_upload_key));
-      const uploadName = referenceField?.type === 'multi_image'
+      const uploadName = referenceField?.type === 'multi_image' || imageWorkflow === 'image_to_image'
         ? `uploads[${activeConfig.reference_upload_key}][]`
         : `uploads[${activeConfig.reference_upload_key}]`;
-      data.append(uploadName, uploadInput.files[0]);
+      uploadFiles.forEach((file) => data.append(uploadName, file));
     }
     const selectedModel = selectedValues.model ? optionsFor('model').find((option) => String(option.value) === String(selectedValues.model)) : null;
     if (selectedModel?.value) {
@@ -635,7 +646,7 @@
     hideError();
     if (!prompt.value.trim()) { showError('ابتدا توضیحات ساخت را وارد کنید.'); prompt.focus(); return; }
     if (config.authenticated !== true) { saveStudioState(); window.location.href = config.login_url; return; }
-    if (currentMode === 'image' && imageWorkflow === 'image_to_image' && !uploadInput.files[0]) { showError('برای حالت عکس به عکس، یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
+    if (currentMode === 'image' && imageWorkflow === 'image_to_image' && selectedUploadFiles.length === 0 && !uploadInput.files[0]) { showError('برای حالت عکس به عکس، حداقل یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
     const requiredCredits = Number(normalizeDigits(cost?.textContent || 0));
     const balance = Number(root.dataset.balance || 0);
     if (requiredCredits > 0 && balance < requiredCredits) {
@@ -691,7 +702,19 @@
     uploadInput.click();
   });
   uploadZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); uploadInput.click(); } });
-  uploadInput.addEventListener('change', () => { const file = uploadInput.files[0]; if (!file) return; uploadFile.hidden = false; uploadFile.textContent = file.name; });
+  uploadInput.addEventListener('change', () => {
+    const maxFiles = Number(uploadInput.dataset.maxFiles || 1);
+    const files = [...uploadInput.files].slice(0, maxFiles);
+    selectedUploadFiles = files;
+    if (uploadInput.files.length > maxFiles) showError(`حداکثر ${faDigits(maxFiles)} تصویر قابل انتخاب است.`);
+    if (!files.length) {
+      uploadFile.hidden = true;
+      uploadFile.textContent = '';
+      return;
+    }
+    uploadFile.hidden = false;
+    uploadFile.textContent = files.length > 1 ? `${faDigits(files.length)} تصویر انتخاب شد` : files[0].name;
+  });
   submit.addEventListener('click', generate); root.querySelector('[data-studio-regenerate]').addEventListener('click', generate);
   root.querySelector('[data-studio-error-close]').addEventListener('click', hideError);
   document.addEventListener('click', (event) => {

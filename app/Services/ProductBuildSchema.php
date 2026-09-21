@@ -150,6 +150,13 @@ class ProductBuildSchema
             'face_profile_id' => ['nullable', 'integer'],
         ];
         $usesFaceProfile = $this->canUseFaceProfileFor($product);
+        $studioImageToImage = request()->routeIs('app.create.generate')
+            && request()->boolean('studio_mode')
+            && request()->input('studio_workflow') === 'image_to_image';
+        $studioReferenceUploadId = data_get(
+            collect($this->fields($product))->first(fn (array $field): bool => in_array($field['type'] ?? '', ['image_upload', 'multi_image'], true)),
+            'id'
+        );
         foreach ($this->fields($product) as $field) {
             if ($this->isLayout($field['type'])) continue;
             $required = $field['required'] && $this->isVisible($field, (array) request()->input('fields', [])) ? 'required' : 'nullable';
@@ -164,7 +171,10 @@ class ProductBuildSchema
                 $maxKb = max(1, (int) ($field['max_size_mb'] ?: 10)) * 1024;
                 $fileRules = ['file', "max:{$maxKb}"];
                 if ($field['type'] !== 'file_upload') $fileRules[] = 'image';
-                if ($field['type'] === 'multi_image') {
+                if ($studioImageToImage && $field['id'] === $studioReferenceUploadId && $field['type'] !== 'file_upload') {
+                    $rules[$uploadKey] = [$required, 'array', 'max:5'];
+                    $rules[$uploadKey . '.*'] = $fileRules;
+                } elseif ($field['type'] === 'multi_image') {
                     $rules[$uploadKey] = [$required, 'array', 'max:' . max(1, (int) ($field['max_files'] ?: 4))];
                     $rules[$uploadKey . '.*'] = $fileRules;
                 } else {

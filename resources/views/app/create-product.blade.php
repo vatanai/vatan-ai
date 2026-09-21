@@ -4,6 +4,9 @@
 
 @push('styles')
   <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/create-samples-workspace.css') }}">
+  <style>
+    .create-section--product .cw-generate.is-credit-locked { filter: none; }
+  </style>
 @endpush
 
 @section('content')
@@ -11,7 +14,7 @@
     <button type="button" class="create-page-close" data-create-page-close title="برگشت" aria-label="برگشت به صفحه قبل">
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </button>
-    <section class="create-section create-section--redesign" data-create-section="redesign" aria-label="صفحه‌ی بساز محصول">
+    <section class="create-section create-section--redesign create-section--product" data-create-section="redesign" aria-label="صفحه‌ی بساز محصول">
       @include('app.partials.create-samples-workspace', [
           'product' => $buildProduct,
           'previewMode' => false,

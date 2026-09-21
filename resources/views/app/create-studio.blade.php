@@ -42,7 +42,7 @@
           <strong data-studio-model-title>استودیوی ویدیو</strong><span data-studio-model-subtitle>ساخت ویدیو با مدل واقعی وطن</span><b data-studio-model-name>مدل ویدیو <i class="fa-solid fa-signal"></i></b>
         </section>
 
-        <div class="create-studio-reference-drop" data-studio-upload-zone tabindex="0" role="button"><input type="file" hidden data-studio-upload-input><span class="create-studio-reference-icons"><i class="fa-regular fa-image"></i><i class="fa-solid fa-video"></i><i class="fa-solid fa-music"></i></span><strong data-upload-title>فایل ورودی لازم نیست</strong><small data-upload-help>برای متن به عکس فقط توضیحات را بنویس</small><em>+</em></div>
+        <div class="create-studio-reference-drop" data-studio-upload-zone tabindex="0" role="button"><input type="file" hidden data-studio-upload-input data-image-max-files="5"><span class="create-studio-reference-icons"><i class="fa-regular fa-image"></i><i class="fa-solid fa-video"></i><i class="fa-solid fa-music"></i></span><strong data-upload-title>فایل ورودی لازم نیست</strong><small data-upload-help>برای متن به عکس فقط توضیحات را بنویس</small><em>+</em></div>
         <div class="create-studio-upload-file" data-studio-upload-file hidden></div>
         @if($experimental ?? false)
           <div class="create-studio-workflow-files" data-workflow-files hidden></div>
