@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\ReferralLinkReportService;
 use App\Models\TelegramProductClick;
 use App\Services\TelegramIdentityService;
 use App\Services\TelegramInitDataValidator;
@@ -18,6 +19,7 @@ class TelegramMiniAppController extends Controller
     public function __construct(
         private readonly TelegramInitDataValidator $validator,
         private readonly TelegramIdentityService $identity,
+        private readonly ReferralLinkReportService $referralReports,
     ) {
     }
 
@@ -25,14 +27,30 @@ class TelegramMiniAppController extends Controller
     {
         $launchToken = trim((string) $request->query('launch', '')) ?: null;
         $all = $request->boolean('all');
-        $target = $request->query('target') === 'plans' ? 'plans' : null;
+        $target = in_array($request->query('target'), ['plans', 'referral'], true)
+            ? (string) $request->query('target')
+            : null;
+        $referralSlug = trim((string) $request->query('link', '')) ?: null;
+
+        if ($target === 'referral' && Auth::check()) {
+            $resolved = $this->referralReports->resolve(Auth::user(), $referralSlug);
+
+            return view('telegram.referral-dashboard', [
+                'link' => $resolved['link'],
+                'report' => $resolved['report'],
+                'insideTelegram' => (bool) $request->session()->get('telegram_mini_app_user_id'),
+            ]);
+        }
+
         $click = $launchToken ? TelegramProductClick::query()->with('product')->where('launch_token', $launchToken)->first() : null;
         $product = $click?->product;
         $fallbackUrl = $target === 'plans'
             ? route('pricing.index')
+            : ($target === 'referral'
+                ? route('app.profile', ['tab' => 'referral'])
             : ($all || ! $product
             ? route('app.home')
-            : route('app.create', ['product' => $product->route_slug]));
+            : route('app.create', ['product' => $product->route_slug])));
         $botUsername = trim((string) (\App\Models\ReferralSetting::current()->telegram_bot_username ?: config('services.telegram.bot_username', 'channel_vatanai_bot')));
         $registrationUrl = $botUsername !== '' ? 'https://t.me/' . ltrim($botUsername, '@') : $fallbackUrl;
 
@@ -40,6 +58,7 @@ class TelegramMiniAppController extends Controller
             'launchToken' => $launchToken,
             'allProducts' => $all,
             'target' => $target,
+            'referralSlug' => $referralSlug,
             'fallbackUrl' => $fallbackUrl,
             'registrationUrl' => $registrationUrl,
         ]);
@@ -68,7 +87,10 @@ class TelegramMiniAppController extends Controller
 
             $launchToken = trim((string) $request->input('launch_token')) ?: null;
             $all = $request->boolean('all');
-            $target = $request->input('target') === 'plans' ? 'plans' : null;
+            $target = in_array($request->input('target'), ['plans', 'referral'], true)
+                ? (string) $request->input('target')
+                : null;
+            $referralSlug = trim((string) $request->input('link', '')) ?: null;
             $click = $launchToken
                 ? TelegramProductClick::query()
                     ->with('product')
@@ -82,6 +104,14 @@ class TelegramMiniAppController extends Controller
                 return response()->json(['ok' => false, 'code' => 'TELEGRAM_LAUNCH_EXPIRED', 'message' => 'لینک ساخت محصول منقضی شده است.'], 422);
             }
 
+            if ($target === 'referral') {
+                if (! $referralSlug || ! $telegramUser->user) {
+                    return response()->json(['ok' => false, 'code' => 'REFERRAL_LINK_NOT_FOUND', 'message' => 'لینک رفرال پیدا نشد.'], 404);
+                }
+
+                $this->referralReports->resolve($telegramUser->user, $referralSlug);
+            }
+
             Auth::login($telegramUser->user, true);
             $request->session()->regenerate();
             $request->session()->put([
@@ -92,9 +122,11 @@ class TelegramMiniAppController extends Controller
 
             $redirect = $target === 'plans'
                 ? route('pricing.index')
+                : ($target === 'referral'
+                    ? route('telegram.mini-app', ['target' => 'referral', 'link' => $referralSlug])
                 : ($all || ! $click?->product
                     ? route('app.home')
-                    : route('app.create', ['product' => $click->product->route_slug]));
+                    : route('app.create', ['product' => $click->product->route_slug])));
 
             return response()->json([
                 'ok' => true,

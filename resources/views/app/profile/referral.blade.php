@@ -80,6 +80,11 @@
         <input id="referralLinkInput" value="{{ $referralData['link'] }}" readonly aria-label="لینک اختصاصی دعوت">
         <button type="button" id="copyReferralLink" @disabled(!$programActive)><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>کپی لینک</span></button>
       </div>
+      <a class="referral-mini-app-link" href="{{ route('telegram.mini-app', ['target' => 'referral', 'link' => 'profile']) }}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        <span>مشاهده‌ی داشبورد کامل این لینک</span>
+        <b>↗</b>
+      </a>
       <p class="referral-copy-feedback" id="referralCopyFeedback" aria-live="polite"></p>
     </section>
 
@@ -124,7 +129,7 @@
               <span><b>{{ number_format((int) $link->first_images_count) }}</b><small>تصویر</small></span>
               <span class="is-commission"><b>{{ number_format((int) $link->commission_total) }}</b><small>کمیسیون تومان</small></span>
             </div>
-            <div class="referral-link-status-box referral-invite-state {{ $link->isActive() ? 'is-paid' : 'is-rejected' }}"><span class="referral-status-label"><svg viewBox="0 0 24 24" aria-hidden="true">@if($link->isActive())<circle cx="12" cy="12" r="8.5"/><path d="m8 12 2.5 2.5L16 9"/>@else<circle cx="12" cy="12" r="8.5"/><path d="M9 9v6M15 9v6"/>@endif</svg>{{ $link->isActive() ? 'فعال' : 'غیرفعال' }}</span>@if($link->isActive())<form method="POST" action="{{ route('profile.referral-links.deactivate', $link) }}">@csrf @method('PATCH')<button type="submit">غیرفعال‌سازی</button></form>@endif</div>
+            <div class="referral-link-status-box referral-invite-state {{ $link->isActive() ? 'is-paid' : 'is-rejected' }}"><span class="referral-status-label"><svg viewBox="0 0 24 24" aria-hidden="true">@if($link->isActive())<circle cx="12" cy="12" r="8.5"/><path d="m8 12 2.5 2.5L16 9"/>@else<circle cx="12" cy="12" r="8.5"/><path d="M9 9v6M15 9v6"/>@endif</svg>{{ $link->isActive() ? 'فعال' : 'غیرفعال' }}</span><a class="referral-link-details" href="{{ route('telegram.mini-app', ['target' => 'referral', 'link' => $link->slug]) }}" target="_blank" rel="noopener">جزئیات</a>@if($link->isActive())<form method="POST" action="{{ route('profile.referral-links.deactivate', $link) }}">@csrf @method('PATCH')<button type="submit">غیرفعال‌سازی</button></form>@endif</div>
           </article>
         @empty
           <div class="referral-invites-empty"><svg class="referral-icon referral-icon--visual" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 7 8-4 8 4-8 4-8-4ZM4 12l8 4 8-4M4 17l8 4 8-4"/></svg><p>هنوز لینک محصولی نساخته‌ای.</p></div>

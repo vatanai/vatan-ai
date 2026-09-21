@@ -21,20 +21,20 @@
     </span>
   </a>
 
-  <button type="button" class="ig-quick-item" data-quick="remove-background" aria-label="حذف پس‌زمینه عکس">
+  <a class="ig-quick-item ig-quick-item--link" data-quick="character-sheet" href="{{ route('landing.character-sheet') }}" aria-label="کارکتر شیت">
     <span class="ig-quick-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="3"/>
-        <path d="M3 9h18"/>
-        <path d="M9 3v18"/>
-        <path d="m15 14 2 2 4-4"/>
+        <circle cx="12" cy="8" r="3"/>
+        <path d="M5 20a7 7 0 0 1 14 0"/>
+        <path d="M18 4v4"/>
+        <path d="M16 6h4"/>
       </svg>
     </span>
     <span class="ig-quick-text">
-      <span class="ig-quick-title">حذف پس‌زمینه</span>
-      <span class="ig-quick-sub">سوژه را جدا کن</span>
+      <span class="ig-quick-title">کارکتر شیت</span>
+      <span class="ig-quick-sub">یکبار خودتو بساز!</span>
     </span>
-  </button>
+  </a>
 
   <button type="button" class="ig-quick-item" data-quick="profile" aria-label="ساخت عکس پروفایل حرفه‌ای">
     <span class="ig-quick-icon">

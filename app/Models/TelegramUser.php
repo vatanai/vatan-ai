@@ -45,4 +45,9 @@ class TelegramUser extends Model
     {
         return $this->hasMany(TelegramEvent::class);
     }
+
+    public function referralMessages(): HasMany
+    {
+        return $this->hasMany(TelegramReferralMessage::class);
+    }
 }

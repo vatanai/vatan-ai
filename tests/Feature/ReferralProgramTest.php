@@ -7,14 +7,17 @@ use App\Models\ReferralReward;
 use App\Models\ReferralSetting;
 use App\Models\ReferralVisit;
 use App\Models\ReferralConversion;
+use App\Models\ReferralEvent;
 use App\Models\ReferralLink;
 use App\Models\Product;
+use App\Models\Plan;
 use App\Models\PlanPurchase;
 use App\Models\TokenLog;
 use App\Models\User;
 use App\Services\ReferralProgramService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ReferralProgramTest extends TestCase
@@ -224,6 +227,99 @@ class ReferralProgramTest extends TestCase
 
         self::assertSame(5, (int) $invitee->fresh()->tokens);
         self::assertSame(5, (int) $inviter->fresh()->tokens);
+    }
+
+    public function test_completed_purchase_pays_plan_percentage_as_tokens_and_recovers_missing_reward(): void
+    {
+        ReferralSetting::current()->update([
+            'registration_gift_enabled' => false,
+            'referral_enabled' => true,
+            'referral_rewards_require_admin_approval' => false,
+            'invitee_reward_tokens' => 0,
+            'inviter_reward_tokens' => 0,
+            'purchase_reward_tokens' => 999,
+            'purchase_commission_percent' => 10,
+            'reward_trigger' => 'registration',
+            'review_repeated_ip' => false,
+            'review_repeated_device' => false,
+        ]);
+
+        $plan = Plan::query()->create([
+            'plan_code' => 'PLN-REF-TEST',
+            'name' => 'پلن تست رفرال',
+            'slug' => 'referral-commission-test',
+            'price' => 599000,
+            'tokens' => 25,
+            'referral_commission_percent' => 20,
+            'status' => 'active',
+            'billing_type' => 'monthly',
+            'version' => 1,
+        ]);
+        $inviter = User::factory()->create(['status' => 'active', 'tokens' => 0]);
+        $invitee = User::factory()->create(['status' => 'active', 'tokens' => 0]);
+        $service = app(ReferralProgramService::class);
+
+        $service->completeRegistration($invitee, $this->attributedRequest($inviter));
+        $purchase = PlanPurchase::query()->create([
+            'user_id' => $invitee->id,
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'paid_amount' => 599000,
+            'granted_tokens' => 25,
+            'plan_snapshot' => ['tokens' => 25, 'bonus_tokens' => 0],
+            'status' => PlanPurchase::COMPLETED,
+            'payment_reference' => 'REFERRAL-COMMISSION-TEST-1',
+            'purchased_at' => now(),
+        ]);
+
+        $reward = $service->handleCompletedPurchase($purchase);
+        $service->handleCompletedPurchase($purchase->fresh());
+
+        self::assertNotNull($reward);
+        self::assertSame(5, (int) $inviter->fresh()->tokens);
+        self::assertDatabaseHas('referral_rewards', [
+            'plan_purchase_id' => $purchase->id,
+            'reward_type' => 'purchase_reward',
+            'currency' => 'token',
+            'amount' => 5,
+            'status' => 'paid',
+        ]);
+        self::assertSame(1, ReferralReward::query()->where('plan_purchase_id', $purchase->id)->count());
+        self::assertSame(1, TokenLog::query()->where('event_key', 'referral-purchase-reward:'.$purchase->id)->count());
+        self::assertSame(0, ReferralReward::query()->where('plan_purchase_id', $purchase->id)->where('reward_type', 'purchase_commission')->count());
+        self::assertSame(599000, (int) ReferralConversion::query()->where('invitee_id', $invitee->id)->value('purchase_amount'));
+
+        $secondPurchase = PlanPurchase::query()->create([
+            'user_id' => $invitee->id,
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'paid_amount' => 599000,
+            'granted_tokens' => 25,
+            'plan_snapshot' => ['tokens' => 25, 'bonus_tokens' => 0],
+            'status' => PlanPurchase::COMPLETED,
+            'payment_reference' => 'REFERRAL-COMMISSION-TEST-2',
+            'purchased_at' => now(),
+        ]);
+        $conversion = ReferralConversion::query()->where('invitee_id', $invitee->id)->firstOrFail();
+        ReferralEvent::query()->create([
+            'event_uuid' => (string) Str::uuid(),
+            'event_type' => 'purchase_completed',
+            'event_key' => 'purchase-completed:'.$secondPurchase->id,
+            'inviter_id' => $inviter->id,
+            'invitee_id' => $invitee->id,
+            'conversion_id' => $conversion->id,
+            'plan_purchase_id' => $secondPurchase->id,
+            'source' => 'payment',
+            'amount' => 599000,
+            'currency' => 'IRT',
+            'metadata' => [],
+            'occurred_at' => now(),
+        ]);
+
+        $service->handleCompletedPurchase($secondPurchase);
+        self::assertSame(10, (int) $inviter->fresh()->tokens);
+        self::assertSame(2, ReferralReward::query()->where('user_id', $inviter->id)->where('reward_type', 'purchase_reward')->count());
+        self::assertSame(599000, (int) ReferralConversion::query()->where('invitee_id', $invitee->id)->value('purchase_amount'));
     }
 
     private function attributedRequest(User $inviter): Request

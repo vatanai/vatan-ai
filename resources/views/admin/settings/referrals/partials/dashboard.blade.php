@@ -81,10 +81,32 @@
           <div class="referral-fields two-columns">
             <label class="referral-field"><span>هدیه کاربر دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="invitee_reward_tokens" value="{{ old('invitee_reward_tokens', $settings->invitee_reward_tokens) }}"><b>توکن</b></div></label>
             <label class="referral-field"><span>پاداش دعوت‌کننده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="inviter_reward_tokens" value="{{ old('inviter_reward_tokens', $settings->inviter_reward_tokens) }}"><b>توکن</b></div></label>
-            <label class="referral-field"><span>پاداش هر خرید موفق همکار</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="purchase_reward_tokens" value="{{ old('purchase_reward_tokens', $settings->purchase_reward_tokens ?? 5) }}"><b>توکن</b></div><small>برای هر خرید موفق دعوت‌شده، یک‌بار به همکار پرداخت می‌شود.</small></label>
             <label class="referral-field"><span>تخفیف خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="referral_discount_percent" value="{{ old('referral_discount_percent', $settings->referral_discount_percent ?? 10) }}"><b>٪</b></div><small>روی مبلغ نهایی خرید اعمال می‌شود.</small></label>
-            <label class="referral-field"><span>کمیسیون خرید دعوت‌شده</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="purchase_commission_percent" value="{{ old('purchase_commission_percent', $settings->purchase_commission_percent ?? 10) }}"><b>٪</b></div><small>به‌صورت دفتر مالی در انتظار تسویه ثبت می‌شود.</small></label>
+            <label class="referral-field"><span>درصد پیش‌فرض کمیسیون خرید موفق</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" max="100" step="0.01" name="purchase_commission_percent" value="{{ old('purchase_commission_percent', $settings->purchase_commission_percent ?? 10) }}"><b>٪</b></div><small>برای پلن‌هایی است که درصد اختصاصی ندارند و پاداش به‌صورت اعتبار پرداخت می‌شود.</small></label>
             <label class="referral-field"><span>حداقل مبلغ مشمول تخفیف</span><div class="referral-input-suffix"><input class="input-pro" type="number" min="0" name="minimum_purchase_amount" value="{{ old('minimum_purchase_amount', $settings->minimum_purchase_amount) }}"><b>تومان</b></div><small>خالی یعنی همه خریدهای واجد شرایط.</small></label>
+          </div>
+          <div class="referral-plan-commission-box">
+            <div class="referral-plan-commission-head">
+              <div><strong>درصد کمیسیون به تفکیک پلن</strong><small>درصد از اعتبار همان پلن محاسبه و پس از خرید موفق به همکار پرداخت می‌شود. خالی‌گذاشتن یعنی استفاده از درصد پیش‌فرض.</small></div>
+              <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            </div>
+            <div class="referral-plan-commission-list">
+              @forelse($plans as $plan)
+                @php($planPercent = old('plan_commission_percent.'.$plan->id, $plan->referral_commission_percent))
+                <label class="referral-plan-commission-row">
+                  <span>
+                    <strong>{{ $plan->name }}</strong>
+                    <small>{{ $plan->is_unlimited ? 'اعتبار نامحدود' : number_format((int) $plan->tokens).' اعتبار' }} <b>·</b> {{ $plan->status === 'active' ? 'فعال' : 'غیرفعال' }}</small>
+                  </span>
+                  <div class="referral-input-suffix">
+                    <input class="input-pro" type="number" min="0" max="100" step="0.01" name="plan_commission_percent[{{ $plan->id }}]" value="{{ $planPercent }}" placeholder="{{ $settings->purchase_commission_percent ?? 10 }}">
+                    <b>٪</b>
+                  </div>
+                </label>
+              @empty
+                <div class="referral-plan-commission-empty"><i class="fa-solid fa-circle-info"></i><span>برای فعال‌شدن مدیریت درصد پلن‌ها، migration مربوط به کمیسیون پلن باید اجرا شود.</span></div>
+              @endforelse
+            </div>
           </div>
         </div>
       </section>

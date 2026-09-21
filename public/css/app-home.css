@@ -490,6 +490,11 @@
     border-color: var(--green);
   }
 
+  .ig-quick-item--link {
+    color: inherit;
+    text-decoration: none;
+  }
+
   .ig-quick-icon {
     width: 28px;
     height: 28px;

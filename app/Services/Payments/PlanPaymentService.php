@@ -313,6 +313,9 @@ class PlanPaymentService
             'price' => (int) $offer['price'],
             'tokens' => (int) $offer['tokens'],
             'bonus_tokens' => (int) $offer['bonus_tokens'],
+            'referral_commission_percent' => $plan->referral_commission_percent !== null
+                ? (float) $plan->referral_commission_percent
+                : null,
             'billing_type' => $plan->billing_type,
             'model_tier_key' => $plan->model_tier_key,
             'model_tier_name' => \App\Services\ModelTierService::DEFINITIONS[$plan->model_tier_key]['name'] ?? 'رایگان',

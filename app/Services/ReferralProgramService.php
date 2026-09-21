@@ -477,7 +477,7 @@ class ReferralProgramService
             'conversion_id' => $conversion->id,
             'inviter_id' => $conversion->inviter_id,
             'discount_percent' => (float) ($settings->referral_discount_percent ?? 10),
-            'commission_percent' => (float) ($settings->purchase_commission_percent ?? 10),
+            'commission_percent' => $this->purchaseCommissionPercent($purchase, $settings),
             'code' => $code ?: $conversion->inviter?->referral_code,
         ];
         $purchase->forceFill([
@@ -500,7 +500,7 @@ class ReferralProgramService
         return $purchase->fresh();
     }
 
-    /** پرداخت موفق را به‌صورت idempotent ثبت، پاداش اعتباری را پرداخت و کمیسیون را در دفتر مالی ثبت می‌کند. */
+    /** پرداخت موفق را به‌صورت idempotent ثبت و کمیسیون پلن را به‌صورت اعتبار پرداخت می‌کند. */
     public function handleCompletedPurchase(PlanPurchase $purchase): ?ReferralReward
     {
         return DB::transaction(function () use ($purchase): ?ReferralReward {
@@ -509,9 +509,11 @@ class ReferralProgramService
                 return null;
             }
 
+            $purchase->loadMissing('plan');
             $settings = ReferralSetting::current();
             $finalAmount = (int) $purchase->paid_amount;
-            $commission = (int) round($finalAmount * ((float) ($settings->purchase_commission_percent ?? 10) / 100));
+            $commissionPercent = $this->purchaseCommissionPercent($purchase, $settings);
+            $commissionCredits = $this->purchaseRewardAmount($purchase, $settings);
             $purchaseEvent = $this->recordEvent('purchase_completed', 'purchase-completed:'.$purchase->id, [
                 'inviter_id' => $conversion->inviter_id,
                 'invitee_id' => $purchase->user_id,
@@ -520,25 +522,29 @@ class ReferralProgramService
                 'source' => 'payment',
                 'amount' => $finalAmount,
                 'currency' => 'IRT',
-                'metadata' => ['discount_amount' => (int) $purchase->discount_amount],
+                'metadata' => [
+                    'discount_amount' => (int) $purchase->discount_amount,
+                    'commission_percent' => $commissionPercent,
+                    'commission_credits' => $commissionCredits,
+                ],
             ]);
 
-            if ($purchaseEvent && ! $purchaseEvent->wasRecentlyCreated) {
-                return ReferralReward::query()->where('event_key', 'referral-commission:'.$purchase->id)->first();
+            // رویداد خرید و رکورد پاداش مستقل و idempotent هستند. اگر رویداد قبلاً
+            // ثبت شده باشد ولی پرداخت پاداش در اجرای قبلی ناقص مانده باشد، نباید
+            // وجود رویداد مانع ساخت/پرداخت پاداش شود.
+            if (! $purchaseEvent || $purchaseEvent->wasRecentlyCreated) {
+                $conversion->update([
+                    'first_purchase_at' => $conversion->first_purchase_at ?: now(),
+                    'purchase_amount' => (int) $conversion->purchase_amount + $finalAmount,
+                    'discount_amount' => (int) $conversion->discount_amount + (int) $purchase->discount_amount,
+                ]);
             }
 
-            $conversion->update([
-                'first_purchase_at' => $conversion->first_purchase_at ?: now(),
-                'purchase_amount' => (int) $conversion->purchase_amount + $finalAmount,
-                'discount_amount' => (int) $conversion->discount_amount + (int) $purchase->discount_amount,
-                'commission_amount' => (int) $conversion->commission_amount + $commission,
-            ]);
-
             $purchaseReward = null;
-            if ($conversion->inviter_id && (int) ($settings->purchase_reward_tokens ?? 0) > 0) {
+            if ($conversion->inviter_id && $commissionCredits > 0) {
                 $purchaseReward = $this->createAndPayReward(
                     user: $conversion->inviter,
-                    amount: (int) $settings->purchase_reward_tokens,
+                    amount: $commissionCredits,
                     type: 'purchase_reward',
                     eventKey: 'referral-purchase-reward:'.$purchase->id,
                     settings: $settings,
@@ -547,25 +553,47 @@ class ReferralProgramService
                 );
             }
 
-            if ($commission < 1 || ! $conversion->inviter_id) {
-                return $purchaseReward;
-            }
-
-            return ReferralReward::query()->firstOrCreate(
-                ['event_key' => 'referral-commission:'.$purchase->id],
-                [
-                    'conversion_id' => $conversion->id,
-                    'plan_purchase_id' => $purchase->id,
-                    'user_id' => $conversion->inviter_id,
-                    'reward_type' => 'purchase_commission',
-                    'currency' => 'IRT',
-                    'amount' => $commission,
-                    'status' => 'pending',
-                    'reason' => 'کمیسیون خرید موفق دعوت‌شده؛ آماده تسویه مالی',
-                    'settings_snapshot' => $this->settingsSnapshot($settings),
-                ],
-            );
+            return $purchaseReward;
         });
+    }
+
+    /** درصد مؤثر کمیسیون را از تنظیم پلن می‌خواند و برای خریدهای قدیمی به تنظیم سراسری برمی‌گردد. */
+    private function purchaseCommissionPercent(PlanPurchase $purchase, ReferralSetting $settings): float
+    {
+        $snapshotPercent = data_get($purchase->plan_snapshot, 'referral_commission_percent');
+        if ($snapshotPercent !== null) {
+            return max(0, min(100, (float) $snapshotPercent));
+        }
+
+        $purchase->loadMissing('plan');
+        $planPercent = $purchase->plan?->referral_commission_percent;
+
+        if ($planPercent !== null) {
+            return max(0, min(100, (float) $planPercent));
+        }
+
+        return max(0, min(100, (float) ($settings->purchase_commission_percent ?? 10)));
+    }
+
+    /** مبنای محاسبه، اعتبار واقعی همان خرید است؛ نه مبلغ تومان پرداخت‌شده. */
+    private function purchaseCreditBase(PlanPurchase $purchase): int
+    {
+        $snapshotTokens = data_get($purchase->plan_snapshot, 'tokens');
+        $snapshotBonusTokens = data_get($purchase->plan_snapshot, 'bonus_tokens');
+
+        if ($snapshotTokens !== null) {
+            return max(0, (int) $snapshotTokens + (int) ($snapshotBonusTokens ?? 0));
+        }
+
+        return max(0, (int) $purchase->granted_tokens);
+    }
+
+    private function purchaseRewardAmount(PlanPurchase $purchase, ReferralSetting $settings): int
+    {
+        $baseCredits = $this->purchaseCreditBase($purchase);
+        $percent = $this->purchaseCommissionPercent($purchase, $settings);
+
+        return max(0, (int) round($baseCredits * ($percent / 100), 0, PHP_ROUND_HALF_UP));
     }
 
     /** بازگشت کمیسیون خرید در صورت بازپرداخت؛ رکورد اصلی حذف نمی‌شود و سند بدهکار جدا می‌ماند. */

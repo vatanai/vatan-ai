@@ -19,6 +19,7 @@ class Plan extends Model
         'slug',
         'price',
         'tokens',
+        'referral_commission_percent',
         'image_path',
         'short_description',
         'description',
@@ -46,6 +47,7 @@ class Plan extends Model
     protected $casts = [
         'price' => 'integer',
         'tokens' => 'integer',
+        'referral_commission_percent' => 'float',
         'compare_at_price' => 'integer',
         'tags' => 'array',
         'features' => 'array',

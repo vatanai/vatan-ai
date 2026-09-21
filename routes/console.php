@@ -4,6 +4,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use App\Services\AiCatalogSyncService;
+use App\Jobs\SyncTelegramReferralMessages;
+use App\Models\TelegramUser;
 
 Schedule::command('credits:sync')
     ->everyMinute()
@@ -12,6 +14,26 @@ Schedule::command('credits:sync')
 Schedule::command('sms:send-first-image-followups')
     ->everyFifteenMinutes()
     ->withoutOverlapping(10);
+
+Schedule::command('telegram:sync-referral-messages')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(4);
+
+Artisan::command('telegram:sync-referral-messages', function () {
+    $count = 0;
+    TelegramUser::query()
+        ->whereNotNull('user_id')
+        ->where('is_blocked', false)
+        ->orderBy('id')
+        ->chunkById(100, function ($users) use (&$count): void {
+            foreach ($users as $telegramUser) {
+                SyncTelegramReferralMessages::dispatch((int) $telegramUser->id);
+                $count++;
+            }
+        });
+
+    $this->info("همگام‌سازی {$count} کاربر تلگرام در صف قرار گرفت.");
+})->purpose('به‌روزرسانی پیام‌های اختصاصی گزارش رفرال کاربران تلگرام');
 
 Artisan::command('ai:sync-catalog {provider=all}', function (string $provider, AiCatalogSyncService $syncer) {
     $this->info('همگام‌سازی کاتالوگ مدل‌های عکس و ویدیو شروع شد.');

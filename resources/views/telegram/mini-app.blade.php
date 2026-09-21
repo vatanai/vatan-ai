@@ -22,7 +22,7 @@
 <main>
     <div class="mark">و</div>
     <h1>در حال آماده‌سازی وطن</h1>
-    <p id="message">چند لحظه صبر کن تا صفحه‌ی ساخت برایت باز شود.</p>
+    <p id="message">چند لحظه صبر کن تا داشبورد اختصاصی‌ات آماده شود.</p>
     <div class="loader" id="loader"></div>
     <a id="fallback" href="{{ $fallbackUrl }}" hidden>ادامه در سایت</a>
 </main>
@@ -60,7 +60,8 @@
                 init_data: telegram.initData,
                 launch_token: @json($launchToken),
                 all: @json($allProducts),
-                target: @json($target)
+                target: @json($target),
+                link: @json($referralSlug)
             })
         }))
         .then(response => response.json().then(data => ({ ok: response.ok, data })))

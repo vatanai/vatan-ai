@@ -19,6 +19,8 @@ class TelegramFlowService
         private readonly TelegramDeepLinkService $deepLinks,
         private readonly TelegramContentService $content,
         private readonly TelegramMembershipService $membershipService,
+        private readonly ReferralLinkReportService $referralReports,
+        private readonly TelegramReferralMessageService $referralMessages,
     ) {
     }
 
@@ -46,6 +48,11 @@ class TelegramFlowService
                 'reason' => 'blocked_user',
                 'chat_id' => $chatId,
             ];
+        }
+
+        if ($event === 'referral') {
+            $telegramUser->loadMissing('user');
+            return $this->referralDashboardResponse($telegramUser, $chatId);
         }
 
         if ($event === 'start') {
@@ -179,7 +186,10 @@ class TelegramFlowService
             return $this->registeredResponse($telegramUser->fresh(), $chatId, $user, []);
         }
 
-        return $this->contentMessage($chatId, 'welcome', $this->variables($telegramUser), $this->homeButtons($telegramUser));
+        return $this->withReferralButton(
+            $this->contentMessage($chatId, 'welcome', $this->variables($telegramUser), $this->homeButtons($telegramUser)),
+            $telegramUser,
+        );
     }
 
     private function registeredResponse(TelegramUser $telegramUser, string $chatId, $user, array $input): array
@@ -193,11 +203,11 @@ class TelegramFlowService
             'launch_token' => $click?->launch_token ?: '',
         ];
 
-        return $this->contentMessage($chatId, 'registration_done', $variables, [
+        return $this->withReferralButton($this->contentMessage($chatId, 'registration_done', $variables, [
             ['text' => 'ساخت با همین محصول', 'callback_data' => 'build:' . ($click?->launch_token ?? '')],
             ['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'],
             $this->plansButton(),
-        ]);
+        ]), $telegramUser);
     }
 
     private function productOrWelcome(TelegramUser $telegramUser, string $chatId, ?TelegramProductClick $click, bool $returning = false): array
@@ -210,7 +220,10 @@ class TelegramFlowService
             ]);
         }
 
-        return $this->contentMessage($chatId, $returning ? 'returning_user' : 'welcome', $this->variables($telegramUser), $this->homeButtons($telegramUser));
+        return $this->withReferralButton(
+            $this->contentMessage($chatId, $returning ? 'returning_user' : 'welcome', $this->variables($telegramUser), $this->homeButtons($telegramUser)),
+            $telegramUser,
+        );
     }
 
     private function buildResponse(TelegramUser $telegramUser, string $chatId, ?TelegramProductClick $click): array
@@ -255,6 +268,31 @@ class TelegramFlowService
             'url' => $url,
             'user_id' => $telegramUser->user_id,
         ];
+    }
+
+    private function referralDashboardResponse(TelegramUser $telegramUser, string $chatId): array
+    {
+        if (! $telegramUser->user_id || ! $telegramUser->user) {
+            return $this->contentMessage($chatId, 'registration_name', [], [
+                ['text' => 'ثبت‌نام برای شروع', 'callback_data' => 'register'],
+            ]);
+        }
+
+        $summary = $this->referralReports->resolve($telegramUser->user, 'profile')['report'];
+        $sync = $this->referralMessages->sync($telegramUser, $chatId);
+        $text = "📊 داشبورد رفرال تو\n\n"
+            . "کلیک: " . number_format((int) $summary['stats']['clicks']) . "\n"
+            . "ثبت‌نام: " . number_format((int) $summary['stats']['registrations']) . "\n"
+            . "خرید موفق: " . number_format((int) $summary['stats']['purchases']) . "\n"
+            . "پاداش پرداخت‌شده: " . number_format((int) $summary['stats']['paid']) . " اعتبار\n\n"
+            . "پیام‌های اختصاصی لینک‌هایت به‌روزرسانی شدند.\n"
+            . "ساخته‌شده: " . number_format($sync['created']) . " · ویرایش‌شده: " . number_format($sync['updated']) . "\n"
+            . "برای دیدن جزئیات، روی پیام مربوط به هر لینک بزن.";
+
+        return $this->message($chatId, $text, [[
+            'text' => '🔄 به‌روزرسانی دوباره',
+            'callback_data' => 'referral',
+        ]]);
     }
 
     private function registerProductClick(TelegramUser $telegramUser, array $payload, array $input): ?TelegramProductClick
@@ -315,10 +353,10 @@ class TelegramFlowService
         ];
     }
 
-    private function miniAppUrl(?string $launchToken, bool $all = false, ?string $target = null): string
+    private function miniAppUrl(?string $launchToken, bool $all = false, ?string $target = null, ?string $linkSlug = null): string
     {
         $base = trim((string) (ReferralSetting::current()->telegram_mini_app_url ?: config('services.telegram.mini_app_url') ?: route('telegram.mini-app')));
-        $query = array_filter(['launch' => $launchToken, 'all' => $all ? '1' : null, 'target' => $target]);
+        $query = array_filter(['launch' => $launchToken, 'all' => $all ? '1' : null, 'target' => $target, 'link' => $linkSlug]);
         return $base . ($query ? '?' . http_build_query($query) : '');
     }
 
@@ -345,8 +383,30 @@ class TelegramFlowService
     private function homeButtons(TelegramUser $telegramUser): array
     {
         return $telegramUser->user_id
-            ? [['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'], $this->plansButton()]
+            ? [
+                ['text' => '📊 داشبورد رفرال من', 'callback_data' => 'referral'],
+                ['text' => 'نمایش همه قالب‌ها', 'callback_data' => 'all_products'],
+                $this->plansButton(),
+            ]
             : [['text' => 'ثبت‌نام برای شروع', 'callback_data' => 'register']];
+    }
+
+    private function withReferralButton(array $response, TelegramUser $telegramUser): array
+    {
+        if (! $telegramUser->user_id) {
+            return $response;
+        }
+
+        $buttons = (array) ($response['buttons'] ?? []);
+        $hasReferralButton = collect($buttons)->contains(
+            fn ($button): bool => is_array($button) && ($button['callback_data'] ?? null) === 'referral',
+        );
+        if (! $hasReferralButton) {
+            array_unshift($buttons, ['text' => '📊 داشبورد رفرال من', 'callback_data' => 'referral']);
+        }
+        $response['buttons'] = $buttons;
+
+        return $response;
     }
 
     private function normalizeMembershipButtons(array $buttons, string $channelUrl, ?string $launchToken): array

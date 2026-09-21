@@ -113,6 +113,9 @@ class PlanSubscriptionController extends Controller
                     'price' => $offer['price'],
                     'tokens' => $offer['tokens'],
                     'bonus_tokens' => $offer['bonus_tokens'],
+                    'referral_commission_percent' => $planModel->referral_commission_percent !== null
+                        ? (float) $planModel->referral_commission_percent
+                        : null,
                     'billing_type' => $planModel->billing_type,
                     'features' => $planModel->features,
                 ],

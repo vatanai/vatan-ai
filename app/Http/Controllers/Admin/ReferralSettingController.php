@@ -13,6 +13,7 @@ use App\Models\ReferralVisit;
 use App\Models\TokenLog;
 use App\Models\User;
 use App\Models\Product;
+use App\Models\Plan;
 use App\Models\GeneratedImage;
 use App\Services\ReferralProgramService;
 use App\Support\Numeral;
@@ -247,6 +248,16 @@ class ReferralSettingController extends Controller
         $reviewConversions = null;
         $reviewRewards = null;
         $inviterCards = collect();
+        $plans = collect();
+
+        if ($page === 'settings' && Schema::hasTable('plans') && Schema::hasColumn('plans', 'referral_commission_percent')) {
+            $plans = Plan::query()
+                ->where('status', 'active')
+                ->whereNull('archived_at')
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'name', 'slug', 'tokens', 'price', 'status', 'billing_type', 'is_unlimited', 'referral_commission_percent']);
+        }
 
         if ($page === 'overview') {
             $inviterCards = User::query()
@@ -374,7 +385,7 @@ class ReferralSettingController extends Controller
 
         return view('admin.settings.referrals', compact(
             'settings', 'stats', 'page', 'pageMeta', 'tab', 'tabCounts',
-            'records', 'reviewConversions', 'reviewRewards', 'inviterCards', 'inviterSearch'
+            'records', 'reviewConversions', 'reviewRewards', 'inviterCards', 'inviterSearch', 'plans'
         ));
     }
 
@@ -464,7 +475,8 @@ class ReferralSettingController extends Controller
             'referral_rewards_require_admin_approval' => ['required', 'boolean'],
             'invitee_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
             'inviter_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
-            'purchase_reward_tokens' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'plan_commission_percent' => ['nullable', 'array'],
+            'plan_commission_percent.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'reward_trigger' => ['required', Rule::in(['registration', 'first_purchase'])],
             'referral_discount_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'purchase_commission_percent' => ['required', 'numeric', 'min:0', 'max:100'],
@@ -490,6 +502,29 @@ class ReferralSettingController extends Controller
 
         DB::transaction(function () use ($request, $data) {
             $settings = ReferralSetting::query()->lockForUpdate()->firstOrFail();
+            $planPercentages = $data['plan_commission_percent'] ?? [];
+            unset($data['plan_commission_percent']);
+            $planValuesBefore = [];
+            $planValuesAfter = [];
+
+            if ($planPercentages !== [] && Schema::hasColumn('plans', 'referral_commission_percent')) {
+                $planIds = array_map('intval', array_keys($planPercentages));
+                $plans = Plan::query()->whereIn('id', $planIds)->lockForUpdate()->get()->keyBy('id');
+                foreach ($planPercentages as $planId => $percentage) {
+                    $plan = $plans->get((int) $planId);
+                    if (! $plan) {
+                        continue;
+                    }
+
+                    $planValuesBefore[(string) $plan->id] = $plan->referral_commission_percent;
+                    $plan->update([
+                        'referral_commission_percent' => $percentage === null || $percentage === ''
+                            ? null
+                            : (float) $percentage,
+                    ]);
+                    $planValuesAfter[(string) $plan->id] = $plan->fresh()->referral_commission_percent;
+                }
+            }
 
             if (array_key_exists('registration_gift_tokens', $data)
                 && Schema::hasColumn('referral_settings', 'prelogin_credit_text')) {
@@ -497,12 +532,19 @@ class ReferralSettingController extends Controller
             }
 
             $before = $settings->only(array_keys($data));
+            if ($planValuesBefore !== []) {
+                $before['plan_commission_percent'] = $planValuesBefore;
+            }
             $settings->update($data);
+            $after = $settings->fresh()->only(array_keys($data));
+            if ($planValuesAfter !== []) {
+                $after['plan_commission_percent'] = $planValuesAfter;
+            }
 
             ReferralSettingLog::query()->create([
                 'admin_id' => $request->user('admin')->id,
                 'before_values' => $before,
-                'after_values' => $settings->fresh()->only(array_keys($data)),
+                'after_values' => $after,
             ]);
         });
 

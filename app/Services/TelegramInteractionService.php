@@ -66,6 +66,35 @@ class TelegramInteractionService
         ]);
     }
 
+    /** @return array<string,mixed>|null */
+    public function sendText(string $chatId, string $text, array $buttons = []): ?array
+    {
+        if ($chatId === '' || trim($text) === '') {
+            return null;
+        }
+
+        return $this->call('sendMessage', array_filter([
+            'chat_id' => $chatId,
+            'text' => $text,
+            'reply_markup' => $this->replyMarkup($buttons),
+        ], static fn ($value) => $value !== null));
+    }
+
+    /** @return array<string,mixed>|null */
+    public function editText(string $chatId, int $messageId, string $text, array $buttons = []): ?array
+    {
+        if ($chatId === '' || $messageId < 1 || trim($text) === '') {
+            return null;
+        }
+
+        return $this->call('editMessageText', array_filter([
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'text' => $text,
+            'reply_markup' => $this->replyMarkup($buttons),
+        ], static fn ($value) => $value !== null));
+    }
+
     public function deleteMessage(?string $chatId, ?string $messageId): void
     {
         if (! $chatId || ! $messageId) {
@@ -78,19 +107,28 @@ class TelegramInteractionService
         ]);
     }
 
-    private function call(string $method, array $payload): void
+    /** @return array<string,mixed>|null */
+    private function call(string $method, array $payload): ?array
     {
         $token = trim((string) config('services.telegram.bot_token'));
         if ($token === '') {
-            return;
+            return null;
         }
 
         try {
-            Http::acceptJson()
+            $response = Http::acceptJson()
                 ->timeout(3)
                 ->post("https://api.telegram.org/bot{$token}/{$method}", $payload);
+
+            if (! $response->successful() || ! $response->json('ok')) {
+                return null;
+            }
+
+            $result = $response->json('result');
+            return is_array($result) ? $result : null;
         } catch (\Throwable) {
             // پاسخ اصلی بات نباید به‌خاطر خطای جانبی تلگرام متوقف شود.
+            return null;
         }
     }
 
