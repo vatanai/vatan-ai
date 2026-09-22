@@ -245,7 +245,9 @@ class OrderController extends Controller
         $query->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from));
         $query->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to));
 
-        $orders = $query->latest()->paginate(20)->withQueryString();
+        // id کلید اصلی و ترتیبی سفارش است و در production بدون sort اضافه قابل پیمایش است.
+        // مرتب‌سازی created_at روی جدول بزرگ با محدودیت حافظهٔ MySQL به 500 می‌رسید.
+        $orders = $query->latest('orders.id')->paginate(20)->withQueryString();
         $products = Product::query()->select('id', 'name_fa')->orderBy('name_fa')->get();
         $stats = [
             'total' => Order::count(),
@@ -329,7 +331,8 @@ class OrderController extends Controller
     {
         $orders = Order::query()->with(['user', 'product'])
             ->where(fn ($q) => $q->whereNotNull('cancelled_at')->orWhere('refunded_credits', '>', 0))
-            ->latest('updated_at')->paginate(20)->withQueryString();
+            // برای گزارش بازپرداخت نیز از sort پرهزینهٔ updated_at عبور می‌کنیم.
+            ->latest('orders.id')->paginate(20)->withQueryString();
         $stats = [
             'total' => Order::where(fn ($q) => $q->whereNotNull('cancelled_at')->orWhere('refunded_credits', '>', 0))->count(),
             'cancelled' => Order::whereNotNull('cancelled_at')->count(),
