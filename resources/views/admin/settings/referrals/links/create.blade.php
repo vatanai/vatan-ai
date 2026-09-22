@@ -111,34 +111,53 @@
           </form>
         </section>
 
-        <aside class="content-card referral-link-existing-card">
-          <div class="referral-card-head"><span class="referral-card-icon is-info"><i class="fa-solid fa-list-check"></i></span><div><h2>لینک‌های قبلی کاربر</h2><p>برای جلوگیری از ساخت لینک تکراری، وضعیت لینک‌های فعلی را ببینید.</p></div></div>
-          <div class="referral-card-body">
-            @forelse($user->referralLinks as $link)
-              @php
-                $linkUrl = route('referral.link', ['referralLink' => $link->slug]);
-                $linkProduct = $link->product?->name_fa ?: ($link->product?->name_en ?: 'محصول حذف‌شده');
-                $linkActive = $link->status === 'active' && $link->deactivated_at === null;
-              @endphp
-              <div class="referral-existing-link">
-                <div><strong>{{ $linkProduct }}</strong><code title="{{ $linkUrl }}">{{ $linkUrl }}</code><small>{{ number_format((int) $link->visits_count) }} کلیک <span>•</span> {{ number_format((int) $link->conversions_count) }} ثبت‌نام</small></div>
-                <div class="referral-existing-link-actions">
-                  <form method="POST" action="{{ route('admin.referrals.links.toggle', ['referralLink' => $link->id]) }}">
-                    @csrf @method('PATCH')
-                    <button type="submit" class="referral-link-status {{ $linkActive ? 'is-active' : 'is-inactive' }}">{{ $linkActive ? 'فعال' : 'غیرفعال' }}</button>
-                  </form>
-                  <form method="POST" action="{{ route('admin.referrals.links.destroy', ['referralLink' => $link->id]) }}" onsubmit="return confirm('این لینک حذف شود؟ اگر سابقه داشته باشد به‌صورت خودکار غیرفعال می‌شود.')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="referral-icon-button referral-delete-link" title="حذف یا غیرفعال‌سازی لینک" aria-label="حذف یا غیرفعال‌سازی لینک"><i class="fa-solid fa-trash-can"></i></button>
-                  </form>
-                </div>
-              </div>
-            @empty
-              <div class="referral-subtree-empty">هنوز لینکی برای این کاربر ساخته نشده است.</div>
-            @endforelse
-          </div>
-        </aside>
       </div>
+
+      <section class="content-card referral-link-existing-card referral-links-table-card" id="referral-links">
+        <div class="referral-card-head">
+          <span class="referral-card-icon is-info"><i class="fa-solid fa-list-check"></i></span>
+          <div><h2>فهرست و پایش لینک‌های کاربر</h2><p>لینک عادی دعوت و تمام لینک‌های محصول در یک فهرست یکسان با آمار کلیک، ثبت‌نام، خرید و ساخت نمایش داده می‌شوند.</p></div>
+          <a class="referral-action is-info referral-monitor-all-link" href="{{ route('admin.users.gallery.referral-report', $user) }}" title="مشاهده گزارش کامل همه لینک‌ها"><i class="fa-solid fa-chart-line"></i> گزارش کامل پایش</a>
+        </div>
+        <div class="referral-table-wrap">
+          <table class="table-pro referral-user-links-table">
+            <thead>
+              <tr><th>نوع / مقصد</th><th>لینک</th><th>وضعیت</th><th>کلیک</th><th>ثبت‌نام</th><th>خرید موفق</th><th>ساخت مخاطبان</th><th>عملیات</th></tr>
+            </thead>
+            <tbody>
+              @forelse($referralLinkRows as $row)
+                <tr>
+                  <td data-label="نوع / مقصد"><strong>{{ $row['label'] }}</strong><small>{{ $row['destination'] }}</small></td>
+                  <td data-label="لینک"><code class="referral-table-url" title="{{ $row['url'] }}">{{ $row['url'] }}</code></td>
+                  <td data-label="وضعیت"><span class="referral-table-status {{ $row['active'] ? 'is-active' : 'is-inactive' }}">{{ $row['active'] ? 'فعال' : 'غیرفعال' }}</span></td>
+                  <td data-label="کلیک">{{ number_format($row['clicks']) }}</td>
+                  <td data-label="ثبت‌نام">{{ number_format($row['registrations']) }}</td>
+                  <td data-label="خرید موفق">{{ number_format($row['purchases']) }}</td>
+                  <td data-label="ساخت مخاطبان">{{ number_format($row['outputs']) }}</td>
+                  <td data-label="عملیات">
+                    <div class="referral-table-actions">
+                      <button type="button" class="referral-action is-neutral" data-copy-url="{{ $row['url'] }}" title="کپی لینک کامل"><i class="fa-regular fa-copy"></i> کپی</button>
+                      <a class="referral-action is-info" href="{{ route('admin.users.gallery.referral-report', $user) }}#referral-links" title="مشاهده گزارش کامل پایش"><i class="fa-solid fa-chart-line"></i> پایش</a>
+                      @if($row['type'] === 'product')
+                        <form method="POST" action="{{ route('admin.referrals.links.toggle', ['referralLink' => $row['id']]) }}">
+                          @csrf @method('PATCH')
+                          <button type="submit" class="referral-link-status {{ $row['active'] ? 'is-active' : 'is-inactive' }}">{{ $row['active'] ? 'فعال' : 'غیرفعال' }}</button>
+                        </form>
+                        <form method="POST" action="{{ route('admin.referrals.links.destroy', ['referralLink' => $row['id']]) }}" onsubmit="return confirm('این لینک حذف شود؟ اگر سابقه داشته باشد به‌صورت خودکار غیرفعال می‌شود.')">
+                          @csrf @method('DELETE')
+                          <button type="submit" class="referral-icon-button referral-delete-link" title="حذف یا غیرفعال‌سازی لینک" aria-label="حذف یا غیرفعال‌سازی لینک"><i class="fa-solid fa-trash-can"></i></button>
+                        </form>
+                      @endif
+                    </div>
+                  </td>
+                </tr>
+              @empty
+                <tr><td colspan="8" class="td-empty">برای این کاربر هنوز لینک عادی یا لینک محصولی ساخته نشده است.</td></tr>
+              @endforelse
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </div>
 </main>

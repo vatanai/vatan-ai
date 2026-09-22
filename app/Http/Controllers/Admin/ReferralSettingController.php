@@ -51,6 +51,8 @@ class ReferralSettingController extends Controller
             $query
                 ->with('product:id,name_fa,name_en,slug,product_code')
                 ->withCount(['visits', 'conversions'])
+                ->withCount(['conversions as purchases_count' => fn ($conversionQuery) => $conversionQuery->whereHas('invitee.planPurchases', fn ($purchaseQuery) => $purchaseQuery->where('status', 'completed'))])
+                ->withCount(['conversions as first_images_count' => fn ($conversionQuery) => $conversionQuery->whereNotNull('first_image_at')])
                 ->latest('id');
         }]);
         $referralInvitees = ReferralConversion::query()->where('inviter_id', $user->id)->select('invitee_id');
@@ -62,8 +64,39 @@ class ReferralSettingController extends Controller
                 ->count(),
             'outputs' => GeneratedImage::query()->whereIn('user_id', $referralInvitees)->count(),
         ];
+        $referralLinkRows = collect();
 
-        return view('admin.settings.referrals.links.create', compact('user', 'products', 'normalLinkStats'));
+        if ($user->referral_code) {
+            $referralLinkRows->push([
+                'id' => null,
+                'type' => 'normal',
+                'label' => 'لینک عادی دعوت',
+                'destination' => 'ورود به صفحه اصلی سایت',
+                'url' => route('referral.visit', ['code' => $user->referral_code]),
+                'active' => true,
+                'clicks' => $normalLinkStats['visits'],
+                'registrations' => $normalLinkStats['registrations'],
+                'purchases' => $normalLinkStats['purchases'],
+                'outputs' => $normalLinkStats['outputs'],
+            ]);
+        }
+
+        foreach ($user->referralLinks as $link) {
+            $referralLinkRows->push([
+                'id' => $link->id,
+                'type' => 'product',
+                'label' => $link->product?->name_fa ?: ($link->product?->name_en ?: 'محصول حذف‌شده'),
+                'destination' => 'ورود مستقیم به محصول',
+                'url' => route('referral.link', ['referralLink' => $link->slug]),
+                'active' => $link->isActive(),
+                'clicks' => (int) $link->visits_count,
+                'registrations' => (int) $link->conversions_count,
+                'purchases' => (int) $link->purchases_count,
+                'outputs' => (int) $link->first_images_count,
+            ]);
+        }
+
+        return view('admin.settings.referrals.links.create', compact('user', 'products', 'normalLinkStats', 'referralLinkRows'));
     }
 
     /** برای کاربرانی که کد قدیمی ندارند، لینک عمومی پایدار را یک‌بار ایجاد می‌کند. */
@@ -406,7 +439,7 @@ class ReferralSettingController extends Controller
             ->first();
 
         if ($existing) {
-            return redirect()->route('admin.referrals.overview', ['inviter_search' => $user->id])
+            return redirect()->route('admin.referrals.users.links.create', $user)
                 ->with('success', 'برای این کاربر و محصول، لینک فعال از قبل وجود دارد.');
         }
 
@@ -422,7 +455,7 @@ class ReferralSettingController extends Controller
             'status' => 'active',
         ]);
 
-        return redirect()->route('admin.referrals.overview', ['inviter_search' => $user->id])
+        return redirect()->route('admin.referrals.users.links.create', $user)
             ->with('success', 'لینک دعوت برای کاربر ساخته شد.');
     }
 

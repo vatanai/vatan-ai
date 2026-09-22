@@ -226,7 +226,7 @@ body.light .referral-switch-input:checked+.referral-switch:after{background:var(
 .referral-existing-link code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right;color:var(--primary);font-size:8px}
 .referral-existing-link small{color:var(--text-soft);font-size:8.5px}
 .referral-existing-link small span{color:var(--border)}
-.referral-existing-link-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}.referral-existing-link-actions form{margin:0}.referral-delete-link{color:var(--danger)}.referral-delete-link:hover{border-color:var(--danger);background:var(--danger-l);color:var(--danger)}
+.referral-existing-link-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;flex-wrap:wrap}.referral-existing-link-actions form{margin:0}.referral-existing-link-actions .referral-action{text-decoration:none;white-space:nowrap}.referral-delete-link{color:var(--danger)}.referral-delete-link:hover{border-color:var(--danger);background:var(--danger-l);color:var(--danger)}
 @media(max-width:1180px){.referral-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-config-grid{grid-template-columns:1fr}.referral-inviter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:1400px){.referral-filter-form{grid-template-columns:repeat(3,minmax(0,1fr))}.referral-filter-search{grid-column:span 2}}
 @media(max-width:900px){.sidebar{transform:translateX(calc(100% + 64px))}}
@@ -251,3 +251,18 @@ body.light .referral-switch-input:checked+.referral-switch:after{background:var(
 .referral-normal-link-missing{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px dashed var(--warning);border-radius:10px;color:var(--text-soft);font-size:10px}
 .referral-normal-link-missing form{margin:0}
 @media(max-width:640px){.referral-link-type-badge{margin-right:0}.referral-normal-link-box{align-items:stretch;flex-direction:column}.referral-copy-button{width:100%}.referral-normal-link-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-normal-link-missing{align-items:stretch;flex-direction:column}.referral-normal-link-missing .referral-action{width:100%}}
+.referral-monitor-all-link{margin-right:auto;white-space:nowrap;text-decoration:none}
+@media(max-width:640px){.referral-monitor-all-link{margin-right:0;margin-top:6px;width:100%}.referral-existing-link-actions{width:100%;justify-content:flex-start}}
+.referral-links-table-card{overflow:hidden}
+.referral-links-table-card .referral-table-wrap{overflow-x:auto}
+.referral-user-links-table{min-width:980px}
+.referral-user-links-table td strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-h);font-size:11px}
+.referral-user-links-table td small{display:block;margin-top:4px;color:var(--text-soft);font-size:8.5px}
+.referral-table-url{display:block;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:right;color:var(--primary);font-size:9px}
+.referral-table-status{display:inline-flex;padding:5px 8px;border:1px solid;border-radius:99px;font-size:8.5px;font-weight:800;white-space:nowrap}
+.referral-table-status.is-active{border-color:var(--success-m);background:var(--success-l);color:var(--success)}
+.referral-table-status.is-inactive{border-color:var(--danger-m);background:var(--danger-l);color:var(--danger)}
+.referral-table-actions{display:flex;align-items:center;justify-content:flex-start;gap:5px;flex-wrap:wrap;min-width:190px}
+.referral-table-actions form{margin:0}
+.referral-table-actions .referral-action{white-space:nowrap;text-decoration:none}
+@media(max-width:767px){.referral-user-links-table{min-width:0}.referral-user-links-table tbody td[data-label="عملیات"]{display:block}.referral-table-actions{min-width:0}.referral-table-url{max-width:100%}}

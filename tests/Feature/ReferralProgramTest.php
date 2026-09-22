@@ -65,6 +65,32 @@ class ReferralProgramTest extends TestCase
         ]);
     }
 
+    public function test_admin_product_link_creation_stays_on_the_user_link_management_page(): void
+    {
+        $admin = Admin::query()->create([
+            'name' => 'مدیر ساخت لینک تست',
+            'email' => 'referral-link-create@example.test',
+            'password' => 'password',
+            'role' => 'leader',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->create(['status' => 'active']);
+        $product = $this->createActiveProduct('admin-referral-link-create-test');
+
+        $this->actingAs($admin, 'admin')
+            ->post(route('admin.referrals.users.links.store', $user), [
+                'product_id' => $product->id,
+            ])
+            ->assertRedirect(route('admin.referrals.users.links.create', $user))
+            ->assertSessionHas('success', 'لینک دعوت برای کاربر ساخته شد.');
+
+        self::assertDatabaseHas('referral_links', [
+            'inviter_id' => $user->id,
+            'product_id' => $product->id,
+            'status' => 'active',
+        ]);
+    }
+
     public function test_known_link_preview_agents_do_not_inflate_referral_clicks(): void
     {
         $inviter = User::factory()->create(['status' => 'active']);
