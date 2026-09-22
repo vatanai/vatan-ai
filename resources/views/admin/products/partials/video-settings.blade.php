@@ -64,10 +64,9 @@
   </div>
 
 
-  <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+  <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
     <label class="flex items-center gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg"><input type="hidden" name="video_prompt_enhance" value="0"><input type="checkbox" name="video_prompt_enhance" value="1" @checked(old('video_prompt_enhance', $videoValue('prompt_enhance', true))) class="accent-[var(--accent)]"><span class="text-[10.5px] text-[var(--text2)]">بهبود هوشمند پرامپت</span></label>
     <label class="flex items-center gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg"><input type="hidden" name="video_audio_allowed" value="0"><input type="checkbox" name="video_audio_allowed" value="1" @checked(old('video_audio_allowed', $videoValue('audio_allowed', false))) class="accent-[var(--accent)]"><span class="text-[10.5px] text-[var(--text2)]">امکان صدای همگام</span></label>
-    <label class="flex items-center gap-2 p-3 bg-[var(--s1)] border border-[var(--b1)] rounded-lg"><input type="hidden" name="video_allow_promotional_credits" value="0"><input type="checkbox" name="video_allow_promotional_credits" value="1" @checked(old('video_allow_promotional_credits', $videoValue('allow_promotional_credits', false))) class="accent-[var(--accent)]"><span class="text-[10.5px] text-[var(--text2)]">اعتبار هدیه</span></label>
   </div>
 
   <div class="mt-4 border-t border-[var(--b1)] pt-4">

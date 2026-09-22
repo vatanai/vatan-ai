@@ -556,7 +556,6 @@ class Product extends Model
             'audio_allowed' => false,
             'audio_default' => false,
             'prompt_enhance' => true,
-            'allow_promotional_credits' => false,
             'credit_costs_by_duration' => [],
             'preserve_source_aspect_ratio' => false,
             'quality_credit_costs' => self::DEFAULT_QUALITY_CREDIT_COSTS,

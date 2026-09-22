@@ -108,7 +108,6 @@ class VideoProductConfigService
             'audio_allowed' => filter_var($data['audio_allowed'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'audio_default' => filter_var($data['audio_default'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'prompt_enhance' => filter_var($data['prompt_enhance'] ?? true, FILTER_VALIDATE_BOOLEAN),
-            'allow_promotional_credits' => filter_var($data['allow_promotional_credits'] ?? false, FILTER_VALIDATE_BOOLEAN),
             'credit_costs_by_duration' => $costs,
             'quality_costs' => collect((array) ($data['quality_costs'] ?? []))->mapWithKeys(fn ($value, $key) => [(string) $key => max(0, (int) $value)])->all() + ['480p' => 0, '720p' => 2, '1080p' => 5, '4K' => 10],
             'quality_tiers' => (array) ($data['quality_tiers'] ?? [

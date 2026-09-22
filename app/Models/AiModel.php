@@ -447,12 +447,7 @@ class AiModel extends Model
         return $score === null ? 'ثبت نشده' : rtrim(rtrim(number_format($score, 1), '0'), '.') . ' از ۱۰';
     }
 
-    /**
-     * گرید عملیاتی مدل برای سیاست قیمت‌گذاری و اعتبار هدیه.
-     *
-     * گرید از امتیاز کیفی استخراج می‌شود تا با تغییر ارزیابی آزمایشگاه، سیاست
-     * اعتبار هدیه نیز بدون نگه‌داری یک مقدار تکراری در دیتابیس به‌روز بماند.
-     */
+    /** گرید عملیاتی مدل برای سیاست قیمت‌گذاری و مسیریابی کیفیت. */
     public function pricingGrade(): int
     {
         $score = $this->qualityScore();
@@ -462,12 +457,6 @@ class AiModel extends Model
         if ($score !== null && $score >= 8.5) return 3;
 
         return 4;
-    }
-
-    /** اعتبار هدیه فقط برای مدل‌های اقتصادی یا متعادل قابل مصرف است. */
-    public function allowsPromotionalCredits(): bool
-    {
-        return $this->pricingGrade() >= 3;
     }
 
     /**

@@ -1915,7 +1915,6 @@ class ProductController extends Controller
             'audio_allowed' => $request->boolean('video_audio_allowed'),
             'audio_default' => $request->boolean('video_audio_default'),
             'prompt_enhance' => $request->boolean('video_prompt_enhance'),
-            'allow_promotional_credits' => $request->boolean('video_allow_promotional_credits'),
             'credit_costs_by_duration' => $rawVideo['credit_costs_by_duration'] ?? data_get($existingVideo, 'credit_costs_by_duration', []),
             'quality_costs' => $rawVideo['quality_costs'] ?? data_get($existingVideo, 'quality_costs', []),
             'quality_tiers' => $rawVideo['quality_tiers'] ?? data_get($existingVideo, 'quality_tiers', []),

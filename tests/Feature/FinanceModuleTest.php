@@ -264,7 +264,7 @@ class FinanceModuleTest extends TestCase
             'status' => 'processing', 'payment_status' => 'paid', 'processing_status' => 'processing',
             'original_credits' => 20, 'final_credits' => 20, 'ai_model' => 'test/model', 'ai_provider' => 'test-provider',
         ]);
-        $reservation = app(CreditWalletService::class)->reserve($user, 20, true, $order);
+        $reservation = app(CreditWalletService::class)->reserve($user, 20, $order);
         app(CreditWalletService::class)->settle($user, $reservation, 20);
         AiProviderRequest::query()->create([
             'provider' => 'test-provider', 'order_id' => $order->id, 'external_request_id' => 'CASE-REQUEST-001',

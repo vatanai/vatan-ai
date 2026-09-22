@@ -130,7 +130,7 @@ class User extends Authenticatable
         return max(0, min((int) $this->promotional_tokens, (int) $this->tokens));
     }
 
-    /** اعتبار خریداری‌شده یا دستیِ قابل استفاده برای همه مدل‌ها. */
+    /** بخش غیرهدیهٔ موجودی؛ فقط برای تفکیک و گزارش مالی نگه‌داری می‌شود. */
     public function paidTokenBalance(): int
     {
         return max(0, (int) $this->tokens - $this->promotionalTokenBalance());

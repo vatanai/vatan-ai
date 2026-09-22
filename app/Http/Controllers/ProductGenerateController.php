@@ -371,17 +371,6 @@ class ProductGenerateController extends Controller
             }
         }
         $candidates->forget((string) $model->openrouter_model_id);
-        if ($model->allowsPromotionalCredits()) {
-            $candidates = $candidates->filter(function (string $provider, string $candidateId): bool {
-                $candidate = AiModel::query()
-                    ->where('is_active', true)
-                    ->where('provider', $provider)
-                    ->where('openrouter_model_id', $candidateId)
-                    ->first();
-
-                return $candidate?->allowsPromotionalCredits() === true;
-            });
-        }
         $product->primary_model = (string) $model->openrouter_model_id;
         $product->ai_provider = (string) $model->provider;
         $product->fallback_models = $candidates->keys()->values()->all();
@@ -812,19 +801,10 @@ class ProductGenerateController extends Controller
             $executionProduct->fallback_model_providers = [];
         }
 
-        $promotionalCreditsAllowed = false;
         if (($product->pricing_model === 'per_credit' || $request->boolean('studio_mode')) && $totalCreditCost > 0) {
             if (! $user) {
                 return $failure('برای ساخت این محصول ابتدا وارد حساب کاربری شوید.', 'AUTHENTICATION_REQUIRED', 401);
             }
-
-            // این کنترل باید پس از تعیین مدل هویتی و مدل‌های جایگزین انجام شود؛
-            // در غیر این صورت اعتبار هدیه می‌تواند ناخواسته به مدل گران‌تر برسد.
-            // پس از فعال‌شدن پلن پرداختی، کل موجودی قابل نمایش کاربر باید برای
-            // هر سه کیفیت قابل مصرف باشد؛ وگرنه اعتبار باقی‌مانده‌ای که منشأ
-            // هدیه دارد، حرفه‌ای و بهترین را با خطای گمراه‌کننده متوقف می‌کند.
-            $promotionalCreditsAllowed = $this->modelTiers->hasPaidPlan($user)
-                || $this->creditWallet->productAllowsPromotionalCredits($executionProduct);
         }
 
         try {
@@ -903,7 +883,6 @@ class ProductGenerateController extends Controller
                     $creditReservation = $this->creditWallet->reserve(
                         $user,
                         $totalCreditCost,
-                        $promotionalCreditsAllowed,
                         $order,
                     );
                 } catch (ValidationException $exception) {

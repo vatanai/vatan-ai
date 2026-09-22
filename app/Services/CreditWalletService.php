@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\AiModel;
-use App\Models\Product;
 use App\Models\User;
 use App\Models\Order;
 use App\Services\Finance\FinanceCaseLedgerService;
@@ -11,56 +9,24 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * کیف پول اعتبار خریداری‌شده و هدیه.
+ * کیف پول یکپارچهٔ اعتبار کاربر.
  *
  * ستون users.tokens همچنان موجودی واحدی است که رابط کاربر نمایش می‌دهد؛
- * promotional_tokens فقط سهمِ هدیه از همین موجودی را نگه می‌دارد. این جداسازی
- * اجازه می‌دهد مدل‌های گرید ۱ و ۲ فقط از اعتبار خریداری‌شده استفاده کنند.
+ * promotional_tokens فقط سهمِ هدیه از همین موجودی را برای گزارش مالی، انقضا
+ * و بازگرداندن اعتبار به منبع درست نگه می‌دارد و محدودیت مصرف ایجاد نمی‌کند.
  */
 class CreditWalletService
 {
-    /**
-     * اعتبار هدیه تنها وقتی مجاز است که تمام مسیرهای قابل اجرای محصول (اصلی و
-     * جایگزین) گرید ۳ یا ۴ باشند. مدل ناشناخته عمداً نامجاز است تا سیاست شکستِ امن داشته باشد.
-     */
-    public function productAllowsPromotionalCredits(Product $product): bool
-    {
-        $modelIds = array_values(array_filter(array_merge(
-            [(string) $product->primary_model],
-            (array) $product->fallback_models,
-        )));
-        $providers = array_values(array_merge(
-            [(string) $product->ai_provider],
-            (array) $product->fallback_model_providers,
-        ));
-
-        if (empty($modelIds) || count($modelIds) !== count($providers)) {
-            return false;
-        }
-
-        foreach ($modelIds as $index => $modelId) {
-            $model = AiModel::query()
-                ->where('is_active', true)
-                ->where('provider', $providers[$index])
-                ->where('openrouter_model_id', $modelId)
-                ->first();
-
-            if (! $model || ! $model->allowsPromotionalCredits()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     /**
      * رزرو اتمیک اعتبار و ثبت سهم هدیه/پرداختی برای تسویه یا بازگشت بعدی.
      *
      * @return array{total:int,promotional:int,paid:int,ledger_key?:string|null}
      */
-    public function reserve(User $user, int $amount, bool $allowPromotionalCredits, ?Order $order = null): array
+    public function reserve(User $user, int $amount, ?Order $order = null): array
     {
-        return DB::transaction(function () use ($user, $amount, $allowPromotionalCredits, $order) {
+        $amount = max(0, $amount);
+
+        return DB::transaction(function () use ($user, $amount, $order) {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->getKey());
             app(TokenGrantService::class)->expireLocked($lockedUser);
             $promotionalAvailable = $lockedUser->promotionalTokenBalance();
@@ -69,7 +35,6 @@ class CreditWalletService
                 (int) $lockedUser->tokens,
                 $promotionalAvailable,
                 $amount,
-                $allowPromotionalCredits,
             );
 
             $lockedUser->tokens = (int) $lockedUser->tokens - $amount;
@@ -110,7 +75,6 @@ class CreditWalletService
         int $balance,
         int $promotionalBalance,
         int $amount,
-        bool $allowPromotionalCredits,
     ): array {
         if ($amount < 1) {
             return ['total' => 0, 'promotional' => 0, 'paid' => 0];
@@ -118,15 +82,12 @@ class CreditWalletService
 
         $balance = max(0, $balance);
         $promotionalAvailable = max(0, min($promotionalBalance, $balance));
-        $paidAvailable = $balance - $promotionalAvailable;
-        $promotional = $allowPromotionalCredits ? min($promotionalAvailable, $amount) : 0;
+        $promotional = min($promotionalAvailable, $amount);
         $paid = $amount - $promotional;
 
-        if ($paidAvailable < $paid) {
+        if ($balance < $amount) {
             throw ValidationException::withMessages([
-                'tokens' => $allowPromotionalCredits
-                    ? 'موجودی اعتبار شما کافی نیست.'
-                    : 'این محصول با اعتبار هدیه قابل ساخت نیست؛ برای مدل‌های گرید ۱ و ۲ اعتبار خریداری‌شده لازم است.',
+                'tokens' => 'موجودی اعتبار شما کافی نیست.',
             ]);
         }
 
@@ -142,36 +103,60 @@ class CreditWalletService
     public function settle(User $user, array $reservation, int $actualAmount): array
     {
         $actualAmount = max(0, $actualAmount);
-        $promotionalUsed = min((int) $reservation['promotional'], $actualAmount);
-        $paidUsed = $actualAmount - $promotionalUsed;
-        $promotionalRefund = (int) $reservation['promotional'] - $promotionalUsed;
-        $paidRefund = max(0, (int) $reservation['paid'] - $paidUsed);
-        $paidOverage = max(0, $paidUsed - (int) $reservation['paid']);
+        $reservedPromotional = max(0, (int) ($reservation['promotional'] ?? 0));
+        $reservedPaid = max(0, (int) ($reservation['paid'] ?? 0));
+        $reservedTotal = $reservedPromotional + $reservedPaid;
+        $reservedUsage = min($actualAmount, $reservedTotal);
+        $promotionalUsed = min($reservedPromotional, $reservedUsage);
+        $paidUsed = min($reservedPaid, max(0, $reservedUsage - $promotionalUsed));
+        $promotionalRefund = $reservedPromotional - $promotionalUsed;
+        $paidRefund = $reservedPaid - $paidUsed;
+        $overage = max(0, $actualAmount - $reservedTotal);
 
         $grantAllocations = (array) ($reservation['grant_allocations'] ?? []);
-        DB::transaction(function () use ($user, $actualAmount, $promotionalRefund, $paidRefund, $paidOverage, $grantAllocations) {
+        $overageAllocation = DB::transaction(function () use ($user, $actualAmount, $promotionalRefund, $paidRefund, $overage, $grantAllocations): array {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->getKey());
-            $paidAvailable = max(0, (int) $lockedUser->tokens - $lockedUser->promotionalTokenBalance());
-            if ($paidAvailable < $paidOverage) {
-                throw ValidationException::withMessages([
-                    'tokens' => 'هزینهٔ واقعی بیشتر از مبلغ رزروشده است و اعتبار خریداری‌شده برای تسویه کافی نیست.',
-                ]);
-            }
-            $lockedUser->tokens = (int) $lockedUser->tokens + $promotionalRefund + $paidRefund - $paidOverage;
-            $lockedUser->promotional_tokens = $lockedUser->promotionalTokenBalance() + $promotionalRefund;
+            app(TokenGrantService::class)->expireLocked($lockedUser);
+            $promotionalAvailable = $lockedUser->promotionalTokenBalance();
+            $allocation = $this->allocationForReservation(
+                (int) $lockedUser->tokens,
+                $promotionalAvailable,
+                $overage,
+            );
+
+            $lockedUser->tokens = (int) $lockedUser->tokens + $promotionalRefund + $paidRefund - $overage;
+            $lockedUser->promotional_tokens = $promotionalAvailable + $promotionalRefund - $allocation['promotional'];
             $lockedUser->tokens_used = (int) $lockedUser->tokens_used + $actualAmount;
             $lockedUser->save();
+            if ($allocation['promotional'] > 0) {
+                app(TokenGrantService::class)->consumeLocked($lockedUser, $allocation['promotional']);
+            }
             if ($promotionalRefund > 0 && $grantAllocations) {
+                $remainingRefund = $promotionalRefund;
                 foreach ($grantAllocations as $grantId => $used) {
-                    \App\Models\UserTokenGrant::query()->whereKey($grantId)->where('user_id', $lockedUser->id)->increment('remaining_amount', (int) min($used, $promotionalRefund));
-                    $promotionalRefund -= (int) min($used, $promotionalRefund);
-                    if ($promotionalRefund < 1) break;
+                    $restoreAmount = (int) min($used, $remainingRefund);
+                    \App\Models\UserTokenGrant::query()->whereKey($grantId)->where('user_id', $lockedUser->id)->increment('remaining_amount', $restoreAmount);
+                    $remainingRefund -= $restoreAmount;
+                    if ($remainingRefund < 1) break;
                 }
             }
+
+            return $allocation;
         });
 
+        $promotionalUsed += $overageAllocation['promotional'];
+        $paidUsed += $overageAllocation['paid'];
+
         try {
-            app(FinanceCaseLedgerService::class)->settleReservation($reservation['ledger_key'] ?? null, $actualAmount);
+            DB::transaction(function () use ($reservation, $overageAllocation, $actualAmount): void {
+                $ledger = app(FinanceCaseLedgerService::class);
+                $ledger->extendReservation(
+                    $reservation['ledger_key'] ?? null,
+                    $overageAllocation['promotional'],
+                    $overageAllocation['paid'],
+                );
+                $ledger->settleReservation($reservation['ledger_key'] ?? null, $actualAmount);
+            });
         } catch (\Throwable $exception) {
             report($exception);
         }

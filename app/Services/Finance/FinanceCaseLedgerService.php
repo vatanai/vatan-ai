@@ -271,6 +271,29 @@ class FinanceCaseLedgerService
         });
     }
 
+    /** رزرو دفتر مالی را برای مازاد هزینهٔ واقعی با همان منبع اعتبار گسترش می‌دهد. */
+    public function extendReservation(?string $reservationKey, int $promotional, int $paid): void
+    {
+        if (! $reservationKey || ($promotional + $paid) < 1 || ! Schema::hasTable('finance_credit_allocations')) {
+            return;
+        }
+
+        DB::transaction(function () use ($reservationKey, $promotional, $paid): void {
+            $allocation = FinanceCreditAllocation::query()
+                ->with('order.user')
+                ->where('reservation_key', $reservationKey)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $allocation?->order?->user) {
+                return;
+            }
+
+            $this->allocateLots($allocation->order->user, $allocation->order, $reservationKey, $promotional, true);
+            $this->allocateLots($allocation->order->user, $allocation->order, $reservationKey, $paid, false);
+        });
+    }
+
     public function restoreReservation(?string $reservationKey, bool $reverseSettled = false): void
     {
         if (! $reservationKey || ! Schema::hasTable('finance_credit_allocations')) {

@@ -222,9 +222,6 @@ class VideoGenerationService
         if ($studioQuote && $studioQuote['credits_per_output'] !== null) {
             $creditCost = (int) $studioQuote['credits_per_output'] + $featureCost + ($identityRequested ? 2 : 0);
         }
-        $allowPromotional = (bool) ($config['allow_promotional_credits'] ?? false)
-            || $this->wallet->productAllowsPromotionalCredits($product);
-
         $order = Order::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
@@ -313,7 +310,7 @@ class VideoGenerationService
 
         $reservation = ['total' => 0, 'promotional' => 0, 'paid' => 0, 'ledger_key' => null];
         try {
-            if ($creditCost > 0) $reservation = $this->wallet->reserve($user, $creditCost, $allowPromotional, $order);
+            if ($creditCost > 0) $reservation = $this->wallet->reserve($user, $creditCost, $order);
         } catch (ValidationException $exception) {
             $order->update(['status' => 'review', 'payment_status' => 'failed', 'processing_status' => 'stopped', 'error_message' => 'اعتبار کافی نیست.']);
             throw $exception;
@@ -468,7 +465,6 @@ class VideoGenerationService
             $reservation = $this->wallet->reserve(
                 $generation->user,
                 (int) $generation->credits_reserved,
-                $this->wallet->productAllowsPromotionalCredits($generation->product),
                 $generation->order,
             );
         }

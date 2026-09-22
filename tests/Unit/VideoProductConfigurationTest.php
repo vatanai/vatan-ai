@@ -69,7 +69,7 @@ class VideoProductConfigurationTest extends TestCase
         $this->assertSame([4, 8], $normalized['durations']);
         $this->assertSame(['9:16'], $normalized['aspect_ratios']);
         $this->assertSame('orbit', $normalized['motion_presets'][0]['key']);
-        $this->assertTrue($normalized['allow_promotional_credits']);
+        $this->assertArrayNotHasKey('allow_promotional_credits', $normalized);
         $this->assertSame(12, $service->creditCost($product, 8));
         $this->assertSame(22, $service->creditCost($product, 8, '4K'));
     }

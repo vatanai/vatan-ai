@@ -411,17 +411,6 @@ class VideoProductController extends Controller
         }
         $candidates = $candidates->filter(fn (string $provider): bool => $provider === 'openrouter');
         $candidates->forget((string) $model->openrouter_model_id);
-        if ($model->allowsPromotionalCredits()) {
-            $candidates = $candidates->filter(function (string $provider, string $candidateId): bool {
-                $candidate = AiModel::query()
-                    ->where('is_active', true)
-                    ->where('provider', $provider)
-                    ->where('openrouter_model_id', $candidateId)
-                    ->first();
-
-                return $candidate?->allowsPromotionalCredits() === true;
-            });
-        }
         $product->primary_model = (string) $model->openrouter_model_id;
         $product->ai_provider = (string) $model->provider;
         $product->fallback_models = $candidates->keys()->values()->all();

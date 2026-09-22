@@ -63,7 +63,6 @@ class VideoProductController extends Controller
             'fps' => 24,
             'motion_presets' => ['static', 'dolly_in', 'orbit', 'pan'],
             'credit_costs_by_duration' => ['4' => 10, '6' => 14, '8' => 18],
-            'allow_promotional_credits' => true,
         ]);
 
         return view($view, [
@@ -153,7 +152,6 @@ class VideoProductController extends Controller
             'audio_allowed' => ['nullable', 'boolean'],
             'audio_default' => ['nullable', 'boolean'],
             'prompt_enhance' => ['nullable', 'boolean'],
-            'allow_promotional_credits' => ['nullable', 'boolean'],
             'cover_image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
             // گام ۱ نسخه‌ی جدید از همان آپلودر چندتصویری ثبت محصول عکس استفاده می‌کند؛
             // اولین تصویر انتخاب‌شده به‌عنوان کاور ویدیو ذخیره می‌شود.
