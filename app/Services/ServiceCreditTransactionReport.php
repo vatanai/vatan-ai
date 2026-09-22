@@ -209,7 +209,9 @@ class ServiceCreditTransactionReport
             })
             ->when($from, fn ($query) => $query->where('orders.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('orders.created_at', '<=', $to))
-            ->latest('orders.created_at')->limit($sourceLimit)->get();
+            // id کلید اصلی و ترتیبی سفارش است؛ برای این گزارش از sort پرهزینهٔ
+            // created_at روی جدول بزرگ production استفاده نمی‌کنیم.
+            ->latest('orders.id')->limit($sourceLimit)->get();
         foreach ($orders as $order) {
             $rows->push($this->row([
                 'id' => 'order-' . $order->id, 'source_key' => 'order', 'source_label' => 'سفارش بدون جزئیات مدل',
