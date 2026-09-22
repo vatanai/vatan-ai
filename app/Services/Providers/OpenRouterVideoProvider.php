@@ -4,7 +4,10 @@ namespace App\Services\Providers;
 
 use App\Models\AiModel;
 use App\Models\AiProviderRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /** Adapter صف ویدیوی رسمی OpenRouter (/api/v1/videos). */
@@ -31,7 +34,9 @@ class OpenRouterVideoProvider extends AbstractQueuedImageProvider
         $headers = $this->requestHeaders();
         if ($idempotencyKey !== '') $headers['X-OpenRouter-Idempotency-Key'] = $idempotencyKey;
         $response = Http::withHeaders($headers)->connectTimeout(15)->timeout(60)->post($base . '/videos', $body);
-        if ($response->failed()) throw new RuntimeException('OpenRouter HTTP ' . $response->status() . ': ' . $response->body());
+        if ($response->failed()) {
+            throw new RuntimeException($this->providerFailureMessage($response, 'ارسال درخواست ویدیو'));
+        }
         return (array) $response->json();
     }
 
@@ -40,7 +45,9 @@ class OpenRouterVideoProvider extends AbstractQueuedImageProvider
         $credentials = $this->credentials->for('openrouter');
         $base = rtrim($credentials['base_url'] ?: 'https://openrouter.ai/api/v1', '/');
         $response = Http::withHeaders($this->requestHeaders())->connectTimeout(10)->timeout(60)->get($base . '/videos/' . rawurlencode($requestId));
-        if ($response->failed()) throw new RuntimeException('OpenRouter status HTTP ' . $response->status() . ': ' . $response->body());
+        if ($response->failed()) {
+            throw new RuntimeException($this->providerFailureMessage($response, 'دریافت وضعیت ویدیو'));
+        }
         return (array) $response->json();
     }
 
@@ -101,6 +108,25 @@ class OpenRouterVideoProvider extends AbstractQueuedImageProvider
         ];
     }
 
+    private function providerFailureMessage(Response $response, string $operation): string
+    {
+        $payload = (array) $response->json();
+        $error = $payload['error'] ?? null;
+        $code = is_array($error) ? ($error['code'] ?? null) : null;
+        $message = is_array($error) ? ($error['message'] ?? null) : (is_string($error) ? $error : null);
+        $message = trim((string) ($message ?: $response->body()));
+        $safe = Str::limit(preg_replace('/\s+/', ' ', $message) ?: 'پاسخ نامعتبر از OpenRouter', 800, '');
+
+        Log::warning('OpenRouter video request rejected', [
+            'operation' => $operation,
+            'http_status' => $response->status(),
+            'provider_error_code' => $code,
+            'provider_error_message' => $safe,
+        ]);
+
+        return sprintf('OpenRouter HTTP %d%s: %s', $response->status(), $code ? " [{$code}]" : '', $safe);
+    }
+
     public function handleWebhook(array $payload): array
     {
         $data = (array) ($payload['data'] ?? $payload);
@@ -119,7 +145,12 @@ class OpenRouterVideoProvider extends AbstractQueuedImageProvider
 
     public function estimateCost(AiModel $model, array $payload = []): ?float
     {
-        $perSecond = (float) ($model->cost_per_generation_usd ?: 0);
+        $workflow = (string) ($payload['workflow'] ?? '');
+        if ($workflow === 'image_sequence_to_video') $workflow = 'image_to_video';
+        $workflowTiers = (array) data_get($model->pricing_config, 'workflow_resolution_tiers', []);
+        $resolution = (string) ($payload['resolution'] ?? '');
+        $perSecond = (float) data_get($workflowTiers, $workflow . '.' . $resolution, 0);
+        if ($perSecond <= 0) $perSecond = (float) ($model->cost_per_generation_usd ?: 0);
         $duration = max(1, (int) ($payload['duration'] ?? 1));
         return $perSecond > 0 ? $perSecond * $duration : null;
     }

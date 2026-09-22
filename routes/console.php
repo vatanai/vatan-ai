@@ -46,7 +46,7 @@ Artisan::command('ai:sync-catalog {provider=all}', function (string $provider, A
     foreach ($result as $name => $stats) {
         $this->line($name . ': ' . json_encode($stats, JSON_UNESCAPED_UNICODE));
     }
-})->purpose('همگام‌سازی مدل‌های عکس و ویدیو از Fal.ai و Replicate');
+})->purpose('همگام‌سازی مدل‌های عکس و ویدیو از providerهای رسمی');
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

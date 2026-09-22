@@ -21,10 +21,18 @@ class StudioCostService
         $aspectRatio = (string) ($options['aspect_ratio'] ?? '');
         $duration = isset($options['duration']) ? (int) $options['duration'] : null;
         $count = max(1, min(6, (int) ($options['count'] ?? 1)));
-        $unitUsd = $this->modelUnitPrice($model, $mediaType, $resolution, $duration, $aspectRatio);
+        $unitUsd = $this->modelUnitPrice(
+            $model,
+            $mediaType,
+            $resolution,
+            $duration,
+            $aspectRatio,
+            (string) ($options['workflow'] ?? ''),
+        );
         $pricingSource = $unitUsd !== null ? data_get($model?->pricing_config, 'source', 'کاتالوگ مدل') : null;
         if (($unitUsd === null || $unitUsd <= 0) && $model) {
             $live = app(ProviderPricingService::class)->estimate($model, 1, true, [
+                'workflow' => (string) ($options['workflow'] ?? ''),
                 'duration' => $duration,
                 'resolution' => $resolution,
                 'aspect_ratio' => $aspectRatio,
@@ -46,6 +54,7 @@ class StudioCostService
         if (($unitUsd === null || $unitUsd <= 0)
             && $mediaType === 'video'
             && $model
+            && data_get($model->pricing_config, 'source') !== 'openrouter.video.models'
             && in_array((string) $model->openrouter_model_id, AiModel::VIDEO_PRODUCT_MODEL_IDS, true)) {
             $configuredCredits = app(VideoProductConfigService::class)->creditCost(
                 $product,
@@ -103,13 +112,17 @@ class StudioCostService
         );
     }
 
-    public function modelUnitPrice(?AiModel $model, string $mediaType = 'image', string $resolution = '', ?int $duration = null, string $aspectRatio = ''): ?float
+    public function modelUnitPrice(?AiModel $model, string $mediaType = 'image', string $resolution = '', ?int $duration = null, string $aspectRatio = '', string $workflow = ''): ?float
     {
         if (!$model) return null;
 
         $config = (array) ($model->pricing_config ?? []);
         $normalizedResolution = $this->normalizeResolution($resolution);
-        $tierMap = (array) ($config['resolution_tiers'] ?? $config['tiers'] ?? []);
+        $workflowTiers = (array) ($config['workflow_resolution_tiers'] ?? []);
+        $pricingWorkflow = $workflow === 'image_sequence_to_video' ? 'image_to_video' : $workflow;
+        $tierMap = (array) (($pricingWorkflow !== '' && isset($workflowTiers[$pricingWorkflow]))
+            ? $workflowTiers[$pricingWorkflow]
+            : ($config['resolution_tiers'] ?? $config['tiers'] ?? []));
         foreach ([$resolution, $normalizedResolution, strtoupper($resolution)] as $key) {
             if ($key !== '' && is_numeric($tierMap[$key] ?? null) && (float) $tierMap[$key] > 0) {
                 return $this->applyDuration((float) $tierMap[$key], $model, $mediaType, $duration, $config);

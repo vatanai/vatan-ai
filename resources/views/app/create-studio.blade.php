@@ -24,10 +24,9 @@
       </nav>
       <div class="create-studio-image-workflow-note" data-image-workflow-note role="status">برای شروع، ایده‌ات را بنویس؛ تصویر ورودی لازم نیست.</div>
       @if($experimental ?? false)
-        <nav class="create-studio-workflow-tabs" data-workflow-tabs hidden aria-label="نوع ورودی ویدیو">
+        <nav class="create-studio-image-workflow-tabs" data-workflow-tabs hidden aria-label="نوع ورودی ویدیو">
           <button type="button" class="is-active" data-workflow="text_to_video"><i class="fa-solid fa-pen-nib"></i><span>متن به ویدیو</span><small>فقط پرامپت</small></button>
           <button type="button" data-workflow="image_to_video"><i class="fa-regular fa-images"></i><span>عکس به ویدیو</span><small>یک یا چند عکس</small></button>
-          <button type="button" data-workflow="video_to_video"><i class="fa-solid fa-film"></i><span>ویدیو به ویدیو</span><small>ویدیوی مرجع</small></button>
         </nav>
         <div class="create-studio-workflow-note" data-workflow-note hidden></div>
         <div class="create-studio-workflow-subtabs" data-workflow-image-options hidden aria-label="روش استفاده از تصاویر">

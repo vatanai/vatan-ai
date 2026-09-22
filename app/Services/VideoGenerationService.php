@@ -208,6 +208,7 @@ class VideoGenerationService
         $studioQuote = $studioMode
             ? $this->studioCosts->quote($product, [
                 'media_type' => 'video',
+                'workflow' => (string) ($options['workflow'] ?? $config['workflow'] ?? 'text_to_video'),
                 'resolution' => $resolution,
                 'quality' => $quality,
                 'source_aspect_ratio' => $options['source_aspect_ratio'] ?? null,
@@ -602,6 +603,16 @@ class VideoGenerationService
         }
         if (in_array($status, ['failed', 'canceled'], true)) {
             $providerMessage = (string) ($normalized['error_message'] ?? 'خطای سرویس‌دهنده');
+            if ($status === 'failed') {
+                Log::warning('Video provider returned a terminal failure', [
+                    'generated_video_id' => $generation->id,
+                    'correlation_id' => $generation->correlation_id,
+                    'provider_request_id' => $generation->external_request_id,
+                    'provider_error_code' => $normalized['error_code'] ?? null,
+                    'provider_error_message' => Str::limit($providerMessage, 1000, ''),
+                    'provider_metadata' => $normalized['provider_metadata'] ?? null,
+                ]);
+            }
             if (!$generation->cancel_requested_at && $status === 'failed' && $this->isRetryableProviderError($providerMessage) && $this->retryFallback($generation, $providerMessage)) {
                 return $generation->fresh();
             }
@@ -844,6 +855,7 @@ class VideoGenerationService
         $submitted = $this->asyncProvider($model->provider)->submitGeneration($model, $prompt, [
             'input' => $input, 'order_id' => $order->id, 'n' => 1,
             'duration' => $options['duration'], 'resolution' => $options['resolution'],
+            'workflow' => (string) ($options['workflow'] ?? 'text_to_video'),
         ]);
         $requestId = (string) $submitted['external_request_id'];
         $providerRequest = AiProviderRequest::query()->where('provider', $model->provider)->where('external_request_id', $requestId)->first();
@@ -991,31 +1003,58 @@ class VideoGenerationService
         }
 
         if ($model->provider === 'openrouter') {
-            $input = [
-                'prompt' => $prompt,
-                'duration' => $duration,
-                'resolution' => (string) $options['resolution'],
-                'generate_audio' => (bool) (($config['audio_allowed'] ?? false) && ($options['generate_audio'] ?? $config['audio_default'] ?? false)),
-            ];
-            if ($aspectSupported) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
-            if ($negativePrompt !== '') $input['negative_prompt'] = $negativePrompt;
-            if (isset($options['seed'])) $input['seed'] = (int) $options['seed'];
+            $capabilities = (array) ($model->capability_config ?? []);
+            $supportedDurations = array_values(array_map('strval', (array) ($capabilities['supported_durations'] ?? [])));
+            $supportedResolutions = array_values(array_map('strtolower', array_map('strval', (array) ($capabilities['supported_resolutions'] ?? []))));
+            $supportedAspectRatios = array_values(array_map('strtolower', array_map('strval', (array) ($capabilities['supported_aspect_ratios'] ?? []))));
+            $passthrough = array_map('strtolower', array_values(array_filter((array) ($capabilities['allowed_passthrough_parameters'] ?? []), 'is_string')));
+            $input = ['prompt' => $prompt];
+            // پارامترهای اختیاری فقط وقتی ارسال می‌شوند که کاتالوگ زندهٔ مدل
+            // آن‌ها را اعلام کرده باشد؛ این کار جلوی ردشدن درخواست به‌خاطر
+            // فرستادن فیلدهای مدل دیگری را می‌گیرد.
+            if ($supportedDurations === [] || in_array((string) $duration, $supportedDurations, true)) {
+                if ($supportedDurations !== []) $input['duration'] = $duration;
+            }
+            if ($supportedResolutions !== [] && in_array(strtolower((string) $options['resolution']), $supportedResolutions, true)) {
+                $input['resolution'] = (string) $options['resolution'];
+            }
+            if ($aspectSupported && ($supportedAspectRatios === [] || in_array(strtolower((string) $options['aspect_ratio']), $supportedAspectRatios, true))) {
+                if ($supportedAspectRatios !== []) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
+            }
+            $audioRequested = (bool) (($config['audio_allowed'] ?? false) && ($options['generate_audio'] ?? $config['audio_default'] ?? false));
+            if ($audioRequested && data_get($capabilities, 'supports_audio') === true) $input['generate_audio'] = true;
+            if ($negativePrompt !== '' && in_array('negative_prompt', $passthrough, true)) $input['negative_prompt'] = $negativePrompt;
+            if (isset($options['seed']) && (data_get($capabilities, 'supports_seed') === true || in_array('seed', $passthrough, true))) {
+                $input['seed'] = (int) $options['seed'];
+            }
             if ($sourceImages !== []) {
                 $references = array_map(fn (string $image): array => [
                     'type' => 'image_url',
                     'image_url' => ['url' => $image],
                 ], $sourceImages);
                 $useReferences = ($options['reference_mode'] ?? null) === 'input_references' || count($references) > 1;
-                if ($useReferences) {
+                $supportedFrames = array_values(array_filter((array) data_get($model->capability_config, 'supported_frame_images', []), 'is_string'));
+                // فقط مدل‌هایی که در کاتالوگ زنده frame_images را اعلام کرده‌اند
+                // باید قالب first/last frame دریافت کنند؛ برای سایر مدل‌ها قالب
+                // رسمی input_references استفاده می‌شود تا درخواست با schema مدل
+                // ناسازگار نشود.
+                if ($useReferences || $supportedFrames === []) {
                     $input['input_references'] = $references;
                 } else {
+                    $frameType = in_array('first_frame', $supportedFrames, true) ? 'first_frame' : $supportedFrames[0];
                     $input['frame_images'] = [[
                         ...$references[0],
-                        'frame_type' => 'first_frame',
+                        'frame_type' => $frameType,
                     ]];
                 }
             }
             if (!empty($options['source_video_url'])) {
+                if (data_get($model->capability_config, 'supports_video_to_video') !== true
+                    && $model->supports_video_input !== true) {
+                    throw ValidationException::withMessages([
+                        'source_video' => 'مدل انتخاب‌شده ورودی ویدیویی را پشتیبانی نمی‌کند.',
+                    ]);
+                }
                 $input['input_references'][] = [
                     'type' => 'video_url',
                     'video_url' => ['url' => $options['source_video_url']],

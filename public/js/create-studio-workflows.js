@@ -67,7 +67,7 @@
   }
 
   function modelSupportsWorkflow(item) {
-    if (!item) return true;
+    if (!item) return false;
     if (workflow === 'text_to_video') return item.supports_text;
     if (workflow === 'video_to_video') return item.supports_video;
     if (workflow === 'image_sequence_to_video') return item.supports_image && Number(item.max_images || 1) >= 2;

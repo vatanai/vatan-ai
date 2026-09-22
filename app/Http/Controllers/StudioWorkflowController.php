@@ -38,7 +38,7 @@ class StudioWorkflowController extends Controller
             // خارج از قرارداد OpenRouter به صف ارسال نشود.
             ->where('provider', 'openrouter')
             ->whereNotNull('capability_config')
-            ->whereIn('task_type', ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'])
+            ->whereIn('task_type', ['text_to_video', 'image_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
             ->get()
@@ -89,6 +89,7 @@ class StudioWorkflowController extends Controller
         $model = $this->selectedModel($request, $product, $workflow);
         $quote = $studioCosts->quote($product, [
             'media_type' => 'video',
+            'workflow' => $workflow,
             'resolution' => (string) $request->query('resolution', '720p'),
             'aspect_ratio' => (string) $request->query('aspect_ratio', '16:9'),
             'duration' => max(1, min(15, (int) $request->query('duration', 4))),
@@ -132,6 +133,7 @@ class StudioWorkflowController extends Controller
             'source_video' => [$isVideoWorkflow ? 'required' : 'nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'rights_confirmed' => ['accepted'],
         ]);
+        $this->ensureWorkflowInputSupport($model, $workflow, $modelSchemas);
         $this->ensureSupportedOptions($model, $request, $modelSchemas);
 
         $runner = clone $product;
@@ -338,6 +340,24 @@ class StudioWorkflowController extends Controller
         }
 
         return $model;
+    }
+
+    private function ensureWorkflowInputSupport(AiModel $model, string $workflow, VideoModelSchemaService $modelSchemas): void
+    {
+        $capabilities = (array) ($model->capability_config ?? []);
+        $summary = $modelSchemas->summarize($model);
+        $supported = match ($workflow) {
+            'text_to_video' => data_get($capabilities, 'supports_text_to_video', $model->task_type === 'text_to_video') === true,
+            'image_to_video', 'image_sequence_to_video' => (bool) ($summary['supports_image'] || data_get($capabilities, 'supports_image_to_video') === true),
+            'video_to_video' => (bool) ($summary['supports_video'] || data_get($capabilities, 'supports_video_to_video') === true),
+            default => false,
+        };
+
+        if (!$supported) {
+            throw ValidationException::withMessages([
+                'studio_model' => 'مدل انتخاب‌شده ورودی این حالت را پشتیبانی نمی‌کند؛ یک مدل سازگار انتخاب کنید.',
+            ]);
+        }
     }
 
     /**

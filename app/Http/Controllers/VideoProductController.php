@@ -280,6 +280,7 @@ class VideoProductController extends Controller
             'error_code' => $generatedVideo->error_code,
             'retryable' => (bool) $generatedVideo->retryable,
             'generation_id' => $generatedVideo->id,
+            'correlation_id' => $generatedVideo->correlation_id,
             'video_url' => $generatedVideo->status === 'completed' ? $generatedVideo->playbackUrl() : null,
             'error_message' => $generatedVideo->error_message,
             'credits_reserved' => (int) $generatedVideo->credits_reserved,
@@ -292,7 +293,7 @@ class VideoProductController extends Controller
                 : route('app.video-generation.cancel', $generatedVideo),
             'retry_url' => route('app.video-generation.retry', $generatedVideo),
             'remaining_tokens' => $request->user()->fresh()->tokens,
-        ]);
+        ])->header('X-Correlation-ID', (string) $generatedVideo->correlation_id);
     }
 
     public function cancel(Request $request, GeneratedVideo $generatedVideo, VideoGenerationService $videos)

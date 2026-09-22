@@ -495,33 +495,63 @@ class AiCatalogSyncService
         $frameTypes = array_values(array_filter((array) ($remote['supported_frame_images'] ?? []), 'is_string'));
         $taskType = $frameTypes !== [] ? 'image_to_video' : 'text_to_video';
         $pricing = (array) ($remote['pricing_skus'] ?? []);
+        $passthrough = array_values(array_filter((array) ($remote['allowed_passthrough_parameters'] ?? []), 'is_string'));
+        $description = strtolower((string) ($remote['description'] ?? ''));
+        $capabilityBlob = strtolower(json_encode([
+            'description' => $description,
+            'pricing_skus' => $pricing,
+            'allowed_passthrough_parameters' => $passthrough,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '');
+        // OpenRouter ویدیوی ورودی را به‌صورت فیلد مستقل در کاتالوگ اعلام نمی‌کند؛
+        // این قابلیت از SKUهای «with_video_input»، پارامترهای عبوری video/videos
+        // یا توضیح رسمی مدل تشخیص داده می‌شود. صرف وجود خروجی ویدیو کافی نیست.
+        $supportsVideoInput = (bool) preg_match(
+            '/video[s]?[_ -]?input|video[s]?[_ -]?reference|input[_ -]?video|reference[s]?[_ -]?video|reference[- _]?to[- _]?video|video[_ -]?continuation|video[_ -]?edit|"video"|"videos"/',
+            $capabilityBlob,
+        );
         $resolutionTiers = [];
+        $workflowResolutionTiers = ['text_to_video' => [], 'image_to_video' => []];
 
         foreach ((array) ($remote['supported_resolutions'] ?? []) as $resolution) {
             $resolution = (string) $resolution;
-            $candidates = [
+            $genericCandidates = [
                 'cents_per_video_output_second_' . strtolower($resolution),
                 'duration_seconds_' . strtolower($resolution),
                 'duration_seconds_' . strtoupper($resolution),
-                'text_to_video_duration_seconds_' . strtolower($resolution),
-                'image_to_video_duration_seconds_' . strtolower($resolution),
             ];
-            foreach ($candidates as $key) {
+            $workflowCandidates = [
+                'text_to_video' => ['text_to_video_duration_seconds_' . strtolower($resolution)],
+                'image_to_video' => ['image_to_video_duration_seconds_' . strtolower($resolution)],
+            ];
+            foreach ($genericCandidates as $key) {
                 if (is_numeric($pricing[$key] ?? null)) {
-                    $value = (float) $pricing[$key];
-                    if (str_starts_with($key, 'cents_')) $value /= 100;
-                    $resolutionTiers[$resolution] = $value;
+                    $resolutionTiers[$resolution] = $this->normalizeOpenRouterPrice($key, $pricing[$key]);
                     break;
                 }
+            }
+            foreach ($workflowCandidates as $workflow => $candidates) {
+                foreach ($candidates as $key) {
+                    if (is_numeric($pricing[$key] ?? null)) {
+                        $workflowResolutionTiers[$workflow][$resolution] = $this->normalizeOpenRouterPrice($key, $pricing[$key]);
+                        break;
+                    }
+                }
+            }
+            // وقتی فقط قیمت workflow-specific موجود است، همان را به‌عنوان
+            // fallback همان workflow نگه می‌داریم؛ هرگز قیمت text را به image
+            // نسبت نمی‌دهیم.
+            if (!isset($resolutionTiers[$resolution])) {
+                $resolutionTiers[$resolution] = $workflowResolutionTiers['text_to_video'][$resolution]
+                    ?? $workflowResolutionTiers['image_to_video'][$resolution]
+                    ?? null;
+                if ($resolutionTiers[$resolution] === null) unset($resolutionTiers[$resolution]);
             }
         }
 
         if ($resolutionTiers === []) {
             foreach (['duration_seconds', 'cents_per_second_output', 'cents_per_video_output_second_480p'] as $key) {
                 if (is_numeric($pricing[$key] ?? null)) {
-                    $value = (float) $pricing[$key];
-                    if (str_starts_with($key, 'cents_')) $value /= 100;
-                    $resolutionTiers['default'] = $value;
+                    $resolutionTiers['default'] = $this->normalizeOpenRouterPrice($key, $pricing[$key]);
                     break;
                 }
             }
@@ -535,12 +565,21 @@ class AiCatalogSyncService
         $capabilities = [
             'supports_text_to_video' => true,
             'supports_image_to_video' => $frameTypes !== [],
+            'supports_video_to_video' => $supportsVideoInput,
+            'supports_video_input' => $supportsVideoInput,
+            'supports_audio' => (bool) ($remote['generate_audio'] ?? false),
+            'supports_seed' => (bool) ($remote['seed'] ?? false),
             'supports_text_to_image' => false,
-            'allowed_inputs' => ['prompt', 'duration', 'resolution', 'aspect_ratio', 'generate_audio', 'seed', 'frame_images', 'input_references'],
+            'allowed_inputs' => array_values(array_unique(array_merge(
+                ['prompt', 'duration', 'resolution', 'aspect_ratio', 'generate_audio', 'seed'],
+                $frameTypes !== [] ? ['frame_images', 'input_references'] : [],
+                $supportsVideoInput ? ['input_references'] : [],
+            ))),
             'supported_durations' => array_values(array_map('intval', (array) ($remote['supported_durations'] ?? []))),
             'supported_resolutions' => array_values(array_map('strval', (array) ($remote['supported_resolutions'] ?? []))),
             'supported_aspect_ratios' => array_values(array_map('strval', (array) ($remote['supported_aspect_ratios'] ?? []))),
             'supported_frame_images' => $frameTypes,
+            'allowed_passthrough_parameters' => $passthrough,
         ];
         if ($qualityScore !== null) $capabilities['quality_score'] = $qualityScore;
 
@@ -556,7 +595,7 @@ class AiCatalogSyncService
             'supports_face_identity' => false,
             'supports_multiple_faces' => false,
             'supports_audio' => (bool) ($remote['generate_audio'] ?? false),
-            'supports_video_input' => false,
+            'supports_video_input' => $supportsVideoInput,
             'cost_per_generation' => 0,
             'cost_per_generation_usd' => $resolutionTiers['720p'] ?? $resolutionTiers['default'] ?? null,
             'default_width' => 1280,
@@ -570,11 +609,14 @@ class AiCatalogSyncService
                 'source' => 'openrouter.video.models',
                 'unit' => 'per_second',
                 'resolution_tiers' => $resolutionTiers,
+                'workflow_resolution_tiers' => $workflowResolutionTiers,
                 'pricing_skus' => $pricing,
                 'supported_resolutions' => $remote['supported_resolutions'] ?? [],
                 'supported_durations' => $remote['supported_durations'] ?? [],
                 'supported_aspect_ratios' => $remote['supported_aspect_ratios'] ?? [],
                 'supported_frame_images' => $frameTypes,
+                'allowed_passthrough_parameters' => $passthrough,
+                'supports_video_to_video' => $supportsVideoInput,
             ],
             'pricing_type' => 'per_second',
             'commercial_use' => null,
@@ -584,6 +626,12 @@ class AiCatalogSyncService
             'last_verified_at' => now(),
             'description' => (string) ($remote['description'] ?? "مدل {$modelId} از OpenRouter."),
         ];
+    }
+
+    private function normalizeOpenRouterPrice(string $key, mixed $value): float
+    {
+        $price = (float) $value;
+        return str_starts_with($key, 'cents_') ? $price / 100 : $price;
     }
 
     private function replicateData(array $remote, array $classification): array

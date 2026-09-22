@@ -180,7 +180,7 @@ class AiModelController extends Controller
     public function syncCatalog(Request $request, AiCatalogSyncService $syncer)
     {
         $data = $request->validate([
-            'provider' => 'required|string|in:fal,replicate,all',
+            'provider' => 'required|string|in:fal,replicate,openrouter,all',
         ]);
 
         try {
