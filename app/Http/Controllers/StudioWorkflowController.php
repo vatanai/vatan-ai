@@ -13,6 +13,8 @@ use App\Services\VideoModelSchemaService;
 use App\Services\VideoProductConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -24,6 +26,11 @@ class StudioWorkflowController extends Controller
         $data['experimental'] = true;
         $data['studioConfig']['workflow_generate_url'] = route('app.create.studio.workflows.generate');
         $data['studioConfig']['workflow_quote_url'] = route('app.create.studio.workflows.quote');
+        $data['studioConfig']['upload_limits'] = [
+            'max_reference_images' => $this->infrastructureImageLimit(),
+            'max_image_bytes' => max(1024, (int) config('studio.max_image_kilobytes', 12288)) * 1024,
+            'max_video_bytes' => 100 * 1024 * 1024,
+        ];
         $data['studioConfig']['workflow_models'] = AiModel::query()
             ->where('is_active', true)
             ->where('output_modality', 'video')
@@ -45,7 +52,7 @@ class StudioWorkflowController extends Controller
             ->map(function (AiModel $model) use ($modelSchemas): array {
                 $summary = $modelSchemas->summarize($model);
                 $capabilities = (array) ($model->capability_config ?? []);
-                $maxImages = max(1, min(4, (int) data_get(
+                $maxImages = max(1, min($this->infrastructureImageLimit(), (int) data_get(
                     $capabilities,
                     'max_reference_images',
                     data_get($capabilities, 'max_images', 1),
@@ -90,17 +97,28 @@ class StudioWorkflowController extends Controller
 
         return response()->json($quote + [
             'workflow' => $workflow,
-            'input_count' => max(0, min(4, (int) $request->query('input_count', 0))),
+            'input_count' => max(0, min($this->maxReferenceImages($model), (int) $request->query('input_count', 0))),
         ]);
     }
 
     public function generate(Request $request, VideoGenerationService $videos, VideoModelSchemaService $modelSchemas): \Illuminate\Http\JsonResponse
     {
+        $correlationId = (string) Str::uuid();
+        Log::withContext([
+            'correlation_id' => $correlationId,
+            'user_id' => $request->user()?->id,
+            'studio_operation' => 'video_generation',
+        ]);
         $workflow = $this->workflow($request->input('workflow'));
         $product = $this->videoProduct();
         $model = $this->selectedModel($request, $product, $workflow);
         $isImageWorkflow = in_array($workflow, ['image_to_video', 'image_sequence_to_video'], true);
         $isVideoWorkflow = $workflow === 'video_to_video';
+        $maxImages = $this->maxReferenceImages($model);
+        if ($workflow === 'image_sequence_to_video' && $maxImages < 2) {
+            throw ValidationException::withMessages(['studio_model' => 'مدل انتخاب‌شده از توالی چند تصویر پشتیبانی نمی‌کند.']);
+        }
+        $maxImageKilobytes = max(1024, (int) config('studio.max_image_kilobytes', 12288));
 
         $request->validate([
             'workflow' => ['required', Rule::in(['text_to_video', 'image_to_video', 'image_sequence_to_video', 'video_to_video'])],
@@ -109,8 +127,8 @@ class StudioWorkflowController extends Controller
             'video.aspect_ratio' => ['required', Rule::in(VideoProductConfigService::STUDIO_ASPECT_RATIOS)],
             'video.resolution' => ['required', Rule::in(VideoProductConfigService::RESOLUTIONS)],
             'video.motion_preset' => ['nullable', 'string', 'max:80'],
-            'source_images' => [$isImageWorkflow ? 'required' : 'nullable', 'array', 'min:' . ($workflow === 'image_sequence_to_video' ? 2 : 1), 'max:4'],
-            'source_images.*' => ['image', 'mimes:jpeg,jpg,png,webp,avif', 'max:12288'],
+            'source_images' => [$isImageWorkflow ? 'required' : 'nullable', 'array', 'min:' . ($workflow === 'image_sequence_to_video' ? 2 : 1), 'max:' . $maxImages],
+            'source_images.*' => ['image', 'mimes:jpeg,jpg,png,webp,avif', 'max:' . $maxImageKilobytes],
             'source_video' => [$isVideoWorkflow ? 'required' : 'nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'rights_confirmed' => ['accepted'],
         ]);
@@ -132,18 +150,20 @@ class StudioWorkflowController extends Controller
         $providerOptions['video'] = $videoConfig;
         $runner->provider_options = $providerOptions;
 
-        $imageData = [];
+        $imageUrls = [];
         $imagePaths = [];
+        $uploadIds = [];
         foreach ((array) $request->file('source_images', []) as $file) {
             $path = $file->store('uploads/video-inputs/images', 'public');
             $imagePaths[] = $path;
-            $imageData[] = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
-            UserUpload::create([
+            $imageUrls[] = asset('storage/' . ltrim($path, '/'));
+            $uploadIds[] = UserUpload::create([
                 'user_id' => $request->user()->id,
                 'file_path' => $path,
                 'size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
-            ]);
+                'expires_at' => now()->addDays(7),
+            ])->id;
         }
 
         $sourceVideoUrl = null;
@@ -152,12 +172,13 @@ class StudioWorkflowController extends Controller
             $file = $request->file('source_video');
             $sourceVideoPath = $file->store('uploads/video-inputs/videos', 'public');
             $sourceVideoUrl = asset('storage/' . $sourceVideoPath);
-            UserUpload::create([
+            $uploadIds[] = UserUpload::create([
                 'user_id' => $request->user()->id,
                 'file_path' => $sourceVideoPath,
                 'size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
-            ]);
+                'expires_at' => now()->addDays(7),
+            ])->id;
         }
 
         try {
@@ -171,27 +192,55 @@ class StudioWorkflowController extends Controller
                 'resolution' => (string) $request->input('video.resolution'),
                 'motion_preset' => (string) $request->input('video.motion_preset', ''),
                 'generate_audio' => false,
-                'source_image_data' => $imageData[0] ?? null,
-                'source_image_data_list' => $imageData,
+                'source_image_data' => $imageUrls[0] ?? null,
+                'source_image_data_list' => $imageUrls,
                 'source_upload_path' => $imagePaths[0] ?? null,
                 'source_upload_paths' => $imagePaths,
                 'source_video_path' => $sourceVideoPath,
                 'source_video_url' => $sourceVideoUrl,
                 'workflow' => $workflow,
-                'reference_mode' => $workflow === 'image_sequence_to_video' || count($imageData) > 1 ? 'input_references' : null,
+                'reference_mode' => $workflow === 'image_sequence_to_video' || count($imageUrls) > 1 ? 'input_references' : null,
                 'studio_mode' => true,
+                'idempotency_key' => (string) $request->header('Idempotency-Key', $request->input('idempotency_key', '')),
+                'correlation_id' => $correlationId,
+            ]);
+
+            if ($generation->getAttribute('was_idempotent_duplicate')) {
+                foreach ($imagePaths as $path) Storage::disk('public')->delete($path);
+                if ($sourceVideoPath) Storage::disk('public')->delete($sourceVideoPath);
+                UserUpload::query()->whereIn('id', $uploadIds)->delete();
+            } else {
+                UserUpload::query()->whereIn('id', $uploadIds)->update(['status' => 'attached']);
+            }
+
+            Log::info('Studio video generation accepted', [
+                'generation_id' => $generation->id,
+                'workflow' => $workflow,
+                'model' => $model->openrouter_model_id,
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => $generation->status,
-                'generation_id' => $generation->id,
-                'status_url' => route('app.video-generation.status', $generation),
                 'message' => 'درخواست وارد صف ساخت شد.',
-            ], 202);
+                'error_code' => null,
+                'retryable' => false,
+                'generation_id' => $generation->id,
+                'credits_reserved' => (int) $generation->credits_reserved,
+                'credits_settled' => (int) $generation->credits_settled,
+                'credits_refunded' => (int) $generation->credits_refunded,
+                'poll_url' => route('app.video-generation.status', $generation),
+                'status_url' => route('app.video-generation.status', $generation),
+            ], 202)->header('X-Correlation-ID', $correlationId);
         } catch (ValidationException $exception) {
+            foreach ($imagePaths as $path) Storage::disk('public')->delete($path);
+            if ($sourceVideoPath) Storage::disk('public')->delete($sourceVideoPath);
+            UserUpload::query()->whereIn('id', $uploadIds)->delete();
             throw $exception;
         } catch (\Throwable $exception) {
+            foreach ($imagePaths as $path) Storage::disk('public')->delete($path);
+            if ($sourceVideoPath) Storage::disk('public')->delete($sourceVideoPath);
+            UserUpload::query()->whereIn('id', $uploadIds)->update(['status' => 'failed', 'error_message' => 'ثبت درخواست ساخت کامل نشد.']);
             report($exception);
 
             $exceptionMessage = strtolower($exception->getMessage());
@@ -200,9 +249,16 @@ class StudioWorkflowController extends Controller
                 || str_contains($exceptionMessage, 'privacyinformation')) {
                 return response()->json([
                     'success' => false,
+                    'status' => 'failed',
                     'message' => 'پروایدر به‌دلیل سیاست ایمنی، تصویر دارای چهرهٔ انسان واقعی یا اطلاعات خصوصی را نپذیرفت؛ برای ساخت ویدیو از تصویری بدون چهرهٔ واقعی استفاده کنید.',
                     'error_code' => 'VIDEO_INPUT_SAFETY_REJECTED',
-                ], 422);
+                    'retryable' => false,
+                    'generation_id' => null,
+                    'credits_reserved' => 0,
+                    'credits_settled' => 0,
+                    'credits_refunded' => 0,
+                    'poll_url' => null,
+                ], 422)->header('X-Correlation-ID', $correlationId);
             }
             $message = str_contains($exceptionMessage, 'exhausted balance')
                 || str_contains($exceptionMessage, 'user is locked')
@@ -211,10 +267,28 @@ class StudioWorkflowController extends Controller
 
             return response()->json([
                 'success' => false,
+                'status' => 'failed',
                 'message' => $message,
                 'error_code' => 'STUDIO_WORKFLOW_UNAVAILABLE',
-            ], 503);
+                'retryable' => true,
+                'generation_id' => null,
+                'credits_reserved' => 0,
+                'credits_settled' => 0,
+                'credits_refunded' => 0,
+                'poll_url' => null,
+            ], 503)->header('X-Correlation-ID', $correlationId);
         }
+    }
+
+    private function infrastructureImageLimit(): int
+    {
+        return max(1, min(50, (int) config('studio.max_reference_images', 20)));
+    }
+
+    private function maxReferenceImages(AiModel $model): int
+    {
+        $configured = (int) data_get($model->capability_config, 'max_reference_images', data_get($model->capability_config, 'max_images', 1));
+        return max(1, min($this->infrastructureImageLimit(), $configured));
     }
 
     private function videoProduct(): Product

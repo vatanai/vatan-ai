@@ -185,12 +185,29 @@ abstract class AbstractQueuedImageProvider implements AiImageProviderInterface, 
                 throw new RuntimeException('provider شناسه‌ی درخواست برنگرداند.');
             }
 
-            $reservation->update([
-                'external_request_id' => $requestId,
-                'status' => 'queued',
-                'raw_response' => $remote,
-                'submitted_at' => now(),
-            ]);
+            $existing = AiProviderRequest::query()
+                ->where('provider', $this->provider())
+                ->where('external_request_id', $requestId)
+                ->where('id', '<>', $reservation->id)
+                ->first();
+            if ($existing) {
+                if ((int) $existing->order_id !== (int) ($payload['order_id'] ?? 0)) {
+                    throw new RuntimeException('provider شناسه‌ای تکراری برای سفارش متفاوت برگرداند.');
+                }
+                $reservation->update([
+                    'status' => 'failed',
+                    'error_code' => 'idempotent_duplicate',
+                    'error_message' => 'ارسال تکراری با درخواست اصلی ادغام شد.',
+                    'completed_at' => now(),
+                ]);
+            } else {
+                $reservation->update([
+                    'external_request_id' => $requestId,
+                    'status' => 'queued',
+                    'raw_response' => $remote,
+                    'submitted_at' => now(),
+                ]);
+            }
         } catch (\Throwable $error) {
             // برای جلوگیری از عبور درخواست‌های خطادار از سقف عددی/هزینه‌ای،
             // رزرو تا پایان بازه باقی می‌ماند و وضعیت خطا می‌گیرد.

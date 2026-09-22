@@ -212,6 +212,10 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     Route::post('/create-studio-workflows/generate', [\App\Http\Controllers\StudioWorkflowController::class, 'generate'])
         ->middleware('auth')
         ->name('app.create.studio.workflows.generate');
+    Route::post('/video-generations/{generatedVideo}/cancel', [\App\Http\Controllers\VideoProductController::class, 'cancel'])
+        ->middleware('auth')->name('app.video-generation.cancel');
+    Route::post('/video-generations/{generatedVideo}/retry', [\App\Http\Controllers\VideoProductController::class, 'retry'])
+        ->middleware('auth')->name('app.video-generation.retry');
     Route::get('/create-samples', function (\App\Services\ProductBuildSchema $schema) {
         $product = \App\Models\Product::where('status', 'active')->latest()->first();
 
@@ -310,7 +314,7 @@ Route::prefix('app')->middleware('site.page')->group(function () {
         ->middleware(['auth', \App\Http\Middleware\MarkTelegramBuildCompleted::class])
         ->name('app.create.generate');
     Route::post('/video-products/{product:slug}/quote', [\App\Http\Controllers\VideoProductController::class, 'quote'])->middleware('auth')->name('app.video-product.quote');
-                Route::get('/video-generations/{generatedVideo}/status', [\App\Http\Controllers\VideoProductController::class, 'status'])
+    Route::get('/video-generations/{generatedVideo}/status', [\App\Http\Controllers\VideoProductController::class, 'status'])
         ->middleware('auth')
         ->name('app.video-generation.status');
     Route::get('/profile',      [ProfileController::class, 'index'])->name('app.profile');
@@ -340,6 +344,7 @@ Route::get('/generation/{id}/status', [GenerationController::class, 'checkStatus
 // وب‌هوک‌های providerها عمومی هستند، اما قبل از پردازش با امضای رسمی provider بررسی می‌شوند.
 Route::post('/webhooks/ai/fal', [AiWebhookController::class, 'fal'])->name('webhooks.ai.fal');
 Route::post('/webhooks/ai/replicate', [AiWebhookController::class, 'replicate'])->name('webhooks.ai.replicate');
+Route::post('/webhooks/ai/openrouter', [AiWebhookController::class, 'openrouter'])->name('webhooks.ai.openrouter');
 Route::post('/webhooks/video-studio/{job}/status', [VideoStudioController::class, 'n8nStatus'])
     ->name('webhooks.video-studio.status');
 Route::get('/webhooks/meta', [\App\Http\Controllers\MarketingMetaWebhookController::class, 'verify'])

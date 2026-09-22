@@ -49,6 +49,39 @@ return Application::configure(basePath: dirname(__DIR__))
         // در فایل blade است، نه کش قدیمی — و پارامتر __viewcache_recovered=1 در آدرس از
         // حلقه‌ی بی‌نهایت جلوگیری می‌کند.
         $exceptions->render(function (\Throwable $e, Request $request) {
+            $isStudioJson = $request->expectsJson()
+                && ($request->is('app/create-studio-workflows/*') || $request->boolean('studio_mode'));
+            if ($isStudioJson && $e instanceof \Illuminate\Validation\ValidationException) {
+                $errors = $e->errors();
+                return response()->json([
+                    'success' => false,
+                    'status' => 'failed',
+                    'message' => collect($errors)->flatten()->filter()->first() ?: 'اطلاعات واردشده معتبر نیست.',
+                    'error_code' => 'REQUEST_VALIDATION_FAILED',
+                    'retryable' => false,
+                    'generation_id' => null,
+                    'credits_reserved' => 0,
+                    'credits_settled' => 0,
+                    'credits_refunded' => 0,
+                    'poll_url' => null,
+                    'errors' => $errors,
+                ], 422);
+            }
+            if ($isStudioJson && $e instanceof \Illuminate\Auth\AuthenticationException) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'failed',
+                    'message' => 'برای انجام این کار ابتدا وارد حساب کاربری شوید.',
+                    'error_code' => 'AUTHENTICATION_REQUIRED',
+                    'retryable' => false,
+                    'generation_id' => null,
+                    'credits_reserved' => 0,
+                    'credits_settled' => 0,
+                    'credits_refunded' => 0,
+                    'poll_url' => null,
+                ], 401);
+            }
+
             $isLabRequest = ($request->is('admin/lab') || $request->is('admin/lab/*'))
                 && ($request->isMethod('post') || $request->expectsJson());
             if ($isLabRequest) {

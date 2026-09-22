@@ -25,15 +25,21 @@
   const result = root.querySelector('[data-studio-result]');
   const outputVideo = root.querySelector('[data-studio-output-video]');
   const outputImage = root.querySelector('[data-studio-output-image]');
+  const creditSummary = root.querySelector('[data-studio-credit-summary]');
   const videoPlay = root.querySelector('[data-studio-video-play]');
   const errorBox = root.querySelector('[data-studio-error]');
   const errorText = errorBox?.querySelector('span');
+  const progressActions = root.querySelector('[data-studio-progress-actions]');
+  const cancelButton = root.querySelector('[data-studio-cancel]');
+  const retryButton = root.querySelector('[data-studio-retry]');
 
   let workflow = 'text_to_video';
   let progressTimer = null;
   let pollTimer = null;
   let quoteSequence = 0;
   let objectUrls = [];
+  let activeGeneration = null;
+  const activeGenerationKey = 'vatan-studio-active-video';
 
   const faDigits = (value) => String(value).replace(/[0-9]/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
 
@@ -64,6 +70,7 @@
     if (!item) return true;
     if (workflow === 'text_to_video') return item.supports_text;
     if (workflow === 'video_to_video') return item.supports_video;
+    if (workflow === 'image_sequence_to_video') return item.supports_image && Number(item.max_images || 1) >= 2;
     return item.supports_image;
   }
 
@@ -214,6 +221,9 @@
     }
     if (uploadInput) {
       uploadInput.multiple = isImageWorkflow;
+      uploadInput.dataset.maxFiles = String(isImageWorkflow
+        ? Math.max(1, Number(workflowModel(selectedModel())?.max_images || 1))
+        : 1);
       uploadInput.accept = isImageWorkflow
         ? 'image/png,image/jpeg,image/webp,image/avif'
         : isVideoWorkflow
@@ -236,9 +246,10 @@
       if (title) title.textContent = disabled
         ? 'فایل لازم نیست'
         : isImageWorkflow ? 'افزودن تصویر مرجع' : 'افزودن ویدیوی مرجع';
+      const maxImages = Math.max(1, Number(workflowModel(selectedModel())?.max_images || 1));
       if (help) help.textContent = disabled
         ? 'پرامپت برای ساخت کافی است'
-        : isImageWorkflow ? (workflow === 'image_sequence_to_video' ? '۲ تا ۴ عکس پشت‌سرهم' : '۱ تا ۴ تصویر') : 'MP4، WebM یا MOV';
+        : isImageWorkflow ? (workflow === 'image_sequence_to_video' ? `۲ تا ${faDigits(maxImages)} عکس پشت‌سرهم` : `۱ تا ${faDigits(maxImages)} تصویر برای این مدل`) : 'MP4، WebM یا MOV';
     }
 
     if (workflowFiles) workflowFiles.hidden = disabled || workflowFiles.childElementCount === 0;
@@ -265,7 +276,7 @@
       uploadFile.textContent = files.length > 1 ? faDigits(files.length) + ' فایل انتخاب شد' : (files[0]?.name || '');
     }
     workflowFiles.hidden = files.length === 0;
-    files.slice(0, 4).forEach((file, index) => {
+    files.forEach((file, index) => {
       const item = document.createElement('div');
       item.className = 'create-studio-workflow-file';
       const url = URL.createObjectURL(file);
@@ -278,9 +289,28 @@
       } else {
         item.innerHTML = '<i class="fa-solid fa-film"></i>';
       }
-      item.insertAdjacentHTML('beforeend', '<b>' + faDigits(index + 1) + '</b><span>' + file.name + '</span>');
+      const number = document.createElement('b');
+      number.textContent = faDigits(index + 1);
+      const name = document.createElement('span');
+      name.textContent = file.name;
+      const state = document.createElement('em');
+      state.textContent = 'آماده ارسال';
+      item.append(number, name, state);
       workflowFiles.appendChild(item);
     });
+  }
+
+  function renderCreditSummary(payload) {
+    if (!creditSummary || !payload) return;
+    const reserved = Math.max(0, Number(payload.credits_reserved || 0));
+    const settled = Math.max(0, Number(payload.credits_settled || 0));
+    const refunded = Math.max(0, Number(payload.credits_refunded || 0));
+    creditSummary.querySelector('[data-studio-credits-reserved]').textContent = faDigits(reserved);
+    creditSummary.querySelector('[data-studio-credits-settled]').textContent = faDigits(settled);
+    creditSummary.querySelector('[data-studio-credits-refunded]').textContent = faDigits(refunded);
+    const refundItem = creditSummary.querySelector('[data-studio-refund-item]');
+    if (refundItem) refundItem.hidden = refunded < 1;
+    creditSummary.hidden = false;
   }
 
   function setWorkflow(nextWorkflow) {
@@ -363,13 +393,20 @@
       await new Promise((resolve) => { pollTimer = window.setTimeout(resolve, 2500); });
       const response = await fetch(statusUrl, {headers: {'Accept': 'application/json'}});
       const payload = await response.json();
-      if (payload.status === 'completed' && payload.video_url) return payload.video_url;
-      if (['failed', 'canceled'].includes(payload.status)) {
-        throw new Error(payload.error_message || 'ساخت ویدیو ناموفق بود.');
+      activeGeneration = {...activeGeneration, ...payload, statusUrl};
+      window.localStorage.setItem(activeGenerationKey, JSON.stringify(activeGeneration));
+      if (progressActions) progressActions.hidden = false;
+      if (cancelButton) cancelButton.hidden = !payload.cancel_url || ['completed', 'failed', 'canceled', 'needs_review'].includes(payload.status);
+      if (retryButton) retryButton.hidden = !(payload.retryable && payload.retry_url);
+      if (payload.status === 'completed' && payload.video_url) return payload;
+      if (['failed', 'canceled', 'needs_review'].includes(payload.status)) {
+        const error = new Error(payload.error_message || payload.message || 'ساخت ویدیو ناموفق بود.');
+        error.payload = payload;
+        throw error;
       }
-      if (progressText) progressText.textContent = payload.status === 'queued'
+      if (progressText) progressText.textContent = payload.message || (payload.status === 'queued'
         ? 'درخواست در صف ساخت قرار دارد...'
-        : 'مدل هوش مصنوعی در حال ساخت خروجی است...';
+        : 'مدل هوش مصنوعی در حال ساخت خروجی است...');
     }
     throw new Error('ساخت ویدیو بیشتر از زمان معمول طول کشید.');
   }
@@ -387,16 +424,17 @@
     }
 
     const files = [...(uploadInput?.files || [])];
-    if (files.length > 4) {
-      showError('حداکثر چهار فایل قابل انتخاب است.');
+    const maxImages = Math.max(1, Number(workflowModel(selectedModel())?.max_images || 1));
+    if ((workflow === 'image_to_video' || workflow === 'image_sequence_to_video') && files.length > maxImages) {
+      showError(`مدل انتخاب‌شده حداکثر ${faDigits(maxImages)} تصویر مرجع می‌پذیرد.`);
       return;
     }
     if (workflow === 'image_to_video' && files.length < 1) {
       showError('برای حالت عکس به ویدیو، حداقل یک تصویر انتخاب کنید.');
       return;
     }
-    if (workflow === 'image_sequence_to_video' && (files.length < 2 || files.length > 4)) {
-      showError('برای توالی داستانی، دو تا چهار تصویر انتخاب کنید.');
+    if (workflow === 'image_sequence_to_video' && (files.length < 2 || files.length > maxImages)) {
+      showError(`برای توالی داستانی، دو تا ${faDigits(maxImages)} تصویر انتخاب کنید.`);
       return;
     }
     if (workflow === 'video_to_video' && files.length !== 1) {
@@ -421,6 +459,7 @@
     }
 
     const data = new FormData(form);
+    const idempotencyKey = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     data.set('workflow', workflow);
     data.set('prompt', prompt.value.trim());
     data.set('studio_model', model?.value || '');
@@ -430,6 +469,7 @@
     data.set('video[resolution]', selectedValue('quality') || '720p');
     data.set('video[motion_preset]', selectedValue('motion') || '');
     data.set('rights_confirmed', '1');
+    data.set('idempotency_key', idempotencyKey);
     if (workflow === 'video_to_video') {
       data.append('source_video', files[0]);
     } else {
@@ -446,12 +486,17 @@
         headers: {
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
           'Accept': 'application/json',
+          'Idempotency-Key': idempotencyKey,
         },
         body: data,
       });
       const payload = await readPayload(response);
-      const videoUrl = await pollVideo(payload.status_url);
-      outputVideo.src = videoUrl;
+      activeGeneration = {statusUrl: payload.poll_url || payload.status_url, generation_id: payload.generation_id};
+      window.localStorage.setItem(activeGenerationKey, JSON.stringify(activeGeneration));
+      if (progressActions) progressActions.hidden = false;
+      const completed = await pollVideo(activeGeneration.statusUrl);
+      renderCreditSummary(completed);
+      outputVideo.src = completed.video_url;
       outputVideo.hidden = false;
       outputImage.hidden = true;
       outputVideo.controls = false;
@@ -461,6 +506,7 @@
       setProgress(100);
       window.setTimeout(() => { progress.hidden = true; }, 350);
       result.hidden = false;
+      window.localStorage.removeItem(activeGenerationKey);
       submitLabel.textContent = 'دوباره بساز';
       if (window.matchMedia('(max-width: 700px)').matches) {
         window.requestAnimationFrame(() => result.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'}));
@@ -468,10 +514,17 @@
     } catch (error) {
       stopProgress();
       setProgress(0);
-      if (progress) progress.hidden = true;
-      root.querySelector('[data-studio-video-content]')?.removeAttribute('hidden');
+      const canRetry = Boolean(error.payload?.retryable && error.payload?.retry_url);
+      if (progress) progress.hidden = !canRetry;
+      if (progressTitle && canRetry) progressTitle.textContent = 'ساخت ویدیو کامل نشد';
+      if (progressText && canRetry) progressText.textContent = error.message || 'می‌توانید دوباره تلاش کنید.';
+      if (progressActions) progressActions.hidden = !canRetry;
+      if (retryButton) retryButton.hidden = !canRetry;
+      if (cancelButton) cancelButton.hidden = true;
+      if (!canRetry) root.querySelector('[data-studio-video-content]')?.removeAttribute('hidden');
       submitLabel.textContent = 'بساز';
       showError(error.message || 'ارتباط با سرویس ساخت برقرار نشد.');
+      if (!canRetry) window.localStorage.removeItem(activeGenerationKey);
     } finally {
       submit.disabled = false;
       submit.removeAttribute('aria-busy');
@@ -506,8 +559,20 @@
     button.addEventListener('click', () => setWorkflow(button.dataset.workflowSubmode));
   });
   uploadInput?.addEventListener('change', () => {
-    const files = [...uploadInput.files].slice(0, 4);
-    if (files.length !== uploadInput.files.length) showError('حداکثر چهار فایل قابل انتخاب است.');
+    const maxImages = Math.max(1, Number(workflowModel(selectedModel())?.max_images || 1));
+    const limit = workflow === 'video_to_video' ? 1 : maxImages;
+    const files = [...uploadInput.files].slice(0, limit);
+    if (files.length !== uploadInput.files.length) showError(`مدل انتخاب‌شده حداکثر ${faDigits(limit)} فایل می‌پذیرد.`);
+    const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    const invalid = files.find((file) => workflow === 'video_to_video'
+      ? !['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type) || file.size > Number(config.upload_limits?.max_video_bytes || 104857600)
+      : !allowedImageTypes.has(file.type) || file.size > Number(config.upload_limits?.max_image_bytes || 12582912));
+    if (invalid) {
+      uploadInput.value = '';
+      renderFiles([]);
+      showError(workflow === 'video_to_video' ? 'فرمت یا حجم ویدیوی انتخاب‌شده معتبر نیست.' : `فرمت یا حجم فایل «${invalid.name}» معتبر نیست.`);
+      return;
+    }
     renderFiles(files);
     requestQuote();
   });
@@ -533,9 +598,77 @@
     generateWorkflow();
   }, true);
 
+  cancelButton?.addEventListener('click', async () => {
+    if (!activeGeneration?.cancel_url) return;
+    cancelButton.disabled = true;
+    try {
+      const response = await fetch(activeGeneration.cancel_url, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json'}});
+      const payload = await readPayload(response);
+      activeGeneration = {...activeGeneration, ...payload, cancel_url: null};
+      window.localStorage.setItem(activeGenerationKey, JSON.stringify(activeGeneration));
+      cancelButton.hidden = true;
+      if (progressText) progressText.textContent = payload.message;
+    } catch (error) {
+      showError(error.message || 'لغو ساخت انجام نشد.');
+    } finally { cancelButton.disabled = false; }
+  });
+
+  retryButton?.addEventListener('click', async () => {
+    if (!activeGeneration?.retry_url) return;
+    retryButton.disabled = true;
+    try {
+      const response = await fetch(activeGeneration.retry_url, {method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json'}});
+      const payload = await readPayload(response);
+      activeGeneration = {statusUrl: payload.poll_url, generation_id: payload.generation_id};
+      window.localStorage.setItem(activeGenerationKey, JSON.stringify(activeGeneration));
+      startProgress();
+      const completed = await pollVideo(activeGeneration.statusUrl);
+      renderCreditSummary(completed);
+      outputVideo.src = completed.video_url;
+      outputVideo.hidden = false;
+      outputImage.hidden = true;
+      outputVideo.controls = false;
+      videoPlay.hidden = false;
+      outputVideo.load();
+      stopProgress();
+      setProgress(100);
+      progress.hidden = true;
+      result.hidden = false;
+      window.localStorage.removeItem(activeGenerationKey);
+    } catch (error) { showError(error.message || 'تلاش دوباره انجام نشد.'); }
+    finally { retryButton.disabled = false; }
+  });
+
   const observer = new MutationObserver(syncMode);
   observer.observe(root, {attributes: true, attributeFilter: ['data-mode']});
   syncMode();
   syncModelConstraints();
   requestQuote();
+  try {
+    const savedGeneration = JSON.parse(window.localStorage.getItem(activeGenerationKey) || 'null');
+    if (savedGeneration?.statusUrl) {
+      activeGeneration = savedGeneration;
+      startProgress();
+      pollVideo(savedGeneration.statusUrl).then((completed) => {
+        renderCreditSummary(completed);
+        outputVideo.src = completed.video_url;
+        outputVideo.hidden = false;
+        outputVideo.load();
+        stopProgress();
+        progress.hidden = true;
+        result.hidden = false;
+        window.localStorage.removeItem(activeGenerationKey);
+      }).catch((error) => {
+        stopProgress();
+        const canRetry = Boolean(error.payload?.retryable && error.payload?.retry_url);
+        progress.hidden = !canRetry;
+        if (progressTitle && canRetry) progressTitle.textContent = 'ساخت ویدیو کامل نشد';
+        if (progressText && canRetry) progressText.textContent = error.message || 'می‌توانید دوباره تلاش کنید.';
+        if (retryButton) retryButton.hidden = !canRetry;
+        if (progressActions) progressActions.hidden = !canRetry;
+        showError(error.message || 'پیگیری درخواست قبلی کامل نشد.');
+        if (!canRetry) window.localStorage.removeItem(activeGenerationKey);
+      });
+    }
+  } catch (_) { window.localStorage.removeItem(activeGenerationKey); }
 }());

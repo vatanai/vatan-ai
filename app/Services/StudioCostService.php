@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
 class StudioCostService
 {
     public const CREDIT_VALUE_TOMAN = 1000;
+    public const ACTUAL_COST_PROFIT_PERCENT = 10.0;
 
     public function quote(Product $product, array $options = [], ?AiModel $model = null): array
     {
@@ -61,7 +62,7 @@ class StudioCostService
         $costKnown = $unitUsd !== null && $unitUsd > 0;
         $rate = $this->latestExchangeRate();
         $costTomanPerOutput = $costKnown ? $unitUsd * $rate : null;
-        $profitPercent = $this->profitPercent($mediaType);
+        $profitPercent = self::ACTUAL_COST_PROFIT_PERCENT;
         $sellPricePerOutput = $costTomanPerOutput === null ? null : $costTomanPerOutput * (1 + ($profitPercent / 100));
         $creditsPerOutput = $sellPricePerOutput === null ? null : max(1, (int) ceil($sellPricePerOutput / self::CREDIT_VALUE_TOMAN));
         $totalCostToman = $costTomanPerOutput === null ? null : $costTomanPerOutput * ($mediaType === 'image' ? $count : 1);
@@ -85,6 +86,21 @@ class StudioCostService
             'credit_value_toman' => self::CREDIT_VALUE_TOMAN,
             'count' => $count,
         ];
+    }
+
+    /** مبلغ نهایی طبق هزینهٔ واقعی سرویس‌دهنده و سود تنظیم‌شدهٔ استودیو. */
+    public function creditsForActualCost(float $actualCostUsd, string $mediaType): int
+    {
+        if ($actualCostUsd < 0) {
+            throw new \InvalidArgumentException('هزینهٔ واقعی نمی‌تواند منفی باشد.');
+        }
+
+        return (int) ceil(
+            $actualCostUsd
+            * $this->latestExchangeRate()
+            * (1 + (self::ACTUAL_COST_PROFIT_PERCENT / 100))
+            / self::CREDIT_VALUE_TOMAN
+        );
     }
 
     public function modelUnitPrice(?AiModel $model, string $mediaType = 'image', string $resolution = '', ?int $duration = null, string $aspectRatio = ''): ?float

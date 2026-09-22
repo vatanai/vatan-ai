@@ -28,6 +28,7 @@
   const progressValue = root.querySelector('[data-studio-progress-value]');
   const result = root.querySelector('[data-studio-result]');
   const outputImage = root.querySelector('[data-studio-output-image]');
+  const creditSummary = root.querySelector('[data-studio-credit-summary]');
   const outputVideo = root.querySelector('[data-studio-output-video]');
   const videoPlay = root.querySelector('[data-studio-video-play]');
   const errorBox = root.querySelector('[data-studio-error]');
@@ -396,6 +397,7 @@
           const next = dependentOptions.some((option) => String(option.value) === String(current)) ? current : (dependentOptions[0]?.value || '');
           chooseSelect(dependent, next);
         });
+        updateImageWorkflowUI();
       }
     }
     saveStudioState();
@@ -449,8 +451,9 @@
   function updateImageWorkflowUI() {
     const isImageMode = currentMode === 'image';
     const needsReference = imageWorkflow === 'image_to_image';
+    const selectedModel = (activeConfig?.model_options || []).find((item) => String(item.value) === String(selectedValues.model));
     const maxUploadFiles = isImageMode && needsReference
-      ? Number(uploadInput?.dataset.imageMaxFiles || 5)
+      ? Math.max(1, Number(selectedModel?.max_reference_images || config.upload_limits?.max_reference_images || uploadInput?.dataset.imageMaxFiles || 1))
       : 1;
     imageWorkflowTabs?.querySelectorAll('[data-image-workflow]').forEach((button) => {
       const active = button.dataset.imageWorkflow === imageWorkflow;
@@ -475,7 +478,7 @@
       const title = uploadZone.querySelector('[data-upload-title]');
       const help = uploadZone.querySelector('[data-upload-help]');
       if (title) title.textContent = isImageMode && needsReference ? 'افزودن تصویر مرجع' : 'فایل ورودی لازم نیست';
-      if (help) help.textContent = isImageMode && needsReference ? 'JPG، PNG یا WebP · تا ۵ تصویر' : 'برای متن به عکس فقط توضیحات را بنویس';
+      if (help) help.textContent = isImageMode && needsReference ? `JPG، PNG، WebP یا AVIF · تا ${faDigits(maxUploadFiles)} تصویر برای این مدل` : 'برای متن به عکس فقط توضیحات را بنویس';
       if (!isImageMode || !needsReference) {
         selectedUploadFiles = [];
         uploadInput.value = '';
@@ -571,6 +574,19 @@
     });
   }
 
+  function renderCreditSummary(payload) {
+    if (!creditSummary || !payload) return;
+    const reserved = Math.max(0, Number(payload.credits_reserved || 0));
+    const settled = Math.max(0, Number(payload.credits_settled || 0));
+    const refunded = Math.max(0, Number(payload.credits_refunded || 0));
+    creditSummary.querySelector('[data-studio-credits-reserved]').textContent = faDigits(reserved);
+    creditSummary.querySelector('[data-studio-credits-settled]').textContent = faDigits(settled);
+    creditSummary.querySelector('[data-studio-credits-refunded]').textContent = faDigits(refunded);
+    const refundItem = creditSummary.querySelector('[data-studio-refund-item]');
+    if (refundItem) refundItem.hidden = refunded < 1;
+    creditSummary.hidden = false;
+  }
+
   function imageUrlFromPayload(image) {
     if (typeof image === 'string') return image.trim();
     if (!image || typeof image !== 'object') return '';
@@ -647,6 +663,9 @@
     if (!prompt.value.trim()) { showError('ابتدا توضیحات ساخت را وارد کنید.'); prompt.focus(); return; }
     if (config.authenticated !== true) { saveStudioState(); window.location.href = config.login_url; return; }
     if (currentMode === 'image' && imageWorkflow === 'image_to_image' && selectedUploadFiles.length === 0 && !uploadInput.files[0]) { showError('برای حالت عکس به عکس، حداقل یک تصویر مرجع واضح بارگذاری کنید.'); uploadZone.focus(); return; }
+    const selectedModel = optionsFor('model').find((option) => String(option.value) === String(selectedValues.model));
+    const modelFileLimit = Number(selectedModel?.max_reference_images || config.upload_limits?.max_reference_images || 1);
+    if (currentMode === 'image' && imageWorkflow === 'image_to_image' && selectedUploadFiles.length > modelFileLimit) { showError(`مدل انتخاب‌شده حداکثر ${faDigits(modelFileLimit)} تصویر مرجع می‌پذیرد.`); return; }
     const requiredCredits = Number(normalizeDigits(cost?.textContent || 0));
     const balance = Number(root.dataset.balance || 0);
     if (requiredCredits > 0 && balance < requiredCredits) {
@@ -664,6 +683,7 @@
       } else {
         const first = firstImageUrl(payload); if (!first) throw new Error('لینک خروجی تصویر از سرویس دریافت نشد.'); outputImage.src = first; outputImage.hidden = false; outputVideo.hidden = true; videoPlay.hidden = true;
       }
+      renderCreditSummary(payload);
       finishProgress(); revealGeneratedResult(); submitLabel.textContent = 'دوباره بساز';
     } catch (error) {
       stopProgress();
@@ -705,6 +725,17 @@
   uploadInput.addEventListener('change', () => {
     const maxFiles = Number(uploadInput.dataset.maxFiles || 1);
     const files = [...uploadInput.files].slice(0, maxFiles);
+    const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    const maxImageBytes = Number(config.upload_limits?.max_image_bytes || 12582912);
+    const invalid = currentMode === 'image' && files.find((file) => !allowedImageTypes.has(file.type) || file.size > maxImageBytes);
+    if (invalid) {
+      selectedUploadFiles = [];
+      uploadInput.value = '';
+      uploadFile.hidden = true;
+      uploadFile.textContent = '';
+      showError(`فرمت یا حجم فایل «${invalid.name}» معتبر نیست.`);
+      return;
+    }
     selectedUploadFiles = files;
     if (uploadInput.files.length > maxFiles) showError(`حداکثر ${faDigits(maxFiles)} تصویر قابل انتخاب است.`);
     if (!files.length) {

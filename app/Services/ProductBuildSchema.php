@@ -168,11 +168,14 @@ class ProductBuildSchema
                 }
                 $uploadKey = "uploads.{$field['id']}";
                 $rules[$uploadKey] = [$required];
-                $maxKb = max(1, (int) ($field['max_size_mb'] ?: 10)) * 1024;
+                $maxKb = $studioImageToImage && $field['id'] === $studioReferenceUploadId
+                    ? max(1024, (int) config('studio.max_image_kilobytes', 12288))
+                    : max(1, (int) ($field['max_size_mb'] ?: 10)) * 1024;
                 $fileRules = ['file', "max:{$maxKb}"];
                 if ($field['type'] !== 'file_upload') $fileRules[] = 'image';
                 if ($studioImageToImage && $field['id'] === $studioReferenceUploadId && $field['type'] !== 'file_upload') {
-                    $rules[$uploadKey] = [$required, 'array', 'max:5'];
+                    $fileRules[] = 'mimes:jpeg,jpg,png,webp,avif';
+                    $rules[$uploadKey] = [$required, 'array', 'max:' . max(1, min(50, (int) config('studio.max_reference_images', 20)))];
                     $rules[$uploadKey . '.*'] = $fileRules;
                 } elseif ($field['type'] === 'multi_image') {
                     $rules[$uploadKey] = [$required, 'array', 'max:' . max(1, (int) ($field['max_files'] ?: 4))];

@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Exception;
 
@@ -280,6 +281,10 @@ class ProductGenerateController extends Controller
             'supported_resolutions' => $this->studioModelSupportedOptions($model, 'resolutions', $modality),
             'supported_durations' => $modality === 'video' ? $this->studioModelSupportedOptions($model, 'durations', $modality) : [],
             'task_type' => (string) $model->task_type,
+            'max_reference_images' => max(1, min(
+                max(1, (int) config('studio.max_reference_images', 20)),
+                (int) data_get($model->capability_config, 'max_reference_images', data_get($model->capability_config, 'max_images', $model->supports_image_input ? 1 : 0)),
+            )),
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
         $primary = (string) $product->primary_model;
@@ -294,6 +299,7 @@ class ProductGenerateController extends Controller
                 'supported_aspect_ratios' => [],
                 'supported_resolutions' => [],
                 'task_type' => null,
+                'max_reference_images' => 1,
             ]);
         }
 
@@ -527,6 +533,15 @@ class ProductGenerateController extends Controller
 
     public function generate(GenerateProductRequest $request, Product $product, ProductBuildSchema $schema, ProductPromptBuilder $promptBuilder, StudioCostService $studioCosts)
     {
+        $correlationId = (string) Str::uuid();
+        if ($request->boolean('studio_mode')) {
+            Log::withContext([
+                'correlation_id' => $correlationId,
+                'user_id' => $request->user()?->id,
+                'studio_operation' => $product->isVideoProduct() ? 'video_generation' : 'image_generation',
+            ]);
+            $request->attributes->set('correlation_id', $correlationId);
+        }
         if ($product->isVideoProduct()) {
             return app(VideoProductController::class)->generate(
                 $request,
@@ -536,16 +551,35 @@ class ProductGenerateController extends Controller
             );
         }
 
+        $failure = static function (
+            string $message,
+            string $errorCode,
+            int $httpStatus = 422,
+            bool $retryable = false,
+            int $reserved = 0,
+            int $refunded = 0,
+        ) use ($correlationId): \Illuminate\Http\JsonResponse {
+            return response()->json([
+                'success' => false,
+                'status' => 'failed',
+                'message' => $message,
+                'error_code' => $errorCode,
+                'retryable' => $retryable,
+                'generation_id' => null,
+                'credits_reserved' => $reserved,
+                'credits_settled' => 0,
+                'credits_refunded' => $refunded,
+                'poll_url' => null,
+            ], $httpStatus)->header('X-Correlation-ID', $correlationId);
+        };
+
         $this->applyStudioModel($product, $request, 'image');
         $user = auth()->user();
         $faceProfile = $this->selectedFaceProfile($request, $user);
         $requestedMainQuality = (string) $request->input('output.main_quality', 'standard');
         $mainQuality = $this->modelTiers->resolveOutputQuality($user, $requestedMainQuality, $product);
         if (! $mainQuality) {
-            return response()->json([
-                'success' => false,
-                'message' => 'برای انتخاب این کیفیت، ابتدا یکی از پلن‌های اعتباری را فعال کنید.',
-            ], 403);
+            return $failure('برای انتخاب این کیفیت، ابتدا یکی از پلن‌های اعتباری را فعال کنید.', 'PLAN_REQUIRED', 403);
         }
 
         $tierKey = $mainQuality['execution_tier_key'];
@@ -590,10 +624,7 @@ class ProductGenerateController extends Controller
                 }
             }
             if (empty($selectedVariants)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'حداقل یک مدل خروجی را انتخاب کنید.',
-                ], 422);
+                return $failure('حداقل یک مدل خروجی را انتخاب کنید.', 'OUTPUT_VARIANT_REQUIRED');
             }
         }
         $requestedOutputCount = max(1, min(6, (int) $request->input('output.count', 1)));
@@ -607,45 +638,50 @@ class ProductGenerateController extends Controller
             $code = strtoupper(trim((string) $request->input('discount_code')));
             $discount = Discount::available()->where('code', $code)->first();
             if (!$discount) {
-                return response()->json(['success' => false, 'message' => 'کد تخفیف معتبر یا فعال نیست.'], 422);
+                return $failure('کد تخفیف معتبر یا فعال نیست.', 'DISCOUNT_INVALID');
             }
             if ($discount->first_order_only && Order::where('user_id', $user?->id)->exists()) {
-                return response()->json(['success' => false, 'message' => 'این کد فقط برای اولین سفارش قابل استفاده است.'], 422);
+                return $failure('این کد فقط برای اولین سفارش قابل استفاده است.', 'DISCOUNT_FIRST_ORDER_ONLY');
             }
             if ($user && Order::where('user_id', $user->id)->where('discount_id', $discount->id)->count() >= $discount->usage_limit_per_user) {
-                return response()->json(['success' => false, 'message' => 'سقف استفاده شما از این کد تخفیف تکمیل شده است.'], 422);
+                return $failure('سقف استفاده شما از این کد تخفیف تکمیل شده است.', 'DISCOUNT_USAGE_LIMIT');
             }
             $inScope = $discount->scope === 'all'
                 || ($discount->scope === 'products' && in_array($product->id, $discount->product_ids ?? [], true))
                 || ($discount->scope === 'categories' && $product->categories()->whereIn('categories.id', $discount->category_ids ?? [])->exists());
             if (!$inScope) {
-                return response()->json(['success' => false, 'message' => 'این کد برای محصول انتخاب‌شده قابل استفاده نیست.'], 422);
+                return $failure('این کد برای محصول انتخاب‌شده قابل استفاده نیست.', 'DISCOUNT_OUT_OF_SCOPE');
             }
             $discountCredits = $discount->calculateCredits($originalCreditCost);
             if ($discountCredits < 1) {
-                return response()->json(['success' => false, 'message' => 'حداقل اعتبار لازم برای این کد تخفیف تأمین نشده است.'], 422);
+                return $failure('حداقل اعتبار لازم برای این کد تخفیف تأمین نشده است.', 'DISCOUNT_MINIMUM_NOT_MET');
             }
             $totalCreditCost = max(0, $originalCreditCost - $discountCredits);
         }
 
         // اصلاح دریافت فایل‌ها بر اساس ساختار ارسالی جاوااسکریپت (uploads)
         $allFiles = $schema->flattenUploads($request);
+        if ($request->boolean('studio_mode') && $studioWorkflow === 'image_to_image' && $studioModel) {
+            $modelMaxReferences = max(1, min(
+                max(1, (int) config('studio.max_reference_images', 20)),
+                (int) data_get($studioModel->capability_config, 'max_reference_images', data_get($studioModel->capability_config, 'max_images', 1)),
+            ));
+            if (count($allFiles) > $modelMaxReferences) {
+                throw ValidationException::withMessages([
+                    'uploads' => "مدل انتخاب‌شده حداکثر {$modelMaxReferences} تصویر مرجع می‌پذیرد.",
+                ]);
+            }
+        }
         if ($request->boolean('studio_mode')
             && $studioWorkflow === 'image_to_image'
             && $allFiles === []
             && ! $faceProfile) {
-            return response()->json([
-                'success' => false,
-                'message' => 'برای حالت عکس به عکس، یک تصویر ورودی انتخاب کنید.',
-            ], 422);
+            return $failure('برای حالت عکس به عکس، یک تصویر ورودی انتخاب کنید.', 'REFERENCE_IMAGE_REQUIRED');
         }
         if (! ($request->boolean('studio_mode') && $studioWorkflow === 'image_to_image')
             && in_array($product->subject_type, ['face', 'body'], true)
             && count($allFiles) > 3) {
-            return response()->json([
-                'success' => false,
-                'message' => 'برای محصولات چهره‌محور حداکثر ۳ عکس مرجع قابل استفاده است.',
-            ], 422);
+            return $failure('برای محصولات چهره‌محور حداکثر ۳ عکس مرجع قابل استفاده است.', 'REFERENCE_IMAGE_LIMIT');
         }
 
         // ۲. بررسی سخت‌گیرانه سقف فضای ذخیره‌سازی (حداکثر ۱۰۰ مگابایت)
@@ -670,10 +706,7 @@ class ProductGenerateController extends Controller
             $estimatedAiImageSize = (2 * 1024 * 1024) * $runCount;
 
             if (($currentUsedBytes + $newUploadsSize + $estimatedAiImageSize) > $maxStorageBytes) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'فضای ذخیره‌سازی ۱۰۰ مگابایتی شما کافی نیست! لطفاً ابتدا فایل‌های قبلی خود را مدیریت یا پاک کنید.',
-                ], 400);
+                return $failure('فضای ذخیره‌سازی ۱۰۰ مگابایتی شما کافی نیست! لطفاً ابتدا فایل‌های قبلی خود را مدیریت یا پاک کنید.', 'STORAGE_LIMIT_EXCEEDED', 400);
             }
         }
 
@@ -708,8 +741,9 @@ class ProductGenerateController extends Controller
 
             $mime = $file->getMimeType();
             if (str_starts_with((string) $mime, 'image/')) {
-                $b64 = base64_encode(file_get_contents($file->getRealPath()));
-                $base64Images[] = "data:{$mime};base64,{$b64}";
+                $base64Images[] = $request->boolean('studio_mode')
+                    ? asset('storage/' . ltrim($path, '/'))
+                    : "data:{$mime};base64," . base64_encode(file_get_contents($file->getRealPath()));
             }
         }
 
@@ -726,7 +760,9 @@ class ProductGenerateController extends Controller
                     continue;
                 }
 
-                $base64Images[] = "data:{$mime};base64," . base64_encode($disk->get($path));
+                $base64Images[] = $request->boolean('studio_mode')
+                    ? asset('storage/' . ltrim($path, '/'))
+                    : "data:{$mime};base64," . base64_encode($disk->get($path));
             }
         }
 
@@ -736,10 +772,7 @@ class ProductGenerateController extends Controller
             foreach ($uploadedPaths as $up) {
                 Storage::disk('public')->delete($up['path']);
             }
-            return response()->json([
-                'success' => false,
-                'message' => "این محصول برای نتیجهٔ دقیق به حداقل {$minRefs} تصویر ورودی نیاز دارد.",
-            ], 422);
+            return $failure("این محصول برای نتیجهٔ دقیق به حداقل {$minRefs} تصویر ورودی نیاز دارد.", 'REFERENCE_IMAGE_MINIMUM');
         }
 
         // ۵. مشخصات خروجی تصویر هوش مصنوعی
@@ -780,12 +813,9 @@ class ProductGenerateController extends Controller
         }
 
         $promotionalCreditsAllowed = false;
-        if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
+        if (($product->pricing_model === 'per_credit' || $request->boolean('studio_mode')) && $totalCreditCost > 0) {
             if (! $user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'برای ساخت این محصول ابتدا وارد حساب کاربری شوید.',
-                ], 401);
+                return $failure('برای ساخت این محصول ابتدا وارد حساب کاربری شوید.', 'AUTHENTICATION_REQUIRED', 401);
             }
 
             // این کنترل باید پس از تعیین مدل هویتی و مدل‌های جایگزین انجام شود؛
@@ -833,6 +863,7 @@ class ProductGenerateController extends Controller
                     'source_upload_path' => $uploadedPaths[0]['path'] ?? null,
                     'source_upload_paths' => array_values(array_column($uploadedPaths, 'path')),
                     'project_name' => trim((string) $request->input('studio_project_name', '')) ?: null,
+                    'correlation_id' => $correlationId,
                 ],
                 'source' => 'app',
                 'paid_at' => now(),
@@ -867,7 +898,7 @@ class ProductGenerateController extends Controller
 
             // رزرو اتمیک اعتبار؛ از ساخت هم‌زمان بیش از موجودی جلوگیری می‌کند و
             // سهم اعتبار هدیه/خریداری‌شده را تا انتهای سفارش نگه می‌دارد.
-            if ($product->pricing_model === 'per_credit' && $totalCreditCost > 0) {
+            if (($product->pricing_model === 'per_credit' || $request->boolean('studio_mode')) && $totalCreditCost > 0) {
                 try {
                     $creditReservation = $this->creditWallet->reserve(
                         $user,
@@ -884,10 +915,11 @@ class ProductGenerateController extends Controller
                         'error_message' => 'موجودی اعتبار هنگام رزرو نهایی کافی نبود.',
                     ]);
                     $order->recordEvent('payment_failed', 'رزرو اعتبار ناموفق بود', 'موجودی اعتبار برای مسیر انتخاب‌شده کافی نبود.');
-                    return response()->json([
-                        'success' => false,
-                        'message' => collect($exception->errors())->flatten()->first() ?? 'اعتبارهای شما کافی نیست.',
-                    ], 402);
+                    return $failure(
+                        collect($exception->errors())->flatten()->first() ?? 'اعتبارهای شما کافی نیست.',
+                        'INSUFFICIENT_CREDITS',
+                        402,
+                    );
                 }
             }
 
@@ -964,6 +996,8 @@ class ProductGenerateController extends Controller
             $generated = [];   // [{key, title, url, path, size, cost, prompt}]
             $failed    = [];
             $usedModels = [];
+            $actualCostUsd = 0.0;
+            $allActualCostsKnown = true;
 
             foreach ($runs as $run) {
                 try {
@@ -987,12 +1021,10 @@ class ProductGenerateController extends Controller
                     // قیمت snapshot‌شده‌ی رسمی مدل را در estimated_cost_usd
                     // قرار می‌دهد. Fal نیز در صورت آماده‌بودن billing event
                     // actual_cost_usd را برمی‌گرداند.
-                    $totalApiCost = (float) (
-                        $result['usage']['actual_cost_usd']
-                        ?? $result['usage']['estimated_cost_usd']
-                        ?? $result['usage']['cost']
-                        ?? 0
-                    );
+                    $actualRunCost = $result['usage']['actual_cost_usd'] ?? $result['usage']['cost'] ?? null;
+                    $allActualCostsKnown = $allActualCostsKnown && is_numeric($actualRunCost);
+                    if (is_numeric($actualRunCost)) $actualCostUsd += (float) $actualRunCost;
+                    $totalApiCost = (float) ($actualRunCost ?? $result['usage']['estimated_cost_usd'] ?? 0);
                     $perImageApiCost = $totalApiCost / max(1, count($items));
                     foreach ($items as $item) {
                         $singleResult = isset($item['b64_json']) || isset($item['url']) ? ['data' => [$item]] : $item;
@@ -1025,6 +1057,44 @@ class ProductGenerateController extends Controller
 
             if (empty($generated)) {
                 throw new Exception('هیچ‌کدام از مدل‌های خروجی انتخاب‌شده با موفقیت ساخته نشد. لطفاً دوباره تلاش کنید.');
+            }
+
+            if ($request->boolean('studio_mode') && !$allActualCostsKnown) {
+                $order?->update([
+                    'status' => 'review',
+                    'processing_status' => 'needs_review',
+                    'output_payload' => array_map(fn ($g) => ['path' => $g['path']], $generated),
+                    'error_message' => 'هزینهٔ واقعی سرویس‌دهنده در پاسخ موجود نبود.',
+                ]);
+                $order?->recordEvent('needs_review', 'هزینهٔ واقعی ساخت نامشخص است', 'خروجی تا بررسی مالی تحویل داده نمی‌شود.');
+
+                return response()->json([
+                    'success' => false,
+                    'status' => 'needs_review',
+                    'message' => 'هزینهٔ واقعی ساخت هنوز از سرویس‌دهنده دریافت نشده است؛ درخواست برای بررسی امن نگه داشته شد.',
+                    'error_code' => 'ACTUAL_COST_MISSING',
+                    'retryable' => false,
+                    'generation_id' => null,
+                    'credits_reserved' => (int) ($creditReservation['total'] ?? 0),
+                    'credits_settled' => 0,
+                    'credits_refunded' => 0,
+                    'poll_url' => null,
+                ], 202);
+            }
+
+            // تسویه پیش از انتشار رکوردهای گالری انجام می‌شود تا در صورت کسری
+            // اعتبار برای هزینهٔ واقعی، خروجی بدون تسویه در دسترس قرار نگیرد.
+            $actualOriginalCredit = $request->boolean('studio_mode')
+                ? $studioCosts->creditsForActualCost($actualCostUsd, 'image')
+                : ($product->pricing_model === 'per_credit' ? $creditCost * count($generated) : 0);
+            $actualDiscount = $request->boolean('studio_mode') ? 0 : ($discount?->calculateCredits($actualOriginalCredit) ?? 0);
+            $actualCredit = max(0, $actualOriginalCredit - $actualDiscount);
+            $creditsReturned = 0;
+            $reservedCreditTotal = (int) ($creditReservation['total'] ?? 0);
+            if ($creditReservation['total'] > 0 && $user) {
+                $creditsReturned = max(0, (int) $creditReservation['total'] - $actualCredit);
+                $creditReservation = $this->creditWallet->settle($user, $creditReservation, $actualCredit);
+                $creditReservationSettled = true;
             }
 
             // ۷. ثبت نهایی سوابق در دیتابیس در صورت لاگین بودن کاربر
@@ -1068,17 +1138,6 @@ class ProductGenerateController extends Controller
                     }
                 }
 
-            }
-
-            // اگر بعضی واریانت‌ها شکست خوردند، اعتبار همان خروجی‌ها بازگردانده می‌شود.
-            $actualOriginalCredit = $product->pricing_model === 'per_credit' ? $creditCost * count($generated) : 0;
-            $actualDiscount = $discount?->calculateCredits($actualOriginalCredit) ?? 0;
-            $actualCredit = max(0, $actualOriginalCredit - $actualDiscount);
-            $creditsReturned = 0;
-            if ($creditReservation['total'] > 0 && $user) {
-                $creditsReturned = max(0, (int) $creditReservation['total'] - $actualCredit);
-                $creditReservation = $this->creditWallet->settle($user, $creditReservation, $actualCredit);
-                $creditReservationSettled = true;
             }
 
             // پاداش مالک فقط بعد از مشخص‌شدن سهم نهایی اعتبار هر خروجی ثبت می‌شود.
@@ -1148,8 +1207,23 @@ class ProductGenerateController extends Controller
                 }
             }
 
+            Log::info('Studio image generation completed', [
+                'order_id' => $order?->id,
+                'actual_cost_usd' => $actualCostUsd,
+                'credits_settled' => $actualCredit,
+            ]);
+
             return response()->json([
                 'success'          => true,
+                'status'           => 'completed',
+                'message'          => 'تصویر با موفقیت ساخته شد.',
+                'error_code'       => null,
+                'retryable'        => false,
+                'generation_id'    => ($generatedImageRecords[0] ?? null)?->id,
+                'credits_reserved' => $reservedCreditTotal,
+                'credits_settled'  => (int) ($creditReservation['total'] ?? 0),
+                'credits_refunded' => $creditsReturned,
+                'poll_url'         => null,
                 'image_url'        => $generated[0]['url'],
                 'images'           => array_map(function (array $g, int $index) use ($generatedImageRecords): array {
                     return [
@@ -1164,7 +1238,7 @@ class ProductGenerateController extends Controller
                 'used_model'       => $usedModels[0] ?? $executionProduct->primary_model,
                 'model_tier'       => $tierMeta,
                 'remaining_tokens' => $remainingTokens,
-            ]);
+            ])->header('X-Correlation-ID', $correlationId);
 
         } catch (\Throwable $e) {
             $creditsReturned = 0;
@@ -1182,7 +1256,14 @@ class ProductGenerateController extends Controller
             foreach ($uploadedPaths as $up) {
                 Storage::disk('public')->delete($up['path']);
             }
-            Log::error('ProductGenerateController Error: ' . $e->getMessage());
+            foreach ((array) ($generated ?? []) as $output) {
+                if (!empty($output['path'])) Storage::disk('public')->delete((string) $output['path']);
+            }
+            Log::error('Studio image generation failed', [
+                'exception' => $e::class,
+                'message' => Str::limit($e->getMessage(), 1000, ''),
+                'order_id' => $order?->id,
+            ]);
             if ($order) {
                 $order->update([
                     'status' => 'review', 'processing_status' => 'failed',
@@ -1211,6 +1292,7 @@ class ProductGenerateController extends Controller
                 || str_contains($errorText, 'curl');
             return response()->json([
                 'success' => false,
+                'status' => 'failed',
                 'message' => $providerCreditIssue
                     ? 'موجودی سرویس ساخت موقتاً کافی نیست؛ اعتبار این درخواست کامل به حساب شما برگشت داده شد. لطفاً بعداً دوباره تلاش کنید.'
                     : ($providerBusy
@@ -1220,8 +1302,13 @@ class ProductGenerateController extends Controller
                     : 'ساخت تصویر انجام نشد. لطفاً دوباره تلاش کنید.')),
                 'error_code' => $providerCreditIssue ? 'AI_PROVIDER_CREDIT_UNAVAILABLE' : ($providerBusy ? 'AI_PROVIDER_BUSY' : ($providerFailure ? 'AI_PROVIDER_UNAVAILABLE' : 'IMAGE_GENERATION_FAILED')),
                 'retryable' => $providerCreditIssue || $providerBusy || $providerFailure,
+                'generation_id' => null,
+                'credits_reserved' => (int) ($creditReservation['total'] ?? 0),
+                'credits_settled' => 0,
+                'credits_refunded' => $creditsReturned,
+                'poll_url' => null,
                 'credits_returned' => $creditsReturned,
-            ], $providerFailure ? 503 : 422);
+            ], $providerFailure ? 503 : 422)->header('X-Correlation-ID', $correlationId);
         }
     }
 

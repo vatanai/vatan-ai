@@ -141,16 +141,23 @@ class CreditWalletService
      */
     public function settle(User $user, array $reservation, int $actualAmount): array
     {
-        $actualAmount = max(0, min((int) $reservation['total'], $actualAmount));
+        $actualAmount = max(0, $actualAmount);
         $promotionalUsed = min((int) $reservation['promotional'], $actualAmount);
         $paidUsed = $actualAmount - $promotionalUsed;
         $promotionalRefund = (int) $reservation['promotional'] - $promotionalUsed;
-        $paidRefund = (int) $reservation['paid'] - $paidUsed;
+        $paidRefund = max(0, (int) $reservation['paid'] - $paidUsed);
+        $paidOverage = max(0, $paidUsed - (int) $reservation['paid']);
 
         $grantAllocations = (array) ($reservation['grant_allocations'] ?? []);
-        DB::transaction(function () use ($user, $actualAmount, $promotionalRefund, $paidRefund, $grantAllocations) {
+        DB::transaction(function () use ($user, $actualAmount, $promotionalRefund, $paidRefund, $paidOverage, $grantAllocations) {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->getKey());
-            $lockedUser->tokens = (int) $lockedUser->tokens + $promotionalRefund + $paidRefund;
+            $paidAvailable = max(0, (int) $lockedUser->tokens - $lockedUser->promotionalTokenBalance());
+            if ($paidAvailable < $paidOverage) {
+                throw ValidationException::withMessages([
+                    'tokens' => 'هزینهٔ واقعی بیشتر از مبلغ رزروشده است و اعتبار خریداری‌شده برای تسویه کافی نیست.',
+                ]);
+            }
+            $lockedUser->tokens = (int) $lockedUser->tokens + $promotionalRefund + $paidRefund - $paidOverage;
             $lockedUser->promotional_tokens = $lockedUser->promotionalTokenBalance() + $promotionalRefund;
             $lockedUser->tokens_used = (int) $lockedUser->tokens_used + $actualAmount;
             $lockedUser->save();

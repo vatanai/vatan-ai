@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schedule;
 use App\Services\AiCatalogSyncService;
 use App\Jobs\SyncTelegramReferralMessages;
 use App\Models\TelegramUser;
+use App\Jobs\CleanupExpiredStudioUploads;
 
 Schedule::command('credits:sync')
     ->everyMinute()
@@ -18,6 +19,10 @@ Schedule::command('sms:send-first-image-followups')
 Schedule::command('telegram:sync-referral-messages')
     ->everyFiveMinutes()
     ->withoutOverlapping(4);
+
+Schedule::job(new CleanupExpiredStudioUploads)
+    ->dailyAt('03:30')
+    ->withoutOverlapping(30);
 
 Artisan::command('telegram:sync-referral-messages', function () {
     $count = 0;

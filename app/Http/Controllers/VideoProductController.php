@@ -17,6 +17,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Jobs\PollStudioVideoGeneration;
+use Illuminate\Support\Facades\Log;
 
 class VideoProductController extends Controller
 {
@@ -207,14 +209,22 @@ class VideoProductController extends Controller
                 'audio_url' => $audioUrl,
                 'timeline' => (array) ($config['timeline'] ?? []),
                 'studio_mode' => $studioMode,
+                'idempotency_key' => (string) $request->header('Idempotency-Key', $request->input('idempotency_key', '')),
+                'correlation_id' => (string) $request->attributes->get('correlation_id', \Illuminate\Support\Str::uuid()),
             ]);
 
             return response()->json([
                 'success' => true,
                 'status' => $generation->status,
-                'generation_id' => $generation->id,
-                'status_url' => route('app.video-generation.status', $generation),
                 'message' => 'ویدیو وارد صف ساخت شد. این صفحه را باز نگه دارید؛ نتیجه خودکار نمایش داده می‌شود.',
+                'error_code' => null,
+                'retryable' => false,
+                'generation_id' => $generation->id,
+                'credits_reserved' => (int) $generation->credits_reserved,
+                'credits_settled' => (int) $generation->credits_settled,
+                'credits_refunded' => (int) $generation->credits_refunded,
+                'poll_url' => route('app.video-generation.status', $generation),
+                'status_url' => route('app.video-generation.status', $generation),
                 'remaining_tokens' => $user->fresh()->tokens,
             ], 202);
         } catch (ValidationException $exception) {
@@ -223,8 +233,15 @@ class VideoProductController extends Controller
             report($exception);
             return response()->json([
                 'success' => false,
+                'status' => 'failed',
                 'message' => 'ارسال درخواست ویدیو انجام نشد. تنظیم مدل یا اتصال سرویس را بررسی کنید.',
                 'error_code' => 'VIDEO_PROVIDER_UNAVAILABLE',
+                'retryable' => true,
+                'generation_id' => null,
+                'credits_reserved' => 0,
+                'credits_settled' => 0,
+                'credits_refunded' => 0,
+                'poll_url' => null,
             ], 503);
         }
     }
@@ -243,20 +260,89 @@ class VideoProductController extends Controller
     public function status(Request $request, GeneratedVideo $generatedVideo, VideoGenerationService $videos)
     {
         abort_unless((int) $generatedVideo->user_id === (int) $request->user()->id, 403);
-        try {
-            $generatedVideo = $videos->refresh($generatedVideo);
-        } catch (\Throwable $exception) {
-            report($exception);
+        Log::withContext([
+            'correlation_id' => $generatedVideo->correlation_id,
+            'generation_id' => $generatedVideo->id,
+            'user_id' => $request->user()->id,
+        ]);
+        if (!in_array($generatedVideo->status, ['completed', 'failed', 'canceled', 'needs_review'], true)
+            && (!$generatedVideo->next_poll_at || $generatedVideo->next_poll_at->isPast())) {
+            PollStudioVideoGeneration::dispatchAfterResponse($generatedVideo->id);
+            $generatedVideo->update(['next_poll_at' => now()->addSeconds(20)]);
         }
+
+        $generatedVideo->refresh();
 
         return response()->json([
             'success' => true,
             'status' => $generatedVideo->status,
-            'video_url' => $generatedVideo->playbackUrl(),
+            'message' => $this->videoStatusMessage($generatedVideo),
+            'error_code' => $generatedVideo->error_code,
+            'retryable' => (bool) $generatedVideo->retryable,
+            'generation_id' => $generatedVideo->id,
+            'video_url' => $generatedVideo->status === 'completed' ? $generatedVideo->playbackUrl() : null,
             'error_message' => $generatedVideo->error_message,
-            'credits_returned' => (int) ($generatedVideo->order?->refunded_credits ?? 0),
+            'credits_reserved' => (int) $generatedVideo->credits_reserved,
+            'credits_settled' => (int) $generatedVideo->credits_settled,
+            'credits_refunded' => (int) $generatedVideo->credits_refunded,
+            'credits_returned' => (int) $generatedVideo->credits_refunded,
+            'poll_url' => route('app.video-generation.status', $generatedVideo),
+            'cancel_url' => $generatedVideo->cancel_requested_at || in_array($generatedVideo->status, ['completed', 'failed', 'canceled', 'needs_review'], true)
+                ? null
+                : route('app.video-generation.cancel', $generatedVideo),
+            'retry_url' => route('app.video-generation.retry', $generatedVideo),
             'remaining_tokens' => $request->user()->fresh()->tokens,
         ]);
+    }
+
+    public function cancel(Request $request, GeneratedVideo $generatedVideo, VideoGenerationService $videos)
+    {
+        abort_unless((int) $generatedVideo->user_id === (int) $request->user()->id, 403);
+        $generatedVideo = $videos->cancel($generatedVideo);
+        return response()->json([
+            'success' => true, 'status' => $generatedVideo->status,
+            'message' => $generatedVideo->status === 'canceled'
+                ? 'ساخت ویدیو لغو شد و اعتبار رزروشده بازگشت.'
+                : 'درخواست لغو ثبت شد؛ نتیجه تحویل نمی‌شود و تسویه پس از اعلام هزینهٔ واقعی سرویس انجام خواهد شد.',
+            'error_code' => $generatedVideo->error_code,
+            'retryable' => false,
+            'generation_id' => $generatedVideo->id,
+            'credits_reserved' => (int) $generatedVideo->credits_reserved,
+            'credits_settled' => (int) $generatedVideo->credits_settled,
+            'credits_refunded' => (int) $generatedVideo->credits_refunded,
+            'poll_url' => route('app.video-generation.status', $generatedVideo),
+        ]);
+    }
+
+    public function retry(Request $request, GeneratedVideo $generatedVideo, VideoGenerationService $videos)
+    {
+        abort_unless((int) $generatedVideo->user_id === (int) $request->user()->id, 403);
+        $generatedVideo = $videos->retry($generatedVideo);
+        return response()->json([
+            'success' => true, 'status' => $generatedVideo->status,
+            'message' => 'درخواست دوباره وارد صف شد.', 'error_code' => null, 'retryable' => false,
+            'generation_id' => $generatedVideo->id,
+            'credits_reserved' => (int) $generatedVideo->credits_reserved,
+            'credits_settled' => 0, 'credits_refunded' => 0,
+            'poll_url' => route('app.video-generation.status', $generatedVideo),
+        ], 202);
+    }
+
+    private function videoStatusMessage(GeneratedVideo $video): string
+    {
+        if ($video->cancel_requested_at && !in_array($video->status, ['canceled', 'needs_review'], true)) {
+            return 'درخواست لغو ثبت شده و تسویه پس از اعلام وضعیت نهایی سرویس انجام می‌شود.';
+        }
+
+        return match ($video->status) {
+            'submitting', 'queued' => 'درخواست در صف ساخت قرار دارد.',
+            'processing' => 'مدل در حال ساخت ویدیو است.',
+            'downloading' => 'خروجی آماده شده و در حال ذخیره‌سازی امن است.',
+            'completed' => 'ویدیو با موفقیت آماده شد.',
+            'canceled' => 'ساخت ویدیو لغو شد.',
+            'needs_review' => $video->error_message ?: 'این درخواست برای بررسی ایمن متوقف شده است.',
+            default => $video->error_message ?: 'ساخت ویدیو کامل نشد.',
+        };
     }
 
     private function selectedFaceProfile(Request $request, $user): ?FaceProfile

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserUpload extends Model
 {
-    protected $fillable = ['user_id', 'file_path', 'size', 'mime_type'];
+    protected $fillable = ['user_id', 'file_path', 'size', 'mime_type', 'status', 'error_message', 'expires_at'];
+
+    protected $casts = ['expires_at' => 'datetime'];
 
     public function user(): BelongsTo
     {
