@@ -171,7 +171,6 @@ class ServiceCreditTransactionReport
             ->when($from, fn ($query) => $query->where('ai_provider_requests.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('ai_provider_requests.created_at', '<=', $to))
             ->latest('ai_provider_requests.created_at')->limit($sourceLimit)->get();
-        $requestOrderIds = $providerRequests->pluck('order_id')->filter()->unique();
         foreach ($providerRequests as $providerRequest) {
             $order = $providerRequest->order;
             $usd = (float) $providerRequest->actual_cost_usd > 0
@@ -198,8 +197,16 @@ class ServiceCreditTransactionReport
             ]));
         }
 
+        // از ساختن whereNotIn با شناسهٔ تمام درخواست‌های provider خودداری می‌کنیم؛
+        // با بزرگ شدن جدول، آرایهٔ چندصد/چندهزار شناسه باعث مصرف شدید حافظهٔ sort در MySQL
+        // و خطای 500 صفحهٔ گزارش تراکنش‌ها می‌شد. NOT EXISTS همان حذف سفارش‌های تکراری
+        // را در خود دیتابیس و بدون انتقال فهرست بزرگ شناسه‌ها انجام می‌دهد.
         $orders = Order::with(['user', 'product'])
-            ->when($requestOrderIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $requestOrderIds))
+            ->whereNotExists(function ($query): void {
+                $query->selectRaw('1')
+                    ->from('ai_provider_requests')
+                    ->whereColumn('ai_provider_requests.order_id', 'orders.id');
+            })
             ->when($from, fn ($query) => $query->where('orders.created_at', '>=', $from))
             ->when($to, fn ($query) => $query->where('orders.created_at', '<=', $to))
             ->latest('orders.created_at')->limit($sourceLimit)->get();
