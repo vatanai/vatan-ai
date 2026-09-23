@@ -164,6 +164,7 @@
   }
 
   function filterModelOptions() {
+    if (root.dataset.mode !== 'video') return;
     const menu = [...document.querySelectorAll('[data-select-menu]')]
       .find((item) => item.dataset.studioMenuKey === 'model' || item.closest('[data-studio-select="model"]'));
     if (!menu) return;
