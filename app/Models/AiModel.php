@@ -241,11 +241,11 @@ class AiModel extends Model
         'fal-ai/kling-video/v3/pro/motion-control',
     ];
 
-    /** ترتیب رسمی انتخاب سرویس در استودیوی عمومی؛ فال فقط پشتیبان است. */
+    /** ترتیب رسمی انتخاب سرویس در استودیوی عمومی: OpenRouter، سپس Fal.ai، سپس Replicate. */
     public const STUDIO_PROVIDER_PRIORITY = [
         'openrouter' => 0,
-        'replicate' => 1,
-        'fal' => 2,
+        'fal' => 1,
+        'replicate' => 2,
     ];
 
     public function externalModelId(): string
