@@ -35,6 +35,7 @@
       $productName = optional($product)->name_fa ?? optional($product)->name_en ?? 'نامشخص';
       $productSlug = optional($product)->route_slug;
     @endphp
+    <div class="profile-media-card">
     <button type="button" class="grid-cell grid-cell--clickable {{ $isVideo ? 'grid-cell--video' : '' }}"
             data-media-kind="{{ $isVideo ? 'video' : 'image' }}"
             data-media-url="{{ $mediaUrl }}"
@@ -46,6 +47,7 @@
             data-product-url="{{ $productSlug ? route('app.product', $productSlug) : '' }}"
             data-product-create-url="{{ $productSlug ? route('app.create.product', $productSlug) : '' }}"
             data-product-download-url="{{ optional($product)->slug ? route('app.product.download', $product->slug) : '' }}"
+            data-delete-url="{{ $isVideo ? route('profile.generated-videos.destroy', $item) : route('profile.generated-images.destroy', $item) }}"
             aria-label="نمایش {{ $isVideo ? 'ویدیوی' : 'عکس' }} ساخته‌شده">
       @if($isVideo)
         <img class="grid-img grid-video-poster" alt="" loading="lazy" decoding="async"
@@ -57,6 +59,7 @@
         <img src="{{ $mediaUrl }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
       @endif
     </button>
+    </div>
   @empty
     <div class="grid-empty">
       <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-grid.svg') }}" width="32" height="32" alt="" style="opacity:.4;">

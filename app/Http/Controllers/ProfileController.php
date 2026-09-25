@@ -11,7 +11,10 @@ use App\Models\ReferralVisit;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\FaceProfile;
+use App\Models\GeneratedImage;
+use App\Models\UserUpload;
 use App\Models\GeneratedVideo;
+use App\Services\UserStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -30,7 +33,6 @@ public function gallery()
 
     // واکشی تصاویر بر اساس رابطه‌های مدل User
     $createdImages = $user->generatedImages()->latest()->get();
-    $personalImages = $user->uploadedImages()->latest()->get();
     $galleryItems = $user->galleryItems()->latest()->get();
     $galleryItems->each(function ($item): void {
         if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
@@ -45,7 +47,7 @@ public function gallery()
     $galleryConfig = $galleryService->config();
     $gallerySetting = $galleryService->setting($user);
 
-    return view('app.gallery', compact('createdImages', 'personalImages', 'galleryItems', 'galleryConfig', 'gallerySetting'));
+    return view('app.gallery', compact('createdImages', 'galleryItems', 'galleryConfig', 'gallerySetting'));
 }
 
     public function index()
@@ -158,9 +160,6 @@ public function gallery()
             ->map(fn ($item) => $item->product)
             ->unique('id')
             ->values();
-        $personalImages = $user->uploadedImages()
-            ->select(['id', 'user_id', 'file_path', 'mime_type', 'size', 'created_at'])
-            ->latest()->get();
         $faceProfiles = Schema::hasTable('face_profiles')
             ? $user->faceProfiles()->active()->latest()->get()
             : collect();
@@ -183,18 +182,8 @@ public function gallery()
             ->select(['products.id', 'products.name_fa', 'products.slug', 'products.product_code', 'products.cover', 'products.sample_outputs', 'products.thumbnail'])
             ->latest('saved_products.created_at')->get();
 
-        // محاسبه حجم مصرفی واقعی کاربر بر حسب بایت
-        $createdImagesSize = $user->generatedImages()->sum('size') ?? 0;
-        $createdVideosSize = Schema::hasTable('generated_videos')
-            ? $user->generatedVideos()->sum('size')
-            : 0;
-        $personalImagesSize = $user->uploadedImages()->sum('size') ?? 0;
-        $faceProfilesSize = $faceProfiles->sum(
-            fn (FaceProfile $profile): int => collect($profile->referenceImageEntries())
-                ->sum(fn (array $image): int => (int) ($image['size'] ?? 0))
-        );
-
-        $totalBytes = $createdImagesSize + $createdVideosSize + $personalImagesSize + $faceProfilesSize;
+        // محاسبهٔ متمرکز فضای پروفایل؛ user_gallery عمداً در این سهمیه نیست.
+        $totalBytes = (int) app(UserStorageService::class)->snapshot($user)['used'];
 
         // تبدیل دقیق بایت به مگابایت با رند کردن تا ۲ رقم اعشار
         $storageUsed = round($totalBytes / (1024 * 1024), 2);
@@ -219,7 +208,6 @@ public function gallery()
             'createdImages',
             'createdVideos',
             'createdMedia',
-            'personalImages',
             'faceProfiles',
             'galleryItems',
             'savedProducts',
@@ -402,6 +390,72 @@ public function gallery()
         return back()->with('success', 'عکس پروفایل با موفقیت بروزرسانی شد.');
     }
 
+    /** حذف خروجی تصویریِ متعلق به حساب کاربر و آزادکردن حجم آن. */
+    public function destroyGeneratedImage(GeneratedImage $generatedImage)
+    {
+        $user = Auth::user();
+
+        abort_unless($user && (int) $generatedImage->user_id === (int) $user->id, 404);
+
+        app(\App\Services\UserGalleryService::class)->captureOutput(
+            $user,
+            'output_image',
+            (int) $generatedImage->id,
+            (string) $generatedImage->image_path,
+            'public',
+            (int) $generatedImage->size,
+            'image/*',
+            ['order_id' => $generatedImage->order_id, 'source' => 'profile_delete_snapshot'],
+        );
+        app(UserStorageService::class)->deletePublicFile($generatedImage->image_path);
+        $generatedImage->delete();
+
+        return redirect()->route('app.profile', ['tab' => 'grid'])
+            ->with('success', 'خروجی تصویر حذف شد و فضای آن آزاد شد.');
+    }
+
+    /** حذف فایل ورودیِ متعلق به حساب کاربر و آزادکردن حجم آن. */
+    public function destroyUserUpload(UserUpload $userUpload)
+    {
+        $user = Auth::user();
+
+        abort_unless($user && (int) $userUpload->user_id === (int) $user->id, 404);
+
+        app(UserStorageService::class)->deletePublicFile($userUpload->file_path);
+        $userUpload->delete();
+
+        return redirect()->route('app.profile', [
+            'tab' => 'files',
+            'file_tab' => 'face-profiles',
+        ])->with('success', 'فایل ورودی حذف شد و فضای آن آزاد شد.');
+    }
+
+    /** حذف خروجی ویدیوییِ متعلق به حساب کاربر و آزادکردن حجم آن. */
+    public function destroyGeneratedVideo(GeneratedVideo $generatedVideo)
+    {
+        $user = Auth::user();
+
+        abort_unless($user && (int) $generatedVideo->user_id === (int) $user->id, 404);
+
+        app(\App\Services\UserGalleryService::class)->captureOutput(
+            $user,
+            'output_video',
+            (int) $generatedVideo->id,
+            (string) ($generatedVideo->video_path ?: $generatedVideo->video_url),
+            'public',
+            (int) $generatedVideo->size,
+            $generatedVideo->mime_type ?: 'video/mp4',
+            ['order_id' => $generatedVideo->order_id, 'source' => 'profile_delete_snapshot'],
+        );
+        $storage = app(UserStorageService::class);
+        $storage->deletePublicFile($generatedVideo->video_path);
+        $storage->deletePublicFile($generatedVideo->poster_path);
+        $generatedVideo->delete();
+
+        return redirect()->route('app.profile', ['tab' => 'grid'])
+            ->with('success', 'خروجی ویدیو حذف شد و فضای آن آزاد شد.');
+    }
+
     /** ساخت پروفایل مرجع چهره برای استفاده‌ی مجدد در ساخت‌های بعدی. */
     public function storeFaceProfile(Request $request)
     {
@@ -426,6 +480,14 @@ public function gallery()
             'images' => ['required', 'array', 'min:1', 'max:3'],
             'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
+
+        $incomingBytes = collect($request->file('images', []))
+            ->sum(fn ($image): int => (int) $image->getSize());
+        $storage = app(UserStorageService::class);
+        $storageCheck = $storage->check($user, $incomingBytes);
+        if (! $storageCheck['allowed']) {
+            return back()->withErrors(['face_profile' => $storage->blockMessage($storageCheck)]);
+        }
 
         $referenceImages = [];
         foreach ($request->file('images', []) as $image) {
@@ -476,16 +538,15 @@ public function gallery()
         abort_unless($user && (int) $faceProfile->user_id === (int) $user->id, 404);
 
         foreach ($faceProfile->referenceImageEntries() as $image) {
-            if (!empty($image['path'])) {
-                Storage::disk('public')->delete($image['path']);
-            }
+            app(UserStorageService::class)->deletePublicFile($image['path'] ?? null);
         }
 
-        $faceProfile->update(['status' => 'deleted']);
+        $faceProfile->delete();
 
         return redirect()->route('app.profile', [
             'tab' => 'files',
             'file_tab' => 'face-profiles',
         ])->with('success', 'پروفایل چهره حذف شد.');
     }
+
 }

@@ -81,6 +81,50 @@ class UserGalleryService
         );
     }
 
+    /** یک نسخهٔ مستقل از خروجی برای گالری داشبورد نگه می‌دارد. */
+    public function captureOutput(
+        User $user,
+        string $sourceType,
+        int $sourceId,
+        string $sourcePath,
+        string $sourceDisk = 'public',
+        ?int $size = null,
+        ?string $mimeType = null,
+        array $metadata = [],
+    ): ?UserGalleryItem {
+        if (! Schema::hasTable('user_gallery_items') || ! Schema::hasTable('user_gallery_configs')) {
+            return null;
+        }
+
+        $sourceContents = $this->sourceContentsIfExists($sourcePath, $sourceDisk);
+        if ($sourceContents === null || $sourceContents === '') {
+            return null;
+        }
+
+        $existing = UserGalleryItem::query()
+            ->where('user_id', $user->id)
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->storeContents(
+            $user,
+            $sourceType,
+            $sourceId,
+            $sourceContents,
+            $size ?: strlen($sourceContents),
+            $mimeType,
+            $metadata,
+            $this->extensionFor($mimeType, $sourcePath),
+            false,
+            90,
+            false,
+        );
+    }
+
     /** متن خامی که کاربر در صفحهٔ ساخت وارد کرده را مانند سایر ورودی‌ها ذخیره می‌کند. */
     public function captureText(
         User $user,
@@ -114,19 +158,24 @@ class UserGalleryService
         ?string $mimeType,
         array $metadata,
         string $extension,
+        bool $requireConsent = true,
+        ?int $retentionDays = null,
+        bool $enforceQuota = true,
     ): ?UserGalleryItem {
-        if (! $this->isEnabledFor($user) || $sourceContents === '') {
+        if (($requireConsent && ! $this->isEnabledFor($user)) || $sourceContents === '') {
             return null;
         }
 
         $config = $this->config();
-        if ($user->galleryItems()->count() >= $config->max_items_per_user) {
-            return null;
-        }
+        if ($enforceQuota) {
+            if ($user->galleryItems()->count() >= $config->max_items_per_user) {
+                return null;
+            }
 
-        $maxBytes = max(1, $config->max_storage_mb) * 1024 * 1024;
-        if ((int) $user->galleryItems()->sum('size') + $actualSize > $maxBytes) {
-            return null;
+            $maxBytes = max(1, $config->max_storage_mb) * 1024 * 1024;
+            if ((int) $user->galleryItems()->sum('size') + $actualSize > $maxBytes) {
+                return null;
+            }
         }
 
         $disk = Storage::disk('user_gallery');
@@ -152,7 +201,9 @@ class UserGalleryService
             'mime_type' => $mimeType ?: 'application/octet-stream',
             'preview_mime_type' => $previewMime ?: 'image/jpeg',
             'size' => $actualSize,
-            'expires_at' => now()->addDays(max(1, $config->retention_days)),
+            'expires_at' => (int) ($retentionDays ?? $config->retention_days) > 0
+                ? now()->addDays((int) ($retentionDays ?? $config->retention_days))
+                : null,
             'metadata' => $metadata,
         ]);
 
@@ -162,7 +213,7 @@ class UserGalleryService
             'action' => 'stored',
             'source_type' => $sourceType,
             'source_id' => $sourceId,
-            'metadata' => ['retention_days' => (int) $config->retention_days],
+            'metadata' => ['retention_days' => (int) ($retentionDays ?? $config->retention_days)],
         ]);
         app(UserGalleryCostService::class)->recordStorage($item);
 
@@ -197,6 +248,7 @@ class UserGalleryService
 
         $deleted = 0;
         UserGalleryItem::query()
+            ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->orderBy('id')
             ->chunkById(100, function ($items) use (&$deleted): void {
@@ -229,6 +281,15 @@ class UserGalleryService
         }
 
         return Storage::disk($disk)->exists($path);
+    }
+
+    private function sourceContentsIfExists(string $path, string $disk): ?string
+    {
+        if (! $this->sourceExists($path, $disk)) {
+            return null;
+        }
+
+        return $this->sourceContents($path, $disk);
     }
 
     private function sourceContents(string $path, string $disk): ?string

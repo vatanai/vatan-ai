@@ -15,7 +15,7 @@ class AdminAuthController extends Controller
     public function showLogin()
     {
         if (Auth::guard('admin')->check()) {
-            return redirect()->route('admin.dashboard');
+            return redirect()->route('admin.quick-access');
         }
         return view('admin.auth.login');
     }
@@ -49,7 +49,7 @@ class AdminAuthController extends Controller
                     'login_time'=>now()->format('Y/m/d H:i'), 'ip'=>$request->ip(),
                 ]);
             }
-            return redirect()->intended(route('admin.dashboard'));
+            return redirect()->route('admin.quick-access');
         }
 
         RateLimiter::hit($key, 60);
@@ -70,6 +70,6 @@ class AdminAuthController extends Controller
 
     public function dashboard()
     {
-        return view('admin.dashboard');
+        return redirect()->route('admin.quick-access');
     }
 }

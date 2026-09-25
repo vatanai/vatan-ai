@@ -35,7 +35,7 @@ class UserGalleryConfig extends Model
             [
                 'enabled' => true,
                 'suggestions_enabled' => true,
-                'retention_days' => 60,
+                'retention_days' => 7,
                 'max_items_per_user' => 50,
                 'max_storage_mb' => 100,
                 'free_recreations_per_month' => 1,
@@ -52,6 +52,6 @@ class UserGalleryConfig extends Model
     {
         return Schema::hasTable('user_gallery_configs')
             ? (int) static::current()->retention_days
-            : 60;
+            : 7;
     }
 }

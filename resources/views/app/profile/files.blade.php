@@ -1,4 +1,4 @@
-{{-- ===== بخش فایل‌ها: فضای ذخیره‌سازی + عکس‌های ورودی + محصولات استفاده‌شده ===== --}}
+{{-- ===== بخش فایل‌ها: فضای ذخیره‌سازی + کارکتر شیت + محصولات استفاده‌شده ===== --}}
 <div class="profile-panel" data-panel="files" style="display:none;">
 
   @if($isGuest ?? false)
@@ -34,7 +34,6 @@
 
   <div class="files-sub-tabs" dir="rtl">
     <button type="button" class="files-sub-tab active" data-sub="face-profiles"><i class="fa-solid fa-user" aria-hidden="true"></i> کارکتر چهره شما</button>
-    <button type="button" class="files-sub-tab" data-sub="personal">عکس‌های ورودی</button>
     <button type="button" class="files-sub-tab" data-sub="used-products">محصولات استفاده شده</button>
   </div>
 
@@ -96,15 +95,6 @@
         <div class="face-profile-empty"><span><i class="fa-solid fa-sparkles" aria-hidden="true"></i></span><strong>هنوز کارکتر چهره‌ای نساختی</strong><p>اولین پروفایل چهره‌ات را بساز تا در ساخت‌های بعدی سریع‌تر شروع کنی.</p><a href="{{ route('landing.character-sheet') }}">شروع با کارکتر شیت <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a></div>
       @endforelse
     </div>
-  </div>
-
-  <div id="files-personal" class="files-grid" style="display:none;">
-    @forelse (($personalImages ?? collect())->filter(fn ($upload) => blank($upload->mime_type) || str_starts_with((string) $upload->mime_type, 'image/')) as $upload)
-      @php $personalPath = $upload->file_path ?? ''; @endphp
-      <div class="files-cell"><img src="{{ filter_var($personalPath, FILTER_VALIDATE_URL) ? $personalPath : asset('storage/' . ltrim($personalPath, '/')) }}" alt="عکس شخصی آپلودشده" class="grid-img" loading="lazy" decoding="async"></div>
-    @empty
-      <div class="grid-empty"><p>هنوز عکس ورودی برای ساخت وارد نکردی</p></div>
-    @endforelse
   </div>
 
   <div id="files-used-products" class="files-grid files-grid--products" style="display:none;">

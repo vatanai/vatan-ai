@@ -7,6 +7,8 @@ use App\Services\AiCatalogSyncService;
 use App\Jobs\SyncTelegramReferralMessages;
 use App\Models\TelegramUser;
 use App\Jobs\CleanupExpiredStudioUploads;
+use App\Jobs\CleanupExpiredUserGalleryItems;
+use App\Jobs\CleanupExpiredProfileMedia;
 
 Schedule::command('credits:sync')
     ->everyMinute()
@@ -22,6 +24,14 @@ Schedule::command('telegram:sync-referral-messages')
 
 Schedule::job(new CleanupExpiredStudioUploads)
     ->dailyAt('03:30')
+    ->withoutOverlapping(30);
+
+Schedule::job(new CleanupExpiredUserGalleryItems)
+    ->dailyAt('03:45')
+    ->withoutOverlapping(30);
+
+Schedule::job(new CleanupExpiredProfileMedia)
+    ->dailyAt('04:00')
     ->withoutOverlapping(30);
 
 Artisan::command('telegram:sync-referral-messages', function () {

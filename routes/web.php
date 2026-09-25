@@ -164,6 +164,9 @@ Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::delete('/profile/generated-images/{generatedImage}', [ProfileController::class, 'destroyGeneratedImage'])->name('profile.generated-images.destroy');
+    Route::delete('/profile/generated-videos/{generatedVideo}', [ProfileController::class, 'destroyGeneratedVideo'])->name('profile.generated-videos.destroy');
+    Route::delete('/profile/uploads/{userUpload}', [ProfileController::class, 'destroyUserUpload'])->name('profile.uploads.destroy');
     Route::post('/profile/referral-links', [ReferralController::class, 'createLink'])->name('profile.referral-links.store');
     Route::patch('/profile/referral-links/{referralLink}/deactivate', [ReferralController::class, 'deactivateLink'])->name('profile.referral-links.deactivate');
     Route::post('/profile/face-profiles', [ProfileController::class, 'storeFaceProfile'])->name('profile.face-profiles.store');
@@ -400,6 +403,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::patch('product-tests/{run}', [AiTestController::class, 'updateRun'])->name('product-tests.update');
 
     // داشبورد مرکزی
+    Route::get('/quick-access', [DashboardController::class, 'quickAccess'])->name('quick-access');
     Route::get('/dashboard/fragment/{section}', [DashboardController::class, 'fragment'])
         ->name('dashboard.fragment')
         ->where('section', '[a-z0-9]+');
@@ -473,6 +477,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
 
     // گالری ورودی‌های کاربران؛ مسیرهای فایل قبل از پارامترهای عمومی کاربران ثبت شده‌اند.
     Route::get('/users/gallery', [UserGalleryController::class, 'index'])->name('users.gallery.index');
+    Route::delete('/users/gallery/bulk', [UserGalleryController::class, 'bulkDestroy'])->name('users.gallery.bulk-destroy');
     Route::get('/users/face-profiles', [UserGalleryController::class, 'faceProfiles'])->name('users.face-profiles.index');
     Route::post('/users/gallery/settings', [UserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
     Route::post('/users/{user}/face-profiles', [UserGalleryController::class, 'storeFaceProfile'])->name('users.face-profiles.store');

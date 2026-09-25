@@ -64,6 +64,19 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7M20 5v3.7h-3.7M20 12a8 8 0 0 1-13.7 5.6L4 15.3M4 19v-3.7h3.7"></path></svg>
           <span>ساخت مجدد</span>
         </a>
+        <button type="button" id="gridPreviewDelete" class="grid-preview-btn grid-preview-btn--delete">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16m-10 4v6m4-6v6M9 7V4h6v3m-9 0 1 13h10l1-13"></path></svg>
+          <span>حذف</span>
+        </button>
+      </div>
+      <div id="gridPreviewDeleteConfirm" class="grid-preview-delete-confirm" hidden role="dialog" aria-live="polite" aria-label="تأیید حذف خروجی">
+        <p>از حذف این عکس مطمئن هستین؟</p>
+        <form id="gridPreviewDeleteForm" method="POST">
+          @csrf
+          @method('DELETE')
+          <button type="submit" class="grid-preview-delete-confirm__yes">آره، پاک بشه</button>
+          <button type="button" id="gridPreviewDeleteCancel" class="grid-preview-delete-confirm__no">خیر، منصرف شدم</button>
+        </form>
       </div>
 
     </div>

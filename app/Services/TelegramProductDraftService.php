@@ -583,7 +583,9 @@ class TelegramProductDraftService
         $slugBase = Str::slug((string) ($ai['name_en'] ?? 'vatan-product')) ?: 'vatan-product';
         $slug = $slugBase;
         $counter = 1;
-        while (Product::query()->where('slug', $slug)->exists()) {
+        // اسلاگ محصولات حذف‌شده هم به‌خاطر ایندکس یکتا همچنان اشغال است.
+        // بنابراین برای ساخت اسلاگ جدید باید محصولات حذف‌شده را هم بررسی کنیم.
+        while (Product::withTrashed()->where('slug', $slug)->exists()) {
             $slug = $slugBase . '-' . (++$counter);
         }
 

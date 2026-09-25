@@ -18,6 +18,11 @@ class GeneratedImage extends Model
         'user_prompt',
         'cost',
         'size',
+        'expires_at',
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

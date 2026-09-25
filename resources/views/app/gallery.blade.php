@@ -38,28 +38,7 @@
         @endforelse
     </div>
 
-    {{-- بخش دوم: عکس‌های ورودی برای ساخت --}}
-    <div class="section-title" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #3b82f6; font-size: 18px;">📁</span>
-        <h2 style="font-size: 16px; font-weight: 700; margin: 0;">عکس‌های ورودی برای ساخت</h2>
-    </div>
-
-    <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;">
-        @forelse ($personalImages as $img)
-            <div class="image-cell" style="aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle);">
-                <img src="{{ filter_var($img->file_path, FILTER_VALIDATE_URL) ? $img->file_path : asset('storage/' . ltrim($img->file_path, '/')) }}" 
-                     alt="تصویر آپلود شده" 
-                     style="width: 100%; height: 100%; object-fit: cover; display: block;" 
-                     loading="lazy">
-            </div>
-        @empty
-            <div style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 12px; padding: 20px 0;">
-                هنوز هیچ عکس ورودی برای ساخت وارد نکرده‌اید.
-            </div>
-        @endforelse
-    </div>
-
-    {{-- بخش سوم: ورودی‌های ثبت‌شدهٔ هر آزمایش --}}
+    {{-- بخش دوم: ورودی‌های ثبت‌شدهٔ هر آزمایش در گالری خصوصی --}}
     <div class="section-title" style="margin: 48px 0 16px; display: flex; align-items: center; gap: 8px;">
         <span style="color: #cffe00; font-size: 18px;">✦</span>
         <h2 style="font-size: 16px; font-weight: 700; margin: 0;">ورودی‌های ثبت‌شدهٔ ساخت</h2>

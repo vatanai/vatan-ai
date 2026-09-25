@@ -383,6 +383,10 @@
   var previewDownload = document.getElementById('gridPreviewDownload');
   var previewShare    = document.getElementById('gridPreviewShare');
   var previewRecreate = document.getElementById('gridPreviewRecreate');
+  var previewDelete   = document.getElementById('gridPreviewDelete');
+  var previewDeleteConfirm = document.getElementById('gridPreviewDeleteConfirm');
+  var previewDeleteForm = document.getElementById('gridPreviewDeleteForm');
+  var previewDeleteCancel = document.getElementById('gridPreviewDeleteCancel');
   var previewDate     = document.getElementById('gridPreviewDate');
   var previewClose    = document.getElementById('gridPreviewClose');
   var previewImgWrap  = previewVideo ? previewVideo.closest('.grid-preview-img-wrap') : null;
@@ -420,6 +424,7 @@
     var posterUrl   = cell.getAttribute('data-poster') || '';
     var date        = cell.getAttribute('data-date') || '';
     var productCreateUrl = cell.getAttribute('data-product-create-url') || '';
+    var deleteUrl = cell.getAttribute('data-delete-url') || '';
     previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
     var isVideo = mediaKind === 'video' && videoUrl;
@@ -453,6 +458,10 @@
       }
     }
 
+    if (previewDeleteForm) previewDeleteForm.action = deleteUrl;
+    if (previewDelete) previewDelete.hidden = !deleteUrl;
+    if (previewDeleteConfirm) previewDeleteConfirm.hidden = true;
+
     previewModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     syncPreviewVideoFrame();
@@ -476,6 +485,8 @@
       previewRecreate.classList.add('is-disabled');
       previewRecreate.setAttribute('aria-disabled', 'true');
     }
+    if (previewDeleteConfirm) previewDeleteConfirm.hidden = true;
+    if (previewDeleteForm) previewDeleteForm.removeAttribute('action');
     document.body.style.overflow = '';
   }
 
@@ -486,6 +497,20 @@
   });
 
   if (previewClose) previewClose.addEventListener('click', closeGridPreview);
+
+  if (previewDelete) {
+    previewDelete.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (previewDeleteForm && previewDeleteForm.action) {
+        previewDeleteConfirm.hidden = false;
+      }
+    });
+  }
+  if (previewDeleteCancel) {
+    previewDeleteCancel.addEventListener('click', function () {
+      previewDeleteConfirm.hidden = true;
+    });
+  }
 
   if (previewPlay && previewVideo) {
     previewPlay.addEventListener('click', function (event) {

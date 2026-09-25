@@ -11,6 +11,7 @@ use App\Services\StudioCostService;
 use App\Services\VideoGenerationService;
 use App\Services\VideoModelSchemaService;
 use App\Services\VideoProductConfigService;
+use App\Services\UserStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -133,6 +134,18 @@ class StudioWorkflowController extends Controller
             'source_video' => [$isVideoWorkflow ? 'required' : 'nullable', 'file', 'mimes:mp4,webm,mov', 'max:102400'],
             'rights_confirmed' => ['accepted'],
         ]);
+        $user = $request->user();
+        abort_unless($user, 401);
+        $incomingFiles = collect((array) $request->file('source_images', []));
+        if ($request->file('source_video')) {
+            $incomingFiles->push($request->file('source_video'));
+        }
+        $incomingBytes = $incomingFiles->filter()->sum(fn ($file): int => (int) $file->getSize());
+        $storage = app(UserStorageService::class);
+        $storageCheck = $storage->check($user, $incomingBytes);
+        if (! $storageCheck['allowed']) {
+            throw ValidationException::withMessages(['storage' => $storage->blockMessage($storageCheck)]);
+        }
         $this->ensureWorkflowInputSupport($model, $workflow, $modelSchemas);
         $this->ensureSupportedOptions($model, $request, $modelSchemas);
 
@@ -160,11 +173,11 @@ class StudioWorkflowController extends Controller
             $imagePaths[] = $path;
             $imageUrls[] = asset('storage/' . ltrim($path, '/'));
             $uploadIds[] = UserUpload::create([
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
                 'file_path' => $path,
                 'size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
-                'expires_at' => now()->addDays(7),
+                'expires_at' => now()->addDays(UserStorageService::INPUT_RETENTION_DAYS),
             ])->id;
         }
 
@@ -175,11 +188,11 @@ class StudioWorkflowController extends Controller
             $sourceVideoPath = $file->store('uploads/video-inputs/videos', 'public');
             $sourceVideoUrl = asset('storage/' . $sourceVideoPath);
             $uploadIds[] = UserUpload::create([
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
                 'file_path' => $sourceVideoPath,
                 'size' => $file->getSize(),
                 'mime_type' => $file->getMimeType(),
-                'expires_at' => now()->addDays(7),
+                'expires_at' => now()->addDays(UserStorageService::INPUT_RETENTION_DAYS),
             ])->id;
         }
 
@@ -198,6 +211,7 @@ class StudioWorkflowController extends Controller
                 'source_image_data_list' => $imageUrls,
                 'source_upload_path' => $imagePaths[0] ?? null,
                 'source_upload_paths' => $imagePaths,
+                'temporary_upload_paths' => array_values(array_filter(array_merge($imagePaths, [$sourceVideoPath]))),
                 'source_video_path' => $sourceVideoPath,
                 'source_video_url' => $sourceVideoUrl,
                 'workflow' => $workflow,

@@ -4,7 +4,9 @@
         $adminBreadcrumb[] = ['label' => $label];
     };
 
-    if (request()->is('admin/home-builder/galleries*')) {
+    if (request()->routeIs('admin.quick-access')) {
+        $addBreadcrumb('دسترسی سریع');
+    } elseif (request()->is('admin/home-builder/galleries*')) {
         $addBreadcrumb('مدیریت وبسایت');
         $addBreadcrumb('مدیریت سایت');
         $addBreadcrumb('صفحه اصلی');

@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-8 gap-3 mb-5 max-[1200px]:grid-cols-4 max-[700px]:grid-cols-2 max-[480px]:grid-cols-1">
+    <div class="grid grid-cols-4 gap-3 mb-5 max-[1200px]:grid-cols-4 max-[700px]:grid-cols-2 max-[480px]:grid-cols-1">
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کل ورودی‌ها</span><strong class="block mt-1 text-[23px] text-[var(--text-h)]">{{ number_format($stats['items']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کاربران دارای گالری</span><strong class="block mt-1 text-[23px] text-[var(--primary)]">{{ number_format($stats['users']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">ورودی‌های فعال</span><strong class="block mt-1 text-[23px] text-[var(--success)]">{{ number_format($stats['active']) }}</strong></div>
@@ -34,6 +34,10 @@
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">بازآفرینی موفق</span><strong class="block mt-1 text-[23px] text-[var(--primary)]">{{ number_format($stats['recreations']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کمپین‌های آماده</span><strong class="block mt-1 text-[23px] text-[var(--warning)]">{{ number_format($stats['campaigns']) }}</strong></div>
       <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">هزینه ثبت‌شده</span><strong class="block mt-1 text-[23px] text-[var(--info)]">{{ number_format($stats['costs']) }} تومان</strong></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">عکس‌های ورودی</span><strong class="block mt-1 text-[23px] text-[var(--info)]">{{ number_format($stats['input_images']) }}</strong><small class="block mt-1 text-[9px] text-[var(--text-soft)]">{{ number_format($stats['input_image_storage'] / 1048576, 1) }} مگابایت</small></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">عکس‌های ساخته‌شده</span><strong class="block mt-1 text-[23px] text-[var(--success)]">{{ number_format($stats['generated_images']) }}</strong><small class="block mt-1 text-[9px] text-[var(--text-soft)]">{{ number_format($stats['generated_image_storage'] / 1048576, 1) }} مگابایت</small></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">خروجی‌های ویدیویی</span><strong class="block mt-1 text-[23px] text-[var(--primary)]">{{ number_format($stats['generated_videos']) }}</strong><small class="block mt-1 text-[9px] text-[var(--text-soft)]">{{ number_format($stats['generated_video_storage'] / 1048576, 1) }} مگابایت</small></div>
+      <div class="p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]"><span class="text-[10px] text-[var(--text-soft)]">کارکتر شیت فعال</span><strong class="block mt-1 text-[23px] text-[var(--warning)]">{{ number_format($stats['face_profiles']) }}</strong><small class="block mt-1 text-[9px] text-[var(--text-soft)]">{{ number_format($stats['face_storage'] / 1048576, 1) }} مگابایت</small></div>
     </div>
 
     <section class="mb-5 p-4 rounded-2xl border bg-[var(--card-bg)] border-[var(--border)]">
@@ -53,7 +57,7 @@
           <input type="checkbox" name="suggestions_enabled" value="1" @checked($config->suggestions_enabled ?? true) class="accent-[var(--primary)]">
           فعال‌سازی پیشنهادها
         </label>
-        <label class="block text-[10px] text-[var(--text-soft)]">مدت نگهداری (روز)<input type="number" name="retention_days" min="1" max="3650" value="{{ $config->retention_days }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
+        <label class="block text-[10px] text-[var(--text-soft)]">مدت نگهداری عکس‌های ورودی<select name="retention_days" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"><option value="7" @selected((int) $config->retention_days === 7)>یک هفته</option><option value="30" @selected((int) $config->retention_days === 30)>یک ماه</option><option value="90" @selected((int) $config->retention_days === 90)>۳ ماه</option><option value="180" @selected((int) $config->retention_days === 180)>۶ ماه</option><option value="270" @selected((int) $config->retention_days === 270)>۹ ماه</option><option value="365" @selected((int) $config->retention_days === 365)>۱۲ ماه</option><option value="0" @selected((int) $config->retention_days === 0)>همیشه</option></select></label>
         <label class="block text-[10px] text-[var(--text-soft)]">سقف تصاویر هر کاربر<input type="number" name="max_items_per_user" min="1" max="1000" value="{{ $config->max_items_per_user }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
         <label class="block text-[10px] text-[var(--text-soft)]">سقف حجم هر کاربر (مگابایت)<input type="number" name="max_storage_mb" min="1" max="20480" value="{{ $config->max_storage_mb }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
         <label class="block text-[10px] text-[var(--text-soft)]">بازآفرینی رایگان ماهانه<input type="number" name="free_recreations_per_month" min="0" max="100" value="{{ $config->free_recreations_per_month ?? 1 }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
@@ -69,11 +73,27 @@
         </div>
         <span class="text-[10px] text-[var(--text-soft)]">{{ number_format($galleryUsers->total()) }} کاربر</span>
       </div>
+      <form method="GET" class="grid grid-cols-6 gap-2 p-4 border-b border-[var(--border)] bg-[var(--page-bg)] items-end max-[1100px]:grid-cols-3 max-[520px]:grid-cols-1">
+        <label class="block text-[10px] text-[var(--text-soft)]">جستجوی کاربر<input name="q" value="{{ $search }}" placeholder="نام، تلفن یا ایمیل" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
+        <label class="block text-[10px] text-[var(--text-soft)]">از تاریخ ساخت<input type="date" name="date_from" value="{{ $from?->format('Y-m-d') }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
+        <label class="block text-[10px] text-[var(--text-soft)]">تا تاریخ ساخت<input type="date" name="date_to" value="{{ $to?->format('Y-m-d') }}" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"></label>
+        <label class="block text-[10px] text-[var(--text-soft)]">نوع خروجی<select name="media_type" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"><option value="all" @selected($mediaType === 'all')>همه</option><option value="image" @selected($mediaType === 'image')>تصویر</option><option value="video" @selected($mediaType === 'video')>ویدیو</option></select></label>
+        <label class="block text-[10px] text-[var(--text-soft)]">ترتیب نمایش<select name="sort" class="mt-1 w-full px-3 py-2 rounded-xl border bg-[var(--card-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]"><option value="newest" @selected($sort === 'newest')>جدیدترین</option><option value="oldest" @selected($sort === 'oldest')>قدیمی‌ترین</option></select></label>
+        <div class="flex items-center gap-2"><button type="submit" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--primary)] text-white text-[11px] font-bold hover:opacity-90"><i class="fa-solid fa-magnifying-glass"></i> اعمال فیلتر</button><a href="{{ route('admin.users.gallery.index') }}" class="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-[var(--border)] text-[var(--text-soft)] text-[11px] hover:text-[var(--primary)]" title="حذف فیلترها"><i class="fa-solid fa-rotate-left"></i></a></div>
+      </form>
+      <form method="POST" action="{{ route('admin.users.gallery.bulk-destroy') }}" id="gallery-card-bulk-form">
+        @csrf
+        @method('DELETE')
+        <div class="px-4 pt-4 flex items-center justify-between gap-3 flex-wrap">
+          <label class="inline-flex items-center gap-2 text-[10px] text-[var(--text-main)] cursor-pointer"><input type="checkbox" id="gallery-card-select-all" class="accent-[var(--primary)]"> انتخاب کل کارت‌ها</label>
+          <button type="submit" id="gallery-card-bulk-delete" disabled class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--danger-m)] bg-[var(--danger-l)] text-[var(--danger)] text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"><i class="fa-solid fa-trash-can"></i> حذف ورودی کارت‌های انتخاب‌شده</button>
+        </div>
       <div class="grid grid-cols-4 gap-3 p-4 max-[1280px]:grid-cols-3 max-[1000px]:grid-cols-2 max-[650px]:grid-cols-1">
         @forelse($galleryCards as $card)
-          <article class="rounded-2xl border bg-[var(--page-bg)] border-[var(--border)] overflow-hidden">
-            <a href="{{ route('admin.users.gallery.show', $card['user_id']) }}" class="flex items-center justify-between gap-3 p-3 border-b border-[var(--border)] hover:bg-[var(--primary-l)] no-underline">
-              <div class="min-w-0">
+          <article class="relative rounded-2xl border bg-[var(--page-bg)] border-[var(--border)] overflow-hidden">
+            <label class="absolute top-2 left-2 z-10 w-7 h-7 rounded-lg inline-flex items-center justify-center bg-[var(--card-bg)]/90 border border-[var(--border)] cursor-pointer"><input type="checkbox" name="user_ids[]" value="{{ $card['user_id'] }}" class="gallery-card-checkbox accent-[var(--primary)]" aria-label="انتخاب کارت {{ $card['user_name'] }}"></label>
+            <a href="{{ route('admin.users.gallery.show', $card['user_id']) }}" class="flex items-center justify-between gap-3 p-3 pl-12 border-b border-[var(--border)] hover:bg-[var(--primary-l)] no-underline">
+              <div class="min-w-0 flex-1">
                 <strong class="block truncate text-[11px] text-[var(--text-h)]">{{ $card['user_name'] }}</strong>
                 @if($card['user_phone'])<span class="block mt-1 text-[9px] text-[var(--text-soft)]" dir="ltr">{{ $card['user_phone'] }}</span>@endif
               </div>
@@ -119,51 +139,25 @@
         @endforelse
       </div>
       <div class="p-4 border-t border-[var(--border)]">{{ $galleryUsers->appends(request()->except('gallery_page'))->links() }}</div>
+      </form>
     </section>
 
-    <section class="rounded-2xl border bg-[var(--card-bg)] border-[var(--border)] overflow-hidden">
-      <div class="p-4 border-b border-[var(--border)] flex items-center justify-between gap-3 flex-wrap">
-        <h2 class="text-[12px] font-bold text-[var(--text-h)]">ورودی‌های ذخیره‌شده</h2>
-        <form method="GET" class="flex items-center gap-2">
-          <input name="q" value="{{ $search }}" placeholder="جستجوی کاربر" class="w-44 px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]">
-          <select name="status" class="px-3 py-2 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-[11px] text-[var(--text-main)]">
-            <option value="all" @selected($status === 'all')>همه</option>
-            <option value="active" @selected($status === 'active')>فعال</option>
-            <option value="expired" @selected($status === 'expired')>منقضی‌شده</option>
-          </select>
-          <button class="w-9 h-9 rounded-xl border border-[var(--border)] text-[var(--text-soft)] hover:text-[var(--primary)]" title="جستجو" aria-label="جستجو"><i class="fa-solid fa-magnifying-glass"></i></button>
-        </form>
-      </div>
-      <div class="grid grid-cols-4 gap-3 p-4 max-[1100px]:grid-cols-3 max-[700px]:grid-cols-2 max-[430px]:grid-cols-1">
-        @forelse($items as $item)
-          <article class="overflow-hidden rounded-2xl border bg-[var(--page-bg)] border-[var(--border)]">
-            <div class="relative aspect-square bg-[var(--input-bg)] flex items-center justify-center overflow-hidden">
-              @if($item->input_kind === 'image')
-                <a href="{{ route('admin.users.gallery.preview', [$item->user_id, $item->id]) }}" target="_blank" rel="noopener" class="block w-full h-full"><img src="{{ route('admin.users.gallery.preview', [$item->user_id, $item->id]) }}" alt="عکس ورودی کاربر" class="w-full h-full object-cover" loading="lazy"></a>
-              @elseif($item->input_kind === 'video')
-                <video src="{{ route('admin.users.gallery.original', [$item->user_id, $item->id]) }}" class="w-full h-full object-contain" controls preload="metadata"></video>
-              @elseif($item->input_kind === 'text')
-                <div class="w-full h-full p-4 overflow-hidden text-[11px] leading-7 text-[var(--text-main)] whitespace-pre-wrap">{{ $item->text_preview }}</div>
-              @else
-                <a href="{{ route('admin.users.gallery.original', [$item->user_id, $item->id]) }}" target="_blank" rel="noopener" class="text-center text-[var(--primary)]"><i class="fa-solid fa-file text-[30px]"></i><span class="block mt-2 text-[10px]">بازکردن فایل</span></a>
-              @endif
-              <span class="absolute top-2 right-2 px-2 py-1 rounded-lg bg-[var(--card-bg)]/90 border border-[var(--border)] text-[9px] text-[var(--text-main)]">{{ $item->input_label }}</span>
-            </div>
-            <div class="p-3">
-              <a href="{{ route('admin.users.gallery.show', $item->user_id) }}" class="block truncate text-[11px] font-bold text-[var(--text-h)] hover:text-[var(--primary)]">{{ trim(($item->user?->name ?? '').' '.($item->user?->last_name ?? '')) ?: 'کاربر حذف‌شده' }}</a>
-              <div class="mt-1 text-[9.5px] text-[var(--text-soft)]">انقضا: {{ \App\Support\Jalali::formatNumeric($item->expires_at) }} · {{ number_format($item->size / 1048576, 2) }} مگابایت</div>
-              <div class="mt-2 flex items-center justify-between gap-2">
-                <span class="px-2 py-1 rounded-lg border border-[var(--border)] text-[9px] {{ $item->expires_at?->isFuture() ? 'text-[var(--success)]' : 'text-[var(--danger)]' }}">{{ $item->expires_at?->isFuture() ? 'فعال' : 'منقضی' }}</span>
-                <a href="{{ route('admin.users.gallery.original', [$item->user_id, $item->id]) }}" target="_blank" rel="noopener" class="text-[10px] text-[var(--info)] hover:text-[var(--primary)]" title="فایل اصلی"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-              </div>
-            </div>
-          </article>
-        @empty
-          <div class="col-span-full p-12 text-center text-[11px] text-[var(--text-soft)]"><i class="fa-regular fa-photo-film text-[24px] mb-2"></i><p>ورودی‌ای در آرشیو ثبت نشده است.</p></div>
-        @endforelse
-      </div>
-      <div class="p-4 border-t border-[var(--border)]">{{ $items->links() }}</div>
-    </section>
   </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const cardForm = document.getElementById('gallery-card-bulk-form');
+  if (cardForm) {
+    const master = document.getElementById('gallery-card-select-all');
+    const submit = document.getElementById('gallery-card-bulk-delete');
+    const cards = Array.from(cardForm.querySelectorAll('.gallery-card-checkbox'));
+    const sync = () => { submit.disabled = !master.checked && !cards.some((item) => item.checked); };
+    master.addEventListener('change', () => { cards.forEach((item) => { item.checked = master.checked; }); sync(); });
+    cards.forEach((item) => item.addEventListener('change', sync));
+    cardForm.addEventListener('submit', (event) => {
+      if (!confirm(master.checked ? 'ورودی‌های تمام کارت‌های این صفحه حذف شوند؟' : 'ورودی‌های کارت‌های انتخاب‌شده حذف شوند؟')) event.preventDefault();
+    });
+  }
+});
+</script>
 </main>
 @endsection

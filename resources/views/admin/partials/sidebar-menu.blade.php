@@ -25,9 +25,14 @@
   $isMarketingTechnologyMenu = request()->is('admin/marketing-technology*');
 @endphp
 
+{{-- دسترسی سریع — نقطه‌ی ورود ثابت پنل مدیریت --}}
+<div class="nav-item">
+  <a href="{{ route('admin.quick-access') }}" class="nav-link {{ request()->routeIs('admin.quick-access') ? 'active' : '' }}"><div class="nav-icon"><i class="fa-solid fa-border-all"></i></div><div class="nav-label">دسترسی سریع</div></a>
+</div>
+
 {{-- مرکز فرماندهی و اعتبار سرویس‌ها --}}
 <div class="nav-item">
-  <a href="/admin/dashboard" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}"><div class="nav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="nav-label">مرکز فرماندهی</div></a>
+  <a href="{{ route('admin.dashboard', ['center' => 1]) }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}"><div class="nav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="nav-label">مرکز فرماندهی</div></a>
 </div>
 <div class="nav-item">
   @php $isCreditMenu = request()->is('admin/service-credits*'); @endphp

@@ -43,6 +43,7 @@ class GeneratedVideo extends Model
         'credits_settled_at',
         'credits_restored_at',
         'completed_at',
+        'expires_at',
     ];
 
     protected $casts = [
@@ -65,6 +66,7 @@ class GeneratedVideo extends Model
         'credits_settled_at' => 'datetime',
         'credits_restored_at' => 'datetime',
         'completed_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }

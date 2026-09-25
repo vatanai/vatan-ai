@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -32,6 +33,7 @@ class VideoGenerationService
         private readonly StudioCostService $studioCosts,
         private readonly AiProviderCredentials $credentials,
         private readonly ProductCreatorRewardService $creatorRewards,
+        private readonly UserStorageService $userStorage,
     ) {}
 
     public function start(Product $product, User $user, array $options): GeneratedVideo
@@ -255,7 +257,9 @@ class VideoGenerationService
                 'face_profile_id' => $options['face_profile_id'] ?? null,
                 'source_upload_path' => $options['source_upload_path'] ?? null,
                 'source_upload_paths' => array_values(array_filter((array) ($options['source_upload_paths'] ?? []))),
+                'temporary_upload_paths' => array_values(array_filter((array) ($options['temporary_upload_paths'] ?? []))),
                 'source_video_path' => $options['source_video_path'] ?? null,
+                'source_audio_path' => $options['source_audio_path'] ?? null,
                 'source_video_url' => $options['source_video_url'] ?? null,
                 'negative_prompt' => $negativePrompt ?: null,
                 'workflow' => $options['workflow'] ?? $config['workflow'],
@@ -358,6 +362,7 @@ class VideoGenerationService
             try {
                 $this->submitCandidate($generation, $generation->order, $candidate, $generation->product, (string) $generation->user_prompt, $options);
                 $generation->update(['submitted_at' => now(), 'next_poll_at' => now()->addSeconds(15)]);
+                $this->cleanupTemporaryInputs($generation);
                 if (config('queue.default') !== 'sync') {
                     PollStudioVideoGeneration::dispatch($generation->id)->delay(now()->addSeconds(15));
                 }
@@ -675,6 +680,19 @@ class VideoGenerationService
             $generation->update(['status' => 'processing', 'next_poll_at' => now()->addSeconds(30)]);
             throw $error;
         }
+        $storageCheck = $this->userStorage->check($generation->user, 0, (int) $stored['size']);
+        if (! $storageCheck['allowed']) {
+            $this->userStorage->deletePublicFile($stored['path']);
+            $this->failAndRestore(
+                $generation,
+                $this->userStorage->blockMessage($storageCheck),
+                'failed',
+                $actualCost,
+                'STORAGE_LIMIT_EXCEEDED',
+                false,
+            );
+            return $generation->fresh();
+        }
         if ($actualCost === null) {
             $generation->update([
                 'status' => 'needs_review',
@@ -682,9 +700,11 @@ class VideoGenerationService
                 'video_url' => (string) $output['url'],
                 'mime_type' => $stored['mime'],
                 'size' => $stored['size'],
+                'expires_at' => now()->addDays(UserStorageService::OUTPUT_RETENTION_DAYS),
                 'error_code' => 'ACTUAL_COST_MISSING',
                 'error_message' => 'هزینهٔ واقعی سرویس هنوز مشخص نشده است؛ نتیجه پس از بررسی مالی آزاد می‌شود.',
             ]);
+            $this->captureOutputSnapshot($generation->fresh(), $stored);
             $generation->order?->update(['status' => 'review', 'processing_status' => 'needs_review']);
             return $generation->fresh();
         }
@@ -707,6 +727,7 @@ class VideoGenerationService
                 'error_code' => 'CREDIT_SETTLEMENT_REQUIRED',
                 'error_message' => 'هزینهٔ واقعی بیشتر از مبلغ رزروشده است و برای تحویل نتیجه به بررسی اعتبار نیاز دارد.',
             ]);
+            $this->captureOutputSnapshot($generation->fresh(), $stored);
             $generation->order?->update(['status' => 'review', 'processing_status' => 'needs_review']);
             return $generation->fresh();
         }
@@ -718,6 +739,7 @@ class VideoGenerationService
             'video_url' => (string) $output['url'],
             'mime_type' => $stored['mime'],
             'size' => $stored['size'],
+            'expires_at' => now()->addDays(UserStorageService::OUTPUT_RETENTION_DAYS),
             'cost' => $actualCost,
             'actual_cost_usd' => $actualCost,
             'credit_reservation' => $reservation,
@@ -740,6 +762,7 @@ class VideoGenerationService
             'processing_duration_ms' => $generation->order?->processing_started_at?->diffInMilliseconds(now()),
         ]);
         $generation->order?->recordEvent('completed', 'ویدیو با موفقیت ساخته شد');
+        $this->captureOutputSnapshot($generation->fresh(), $stored);
 
         try {
             $this->creatorRewards->rewardForVideo($generation->fresh(['product', 'user', 'order']), $reservation);
@@ -821,8 +844,61 @@ class VideoGenerationService
                 'processing_duration_ms' => $generation->order?->processing_started_at?->diffInMilliseconds(now()),
             ]);
             $generation->order?->recordEvent('failed', 'ساخت ویدیو کامل نشد', $message);
+            $this->cleanupTemporaryInputs($generation);
             Log::warning('Video generation failed', ['generated_video_id' => $generation->id, 'message' => $message]);
         });
+    }
+
+    private function cleanupTemporaryInputs(GeneratedVideo $generation): void
+    {
+        $payload = (array) $generation->input_payload;
+        $temporaryPaths = array_key_exists('temporary_upload_paths', $payload)
+            ? (array) ($payload['temporary_upload_paths'] ?? [])
+            : array_merge(
+                (array) ($payload['source_upload_paths'] ?? []),
+                [$payload['source_video_path'] ?? null, $payload['source_audio_path'] ?? null],
+            );
+        $paths = array_values(array_unique(array_filter($temporaryPaths, fn ($path): bool => is_string($path) && trim($path) !== '')));
+
+        if ($paths === []) {
+            return;
+        }
+
+        foreach ($paths as $path) {
+            $this->userStorage->deletePublicFile($path);
+        }
+
+        if (Schema::hasTable('user_uploads')) {
+            \App\Models\UserUpload::query()
+                ->where('user_id', $generation->user_id)
+                ->whereIn('file_path', $paths)
+                ->delete();
+        }
+
+        $payload['source_upload_path'] = null;
+        $payload['source_upload_paths'] = [];
+        $payload['temporary_upload_paths'] = [];
+        $payload['source_video_path'] = null;
+        $payload['source_audio_path'] = null;
+        $generation->update(['input_payload' => $payload]);
+    }
+
+    private function captureOutputSnapshot(GeneratedVideo $generation, array $stored): void
+    {
+        try {
+            app(UserGalleryService::class)->captureOutput(
+                $generation->user,
+                'output_video',
+                (int) $generation->id,
+                (string) ($stored['path'] ?? ''),
+                'public',
+                (int) ($stored['size'] ?? 0),
+                (string) ($stored['mime'] ?? 'video/mp4'),
+                ['order_id' => $generation->order_id, 'source' => 'video_generation'],
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function candidateModels(Product $product): array

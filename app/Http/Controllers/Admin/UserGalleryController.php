@@ -22,10 +22,13 @@ use App\Models\ReferralConversion;
 use App\Models\ReferralReward;
 use App\Models\ReferralVisit;
 use App\Services\UserGalleryService;
+use App\Services\UserStorageService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -37,21 +40,54 @@ class UserGalleryController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
-        $status = (string) $request->query('status', 'all');
+        $mediaType = (string) $request->query('media_type', 'all');
+        if (! in_array($mediaType, ['all', 'image', 'video'], true)) {
+            $mediaType = 'all';
+        }
+        $sort = (string) $request->query('sort', 'newest');
+        if (! in_array($sort, ['newest', 'oldest'], true)) {
+            $sort = 'newest';
+        }
+        $from = $this->galleryDate($request->query('date_from'), false);
+        $to = $this->galleryDate($request->query('date_to'), true);
 
         $hasGeneratedVideos = Schema::hasTable('generated_videos');
 
         // صفحهٔ گالری باید صاحبان خروجی‌های واقعی را هم نشان بدهد؛ قبلاً فقط
         // ردیف‌های ورودی از user_gallery_items در این فهرست خوانده می‌شدند.
         $galleryUsersQuery = User::query()
-            ->where(function ($query) use ($hasGeneratedVideos): void {
-                $query->whereHas('generatedImages', fn ($imageQuery) => $imageQuery->whereNotNull('image_path'))
-                    ->orWhereHas('galleryItems', fn ($itemQuery) => $itemQuery->whereIn('source_type', self::INPUT_SOURCE_TYPES));
-                if ($hasGeneratedVideos) {
-                    $query->orWhereHas('generatedVideos', fn ($videoQuery) => $videoQuery
-                        ->where(function ($outputQuery): void {
-                            $outputQuery->whereNotNull('video_path')->orWhereNotNull('video_url');
-                        }));
+            ->where(function ($query) use ($hasGeneratedVideos, $mediaType, $from, $to): void {
+                if ($mediaType !== 'video') {
+                    $query->where(function ($imageQuery) use ($from, $to): void {
+                        $imageQuery->whereHas('generatedImages', function ($outputQuery) use ($from, $to): void {
+                            $outputQuery->whereNotNull('image_path');
+                            $this->applyGalleryDateRange($outputQuery, $from, $to);
+                        })->orWhereHas('galleryItems', function ($itemQuery) use ($from, $to): void {
+                            $itemQuery->where('source_type', 'output_image');
+                            $this->applyGalleryDateRange($itemQuery, $from, $to);
+                        });
+                    });
+                }
+                if ($mediaType !== 'image') {
+                    $query->orWhere(function ($videoQuery) use ($hasGeneratedVideos, $from, $to): void {
+                        if ($hasGeneratedVideos) {
+                            $videoQuery->whereHas('generatedVideos', function ($outputQuery) use ($from, $to): void {
+                                $outputQuery->where(function ($query): void {
+                                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                                });
+                                $this->applyGalleryDateRange($outputQuery, $from, $to);
+                            });
+                            $videoQuery->orWhereHas('galleryItems', function ($itemQuery) use ($from, $to): void {
+                                $itemQuery->where('source_type', 'output_video');
+                                $this->applyGalleryDateRange($itemQuery, $from, $to);
+                            });
+                        } else {
+                            $videoQuery->whereHas('galleryItems', function ($itemQuery) use ($from, $to): void {
+                                $itemQuery->where('source_type', 'output_video');
+                                $this->applyGalleryDateRange($itemQuery, $from, $to);
+                            });
+                        }
+                    });
                 }
             })
             ->when($search !== '', function ($query) use ($search): void {
@@ -62,13 +98,6 @@ class UserGalleryController extends Controller
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->when(in_array($status, ['active', 'expired'], true), function ($query) use ($status): void {
-                $query->whereHas('galleryItems', function ($itemQuery) use ($status): void {
-                    $itemQuery->whereIn('source_type', self::INPUT_SOURCE_TYPES)
-                        ->when($status === 'active', fn ($activeQuery) => $activeQuery->where('expires_at', '>', now()))
-                        ->when($status === 'expired', fn ($expiredQuery) => $expiredQuery->where('expires_at', '<=', now()));
-                });
-            })
             ->withCount(['generatedImages' => fn ($query) => $query->whereNotNull('image_path')]);
         if ($hasGeneratedVideos) {
             $galleryUsersQuery->withCount(['generatedVideos' => function ($query): void {
@@ -77,41 +106,37 @@ class UserGalleryController extends Controller
                 });
             }]);
         }
-        $galleryUsers = $galleryUsersQuery->latest('id')->paginate(24, ['*'], 'gallery_page')->withQueryString();
-        $galleryCards = $this->buildGalleryCards($galleryUsers->getCollection(), $hasGeneratedVideos);
-
-        $items = UserGalleryItem::query()
-            ->whereIn('source_type', self::INPUT_SOURCE_TYPES)
-            ->with('user:id,name,last_name,phone')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->whereHas('user', function ($userQuery) use ($search): void {
-                    $userQuery
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
-            ->when($status === 'active', fn ($query) => $query->where('expires_at', '>', now()))
-            ->when($status === 'expired', fn ($query) => $query->where('expires_at', '<=', now()))
-            ->latest()
-            ->paginate(24)
-            ->withQueryString();
-        $this->decorateItems($items);
+        $sort === 'oldest' ? $galleryUsersQuery->oldest('id') : $galleryUsersQuery->latest('id');
+        $galleryUsers = $galleryUsersQuery->paginate(24, ['*'], 'gallery_page')->withQueryString();
+        $galleryCards = $this->buildGalleryCards($galleryUsers->getCollection(), $hasGeneratedVideos, $mediaType, $from, $to);
 
         $config = UserGalleryConfig::current();
         $stats = [
             'items' => UserGalleryItem::whereIn('source_type', self::INPUT_SOURCE_TYPES)->count(),
+            'input_images' => UserGalleryItem::whereIn('source_type', ['upload', 'input_image'])->count(),
             'users' => UserGalleryItem::query()->whereIn('source_type', self::INPUT_SOURCE_TYPES)->distinct('user_id')->count('user_id'),
-            'active' => UserGalleryItem::whereIn('source_type', self::INPUT_SOURCE_TYPES)->where('expires_at', '>', now())->count(),
+            'active' => UserGalleryItem::whereIn('source_type', self::INPUT_SOURCE_TYPES)->where(function ($query): void {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })->count(),
             'storage' => (int) UserGalleryItem::whereIn('source_type', self::INPUT_SOURCE_TYPES)->sum('size'),
+            'input_image_storage' => (int) UserGalleryItem::whereIn('source_type', ['upload', 'input_image'])->sum('size'),
+            'generated_images' => Schema::hasTable('generated_images') ? GeneratedImage::whereNotNull('image_path')->count() : 0,
+            'generated_image_storage' => Schema::hasTable('generated_images') ? (int) GeneratedImage::sum('size') : 0,
+            'generated_videos' => Schema::hasTable('generated_videos') ? GeneratedVideo::where(function ($query): void {
+                $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+            })->count() : 0,
+            'generated_video_storage' => Schema::hasTable('generated_videos') ? (int) GeneratedVideo::sum('size') : 0,
+            'face_profiles' => Schema::hasTable('face_profiles') ? FaceProfile::active()->count() : 0,
+            'face_storage' => Schema::hasTable('face_profiles')
+                ? (int) FaceProfile::active()->get()->sum(fn (FaceProfile $profile): int => collect($profile->referenceImageEntries())->sum(fn (array $image): int => (int) ($image['size'] ?? 0)))
+                : 0,
             'suggestions' => UserGallerySuggestion::count(),
             'recreations' => UserGalleryRecreation::where('status', 'completed')->count(),
             'campaigns' => UserGalleryCampaign::count(),
             'costs' => (int) UserGalleryCostEvent::sum('cost_toman'),
         ];
 
-        return view('admin.users.gallery.index', compact('items', 'config', 'stats', 'search', 'status', 'galleryUsers', 'galleryCards'));
+        return view('admin.users.gallery.index', compact('config', 'stats', 'search', 'mediaType', 'sort', 'from', 'to', 'galleryUsers', 'galleryCards'));
     }
 
     /** فهرست مستقل کارکتر شیت‌های کاربران برای مدیریت سریع ادمین. */
@@ -164,6 +189,14 @@ class UserGalleryController extends Controller
             'images' => ['required', 'array', 'min:1', 'max:3'],
             'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
+
+        $incomingBytes = collect($request->file('images', []))
+            ->sum(fn ($image): int => (int) $image->getSize());
+        $storage = app(UserStorageService::class);
+        $storageCheck = $storage->check($user, $incomingBytes);
+        if (! $storageCheck['allowed']) {
+            return back()->withErrors(['face_profile' => $storage->blockMessage($storageCheck)]);
+        }
 
         $referenceImages = [];
         foreach ($request->file('images', []) as $image) {
@@ -218,27 +251,69 @@ class UserGalleryController extends Controller
         abort_unless((int) $faceProfile->user_id === (int) $user->id, 404);
     }
 
+    private function galleryDate(mixed $value, bool $endOfDay): ?Carbon
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            $date = Carbon::createFromFormat('Y-m-d', $value);
+            if (! $date || $date->format('Y-m-d') !== $value) {
+                return null;
+            }
+
+            return $endOfDay ? $date->endOfDay() : $date->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function applyGalleryDateRange($query, ?Carbon $from, ?Carbon $to): void
+    {
+        $query
+            ->when($from, fn ($builder) => $builder->where('created_at', '>=', $from))
+            ->when($to, fn ($builder) => $builder->where('created_at', '<=', $to));
+    }
+
     /** کارت‌های قبل/بعد را برای همهٔ کاربران دارای خروجی ساخت آماده می‌کند. */
-    private function buildGalleryCards($users, bool $hasGeneratedVideos): array
+    private function buildGalleryCards($users, bool $hasGeneratedVideos, string $mediaType = 'all', ?Carbon $from = null, ?Carbon $to = null): array
     {
         $userIds = collect($users)->pluck('id')->values();
         if ($userIds->isEmpty()) {
             return [];
         }
 
-        $images = GeneratedImage::query()
-            ->whereIn('user_id', $userIds)
-            ->whereNotNull('image_path')
-            ->latest('id')
-            ->get();
-        $videos = $hasGeneratedVideos
+        $images = $mediaType === 'video'
+            ? collect()
+            : GeneratedImage::query()
+                ->whereIn('user_id', $userIds)
+                ->whereNotNull('image_path')
+                ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+                ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+                ->latest('id')
+                ->get();
+        $videos = $hasGeneratedVideos && $mediaType !== 'image'
             ? GeneratedVideo::query()->whereIn('user_id', $userIds)
                 ->where(function ($query): void {
                     $query->whereNotNull('video_path')->orWhereNotNull('video_url');
                 })
+                ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+                ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
                 ->latest('id')->get()
             : collect();
         $outputOrderIds = $images->pluck('order_id')->merge($videos->pluck('order_id'))->filter()->unique()->values();
+        $outputItems = UserGalleryItem::query()
+            ->whereIn('user_id', $userIds)
+            ->whereIn('source_type', $mediaType === 'image' ? ['output_image'] : ($mediaType === 'video' ? ['output_video'] : ['output_image', 'output_video']))
+            ->when($from, fn ($query) => $query->where('created_at', '>=', $from))
+            ->when($to, fn ($query) => $query->where('created_at', '<=', $to))
+            ->latest('id')
+            ->get();
+        $outputOrderIds = $outputOrderIds
+            ->merge($outputItems->map(fn (UserGalleryItem $item) => data_get($item->metadata, 'order_id'))->filter())
+            ->filter()->unique()->values();
         // فقط سفارش‌هایی را بخوان که واقعاً خروجیِ همین صفحه به آن‌ها متصل است؛
         // مرتب‌سازی کل جدول orders روی دیتاست بزرگ باعث خطای sort memory می‌شد.
         $ordersByUser = $outputOrderIds->isNotEmpty()
@@ -252,17 +327,34 @@ class UserGalleryController extends Controller
             ->groupBy('user_id');
         $imagesByOrder = $images->filter(fn (GeneratedImage $image): bool => filled($image->order_id))->groupBy('order_id');
         $videosByOrder = $videos->filter(fn (GeneratedVideo $video): bool => filled($video->order_id))->groupBy('order_id');
+        $outputItemsByOrder = $outputItems
+            ->filter(fn (UserGalleryItem $item): bool => is_numeric(data_get($item->metadata, 'order_id')))
+            ->groupBy(fn (UserGalleryItem $item): string => (string) data_get($item->metadata, 'order_id'));
 
-        return collect($users)->map(function (User $user) use ($ordersByUser, $images, $videos, $inputItems, $imagesByOrder, $videosByOrder): array {
+        return collect($users)->map(function (User $user) use ($ordersByUser, $images, $videos, $outputItems, $inputItems, $imagesByOrder, $videosByOrder, $outputItemsByOrder): array {
             $userImages = $images->where('user_id', $user->id);
             $userVideos = $videos->where('user_id', $user->id);
+            $userOutputItems = $outputItems->where('user_id', $user->id);
             $consumedImageIds = collect();
             $consumedVideoIds = collect();
-            $pairs = collect($ordersByUser->get($user->id, collect()))->map(function (Order $order) use ($inputItems, $imagesByOrder, $videosByOrder, &$consumedImageIds, &$consumedVideoIds): ?array {
+            $pairs = collect($ordersByUser->get($user->id, collect()))->map(function (Order $order) use ($inputItems, $imagesByOrder, $videosByOrder, $outputItemsByOrder, &$consumedImageIds, &$consumedVideoIds): ?array {
                 $orderImages = collect($imagesByOrder->get($order->id, collect()));
                 $orderVideos = collect($videosByOrder->get($order->id, collect()));
-                $outputs = $orderImages->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس', 'id' => $image->id])
-                    ->concat($orderVideos->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو', 'id' => $video->id]))
+                $snapshots = collect($outputItemsByOrder->get((string) $order->id, collect()));
+                $snapshotImageIds = $snapshots->where('source_type', 'output_image')->pluck('source_id')->map(fn ($id) => (int) $id);
+                $snapshotVideoIds = $snapshots->where('source_type', 'output_video')->pluck('source_id')->map(fn ($id) => (int) $id);
+                $outputs = $snapshots->map(function (UserGalleryItem $item) use ($order): array {
+                    $isVideo = $item->source_type === 'output_video';
+                    return [
+                        'type' => $isVideo ? 'video' : 'image',
+                        'url' => $isVideo
+                            ? route('admin.users.gallery.original', [$order->user_id, $item->id])
+                            : route('admin.users.gallery.preview', [$order->user_id, $item->id]),
+                        'label' => $isVideo ? 'خروجی ویدیو' : 'خروجی عکس',
+                        'id' => $item->id,
+                    ];
+                })->concat($orderImages->reject(fn (GeneratedImage $image): bool => $snapshotImageIds->contains((int) $image->id))->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس', 'id' => $image->id]))
+                    ->concat($orderVideos->reject(fn (GeneratedVideo $video): bool => $snapshotVideoIds->contains((int) $video->id))->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو', 'id' => $video->id]))
                     ->filter(fn (array $output): bool => filled($output['url']))->values();
                 if ($outputs->isEmpty()) {
                     return null;
@@ -283,10 +375,19 @@ class UserGalleryController extends Controller
             })->filter()->values();
 
             // خروجی‌هایی که سفارششان حذف شده یا به سفارش متصل نشده‌اند نیز گم نشوند.
-            $orphanOutputs = $userImages->reject(fn (GeneratedImage $image): bool => $consumedImageIds->contains($image->id))
+            $orphanOutputs = $userOutputItems->filter(fn (UserGalleryItem $item): bool => ! is_numeric(data_get($item->metadata, 'order_id')))
+                ->map(function (UserGalleryItem $item) use ($user): array {
+                    $isVideo = $item->source_type === 'output_video';
+                    return [
+                        'type' => $isVideo ? 'video' : 'image',
+                        'url' => $isVideo ? route('admin.users.gallery.original', [$user->id, $item->id]) : route('admin.users.gallery.preview', [$user->id, $item->id]),
+                        'label' => $isVideo ? 'خروجی ویدیو' : 'خروجی عکس',
+                    ];
+                })
+                ->concat($userImages->reject(fn (GeneratedImage $image): bool => $consumedImageIds->contains($image->id))
                 ->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس'])
                 ->concat($userVideos->reject(fn (GeneratedVideo $video): bool => $consumedVideoIds->contains($video->id))
-                    ->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو']))
+                    ->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو'])))
                 ->filter(fn (array $output): bool => filled($output['url']))->values();
             if ($orphanOutputs->isNotEmpty()) {
                 $pairs->push([
@@ -302,7 +403,7 @@ class UserGalleryController extends Controller
                 'user_id' => $user->id,
                 'user_name' => trim(($user->name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'کاربر بدون نام',
                 'user_phone' => $user->phone,
-                'output_count' => (int) $user->generated_images_count + (int) ($user->generated_videos_count ?? 0),
+                'output_count' => max((int) $user->generated_images_count + (int) ($user->generated_videos_count ?? 0), $userOutputItems->count()),
                 'pairs' => $pairs->take(6)->all(),
             ];
         })->values()->all();
@@ -679,7 +780,7 @@ class UserGalleryController extends Controller
         $data = $request->validate([
             'enabled' => ['nullable', 'boolean'],
             'suggestions_enabled' => ['nullable', 'boolean'],
-            'retention_days' => ['required', 'integer', 'min:1', 'max:3650'],
+            'retention_days' => ['required', 'integer', Rule::in([0, 7, 30, 90, 180, 270, 365])],
             'max_items_per_user' => ['required', 'integer', 'min:1', 'max:1000'],
             'max_storage_mb' => ['required', 'integer', 'min:1', 'max:20480'],
             'free_recreations_per_month' => ['required', 'integer', 'min:0', 'max:100'],
@@ -702,6 +803,58 @@ class UserGalleryController extends Controller
         $this->ensureItemBelongsToUser($user, $item);
 
         return $gallery->response($item);
+    }
+
+    public function bulkDestroy(Request $request, UserGalleryService $gallery)
+    {
+        $validated = $request->validate([
+            'item_ids' => ['nullable', 'array', 'max:100'],
+            'item_ids.*' => ['integer'],
+            'user_ids' => ['nullable', 'array', 'max:100'],
+            'user_ids.*' => ['integer'],
+            'select_all' => ['nullable', 'boolean'],
+            'q' => ['nullable', 'string', 'max:120'],
+            'status' => ['nullable', Rule::in(['all', 'active', 'expired'])],
+        ]);
+
+        $query = UserGalleryItem::query()->whereIn('source_type', self::INPUT_SOURCE_TYPES);
+        if (! empty($validated['select_all'])) {
+            $status = (string) ($validated['status'] ?? 'all');
+            if ($status === 'active') {
+                $query->where(function ($expiryQuery): void {
+                    $expiryQuery->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                });
+            } elseif ($status === 'expired') {
+                $query->whereNotNull('expires_at')->where('expires_at', '<=', now());
+            }
+            $search = trim((string) ($validated['q'] ?? ''));
+            if ($search !== '') {
+                $query->whereHas('user', function ($userQuery) use ($search): void {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+        } elseif (! empty($validated['user_ids'])) {
+            $query->whereIn('user_id', array_values(array_filter((array) $validated['user_ids'])));
+        } else {
+            $ids = array_values(array_filter((array) ($validated['item_ids'] ?? [])));
+            if ($ids === []) {
+                return back()->withErrors(['item_ids' => 'حداقل یک ورودی برای حذف انتخاب کنید.']);
+            }
+            $query->whereIn('id', $ids);
+        }
+
+        $deleted = 0;
+        $query->orderBy('id')->chunkById(100, function ($items) use ($gallery, &$deleted): void {
+            foreach ($items as $item) {
+                $gallery->deleteItem($item);
+                $deleted++;
+            }
+        });
+
+        return back()->with('success', "{$deleted} ورودی از گالری کاربران حذف شد.");
     }
 
     public function original(User $user, UserGalleryItem $item, UserGalleryService $gallery)

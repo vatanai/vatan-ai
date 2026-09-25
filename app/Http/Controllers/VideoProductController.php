@@ -14,6 +14,7 @@ use App\Services\VideoGenerationService;
 use App\Services\VideoProductConfigService;
 use App\Services\VideoModelSchemaService;
 use Illuminate\Http\Request;
+use App\Services\UserStorageService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -117,6 +118,22 @@ class VideoProductController extends Controller
             'rights_confirmed' => ['accepted'],
         ]);
 
+        $user = $request->user();
+        abort_unless($user, 401);
+        $incomingFiles = collect([
+            $request->file('source_face_image'),
+            $request->file('source_product_image'),
+            $request->file('source_image'),
+            $request->file('source_video'),
+            $request->file('source_audio'),
+        ])->filter();
+        $incomingBytes = $incomingFiles->sum(fn ($file): int => (int) $file->getSize());
+        $storage = app(UserStorageService::class);
+        $storageCheck = $storage->check($user, $incomingBytes);
+        if (! $storageCheck['allowed']) {
+            throw ValidationException::withMessages(['storage' => $storage->blockMessage($storageCheck)]);
+        }
+
         $selectedQuality = (string) $request->input('video.quality', 'standard');
         $qualityTier = collect((array) ($config['quality_tiers'] ?? []))->firstWhere('key', $selectedQuality);
         $selectedResolution = (string) $request->input('video.resolution');
@@ -124,11 +141,11 @@ class VideoProductController extends Controller
             $selectedResolution = (string) $qualityTier['resolution'];
         }
 
-        $user = $request->user();
         $sourceImageData = null;
         $sourceUploadPath = null;
         $sourceImageDataList = [];
         $sourceUploadPaths = [];
+        $temporaryUploadPaths = [];
         $contract = (array) ($config['input_contract'] ?? []);
         $faceProfile = $this->selectedFaceProfile($request, $user);
         if ($faceProfile) {
@@ -138,14 +155,21 @@ class VideoProductController extends Controller
                 if ($profileData) $sourceImageDataList[] = $profileData;
             }
         }
-        $storeImage = function (string $field) use ($request, $user, &$sourceUploadPath, &$sourceImageDataList, &$sourceUploadPaths): void {
+        $storeImage = function (string $field) use ($request, $user, &$sourceUploadPath, &$sourceImageDataList, &$sourceUploadPaths, &$temporaryUploadPaths): void {
             if (!$request->hasFile($field)) return;
             $file = $request->file($field);
             $path = $file->store('uploads/video-inputs/images', 'public');
             $sourceUploadPath ??= $path;
             $sourceUploadPaths[] = $path;
+            $temporaryUploadPaths[] = $path;
             $sourceImageDataList[] = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
-            UserUpload::create(['user_id' => $user->id, 'file_path' => $path, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+            UserUpload::create([
+                'user_id' => $user->id,
+                'file_path' => $path,
+                'size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'expires_at' => now()->addDays(UserStorageService::INPUT_RETENTION_DAYS),
+            ]);
         };
         $storeImage('source_face_image');
         $storeImage('source_product_image');
@@ -174,18 +198,34 @@ class VideoProductController extends Controller
         }
 
         $sourceVideoUrl = null;
+        $sourceAudioPath = null;
         if ($request->hasFile('source_video')) {
             $file = $request->file('source_video');
             $path = $file->store('uploads/video-inputs/videos', 'public');
             $sourceVideoUrl = asset('storage/' . $path);
-            UserUpload::create(['user_id' => $user->id, 'file_path' => $path, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+            $temporaryUploadPaths[] = $path;
+            UserUpload::create([
+                'user_id' => $user->id,
+                'file_path' => $path,
+                'size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'expires_at' => now()->addDays(UserStorageService::INPUT_RETENTION_DAYS),
+            ]);
         }
         $audioUrl = null;
         if ($request->hasFile('source_audio')) {
             $file = $request->file('source_audio');
             $path = $file->store('uploads/video-inputs/audio', 'public');
+            $sourceAudioPath = $path;
             $audioUrl = asset('storage/' . $path);
-            UserUpload::create(['user_id' => $user->id, 'file_path' => $path, 'size' => $file->getSize(), 'mime_type' => $file->getMimeType()]);
+            $temporaryUploadPaths[] = $path;
+            UserUpload::create([
+                'user_id' => $user->id,
+                'file_path' => $path,
+                'size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'expires_at' => now()->addDays(UserStorageService::INPUT_RETENTION_DAYS),
+            ]);
         }
 
         try {
@@ -205,7 +245,9 @@ class VideoProductController extends Controller
                 'source_image_data_list' => $sourceImageDataList,
                 'source_upload_path' => $sourceUploadPath,
                 'source_upload_paths' => $sourceUploadPaths,
+                'temporary_upload_paths' => $temporaryUploadPaths,
                 'source_video_url' => $sourceVideoUrl,
+                'source_audio_path' => $sourceAudioPath,
                 'audio_url' => $audioUrl,
                 'timeline' => (array) ($config['timeline'] ?? []),
                 'studio_mode' => $studioMode,
@@ -228,8 +270,22 @@ class VideoProductController extends Controller
                 'remaining_tokens' => $user->fresh()->tokens,
             ], 202);
         } catch (ValidationException $exception) {
+            foreach ($temporaryUploadPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            UserUpload::query()
+                ->where('user_id', $user->id)
+                ->whereIn('file_path', $temporaryUploadPaths)
+                ->delete();
             throw $exception;
         } catch (\Throwable $exception) {
+            foreach ($temporaryUploadPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            UserUpload::query()
+                ->where('user_id', $user->id)
+                ->whereIn('file_path', $temporaryUploadPaths)
+                ->delete();
             report($exception);
             return response()->json([
                 'success' => false,

@@ -661,6 +661,32 @@ html.light .custom-products-total { background:rgba(255,255,255,.55); }
 .grid-cell--clickable:hover,
 .grid-cell--clickable:focus-visible { opacity: .9; }
 .grid-cell--clickable:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.profile-media-card,
+.profile-file-card { position: relative; min-width: 0; }
+.profile-media-delete-form {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 4;
+  margin: 0;
+}
+.profile-media-delete-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(0,0,0,.25);
+  border-radius: 50%;
+  background: rgba(0,0,0,.68);
+  color: var(--red);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.profile-media-delete-form button:hover,
+.profile-media-delete-form button:focus-visible { background: rgba(0,0,0,.88); }
 
 .grid-empty {
   grid-column: 1 / -1;
@@ -1367,7 +1393,7 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 
 .grid-preview-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   direction: rtl;
 }
@@ -1422,6 +1448,65 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   background: rgba(207,253,0,.18);
   border-color: var(--green);
   color: var(--green);
+}
+
+.grid-preview-btn--delete {
+  background: rgba(240,92,92,.1);
+  border-color: rgba(240,92,92,.34);
+  color: var(--red);
+}
+
+.grid-preview-btn--delete:hover {
+  background: rgba(240,92,92,.18);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.grid-preview-delete-confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(240,92,92,.25);
+  border-radius: 14px;
+  background: rgba(240,92,92,.08);
+  font: inherit;
+}
+
+.grid-preview-delete-confirm p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.grid-preview-delete-confirm form {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.grid-preview-delete-confirm button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.grid-preview-delete-confirm__yes {
+  background: var(--red);
+  border-color: var(--red) !important;
+  color: #fff;
+}
+
+.grid-preview-delete-confirm__no {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.14) !important;
+  color: rgba(255,255,255,.78);
 }
 
 .grid-preview-btn.is-disabled {
@@ -1545,6 +1630,7 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
     padding: 13px;
   }
   .grid-preview-actions { gap: 8px; }
+  .grid-preview-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-preview-btn { min-height: 48px; padding-inline: 5px; font-size: 10px; }
   .grid-preview-img-wrap {
     min-height: 190px;

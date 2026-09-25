@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\AiModel;
 use App\Models\ProductMetricEvent;
 use App\Models\GeneratedImage;
-use App\Models\UserUpload;
 use App\Models\Order;
 use App\Models\AiProviderRequest;
 use App\Models\Discount;
@@ -23,6 +22,7 @@ use App\Services\VideoProductConfigService;
 use App\Services\StudioCostService;
 use App\Services\UserGalleryService;
 use App\Services\ProductCreatorRewardService;
+use App\Services\UserStorageService;
 use App\Http\Requests\GenerateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -40,6 +40,7 @@ class ProductGenerateController extends Controller
         protected CreditWalletService $creditWallet,
         protected ModelTierService $modelTiers,
         protected ProductCreatorRewardService $creatorRewards,
+        protected UserStorageService $userStorage,
     )
     {
     }
@@ -679,15 +680,6 @@ class ProductGenerateController extends Controller
 
         // ۲. بررسی سخت‌گیرانه سقف فضای ذخیره‌سازی (حداکثر ۱۰۰ مگابایت)
         if ($user) {
-            $createdImagesSize = $user->generatedImages()->sum('size') ?? 0;
-            $personalImagesSize = $user->uploadedImages()->sum('size') ?? 0;
-            $faceProfilesSize = Schema::hasTable('face_profiles')
-                ? $user->faceProfiles()->active()->get()->sum(function (FaceProfile $profile): int {
-                    return collect($profile->referenceImageEntries())->sum(fn (array $image) => (int) ($image['size'] ?? 0));
-                })
-                : 0;
-            $currentUsedBytes = $createdImagesSize + $personalImagesSize + $faceProfilesSize;
-
             $newUploadsSize = 0;
             foreach ($allFiles as $file) {
                 if ($file) {
@@ -695,11 +687,14 @@ class ProductGenerateController extends Controller
                 }
             }
 
-            $maxStorageBytes = 100 * 1024 * 1024;
-            $estimatedAiImageSize = (2 * 1024 * 1024) * $runCount;
+            $storageCheck = $this->userStorage->check(
+                $user,
+                $newUploadsSize,
+                $this->userStorage->imageOutputEstimate($runCount),
+            );
 
-            if (($currentUsedBytes + $newUploadsSize + $estimatedAiImageSize) > $maxStorageBytes) {
-                return $failure('فضای ذخیره‌سازی ۱۰۰ مگابایتی شما کافی نیست! لطفاً ابتدا فایل‌های قبلی خود را مدیریت یا پاک کنید.', 'STORAGE_LIMIT_EXCEEDED', 400);
+            if (! $storageCheck['allowed']) {
+                return $failure($this->userStorage->blockMessage($storageCheck), 'STORAGE_LIMIT_EXCEEDED', 400);
             }
         }
 
@@ -1057,6 +1052,10 @@ class ProductGenerateController extends Controller
                 ]);
                 $order?->recordEvent('needs_review', 'هزینهٔ واقعی ساخت نامشخص است', 'خروجی تا بررسی مالی تحویل داده نمی‌شود.');
 
+                foreach ($uploadedPaths as $up) {
+                    $this->userStorage->deletePublicFile($up['path'] ?? null);
+                }
+
                 return response()->json([
                     'success' => false,
                     'status' => 'needs_review',
@@ -1089,15 +1088,6 @@ class ProductGenerateController extends Controller
             // ۷. ثبت نهایی سوابق در دیتابیس در صورت لاگین بودن کاربر
             $generatedImageRecords = [];
             if ($user) {
-                foreach ($uploadedPaths as $up) {
-                    UserUpload::create([
-                        'user_id'   => $user->id,
-                        'file_path' => $up['path'],
-                        'size'      => $up['size'],
-                        'mime_type' => $up['mime'],
-                    ]);
-                }
-
                 foreach ($generated as $g) {
                     $generatedImage = GeneratedImage::create([
                         'user_id'     => $user->id,
@@ -1108,8 +1098,23 @@ class ProductGenerateController extends Controller
                         'user_prompt' => $g['prompt'],
                         'cost'        => $g['cost'],
                         'size'        => $g['size'],
+                        'expires_at'  => now()->addDays(UserStorageService::OUTPUT_RETENTION_DAYS),
                     ]);
                     $generatedImageRecords[] = $generatedImage;
+                    try {
+                        app(UserGalleryService::class)->captureOutput(
+                            $user,
+                            'output_image',
+                            (int) $generatedImage->id,
+                            (string) $g['path'],
+                            'public',
+                            (int) $g['size'],
+                            'image/*',
+                            ['order_id' => $order?->id, 'source' => 'app.create'],
+                        );
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
                     // ثبت تصویر، منبع اصلی موفقیت ساخت است. سرویس‌های جانبی
                     // مثل رفرال و زمان‌بندی پیامک نباید بعد از ثبت خروجی، پاسخ
                     // موفق ساخت را به خطا تبدیل کنند.
@@ -1127,6 +1132,12 @@ class ProductGenerateController extends Controller
                     }
                 }
 
+            }
+
+            // ورودی اصلی فقط تا پایان همین ساخت روی دیسک عمومی لازم است؛
+            // نسخهٔ مستقل گالری، در صورت رضایت کاربر، قبلاً روی user_gallery کپی شده است.
+            foreach ($uploadedPaths as $up) {
+                $this->userStorage->deletePublicFile($up['path'] ?? null);
             }
 
             // پاداش مالک فقط بعد از مشخص‌شدن سهم نهایی اعتبار هر خروجی ثبت می‌شود.

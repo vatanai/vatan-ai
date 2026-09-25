@@ -348,7 +348,7 @@
         <th style="width:64px;"></th>
         <th>محصول</th>
         <th style="text-align:center;"><span class="block">نوع محصول</span><span class="block">کد محصول</span><span class="block">دسته‌بندی</span></th>
-        <th style="text-align:center;"><span class="block">{{ ($isVideoList ?? false) ? 'سناریو' : 'ویژگی‌ها' }}</span><span class="block">هوش مصنوعی</span></th>
+        <th style="text-align:center;"><span class="block">{{ ($isVideoList ?? false) ? 'سناریو' : 'ویژگی‌ها' }}</span><span class="block">هوش مصنوعی</span><span class="block">اولویت ساخت</span></th>
         <th style="text-align:center;"><span class="block">اعتبار اجرا</span><span class="block">قیمت محصول</span></th>
         <th style="text-align:center;"><span class="block">مالک</span><span class="block">تعداد اجرا</span></th>
         <th style="text-align:center;"><span class="block">{{ ($isVideoList ?? false) ? 'مدت / قاب' : 'زمان اجرا' }}</span><span class="block">اعتبار مصرفی</span></th>
@@ -426,6 +426,11 @@
               $assignedAiModel = $aiModelIsValid
                 ? $assignableAiModels->first(fn ($model) => $model->provider === $product->ai_provider && $model->openrouter_model_id === $product->primary_model)
                 : null;
+              $qualityPresetKey = data_get($product->model_configuration, 'quality_preset_key');
+              $qualityPresetName = $qualityPresetKey === 'custom'
+                ? 'تنظیم سفارشی'
+                : ($modelQualityPresets->firstWhere('preset_key', $qualityPresetKey)?->name
+                    ?? ($qualityPresetKey ?: 'تنظیم نشده'));
             @endphp
             @if(($isVideoList ?? false))
               @php $videoListConfig = $product->videoConfiguration(); @endphp
@@ -444,6 +449,9 @@
             @else
               <span style="color:var(--text-soft);">ــ</span>
             @endif
+            <div class="mt-1.5 flex flex-wrap items-center justify-center gap-1">
+              <span class="badge-pro badge-primary" title="پیش‌فرض مدل‌های ساخت محصول">{{ $qualityPresetName }}</span>
+            </div>
             <div class="mt-1.5 flex flex-wrap items-center justify-center gap-1" id="product-ai-status-{{ $product->id }}">
               @if(!$product->primary_model || !$product->ai_provider)
                 <span class="badge-pro badge-warning"><i class="fa-solid fa-circle-exclamation"></i> مدل تعیین نشده</span>
