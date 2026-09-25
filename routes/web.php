@@ -164,6 +164,12 @@ Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    Route::get('/profile/panels/{panel}', [ProfileController::class, 'panel'])
+        ->where('panel', 'saved|files|referral')
+        ->name('profile.panels');
+    Route::get('/profile/media', [ProfileController::class, 'media'])->name('profile.media');
+    Route::get('/profile/generated-images/{generatedImage}/thumbnail', [ProfileController::class, 'generatedImageThumbnail'])
+        ->name('profile.generated-images.thumbnail');
     Route::delete('/profile/generated-images/{generatedImage}', [ProfileController::class, 'destroyGeneratedImage'])->name('profile.generated-images.destroy');
     Route::delete('/profile/generated-videos/{generatedVideo}', [ProfileController::class, 'destroyGeneratedVideo'])->name('profile.generated-videos.destroy');
     Route::delete('/profile/uploads/{userUpload}', [ProfileController::class, 'destroyUserUpload'])->name('profile.uploads.destroy');

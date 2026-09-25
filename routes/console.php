@@ -9,6 +9,17 @@ use App\Models\TelegramUser;
 use App\Jobs\CleanupExpiredStudioUploads;
 use App\Jobs\CleanupExpiredUserGalleryItems;
 use App\Jobs\CleanupExpiredProfileMedia;
+use App\Services\Finance\FinanceExchangeRateSnapshotService;
+
+Schedule::command('finance:refresh-exchange-rate --slot=morning')
+    ->dailyAt('11:10')
+    ->timezone('Asia/Tehran')
+    ->withoutOverlapping(10);
+
+Schedule::command('finance:refresh-exchange-rate --slot=evening')
+    ->dailyAt('17:00')
+    ->timezone('Asia/Tehran')
+    ->withoutOverlapping(10);
 
 Schedule::command('credits:sync')
     ->everyMinute()
@@ -21,6 +32,17 @@ Schedule::command('sms:send-first-image-followups')
 Schedule::command('telegram:sync-referral-messages')
     ->everyFiveMinutes()
     ->withoutOverlapping(4);
+
+Artisan::command('finance:refresh-exchange-rate {--slot=manual}', function (FinanceExchangeRateSnapshotService $rates) {
+    $slot = (string) $this->option('slot');
+    $snapshot = $rates->refresh('USD', $slot);
+    $this->info(sprintf(
+        'نرخ USD در snapshot %s ثبت شد: %s تومان از %s',
+        $slot,
+        number_format((float) $snapshot->rate_to_toman, 2),
+        $snapshot->source,
+    ));
+})->purpose('ثبت نرخ دلار برای بهای تمام‌شده در ساعت‌های زمان‌بندی‌شده');
 
 Schedule::job(new CleanupExpiredStudioUploads)
     ->dailyAt('03:30')

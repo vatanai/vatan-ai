@@ -642,6 +642,7 @@ class VideoGenerationService
         }
         if ($status !== 'completed') return $generation;
         if ($generation->status === 'completed' && $generation->credits_settled_at) {
+            $this->cleanupTemporaryInputs($generation);
             try {
                 $this->creatorRewards->rewardForVideo($generation, (array) $generation->credit_reservation);
             } catch (\Throwable $exception) {
@@ -706,6 +707,7 @@ class VideoGenerationService
             ]);
             $this->captureOutputSnapshot($generation->fresh(), $stored);
             $generation->order?->update(['status' => 'review', 'processing_status' => 'needs_review']);
+            $this->cleanupTemporaryInputs($generation->fresh());
             return $generation->fresh();
         }
 
@@ -729,6 +731,7 @@ class VideoGenerationService
             ]);
             $this->captureOutputSnapshot($generation->fresh(), $stored);
             $generation->order?->update(['status' => 'review', 'processing_status' => 'needs_review']);
+            $this->cleanupTemporaryInputs($generation->fresh());
             return $generation->fresh();
         }
         $reservedCredits = (int) ($generation->credits_reserved ?: ($generation->credit_reservation['total'] ?? 0));
@@ -751,6 +754,9 @@ class VideoGenerationService
             'error_code' => null,
             'retryable' => false,
         ]);
+        if ($generation->user) {
+            $this->userStorage->forgetProfileSnapshot($generation->user);
+        }
         $generation->order?->update([
             'status' => 'completed',
             'processing_status' => 'completed',
@@ -763,6 +769,7 @@ class VideoGenerationService
         ]);
         $generation->order?->recordEvent('completed', 'ویدیو با موفقیت ساخته شد');
         $this->captureOutputSnapshot($generation->fresh(), $stored);
+        $this->cleanupTemporaryInputs($generation->fresh());
 
         try {
             $this->creatorRewards->rewardForVideo($generation->fresh(['product', 'user', 'order']), $reservation);
@@ -881,6 +888,9 @@ class VideoGenerationService
         $payload['source_video_path'] = null;
         $payload['source_audio_path'] = null;
         $generation->update(['input_payload' => $payload]);
+        if ($generation->user) {
+            $this->userStorage->forgetProfileSnapshot($generation->user);
+        }
     }
 
     private function captureOutputSnapshot(GeneratedVideo $generation, array $stored): void

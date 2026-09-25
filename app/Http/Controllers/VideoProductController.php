@@ -228,6 +228,8 @@ class VideoProductController extends Controller
             ]);
         }
 
+        $storage->forgetProfileSnapshot($user);
+
         try {
             $generation = $videos->start($product, $user, [
                 'prompt' => (string) $request->input('prompt', ''),

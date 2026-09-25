@@ -17,7 +17,6 @@ class CleanupExpiredStudioUploads implements ShouldQueue
     public function handle(): void
     {
         UserUpload::query()
-            ->whereIn('status', ['stored', 'failed'])
             ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now())
             ->chunkById(100, function ($uploads): void {

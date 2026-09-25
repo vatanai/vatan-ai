@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\FinanceExchangeRate;
 use App\Models\MarketingCostEvent;
+use App\Services\Finance\FinanceExchangeRateSnapshotService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Schema;
@@ -44,7 +44,10 @@ class MarketingCostAnalysisService
     private function latestRate(): array
     {
         if (!Schema::hasTable('finance_exchange_rates') || !Schema::hasColumn('finance_exchange_rates', 'rate_to_toman')) return ['value' => 0, 'source' => 'هنوز ثبت نشده', 'date' => null, 'is_live' => false];
-        $latest = FinanceExchangeRate::query()->where('currency', 'USD')->where('rate_to_toman', '>', 0)->latest('rate_date')->first();
+        $latest = app(FinanceExchangeRateSnapshotService::class)->current('USD');
+        if ($latest && (float) $latest->rate_to_toman <= 0) {
+            $latest = null;
+        }
         return $latest ? ['value' => (float) $latest->rate_to_toman, 'source' => $latest->source ?: 'ثبت مالی وطن', 'date' => $latest->rate_date?->format('Y/m/d'), 'is_live' => !$latest->is_manual] : ['value' => 0, 'source' => 'هنوز ثبت نشده', 'date' => null, 'is_live' => false];
     }
 }

@@ -12,6 +12,7 @@ use App\Services\Finance\FinanceAccessService;
 use App\Services\Finance\FinanceAuditService;
 use App\Services\Finance\FinanceSyncService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -25,17 +26,31 @@ class FinanceReferenceController extends Controller
             'rate_to_toman' => ['required', 'numeric', 'min:1'],
             'source' => ['nullable', 'string', 'max:190'],
         ]);
-        $existing = FinanceExchangeRate::query()->where('currency', 'USD')->whereDate('rate_date', $data['rate_date'])->first();
+        $existingQuery = FinanceExchangeRate::query()
+            ->where('currency', 'USD')
+            ->whereDate('rate_date', $data['rate_date']);
+        if (Schema::hasColumn('finance_exchange_rates', 'capture_slot')) {
+            $existingQuery->where('capture_slot', 'manual');
+        }
+        $existing = $existingQuery->first();
         $before = $existing?->toArray();
+        $identifiers = ['currency' => 'USD', 'rate_date' => $data['rate_date']];
+        if (Schema::hasColumn('finance_exchange_rates', 'capture_slot')) {
+            $identifiers['capture_slot'] = 'manual';
+        }
+        $values = [
+            'rate_to_irr' => (float) $data['rate_to_toman'] * 10,
+            'rate_to_toman' => $data['rate_to_toman'],
+            'source' => $data['source'] ?: 'ثبت دستی',
+            'is_manual' => true,
+            'created_by' => $request->user('admin')->id,
+        ];
+        if (Schema::hasColumn('finance_exchange_rates', 'captured_at')) {
+            $values['captured_at'] = now('UTC');
+        }
         $rate = FinanceExchangeRate::query()->updateOrCreate(
-            ['currency' => 'USD', 'rate_date' => $data['rate_date']],
-            [
-                'rate_to_irr' => (float) $data['rate_to_toman'] * 10,
-                'rate_to_toman' => $data['rate_to_toman'],
-                'source' => $data['source'] ?: 'ثبت دستی',
-                'is_manual' => true,
-                'created_by' => $request->user('admin')->id,
-            ],
+            $identifiers,
+            $values,
         );
         $audit->record($rate, $existing ? 'rate_updated' : 'rate_created', $before, $rate->toArray());
 

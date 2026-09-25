@@ -27,29 +27,66 @@
     }
   }
 
-  var referralSubtabs = document.querySelectorAll('[data-referral-subtab]');
-  var referralSubpanels = document.querySelectorAll('[data-referral-subpanel]');
-
   function activateReferralSubtab(target) {
     var selected = document.querySelector('[data-referral-subtab="' + target + '"]');
     if (!selected) return;
 
-    referralSubtabs.forEach(function (tab) {
+    document.querySelectorAll('[data-referral-subtab]').forEach(function (tab) {
       var isActive = tab === selected;
       tab.classList.toggle('is-active', isActive);
       tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
-    referralSubpanels.forEach(function (panel) {
+    document.querySelectorAll('[data-referral-subpanel]').forEach(function (panel) {
       var isVisible = panel.getAttribute('data-referral-subpanel') === target;
       panel.classList.toggle('is-active', isVisible);
       panel.style.display = isVisible ? 'grid' : 'none';
     });
   }
 
+  var panelRequests = {};
+
+  function loadProfilePanel(target) {
+    var panel = document.querySelector('.profile-panel[data-panel="' + target + '"]');
+    if (!panel || !panel.dataset.lazyPanel || panel.dataset.loaded === '1' || panelRequests[target]) return;
+
+    var endpoint = panel.getAttribute('data-endpoint');
+    if (!endpoint) return;
+
+    panelRequests[target] = true;
+    panel.classList.add('is-loading');
+    fetch(endpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('profile-panel-failed');
+        return response.json();
+      })
+      .then(function (payload) {
+        var template = document.createElement('template');
+        template.innerHTML = payload.html || '';
+        var source = template.content.querySelector('.profile-panel[data-panel="' + target + '"]');
+        panel.innerHTML = source ? source.innerHTML : (payload.html || '');
+        panel.dataset.loaded = '1';
+        panel.classList.remove('is-loading');
+        bindFilesSubtabs();
+        bindGridCells(panel);
+        initReferralControls();
+        if (target === 'referral') {
+          activateReferralSubtab(requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
+        }
+      })
+      .catch(function () {
+        panel.classList.remove('is-loading');
+        panel.innerHTML = '<div class="grid-empty"><p>بارگذاری این بخش انجام نشد. دوباره تلاش کن.</p></div>';
+      })
+      .finally(function () {
+        delete panelRequests[target];
+      });
+  }
+
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var target = tab.getAttribute('data-tab');
       activateProfileTab(target, false);
+      loadProfilePanel(target);
       if (target === 'referral') {
         activateReferralSubtab('affiliate');
         history.replaceState(null, '', '#referral-program');
@@ -57,10 +94,12 @@
     });
   });
 
-  referralSubtabs.forEach(function (tab) {
-    tab.addEventListener('click', function () {
+  document.addEventListener('click', function (event) {
+    var tab = event.target.closest('[data-referral-subtab]');
+    if (!tab) return;
       var target = tab.getAttribute('data-referral-subtab');
       activateProfileTab('referral', false);
+      loadProfilePanel('referral');
       activateReferralSubtab(target);
       var url = new URL(window.location.href);
       url.searchParams.set('tab', 'referral');
@@ -69,11 +108,11 @@
       url.hash = 'referral-program';
       history.replaceState(null, '', url.pathname + url.search + url.hash);
     });
-  });
 
   document.querySelectorAll('[data-open-referral]').forEach(function (button) {
     button.addEventListener('click', function () {
       activateProfileTab('referral', true);
+      loadProfilePanel('referral');
       activateReferralSubtab('affiliate');
       history.replaceState(null, '', '#referral-program');
     });
@@ -85,9 +124,11 @@
   var requestedFileTab = requestedParams.get('file_tab');
   if (['grid', 'saved', 'files', 'referral'].indexOf(requestedTab) !== -1) {
     activateProfileTab(requestedTab, true);
+    loadProfilePanel(requestedTab);
   }
   if (window.location.hash === '#referral-program' || requestedTab === 'referral' || requestedTab === 'custom-products') {
     activateProfileTab('referral', true);
+    loadProfilePanel('referral');
     activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
   }
 
@@ -175,15 +216,24 @@
           observer.unobserve(entry.target);
         });
       }, { rootMargin: '220px 0px' });
-      cards.forEach(function (card) { observer.observe(card); });
+      cards.forEach(function (card) {
+        if (card.dataset.posterObserverBound === '1') return;
+        card.dataset.posterObserverBound = '1';
+        observer.observe(card);
+      });
     } else {
-      Array.prototype.slice.call(cards, 0, 4).forEach(renderPoster);
+      Array.prototype.slice.call(cards, 0, 4).forEach(function (card) {
+        if (card.dataset.posterObserverBound === '1') return;
+        card.dataset.posterObserverBound = '1';
+        renderPoster(card);
+      });
     }
   }
 
   initVideoGridPosters();
 
   /* ───── لینک دعوت و اشتراک‌گذاری ───── */
+  function initReferralControls() {
   var referralLinkInput = document.getElementById('referralLinkInput');
   var copyReferralLink = document.getElementById('copyReferralLink');
   var referralCopyFeedback = document.getElementById('referralCopyFeedback');
@@ -318,6 +368,9 @@
       });
     });
   });
+  }
+
+  initReferralControls();
 
   /* ───── آپلود عکس پروفایل ───── */
   var changeAvatarBtn    = document.getElementById('changeAvatarBtn');
@@ -490,11 +543,17 @@
     document.body.style.overflow = '';
   }
 
-  document.querySelectorAll('.grid-cell--clickable').forEach(function (cell) {
-    cell.addEventListener('click', function () {
-      openGridPreview(cell);
+  function bindGridCells(root) {
+    (root || document).querySelectorAll('.grid-cell--clickable').forEach(function (cell) {
+      if (cell.dataset.profilePreviewBound === '1') return;
+      cell.dataset.profilePreviewBound = '1';
+      cell.addEventListener('click', function () {
+        openGridPreview(cell);
+      });
     });
-  });
+  }
+
+  bindGridCells(document);
 
   if (previewClose) previewClose.addEventListener('click', closeGridPreview);
 
@@ -577,12 +636,65 @@
     if (productsPanel) productsPanel.style.display = target === 'used-products' ? 'grid' : 'none';
   }
 
-  document.querySelectorAll('.files-sub-tab').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      activateFilesSubtab(btn.getAttribute('data-sub'));
+  function bindFilesSubtabs(root) {
+    (root || document).querySelectorAll('.files-sub-tab').forEach(function (btn) {
+      if (btn.dataset.profileSubtabBound === '1') return;
+      btn.dataset.profileSubtabBound = '1';
+      btn.addEventListener('click', function () {
+        activateFilesSubtab(btn.getAttribute('data-sub'));
+      });
     });
-  });
+  }
 
+  bindFilesSubtabs(document);
   activateFilesSubtab(requestedTab === 'files' && requestedFileTab ? requestedFileTab : 'face-profiles');
+
+  /* ───── بارگذاری مرحله‌ای خروجی‌های قدیمی‌تر ───── */
+  var mediaSentinel = document.querySelector('[data-media-sentinel]');
+  var mediaRequestActive = false;
+
+  function loadMoreProfileMedia() {
+    if (!mediaSentinel || mediaRequestActive) return;
+    var cursor = mediaSentinel.getAttribute('data-next-cursor') || '';
+    var endpoint = mediaSentinel.getAttribute('data-media-endpoint') || '';
+    if (!cursor || !endpoint) return;
+
+    mediaRequestActive = true;
+    var url = endpoint + '?cursor=' + encodeURIComponent(cursor);
+    fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('profile-media-failed');
+        return response.json();
+      })
+      .then(function (payload) {
+        var grid = document.querySelector('.profile-panel[data-panel="grid"]');
+        if (!grid) return;
+        grid.insertAdjacentHTML('beforeend', payload.html || '');
+        bindGridCells(grid);
+        initVideoGridPosters();
+        if (payload.next_cursor) {
+          mediaSentinel.setAttribute('data-next-cursor', payload.next_cursor);
+        } else {
+          mediaSentinel.removeAttribute('data-next-cursor');
+        }
+      })
+      .catch(function () {})
+      .finally(function () {
+        mediaRequestActive = false;
+      });
+  }
+
+  if (mediaSentinel && mediaSentinel.getAttribute('data-next-cursor')) {
+    if ('IntersectionObserver' in window) {
+      var mediaObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) loadMoreProfileMedia();
+        });
+      }, { rootMargin: '640px 0px' });
+      mediaObserver.observe(mediaSentinel);
+    } else {
+      window.addEventListener('scroll', loadMoreProfileMedia, { passive: true });
+    }
+  }
 
 }());

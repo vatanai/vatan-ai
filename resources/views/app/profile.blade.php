@@ -13,12 +13,12 @@
     {{-- ۲) گرید و مارک‌ها: تب‌ها + محتوای ساخته‌شده + ذخیره‌شده‌ها --}}
     @include('app.profile.content')
 
-    {{-- ۳) فایل‌های تو --}}
-    @include('app.profile.files')
+    {{-- ۳) فایل‌های تو — فقط هنگام بازشدن تب دریافت می‌شود --}}
+    @include('app.profile.partials.lazy-panel', ['panel' => 'files'])
 
     @if($referralProfileEnabled ?? false)
-      {{-- ۴) همکاری در فروش --}}
-      @include('app.profile.referral')
+      {{-- ۴) همکاری در فروش — فقط هنگام بازشدن تب دریافت می‌شود --}}
+      @include('app.profile.partials.lazy-panel', ['panel' => 'referral'])
     @endif
 
   </section>

@@ -4,8 +4,10 @@ namespace App\Services\Finance;
 
 use App\Models\FinanceExchangeRate;
 use App\Services\ExchangeRateService;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 class FinanceExchangeRateSnapshotService
 {
@@ -19,30 +21,37 @@ class FinanceExchangeRateSnapshotService
             return null;
         }
 
-        $date = ($at ?: now())->toDateString();
-        $existing = FinanceExchangeRate::query()
-            ->where('currency', strtoupper($currency))
-            ->whereDate('rate_date', $date)
-            ->first();
+        $moment = ($at ?: Carbon::now('Asia/Tehran'))->copy()->utc();
+        $query = FinanceExchangeRate::query()->where('currency', strtoupper($currency));
 
-        if ($existing) {
-            return $existing;
+        if (Schema::hasColumn('finance_exchange_rates', 'captured_at')) {
+            $query->where(function ($builder) use ($moment): void {
+                $builder->whereNull('captured_at')->orWhere('captured_at', '<=', $moment);
+            })->whereDate('rate_date', '<=', $moment->copy()->timezone('Asia/Tehran')->toDateString())
+                ->orderByRaw('captured_at IS NULL')->latest('captured_at')->latest('created_at')->latest('rate_date');
+        } else {
+            $query->whereDate('rate_date', '<=', $moment->copy()->timezone('Asia/Tehran')->toDateString())
+                ->latest('rate_date');
         }
 
-        $live = $this->exchangeRateService->usdToIrr();
+        return $query->first();
+    }
+
+    public function refresh(string $currency = 'USD', string $slot = 'manual'): FinanceExchangeRate
+    {
+        if (! Schema::hasTable('finance_exchange_rates')) {
+            throw new RuntimeException('جدول snapshot نرخ ارز هنوز ساخته نشده است.');
+        }
+
+        $live = $this->exchangeRateService->fetchLive();
         $rate = (float) ($live['rate'] ?? 0);
-
         if ($rate <= 0) {
-            return FinanceExchangeRate::query()
-                ->where('currency', strtoupper($currency))
-                ->whereDate('rate_date', '<=', $date)
-                ->latest('rate_date')
-                ->first();
+            throw new RuntimeException('از هیچ‌یک از منابع نرخ ارز، قیمت معتبر دریافت نشد.');
         }
 
+        $slot = in_array($slot, ['morning', 'evening', 'manual', 'legacy'], true) ? $slot : 'manual';
+        $localNow = Carbon::now('Asia/Tehran');
         $values = [
-            'currency' => strtoupper($currency),
-            'rate_date' => $date,
             'rate_to_irr' => $rate,
             'source' => (string) ($live['source'] ?? 'سرویس نرخ ارز'),
             'is_manual' => false,
@@ -50,8 +59,18 @@ class FinanceExchangeRateSnapshotService
         if (Schema::hasColumn('finance_exchange_rates', 'rate_to_toman')) {
             $values['rate_to_toman'] = $rate / 10;
         }
+        if (Schema::hasColumn('finance_exchange_rates', 'captured_at')) {
+            $values['captured_at'] = Carbon::now('UTC');
+        }
 
-        return FinanceExchangeRate::query()->create($values);
+        return FinanceExchangeRate::query()->updateOrCreate(
+            [
+                'currency' => strtoupper($currency),
+                'rate_date' => $localNow->toDateString(),
+                'capture_slot' => $slot,
+            ],
+            $values,
+        );
     }
 
     public function rate(string $currency = 'USD', ?CarbonInterface $at = null): float

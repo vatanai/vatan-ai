@@ -27,62 +27,17 @@
 
 {{-- ===== PANEL: گرید (محتوا) — خروجی‌های عکس و ویدیوی واقعی کاربر ===== --}}
 <div class="profile-panel panel-grid" data-panel="grid">
-  @forelse (($createdMedia ?? $createdImages ?? []) as $item)
-    @php
-      $isVideo = ($item->media_kind ?? 'image') === 'video';
-      $mediaUrl = (string) ($item->media_url ?? ($item->imageUrl() ?? ''));
-      $product = $item->product;
-      $productName = optional($product)->name_fa ?? optional($product)->name_en ?? 'نامشخص';
-      $productSlug = optional($product)->route_slug;
-    @endphp
-    <div class="profile-media-card">
-    <button type="button" class="grid-cell grid-cell--clickable {{ $isVideo ? 'grid-cell--video' : '' }}"
-            data-media-kind="{{ $isVideo ? 'video' : 'image' }}"
-            data-media-url="{{ $mediaUrl }}"
-            data-image="{{ $isVideo ? '' : $mediaUrl }}"
-            data-video="{{ $isVideo ? $mediaUrl : '' }}"
-            data-poster="{{ $isVideo ? ($item->poster_url ?? '') : '' }}"
-            data-date="{{ $item->jalali_created_at }}"
-            data-product-name="{{ $productName }}"
-            data-product-url="{{ $productSlug ? route('app.product', $productSlug) : '' }}"
-            data-product-create-url="{{ $productSlug ? route('app.create.product', $productSlug) : '' }}"
-            data-product-download-url="{{ optional($product)->slug ? route('app.product.download', $product->slug) : '' }}"
-            data-delete-url="{{ $isVideo ? route('profile.generated-videos.destroy', $item) : route('profile.generated-images.destroy', $item) }}"
-            aria-label="نمایش {{ $isVideo ? 'ویدیوی' : 'عکس' }} ساخته‌شده">
-      @if($isVideo)
-        <img class="grid-img grid-video-poster" alt="" loading="lazy" decoding="async"
-             data-video-source="{{ $mediaUrl }}"
-             @if($item->poster_url ?? false) src="{{ $item->poster_url }}" @endif>
-        <video data-src="{{ $mediaUrl }}" class="grid-video-source" muted playsinline preload="none" aria-hidden="true" hidden></video>
-        <span class="grid-cell-video-badge" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7L8 5Z"></path></svg></span>
-      @else
-        <img src="{{ $mediaUrl }}" alt="" class="grid-img" loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}" decoding="async">
-      @endif
-    </button>
-    </div>
-  @empty
+  @if(($createdMedia ?? collect())->isEmpty())
     <div class="grid-empty">
       <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-grid.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
       <p>هنوز محتوایی نساختی</p>
       <a href="{{ route('app.explore') }}" class="btn-empty-cta">ساخت اولین محتوا</a>
     </div>
-  @endforelse
+  @else
+    @include('app.profile.partials.media-items', ['createdMedia' => $createdMedia, 'eagerMedia' => true])
+  @endif
 </div>
+<div class="profile-media-sentinel" data-media-sentinel data-media-endpoint="{{ route('profile.media') }}" data-next-cursor="{{ $initialMediaCursor ?? '' }}" aria-hidden="true"></div>
 
 {{-- ===== PANEL: ذخیره شده‌ها — محصولات واقعاً سیوشده از جدول saved_products ===== --}}
-<div class="profile-panel panel-saved" data-panel="saved" style="display:none;">
-  @forelse ($savedProducts ?? [] as $product)
-    <a href="{{ route('app.product', $product->route_slug) }}" class="grid-cell" style="display:block;">
-      <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" class="grid-img" loading="lazy" decoding="async">
-      <div class="saved-badge">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="#ffffff"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z"/></svg>
-      </div>
-    </a>
-  @empty
-    <div class="grid-empty">
-      <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-bookmark.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
-      <p>هنوز هیچ محصولی سیو نکردی</p>
-      <a href="{{ route('app.explore') }}" class="btn-empty-cta">مشاهده محصولات</a>
-    </div>
-  @endforelse
-</div>
+@include('app.profile.partials.lazy-panel', ['panel' => 'saved', 'class' => 'panel-saved'])

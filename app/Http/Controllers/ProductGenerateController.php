@@ -23,6 +23,7 @@ use App\Services\StudioCostService;
 use App\Services\UserGalleryService;
 use App\Services\ProductCreatorRewardService;
 use App\Services\UserStorageService;
+use App\Jobs\GenerateProfileMediaThumbnail;
 use App\Http\Requests\GenerateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -1100,6 +1101,9 @@ class ProductGenerateController extends Controller
                         'size'        => $g['size'],
                         'expires_at'  => now()->addDays(UserStorageService::OUTPUT_RETENTION_DAYS),
                     ]);
+                    // ساخت بندانگشتی بعد از پاسخ اصلی/در صف انجام می‌شود تا
+                    // زمان پاسخ ساخت محصول به پردازش تصویر وابسته نباشد.
+                    GenerateProfileMediaThumbnail::dispatch($generatedImage->id)->afterResponse();
                     $generatedImageRecords[] = $generatedImage;
                     try {
                         app(UserGalleryService::class)->captureOutput(
@@ -1149,6 +1153,10 @@ class ProductGenerateController extends Controller
                 } catch (\Throwable $exception) {
                     report($exception);
                 }
+            }
+
+            if ($user) {
+                $this->userStorage->forgetProfileSnapshot($user);
             }
 
             $failedMsg = !empty($failed)

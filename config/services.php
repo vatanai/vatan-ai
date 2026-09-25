@@ -139,6 +139,8 @@ return [
     ],
 
     'exchange_rate' => [
+        'wallex_url' => env('EXCHANGE_RATE_WALLEX_URL', 'https://api.wallex.ir/v1/markets'),
+        'nobitex_url' => env('EXCHANGE_RATE_NOBITEX_URL', env('EXCHANGE_RATE_URL', 'https://api.nobitex.ir/v3/orderbook/USDTIRT')),
         'url' => env('EXCHANGE_RATE_URL', 'https://api.nobitex.ir/v3/orderbook/USDTIRT'),
         'backup_url' => env('EXCHANGE_RATE_BACKUP_URL', 'https://api.wallex.ir/v1/markets'),
         'fallback' => (float) env('USD_IRR_FALLBACK', 0),

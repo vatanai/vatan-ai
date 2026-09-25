@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\AiModel;
-use App\Models\FinanceExchangeRate;
 use App\Models\Product;
 use App\Models\StudioCostRule;
 use App\Models\StudioPricingSetting;
+use App\Services\Finance\FinanceExchangeRateSnapshotService;
 use Illuminate\Support\Facades\Schema;
 
 class StudioCostService
@@ -235,10 +235,10 @@ class StudioCostService
 
     private function latestExchangeRate(): float
     {
-        if (Schema::hasTable('finance_exchange_rates') && Schema::hasColumn('finance_exchange_rates', 'rate_to_toman')) {
-            $rate = FinanceExchangeRate::query()->where('currency', 'USD')->latest('rate_date')->value('rate_to_toman');
-            if ((float) $rate > 0) {
-                return (float) $rate;
+        if (Schema::hasTable('finance_exchange_rates')) {
+            $rate = app(FinanceExchangeRateSnapshotService::class)->rateToman('USD');
+            if ($rate > 0) {
+                return $rate;
             }
         }
 

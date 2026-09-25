@@ -196,6 +196,8 @@ class StudioWorkflowController extends Controller
             ])->id;
         }
 
+        $storage->forgetProfileSnapshot($user);
+
         try {
             $generation = $videos->start($runner, $request->user(), [
                 'prompt' => trim((string) $request->input('prompt')),

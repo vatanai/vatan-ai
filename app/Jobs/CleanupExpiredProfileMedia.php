@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\GeneratedImage;
 use App\Models\GeneratedVideo;
+use App\Services\ProfileMediaThumbnailService;
 use App\Services\UserStorageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,7 @@ class CleanupExpiredProfileMedia implements ShouldQueue
 {
     use Dispatchable, Queueable;
 
-    public function handle(UserStorageService $storage): void
+    public function handle(UserStorageService $storage, ProfileMediaThumbnailService $thumbnails): void
     {
         if (Schema::hasTable('generated_images') && Schema::hasColumn('generated_images', 'expires_at')) {
             GeneratedImage::query()
@@ -22,8 +23,10 @@ class CleanupExpiredProfileMedia implements ShouldQueue
                 ->where('expires_at', '<=', now())
                 ->chunkById(100, function ($items) use ($storage): void {
                     foreach ($items as $item) {
+                        $thumbnails->delete($item);
                         $storage->deletePublicFile($item->image_path);
                         $item->delete();
+                        $storage->forgetProfileSnapshotForUserId((int) $item->user_id);
                     }
                 });
         }
@@ -37,6 +40,7 @@ class CleanupExpiredProfileMedia implements ShouldQueue
                         $storage->deletePublicFile($item->video_path);
                         $storage->deletePublicFile($item->poster_path);
                         $item->delete();
+                        $storage->forgetProfileSnapshotForUserId((int) $item->user_id);
                     }
                 });
         }

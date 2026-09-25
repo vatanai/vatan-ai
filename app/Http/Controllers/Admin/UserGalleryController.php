@@ -106,7 +106,29 @@ class UserGalleryController extends Controller
                 });
             }]);
         }
-        $sort === 'oldest' ? $galleryUsersQuery->oldest('id') : $galleryUsersQuery->latest('id');
+        $galleryUsersQuery->withMax(['generatedImages as latest_image_at' => function ($query) use ($from, $to): void {
+            $query->whereNotNull('image_path');
+            $this->applyGalleryDateRange($query, $from, $to);
+        }], 'created_at');
+        if ($hasGeneratedVideos) {
+            $galleryUsersQuery->withMax(['generatedVideos as latest_video_at' => function ($query) use ($from, $to): void {
+                $query->where(function ($outputQuery): void {
+                    $outputQuery->whereNotNull('video_path')->orWhereNotNull('video_url');
+                });
+                $this->applyGalleryDateRange($query, $from, $to);
+            }], 'created_at');
+        }
+        $galleryUsersQuery->withMax(['galleryItems as latest_output_item_at' => function ($query) use ($from, $to, $mediaType): void {
+            $query->whereIn('source_type', $mediaType === 'image' ? ['output_image'] : ($mediaType === 'video' ? ['output_video'] : ['output_image', 'output_video']));
+            $this->applyGalleryDateRange($query, $from, $to);
+        }], 'created_at');
+        $latestImage = 'COALESCE(latest_image_at, \'1970-01-01 00:00:00\')';
+        $latestVideo = $hasGeneratedVideos ? 'COALESCE(latest_video_at, \'1970-01-01 00:00:00\')' : '\'1970-01-01 00:00:00\'';
+        $latestOutputItem = 'COALESCE(latest_output_item_at, \'1970-01-01 00:00:00\')';
+        $sortDirection = $sort === 'oldest' ? 'ASC' : 'DESC';
+        $galleryUsersQuery
+            ->orderByRaw("GREATEST({$latestImage}, {$latestVideo}, {$latestOutputItem}) {$sortDirection}")
+            ->orderBy('id', $sortDirection);
         $galleryUsers = $galleryUsersQuery->paginate(24, ['*'], 'gallery_page')->withQueryString();
         $galleryCards = $this->buildGalleryCards($galleryUsers->getCollection(), $hasGeneratedVideos, $mediaType, $from, $to);
 
@@ -709,7 +731,68 @@ class UserGalleryController extends Controller
                 'case_url' => $case ? route('admin.finance.cases.show', $case) : null,
                 'order_url' => route('admin.orders.show', $order),
             ];
-        })->values()->all();
+        })->values();
+
+        // خروجی‌های قدیمی یا ساخت‌هایی که سفارششان حذف شده نباید از تاریخچهٔ
+        // گالری ناپدید شوند؛ این‌ها به‌عنوان یک ساخت مستقل نمایش داده می‌شوند.
+        $orphanImages = GeneratedImage::query()
+            ->with('product')
+            ->where('user_id', $user->id)
+            ->whereNotNull('image_path')
+            ->whereDoesntHave('order')
+            ->latest('created_at')
+            ->limit(100)
+            ->get();
+        $orphanVideos = Schema::hasTable('generated_videos')
+            ? GeneratedVideo::query()
+                ->with('product')
+                ->where('user_id', $user->id)
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })
+                ->whereDoesntHave('order')
+                ->latest('created_at')
+                ->limit(100)
+                ->get()
+            : collect();
+        $orphanBuilds = $orphanImages->map(fn (GeneratedImage $image): array => [
+            'id' => 'image-' . $image->id,
+            'order_number' => 'بدون سفارش · #' . $image->id,
+            'date' => $image->created_at,
+            'product_name' => $image->product?->name_fa ?: $image->product?->name_en ?: 'ساخت بدون محصول',
+            'status' => 'موفق',
+            'status_key' => 'completed',
+            'input_media' => [],
+            'outputs' => [['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس']],
+            'output_count' => 1,
+            'credits' => 0,
+            'revenue' => 0,
+            'prompt' => filled($image->user_prompt) ? Str::limit((string) $image->user_prompt, 150) : null,
+            'case_number' => null,
+            'case_url' => null,
+            'order_url' => route('admin.users.gallery.show', $user),
+        ])->concat($orphanVideos->map(fn (GeneratedVideo $video): array => [
+            'id' => 'video-' . $video->id,
+            'order_number' => 'بدون سفارش · #' . $video->id,
+            'date' => $video->created_at,
+            'product_name' => $video->product?->name_fa ?: $video->product?->name_en ?: 'ساخت بدون محصول',
+            'status' => 'موفق',
+            'status_key' => 'completed',
+            'input_media' => [],
+            'outputs' => [['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو']],
+            'output_count' => 1,
+            'credits' => 0,
+            'revenue' => 0,
+            'prompt' => filled($video->user_prompt) ? Str::limit((string) $video->user_prompt, 150) : null,
+            'case_number' => null,
+            'case_url' => null,
+            'order_url' => route('admin.users.gallery.show', $user),
+        ]));
+        $builds = $builds
+            ->concat($orphanBuilds)
+            ->sortByDesc(fn (array $build): int => $build['date']?->getTimestamp() ?? 0)
+            ->take(40)
+            ->values();
 
         $financeCases = Schema::hasTable('finance_cases')
             ? FinanceCase::query()->with(['purchase', 'lots'])->where('user_id', $user->id)->latest('started_at')->get()
@@ -724,7 +807,7 @@ class UserGalleryController extends Controller
             'revenue' => (float) $userAllocations->sum('revenue_toman'),
         ];
 
-        return [$builds, $financeSummary];
+        return [$builds->all(), $financeSummary];
     }
 
     private function inputItemsForBuild(Order $order, $items): array

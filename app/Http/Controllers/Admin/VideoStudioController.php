@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\GeneratedVideo;
 use App\Models\AiModel;
-use App\Models\FinanceExchangeRate;
 use App\Models\Product;
 use App\Models\ProductTestRun;
 use App\Models\VideoHookInspiration;
@@ -1961,11 +1960,8 @@ class VideoStudioController extends Controller
             return [
                 'usd' => 0,
                 'toman' => 0,
-                'rate_toman' => (float) FinanceExchangeRate::query()
-                    ->where('currency', 'USD')
-                    ->where('rate_to_toman', '>', 0)
-                    ->latest('rate_date')
-                    ->value('rate_to_toman'),
+                'rate_toman' => (float) app(\App\Services\Finance\FinanceExchangeRateSnapshotService::class)
+                    ->rateToman('USD'),
                 'source' => 'تدوین قطعی با منبع موجود؛ بدون هزینهٔ مدل تولید ویدیو',
             ];
         }
@@ -1979,11 +1975,8 @@ class VideoStudioController extends Controller
         }
 
         $unitUsd = app(StudioCostService::class)->modelUnitPrice($model, 'video', '', null, $aspectRatio);
-        $rateToman = (float) FinanceExchangeRate::query()
-            ->where('currency', 'USD')
-            ->where('rate_to_toman', '>', 0)
-            ->latest('rate_date')
-            ->value('rate_to_toman');
+        $rateToman = (float) app(\App\Services\Finance\FinanceExchangeRateSnapshotService::class)
+            ->rateToman('USD');
         if (! is_numeric($unitUsd) || (float) $unitUsd <= 0 || $rateToman <= 0) {
             return [];
         }

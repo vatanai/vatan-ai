@@ -15,10 +15,14 @@ use App\Models\GeneratedImage;
 use App\Models\UserUpload;
 use App\Models\GeneratedVideo;
 use App\Services\UserStorageService;
+use App\Services\ProfileMediaThumbnailService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
 
 class ProfileController extends Controller
 {
@@ -31,9 +35,19 @@ public function gallery()
         return redirect()->route('app.profile');
     }
 
-    // واکشی تصاویر بر اساس رابطه‌های مدل User
-    $createdImages = $user->generatedImages()->latest()->get();
-    $galleryItems = $user->galleryItems()->latest()->get();
+    // گالری مستقل است؛ هر دو لیست صفحه‌بندی می‌شوند تا با رشد تاریخچه،
+    // همهٔ فایل‌ها و متن‌ها در اولین پاسخ خوانده نشوند.
+    $createdImages = $user->generatedImages()
+        ->select(['id', 'user_id', 'image_path', 'user_prompt', 'created_at'])
+        ->whereNotNull('image_path')
+        ->latest()
+        ->paginate(24, ['*'], 'images_page')
+        ->withQueryString();
+    $galleryItems = $user->galleryItems()
+        ->select(['id', 'user_id', 'disk', 'mime_type', 'original_path', 'preview_path', 'metadata', 'created_at'])
+        ->latest()
+        ->paginate(24, ['*'], 'gallery_page')
+        ->withQueryString();
     $galleryItems->each(function ($item): void {
         if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
             try {
@@ -87,103 +101,24 @@ public function gallery()
             ]);
         }
 
-        // واکشی تصاویر با لود به ترتیب جدیدترین‌ها بر اساس رابطه‌های مدل User
-        // with('product') برای جلوگیری از N+1 کوئری موقع تشخیص نوع محتوا (عکس/ویدیو)
-        $productPreviewColumns = 'id,name_fa,name_en,slug,product_code,media_type,cover,sample_outputs,thumbnail';
+        $productPreviewColumns = 'id,name_fa,name_en,slug,product_code';
+        $mediaPage = $this->mediaPage($user, null, 20, $productPreviewColumns);
+        $createdImages = $mediaPage['createdImages'];
+        $createdVideos = $mediaPage['createdVideos'];
+        $createdMedia = $mediaPage['createdMedia'];
+        $initialMediaCursor = $mediaPage['nextCursor'];
 
-        $createdImages = $user->generatedImages()
-            ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
-            ->with("product:{$productPreviewColumns}")
-            ->latest()->get()
-            ->filter(fn ($image): bool => filled($image->imageUrl()))
-            ->values();
-
-        // خروجی‌های ویدیویی تکمیل‌شده نیز باید در همان گرید «محتوا» دیده شوند.
-        // فقط رکوردهایی وارد نمایش می‌شوند که واقعاً مسیر یا لینک قابل پخش دارند؛
-        // درخواست‌های صف/ناموفق، فضای خالی یا کارت خراب در پروفایل نمی‌سازند.
-        $createdVideos = Schema::hasTable('generated_videos')
-            ? $user->generatedVideos()
-                ->select(['id', 'user_id', 'product_id', 'video_path', 'video_url', 'poster_path', 'size', 'status', 'created_at'])
+        // فقط شمارنده‌های سبک برای هدر خوانده می‌شوند؛ خود مجموعه‌ها در تب مربوطه می‌آیند.
+        $createdCount = (int) $user->generatedImages()->whereNotNull('image_path')->count();
+        if (Schema::hasTable('generated_videos')) {
+            $createdCount += (int) $user->generatedVideos()
                 ->where(function ($query): void {
                     $query->whereNotNull('video_path')->orWhereNotNull('video_url');
-                })
-                ->with("product:{$productPreviewColumns}")
-                ->latest()->get()
-                ->filter(fn (GeneratedVideo $video): bool => filled($video->playbackUrl()))
-                ->values()
-            : collect();
-
-        $createdMedia = $createdImages
-            ->map(function ($image): object {
-                $image->setAttribute('media_kind', 'image');
-                $image->setAttribute('media_url', $image->imageUrl());
-                return $image;
-            })
-            ->concat($createdVideos->map(function (GeneratedVideo $video): GeneratedVideo {
-                $video->setAttribute('media_kind', 'video');
-                $video->setAttribute('media_url', $video->playbackUrl());
-                $video->setAttribute('poster_url', $video->poster_path
-                    ? (filter_var($video->poster_path, FILTER_VALIDATE_URL)
-                        ? $video->poster_path
-                        : asset('storage/' . ltrim($video->poster_path, '/')))
-                    : null);
-                return $video;
-            }))
-            ->sortByDesc('created_at')
-            ->values();
-
-        // محصولات استفاده‌شده از روی آخرین خروجی‌های عکس و ویدیو استخراج می‌شوند.
-        // هر محصول فقط یک‌بار نمایش داده می‌شود و اولین رکورد همان آخرین استفاده است.
-        $usedProducts = $createdImages
-            ->filter(fn ($image) => $image->product)
-            ->map(fn ($image) => (object) [
-                'product' => $image->product,
-                'used_at' => $image->created_at,
-            ]);
-
-        if (Schema::hasTable('generated_videos')) {
-            $usedProducts = $usedProducts->concat(
-                $user->generatedVideos()
-                    ->select(['id', 'user_id', 'product_id', 'created_at'])
-                    ->with("product:{$productPreviewColumns}")
-                    ->latest()->get()
-                    ->filter(fn ($video) => $video->product)
-                    ->map(fn ($video) => (object) [
-                        'product' => $video->product,
-                        'used_at' => $video->created_at,
-                    ])
-            );
+                })->count();
         }
 
-        $usedProducts = $usedProducts
-            ->sortByDesc('used_at')
-            ->map(fn ($item) => $item->product)
-            ->unique('id')
-            ->values();
-        $faceProfiles = Schema::hasTable('face_profiles')
-            ? $user->faceProfiles()->active()->latest()->get()
-            : collect();
-        $galleryItems = $user->galleryItems()
-            ->select(['id', 'user_id', 'disk', 'mime_type', 'original_path', 'preview_path', 'metadata', 'created_at'])
-            ->latest()->get();
-        $galleryItems->each(function ($item): void {
-            if (str_starts_with(strtolower((string) $item->mime_type), 'text/')) {
-                try {
-                    $item->setAttribute('display_text', data_get($item->metadata, 'text')
-                        ?: Storage::disk($item->disk ?: 'user_gallery')->get($item->original_path));
-                } catch (\Throwable) {
-                    $item->setAttribute('display_text', data_get($item->metadata, 'text', 'متن ورودی در دسترس نیست.'));
-                }
-            }
-        });
-
-        // محصولات ذخیره‌شده (سیو) کاربر — بخش «ذخیره شده‌ها» در صفحه پروفایل
-        $savedProducts = $user->savedProducts()
-            ->select(['products.id', 'products.name_fa', 'products.slug', 'products.product_code', 'products.cover', 'products.sample_outputs', 'products.thumbnail'])
-            ->latest('saved_products.created_at')->get();
-
-        // محاسبهٔ متمرکز فضای پروفایل؛ user_gallery عمداً در این سهمیه نیست.
-        $totalBytes = (int) app(UserStorageService::class)->snapshot($user)['used'];
+        // محاسبهٔ فضای پروفایل برای نمایش cache می‌شود؛ مسیرهای کنترل سهمیه همچنان تازه می‌خوانند.
+        $totalBytes = (int) app(UserStorageService::class)->profileSnapshot($user)['used'];
 
         // تبدیل دقیق بایت به مگابایت با رند کردن تا ۲ رقم اعشار
         $storageUsed = round($totalBytes / (1024 * 1024), 2);
@@ -191,16 +126,9 @@ public function gallery()
 
         // ───── داده‌های واقعی باکس‌های آمار پروفایل ─────
         $tokenBalance  = $user->token_balance;
-        $createdCount  = $createdMedia->count();
         $planName      = optional($user->plan)->name ?? 'رایگان';
-        $referralData  = $referralProfileEnabled ? $this->referralData($user, $referralSettings) : $this->emptyReferralData();
-        $referralProducts = $referralProfileEnabled
-            ? Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'name_en'])
-            : collect();
-        $earnings      = $referralData['paid_tokens'];
-        [$creatorRewardProducts, $creatorRewardCredits] = $referralProfileEnabled
-            ? $this->creatorRewardData($user)
-            : [collect(), 0];
+        $earnings = $this->profileEarnings($user, $referralProfileEnabled);
+        $creatorRewardCredits = $this->creatorRewardCredits($user, $referralProfileEnabled);
         $profileRewardTotal = (int) $earnings + (int) $creatorRewardCredits;
         $isGuest       = false;
 
@@ -208,10 +136,6 @@ public function gallery()
             'createdImages',
             'createdVideos',
             'createdMedia',
-            'faceProfiles',
-            'galleryItems',
-            'savedProducts',
-            'usedProducts',
             'storageUsed',
             'storageTotal',
             'tokenBalance',
@@ -221,12 +145,280 @@ public function gallery()
             'isGuest',
             'referralSettings',
             'referralProfileEnabled',
-            'referralData'
-            ,'referralProducts',
-            'creatorRewardProducts',
             'creatorRewardCredits',
-            'profileRewardTotal'
+            'profileRewardTotal',
+            'initialMediaCursor'
         ));
+    }
+
+    /** تب‌های سنگین پروفایل فقط هنگام بازشدن دریافت می‌شوند. */
+    public function panel(string $panel): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user, 401);
+
+        $html = match ($panel) {
+            'saved' => view('app.profile.partials.saved-items', [
+                'savedProducts' => $user->savedProducts()
+                    ->select(['products.id', 'products.name_fa', 'products.slug', 'products.product_code', 'products.cover', 'products.sample_outputs', 'products.thumbnail'])
+                    ->latest('saved_products.created_at')
+                    ->limit(24)
+                    ->get(),
+            ])->render(),
+            'files' => $this->filesPanelHtml($user),
+            'referral' => $this->referralPanelHtml($user),
+            default => abort(404),
+        };
+
+        return response()->json(['html' => $html]);
+    }
+
+    /** صفحهٔ بعدی گرید خروجی‌ها؛ cursor باعث می‌شود با رشد تاریخچه offset سنگین نشود. */
+    public function media(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        abort_unless($user, 401);
+
+        $productPreviewColumns = 'id,name_fa,name_en,slug,product_code';
+        $page = $this->mediaPage($user, $request->string('cursor')->toString(), 20, $productPreviewColumns);
+
+        return response()->json([
+            'html' => view('app.profile.partials.media-items', [
+                'createdMedia' => $page['createdMedia'],
+                'eagerMedia' => false,
+            ])->render(),
+            'next_cursor' => $page['nextCursor'],
+        ]);
+    }
+
+    /** thumbnail گرید؛ مالکیت رکورد قبل از سرویس فایل بررسی می‌شود. */
+    public function generatedImageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
+    {
+        $user = Auth::user();
+        abort_unless($user && (int) $generatedImage->user_id === (int) $user->id, 404);
+
+        return $thumbnails->serve($generatedImage);
+    }
+
+    private function filesPanelHtml(User $user): string
+    {
+        $faceProfiles = Schema::hasTable('face_profiles')
+            ? $user->faceProfiles()->active()->latest()->limit(20)->get()
+            : collect();
+
+        return view('app.profile.files', [
+            'isGuest' => false,
+            'storageUsed' => round((int) app(UserStorageService::class)->profileSnapshot($user)['used'] / (1024 * 1024), 2),
+            'storageTotal' => 100,
+            'faceProfiles' => $faceProfiles,
+            'usedProducts' => $this->usedProducts($user),
+        ])->render();
+    }
+
+    private function referralPanelHtml(User $user): string
+    {
+        $referralSettings = ReferralSetting::current();
+        $referralData = $this->referralData($user, $referralSettings);
+        [$creatorRewardProducts, $creatorRewardCredits] = $this->creatorRewardData($user);
+
+        return view('app.profile.referral', [
+            'isGuest' => false,
+            'referralSettings' => $referralSettings,
+            'referralData' => $referralData,
+            'referralProducts' => Product::query()
+                ->where('status', 'active')
+                ->orderBy('name_fa')
+                ->limit(200)
+                ->get(['id', 'name_fa', 'name_en']),
+            'creatorRewardProducts' => $creatorRewardProducts,
+            'creatorRewardCredits' => $creatorRewardCredits,
+        ])->render();
+    }
+
+    private function usedProducts(User $user): Collection
+    {
+        $ids = $user->generatedImages()
+            ->whereNotNull('product_id')
+            ->latest()
+            ->limit(80)
+            ->pluck('product_id')
+            ->concat(Schema::hasTable('generated_videos')
+                ? $user->generatedVideos()->whereNotNull('product_id')->latest()->limit(80)->pluck('product_id')
+                : collect())
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        $products = Product::query()
+            ->whereIn('id', $ids->all())
+            ->get(['id', 'name_fa', 'name_en', 'slug', 'product_code', 'cover', 'sample_outputs', 'thumbnail'])
+            ->keyBy('id');
+
+        return $ids->map(fn ($id) => $products->get($id))->filter()->values();
+    }
+
+    private function mediaPage(User $user, ?string $cursor, int $limit, string $productPreviewColumns): array
+    {
+        $cursorData = $this->decodeMediaCursor($cursor);
+        $applyCursor = function ($query, string $mediaKind) use ($cursorData): void {
+            if (! $cursorData) {
+                return;
+            }
+
+            $query->where(function ($nested) use ($cursorData): void {
+                $nested->where('created_at', '<', $cursorData['created_at'])
+                    ->orWhere(function ($sameTime) use ($cursorData): void {
+                    $sameTime->where('created_at', $cursorData['created_at'])
+                            ->where(function ($sameId) use ($cursorData, $mediaKind): void {
+                                $sameId->where('id', '<', $cursorData['id']);
+
+                                // در برخورد نادرِ زمان و شناسهٔ یکسان بین دو جدول،
+                                // ویدیو قبل از تصویر مرتب می‌شود تا cursor چیزی را جا نیندازد.
+                                if ($cursorData['kind'] === 'video' && $mediaKind === 'image') {
+                                    $sameId->orWhere('id', $cursorData['id']);
+                                }
+                            });
+                    });
+            });
+        };
+
+        $images = $user->generatedImages()
+            ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
+            ->whereNotNull('image_path')
+            ->with("product:{$productPreviewColumns}")
+            ->tap(fn ($query) => $applyCursor($query, 'image'))
+            ->latest()
+            ->limit($limit + 1)
+            ->get();
+
+        $videos = Schema::hasTable('generated_videos')
+            ? $user->generatedVideos()
+                ->select(['id', 'user_id', 'product_id', 'video_path', 'video_url', 'poster_path', 'size', 'status', 'created_at'])
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })
+                ->with("product:{$productPreviewColumns}")
+                ->tap(fn ($query) => $applyCursor($query, 'video'))
+                ->latest()
+                ->limit($limit + 1)
+                ->get()
+                ->filter(fn (GeneratedVideo $video): bool => filled($video->playbackUrl()))
+                ->values()
+            : collect();
+
+        $media = $this->decorateMedia($images, $videos)
+            ->sort(function ($left, $right): int {
+                $dateCompare = ($right->created_at?->getTimestamp() ?? 0) <=> ($left->created_at?->getTimestamp() ?? 0);
+                if ($dateCompare !== 0) {
+                    return $dateCompare;
+                }
+
+                $idCompare = (int) $right->id <=> (int) $left->id;
+                if ($idCompare !== 0) {
+                    return $idCompare;
+                }
+
+                return ((int) ($left->media_kind !== 'video')) <=> ((int) ($right->media_kind !== 'video'));
+            })
+            ->values();
+        $hasMore = $media->count() > $limit;
+        $media = $media->take($limit)->values();
+        $last = $media->last();
+
+        return [
+            'createdImages' => $images->take($limit)->values(),
+            'createdVideos' => $videos->take($limit)->values(),
+            'createdMedia' => $media,
+            'nextCursor' => $hasMore && $last
+                ? $this->encodeMediaCursor($last)
+                : null,
+        ];
+    }
+
+    private function decorateMedia(Collection $images, Collection $videos): Collection
+    {
+        return $images->map(function (GeneratedImage $image): GeneratedImage {
+            $image->setAttribute('media_kind', 'image');
+            $image->setAttribute('media_url', $image->imageUrl());
+            return $image;
+        })->concat($videos->map(function (GeneratedVideo $video): GeneratedVideo {
+            $video->setAttribute('media_kind', 'video');
+            $video->setAttribute('media_url', $video->playbackUrl());
+            $video->setAttribute('poster_url', $video->poster_path
+                ? (filter_var($video->poster_path, FILTER_VALIDATE_URL)
+                    ? $video->poster_path
+                    : asset('storage/' . ltrim($video->poster_path, '/')))
+                : null);
+            return $video;
+        }))->values();
+    }
+
+    private function encodeMediaCursor(object $media): string
+    {
+        return rtrim(strtr(base64_encode(json_encode([
+            'created_at' => $media->created_at?->format('Y-m-d H:i:s'),
+            'id' => (int) $media->id,
+            'kind' => (string) ($media->media_kind ?? 'image'),
+        ], JSON_THROW_ON_ERROR)), '+/', '-_'), '=');
+    }
+
+    private function decodeMediaCursor(?string $cursor): ?array
+    {
+        if (blank($cursor)) {
+            return null;
+        }
+
+        try {
+            $base64 = strtr($cursor, '-_', '+/');
+            $base64 .= str_repeat('=', (4 - strlen($base64) % 4) % 4);
+            $decoded = json_decode(base64_decode($base64, true), true, 512, JSON_THROW_ON_ERROR);
+            return isset($decoded['created_at'], $decoded['id']) ? [
+                'created_at' => (string) $decoded['created_at'],
+                'id' => (int) $decoded['id'],
+                'kind' => in_array($decoded['kind'] ?? null, ['image', 'video'], true)
+                    ? $decoded['kind']
+                    : 'image',
+            ] : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function profileEarnings(User $user, bool $enabled): int
+    {
+        if (! $enabled || ! Schema::hasTable('referral_rewards')) {
+            return 0;
+        }
+
+        return (int) ReferralReward::query()
+            ->where('user_id', $user->id)
+            ->whereIn('reward_type', ['inviter_reward', 'purchase_reward'])
+            ->where('status', 'paid')
+            ->sum('amount');
+    }
+
+    private function creatorRewardCredits(User $user, bool $enabled): int
+    {
+        if (! $enabled || ! Schema::hasTable('product_creator_reward_events')) {
+            return 0;
+        }
+
+        if (! Schema::hasColumn('product_creator_reward_events', 'status')
+            || ! Schema::hasColumn('product_creator_reward_events', 'reward_credits')
+            || ! Schema::hasColumn('products', 'creator_reward_owner_id')
+            || ! Schema::hasColumn('products', 'creator_reward_enabled')) {
+            return 0;
+        }
+
+        return (int) DB::table('product_creator_reward_events')
+            ->join('products', 'products.id', '=', 'product_creator_reward_events.product_id')
+            ->where('products.creator_reward_owner_id', $user->id)
+            ->where('products.creator_reward_enabled', true)
+            ->where('product_creator_reward_events.status', 'credited')
+            ->sum('product_creator_reward_events.reward_credits');
     }
 
     /** داده‌ی نمایشی مالک محصول؛ دفتر پاداش از رفرال کاملاً جدا خوانده می‌شود. */
@@ -407,8 +599,11 @@ public function gallery()
             'image/*',
             ['order_id' => $generatedImage->order_id, 'source' => 'profile_delete_snapshot'],
         );
-        app(UserStorageService::class)->deletePublicFile($generatedImage->image_path);
+        $storage = app(UserStorageService::class);
+        app(ProfileMediaThumbnailService::class)->delete($generatedImage);
+        $storage->deletePublicFile($generatedImage->image_path);
         $generatedImage->delete();
+        $storage->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', ['tab' => 'grid'])
             ->with('success', 'خروجی تصویر حذف شد و فضای آن آزاد شد.');
@@ -421,8 +616,10 @@ public function gallery()
 
         abort_unless($user && (int) $userUpload->user_id === (int) $user->id, 404);
 
-        app(UserStorageService::class)->deletePublicFile($userUpload->file_path);
+        $storage = app(UserStorageService::class);
+        $storage->deletePublicFile($userUpload->file_path);
         $userUpload->delete();
+        $storage->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', [
             'tab' => 'files',
@@ -451,6 +648,7 @@ public function gallery()
         $storage->deletePublicFile($generatedVideo->video_path);
         $storage->deletePublicFile($generatedVideo->poster_path);
         $generatedVideo->delete();
+        $storage->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', ['tab' => 'grid'])
             ->with('success', 'خروجی ویدیو حذف شد و فضای آن آزاد شد.');
@@ -504,6 +702,7 @@ public function gallery()
             'reference_images' => $referenceImages,
             'status' => 'active',
         ]);
+        $storage->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', [
             'tab' => 'files',
@@ -523,6 +722,7 @@ public function gallery()
         ]);
 
         $faceProfile->update(['name' => trim((string) $validated['name'])]);
+        app(UserStorageService::class)->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', [
             'tab' => 'files',
@@ -537,11 +737,13 @@ public function gallery()
 
         abort_unless($user && (int) $faceProfile->user_id === (int) $user->id, 404);
 
+        $storage = app(UserStorageService::class);
         foreach ($faceProfile->referenceImageEntries() as $image) {
-            app(UserStorageService::class)->deletePublicFile($image['path'] ?? null);
+            $storage->deletePublicFile($image['path'] ?? null);
         }
 
         $faceProfile->delete();
+        $storage->forgetProfileSnapshot($user);
 
         return redirect()->route('app.profile', [
             'tab' => 'files',

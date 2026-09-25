@@ -26,7 +26,7 @@
     <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 48px;">
         @forelse ($createdImages as $img)
             <div class="image-cell" style="aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; background: var(--bg-card); border: 1px solid var(--border-subtle);">
-                <img src="{{ filter_var($img->image_path, FILTER_VALIDATE_URL) ? $img->image_path : asset('storage/' . ltrim($img->image_path, '/')) }}" 
+                <img src="{{ route('profile.generated-images.thumbnail', $img) }}"
                      alt="{{ $img->user_prompt ?? 'تصویر خلق شده' }}" 
                      style="width: 100%; height: 100%; object-fit: cover; display: block;" 
                      loading="lazy">
@@ -37,6 +37,11 @@
             </div>
         @endforelse
     </div>
+    @if ($createdImages->hasPages())
+        <div class="gallery-pagination" style="margin: -28px 0 32px;">
+            {{ $createdImages->links() }}
+        </div>
+    @endif
 
     {{-- بخش دوم: ورودی‌های ثبت‌شدهٔ هر آزمایش در گالری خصوصی --}}
     <div class="section-title" style="margin: 48px 0 16px; display: flex; align-items: center; gap: 8px;">
@@ -63,6 +68,11 @@
             </div>
         @endforelse
     </div>
+    @if ($galleryItems->hasPages())
+        <div class="gallery-pagination" style="margin-top: 24px;">
+            {{ $galleryItems->links() }}
+        </div>
+    @endif
 
 </div>
 @endsection
