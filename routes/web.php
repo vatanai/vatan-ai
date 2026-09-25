@@ -136,6 +136,9 @@ Route::prefix('api')->name('telegram.api.')->middleware('auth:admin')->group(fun
 // صفحات پروفایل برای مشاهده عمومی هستند؛ عملیات شخصی همچنان احراز هویت می‌خواهد.
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
 Route::get('/my-gallery', [ProfileController::class, 'gallery'])->name('profile.gallery');
+Route::get('/profile/panels/{panel}', [ProfileController::class, 'panel'])
+    ->where('panel', 'saved|files|referral')
+    ->name('profile.panels');
 
 // ─── User Authentication ──────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -164,9 +167,6 @@ Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
-    Route::get('/profile/panels/{panel}', [ProfileController::class, 'panel'])
-        ->where('panel', 'saved|files|referral')
-        ->name('profile.panels');
     Route::get('/profile/media', [ProfileController::class, 'media'])->name('profile.media');
     Route::get('/profile/generated-images/{generatedImage}/thumbnail', [ProfileController::class, 'generatedImageThumbnail'])
         ->name('profile.generated-images.thumbnail');

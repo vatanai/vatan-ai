@@ -8,7 +8,7 @@
   var tabs   = document.querySelectorAll('.profile-tab');
   var panels = document.querySelectorAll('.profile-panel');
 
-  function activateProfileTab(target, shouldScroll) {
+  function activateProfileTab(target) {
     var selectedTab = document.querySelector('.profile-tab[data-tab="' + target + '"]');
     var selectedPanel = document.querySelector('.profile-panel[data-panel="' + target + '"]');
     if (!selectedTab || !selectedPanel) return;
@@ -20,11 +20,6 @@
       panel.style.display = show ? ((key === 'grid' || key === 'saved' || key === 'referral') ? 'grid' : 'block') : 'none';
     });
 
-    if (shouldScroll) {
-      window.setTimeout(function () {
-        selectedPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 40);
-    }
   }
 
   function activateReferralSubtab(target) {
@@ -43,18 +38,35 @@
     });
   }
 
+  var profileRoot = document.querySelector('.profile-page');
   var panelRequests = {};
+
+  function scrollToProfilePanel(panel) {
+    if (!panel) return;
+
+    var fixedHeader = document.querySelector('#vatan-topnav, .app-mobile-header');
+    var headerHeight = fixedHeader ? fixedHeader.getBoundingClientRect().height : 0;
+    var top = panel.getBoundingClientRect().top + window.pageYOffset - headerHeight - 12;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+
+  function showProfilePanelError(panel) {
+    if (!panel) return;
+    panel.classList.remove('is-loading');
+    panel.innerHTML = '<div class="grid-empty"><p>بارگذاری این بخش انجام نشد. دوباره تلاش کن.</p></div>';
+  }
 
   function loadProfilePanel(target) {
     var panel = document.querySelector('.profile-panel[data-panel="' + target + '"]');
-    if (!panel || !panel.dataset.lazyPanel || panel.dataset.loaded === '1' || panelRequests[target]) return;
+    if (!panel || !panel.dataset.lazyPanel) return Promise.resolve(panel);
+    if (panel.dataset.loaded === '1') return Promise.resolve(panel);
+    if (panelRequests[target]) return panelRequests[target];
 
     var endpoint = panel.getAttribute('data-endpoint');
-    if (!endpoint) return;
+    if (!endpoint) return Promise.resolve(panel);
 
-    panelRequests[target] = true;
     panel.classList.add('is-loading');
-    fetch(endpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+    panelRequests[target] = fetch(endpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
       .then(function (response) {
         if (!response.ok) throw new Error('profile-panel-failed');
         return response.json();
@@ -63,7 +75,15 @@
         var template = document.createElement('template');
         template.innerHTML = payload.html || '';
         var source = template.content.querySelector('.profile-panel[data-panel="' + target + '"]');
-        panel.innerHTML = source ? source.innerHTML : (payload.html || '');
+        if (source) {
+          // پنل‌های تنبل با یک ریشهٔ کامل برمی‌گردند. فقط innerHTML را
+          // کپی‌کردن، کلاس‌های حیاتی مثل referral-program را از بین می‌برد
+          // و باعث می‌شود تمام استایل اختصاصی پنل اعمال نشود.
+          panel.className = source.className;
+          panel.innerHTML = source.innerHTML;
+        } else {
+          panel.innerHTML = payload.html || '';
+        }
         panel.dataset.loaded = '1';
         panel.classList.remove('is-loading');
         bindFilesSubtabs();
@@ -72,13 +92,27 @@
         if (target === 'referral') {
           activateReferralSubtab(requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
         }
-      })
-      .catch(function () {
-        panel.classList.remove('is-loading');
-        panel.innerHTML = '<div class="grid-empty"><p>بارگذاری این بخش انجام نشد. دوباره تلاش کن.</p></div>';
+        return panel;
       })
       .finally(function () {
         delete panelRequests[target];
+      });
+
+    return panelRequests[target];
+  }
+
+  function requestProfilePanel(target, shouldScroll) {
+    var panel = document.querySelector('.profile-panel[data-panel="' + target + '"]');
+    return loadProfilePanel(target)
+      .then(function (loadedPanel) {
+        if (shouldScroll) {
+          window.setTimeout(function () { scrollToProfilePanel(loadedPanel || panel); }, 40);
+        }
+        return loadedPanel;
+      })
+      .catch(function () {
+        showProfilePanelError(panel);
+        return null;
       });
   }
 
@@ -86,7 +120,7 @@
     tab.addEventListener('click', function () {
       var target = tab.getAttribute('data-tab');
       activateProfileTab(target, false);
-      loadProfilePanel(target);
+      requestProfilePanel(target, false);
       if (target === 'referral') {
         activateReferralSubtab('affiliate');
         history.replaceState(null, '', '#referral-program');
@@ -99,7 +133,7 @@
     if (!tab) return;
       var target = tab.getAttribute('data-referral-subtab');
       activateProfileTab('referral', false);
-      loadProfilePanel('referral');
+      requestProfilePanel('referral', false);
       activateReferralSubtab(target);
       var url = new URL(window.location.href);
       url.searchParams.set('tab', 'referral');
@@ -111,8 +145,10 @@
 
   document.querySelectorAll('[data-open-referral]').forEach(function (button) {
     button.addEventListener('click', function () {
-      activateProfileTab('referral', true);
-      loadProfilePanel('referral');
+      // ورود به همکاری در فروش نباید کاربر را به پایین صفحه پرتاب کند؛
+      // هدر پروفایل باید در لینک مستقیم و بعد از بارگذاری پنل قابل‌مشاهده بماند.
+      activateProfileTab('referral', false);
+      requestProfilePanel('referral', false);
       activateReferralSubtab('affiliate');
       history.replaceState(null, '', '#referral-program');
     });
@@ -124,13 +160,39 @@
   var requestedFileTab = requestedParams.get('file_tab');
   if (['grid', 'saved', 'files', 'referral'].indexOf(requestedTab) !== -1) {
     activateProfileTab(requestedTab, true);
-    loadProfilePanel(requestedTab);
+    requestProfilePanel(requestedTab, requestedTab !== 'grid' && requestedTab !== 'referral');
   }
   if (window.location.hash === '#referral-program' || requestedTab === 'referral' || requestedTab === 'custom-products') {
+    // لینک عمیق مرورگر ممکن است قبل از آماده‌شدن پنل، صفحه را به پایین
+    // ببرد و هدر پروفایل را از دید خارج کند. پنل در پس‌زمینه آماده می‌شود
+    // اما موقعیت صفحه عمداً روی ابتدای پروفایل باقی می‌ماند.
+    if (window.pageYOffset > 0) window.scrollTo(0, 0);
     activateProfileTab('referral', true);
-    loadProfilePanel('referral');
+    requestProfilePanel('referral', false);
     activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
   }
+
+  function preloadProfilePanels() {
+    if (!profileRoot || profileRoot.dataset.authenticated !== '1') return;
+
+    var targets = ['saved', 'files', 'referral'].filter(function (target) {
+      return document.querySelector('.profile-panel[data-panel="' + target + '"]');
+    });
+    var index = 0;
+    var loadNext = function () {
+      if (index >= targets.length) return;
+      var target = targets[index++];
+      loadProfilePanel(target)
+        .catch(function () {})
+        .finally(function () { window.setTimeout(loadNext, 80); });
+    };
+    var schedule = window.requestIdleCallback
+      ? function (callback) { window.requestIdleCallback(callback, { timeout: 1800 }); }
+      : function (callback) { window.setTimeout(callback, 900); };
+    schedule(loadNext);
+  }
+
+  preloadProfilePanels();
 
   /* ───── تصویر بندانگشتی خروجی‌های ویدیویی گرید ───── */
   function initVideoGridPosters() {

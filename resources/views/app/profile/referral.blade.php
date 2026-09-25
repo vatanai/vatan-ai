@@ -4,7 +4,7 @@
   $loginReturnUrl = route('app.profile', ['tab' => 'referral']).'#referral-program';
 @endphp
 
-<div class="profile-panel referral-program" data-panel="referral" id="referral-program" style="display:none;">
+<div class="profile-panel referral-program" data-panel="referral" data-profile-anchor="referral-program" style="display:none;">
   <section class="referral-program-hero">
     <div class="referral-program-copy">
       <span class="referral-program-kicker"><svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="8" r="3"/><circle cx="17" cy="16" r="3"/><path d="M9.5 9.5 14.5 14.5M14 8h4M18 8l-2-2M18 8l-2 2M10 16H6M6 16l2-2M6 16l2 2"/></svg> همکاری در فروش وطن</span>

@@ -842,6 +842,9 @@ html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
 .referral-program-hero:before{content:"";position:absolute;width:230px;height:230px;border-radius:50%;left:-90px;top:-120px;background:rgba(207,253,0,.08);pointer-events:none}
 .referral-program-copy{position:relative;z-index:1;max-width:680px}
 .referral-program svg.referral-icon{display:inline-block;flex:0 0 auto;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.referral-program svg{fill:none!important;stroke:currentColor!important;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.referral-program .referral-visual-person svg,.referral-program .referral-visual-gift svg,.referral-program .referral-visual-orbit svg{color:var(--text-primary)!important}
+.referral-program .referral-visual-gift svg{color:var(--green)!important}
 .referral-program svg.referral-icon--xs{width:13px;height:13px}
 .referral-program svg.referral-icon--sm{width:15px;height:15px}
 .referral-program svg.referral-icon--visual{width:22px;height:22px}

@@ -3,7 +3,7 @@
 @section('page_title', isset($sitePage) ? ($sitePage->meta_title ?: $sitePage->title) : 'پروفایل | وطن AI')
 
 @section('content')
-<div class="profile-page" dir="rtl">
+<div class="profile-page" dir="rtl" data-authenticated="{{ ($isGuest ?? false) ? '0' : '1' }}">
 
   {{-- ۱) هدر و نمایش بالا: آواتار، اطلاعات، آمار، اکشن‌ها --}}
   @include('app.profile.header')
@@ -13,11 +13,11 @@
     {{-- ۲) گرید و مارک‌ها: تب‌ها + محتوای ساخته‌شده + ذخیره‌شده‌ها --}}
     @include('app.profile.content')
 
-    {{-- ۳) فایل‌های تو — فقط هنگام بازشدن تب دریافت می‌شود --}}
+    {{-- ۳) فایل‌های تو — بعد از آماده‌شدن پاسخ اصلی در پس‌زمینه آماده می‌شود --}}
     @include('app.profile.partials.lazy-panel', ['panel' => 'files'])
 
     @if($referralProfileEnabled ?? false)
-      {{-- ۴) همکاری در فروش — فقط هنگام بازشدن تب دریافت می‌شود --}}
+      {{-- ۴) همکاری در فروش — بعد از آماده‌شدن پاسخ اصلی در پس‌زمینه آماده می‌شود --}}
       @include('app.profile.partials.lazy-panel', ['panel' => 'referral'])
     @endif
 

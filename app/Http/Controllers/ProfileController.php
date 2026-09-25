@@ -151,11 +151,39 @@ public function gallery()
         ));
     }
 
-    /** تب‌های سنگین پروفایل فقط هنگام بازشدن دریافت می‌شوند. */
+    /** تب‌های سنگین پروفایل از پاسخ اصلی جدا هستند و می‌توانند در پس‌زمینه دریافت شوند. */
     public function panel(string $panel): JsonResponse
     {
         $user = Auth::user();
-        abort_unless($user, 401);
+
+        // مهمان هم باید بتواند تب را باز کند و پیام ورود ببیند؛
+        // پاسخ ۴۰۱ نباید به خطای عمومی «بارگذاری انجام نشد» تبدیل شود.
+        if (!$user) {
+            $html = match ($panel) {
+                'saved' => view('app.profile.partials.saved-items', [
+                    'isGuest' => true,
+                    'savedProducts' => collect(),
+                ])->render(),
+                'files' => view('app.profile.files', [
+                    'isGuest' => true,
+                    'storageUsed' => 0,
+                    'storageTotal' => 100,
+                    'faceProfiles' => collect(),
+                    'usedProducts' => collect(),
+                ])->render(),
+                'referral' => view('app.profile.referral', [
+                    'isGuest' => true,
+                    'referralSettings' => ReferralSetting::current(),
+                    'referralData' => $this->emptyReferralData(),
+                    'referralProducts' => collect(),
+                    'creatorRewardProducts' => collect(),
+                    'creatorRewardCredits' => 0,
+                ])->render(),
+                default => abort(404),
+            };
+
+            return response()->json(['html' => $html]);
+        }
 
         $html = match ($panel) {
             'saved' => view('app.profile.partials.saved-items', [

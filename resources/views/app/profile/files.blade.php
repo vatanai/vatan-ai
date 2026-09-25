@@ -2,7 +2,11 @@
 <div class="profile-panel" data-panel="files" style="display:none;">
 
   @if($isGuest ?? false)
-    <div class="files-guest-message">برای مشاهده فایل‌های خود، لطفاً وارد سایت شوید.</div>
+    <div class="grid-empty profile-guest-panel">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-file.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
+      <p>برای مشاهدهٔ فایل‌های خود وارد حساب شو.</p>
+      <a href="{{ route('login', ['redirect' => route('app.profile', ['tab' => 'files'])]) }}" class="btn-empty-cta">ورود به حساب</a>
+    </div>
   @else
 
   @if(session('success'))

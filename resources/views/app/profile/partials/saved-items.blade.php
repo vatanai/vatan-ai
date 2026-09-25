@@ -1,4 +1,11 @@
 <div class="profile-panel panel-saved" data-panel="saved">
+  @if($isGuest ?? false)
+    <div class="grid-empty profile-guest-panel">
+      <img src="{{ \App\Support\AppAsset::url('assets/img/icons/fi-sr-bookmark.svg') }}" width="32" height="32" alt="" style="opacity:.4;">
+      <p>برای مشاهدهٔ ذخیره‌شده‌ها وارد حساب خود شو.</p>
+      <a href="{{ route('login', ['redirect' => route('app.profile', ['tab' => 'saved'])]) }}" class="btn-empty-cta">ورود به حساب</a>
+    </div>
+  @else
   @forelse ($savedProducts ?? [] as $product)
     <a href="{{ route('app.product', $product->route_slug) }}" class="grid-cell" style="display:block;">
       <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" class="grid-img" loading="lazy" decoding="async">
@@ -13,4 +20,5 @@
       <a href="{{ route('app.explore') }}" class="btn-empty-cta">مشاهده محصولات</a>
     </div>
   @endforelse
+  @endif
 </div>
