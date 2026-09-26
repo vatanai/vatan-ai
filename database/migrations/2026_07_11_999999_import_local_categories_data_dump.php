@@ -20,6 +20,11 @@ return new class extends Migration
             return;
         }
 
+        // این دامپ مخصوص `MySQL` است و برای دیتابیس موقت `SQLite` تست‌ها داده‌ی مرجع محسوب نمی‌شود.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $alreadyImported = DB::table('categories')->where('path', 'styles/neon')->exists();
         if ($alreadyImported) {
             return;

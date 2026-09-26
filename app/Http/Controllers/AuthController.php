@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use App\Models\Otp;
 use App\Services\SmsEventService;
 use App\Services\ReferralProgramService;
 use App\Services\AuthEventService;
+use App\Services\CustomerJourneyService;
 use App\Models\ReferralSetting;
 use App\Support\Jalali;
 use App\Support\Numeral;
@@ -513,6 +515,10 @@ class AuthController extends Controller
 
         if ($method !== null) {
             $this->trackSuccessfulLogin($request, $user, $method);
+        }
+
+        if (Schema::hasTable('customer_journeys')) {
+            app(CustomerJourneyService::class)->sync($user->fresh(), $method === 'registration' ? 'ثبت‌نام کاربر' : 'ورود کاربر');
         }
     }
 

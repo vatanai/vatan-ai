@@ -112,6 +112,10 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return collect(Schema::getIndexes($table))->contains(fn (array $index): bool => ($index['name'] ?? null) === $indexName);
+        }
+
         $dbName = DB::connection()->getDatabaseName();
         $result = DB::select(
             'SELECT COUNT(1) AS cnt FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?',
@@ -123,6 +127,10 @@ return new class extends Migration
 
     private function foreignKeyExists(string $table, string $constraintName): bool
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return collect(Schema::getForeignKeys($table))->contains(fn (array $foreignKey): bool => ($foreignKey['name'] ?? null) === $constraintName);
+        }
+
         $dbName = DB::connection()->getDatabaseName();
         $result = DB::select(
             "SELECT COUNT(1) AS cnt FROM information_schema.table_constraints WHERE table_schema = ? AND table_name = ? AND constraint_name = ? AND constraint_type = 'FOREIGN KEY'",

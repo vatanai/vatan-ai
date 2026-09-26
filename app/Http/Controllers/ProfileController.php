@@ -14,15 +14,19 @@ use App\Models\FaceProfile;
 use App\Models\GeneratedImage;
 use App\Models\UserUpload;
 use App\Models\GeneratedVideo;
+use App\Models\SalesPartnerLead;
+use App\Services\CustomerJourneyService;
 use App\Services\UserStorageService;
 use App\Services\ProfileMediaThumbnailService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
+use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
@@ -98,6 +102,7 @@ public function gallery()
                 'creatorRewardProducts' => collect(),
                 'creatorRewardCredits' => 0,
                 'profileRewardTotal' => 0,
+                'journeyData' => $this->emptyJourneyData(),
             ]);
         }
 
@@ -131,6 +136,7 @@ public function gallery()
         $creatorRewardCredits = $this->creatorRewardCredits($user, $referralProfileEnabled);
         $profileRewardTotal = (int) $earnings + (int) $creatorRewardCredits;
         $isGuest       = false;
+        $journeyData = $this->journeyData($user, $createdCount);
 
         return view('app.profile', compact(
             'createdImages',
@@ -147,8 +153,197 @@ public function gallery()
             'referralProfileEnabled',
             'creatorRewardCredits',
             'profileRewardTotal',
-            'initialMediaCursor'
+            'initialMediaCursor',
+            'journeyData'
         ));
+    }
+
+    /** درخواست همکاری فروش از مسیر کاربر عادی؛ با تأیید صریح کاربر وارد صف فروش می‌شود. */
+    public function requestPartnerProgram(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user, 401);
+
+        if (! Schema::hasTable('sales_partner_leads') || ! Schema::hasColumn('sales_partner_leads', 'user_id')) {
+            return back()->with('error', 'مسیر همکاری فروش هنوز برای این محیط فعال نشده است.');
+        }
+
+        $existing = SalesPartnerLead::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($existing) {
+            return back()->with('success', 'درخواست همکاری تو قبلاً ثبت شده و تیم فروش آن را پیگیری می‌کند.');
+        }
+
+        $name = trim(implode(' ', array_filter([(string) $user->name, (string) $user->last_name])));
+        $name = $name !== '' ? $name : 'کاربر سایت';
+
+        SalesPartnerLead::query()->create([
+            'user_id' => $user->id,
+            'name' => $name,
+            'handle' => 'user:'.$user->id,
+            'channel' => 'other',
+            'source' => 'user_profile',
+            'profile_url' => route('app.profile'),
+            'stage' => 4,
+            'stage_changed_at' => now(),
+            'status' => 'active',
+            'priority' => 'high',
+            'next_follow_up_at' => now(),
+            'notes' => 'درخواست همکاری فروش از مسیر کاربر عادی ثبت شده است.',
+        ]);
+
+        return back()->with('success', 'درخواست همکاری ثبت شد. تیم فروش به‌زودی با تو هماهنگ می‌کند.');
+    }
+
+    private function journeyData(User $user, int $createdCount): array
+    {
+        $imageCount = (int) $user->generatedImages()->whereNotNull('image_path')->count();
+        $videoCount = Schema::hasTable('generated_videos')
+            ? (int) $user->generatedVideos()->where(function ($query): void {
+                $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+            })->count()
+            : 0;
+        $firstContentAt = $user->generatedImages()->whereNotNull('image_path')->min('created_at');
+        if (Schema::hasTable('generated_videos')) {
+            $firstVideoAt = $user->generatedVideos()
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })->min('created_at');
+            if ($firstVideoAt && (! $firstContentAt || $firstVideoAt < $firstContentAt)) {
+                $firstContentAt = $firstVideoAt;
+            }
+        }
+        $firstContentAt = $firstContentAt ? Carbon::parse($firstContentAt) : null;
+
+        $linkCount = Schema::hasTable('referral_links')
+            ? (int) $user->referralLinks()->count()
+            : 0;
+        $conversionCount = Schema::hasTable('referral_conversions')
+            ? (int) $user->referralConversions()->count()
+            : 0;
+        $purchaseCount = Schema::hasTable('plan_purchases')
+            ? (int) $user->planPurchases()->where('status', 'completed')->count()
+            : 0;
+        $firstPurchaseAt = Schema::hasTable('plan_purchases')
+            ? $user->planPurchases()->where('status', 'completed')->oldest('purchased_at')->value('purchased_at')
+            : null;
+        $existingPartnerLead = Schema::hasTable('sales_partner_leads')
+            && Schema::hasColumn('sales_partner_leads', 'user_id')
+            ? SalesPartnerLead::query()->where('user_id', $user->id)->where('status', 'active')->first()
+            : null;
+        $customerJourney = Schema::hasTable('customer_journeys')
+            ? app(CustomerJourneyService::class)->sync($user, 'بازدید پروفایل کاربر')
+            : null;
+        $pointDefinitions = $customerJourney ? app(CustomerJourneyService::class)->pointDefinitions() : [];
+
+        $steps = [
+            [
+                'title' => 'ساخت حساب',
+                'description' => 'حساب وطن برایت ساخته شده است.',
+                'done' => true,
+                'date' => $user->registered_at ?? $user->created_at,
+                'icon' => 'fa-user-check',
+            ],
+            [
+                'title' => 'اولین ورود',
+                'description' => 'وارد پنل شو تا مسیر شخصی‌سازی‌شده‌ات شروع شود.',
+                'done' => (bool) ($user->last_login_at || (int) $user->login_count > 0),
+                'date' => $user->last_login_at,
+                'icon' => 'fa-door-open',
+            ],
+            [
+                'title' => 'اولین خروجی',
+                'description' => 'یک عکس یا ویدیو بساز و نتیجه را ببین.',
+                'done' => $createdCount > 0,
+                'date' => $firstContentAt,
+                'icon' => 'fa-wand-magic-sparkles',
+            ],
+            [
+                'title' => 'ساخت دوم',
+                'description' => 'برای بار دوم خروجی بساز تا تجربه‌ات تکرارپذیر شود.',
+                'done' => $createdCount >= 2,
+                'date' => null,
+                'icon' => 'fa-rotate',
+            ],
+            [
+                'title' => 'استفاده مستمر',
+                'description' => 'با چند بار استفاده، ارزش واقعی ابزار را پیدا کن.',
+                'done' => $createdCount >= 3 || (int) $user->login_count >= 3 || $linkCount > 0,
+                'date' => null,
+                'icon' => 'fa-chart-line',
+            ],
+            [
+                'title' => 'آماده خرید',
+                'description' => 'با دیدن ارزش محصول، پلن مناسب خودت را انتخاب کن.',
+                'done' => $createdCount >= 5 || (int) $user->tokens_used >= 40,
+                'date' => null,
+                'icon' => 'fa-coins',
+            ],
+            [
+                'title' => 'خرید اول',
+                'description' => 'اولین خرید موفق تو ثبت و آماده مصرف می‌شود.',
+                'done' => $purchaseCount >= 1,
+                'date' => $firstPurchaseAt ? Carbon::parse($firstPurchaseAt) : null,
+                'icon' => 'fa-cart-shopping',
+            ],
+            [
+                'title' => 'مصرف موفق',
+                'description' => 'از خریدت نتیجه بگیر و رضایتت را ثبت کن.',
+                'done' => $purchaseCount >= 1 && ($createdCount >= 3 || (int) $user->tokens_used >= 40),
+                'date' => null,
+                'icon' => 'fa-face-smile',
+            ],
+            [
+                'title' => 'خرید مجدد',
+                'description' => 'برای ادامه استفاده، پیشنهاد مناسب خرید بعدی را دریافت کن.',
+                'done' => $purchaseCount >= 2,
+                'date' => null,
+                'icon' => 'fa-rotate',
+            ],
+        ];
+
+        $nextIndex = collect($steps)->search(fn (array $step): bool => ! $step['done']);
+        $nextIndex = $nextIndex === false ? count($steps) - 1 : $nextIndex;
+
+        return [
+            'steps' => $steps,
+            'current_index' => $nextIndex,
+            'completed_count' => collect($steps)->where('done', true)->count(),
+            'login_count' => (int) $user->login_count,
+            'link_count' => $linkCount,
+            'conversion_count' => $conversionCount,
+            'image_count' => $imageCount,
+            'video_count' => $videoCount,
+            'token_balance' => (int) $user->tokens,
+            'customer_journey' => $customerJourney,
+            'customer_point_title' => $customerJourney ? ($pointDefinitions[$customerJourney->point]['title'] ?? 'مسیر فعال') : null,
+            'last_login_at' => $user->last_login_at,
+            'existing_partner_lead' => $existingPartnerLead,
+            'next_action_url' => $createdCount === 0 ? route('app.explore') : null,
+        ];
+    }
+
+    private function emptyJourneyData(): array
+    {
+        return [
+            'steps' => [],
+            'current_index' => 0,
+            'completed_count' => 0,
+            'login_count' => 0,
+            'link_count' => 0,
+            'conversion_count' => 0,
+            'image_count' => 0,
+            'video_count' => 0,
+            'token_balance' => 0,
+            'customer_journey' => null,
+            'customer_point_title' => null,
+            'last_login_at' => null,
+            'existing_partner_lead' => null,
+            'next_action_url' => route('login'),
+        ];
     }
 
     /** تب‌های سنگین پروفایل از پاسخ اصلی جدا هستند و می‌توانند در پس‌زمینه دریافت شوند. */

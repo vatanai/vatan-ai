@@ -13,8 +13,7 @@ return new class extends Migration
             return;
         }
 
-        $exists = collect(DB::select('SHOW INDEX FROM generated_videos'))
-            ->contains(fn (object $index): bool => (string) $index->Key_name === 'generated_videos_created_at_index');
+        $exists = $this->indexExists('generated_videos', 'generated_videos_created_at_index');
 
         if ($exists) {
             return;
@@ -31,13 +30,23 @@ return new class extends Migration
             return;
         }
 
-        $exists = collect(DB::select('SHOW INDEX FROM generated_videos'))
-            ->contains(fn (object $index): bool => (string) $index->Key_name === 'generated_videos_created_at_index');
+        $exists = $this->indexExists('generated_videos', 'generated_videos_created_at_index');
 
         if ($exists) {
             Schema::table('generated_videos', function (Blueprint $table): void {
                 $table->dropIndex('generated_videos_created_at_index');
             });
         }
+    }
+
+    private function indexExists(string $table, string $name): bool
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return collect(Schema::getIndexes($table))
+                ->contains(fn (array $index): bool => ($index['name'] ?? null) === $name);
+        }
+
+        return collect(DB::select("SHOW INDEX FROM `{$table}`"))
+            ->contains(fn (object $index): bool => (string) $index->Key_name === $name);
     }
 };

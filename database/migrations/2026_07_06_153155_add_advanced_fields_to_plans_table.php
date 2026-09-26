@@ -154,6 +154,10 @@ return new class extends Migration
      */
     private function indexExists(string $table, string $indexName): bool
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return collect(Schema::getIndexes($table))->contains(fn (array $index): bool => ($index['name'] ?? null) === $indexName);
+        }
+
         $dbName = DB::connection()->getDatabaseName();
         $result = DB::select(
             'SELECT COUNT(1) AS cnt FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?',

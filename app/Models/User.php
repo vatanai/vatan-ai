@@ -215,6 +215,11 @@ class User extends Authenticatable
         return $this->belongsTo(Plan::class);
     }
 
+    public function customerJourney(): HasOne
+    {
+        return $this->hasOne(CustomerJourney::class, 'user_id');
+    }
+
     /** نام استاندارد پلن برای تمام بخش‌های کاربری؛ نبود یا نام خالی یعنی پلن رایگان. */
     public function getPlanDisplayNameAttribute(): string
     {

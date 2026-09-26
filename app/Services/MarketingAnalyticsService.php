@@ -4,9 +4,13 @@ namespace App\Services;
 
 use App\Models\GrowthContent;
 use App\Models\GrowthEvent;
+use App\Models\CustomerJourney;
 use App\Models\MarketingContent;
 use App\Models\MarketingEvent;
 use App\Models\MarketingScenario;
+use App\Models\PlanPurchase;
+use App\Models\SalesPartnerLead;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
@@ -51,6 +55,8 @@ class MarketingAnalyticsService
             'funnel' => $this->funnel($metrics),
             'trend' => $this->trend($from, $to, $growthEvents, $marketingEvents),
             'channels' => $this->channels($growthEvents, $marketingEvents),
+            'customerJourneyFunnel' => $this->customerJourneyFunnel($from, $to),
+            'partnerSources' => $this->partnerSources($from, $to),
             'topContents' => $this->topContents(),
             'topScenarios' => $this->topScenarios($marketingEvents),
             'dataStatus' => [
@@ -89,6 +95,66 @@ class MarketingAnalyticsService
             $query->whereBetween('published_at', [$from, $to])->orWhereNull('published_at');
         });
         return ['views' => (int) $query->sum('impressions'), 'engagements' => (int) $query->sum('engagements'), 'comments' => (int) $query->sum('comments')];
+    }
+
+    private function customerJourneyFunnel(Carbon $from, Carbon $to): array
+    {
+        if (! Schema::hasTable('users') || ! Schema::hasTable('customer_journeys')) {
+            return [];
+        }
+
+        $users = User::query()->whereBetween('registered_at', [$from, $to])->get(['id']);
+        if ($users->isEmpty()) {
+            return [
+                ['label' => 'ثبت‌نام', 'value' => 0, 'width' => 0],
+                ['label' => 'ساخت اول', 'value' => 0, 'width' => 0],
+                ['label' => 'ساخت دوم', 'value' => 0, 'width' => 0],
+                ['label' => 'خرید', 'value' => 0, 'width' => 0],
+            ];
+        }
+
+        $userIds = $users->pluck('id');
+        $journeys = CustomerJourney::query()->whereIn('user_id', $userIds)->get(['user_id', 'point', 'metadata']);
+        $purchases = Schema::hasTable('plan_purchases')
+            ? PlanPurchase::query()->whereIn('user_id', $userIds)->where('status', PlanPurchase::COMPLETED)->distinct()->pluck('user_id')
+            : collect();
+        $values = [
+            ['label' => 'ثبت‌نام', 'value' => $users->count()],
+            ['label' => 'ساخت اول', 'value' => $journeys->filter(fn (CustomerJourney $journey): bool => (int) data_get($journey->metadata, 'output_count', 0) >= 1 || (int) $journey->point >= 2)->count()],
+            ['label' => 'ساخت دوم', 'value' => $journeys->filter(fn (CustomerJourney $journey): bool => (int) data_get($journey->metadata, 'output_count', 0) >= 2 || (int) $journey->point >= 3)->count()],
+            ['label' => 'خرید', 'value' => $purchases->unique()->count()],
+        ];
+        $maximum = max(1, ...array_column($values, 'value'));
+
+        return collect($values)->map(fn (array $item): array => $item + ['width' => $item['value'] > 0 ? max(4, round(($item['value'] / $maximum) * 100, 2)) : 0])->all();
+    }
+
+    private function partnerSources(Carbon $from, Carbon $to): array
+    {
+        if (! Schema::hasTable('sales_partner_leads') || ! Schema::hasColumn('sales_partner_leads', 'acquisition_source')) {
+            return [];
+        }
+
+        $labels = [
+            'instagram' => 'اینستاگرام',
+            'telegram' => 'تلگرام',
+            'google' => 'گوگل',
+            'website' => 'سایت وطن',
+            'referral' => 'معرفی و رفرال',
+            'manual' => 'پیدا شده دستی',
+            'other' => 'سایر',
+        ];
+        $rows = SalesPartnerLead::query()->whereBetween('created_at', [$from, $to])->get(['acquisition_source', 'stage']);
+
+        return collect($labels)->map(function (string $label, string $key) use ($rows): array {
+            $sourceRows = $rows->where('acquisition_source', $key);
+            return [
+                'key' => $key,
+                'label' => $label,
+                'total' => $sourceRows->count(),
+                'active' => $sourceRows->where('stage', 10)->count(),
+            ];
+        })->values()->all();
     }
 
     private function countMarketingEvents(Collection $events, array $types): int

@@ -27,6 +27,12 @@ return new class extends Migration
             return;
         }
 
+        // فایل دامپ با نحو `INSERT IGNORE` برای `MySQL` نوشته شده است؛
+        // در تست‌های `SQLite` از داده‌ی لوکال صرف‌نظر می‌کنیم.
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $sqlFile = database_path('data-import/categories.sql');
         if (!file_exists($sqlFile)) {
             return;

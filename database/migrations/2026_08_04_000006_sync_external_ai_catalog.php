@@ -9,6 +9,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // مهاجرت‌های تست نباید به سرویس خارجی وابسته یا شبکه‌ای شوند.
+        if (app()->environment('testing')) {
+            return;
+        }
+
         if (!config('services.ai.catalog_sync_on_migrate', true) || !Schema::hasTable('ai_models')) return;
 
         try {

@@ -166,6 +166,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     // تکمیل اطلاعات پروفایل (نام و فامیل) بعد از تایید OTP ثبت‌نام
     Route::post('/auth/complete-profile', [AuthController::class, 'completeProfile'])->name('auth.completeProfile');
+    Route::post('/profile/partner-interest', [ProfileController::class, 'requestPartnerProgram'])->name('profile.partner-interest');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::get('/profile/media', [ProfileController::class, 'media'])->name('profile.media');
     Route::get('/profile/generated-images/{generatedImage}/thumbnail', [ProfileController::class, 'generatedImageThumbnail'])
@@ -757,6 +758,22 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     // این مسیرها عمداً از ماژول فعلی رشد جدا هستند و در فاز اتصال، به همان داده‌ها و رویدادهای استاندارد متصل می‌شوند.
     Route::prefix('marketing-technology')->name('marketing-technology.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'index'])->name('index');
+        Route::get('/partners', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'partners'])->name('partners');
+        Route::get('/partners/queue', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'partnerQueue'])->name('partners.queue');
+        Route::get('/partners/team', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'partnerTeam'])->name('partners.team');
+        Route::get('/partners/settings', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'partnerSettings'])->name('partners.settings');
+        Route::get('/customer-journey', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'customerJourney'])->name('customer-journey');
+        Route::patch('/customer-journey/{customerJourney}/point', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateCustomerJourneyPoint'])->name('customer-journey.point');
+        Route::post('/customer-journey/{customerJourney}/review', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'reviewCustomerJourney'])->name('customer-journey.review');
+        Route::post('/customer-journey/tasks/{customerJourneyTask}/complete', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'completeCustomerJourneyTask'])->name('customer-journey.tasks.complete');
+        Route::put('/customer-journey/settings', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateCustomerJourneySettings'])->name('customer-journey.settings.update');
+        Route::put('/customer-journey/stages/{point}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateCustomerJourneyStage'])->name('customer-journey.stages.update');
+        Route::post('/partners', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storePartner'])->name('partners.store');
+        Route::put('/partners/settings/{salesPartnerStage}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updatePartnerStageSettings'])->name('partners.settings.update');
+        Route::patch('/partners/{salesPartnerLead}/stage', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updatePartnerStage'])->name('partners.stage');
+        Route::patch('/partners/{salesPartnerLead}/assignee', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updatePartnerAssignee'])->name('partners.assignee');
+        Route::put('/partners/team/{admin}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updatePartnerTeamSetting'])->name('partners.team.settings.update');
+        Route::post('/partners/{salesPartnerLead}/contacted', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'markPartnerContacted'])->name('partners.contacted');
         Route::get('/content-calendar', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'contentCalendar'])->name('content-calendar');
         Route::post('/content-calendar', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'storeContent'])->name('content-calendar.store');
         Route::patch('/content-calendar/{marketingContent}', [\App\Http\Controllers\Admin\MarketingTechnologyController::class, 'updateContent'])->name('content-calendar.update');

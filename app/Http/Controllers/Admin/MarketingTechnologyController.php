@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\GrowthContent;
 use App\Models\GrowthEvent;
 use App\Models\GrowthLink;
+use App\Models\Admin;
 use App\Models\MarketingCampaign;
 use App\Models\MarketingContent;
 use App\Models\MarketingOperationRun;
@@ -14,10 +15,18 @@ use App\Models\MarketingEvent;
 use App\Models\MarketingIntegration;
 use App\Models\MarketingScenario;
 use App\Models\Product;
+use App\Models\SalesPartnerLead;
+use App\Models\SalesPartnerStage;
+use App\Models\SalesPartnerActivity;
+use App\Models\SalesPartnerTeamSetting;
+use App\Models\CustomerJourney;
+use App\Models\CustomerJourneyTask;
+use App\Services\CustomerJourneyService;
 use App\Services\MarketingCostAnalysisService;
 use App\Services\MarketingAnalyticsService;
 use App\Services\MetaInstagramApiService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -36,6 +45,582 @@ class MarketingTechnologyController extends Controller
             'modules' => $this->modules(),
             'pipeline' => $this->pipeline(),
         ]);
+    }
+
+    public function partners(Request $request): View
+    {
+        $ready = Schema::hasTable('sales_partner_leads');
+        $stages = $this->partnerStages();
+        $view = $request->string('view', 'all')->toString();
+        $allowedViews = ['all', 'today', 'overdue', 'no_follow_up'];
+        if (!in_array($view, $allowedViews, true)) {
+            $view = 'all';
+        }
+
+        $stageFilter = $request->filled('stage') && is_numeric($request->input('stage'))
+            ? (int) $request->input('stage')
+            : null;
+        $channelFilter = $request->string('channel')->toString();
+        $priorityFilter = $request->string('priority')->toString();
+        $assigneeFilter = $request->string('assigned_to')->toString();
+        $search = trim($request->string('q')->toString());
+
+        $applyTaskFilters = function ($query) use ($stageFilter, $channelFilter, $priorityFilter, $assigneeFilter, $search): void {
+            if ($stageFilter !== null && $stageFilter >= 0 && $stageFilter <= 10) {
+                $query->where('stage', $stageFilter);
+            }
+            if (in_array($channelFilter, ['instagram', 'telegram', 'both', 'other'], true)) {
+                $query->where('channel', $channelFilter);
+            }
+            if (in_array($priorityFilter, ['low', 'normal', 'high'], true)) {
+                $query->where('priority', $priorityFilter);
+            }
+            if ($assigneeFilter === 'unassigned') {
+                $query->whereNull('assigned_to');
+            } elseif (is_numeric($assigneeFilter) && (int) $assigneeFilter > 0) {
+                $query->where('assigned_to', (int) $assigneeFilter);
+            }
+            if ($search !== '') {
+                $query->where(function ($searchQuery) use ($search): void {
+                    $searchQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('handle', 'like', "%{$search}%");
+                });
+            }
+        };
+
+        $leads = $ready
+            ? tap(SalesPartnerLead::query()->with('assignee')->where('status', 'active'), $applyTaskFilters)
+                ->when($view === 'today', fn ($query) => $query->whereNotNull('next_follow_up_at')->whereDate('next_follow_up_at', '<=', today()))
+                ->when($view === 'overdue', fn ($query) => $query->whereNotNull('next_follow_up_at')->where('next_follow_up_at', '<', today()->startOfDay()))
+                ->when($view === 'no_follow_up', fn ($query) => $query->whereNull('next_follow_up_at'))
+                ->orderBy('stage')
+                ->orderByRaw('CASE WHEN next_follow_up_at IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('next_follow_up_at')
+                ->orderByDesc('updated_at')
+                ->get()
+            : collect();
+
+        $todayFollowUps = $ready
+            ? tap(SalesPartnerLead::query()->with('assignee')->where('status', 'active')->whereNotNull('next_follow_up_at'), $applyTaskFilters)
+                ->whereDate('next_follow_up_at', '<=', today())
+                ->orderBy('next_follow_up_at')
+                ->orderBy('stage')
+                ->get()
+            : collect();
+
+        $allActiveLeads = $ready
+            ? SalesPartnerLead::query()->where('status', 'active')->get(['stage', 'next_follow_up_at', 'positive_reply_count', 'assigned_to'])
+            : collect();
+        $admins = Schema::hasTable('admins')
+            ? Admin::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role'])
+            : collect();
+        $dailyTarget = 20;
+        $dailyContactsQuery = Schema::hasTable('sales_partner_activities')
+            ? SalesPartnerActivity::query()->whereDate('contacted_at', today())
+            : null;
+        if ($dailyContactsQuery && $assigneeFilter === 'unassigned') {
+            $dailyContactsQuery->whereHas('lead', fn ($query) => $query->whereNull('assigned_to'));
+        } elseif ($dailyContactsQuery && is_numeric($assigneeFilter) && (int) $assigneeFilter > 0) {
+            $dailyContactsQuery->whereHas('lead', fn ($query) => $query->where('assigned_to', (int) $assigneeFilter));
+        }
+        $dailyContacts = $dailyContactsQuery?->count() ?? 0;
+
+        $leadsByStage = collect($stages)->mapWithKeys(function (array $stage) use ($leads): array {
+            return [$stage['key'] => $leads->where('stage', $stage['key'])->values()];
+        });
+
+        return view('admin.marketing-technology.partners', [
+            'title' => 'مسیر همکاران فروش',
+            'ready' => $ready,
+            'stages' => $stages,
+            'leads' => $leads,
+            'leadsByStage' => $leadsByStage,
+            'todayFollowUps' => $todayFollowUps,
+            'admins' => $admins,
+            'dailyTarget' => $dailyTarget,
+            'dailyContacts' => $dailyContacts,
+            'filters' => [
+                'view' => $view,
+                'stage' => $stageFilter,
+                'channel' => $channelFilter,
+                'priority' => $priorityFilter,
+                'assigned_to' => $assigneeFilter,
+                'q' => $search,
+            ],
+            'metrics' => [
+                'total' => $allActiveLeads->count(),
+                'due' => $allActiveLeads->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lte(now()->endOfDay()) ?? false)->count(),
+                'overdue' => $allActiveLeads->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lt(today()->startOfDay()) ?? false)->count(),
+                'unassigned' => $allActiveLeads->whereNull('assigned_to')->count(),
+                'daily_target' => $dailyTarget,
+                'daily_contacts' => $dailyContacts,
+                'positive' => $allActiveLeads->filter(fn (SalesPartnerLead $lead): bool => $lead->positive_reply_count > 0)->count(),
+                'active' => $allActiveLeads->where('stage', 10)->count(),
+            ],
+        ]);
+    }
+
+    public function partnerQueue(Request $request): View
+    {
+        $ready = Schema::hasTable('sales_partner_leads')
+            && Schema::hasTable('sales_partner_stages')
+            && Schema::hasTable('sales_partner_activities');
+        $admin = $request->user('admin');
+        $scope = $request->string('scope', 'mine')->toString();
+        if (! in_array($scope, ['mine', 'all'], true)) {
+            $scope = 'mine';
+        }
+
+        $stages = $this->partnerStages();
+        $stageFilter = $request->filled('stage') && is_numeric($request->input('stage'))
+            ? (int) $request->input('stage')
+            : null;
+
+        $queue = $ready
+            ? SalesPartnerLead::query()
+                ->with('assignee')
+                ->where('status', 'active')
+                ->whereNotNull('next_follow_up_at')
+                ->where('next_follow_up_at', '<=', today()->endOfDay())
+                ->when($scope === 'mine' && $admin, fn ($query) => $query->where('assigned_to', $admin->id))
+                ->when($stageFilter !== null && $stageFilter >= 0 && $stageFilter <= 10, fn ($query) => $query->where('stage', $stageFilter))
+                ->orderByRaw('CASE WHEN next_follow_up_at < ? THEN 0 ELSE 1 END', [today()->startOfDay()])
+                ->orderByRaw("CASE priority WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END")
+                ->orderBy('next_follow_up_at')
+                ->orderBy('stage')
+                ->limit(50)
+                ->get()
+            : collect();
+
+        $todayActivities = $ready
+            ? SalesPartnerActivity::query()->whereDate('contacted_at', today())->get(['admin_id', 'result', 'sales_partner_lead_id'])
+            : collect();
+        $target = 20;
+        if ($admin && Schema::hasTable('sales_partner_team_settings')) {
+            $target = max(0, (int) (SalesPartnerTeamSetting::query()->where('admin_id', $admin->id)->value('daily_contact_target') ?? 20));
+        }
+        $todayContacts = $admin
+            ? $todayActivities->where('admin_id', $admin->id)->count()
+            : $todayActivities->count();
+        $overdue = $queue->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lt(today()->startOfDay()) ?? false)->count();
+        $stageMap = collect($stages)->keyBy('key');
+
+        return view('admin.marketing-technology.partner-queue', [
+            'title' => 'صف عملیاتی امروز',
+            'ready' => $ready,
+            'admin' => $admin,
+            'queue' => $queue,
+            'stages' => $stages,
+            'stageMap' => $stageMap,
+            'scope' => $scope,
+            'stageFilter' => $stageFilter,
+            'todayContacts' => $todayContacts,
+            'target' => $target,
+            'progress' => $target > 0 ? min(100, (int) round(($todayContacts / $target) * 100)) : 0,
+            'overdue' => $overdue,
+        ]);
+    }
+
+    public function partnerSettings(): View
+    {
+        $ready = Schema::hasTable('sales_partner_stages');
+        $stages = $ready
+            ? SalesPartnerStage::query()->orderBy('stage')->get()
+            : collect(SalesPartnerStage::defaultDefinitions());
+
+        return view('admin.marketing-technology.partner-settings', [
+            'title' => 'تنظیمات مسیر همکاران فروش',
+            'ready' => $ready,
+            'stages' => $stages,
+            'messageTypes' => [
+                'none' => 'بدون پیام',
+                'voice' => 'وویس',
+                'message' => 'پیام متنی',
+                'both' => 'وویس یا پیام',
+            ],
+        ]);
+    }
+
+    public function customerJourney(Request $request, CustomerJourneyService $journeyService): View
+    {
+        $ready = Schema::hasTable('customer_journeys')
+            && Schema::hasTable('customer_journey_tasks')
+            && Schema::hasTable('customer_journey_events')
+            && Schema::hasTable('customer_journey_stages');
+        $pointFilter = $request->filled('point') && is_numeric($request->input('point'))
+            ? max(1, min(8, (int) $request->input('point')))
+            : null;
+        $statusFilter = $request->string('status')->toString();
+        $search = trim($request->string('q')->toString());
+
+        if ($ready && $request->boolean('sync', true)) {
+            \App\Models\User::query()->where('status', '!=', 'blocked')->orderBy('id')->chunkById(100, function ($users) use ($journeyService): void {
+                foreach ($users as $user) {
+                    $journeyService->sync($user, 'همگام‌سازی داشبورد مسیر کاربران');
+                }
+            });
+        }
+
+        $journeys = $ready
+            ? CustomerJourney::query()->with(['user', 'tasks' => fn ($query) => $query->where('status', 'pending')->orderBy('due_at')])
+                ->when($pointFilter !== null, fn ($query) => $query->where('point', $pointFilter))
+                ->when(in_array($statusFilter, [CustomerJourneyService::ACTIVE, CustomerJourneyService::HUMAN_REVIEW, CustomerJourneyService::PAUSED, CustomerJourneyService::CLOSED], true), fn ($query) => $query->where('status', $statusFilter))
+                ->when($search !== '', function ($query) use ($search): void {
+                    $query->whereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%")->orWhere('last_name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"));
+                })
+                ->orderByRaw('CASE WHEN status = ? THEN 0 WHEN next_action_at <= ? THEN 1 ELSE 2 END', [CustomerJourneyService::HUMAN_REVIEW, now()])
+                ->orderBy('point')
+                ->orderBy('next_action_at')
+                ->paginate(20)
+                ->withQueryString()
+            : null;
+
+        $allJourneys = $ready ? CustomerJourney::query()->with('user:id,name,last_name')->get(['id', 'user_id', 'point', 'status', 'next_action_at', 'readiness_score']) : collect();
+        $pendingHuman = $ready ? CustomerJourneyTask::query()->where('task_type', 'human_review')->where('status', 'pending')->count() : 0;
+        $todayTasks = $ready ? CustomerJourneyTask::query()->where('status', 'pending')->whereDate('due_at', today())->count() : 0;
+        $pointStats = collect($journeyService->pointDefinitions())->mapWithKeys(function (array $definition, int $point) use ($allJourneys): array {
+            $rows = $allJourneys->where('point', $point);
+
+            return [$point => [
+                'total' => $rows->where('status', '!=', CustomerJourneyService::CLOSED)->count(),
+                'active' => $rows->where('status', CustomerJourneyService::ACTIVE)->count(),
+                'human_review' => $rows->where('status', CustomerJourneyService::HUMAN_REVIEW)->count(),
+                'paused' => $rows->where('status', CustomerJourneyService::PAUSED)->count(),
+                'closed' => $rows->where('status', CustomerJourneyService::CLOSED)->count(),
+                'samples' => $rows->where('status', '!=', CustomerJourneyService::CLOSED)->take(3)->map(function (CustomerJourney $journey): array {
+                    return ['name' => trim(($journey->user?->name ?: '').' '.($journey->user?->last_name ?: '')) ?: 'کاربر بدون نام', 'status' => $journey->status];
+                })->values()->all(),
+            ]];
+        })->all();
+
+        return view('admin.marketing-technology.customer-journey', [
+            'title' => 'مسیر کاربران',
+            'ready' => $ready,
+            'journeys' => $journeys,
+            'pointDefinitions' => $journeyService->pointDefinitions(),
+            'settings' => $journeyService->settings(),
+            'filters' => ['point' => $pointFilter, 'status' => $statusFilter, 'q' => $search],
+            'pointStats' => $pointStats,
+            'metrics' => [
+                'total' => $allJourneys->where('status', '!=', CustomerJourneyService::CLOSED)->count(),
+                'today_tasks' => $todayTasks,
+                'human_review' => $pendingHuman,
+                'average_score' => (int) round($allJourneys->avg('readiness_score') ?: 0),
+                'points' => $allJourneys->where('status', '!=', CustomerJourneyService::CLOSED)->countBy('point'),
+            ],
+        ]);
+    }
+
+    public function updateCustomerJourneyPoint(Request $request, CustomerJourney $customerJourney, CustomerJourneyService $journeyService): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'point' => ['required', 'integer', 'between:1,8'],
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
+        $journeyService->moveManually($customerJourney, (int) $data['point'], $data['reason'], $request->user('admin')?->id);
+
+        $message = 'پوینت کاربر و تسک مرحله بعد ثبت شد.';
+        if ($request->expectsJson()) {
+            $definition = $journeyService->pointDefinitions()[(int) $data['point']] ?? null;
+            return response()->json(['ok' => true, 'message' => $message, 'journey_id' => $customerJourney->id, 'point' => (int) $data['point'], 'point_label' => $definition['short'] ?? '']);
+        }
+        return back()->with('success', $message);
+    }
+
+    public function reviewCustomerJourney(Request $request, CustomerJourney $customerJourney, CustomerJourneyService $journeyService): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+        $journeyService->sendToHumanReview($customerJourney, $data['reason'], $request->user('admin')?->id);
+
+        $message = 'کاربر وارد لیست بررسی انسانی شد.';
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message, 'journey_id' => $customerJourney->id, 'status' => 'human_review']) : back()->with('success', $message);
+    }
+
+    public function completeCustomerJourneyTask(Request $request, CustomerJourneyTask $customerJourneyTask, CustomerJourneyService $journeyService): RedirectResponse|JsonResponse
+    {
+        $journeyService->completeTask($customerJourneyTask, $request->user('admin')?->id);
+
+        $message = 'تسک انجام‌شده ثبت شد.';
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message, 'task_id' => $customerJourneyTask->id]) : back()->with('success', $message);
+    }
+
+    public function updateCustomerJourneySettings(Request $request, CustomerJourneyService $journeyService): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'auto_credit_percent' => ['required', 'integer', 'between:0,100'],
+            'station_size' => ['required', 'integer', 'min:1', 'max:100000'],
+            'final_credit_threshold' => ['required', 'integer', 'min:0', 'max:100000'],
+            'inactivity_days' => ['required', 'integer', 'min:1', 'max:90'],
+            'max_daily_tasks' => ['required', 'integer', 'min:1', 'max:20'],
+        ]);
+        $journeyService->updateSettings($data, $request->user('admin')?->id);
+
+        $message = 'تنظیمات مسیر کاربران ذخیره شد.';
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message]) : back()->with('success', $message);
+    }
+
+    public function updateCustomerJourneyStage(Request $request, int $point, CustomerJourneyService $journeyService): RedirectResponse|JsonResponse
+    {
+        abort_unless(Schema::hasTable('customer_journey_stages'), 503, 'تنظیمات مراحل مسیر کاربران هنوز آماده نشده است.');
+        abort_unless($point >= 1 && $point <= 8, 404);
+
+        $data = $request->validate([
+            'short' => ['required', 'string', 'max:120'],
+            'title' => ['required', 'string', 'max:180'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'task_title' => ['required', 'string', 'max:180'],
+            'task_body' => ['nullable', 'string', 'max:5000'],
+            'channel' => ['required', Rule::in(['none', 'sms', 'call', 'direct', 'email', 'in_app', 'multi'])],
+            'message_template' => ['nullable', 'string', 'max:5000'],
+            'delay_minutes' => ['required', 'integer', 'min:0', 'max:525600'],
+            'human_required' => ['nullable', 'boolean'],
+            'advance_rule' => ['nullable', 'string', 'max:3000'],
+            'stop_rule' => ['nullable', 'string', 'max:3000'],
+            'enabled' => ['nullable', 'boolean'],
+        ]);
+        $data['human_required'] = $request->boolean('human_required');
+        $data['enabled'] = $request->boolean('enabled');
+        $journeyService->updatePointDefinition($point, $data);
+
+        $message = "تنظیمات گام {$point} مسیر کاربران ذخیره شد.";
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message, 'point' => $point]) : back()->with('success', $message);
+    }
+
+    public function updatePartnerStageSettings(Request $request, SalesPartnerStage $salesPartnerStage): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'goal' => ['nullable', 'string', 'max:5000'],
+            'task' => ['nullable', 'string', 'max:5000'],
+            'script' => ['nullable', 'string', 'max:10000'],
+            'follow_up' => ['nullable', 'string', 'max:1000'],
+            'default_follow_up_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
+            'max_follow_ups' => ['required', 'integer', 'min:0', 'max:20'],
+            'message_type' => ['required', Rule::in(['none', 'voice', 'message', 'both'])],
+            'advance_when' => ['nullable', 'string', 'max:5000'],
+            'stop_when' => ['nullable', 'string', 'max:5000'],
+            'is_active' => ['required', 'boolean'],
+        ]);
+        $data['updated_by'] = $request->user('admin')?->id;
+        $salesPartnerStage->update($data);
+
+        $message = "تنظیمات مرحله {$salesPartnerStage->stage} ذخیره شد.";
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message]) : back()->with('success', $message);
+    }
+
+    public function storePartner(Request $request): RedirectResponse|JsonResponse
+    {
+        abort_unless(Schema::hasTable('sales_partner_leads'), 503, 'مدل مسیر همکاران فروش هنوز روی این محیط اجرا نشده است.');
+
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:160'],
+            'handle' => ['required', 'string', 'max:160'],
+            'channel' => ['required', Rule::in(['instagram', 'telegram', 'both', 'other'])],
+            'profile_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'acquisition_source' => ['nullable', Rule::in(['instagram', 'telegram', 'google', 'website', 'referral', 'manual', 'other'])],
+            'stage' => ['required', 'integer', 'between:0,10'],
+            'priority' => ['required', Rule::in(['low', 'normal', 'high'])],
+            'next_follow_up_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:10000'],
+        ]);
+
+        $data['handle'] = trim($data['handle']);
+        $data['acquisition_source'] = $data['acquisition_source'] ?? 'manual';
+        $data['next_follow_up_at'] = $data['next_follow_up_at'] ?? $this->defaultStageFollowUpAt((int) $data['stage']);
+        $data['created_by'] = $request->user('admin')?->id;
+        $data['assigned_to'] = $request->user('admin')?->id;
+
+        $lead = SalesPartnerLead::query()->create($data + [
+            'status' => 'active',
+            'stage_changed_at' => now(),
+        ]);
+
+        $message = 'سرنخ همکار فروش به مسیر اضافه شد.';
+        if ($request->expectsJson()) {
+            $lead->load('assignee');
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'lead' => ['id' => $lead->id, 'stage' => $lead->stage],
+                'html' => view('admin.marketing-technology.partials.partner-lead-card', [
+                    'lead' => $lead,
+                    'acquisitionSourceLabels' => $this->partnerAcquisitionSourceLabels(),
+                ])->render(),
+            ]);
+        }
+        return back()->with('success', $message);
+    }
+
+    public function updatePartnerStage(Request $request, SalesPartnerLead $salesPartnerLead): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate(['stage' => ['required', 'integer', 'between:0,10']]);
+        $salesPartnerLead->update([
+            'stage' => (int) $data['stage'],
+            'stage_changed_at' => now(),
+            'next_follow_up_at' => $this->defaultStageFollowUpAt((int) $data['stage']),
+        ]);
+
+        $message = 'مرحله همکار فروش به‌روزرسانی شد.';
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message, 'stage' => $salesPartnerLead->stage]) : back()->with('success', $message);
+    }
+
+    public function updatePartnerAssignee(Request $request, SalesPartnerLead $salesPartnerLead): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'assigned_to' => ['nullable', 'integer', Rule::exists('admins', 'id')->where(fn ($query) => $query->where('is_active', true))],
+        ]);
+        $salesPartnerLead->update(['assigned_to' => $data['assigned_to'] ?? null]);
+
+        $message = 'مسئول پیگیری همکار فروش به‌روزرسانی شد.';
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message]) : back()->with('success', $message);
+    }
+
+    public function markPartnerContacted(Request $request, SalesPartnerLead $salesPartnerLead): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'contact_type' => ['required', Rule::in(['voice', 'message', 'call', 'other'])],
+            'result' => ['required', Rule::in(['no_response', 'positive', 'negative', 'follow_up'])],
+            'next_follow_up_at' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        $salesPartnerLead->increment('contact_count');
+        if ($data['result'] !== 'no_response') {
+            $salesPartnerLead->increment('reply_count');
+        }
+        if ($data['result'] === 'positive') {
+            $salesPartnerLead->increment('positive_reply_count');
+        }
+        $defaultFollowUp = $this->defaultStageFollowUpAt((int) $salesPartnerLead->stage);
+        $salesPartnerLead->update([
+            'last_contact_at' => now(),
+            'last_contact_type' => $data['contact_type'],
+            'last_contact_result' => $data['result'],
+            'last_contact_note' => $data['note'] ?? null,
+            'next_follow_up_at' => $data['next_follow_up_at'] ?? ($data['result'] === 'negative' ? null : ($defaultFollowUp ?? now()->addDay())),
+        ]);
+        if (Schema::hasTable('sales_partner_activities')) {
+            SalesPartnerActivity::query()->create([
+                'sales_partner_lead_id' => $salesPartnerLead->id,
+                'admin_id' => $request->user('admin')?->id,
+                'contact_type' => $data['contact_type'],
+                'result' => $data['result'],
+                'note' => $data['note'] ?? null,
+                'contacted_at' => now(),
+                'next_follow_up_at' => $salesPartnerLead->next_follow_up_at,
+            ]);
+        }
+
+        $message = 'تماس ثبت شد و پیگیری بعدی در صف قرار گرفت.';
+        if ($request->expectsJson()) {
+            $freshLead = $salesPartnerLead->fresh();
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'lead' => [
+                    'id' => $freshLead->id,
+                    'contact_count' => $freshLead->contact_count,
+                    'next_follow_up_at' => $freshLead->next_follow_up_at?->toIso8601String(),
+                ],
+            ]);
+        }
+        return back()->with('success', $message);
+    }
+
+    public function partnerTeam(): View
+    {
+        $ready = Schema::hasTable('sales_partner_leads')
+            && Schema::hasTable('sales_partner_team_settings');
+        $admins = Schema::hasTable('admins')
+            ? Admin::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role'])
+            : collect();
+        $settings = $ready
+            ? SalesPartnerTeamSetting::query()->whereIn('admin_id', $admins->pluck('id'))->get()->keyBy('admin_id')
+            : collect();
+        $activeLeads = Schema::hasTable('sales_partner_leads')
+            ? SalesPartnerLead::query()->where('status', 'active')->get(['id', 'assigned_to', 'stage', 'next_follow_up_at', 'last_contact_at', 'positive_reply_count', 'created_at'])
+            : collect();
+        $todayActivities = Schema::hasTable('sales_partner_activities')
+            ? SalesPartnerActivity::query()->whereDate('contacted_at', today())->get(['sales_partner_lead_id', 'admin_id', 'result'])
+            : collect();
+
+        $teamRows = $admins->map(function (Admin $admin) use ($settings, $activeLeads, $todayActivities): array {
+            $assigned = $activeLeads->where('assigned_to', $admin->id);
+            $targetSetting = $settings->get($admin->id);
+            $target = max(0, (int) ($targetSetting?->daily_contact_target ?? 20));
+            $contacts = $todayActivities->filter(function (SalesPartnerActivity $activity) use ($assigned): bool {
+                return $assigned->contains('id', $activity->sales_partner_lead_id);
+            });
+            $contactCount = $contacts->count();
+            $due = $assigned->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lte(now()->endOfDay()) ?? false)->count();
+            $overdue = $assigned->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lt(today()->startOfDay()) ?? false)->count();
+            $positive = $contacts->where('result', 'positive')->count();
+
+            return [
+                'admin' => $admin,
+                'setting' => $targetSetting,
+                'target' => $target,
+                'contacts' => $contactCount,
+                'progress' => $target > 0 ? min(100, (int) round(($contactCount / $target) * 100)) : 0,
+                'assigned' => $assigned->count(),
+                'due' => $due,
+                'overdue' => $overdue,
+                'positive' => $positive,
+                'response_rate' => $contactCount > 0 ? (int) round(($contacts->where('result', '!=', 'no_response')->count() / $contactCount) * 100) : 0,
+                'active' => $targetSetting?->is_active ?? true,
+            ];
+        })->values();
+
+        $activeTarget = (int) $teamRows->where('active', true)->sum('target');
+        $todayContacts = $todayActivities->filter(function (SalesPartnerActivity $activity) use ($activeLeads): bool {
+            return $activeLeads->contains('id', $activity->sales_partner_lead_id);
+        })->count();
+        $overdueCount = $activeLeads->filter(fn (SalesPartnerLead $lead): bool => $lead->next_follow_up_at?->lt(today()->startOfDay()) ?? false)->count();
+        $unassignedCount = $activeLeads->whereNull('assigned_to')->count();
+        $noFollowUpCount = $activeLeads->whereNull('next_follow_up_at')->count();
+        $positiveToday = $todayActivities->where('result', 'positive')->count();
+
+        return view('admin.marketing-technology.partner-team', [
+            'title' => 'عملکرد تیم فروش',
+            'ready' => $ready,
+            'teamRows' => $teamRows,
+            'alerts' => [
+                ['title' => 'پیگیری‌های عقب‌افتاده', 'count' => $overdueCount, 'description' => 'کارت‌هایی که امروز باید زودتر بررسی شوند.', 'url' => route('admin.marketing-technology.partners', ['view' => 'overdue'])],
+                ['title' => 'کارت‌های بدون مسئول', 'count' => $unassignedCount, 'description' => 'سرنخ‌هایی که هنوز به یک نفر سپرده نشده‌اند.', 'url' => route('admin.marketing-technology.partners', ['assigned_to' => 'unassigned'])],
+                ['title' => 'بدون زمان پیگیری', 'count' => $noFollowUpCount, 'description' => 'کارت‌هایی که قدم بعدی مشخص ندارند.', 'url' => route('admin.marketing-technology.partners', ['view' => 'no_follow_up'])],
+            ],
+            'metrics' => [
+                'active_leads' => $activeLeads->count(),
+                'today_contacts' => $todayContacts,
+                'today_target' => $activeTarget,
+                'overdue' => $overdueCount,
+                'unassigned' => $unassignedCount,
+                'positive_today' => $positiveToday,
+            ],
+        ]);
+    }
+
+    public function updatePartnerTeamSetting(Request $request, Admin $admin): RedirectResponse|JsonResponse
+    {
+        abort_unless(Schema::hasTable('sales_partner_team_settings'), 503, 'تنظیمات تیم فروش هنوز روی این محیط اجرا نشده است.');
+        abort_unless($admin->is_active, 404);
+
+        $data = $request->validate([
+            'daily_contact_target' => ['required', 'integer', 'between:0,200'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        SalesPartnerTeamSetting::query()->updateOrCreate(
+            ['admin_id' => $admin->id],
+            [
+                'daily_contact_target' => (int) $data['daily_contact_target'],
+                'is_active' => $request->boolean('is_active'),
+            ],
+        );
+
+        $message = "هدف روزانه {$admin->name} ذخیره شد.";
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $message]) : back()->with('success', $message);
     }
 
     public function contentCalendar(Request $request): View
@@ -411,6 +996,7 @@ class MarketingTechnologyController extends Controller
     private function modules(): array
     {
         return [
+            ['key' => 'partners', 'title' => 'مسیر همکاران فروش', 'description' => 'مدیریت سرنخ‌ها، مراحل، تسک‌های روزانه و مسیر همکاری', 'icon' => 'fa-route', 'status' => 'فاز ۱'],
             ['key' => 'content-calendar', 'title' => 'تقویم و صف محتوا', 'description' => 'برنامه‌ریزی، تولید، تأیید و انتشار محتوا', 'icon' => 'fa-calendar-days', 'status' => 'فعال'],
             ['key' => 'scenarios', 'title' => 'سناریوهای کامنت و دایرکت', 'description' => 'مدیریت متن، دکمه، لینک و قواعد پاسخ', 'icon' => 'fa-comments', 'status' => 'فعال'],
             ['key' => 'inbox', 'title' => 'صندوق گفتگوها', 'description' => 'یک نمای واحد از تعاملات ورودی و خروجی', 'icon' => 'fa-inbox', 'status' => 'فعال'],
@@ -419,6 +1005,62 @@ class MarketingTechnologyController extends Controller
             ['key' => 'integrations', 'title' => 'اتصال‌ها و سلامت سرویس', 'description' => 'کنترل اتصال‌ها و آخرین وضعیت دریافت داده', 'icon' => 'fa-plug', 'status' => 'کلید لازم'],
             ['key' => 'logs', 'title' => 'لاگ عملیات', 'description' => 'خطاها، تلاش مجدد و وضعیت اجرای عملیات', 'icon' => 'fa-list-check', 'status' => 'فعال'],
         ];
+    }
+
+    private function partnerStages(): array
+    {
+        if (Schema::hasTable('sales_partner_stages')) {
+            $stages = SalesPartnerStage::query()->where('is_active', true)->orderBy('stage')->get();
+            if ($stages->isNotEmpty()) {
+                return $stages->map(fn (SalesPartnerStage $stage): array => $this->stageToArray($stage))->all();
+            }
+        }
+
+        return collect(SalesPartnerStage::defaultDefinitions())->map(static function (array $definition): array {
+            return $definition + ['key' => $definition['stage']];
+        })->all();
+    }
+
+    private function partnerAcquisitionSourceLabels(): array
+    {
+        return [
+            'instagram' => 'اینستاگرام',
+            'telegram' => 'تلگرام',
+            'google' => 'گوگل',
+            'website' => 'سایت وطن',
+            'referral' => 'معرفی و رفرال',
+            'manual' => 'پیدا شده دستی',
+            'other' => 'سایر',
+        ];
+    }
+
+    private function stageToArray(SalesPartnerStage $stage): array
+    {
+        return [
+            'key' => $stage->stage,
+            'title' => $stage->title,
+            'description' => $stage->description,
+            'icon' => $stage->icon,
+            'goal' => $stage->goal,
+            'task' => $stage->task,
+            'script' => $stage->script,
+            'follow_up' => $stage->follow_up,
+            'default_follow_up_hours' => $stage->default_follow_up_hours,
+            'max_follow_ups' => $stage->max_follow_ups,
+            'message_type' => $stage->message_type,
+            'advance_when' => $stage->advance_when,
+            'stop_when' => $stage->stop_when,
+        ];
+    }
+
+    private function defaultStageFollowUpAt(int $stage): ?\Carbon\Carbon
+    {
+        if (! Schema::hasTable('sales_partner_stages')) {
+            return $stage === 0 ? null : now()->addDay();
+        }
+
+        $hours = SalesPartnerStage::query()->where('stage', $stage)->value('default_follow_up_hours');
+        return $hours === null ? null : now()->addHours((int) $hours);
     }
 
     private function pipeline(): array
