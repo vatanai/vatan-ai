@@ -329,10 +329,9 @@ class AiProviderRouter
 
     private function shouldPreferFastImageRoute(Product $product, string $resolution, array $extraPayload): bool
     {
-        if (filter_var($extraPayload['_prefer_fast_route'] ?? false, FILTER_VALIDATE_BOOL) !== true) {
-            return false;
-        }
-
+        // این تصمیم نباید به فلگ فرم وابسته باشد؛ بعضی فرم‌های قدیمی یا
+        // صفحات محصول آن فلگ را نمی‌فرستند. خودِ رزولوشن استاندارد معیار
+        // معتبر مسیر سریع است و کیفیت‌های 2K/4K همچنان روی مدل حرفه‌ای می‌مانند.
         return in_array(strtolower(trim($resolution)), ['480', '480p', '512', '720', '720p', '1k', '1080', '1080p'], true);
     }
 
