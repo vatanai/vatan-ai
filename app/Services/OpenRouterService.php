@@ -359,6 +359,11 @@ class OpenRouterService implements AiImageProviderInterface
             throw new Exception('OPENROUTER_API_KEY تنظیم نشده است.');
         }
 
+        // timeout محصول باید تا خود درخواست HTTP منتقل شود؛ قبلاً فقط به
+        // لایهٔ انتخاب مدل می‌رسید و این متد همیشه timeout پیش‌فرض را استفاده
+        // می‌کرد. کنترل داخلی هرگز نباید به OpenRouter ارسال شود.
+        $requestTimeout = max(1, (int) ($extraPayload['_request_timeout'] ?? $this->defaultTimeout));
+
         $payload = array_merge([
             'model'        => $modelId,
             'prompt'       => $prompt,
@@ -377,7 +382,7 @@ class OpenRouterService implements AiImageProviderInterface
             'prompt_length' => strlen($prompt),
         ]);
 
-        $response = $this->postWithFailover('/images', $payload, $this->defaultTimeout);
+        $response = $this->postWithFailover('/images', $payload, $requestTimeout);
 
         if ($response->failed() && $payload['n'] > 1 && $this->isSingleImageOnlyError($response)) {
             Log::info('OpenRouter: مدل فقط یک خروجی در هر درخواست می‌پذیرد؛ ساخت خروجی‌ها به‌صورت تک‌تک ادامه پیدا می‌کند', [
@@ -385,7 +390,7 @@ class OpenRouterService implements AiImageProviderInterface
                 'requested_count' => $payload['n'],
             ]);
 
-            return $this->generateImagesOneByOne($payload, (int) $payload['n']);
+            return $this->generateImagesOneByOne($payload, (int) $payload['n'], $requestTimeout);
         }
 
         if ($response->failed()) {
@@ -429,7 +434,9 @@ class OpenRouterService implements AiImageProviderInterface
             $payload['requested_aspect_ratio'],
             $payload['order_id'],
             $payload['provider'],
-            $payload['timeout']
+            $payload['timeout'],
+            $payload['_request_timeout'],
+            $payload['_prefer_fast_route']
         );
 
         // مقدارهای قدیمی محصول مثل `png_url` نامعتبرند؛ Images API فقط
@@ -585,7 +592,7 @@ class OpenRouterService implements AiImageProviderInterface
      * می‌کنند. در صورت اعلام این محدودیت، تعداد درخواستی را تک‌تک می‌سازیم
      * و پاسخ‌ها را به همان ساختار استاندارد Images API برمی‌گردانیم.
      */
-    protected function generateImagesOneByOne(array $payload, int $count): array
+    protected function generateImagesOneByOne(array $payload, int $count, int $timeout): array
     {
         $images = [];
         $usage = [];
@@ -593,7 +600,7 @@ class OpenRouterService implements AiImageProviderInterface
 
         for ($index = 0; $index < $count; $index++) {
             $singlePayload = array_merge($payload, ['n' => 1]);
-            $response = $this->postWithFailover('/images', $singlePayload, $this->defaultTimeout);
+            $response = $this->postWithFailover('/images', $singlePayload, $timeout);
 
             if ($response->failed()) {
                 $body = $response->body();
@@ -656,9 +663,10 @@ class OpenRouterService implements AiImageProviderInterface
     {
         $models = $this->buildPriorityList($product->primary_model, $product->fallback_models);
         $timeout = $product->timeout ?: $this->defaultTimeout;
+        $requestPayload = array_merge($extraPayload, ['_request_timeout' => $timeout]);
 
-        $result = $this->tryModelsInOrder($models, $timeout, function (string $modelId) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
-            return $this->generateImageFromPrompt($modelId, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
+        $result = $this->tryModelsInOrder($models, $timeout, function (string $modelId) use ($prompt, $resolution, $aspectRatio, $count, $requestPayload) {
+            return $this->generateImageFromPrompt($modelId, $prompt, $resolution, $aspectRatio, $count, $requestPayload);
         });
 
         $this->recordProductRequest(
@@ -731,6 +739,10 @@ class OpenRouterService implements AiImageProviderInterface
     // ─────────────────────────────────────────────────────────────────────
     public function generateImage(AiModel $aiModel, string $prompt, array $extraPayload = [], ?int $timeoutOverride = null): array
     {
+        if ($timeoutOverride !== null) {
+            $extraPayload['_request_timeout'] = $timeoutOverride;
+        }
+
         return $this->generateImageFromPrompt(
             $aiModel->openrouter_model_id,
             $prompt,

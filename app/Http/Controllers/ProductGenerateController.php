@@ -929,6 +929,11 @@ class ProductGenerateController extends Controller
             $extraPayload['requested_output_resolution'] = $quality;
             $extraPayload['requested_aspect_ratio'] = $aspectRatio;
 
+            // ساخت معمول کاربر باید مسیر سریع OpenRouter را ترجیح دهد؛ حالت
+            // استودیو و کیفیت‌های حرفه‌ای انتخاب مدل خودشان را حفظ می‌کنند.
+            $extraPayload['_prefer_fast_route'] = ! $request->boolean('studio_mode')
+                && in_array(strtolower(trim((string) $quality)), ['480', '480p', '512', '720', '720p', '1k', '1080', '1080p'], true);
+
             // پارامترهای واقعی مؤثر بر کیفیت — فقط در صورت مقداردهی ارسال می‌شوند
             $userNegativePrompt = $valueForType('negative_prompt');
             $studioNegativePrompt = trim((string) $request->input('studio_negative_prompt', ''));

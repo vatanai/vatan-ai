@@ -159,7 +159,7 @@ class AiProviderRouter
         array   $extraPayload = []
     ): array {
         $this->assertOpenRouterEnabledForImageProduct();
-        return $this->tryProductModelsAcrossProviders($product, function ($service, $candidate) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
+        return $this->tryProductModelsAcrossProviders($product, $resolution, $extraPayload, function ($service, $candidate) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
             return $service->generateForProduct($candidate, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
         });
     }
@@ -167,15 +167,59 @@ class AiProviderRouter
     public function editImageForProduct(Product $product, string $prompt, array $base64Images = []): array
     {
         $this->assertOpenRouterEnabledForImageProduct();
-        return $this->tryProductModelsAcrossProviders($product, function ($service, $candidate) use ($prompt, $base64Images) {
+        return $this->tryProductModelsAcrossProviders($product, null, [], function ($service, $candidate) use ($prompt, $base64Images) {
             return $service->editImageForProduct($candidate, $prompt, $base64Images);
         });
     }
 
-    private function tryProductModelsAcrossProviders(Product $product, callable $run): array
+    private function tryProductModelsAcrossProviders(Product $product, ?string $resolution, array $extraPayload, callable $run): array
     {
         $models = array_values(array_filter(array_merge([(string) $product->primary_model], (array) $product->fallback_models)));
         $providers = array_values(array_merge([(string) $product->ai_provider], (array) $product->fallback_model_providers));
+
+        // بعضی محصولات قدیمی هنوز روی Riverflow Pro مانده‌اند. برای ساخت
+        // معمول کاربر، مسیر سریع OpenRouter را فقط در همان درخواست جلو می
+        // آوریم و تنظیم ذخیره‌شدهٔ محصول/مسیرهای حرفه‌ای را تغییر ندهیم.
+        if ($resolution !== null && $this->shouldPreferFastImageRoute($product, $resolution, $extraPayload)) {
+            $routes = [];
+            foreach ($models as $index => $modelId) {
+                $routes[] = [
+                    'model' => $modelId,
+                    'provider' => $providers[$index] ?? $this->findModel($modelId)?->provider,
+                ];
+            }
+
+            $requiresImageInput = !empty($extraPayload['input_references']);
+            $fastCandidates = match ((string) ($routes[0]['model'] ?? '')) {
+                'sourceful/riverflow-v2-pro' => ['openai/gpt-image-1-mini', 'sourceful/riverflow-v2-fast'],
+                'sourceful/riverflow-v2.5-pro' => ['openai/gpt-image-1-mini', 'sourceful/riverflow-v2.5-fast'],
+                default => [],
+            };
+
+            foreach ($fastCandidates as $fastModel) {
+                $catalogModel = $this->findModel($fastModel, 'openrouter');
+                if (!$catalogModel?->is_active) continue;
+                if ($requiresImageInput && !$catalogModel->supports_image_input) continue;
+
+                $routes = array_values(array_filter(
+                    $routes,
+                    fn (array $route): bool => $route['model'] !== $fastModel
+                ));
+                array_unshift($routes, ['model' => $fastModel, 'provider' => 'openrouter']);
+                $models = array_column($routes, 'model');
+                $providers = array_column($routes, 'provider');
+
+                Log::notice('AiProviderRouter: fast OpenRouter lane selected', [
+                    'product_id' => $product->id,
+                    'source_model' => $product->primary_model,
+                    'model' => $fastModel,
+                    'resolution' => $resolution,
+                    'has_input_reference' => $requiresImageInput,
+                ]);
+                break;
+            }
+        }
+
         $lastError = null;
         $disabledProviders = [];
         $exhaustedProviders = [];
@@ -281,6 +325,15 @@ class AiProviderRouter
         }
 
         throw new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
+    }
+
+    private function shouldPreferFastImageRoute(Product $product, string $resolution, array $extraPayload): bool
+    {
+        if (filter_var($extraPayload['_prefer_fast_route'] ?? false, FILTER_VALIDATE_BOOL) !== true) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($resolution)), ['480', '480p', '512', '720', '720p', '1k', '1080', '1080p'], true);
     }
 
     /** @return array<int, array{model:string,source_provider:string}> */
