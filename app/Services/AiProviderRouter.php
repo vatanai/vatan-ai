@@ -139,6 +139,13 @@ class AiProviderRouter
         }
     }
 
+    private function assertOpenRouterEnabledForImageProduct(): void
+    {
+        if (! ProviderStatus::isEnabled('openrouter')) {
+            throw new Exception('ساخت محصولات تصویری فقط از طریق OpenRouter انجام می‌شود؛ اتصال OpenRouter در پنل ادمین فعال نیست.');
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Proxy متدها — امضا دقیقاً همان OpenRouterService است
     // ─────────────────────────────────────────────────────────────
@@ -151,7 +158,7 @@ class AiProviderRouter
         int     $count        = 1,
         array   $extraPayload = []
     ): array {
-        $this->assertHasEnabledProvider();
+        $this->assertOpenRouterEnabledForImageProduct();
         return $this->tryProductModelsAcrossProviders($product, function ($service, $candidate) use ($prompt, $resolution, $aspectRatio, $count, $extraPayload) {
             return $service->generateForProduct($candidate, $prompt, $resolution, $aspectRatio, $count, $extraPayload);
         });
@@ -159,7 +166,7 @@ class AiProviderRouter
 
     public function editImageForProduct(Product $product, string $prompt, array $base64Images = []): array
     {
-        $this->assertHasEnabledProvider();
+        $this->assertOpenRouterEnabledForImageProduct();
         return $this->tryProductModelsAcrossProviders($product, function ($service, $candidate) use ($prompt, $base64Images) {
             return $service->editImageForProduct($candidate, $prompt, $base64Images);
         });
@@ -171,13 +178,26 @@ class AiProviderRouter
         $providers = array_values(array_merge([(string) $product->ai_provider], (array) $product->fallback_model_providers));
         $lastError = null;
         $disabledProviders = [];
-        $attemptedPaidProviders = [];
         $exhaustedProviders = [];
         $attemptedRoutes = [];
 
         foreach ($models as $index => $modelId) {
             $provider = $providers[$index] ?? $this->findModel($modelId)?->provider;
             if (!$provider) continue;
+
+            // ساخت محصول تصویری وطن باید فقط از OpenRouter عبور کند. مسیرهای
+            // Fal/Replicate قبلاً به‌عنوان fallback ذخیره شده بودند و وقتی
+            // OpenRouter خطای ورودی می‌دادند، هم زمان کاربر را می‌گرفتند و هم
+            // با اعتبار مستقل خودشان شکست می‌خوردند.
+            if ($provider !== 'openrouter') {
+                Log::notice('AiProviderRouter: non-OpenRouter image route ignored', [
+                    'product_id' => $product->id,
+                    'model' => $modelId,
+                    'provider' => $provider,
+                ]);
+                continue;
+            }
+
             if (!ProviderStatus::isEnabled($provider)) {
                 $disabledProviders[] = $provider;
                 continue;
@@ -190,18 +210,6 @@ class AiProviderRouter
                     'reason' => $exhaustedProviders[$provider],
                 ]);
                 continue;
-            }
-            // یک اقدام کاربر نباید چند endpoint از Fal را پشت‌سرهم شارژ کند.
-            // در صورت خطای Fal فقط provider دیگری می‌تواند fallback شود.
-            if ($provider === 'fal' && isset($attemptedPaidProviders[$provider])) {
-                Log::warning('AiProviderRouter: skipped repeated paid Fal fallback', [
-                    'product_id' => $product->id,
-                    'model' => $modelId,
-                ]);
-                continue;
-            }
-            if ($provider === 'fal') {
-                $attemptedPaidProviders[$provider] = true;
             }
             $candidate = $product->replicate();
             $candidate->primary_model = $modelId;

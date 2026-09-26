@@ -263,6 +263,34 @@ class OpenRouterServiceTest extends TestCase
         });
     }
 
+    public function test_escaped_mime_in_image_reference_is_normalized_before_sending(): void
+    {
+        Http::fake([
+            'https://openrouter.test/api/v1/images' => Http::response([
+                'data' => [['b64_json' => base64_encode('image')]],
+            ]),
+        ]);
+
+        $reference = 'data:image\\/jpeg;base64,' . base64_encode('reference');
+
+        app(OpenRouterService::class)->generateImageFromPrompt(
+            'openai/gpt-image-1-mini',
+            'A clean product photo',
+            '1K',
+            '1:1',
+            1,
+            ['input_references' => [[
+                'type' => 'image_url',
+                'image_url' => ['url' => $reference],
+            ]]]
+        );
+
+        Http::assertSent(function (Request $request): bool {
+            return $request['input_references'][0]['image_url']['url']
+                === 'data:image/jpeg;base64,' . base64_encode('reference');
+        });
+    }
+
     public function test_flux_2_payload_drops_unsupported_resolution(): void
     {
         Http::fake([

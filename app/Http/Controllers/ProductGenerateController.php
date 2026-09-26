@@ -173,19 +173,14 @@ class ProductGenerateController extends Controller
             ->whereIn('task_type', $this->studioTaskTypes($mode))
             ->when($mode === 'video', fn ($query) => $query->whereNotNull('capability_config'))
             ->where('openrouter_model_id', $modelId)
-            ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'fal', 'replicate']))
-            ->when(
-                $mode !== 'video' && $request->filled('provider'),
-                fn ($query) => $query->where('provider', (string) $request->query('provider')),
-                fn ($query) => $mode !== 'video' && $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
-            )
+            ->where('provider', 'openrouter')
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', $mode)
             ->whereIn('task_type', $this->studioTaskTypes($mode))
             ->when($mode === 'video', fn ($query) => $query->whereNotNull('capability_config'))
-            ->when($mode === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'fal', 'replicate']))
+            ->where('provider', 'openrouter')
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw($mode === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
@@ -251,7 +246,7 @@ class ProductGenerateController extends Controller
             ->when($modality === 'video', fn ($query) => $query->whereNotNull('capability_config'))
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
-            ->when($modality === 'video', fn ($query) => $query->where('provider', 'openrouter'), fn ($query) => $query->whereIn('provider', ['openrouter', 'fal', 'replicate']))
+            ->where('provider', 'openrouter')
             ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
             ->orderByRaw($modality === 'video'
                 ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
@@ -292,6 +287,7 @@ class ProductGenerateController extends Controller
         $primary = (string) $product->primary_model;
         if ($modality !== 'video'
             && $primary !== ''
+            && $product->ai_provider === 'openrouter'
             && !$options->contains('value', $primary)) {
             $options->prepend([
                 'value' => $primary,
@@ -356,9 +352,8 @@ class ProductGenerateController extends Controller
                 }
             })
             ->when($modelId !== '', fn ($builder) => $builder->where('openrouter_model_id', $modelId))
-            ->when($request->boolean('studio_mode') && $modality === 'video', fn ($builder) => $builder->where('provider', 'openrouter'))
-            ->when($request->filled('studio_provider') && ($modality !== 'video' || $request->input('studio_provider') === 'openrouter'), fn ($builder) => $builder->where('provider', (string) $request->input('studio_provider')),
-                fn ($builder) => $modelId === '' ? $builder->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")->orderByDesc('lab_priority') : $builder);
+            ->where('provider', 'openrouter')
+            ->when($modelId === '', fn ($builder) => $builder->orderByDesc('lab_priority'));
         $model = $query->first();
         if (!$model) {
             throw ValidationException::withMessages(['studio_model' => 'مدل انتخاب‌شده برای این نوع ساخت فعال نیست.']);
@@ -722,17 +717,19 @@ class ProductGenerateController extends Controller
             if (!$file) continue;
 
             $path = $file->store('uploads/personal', 'public');
+            $mime = $this->normalizeImageMime((string) $file->getMimeType());
             $uploadedPaths[] = [
                 'path' => $path,
                 'size' => $file->getSize(),
-                'mime' => $file->getMimeType(),
+                'mime' => $mime,
             ];
 
-            $mime = $file->getMimeType();
             if (str_starts_with((string) $mime, 'image/')) {
-                $base64Images[] = $request->boolean('studio_mode')
-                    ? asset('storage/' . ltrim($path, '/'))
-                    : "data:{$mime};base64," . base64_encode(file_get_contents($file->getRealPath()));
+                $base64Images[] = $this->imageReference(
+                    $path,
+                    $mime,
+                    (string) file_get_contents($file->getRealPath()),
+                );
             }
         }
 
@@ -744,14 +741,12 @@ class ProductGenerateController extends Controller
                     continue;
                 }
 
-                $mime = (string) ($image['mime'] ?: $disk->mimeType($path));
+                $mime = $this->normalizeImageMime((string) ($image['mime'] ?: $disk->mimeType($path)));
                 if (! str_starts_with($mime, 'image/')) {
                     continue;
                 }
 
-                $base64Images[] = $request->boolean('studio_mode')
-                    ? asset('storage/' . ltrim($path, '/'))
-                    : "data:{$mime};base64," . base64_encode($disk->get($path));
+                $base64Images[] = $this->imageReference($path, $mime, (string) $disk->get($path));
             }
         }
 
@@ -1356,18 +1351,13 @@ class ProductGenerateController extends Controller
                     });
                 }
             })->where('openrouter_model_id', $modelId)
-            ->when($request->boolean('studio_mode'), fn ($query) => $query->whereIn('provider', ['openrouter', 'fal', 'replicate']))
-            ->when(
-                $request->filled('studio_provider'),
-                fn ($query) => $query->where('provider', (string) $request->input('studio_provider')),
-                fn ($query) => $requestedModelId === '' ? $query->where('provider', (string) $product->ai_provider) : $query,
-            )
+            ->where('provider', 'openrouter')
             ->first();
         if ($requestedModelId !== '' || $this->hasStoredModelPrice($primary)) return $primary;
 
         return AiModel::query()->where('is_active', true)->where('output_modality', 'image')
             ->whereIn('task_type', $taskTypes)
-            ->whereIn('provider', ['openrouter', 'fal', 'replicate'])
+            ->where('provider', 'openrouter')
             ->whereNotNull('openrouter_model_id')->where('openrouter_model_id', '<>', '')
             ->orderByRaw("CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
             ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
@@ -1464,5 +1454,29 @@ class ProductGenerateController extends Controller
     {
         $base = asset('storage/');
         return str_replace($base, '', $url);
+    }
+
+    private function imageReference(string $path, string $mime, string $contents): string
+    {
+        // در محیط آنلاین، URL عمومی هم از نظر حجم درخواست بهتر است و هم
+        // مشکل escape شدن MIME در data URL را به‌طور کامل حذف می‌کند.
+        if (app()->environment('production')) {
+            return asset('storage/' . ltrim($path, '/'));
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+    }
+
+    private function normalizeImageMime(string $mime): string
+    {
+        $mime = strtolower(trim(explode(';', $mime, 2)[0] ?? ''));
+        $mime = str_replace(['\\', '"', "'", ' '], '', $mime);
+
+        return match ($mime) {
+            'image/jpg', 'image/jpeg' => 'image/jpeg',
+            'image/png' => 'image/png',
+            'image/webp' => 'image/webp',
+            default => $mime,
+        };
     }
 }

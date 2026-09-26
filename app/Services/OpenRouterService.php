@@ -447,6 +447,16 @@ class OpenRouterService implements AiImageProviderInterface
             if ($payload['output_format'] === null) unset($payload['output_format']);
         }
 
+        // بعضی کلاینت‌ها نوع MIME داخل data URL را با escape اضافی مثل
+        // `image\\/jpeg` می‌فرستند. این مقدار بعد از عبور از JSON به‌عنوان
+        // MIME واقعی دیده نمی‌شود و OpenRouter/OpenAI آن را رد می‌کند.
+        // مرجع‌های تصویری را در آخرین لایه قبل از ارسال پاک‌سازی می‌کنیم تا
+        // همه مسیرهای ساخت (محصول، پروفایل چهره و استودیو) رفتار یکسان داشته
+        // باشند.
+        if (array_key_exists('input_references', $payload)) {
+            $payload['input_references'] = $this->normalizeInputReferences($payload['input_references']);
+        }
+
         if (str_starts_with($modelId, 'google/') && str_contains($modelId, 'image')) {
             // Gemini 2.5 فقط aspect_ratio، n و input_references را می‌پذیرد؛
             // نسل‌های 3 و 3.1 علاوه بر آن resolution را هم قبول می‌کنند.
@@ -515,6 +525,48 @@ class OpenRouterService implements AiImageProviderInterface
         }
 
         return $payload;
+    }
+
+    protected function normalizeInputReferences(mixed $references): mixed
+    {
+        if (! is_array($references)) {
+            return $references;
+        }
+
+        return array_map(function (mixed $reference): mixed {
+            if (is_string($reference)) {
+                return $this->normalizeImageDataUrl($reference);
+            }
+
+            if (! is_array($reference)) {
+                return $reference;
+            }
+
+            $url = data_get($reference, 'image_url.url');
+            if (is_string($url)) {
+                data_set($reference, 'image_url.url', $this->normalizeImageDataUrl($url));
+            }
+
+            return $reference;
+        }, $references);
+    }
+
+    protected function normalizeImageDataUrl(string $url): string
+    {
+        if (! preg_match('/^data:([^;,]+);base64,(.*)$/is', $url, $matches)) {
+            return $url;
+        }
+
+        $mime = strtolower(trim((string) $matches[1]));
+        $mime = str_replace(['\\', '"', "'", ' '], '', $mime);
+        $mime = match ($mime) {
+            'image/jpg', 'image/jpeg' => 'image/jpeg',
+            'image/png' => 'image/png',
+            'image/webp' => 'image/webp',
+            default => $mime,
+        };
+
+        return 'data:' . $mime . ';base64,' . $matches[2];
     }
 
     protected function closestClassicOpenAiRatio(string $ratio): string
