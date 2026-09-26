@@ -8,9 +8,6 @@
   {{-- ۱) هدر و نمایش بالا: آواتار، اطلاعات، آمار، اکشن‌ها --}}
   @include('app.profile.header')
 
-  {{-- مسیر روشن کاربر: آمار واقعی، قدم بعدی و امکان تبدیل داوطلبانه به همکار فروش --}}
-  @include('app.profile.journey')
-
   <section class="tabs-section">
 
     {{-- ۲) گرید و مارک‌ها: تب‌ها + محتوای ساخته‌شده + ذخیره‌شده‌ها --}}
@@ -20,7 +17,7 @@
     @include('app.profile.partials.lazy-panel', ['panel' => 'files'])
 
     @if($referralProfileEnabled ?? false)
-      {{-- ۴) همکاری در فروش — بعد از آماده‌شدن پاسخ اصلی در پس‌زمینه آماده می‌شود --}}
+      {{-- ۴) همکاری در فروش و مسیر کاربر — بعد از آماده‌شدن پاسخ اصلی در پس‌زمینه آماده می‌شود --}}
       @include('app.profile.partials.lazy-panel', ['panel' => 'referral'])
     @endif
 

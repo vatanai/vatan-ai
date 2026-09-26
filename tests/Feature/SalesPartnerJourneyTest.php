@@ -19,9 +19,15 @@ class SalesPartnerJourneyTest extends TestCase
     {
         $this->get(route('profile'))
             ->assertOk()
-            ->assertSee('مسیر تو در وطن')
-            ->assertSee('مسیر اختصاصی‌ات بعد از ورود فعال می‌شود')
-            ->assertSee('ورود و شروع مسیر');
+            ->assertDontSee('مسیر اختصاصی‌ات بعد از ورود فعال می‌شود');
+
+        $response = $this->get(route('profile.panels', 'referral'));
+        $response->assertOk();
+        $html = $response->json('html');
+        $this->assertStringContainsString('مسیر تو در وطن', $html);
+        $this->assertStringContainsString('مسیر اختصاصی‌ات بعد از ورود فعال می‌شود', $html);
+        $this->assertStringContainsString('ورود و شروع مسیر', $html);
+        $this->assertStringContainsString('data-referral-subtab="journey"', $html);
     }
 
     public function test_authenticated_user_can_request_sales_partner_program_without_duplicate_leads(): void
@@ -37,9 +43,15 @@ class SalesPartnerJourneyTest extends TestCase
         $this->actingAs($user)
             ->get(route('profile'))
             ->assertOk()
-            ->assertSee('تعداد ورود')
-            ->assertSee('لینک ساخته‌شده')
-            ->assertSee('آماده همکاری فروش');
+            ->assertDontSee('تعداد ورود');
+
+        $response = $this->actingAs($user)->get(route('profile.panels', 'referral'));
+        $response->assertOk();
+        $html = $response->json('html');
+        $this->assertStringContainsString('تعداد ورود', $html);
+        $this->assertStringContainsString('لینک ساخته‌شده', $html);
+        $this->assertStringContainsString('مسیر تو در وطن', $html);
+        $this->assertStringContainsString('data-referral-subtab="journey"', $html);
 
         $this->post(route('profile.partner-interest'))
             ->assertRedirect();

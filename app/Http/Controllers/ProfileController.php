@@ -102,7 +102,6 @@ public function gallery()
                 'creatorRewardProducts' => collect(),
                 'creatorRewardCredits' => 0,
                 'profileRewardTotal' => 0,
-                'journeyData' => $this->emptyJourneyData(),
             ]);
         }
 
@@ -136,8 +135,6 @@ public function gallery()
         $creatorRewardCredits = $this->creatorRewardCredits($user, $referralProfileEnabled);
         $profileRewardTotal = (int) $earnings + (int) $creatorRewardCredits;
         $isGuest       = false;
-        $journeyData = $this->journeyData($user, $createdCount);
-
         return view('app.profile', compact(
             'createdImages',
             'createdVideos',
@@ -153,8 +150,7 @@ public function gallery()
             'referralProfileEnabled',
             'creatorRewardCredits',
             'profileRewardTotal',
-            'initialMediaCursor',
-            'journeyData'
+            'initialMediaCursor'
         ));
     }
 
@@ -373,6 +369,7 @@ public function gallery()
                     'referralProducts' => collect(),
                     'creatorRewardProducts' => collect(),
                     'creatorRewardCredits' => 0,
+                    'journeyData' => $this->emptyJourneyData(),
                 ])->render(),
                 default => abort(404),
             };
@@ -443,6 +440,13 @@ public function gallery()
         $referralSettings = ReferralSetting::current();
         $referralData = $this->referralData($user, $referralSettings);
         [$creatorRewardProducts, $creatorRewardCredits] = $this->creatorRewardData($user);
+        $createdCount = (int) $user->generatedImages()->whereNotNull('image_path')->count();
+        if (Schema::hasTable('generated_videos')) {
+            $createdCount += (int) $user->generatedVideos()
+                ->where(function ($query): void {
+                    $query->whereNotNull('video_path')->orWhereNotNull('video_url');
+                })->count();
+        }
 
         return view('app.profile.referral', [
             'isGuest' => false,
@@ -455,6 +459,7 @@ public function gallery()
                 ->get(['id', 'name_fa', 'name_en']),
             'creatorRewardProducts' => $creatorRewardProducts,
             'creatorRewardCredits' => $creatorRewardCredits,
+            'journeyData' => $this->journeyData($user, $createdCount),
         ])->render();
     }
 

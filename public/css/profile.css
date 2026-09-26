@@ -840,12 +840,18 @@ html.light .files-sub-tab { color: rgba(0,0,0,0.35); }
 ═══════════════════════════════════════ */
 .referral-program{width:100%;min-width:0;padding:18px;display:grid;gap:20px;scroll-margin-top:84px;box-sizing:border-box}
 .referral-program>section,.referral-program>div{width:100%;min-width:0;box-sizing:border-box}
-.referral-subtabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:5px;border:1px solid var(--border-subtle);border-radius:14px;background:var(--bg-surface)}
+.referral-subtabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:5px;border:1px solid var(--border-subtle);border-radius:14px;background:var(--bg-surface)}
 .referral-subtab{min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--text-secondary);font:inherit;font-size:11px;font-weight:800;cursor:pointer;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease}
 .referral-subtab:hover{color:var(--text-primary);background:rgba(207,253,0,.06)}
 .referral-subtab.is-active{border-color:var(--border-affiliate);background:var(--bg-affiliate);color:var(--green);box-shadow:0 6px 16px rgba(0,0,0,.12)}
 .referral-subtab:active{transform:translateY(1px)}
 .referral-subpanel{width:100%;min-width:0;display:grid;gap:16px;box-sizing:border-box}
+.referral-program .journey-subpanel{gap:0}
+.referral-program .journey-subpanel .profile-journey{margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.referral-program .journey-subpanel .journey-head{padding:18px;border:1px solid var(--border-affiliate);border-radius:16px;background:var(--bg-affiliate)}
+.referral-program .journey-subpanel .journey-stat,.referral-program .journey-subpanel .journey-step{background:var(--bg-surface)}
+.referral-program .journey-subpanel .journey-next{padding-inline:2px}
+.profile-journey--compact .journey-head h2{font-size:20px}
 .referral-program-hero{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px;border:1px solid var(--border-affiliate);border-radius:18px;background:var(--bg-affiliate)}
 .referral-program-hero:before{content:"";position:absolute;width:230px;height:230px;border-radius:50%;left:-90px;top:-120px;background:rgba(207,253,0,.08);pointer-events:none}
 .referral-program-copy{position:relative;z-index:1;max-width:680px}
@@ -1624,7 +1630,7 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 }
 
 @media (max-width: 520px) {
-  .referral-subtabs { gap:5px; padding:4px; }
+  .referral-subtabs { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; padding:4px; }
   .referral-subtab { min-height:40px; gap:5px; font-size:10px; }
   .custom-products-panel { padding:12px; gap:12px; }
   .custom-products-hero { align-items:stretch; flex-direction:column; padding:16px; }
@@ -1633,6 +1639,8 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
   .custom-products-grid { grid-template-columns:1fr; }
   .custom-product-card__media { aspect-ratio:16/9; }
   .custom-product-card__stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+  .referral-program .journey-subpanel .journey-head { padding:16px; }
 
   .grid-preview-modal { padding: 10px; }
   .grid-preview-box {

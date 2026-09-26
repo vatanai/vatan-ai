@@ -38,6 +38,11 @@
     });
   }
 
+  function requestedReferralSubtab() {
+    var value = new URLSearchParams(window.location.search).get('subtab');
+    return value === 'custom-products' || value === 'journey' ? value : 'affiliate';
+  }
+
   var profileRoot = document.querySelector('.profile-page');
   var panelRequests = {};
 
@@ -90,7 +95,7 @@
         bindGridCells(panel);
         initReferralControls();
         if (target === 'referral') {
-          activateReferralSubtab(requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
+          activateReferralSubtab(requestedReferralSubtab());
         }
         return panel;
       })
@@ -123,7 +128,11 @@
       requestProfilePanel(target, false);
       if (target === 'referral') {
         activateReferralSubtab('affiliate');
-        history.replaceState(null, '', '#referral-program');
+        var referralUrl = new URL(window.location.href);
+        referralUrl.searchParams.set('tab', 'referral');
+        referralUrl.searchParams.delete('subtab');
+        referralUrl.hash = 'referral-program';
+        history.replaceState(null, '', referralUrl.pathname + referralUrl.search + referralUrl.hash);
       }
     });
   });
@@ -137,7 +146,7 @@
       activateReferralSubtab(target);
       var url = new URL(window.location.href);
       url.searchParams.set('tab', 'referral');
-      if (target === 'custom-products') url.searchParams.set('subtab', 'custom-products');
+      if (target === 'custom-products' || target === 'journey') url.searchParams.set('subtab', target);
       else url.searchParams.delete('subtab');
       url.hash = 'referral-program';
       history.replaceState(null, '', url.pathname + url.search + url.hash);
@@ -156,7 +165,6 @@
 
   var requestedParams = new URLSearchParams(window.location.search);
   var requestedTab = requestedParams.get('tab');
-  var requestedSubtab = requestedParams.get('subtab');
   var requestedFileTab = requestedParams.get('file_tab');
   if (['grid', 'saved', 'files', 'referral'].indexOf(requestedTab) !== -1) {
     activateProfileTab(requestedTab, true);
@@ -169,7 +177,7 @@
     if (window.pageYOffset > 0) window.scrollTo(0, 0);
     activateProfileTab('referral', true);
     requestProfilePanel('referral', false);
-    activateReferralSubtab(requestedTab === 'custom-products' || requestedSubtab === 'custom-products' ? 'custom-products' : 'affiliate');
+    activateReferralSubtab(requestedTab === 'custom-products' ? 'custom-products' : requestedReferralSubtab());
   }
 
   function preloadProfilePanels() {

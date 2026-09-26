@@ -7,7 +7,7 @@
   $partnerLead = $journey['existing_partner_lead'] ?? null;
 @endphp
 
-<section class="profile-journey" aria-labelledby="profile-journey-title">
+<section class="profile-journey {{ ($journeyCompact ?? false) ? 'profile-journey--compact' : '' }}" aria-labelledby="profile-journey-title">
   <div class="journey-head">
     <div>
       <span class="journey-kicker">مسیر تو در وطن</span>
@@ -48,7 +48,9 @@
       @endforeach
     </div>
 
-    <span class="journey-status"><i class="fa-solid fa-handshake"></i> آماده همکاری فروش؛ مسیر جداگانه برای کاربران باتجربه</span>
+    @unless($journeyCompact ?? false)
+      <span class="journey-status"><i class="fa-solid fa-handshake"></i> آماده همکاری فروش؛ مسیر جداگانه برای کاربران باتجربه</span>
+    @endunless
 
     <div class="journey-next">
       <div class="journey-next-copy"><span>قدم بعدی پیشنهادی</span><strong>{{ $steps[$journey['current_index'] ?? 0]['title'] ?? 'ادامه مسیر' }}</strong></div>

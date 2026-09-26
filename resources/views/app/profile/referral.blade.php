@@ -45,6 +45,10 @@
       <svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 8 8-4 8 4-8 4-8-4Z"/><path d="M4 8v9l8 4 8-4V8M8 10v8M16 10v8"/></svg>
       <span>محصولات سفارشی</span>
     </button>
+    <button type="button" class="referral-subtab" data-referral-subtab="journey" aria-selected="false">
+      <svg class="referral-icon referral-icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 6v5M12 11 6 17M12 11l6 6"/></svg>
+      <span>مسیر تو در وطن</span>
+    </button>
   </nav>
 
   <div class="referral-subpanel is-active" data-referral-subpanel="affiliate">
@@ -220,5 +224,9 @@
         @endforelse
       </div>
     @endif
+  </div>
+
+  <div class="referral-subpanel journey-subpanel" data-referral-subpanel="journey" style="display:none;">
+    @include('app.profile.journey', ['journeyData' => $journeyData ?? [], 'journeyCompact' => true])
   </div>
 </div>
