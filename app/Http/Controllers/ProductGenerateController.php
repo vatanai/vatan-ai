@@ -156,6 +156,7 @@ class ProductGenerateController extends Controller
             'media_type' => $mode,
             'resolution' => (string) $request->query('resolution', ''),
             'aspect_ratio' => (string) $request->query('aspect_ratio', ''),
+            'workflow' => $mode === 'image' ? (string) $request->query('workflow', 'text_to_image') : '',
             'duration' => $mode === 'video' ? max(1, min(15, (int) $request->query('duration', 4))) : null,
             'count' => $mode === 'image' ? max(1, min(6, (int) $request->query('count', 1))) : 1,
         ], $model);
@@ -166,6 +167,22 @@ class ProductGenerateController extends Controller
     private function studioQuoteModel(Request $request, Product $product, string $mode): ?AiModel
     {
         $requestedModelId = trim((string) $request->query('model', ''));
+
+        if ($mode === 'image') {
+            $models = AiModel::query()->selectableForImageStudio()->get();
+            $model = $requestedModelId !== ''
+                ? $models->firstWhere('openrouter_model_id', $requestedModelId)
+                : $this->sortStudioImageModels($models)->first();
+
+            if (! $model) {
+                throw ValidationException::withMessages([
+                    'model' => 'مدل انتخاب‌شده در کاتالوگ تأییدشده‌ی استودیو موجود نیست.',
+                ]);
+            }
+
+            return $model;
+        }
+
         $modelId = $requestedModelId ?: (string) $product->primary_model;
         if ($modelId === '') return null;
 
@@ -191,6 +208,10 @@ class ProductGenerateController extends Controller
 
     private function studioProductConfig(Product $product, array $data, ProductBuildSchema $schema, string $modality): array
     {
+        $modelOptions = $this->studioModelOptions($product, $modality);
+        $defaultModel = $modality === 'image'
+            ? (string) data_get($modelOptions, '0.value', '')
+            : (string) ($product->primary_model ?: 'مدل پیش‌فرض وطن');
         $fields = $schema->fields($product);
         $defaults = [];
         foreach ($fields as $field) {
@@ -214,18 +235,17 @@ class ProductGenerateController extends Controller
             'description' => $data['description'],
             'cost' => (int) ($data['cost'] ?? 0),
             'estimated_time' => $data['estimated_time'] ?? 'حدود یک دقیقه',
-            'model' => $product->primary_model ?: 'مدل پیش‌فرض وطن',
-            'model_options' => $this->studioModelOptions($product, $modality),
+            'model' => $defaultModel,
+            'default_model' => $defaultModel,
+            'model_options' => $modelOptions,
             'fields' => $data['fields'] ?? [],
             'reference_upload_key' => data_get(collect($fields)->first(fn (array $field): bool => in_array($field['type'] ?? '', ['image_upload', 'multi_image'], true)), 'id'),
             'requires_reference' => (int) ($product->min_reference_images ?? 0) > 0,
             'defaults' => $defaults,
             'output_aspect_ratios' => $data['output_aspect_ratios'] ?? [],
             'default_output_aspect_ratio' => $data['default_output_aspect_ratio'] ?? null,
-            'output_resolutions' => $modality === 'image'
-                ? array_values(array_unique(array_merge((array) ($data['output_resolutions'] ?? []), ['2160'])))
-                : ($data['output_resolutions'] ?? []),
-            'default_output_resolution' => $data['default_output_resolution'] ?? null,
+            'output_resolutions' => $modality === 'image' ? ['1K', '2K'] : ($data['output_resolutions'] ?? []),
+            'default_output_resolution' => $modality === 'image' ? '1K' : ($data['default_output_resolution'] ?? null),
             'main_quality_options' => $data['main_quality_options'] ?? [],
             'default_main_quality' => data_get($data, 'main_quality_options.0.key', 'standard'),
             'output_count' => max(1, (int) ($data['output_count'] ?? 1)),
@@ -239,26 +259,31 @@ class ProductGenerateController extends Controller
 
     private function studioModelOptions(Product $product, string $modality): array
     {
-        $models = AiModel::query()
-            ->where('is_active', true)
-            ->where('output_modality', $modality)
-            ->whereIn('task_type', $this->studioTaskTypes($modality))
-            ->when($modality === 'video', fn ($query) => $query->whereNotNull('capability_config'))
-            ->whereNotNull('openrouter_model_id')
-            ->where('openrouter_model_id', '<>', '')
-            ->where('provider', 'openrouter')
-            ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
-            ->orderByRaw($modality === 'video'
-                ? "CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END"
-                : "CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
+        $query = $modality === 'image'
+            ? AiModel::query()->selectableForImageStudio()
+            : AiModel::query()
+                ->where('is_active', true)
+                ->where('output_modality', $modality)
+                ->whereIn('task_type', $this->studioTaskTypes($modality))
+                ->whereNotNull('capability_config')
+                ->whereNotNull('openrouter_model_id')
+                ->where('openrouter_model_id', '<>', '')
+                ->where('provider', 'openrouter')
+                ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
+                ->orderByRaw("CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END");
+
+        $models = $query
             ->get([
+                'id',
                 'name',
                 'openrouter_model_id',
                 'provider',
+                'task_type',
                 'supports_image_input',
                 'capability_config',
                 'pricing_config',
             ])
+            ->when($modality === 'image', fn ($models) => $this->sortStudioImageModels($models))
             ->when($modality === 'video', function ($models) {
                 return $models->sortBy(function (AiModel $model): array {
                     $providerPriority = AiModel::STUDIO_PROVIDER_PRIORITY[$model->provider] ?? 99;
@@ -284,22 +309,9 @@ class ProductGenerateController extends Controller
             )),
         ])->unique(fn (array $option): string => $option['value'] . '|' . $option['task_type'])->values();
 
-        $primary = (string) $product->primary_model;
-        if ($modality !== 'video'
-            && $primary !== ''
-            && $product->ai_provider === 'openrouter'
-            && !$options->contains('value', $primary)) {
-            $options->prepend([
-                'value' => $primary,
-                'label' => $primary,
-                'meta' => strtoupper((string) $product->ai_provider),
-                'provider' => (string) $product->ai_provider,
-                'supported_aspect_ratios' => [],
-                'supported_resolutions' => [],
-                'task_type' => null,
-                'max_reference_images' => 1,
-            ]);
-        }
+        $primary = $modality === 'image'
+            ? (string) data_get($options, '0.value', '')
+            : (string) $product->primary_model;
 
         return $options->map(function (array $option) use ($primary): array {
             $isPrimary = (string) $option['value'] === $primary;
@@ -338,7 +350,33 @@ class ProductGenerateController extends Controller
 
     private function applyStudioModel(Product $product, Request $request, string $modality): void
     {
+        if (! $request->boolean('studio_mode')) {
+            return;
+        }
+
         $modelId = trim((string) $request->input('studio_model', ''));
+
+        if ($modality === 'image') {
+            $models = $this->sortStudioImageModels(AiModel::query()->selectableForImageStudio()->get());
+            $model = $modelId !== ''
+                ? $models->firstWhere('openrouter_model_id', $modelId)
+                : $models->first();
+
+            if (! $model) {
+                throw ValidationException::withMessages([
+                    'studio_model' => 'مدل انتخاب‌شده در کاتالوگ تأییدشده‌ی استودیو موجود نیست.',
+                ]);
+            }
+
+            $product->primary_model = (string) $model->openrouter_model_id;
+            $product->ai_provider = 'openrouter';
+            $product->fallback_models = [];
+            $product->fallback_model_providers = [];
+            $product->strict_model_priority = true;
+
+            return;
+        }
+
         $taskTypes = $this->studioTaskTypesForRequest($request, $modality);
         $query = AiModel::query()
             ->where('is_active', true)
@@ -777,7 +815,7 @@ class ProductGenerateController extends Controller
         // پلن کاربر استفاده می‌کنند.
         $requestedQuality = (string) $request->input('output.quality', '');
         $quality = $request->routeIs('app.create.generate') && in_array($requestedQuality, array_values(array_unique(array_merge(
-            $product->allowedResolutionList(), ['2160']
+            $product->allowedResolutionList(), $request->boolean('studio_mode') ? ['1K', '2K'] : []
         ))), true)
             ? $requestedQuality
             : $product->defaultOutputResolutionForUser($user);
@@ -1342,6 +1380,22 @@ class ProductGenerateController extends Controller
 
     private function selectedStudioImageModel(Request $request, Product $product): ?AiModel
     {
+        if ($request->boolean('studio_mode')) {
+            $requestedModelId = trim((string) $request->input('studio_model', ''));
+            $models = $this->sortStudioImageModels(AiModel::query()->selectableForImageStudio()->get());
+            $model = $requestedModelId !== ''
+                ? $models->firstWhere('openrouter_model_id', $requestedModelId)
+                : $models->first();
+
+            if (! $model) {
+                throw ValidationException::withMessages([
+                    'studio_model' => 'مدل انتخاب‌شده در کاتالوگ تأییدشده‌ی استودیو موجود نیست.',
+                ]);
+            }
+
+            return $model;
+        }
+
         $requestedModelId = trim((string) $request->input('studio_model', ''));
         $modelId = $requestedModelId ?: (string) $product->primary_model;
         if ($modelId === '') return null;
@@ -1367,6 +1421,15 @@ class ProductGenerateController extends Controller
             ->orderByRaw("CASE task_type WHEN 'text_to_image' THEN 0 WHEN 'image_to_image' THEN 1 ELSE 2 END")
             ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
             ->orderByDesc('lab_priority')->first() ?: $primary;
+    }
+
+    private function sortStudioImageModels(\Illuminate\Support\Collection $models): \Illuminate\Support\Collection
+    {
+        return $models->sortBy(function (AiModel $model): array {
+            $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_IMAGE_MODEL_PRIORITY, true);
+
+            return [$priority === false ? 1000 : $priority, $model->id];
+        })->values();
     }
 
     /**

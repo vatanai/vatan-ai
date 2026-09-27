@@ -241,6 +241,28 @@ class AiModel extends Model
         'fal-ai/kling-video/v3/pro/motion-control',
     ];
 
+    /**
+     * کاتالوگ عمومی و آزموده‌شده‌ی ساخت عکس در استودیو.
+     *
+     * مدل‌های دیگر همچنان برای محصولات و آزمایشگاه در دسترس‌اند؛ این فهرست
+     * فقط انتخاب‌های صفحه‌ی عمومی استودیو را به مسیرهای پایدار محدود می‌کند.
+     */
+    public const STUDIO_IMAGE_MODEL_PRIORITY = [
+        'google/gemini-3.1-flash-lite-image',
+        'sourceful/riverflow-v2.5-fast',
+    ];
+
+    public function scopeSelectableForImageStudio(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->where('provider', 'openrouter')
+            ->where('output_modality', 'image')
+            ->where('task_type', 'text_to_image')
+            ->where('supports_image_input', true)
+            ->whereIn('openrouter_model_id', self::STUDIO_IMAGE_MODEL_PRIORITY);
+    }
+
     /** ترتیب رسمی انتخاب سرویس در استودیوی عمومی: OpenRouter، سپس Fal.ai، سپس Replicate. */
     public const STUDIO_PROVIDER_PRIORITY = [
         'openrouter' => 0,

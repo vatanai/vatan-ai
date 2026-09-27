@@ -522,6 +522,16 @@ class OpenRouterService implements AiImageProviderInterface
                 '2160', '2160p', '4k' => '4K',
                 default => $payload['resolution'] ?? '1K',
             };
+
+            // endpoint فعلی Riverflow 2.5 Fast فقط رزولوشن‌های 1K/2K و
+            // خروجی JPEG را اعلام می‌کند. نرمال‌سازی اختصاصی مانع ارسال
+            // مقدارهای قدیمی 512/4K یا PNG از تنظیمات محصول می‌شود.
+            if ($modelId === 'sourceful/riverflow-v2.5-fast') {
+                $payload['resolution'] = in_array(strtoupper((string) $payload['resolution']), ['2K', '4K'], true)
+                    ? '2K'
+                    : '1K';
+                $payload['output_format'] = 'jpeg';
+            }
         }
 
         if (str_starts_with($modelId, 'microsoft/mai-image-')) {

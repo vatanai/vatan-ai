@@ -142,7 +142,7 @@ class ProductBuildSchema
             'output.aspect_ratio' => ['nullable', Rule::in($studioAspectRatios)],
             'output.quality' => ['nullable', Rule::in(array_values(array_unique(array_merge(
                 $product->allowedResolutionList(),
-                $product->isVideoProduct() ? [] : (request()->routeIs('app.create.generate') && request()->boolean('studio_mode') ? ['2160'] : [])
+                $product->isVideoProduct() ? [] : (request()->routeIs('app.create.generate') && request()->boolean('studio_mode') ? ['1K', '2K'] : [])
             ))))],
             'output.count' => ['nullable', 'integer', 'min:1', 'max:6'],
             'output.main_quality' => ['nullable', Rule::in(array_keys(ModelTierService::OUTPUT_QUALITY_DEFINITIONS))],

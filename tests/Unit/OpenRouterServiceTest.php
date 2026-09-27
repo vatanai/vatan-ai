@@ -334,4 +334,28 @@ class OpenRouterServiceTest extends TestCase
                 && !array_key_exists('resolution', $request->data());
         });
     }
+
+    public function test_riverflow_fast_uses_only_supported_resolution_and_jpeg_format(): void
+    {
+        Http::fake([
+            'https://openrouter.test/api/v1/images' => Http::response([
+                'data' => [['b64_json' => base64_encode('image')]],
+            ]),
+        ]);
+
+        app(OpenRouterService::class)->generateImageFromPrompt(
+            'sourceful/riverflow-v2.5-fast',
+            'A clean studio product photo',
+            '2160',
+            '4:3',
+            1,
+            ['output_format' => 'png']
+        );
+
+        Http::assertSent(function (Request $request): bool {
+            return $request['resolution'] === '2K'
+                && $request['output_format'] === 'jpeg'
+                && $request['aspect_ratio'] === '4:3';
+        });
+    }
 }

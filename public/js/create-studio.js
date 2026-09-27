@@ -56,6 +56,8 @@
   const formatNumber = (value) => Number(value || 0).toLocaleString('fa-IR');
   const qualityLabel = (value) => {
     const normalized = String(value).trim().toLowerCase();
+    if (normalized === '1k') return '۱٬۰۲۴ پیکسل';
+    if (normalized === '2k') return '۲٬۰۴۸ پیکسل';
     if (normalized === '4k') return '۴٬۰۹۶ پیکسل';
     return `${formatNumber(normalizeDigits(value))} پیکسل`;
   };
@@ -122,7 +124,7 @@
   }
 
   function modelSupportsImageWorkflow(item) {
-    if (!item || !item.task_type) return true;
+    if (!item || !item.task_type) return false;
     return imageWorkflow === 'image_to_image'
       ? ['image_to_image', 'face_consistency'].includes(String(item.task_type))
         || (String(item.task_type) === 'text_to_image' && item.supports_image_input === true)
@@ -197,7 +199,10 @@
   }
 
   function defaultValueFor(key, options) {
-    if (key === 'model') return '';
+    if (key === 'model') {
+      const preferred = String(activeConfig?.default_model || '');
+      return options.some((option) => String(option.value) === preferred) ? preferred : (options[0]?.value ?? '');
+    }
     if (key === 'ratio') {
       const preferred = '16:9';
       return options.some((option) => String(option.value) === preferred) ? preferred : (options[0]?.value ?? '');
@@ -507,6 +512,7 @@
         mode: currentMode,
         model: selectedModel?.value || '',
         provider: selectedModel?.provider || '',
+        workflow: currentMode === 'image' ? imageWorkflow : '',
         resolution: selectedValues.quality || '',
         aspect_ratio: selectedValues.ratio || '',
         duration: selectedValues.duration || '',
