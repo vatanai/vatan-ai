@@ -302,13 +302,19 @@ class OpenRouterService implements AiImageProviderInterface
         $failoverStatuses = [401, 403, 404, 407, 408, 421, 425, 429, 451];
         $maxAttempts = max(1, (int) config('services.openrouter.max_attempts', 5));
         $lastError = null;
+        $deadline = microtime(true) + max(1, $timeout);
 
         foreach ($this->baseUrls as $index => $baseUrl) {
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                $remainingTimeout = (int) ceil($deadline - microtime(true));
+                if ($remainingTimeout < 1) {
+                    break 2;
+                }
+
                 try {
                     $response = Http::withHeaders($this->requestHeaders())
                         ->connectTimeout(12)
-                        ->timeout($timeout)
+                        ->timeout($remainingTimeout)
                         ->post("{$baseUrl}{$path}", $payload);
                 } catch (\Throwable $e) {
                     // خطای شبکه/DNS/فیلترِ متناوب — همین Endpoint را چند بار دیگر امتحان کن
@@ -331,7 +337,7 @@ class OpenRouterService implements AiImageProviderInterface
             }
         }
 
-        throw new Exception($lastError ?? 'هیچ Endpointی برای OpenRouter در دسترس نبود.');
+        throw new Exception($lastError ?? "مهلت {$timeout} ثانیه‌ای پاسخ OpenRouter تمام شد.");
     }
 
 

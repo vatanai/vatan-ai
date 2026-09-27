@@ -176,6 +176,10 @@ class AiProviderRouter
     {
         $models = array_values(array_filter(array_merge([(string) $product->primary_model], (array) $product->fallback_models)));
         $providers = array_values(array_merge([(string) $product->ai_provider], (array) $product->fallback_model_providers));
+        $requestDeadline = microtime(true) + max(
+            60,
+            (int) config('services.openrouter.image_request_budget', 240)
+        );
 
         // بعضی محصولات قدیمی هنوز روی Riverflow Pro مانده‌اند. برای ساخت
         // معمول کاربر، مسیر سریع OpenRouter را فقط در همان درخواست جلو می
@@ -259,6 +263,9 @@ class AiProviderRouter
             $candidate->primary_model = $modelId;
             $candidate->ai_provider = $provider;
             $candidate->fallback_models = [];
+            if (! $this->configureImageAttemptTimeout($candidate, $requestDeadline)) {
+                break;
+            }
             $attemptedRoutes[$provider . '|' . $modelId] = true;
             try {
                 return $run($this->serviceForModelId($modelId, $provider), $candidate);
@@ -288,6 +295,9 @@ class AiProviderRouter
             $candidate->primary_model = $modelId;
             $candidate->ai_provider = $provider;
             $candidate->fallback_models = [];
+            if (! $this->configureImageAttemptTimeout($candidate, $requestDeadline)) {
+                break;
+            }
             try {
                 Log::notice('AiProviderRouter: using runtime OpenRouter fallback', [
                     'product_id' => $product->id,
@@ -325,6 +335,20 @@ class AiProviderRouter
         }
 
         throw new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
+    }
+
+    private function configureImageAttemptTimeout(Product $candidate, float $requestDeadline): bool
+    {
+        $remainingSeconds = (int) floor($requestDeadline - microtime(true));
+        if ($remainingSeconds < 15) {
+            return false;
+        }
+
+        $configuredTimeout = (int) ($candidate->timeout ?: config('services.openrouter.timeout', 60));
+        $attemptTimeout = max(15, (int) config('services.openrouter.image_attempt_timeout', 90));
+        $candidate->timeout = min($configuredTimeout, $attemptTimeout, $remainingSeconds);
+
+        return true;
     }
 
     private function shouldPreferFastImageRoute(Product $product, string $resolution, array $extraPayload): bool

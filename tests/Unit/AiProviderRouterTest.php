@@ -56,4 +56,44 @@ class AiProviderRouterTest extends TestCase
         (new AiProviderRouter($openRouter, null, $replicate))
             ->generateForProduct($product, 'test', '1K', '1:1');
     }
+
+    public function test_slow_primary_model_is_capped_so_configured_fallback_can_run(): void
+    {
+        config([
+            'services.openrouter.timeout' => 300,
+            'services.openrouter.image_attempt_timeout' => 90,
+            'services.openrouter.image_request_budget' => 240,
+        ]);
+
+        $product = new Product([
+            'primary_model' => 'google/gemini-3.1-flash-lite-image',
+            'ai_provider' => 'openrouter',
+            'fallback_models' => ['openai/gpt-image-1-mini'],
+            'fallback_model_providers' => ['openrouter'],
+            'timeout' => 300,
+        ]);
+
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'google/gemini-3.1-flash-lite-image'
+                && (int) $candidate->timeout === 90
+            )
+            ->andThrow(new \RuntimeException('Connection timed out'));
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'openai/gpt-image-1-mini'
+                && (int) $candidate->timeout === 90
+            )
+            ->andReturn(['model' => 'openai/gpt-image-1-mini', 'data' => []]);
+
+        $result = (new AiProviderRouter($openRouter))
+            ->generateForProduct($product, 'test', '1K', '1:1');
+
+        $this->assertSame('openai/gpt-image-1-mini', $result['model']);
+    }
 }

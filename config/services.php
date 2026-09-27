@@ -43,6 +43,9 @@ return [
         'max_attempts' => env('OPENROUTER_MAX_ATTEMPTS', 5), // تعداد تلاش مجدد روی هر Endpoint هنگام خطای شبکه
         'gateway_secret' => env('OPENROUTER_GATEWAY_SECRET'),
         'timeout' => env('OPENROUTER_TIMEOUT', 60),
+        // برای اینکه مدل جایگزین پیش از سقف درخواست وب فرصت اجرا داشته باشد.
+        'image_attempt_timeout' => env('OPENROUTER_IMAGE_ATTEMPT_TIMEOUT', 90),
+        'image_request_budget' => env('OPENROUTER_IMAGE_REQUEST_BUDGET', 240),
     ],
 
     'zarinpal' => [
