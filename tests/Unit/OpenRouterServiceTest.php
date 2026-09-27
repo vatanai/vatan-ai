@@ -358,4 +358,25 @@ class OpenRouterServiceTest extends TestCase
                 && $request['aspect_ratio'] === '4:3';
         });
     }
+
+    public function test_seedream_converts_business_resolution_to_supported_catalog_value(): void
+    {
+        Http::fake([
+            'https://openrouter.test/api/v1/images' => Http::response([
+                'data' => [['b64_json' => base64_encode('image')]],
+            ]),
+        ]);
+
+        app(OpenRouterService::class)->generateImageFromPrompt(
+            'bytedance-seed/seedream-5-0-lite',
+            'A cinematic portrait',
+            '720',
+            '3:4'
+        );
+
+        Http::assertSent(function (Request $request): bool {
+            return $request['resolution'] === '768'
+                && $request['aspect_ratio'] === '3:4';
+        });
+    }
 }
