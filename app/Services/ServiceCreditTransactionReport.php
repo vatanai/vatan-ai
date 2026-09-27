@@ -637,9 +637,18 @@ class ServiceCreditTransactionReport
             (array) data_get($payload, 'source_upload_paths', []),
             [data_get($payload, 'source_upload_path')],
         ), fn ($path): bool => is_scalar($path) && filled($path))));
-        $media = collect($paths)->map(function ($path): ?array {
-            $url = $this->publicMediaUrl((string) $path);
-            return $url ? ['type' => 'image', 'url' => $url, 'original_url' => $url, 'preview_url' => null, 'label' => 'عکس ورودی', 'text' => null] : null;
+        $media = collect($paths)->values()->map(function ($path, int $index) use ($order): ?array {
+            if (filter_var($path, FILTER_VALIDATE_URL)) {
+                return ['type' => 'image', 'url' => (string) $path, 'original_url' => (string) $path, 'preview_url' => (string) $path, 'label' => 'عکس ورودی', 'text' => null];
+            }
+
+            $path = ltrim((string) $path, '/');
+            if (! Storage::disk('public')->exists($path)) {
+                return null;
+            }
+
+            $url = route('admin.service-credits.order-input', [$order, $index]);
+            return ['type' => 'image', 'url' => $url, 'original_url' => $url, 'preview_url' => $url, 'label' => 'عکس ورودی', 'text' => null];
         })->filter();
 
         $inputPrompt = data_get($payload, 'prompt') ?: data_get($payload, 'fields.prompt');

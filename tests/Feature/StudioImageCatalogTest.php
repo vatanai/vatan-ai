@@ -10,15 +10,16 @@ class StudioImageCatalogTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_studio_image_catalog_only_contains_the_verified_models(): void
+    public function test_studio_image_catalog_only_contains_admin_selected_models(): void
     {
         AiModel::query()->delete();
 
-        foreach ([
+        $selectedModels = [
             'google/gemini-3.1-flash-lite-image',
             'sourceful/riverflow-v2.5-fast',
-            'asfasdf/ad',
-        ] as $modelId) {
+        ];
+
+        foreach ([...$selectedModels, 'asfasdf/ad'] as $index => $modelId) {
             AiModel::query()->create([
                 'name' => $modelId,
                 'openrouter_model_id' => $modelId,
@@ -26,12 +27,15 @@ class StudioImageCatalogTest extends TestCase
                 'output_modality' => 'image',
                 'task_type' => 'text_to_image',
                 'supports_image_input' => true,
+                'capability_config' => ['supports_text_to_image' => true, 'supports_image_to_image' => true],
                 'is_active' => true,
+                'featured_in_image_studio' => in_array($modelId, $selectedModels, true),
+                'studio_image_priority' => in_array($modelId, $selectedModels, true) ? $index + 1 : null,
             ]);
         }
 
         $this->assertEqualsCanonicalizing(
-            AiModel::STUDIO_IMAGE_MODEL_PRIORITY,
+            $selectedModels,
             AiModel::query()->selectableForImageStudio()->pluck('openrouter_model_id')->all(),
         );
     }
@@ -47,7 +51,10 @@ class StudioImageCatalogTest extends TestCase
             'output_modality' => 'image',
             'task_type' => 'text_to_image',
             'supports_image_input' => false,
+            'capability_config' => ['supports_text_to_image' => true, 'supports_image_to_image' => false],
             'is_active' => true,
+            'featured_in_image_studio' => true,
+            'studio_image_priority' => 1,
         ]);
 
         $this->assertFalse(AiModel::query()->selectableForImageStudio()->exists());

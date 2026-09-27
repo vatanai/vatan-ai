@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class AiModel extends Model
 {
@@ -107,6 +108,8 @@ class AiModel extends Model
         'lab_categories',
         'lab_priority',
         'featured_in_lab',
+        'featured_in_image_studio',
+        'studio_image_priority',
         'lab_status',
         'lab_description',
         'pricing_config',
@@ -141,6 +144,8 @@ class AiModel extends Model
         'lab_categories' => 'array',
         'lab_priority' => 'integer',
         'featured_in_lab' => 'boolean',
+        'featured_in_image_studio' => 'boolean',
+        'studio_image_priority' => 'integer',
         'lab_status' => 'string',
         'lab_description' => 'string',
         'pricing_config' => 'array',
@@ -242,17 +247,27 @@ class AiModel extends Model
     ];
 
     /**
-     * کاتالوگ عمومی و آزموده‌شده‌ی ساخت عکس در استودیو.
+     * انتخاب پیش‌فرض مدل‌های ساخت عکس در استودیو.
      *
-     * مدل‌های دیگر همچنان برای محصولات و آزمایشگاه در دسترس‌اند؛ این فهرست
-     * فقط انتخاب‌های صفحه‌ی عمومی استودیو را به مسیرهای پایدار محدود می‌کند.
+     * بعد از اجرای migration، انتخاب نهایی از دیتابیس خوانده می‌شود. این
+     * فهرست فقط ترتیب اولیه و fallback امن زمان استقرار است.
      */
     public const STUDIO_IMAGE_MODEL_PRIORITY = [
         'google/gemini-3.1-flash-lite-image',
+        'openai/gpt-image-1-mini',
         'sourceful/riverflow-v2.5-fast',
+        'google/gemini-3.1-flash-image',
+        'openai/gpt-image-1',
+        'google/gemini-2.5-flash-image',
+        'black-forest-labs/flux.2-klein-4b',
+        'qwen/qwen-image-3',
+        'bytedance-seed/seedream-5-0-lite',
+        'openai/gpt-image-2',
+        'google/gemini-3-pro-image',
+        'qwen/qwen-image-3-pro',
     ];
 
-    public function scopeSelectableForImageStudio(Builder $query): Builder
+    public function scopeEligibleForImageStudio(Builder $query): Builder
     {
         return $query
             ->where('is_active', true)
@@ -260,7 +275,20 @@ class AiModel extends Model
             ->where('output_modality', 'image')
             ->where('task_type', 'text_to_image')
             ->where('supports_image_input', true)
-            ->whereIn('openrouter_model_id', self::STUDIO_IMAGE_MODEL_PRIORITY);
+            ->whereNotNull('capability_config')
+            ->whereNotNull('openrouter_model_id')
+            ->where('openrouter_model_id', '<>', '');
+    }
+
+    public function scopeSelectableForImageStudio(Builder $query): Builder
+    {
+        $query->eligibleForImageStudio();
+
+        if (Schema::hasColumn($this->getTable(), 'featured_in_image_studio')) {
+            return $query->where('featured_in_image_studio', true);
+        }
+
+        return $query->whereIn('openrouter_model_id', self::STUDIO_IMAGE_MODEL_PRIORITY);
     }
 
     /** ترتیب رسمی انتخاب سرویس در استودیوی عمومی: OpenRouter، سپس Fal.ai، سپس Replicate. */

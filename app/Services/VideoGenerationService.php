@@ -287,7 +287,7 @@ class VideoGenerationService
             if (! $disk->exists($path)) {
                 continue;
             }
-            $gallery->capture(
+            $gallery->captureBuildInput(
                 $user,
                 'input_image',
                 $order->id,
@@ -301,7 +301,7 @@ class VideoGenerationService
         $sourceVideoPath = (string) ($options['source_video_path'] ?? '');
         $publicDisk = Storage::disk('public');
         if ($sourceVideoPath !== '' && $publicDisk->exists($sourceVideoPath)) {
-            $gallery->capture(
+            $gallery->captureBuildInput(
                 $user,
                 'input_video',
                 $order->id,

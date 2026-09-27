@@ -85,6 +85,48 @@ class UserGalleryService
         );
     }
 
+    /**
+     * ورودی یک ساخت را پیش از حذف نسخهٔ موقت عمومی، در فضای خصوصی نگه می‌دارد.
+     * این نسخه برای تاریخچهٔ ساخت و گزارش مدیریتی لازم است و به رضایت گالری
+     * وابسته نیست؛ اما همچنان از سیاست انقضای ورودی‌های گالری پیروی می‌کند.
+     */
+    public function captureBuildInput(
+        User $user,
+        string $sourceType,
+        int $orderId,
+        string $sourcePath,
+        string $sourceDisk = 'public',
+        ?int $size = null,
+        ?string $mimeType = null,
+        array $metadata = [],
+    ): ?UserGalleryItem {
+        if (! Schema::hasTable('user_gallery_items') || ! Schema::hasTable('user_gallery_configs')) {
+            return null;
+        }
+
+        $sourceContents = $this->sourceContentsIfExists($sourcePath, $sourceDisk);
+        if ($sourceContents === null || $sourceContents === '') {
+            return null;
+        }
+
+        return $this->storeContents(
+            $user,
+            $sourceType,
+            $orderId,
+            $sourceContents,
+            $size ?: strlen($sourceContents),
+            $mimeType,
+            array_merge($metadata, [
+                'order_id' => $orderId,
+                'retained_for_build_history' => true,
+            ]),
+            $this->extensionFor($mimeType, $sourcePath),
+            false,
+            null,
+            false,
+        );
+    }
+
     /** یک نسخهٔ مستقل از خروجی برای گالری داشبورد نگه می‌دارد. */
     public function captureOutput(
         User $user,

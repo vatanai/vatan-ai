@@ -132,4 +132,52 @@ class AiProviderRouterTest extends TestCase
 
         $this->assertSame('fal-ai/nano-banana/edit', $result['model']);
     }
+
+    public function test_openrouter_primary_is_retried_after_strict_fallback_is_exhausted(): void
+    {
+        ProviderStatus::setEnabled('fal', true);
+
+        $product = new Product([
+            'primary_model' => 'google/gemini-3.1-flash-lite-image',
+            'ai_provider' => 'openrouter',
+            'fallback_models' => ['fal-ai/nano-banana/edit'],
+            'fallback_model_providers' => ['fal'],
+            'timeout' => 90,
+        ]);
+        $product->strict_model_priority = true;
+
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'google/gemini-3.1-flash-lite-image'
+                && $candidate->ai_provider === 'openrouter'
+            )
+            ->andThrow(new \RuntimeException('OpenRouter timed out'));
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'google/gemini-3.1-flash-lite-image'
+                && $candidate->ai_provider === 'openrouter'
+                && empty($candidate->fallback_models)
+            )
+            ->andReturn(['model' => 'google/gemini-3.1-flash-lite-image', 'data' => []]);
+
+        $fal = Mockery::mock(FalImageProvider::class);
+        $fal->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'fal-ai/nano-banana/edit'
+                && $candidate->ai_provider === 'fal'
+            )
+            ->andThrow(new \RuntimeException('Fal HTTP 402: Insufficient credit'));
+
+        $result = (new AiProviderRouter($openRouter, $fal))
+            ->generateForProduct($product, 'test', '1K', '1:1');
+
+        $this->assertSame('google/gemini-3.1-flash-lite-image', $result['model']);
+    }
 }

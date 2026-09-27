@@ -15,7 +15,9 @@ use App\Services\AiCatalogSyncService;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ExchangeRateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class AiModelController extends Controller
 {
@@ -25,14 +27,90 @@ class AiModelController extends Controller
             ->whereIn('provider', ProviderStatus::PROVIDERS)
             ->latest()
             ->get();
+        $studioSelectionReady = Schema::hasColumn('ai_models', 'featured_in_image_studio')
+            && Schema::hasColumn('ai_models', 'studio_image_priority');
+        $studioImageModels = AiModel::query()
+            ->eligibleForImageStudio()
+            ->get()
+            ->sortBy(function (AiModel $model) use ($studioSelectionReady): array {
+                $fallbackPriority = array_search(
+                    $model->openrouter_model_id,
+                    AiModel::STUDIO_IMAGE_MODEL_PRIORITY,
+                    true,
+                );
+                $selected = $studioSelectionReady
+                    ? (bool) $model->featured_in_image_studio
+                    : $fallbackPriority !== false;
+
+                return [
+                    $selected ? 0 : 1,
+                    $studioSelectionReady && $model->studio_image_priority !== null
+                        ? (int) $model->studio_image_priority
+                        : ($fallbackPriority === false ? 1000 : $fallbackPriority),
+                    $model->name,
+                ];
+            })
+            ->values();
+
         return view('admin.ai-models.index', [
             'models' => $models,
+            'studioImageModels' => $studioImageModels,
+            'studioSelectionReady' => $studioSelectionReady,
             'exchange' => $exchangeRate->usdToIrr(),
             'providerStatus' => ProviderStatus::all(),
             'initialProvider' => in_array($request->query('provider'), ProviderStatus::PROVIDERS, true)
                 ? $request->query('provider')
                 : 'all',
         ]);
+    }
+
+    public function updateImageStudioSelection(Request $request)
+    {
+        if (! Schema::hasColumn('ai_models', 'featured_in_image_studio')
+            || ! Schema::hasColumn('ai_models', 'studio_image_priority')) {
+            return redirect()->route('admin.ai-models.index')
+                ->withErrors(['studio_models' => 'ابتدا migration انتخاب مدل‌های استودیو را اجرا کنید.']);
+        }
+
+        $data = $request->validate([
+            'studio_models' => ['required', 'array', 'min:10', 'max:30'],
+            'studio_models.*' => ['required', 'integer', 'distinct'],
+        ], [
+            'studio_models.required' => 'حداقل ۱۰ مدل برای استودیوی ساخت عکس انتخاب کنید.',
+            'studio_models.min' => 'برای تنوع و پایداری استودیو، انتخاب حداقل ۱۰ مدل الزامی است.',
+            'studio_models.max' => 'حداکثر ۳۰ مدل را می‌توانید در استودیوی ساخت عکس نمایش دهید.',
+            'studio_models.*.integer' => 'شناسهٔ یکی از مدل‌های انتخاب‌شده معتبر نیست.',
+            'studio_models.*.distinct' => 'هر مدل فقط یک‌بار قابل انتخاب است.',
+        ]);
+
+        $selectedIds = collect($data['studio_models'])->map(fn ($id) => (int) $id)->unique()->values();
+        $eligibleIds = AiModel::query()
+            ->eligibleForImageStudio()
+            ->whereIn('id', $selectedIds)
+            ->pluck('id');
+
+        if ($eligibleIds->count() !== $selectedIds->count()) {
+            return redirect()->route('admin.ai-models.index')
+                ->withErrors(['studio_models' => 'یکی از مدل‌ها فعال نیست یا از ساخت هم‌زمان متن‌به‌عکس و عکس‌به‌عکس پشتیبانی نمی‌کند.'])
+                ->withInput();
+        }
+
+        DB::transaction(function () use ($selectedIds): void {
+            AiModel::query()->where('featured_in_image_studio', true)->update([
+                'featured_in_image_studio' => false,
+                'studio_image_priority' => null,
+            ]);
+
+            foreach ($selectedIds as $priority => $modelId) {
+                AiModel::query()->whereKey($modelId)->update([
+                    'featured_in_image_studio' => true,
+                    'studio_image_priority' => $priority + 1,
+                ]);
+            }
+        });
+
+        return redirect()->route('admin.ai-models.index')
+            ->with('success', $selectedIds->count() . ' مدل برای استودیوی ساخت عکس ذخیره شد.');
     }
 
     public function providers(ServiceCreditOverviewService $creditOverview, AiProviderLimitService $limitService)

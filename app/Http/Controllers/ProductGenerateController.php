@@ -272,17 +272,22 @@ class ProductGenerateController extends Controller
                 ->orderByRaw("CASE provider WHEN 'openrouter' THEN 0 WHEN 'fal' THEN 1 WHEN 'replicate' THEN 2 ELSE 3 END")
                 ->orderByRaw("CASE task_type WHEN 'text_to_video' THEN 0 WHEN 'image_to_video' THEN 1 WHEN 'video_to_video' THEN 2 ELSE 3 END");
 
+        $modelColumns = [
+            'id',
+            'name',
+            'openrouter_model_id',
+            'provider',
+            'task_type',
+            'supports_image_input',
+            'capability_config',
+            'pricing_config',
+        ];
+        if ($modality === 'image' && Schema::hasColumn('ai_models', 'studio_image_priority')) {
+            $modelColumns[] = 'studio_image_priority';
+        }
+
         $models = $query
-            ->get([
-                'id',
-                'name',
-                'openrouter_model_id',
-                'provider',
-                'task_type',
-                'supports_image_input',
-                'capability_config',
-                'pricing_config',
-            ])
+            ->get($modelColumns)
             ->when($modality === 'image', fn ($models) => $this->sortStudioImageModels($models))
             ->when($modality === 'video', function ($models) {
                 return $models->sortBy(function (AiModel $model): array {
@@ -902,7 +907,7 @@ class ProductGenerateController extends Controller
                     ]);
                 }
                 foreach ($uploadedPaths as $upload) {
-                    $gallery->capture(
+                    $gallery->captureBuildInput(
                         $user,
                         'input_image',
                         $order->id,
@@ -1426,9 +1431,12 @@ class ProductGenerateController extends Controller
     private function sortStudioImageModels(\Illuminate\Support\Collection $models): \Illuminate\Support\Collection
     {
         return $models->sortBy(function (AiModel $model): array {
-            $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_IMAGE_MODEL_PRIORITY, true);
+            $fallbackPriority = array_search($model->openrouter_model_id, AiModel::STUDIO_IMAGE_MODEL_PRIORITY, true);
+            $priority = $model->studio_image_priority !== null
+                ? (int) $model->studio_image_priority
+                : ($fallbackPriority === false ? 1000 : $fallbackPriority + 1);
 
-            return [$priority === false ? 1000 : $priority, $model->id];
+            return [$priority, $model->id];
         })->values();
     }
 

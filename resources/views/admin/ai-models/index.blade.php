@@ -61,6 +61,90 @@
       <div class="ai-model-summary-card"><span class="summary-icon is-success"><i class="fa-solid fa-user-check"></i></span><div><small>مدل‌های هویت‌محور</small><strong>{{ $models->where('supports_face_identity', true)->count() }}</strong></div></div>
     </div>
 
+    @php
+      $studioDefaultSelection = $studioImageModels
+        ->filter(function ($model) use ($studioSelectionReady) {
+          return $studioSelectionReady
+            ? (bool) $model->featured_in_image_studio
+            : in_array($model->openrouter_model_id, \App\Models\AiModel::STUDIO_IMAGE_MODEL_PRIORITY, true);
+        })
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->all();
+      $studioSelectedIds = collect(old('studio_models', $studioDefaultSelection))->map(fn ($id) => (string) $id)->all();
+    @endphp
+
+    <section class="content-card studio-image-models-panel mb-5" aria-labelledby="studio-image-models-title">
+      <div class="studio-image-models-head">
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="studio-panel-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+          <div class="min-w-0">
+            <h2 id="studio-image-models-title" class="text-sm font-extrabold text-[var(--text-h)] m-0">استودیو ساخت — ساخت عکس</h2>
+            <p class="text-[10px] text-[var(--text-soft)] mt-1 mb-0">مدل‌هایی را انتخاب کنید که در هر دو حالت «متن به عکس» و «عکس به عکس» به کاربر نمایش داده شوند.</p>
+          </div>
+        </div>
+        <div class="studio-selection-counter" aria-live="polite">
+          <strong data-studio-selected-count>{{ count($studioSelectedIds) }}</strong>
+          <span>مدل انتخاب‌شده</span>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ route('admin.ai-models.image-studio-selection') }}" class="studio-model-selection-form" data-studio-selection-form data-selection-ready="{{ $studioSelectionReady ? '1' : '0' }}">
+        @csrf
+        @method('PUT')
+
+        <div class="studio-selection-note">
+          <span><i class="fa-solid fa-circle-info"></i> حداقل ۱۰ مدل فعال نگه دارید تا تنوع، قیمت و مسیر جایگزین مناسب باقی بماند.</span>
+          <span>فقط نمایش در استودیو تغییر می‌کند؛ تنظیمات محصول و آزمایشگاه دست‌نخورده می‌ماند.</span>
+        </div>
+
+        @if(! $studioSelectionReady)
+          <div class="studio-selection-warning">تنظیمات دیتابیس این بخش هنوز آماده نیست؛ پس از اجرای migration قابل ذخیره خواهد بود.</div>
+        @endif
+
+        <div class="studio-model-checkbox-grid">
+          @forelse($studioImageModels as $studioModel)
+            @php
+              $studioModelId = (string) $studioModel->openrouter_model_id;
+              $studioFamily = match (true) {
+                str_starts_with($studioModelId, 'openai/') => 'OpenAI',
+                str_starts_with($studioModelId, 'google/') => 'Nano Banana',
+                str_starts_with($studioModelId, 'black-forest-labs/') => 'FLUX',
+                str_starts_with($studioModelId, 'qwen/') => 'Qwen',
+                str_starts_with($studioModelId, 'bytedance-seed/') => 'Seedream',
+                str_starts_with($studioModelId, 'sourceful/') => 'Riverflow',
+                default => 'OpenRouter',
+              };
+              $studioChecked = in_array((string) $studioModel->id, $studioSelectedIds, true);
+            @endphp
+            <label class="studio-model-checkbox-card">
+              <input type="checkbox" name="studio_models[]" value="{{ $studioModel->id }}" @checked($studioChecked) data-studio-model-checkbox>
+              <span class="studio-model-check"><i class="fa-solid fa-check"></i></span>
+              <img src="{{ $studioModel->image_url }}" alt="" class="studio-model-thumb">
+              <span class="studio-model-copy">
+                <strong>{{ $studioModel->name }}</strong>
+                <small dir="ltr">{{ $studioModelId }}</small>
+                <span class="studio-model-meta">
+                  <b>{{ $studioFamily }}</b>
+                  <b>{{ $studioModel->cost_per_generation_usd ? '$' . number_format((float) $studioModel->cost_per_generation_usd, 3) : 'قیمت متغیر' }}</b>
+                  <b>عکس مرجع</b>
+                </span>
+              </span>
+            </label>
+          @empty
+            <div class="empty-state">مدل فعال و سازگار برای ساخت عکس پیدا نشد.</div>
+          @endforelse
+        </div>
+
+        <div class="studio-selection-actions">
+          <p data-studio-selection-message>حداقل ۱۰ مدل را انتخاب کنید.</p>
+          <button type="submit" class="btn-pro btn-pro-primary inline-flex items-center gap-2" @disabled(! $studioSelectionReady || $studioImageModels->count() < 10) data-studio-save-button>
+            <i class="fa-solid fa-floppy-disk"></i> ذخیره مدل‌های استودیو
+          </button>
+        </div>
+      </form>
+    </section>
+
     <section class="content-card overflow-hidden">
       <div class="ai-model-list-head p-4 border-b border-[var(--border)]">
         <div>
@@ -185,6 +269,35 @@
   .summary-icon.is-info { color:var(--info); background:color-mix(in srgb,var(--info) 10%,transparent); }
   .summary-icon.is-warning { color:var(--warning); background:color-mix(in srgb,var(--warning) 10%,transparent); }
   .summary-icon.is-purple { color:var(--primary); background:var(--primary-l); }
+  .studio-image-models-panel { padding:0; overflow:hidden; }
+  .studio-image-models-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px; border-bottom:1px solid var(--border); }
+  .studio-panel-icon { width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border-radius:11px; color:var(--primary); background:var(--primary-l); }
+  .studio-selection-counter { display:flex; align-items:baseline; gap:5px; flex-shrink:0; padding:8px 11px; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); color:var(--text-soft); font-size:9px; }
+  .studio-selection-counter strong { color:var(--primary); font-size:17px; line-height:1; }
+  .studio-model-selection-form { padding:16px; }
+  .studio-selection-note { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; padding:9px 11px; border:1px solid color-mix(in srgb,var(--info) 25%,var(--border)); border-radius:9px; background:color-mix(in srgb,var(--info) 6%,var(--card-bg)); color:var(--text-soft); font-size:9px; line-height:1.8; }
+  .studio-selection-note i { margin-left:4px; color:var(--info); }
+  .studio-selection-warning { margin-bottom:12px; padding:9px 11px; border:1px solid color-mix(in srgb,var(--warning) 35%,var(--border)); border-radius:9px; background:color-mix(in srgb,var(--warning) 7%,var(--card-bg)); color:var(--warning); font-size:10px; font-weight:700; }
+  .studio-model-checkbox-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .studio-model-checkbox-card { position:relative; display:flex; align-items:center; gap:9px; min-width:0; min-height:78px; padding:10px 38px 10px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card-bg); cursor:pointer; transition:border-color .18s ease,background .18s ease,transform .18s ease; }
+  .studio-model-checkbox-card:hover { border-color:color-mix(in srgb,var(--primary) 45%,var(--border)); transform:translateY(-1px); }
+  .studio-model-checkbox-card:has(input:checked) { border-color:var(--primary); background:color-mix(in srgb,var(--primary) 6%,var(--card-bg)); }
+  .studio-model-checkbox-card > input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .studio-model-check { position:absolute; right:10px; top:10px; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:5px; background:var(--input-bg); color:transparent; font-size:9px; }
+  .studio-model-checkbox-card:has(input:checked) .studio-model-check { border-color:var(--primary); background:var(--primary); color:var(--card-bg); }
+  .studio-model-checkbox-card:focus-within { outline:2px solid color-mix(in srgb,var(--primary) 30%,transparent); outline-offset:2px; }
+  .studio-model-thumb { width:38px; height:38px; flex-shrink:0; object-fit:cover; border:1px solid var(--border); border-radius:9px; background:var(--input-bg); }
+  .studio-model-copy { display:block; min-width:0; }
+  .studio-model-copy > strong,.studio-model-copy > small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .studio-model-copy > strong { color:var(--text-h); font-size:10px; }
+  .studio-model-copy > small { margin-top:3px; color:var(--text-soft); font-family:monospace; font-size:8px; text-align:left; }
+  .studio-model-meta { display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-top:6px; }
+  .studio-model-meta b { padding:2px 5px; border:1px solid var(--border); border-radius:5px; background:var(--input-bg); color:var(--text-soft); font-size:7.5px; font-weight:700; }
+  .studio-selection-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+  .studio-selection-actions p { margin:0; color:var(--text-soft); font-size:9px; }
+  .studio-selection-actions p.is-valid { color:var(--success); }
+  .studio-selection-actions p.is-invalid { color:var(--danger); }
+  .studio-selection-actions button:disabled { opacity:.55; cursor:not-allowed; }
   .model-purpose-icon { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; color:var(--primary); background:var(--primary-l); font-size:12px; }
   .model-use-case-cell { display:grid; grid-template-columns:28px minmax(0,1fr); align-items:center; gap:3px 6px; min-width:0; }
   .model-use-case-cell small { grid-column:2; color:var(--text-soft); font-size:9px; }
@@ -234,15 +347,39 @@
   .model-toggle-btn { padding:4px 5px; }
   .ai-model-actions { display:flex; align-items:center; justify-content:flex-end; gap:3px; }
   .ai-model-actions .icon-action-btn { width:28px; height:28px; }
-  @media (max-width: 1100px) { .ai-model-summary-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media (max-width: 1100px) { .ai-model-summary-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .studio-model-checkbox-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   @media (max-width: 1100px) { .model-filters-row { grid-template-columns:1fr; } }
   @media (max-width: 900px) { .ai-model-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .provider-metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .studio-image-models-head,.studio-selection-note,.studio-selection-actions { align-items:stretch; flex-direction:column; } .studio-selection-counter { align-self:flex-start; } .studio-model-checkbox-grid { grid-template-columns:1fr; } }
   @media (max-width: 520px) { .ai-model-summary-grid { grid-template-columns:1fr; } }
 </style>
 @endpush
 
 @section('scripts')
 <script>
+  const studioSelectionForm = document.querySelector('[data-studio-selection-form]');
+  if (studioSelectionForm) {
+    const studioCheckboxes = [...studioSelectionForm.querySelectorAll('[data-studio-model-checkbox]')];
+    const studioCount = document.querySelector('[data-studio-selected-count]');
+    const studioMessage = studioSelectionForm.querySelector('[data-studio-selection-message]');
+    const studioSaveButton = studioSelectionForm.querySelector('[data-studio-save-button]');
+    const studioSelectionReady = studioSelectionForm.dataset.selectionReady === '1';
+
+    const refreshStudioSelection = () => {
+      const selectedCount = studioCheckboxes.filter(checkbox => checkbox.checked).length;
+      studioCount.textContent = selectedCount;
+      studioMessage.classList.toggle('is-valid', selectedCount >= 10);
+      studioMessage.classList.toggle('is-invalid', selectedCount < 10);
+      studioMessage.textContent = selectedCount >= 10
+        ? `${selectedCount} مدل در صفحه ساخت عکس نمایش داده می‌شود.`
+        : `${10 - selectedCount} مدل دیگر انتخاب کنید؛ حداقل انتخاب ۱۰ مدل است.`;
+      studioSaveButton.disabled = !studioSelectionReady || selectedCount < 10;
+    };
+
+    studioCheckboxes.forEach(checkbox => checkbox.addEventListener('change', refreshStudioSelection));
+    refreshStudioSelection();
+  }
+
   let selectedProvider = @json($initialProvider ?? 'all');
   let selectedMedia = 'all';
   let selectedTask = 'all';

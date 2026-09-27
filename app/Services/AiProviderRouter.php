@@ -268,6 +268,49 @@ class AiProviderRouter
             }
         }
 
+        // وقتی مسیر محصول قفل شده (strict_model_priority) — یعنی روتر اجازه
+        // ندارد یک مدل تصادفی/گران‌تر جایگزین کند — اما مدل اصلی از طریق
+        // OpenRouter بوده و فقط fallback غیر-OpenRouter (مثلاً Fal) به‌دلیل
+        // اتمام اعتبار/سرویس شکست خورده، یک بار دیگر همان مدل اصلی را از
+        // طریق OpenRouter امتحان کن. این یک مدل جدید یا گران‌تر انتخاب
+        // نمی‌کند — دقیقاً همان مدلی که قرار بود اجرا شود را، وقتی خود
+        // OpenRouter در فهرست providerهای ازکارافتاده نیست (یعنی شکست اول
+        // می‌تواند موقتی/گذرا بوده باشد)، یک شانس دوم می‌دهد.
+        $primaryProvider = $providers[0] ?? null;
+        $primaryModelId = $models[0] ?? null;
+        if ($product->getAttribute('strict_model_priority')
+            && $lastError
+            && $primaryProvider === 'openrouter'
+            && $primaryModelId
+            && count($models) > 1
+            && !isset($exhaustedProviders['openrouter'])
+        ) {
+            $candidate = $product->replicate();
+            $candidate->primary_model = $primaryModelId;
+            $candidate->ai_provider = 'openrouter';
+            $candidate->fallback_models = [];
+            if ($this->configureImageAttemptTimeout($candidate, $requestDeadline)) {
+                try {
+                    Log::notice('AiProviderRouter: retrying original OpenRouter model after fallback exhaustion', [
+                        'product_id' => $product->id,
+                        'model' => $primaryModelId,
+                    ]);
+
+                    return $run($this->serviceForModelId($primaryModelId, 'openrouter'), $candidate);
+                } catch (\Throwable $error) {
+                    $lastError = $error;
+                    if ($this->isProviderExhaustionError($error)) {
+                        $exhaustedProviders['openrouter'] = $this->providerFailureReason($error);
+                    }
+                    Log::warning('AiProviderRouter: OpenRouter retry after fallback exhaustion failed', [
+                        'product_id' => $product->id,
+                        'model' => $primaryModelId,
+                        'message' => $error->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         // بعضی محصولات قدیمی از یک migration آزمایشی آمده‌اند و primary و
         // fallback هر دو روی یک provider ثبت شده‌اند. در این وضعیت، بعد از
         // شکست حساب/سرویس، از بین مدل‌های فعال و هم‌نوع OpenRouter یک مسیر

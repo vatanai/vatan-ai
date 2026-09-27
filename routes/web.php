@@ -424,6 +424,9 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/service-credits/transactions', [ServiceCreditController::class, 'transactions'])->name('service-credits.transactions');
     Route::get('/service-credits/build-transactions', [ServiceCreditController::class, 'buildTransactions'])->name('service-credits.build-transactions');
     Route::get('/service-credits/images/{generatedImage}/thumbnail', [ServiceCreditController::class, 'imageThumbnail'])->name('service-credits.image-thumbnail');
+    Route::get('/service-credits/orders/{order}/inputs/{index}', [ServiceCreditController::class, 'orderInput'])
+        ->whereNumber('index')
+        ->name('service-credits.order-input');
     Route::post('/service-credits/accounts', [ServiceCreditController::class, 'storeAccount'])->name('service-credits.accounts.store');
     Route::put('/service-credits/accounts/{account}', [ServiceCreditController::class, 'updateAccount'])->name('service-credits.accounts.update');
     Route::post('/service-credits/transactions', [ServiceCreditController::class, 'storeTransaction'])->name('service-credits.transactions.store');
@@ -583,6 +586,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('ai-models/toggle-provider', [AiModelController::class, 'toggleProvider'])->name('ai-models.toggle-provider');
     Route::post('ai-models/{aiModel}/toggle', [AiModelController::class, 'toggleModel'])->name('ai-models.toggle-model');
     Route::post('ai-models/{aiModel}/toggle-product-selection', [AiModelController::class, 'toggleProductSelection'])->name('ai-models.toggle-product-selection');
+    Route::put('ai-models/image-studio-selection', [AiModelController::class, 'updateImageStudioSelection'])->name('ai-models.image-studio-selection');
     Route::get('ai-models/providers', [AiModelController::class, 'providers'])->name('ai-models.providers');
     Route::get('ai-models/providers/create', [AiModelController::class, 'createProvider'])->name('ai-models.providers.create');
     Route::put('ai-models/provider-settings', [AiModelController::class, 'updateProviderSettings'])->name('ai-models.provider-settings');
