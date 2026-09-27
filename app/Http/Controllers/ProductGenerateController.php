@@ -902,7 +902,7 @@ class ProductGenerateController extends Controller
                     ]);
                 }
                 foreach ($uploadedPaths as $upload) {
-                    $gallery->capture(
+                    $gallery->captureBuildInput(
                         $user,
                         'input_image',
                         $order->id,

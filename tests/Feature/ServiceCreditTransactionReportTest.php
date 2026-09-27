@@ -347,6 +347,46 @@ class ServiceCreditTransactionReportTest extends TestCase
             ->assertDontSee('سلامت سرویس‌ها');
     }
 
+    public function test_existing_order_input_uses_an_authenticated_preview_route(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('uploads/personal/order-input.png', base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+        ));
+        $user = User::query()->create([
+            'name' => 'کاربر عکس ورودی', 'phone' => '09120000008', 'status' => 'active',
+        ]);
+        $order = Order::query()->create([
+            'user_id' => $user->id,
+            'status' => 'completed',
+            'processing_status' => 'completed',
+            'input_payload' => ['source_upload_paths' => ['uploads/personal/order-input.png']],
+            'completed_at' => now(),
+        ]);
+        $exchange = Mockery::mock(ExchangeRateService::class);
+        $exchange->shouldReceive('usdToIrr')->once()->andReturn([
+            'rate' => 600000, 'source' => 'تست', 'online' => false, 'at' => now(),
+        ]);
+
+        $report = (new ServiceCreditTransactionReport($exchange))->build(Request::create('/', 'GET', [
+            'source' => 'user', 'per_page' => 100,
+        ]));
+        $row = collect($report['transactions']->items())->firstWhere('id', 'order-'.$order->id);
+        $previewUrl = route('admin.service-credits.order-input', [$order, 0]);
+
+        $this->assertNotNull($row);
+        $this->assertSame($previewUrl, $row['input_media'][0]['preview_url']);
+        $this->get($previewUrl)->assertRedirect(route('admin.login'));
+
+        $admin = Admin::query()->create([
+            'name' => 'مدیر ورودی‌ها', 'email' => 'input-preview@example.test', 'password' => 'password',
+            'role' => 'leader', 'is_active' => true,
+        ]);
+        $this->actingAs($admin, 'admin')->get($previewUrl)
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+    }
+
     public function test_database_pagination_is_not_limited_to_five_hundred_source_rows(): void
     {
         $exchange = Mockery::mock(ExchangeRateService::class);

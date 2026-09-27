@@ -16,6 +16,43 @@ class UserGalleryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_build_input_is_retained_privately_without_gallery_consent(): void
+    {
+        Storage::fake('public');
+        Storage::fake('user_gallery');
+
+        $user = User::query()->create([
+            'name' => 'کاربر بدون رضایت گالری',
+            'phone' => '09120000009',
+            'status' => 'active',
+        ]);
+        $order = \App\Models\Order::query()->create([
+            'user_id' => $user->id,
+            'status' => 'processing',
+            'processing_status' => 'processing',
+        ]);
+        Storage::disk('public')->put('uploads/build-input.png', base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+        ));
+
+        $item = app(UserGalleryService::class)->captureBuildInput(
+            $user,
+            'input_image',
+            $order->id,
+            'uploads/build-input.png',
+            'public',
+            68,
+            'image/png',
+        );
+
+        $this->assertNotNull($item);
+        $this->assertSame($order->id, $item->order_id);
+        $this->assertTrue((bool) data_get($item->metadata, 'retained_for_build_history'));
+        $this->assertTrue($item->expires_at->isFuture());
+        Storage::disk('user_gallery')->assertExists($item->original_path);
+        Storage::disk('user_gallery')->assertExists($item->thumbnail_path);
+    }
+
     public function test_consented_image_is_copied_to_private_gallery_with_preview_and_expiry(): void
     {
         Storage::fake('public');

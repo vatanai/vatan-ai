@@ -424,6 +424,9 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/service-credits/transactions', [ServiceCreditController::class, 'transactions'])->name('service-credits.transactions');
     Route::get('/service-credits/build-transactions', [ServiceCreditController::class, 'buildTransactions'])->name('service-credits.build-transactions');
     Route::get('/service-credits/images/{generatedImage}/thumbnail', [ServiceCreditController::class, 'imageThumbnail'])->name('service-credits.image-thumbnail');
+    Route::get('/service-credits/orders/{order}/inputs/{index}', [ServiceCreditController::class, 'orderInput'])
+        ->whereNumber('index')
+        ->name('service-credits.order-input');
     Route::post('/service-credits/accounts', [ServiceCreditController::class, 'storeAccount'])->name('service-credits.accounts.store');
     Route::put('/service-credits/accounts/{account}', [ServiceCreditController::class, 'updateAccount'])->name('service-credits.accounts.update');
     Route::post('/service-credits/transactions', [ServiceCreditController::class, 'storeTransaction'])->name('service-credits.transactions.store');

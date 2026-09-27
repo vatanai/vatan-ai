@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ServiceCreditAccount;
 use App\Models\ServiceCreditTransaction;
 use App\Models\GeneratedImage;
+use App\Models\Order;
 use App\Services\ProfileMediaThumbnailService;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ServiceCreditSynchronizer;
@@ -14,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ServiceCreditController extends Controller
@@ -68,6 +70,32 @@ class ServiceCreditController extends Controller
         if (! $thumbnails->generate($generatedImage, 160)) abort(404);
 
         return $thumbnails->serve($generatedImage, 160);
+    }
+
+    public function orderInput(Order $order, int $index)
+    {
+        $payload = (array) $order->input_payload;
+        $paths = array_values(array_unique(array_filter(array_merge(
+            (array) data_get($payload, 'source_upload_paths', []),
+            [data_get($payload, 'source_upload_path')],
+        ), fn ($path): bool => is_scalar($path) && filled($path))));
+        abort_unless(array_key_exists($index, $paths), 404);
+
+        $path = (string) $paths[$index];
+        abort_if(filter_var($path, FILTER_VALIDATE_URL), 404);
+        $path = ltrim($path, '/');
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($path), 404);
+
+        $response = response()->file($disk->path($path), [
+            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-store');
+        $response->setMaxAge(0);
+
+        return $response;
     }
 
     public function storeAccount(Request $request): RedirectResponse
