@@ -535,6 +535,15 @@
         : `${Number(images.length).toLocaleString('fa-IR')} خروجی آماده و در بخش پروفایل ذخیره شد`;
       result.querySelector('.cw-result-count').innerHTML = `<i class="fa-solid fa-circle-check"></i> ${resultMessage}`;
       if (payload?.credits_returned > 0) window.showCreditsReturnedModal?.(payload.credits_returned);
+      // موجودی محلیِ فرم را با مقدار واقعیِ بازگشته از سرور همگام می‌کنیم؛ در غیر
+      // این صورت بررسی سمت کلاینت پیش از ساختِ بعدی همچنان مقدار زمانِ بارگذاریِ
+      // صفحه را می‌بیند، درخواست را رد نمی‌کند، به سرور می‌رسد و آنجا به‌خاطر
+      // کمبود اعتبار شکست می‌خورد — دقیقاً همان «نساخت و هیچ خطایی نداد».
+      if (payload?.remaining_tokens !== undefined) {
+        root.dataset.balance = String(payload.remaining_tokens);
+        const topNavTokens = document.getElementById('top-nav-tokens');
+        if (topNavTokens) topNavTokens.textContent = Number(payload.remaining_tokens).toLocaleString('fa-IR') + ' توکن';
+      }
       // نمایش خروجی نباید به زمان بارگذاری تصویر وابسته باشد؛ تصویر در همان
       // پنل خروجی شروع به بارگذاری می‌کند و اگر شبکه کند باشد، صفحه قفل نمی‌شود.
       const imageReady = waitForStageImage(main);

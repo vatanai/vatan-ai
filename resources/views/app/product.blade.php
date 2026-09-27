@@ -990,6 +990,13 @@ function triggerGeneration() {
       if (tokenEl && d.remaining_tokens !== undefined) {
           tokenEl.textContent = Number(d.remaining_tokens).toLocaleString('fa-IR') + ' توکن';
       }
+      // موجودی محلی هم باید فوراً به‌روزرسانی شود؛ وگرنه بررسی سمت کلاینت قبل از
+      // ساخت بعدی همچنان مقدار قدیمی (زمان بارگذاری صفحه) را می‌بیند و اجازه‌ی
+      // ارسال درخواستی را می‌دهد که سرور آن را به‌خاطر کمبود اعتبار رد می‌کند —
+      // دقیقاً همان ساختِ بی‌خطا و بدون نتیجه‌ای که کاربران گزارش می‌دادند.
+      if (d.remaining_tokens !== undefined) {
+          USER_TOKEN_BALANCE = Number(d.remaining_tokens);
+      }
     } else {
       errorBox.classList.remove('hidden');
       errorTxt.textContent = d.message || 'پردازش هوش مصنوعی با خطا مواجه شد.';
