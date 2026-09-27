@@ -496,9 +496,9 @@ public function gallery()
                 return;
             }
 
-            $query->where(function ($nested) use ($cursorData): void {
+            $query->where(function ($nested) use ($cursorData, $mediaKind): void {
                 $nested->where('created_at', '<', $cursorData['created_at'])
-                    ->orWhere(function ($sameTime) use ($cursorData): void {
+                    ->orWhere(function ($sameTime) use ($cursorData, $mediaKind): void {
                     $sameTime->where('created_at', $cursorData['created_at'])
                             ->where(function ($sameId) use ($cursorData, $mediaKind): void {
                                 $sameId->where('id', '<', $cursorData['id']);
