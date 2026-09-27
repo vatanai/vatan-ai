@@ -97,6 +97,7 @@ class ModelTierServiceTest extends TestCase
         $this->assertSame('gift/model', $freeExecution->primary_model);
         $this->assertSame('openrouter', $freeExecution->ai_provider);
         $this->assertSame(['gift/backup'], $freeExecution->fallback_models);
+        $this->assertTrue((bool) $freeExecution->strict_model_priority);
         $this->assertSame('pro/model', $professionalExecution->primary_model);
         $this->assertSame('replicate', $professionalExecution->ai_provider);
     }

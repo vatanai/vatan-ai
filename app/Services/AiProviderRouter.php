@@ -233,19 +233,6 @@ class AiProviderRouter
             $provider = $providers[$index] ?? $this->findModel($modelId)?->provider;
             if (!$provider) continue;
 
-            // ساخت محصول تصویری وطن باید فقط از OpenRouter عبور کند. مسیرهای
-            // Fal/Replicate قبلاً به‌عنوان fallback ذخیره شده بودند و وقتی
-            // OpenRouter خطای ورودی می‌دادند، هم زمان کاربر را می‌گرفتند و هم
-            // با اعتبار مستقل خودشان شکست می‌خوردند.
-            if ($provider !== 'openrouter') {
-                Log::notice('AiProviderRouter: non-OpenRouter image route ignored', [
-                    'product_id' => $product->id,
-                    'model' => $modelId,
-                    'provider' => $provider,
-                ]);
-                continue;
-            }
-
             if (!ProviderStatus::isEnabled($provider)) {
                 $disabledProviders[] = $provider;
                 continue;
@@ -286,7 +273,11 @@ class AiProviderRouter
         // شکست حساب/سرویس، از بین مدل‌های فعال و هم‌نوع OpenRouter یک مسیر
         // پشتیبان واقعی پیدا کن؛ این مسیر فقط برای همان درخواست ساخته می‌شود
         // و تنظیم ذخیره‌شده‌ی محصول را تغییر نمی‌دهد.
-        foreach ($this->runtimeOpenRouterFallbacks($product, $attemptedRoutes) as $fallback) {
+        $runtimeFallbacks = $product->getAttribute('strict_model_priority')
+            ? []
+            : $this->runtimeOpenRouterFallbacks($product, $attemptedRoutes);
+
+        foreach ($runtimeFallbacks as $fallback) {
             $modelId = $fallback['model'];
             $provider = 'openrouter';
             if (isset($exhaustedProviders[$provider])) continue;

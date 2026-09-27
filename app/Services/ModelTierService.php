@@ -161,6 +161,10 @@ class ModelTierService
         $executionProduct->ai_provider = $primary['provider'];
         $executionProduct->fallback_models = ! empty($fallback['model_id']) ? [$fallback['model_id']] : [];
         $executionProduct->fallback_model_providers = ! empty($fallback['provider']) ? [$fallback['provider']] : [];
+        // معماری سه‌کیفیتی یک ترتیب صریح و تجاری دارد. بعد از شکست مدل اصلی و
+        // جایگزین همین کیفیت، روتر نباید یک مدل تصادفی و احتمالاً گران‌تر از
+        // کاتالوگ انتخاب کند؛ خطا باید کنترل‌شده به کاربر برگردد.
+        $executionProduct->strict_model_priority = true;
 
         return $executionProduct;
     }

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Product;
 use App\Services\AiProviderRouter;
 use App\Services\OpenRouterService;
+use App\Services\Providers\FalImageProvider;
 use App\Support\ProviderStatus;
 use Mockery;
 use Tests\TestCase;
@@ -95,5 +96,40 @@ class AiProviderRouterTest extends TestCase
             ->generateForProduct($product, 'test', '1K', '1:1');
 
         $this->assertSame('openai/gpt-image-1-mini', $result['model']);
+    }
+
+    public function test_configured_fal_fallback_runs_after_openrouter_primary_fails(): void
+    {
+        ProviderStatus::setEnabled('fal', true);
+
+        $product = new Product([
+            'primary_model' => 'google/gemini-3.1-flash-lite-image',
+            'ai_provider' => 'openrouter',
+            'fallback_models' => ['fal-ai/nano-banana/edit'],
+            'fallback_model_providers' => ['fal'],
+            'timeout' => 90,
+        ]);
+        $product->strict_model_priority = true;
+
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->andThrow(new \RuntimeException('OpenRouter timed out'));
+
+        $fal = Mockery::mock(FalImageProvider::class);
+        $fal->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'fal-ai/nano-banana/edit'
+                && $candidate->ai_provider === 'fal'
+            )
+            ->andReturn(['model' => 'fal-ai/nano-banana/edit', 'data' => []]);
+
+        $result = (new AiProviderRouter($openRouter, $fal))
+            ->generateForProduct($product, 'test', '1K', '1:1');
+
+        $this->assertSame('fal-ai/nano-banana/edit', $result['model']);
     }
 }
