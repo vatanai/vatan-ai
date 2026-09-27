@@ -316,7 +316,13 @@ class AiProviderRouter
         // شکست حساب/سرویس، از بین مدل‌های فعال و هم‌نوع OpenRouter یک مسیر
         // پشتیبان واقعی پیدا کن؛ این مسیر فقط برای همان درخواست ساخته می‌شود
         // و تنظیم ذخیره‌شده‌ی محصول را تغییر نمی‌دهد.
-        $runtimeFallbacks = $product->getAttribute('strict_model_priority')
+        // ترتیب صریح کیفیت فقط وقتی باید جلوی fallback پویا را بگیرد که
+        // واقعاً یک مسیر OpenRouter در همان ترتیب امتحان شده باشد. بعضی
+        // محصولات قدیمی strict هستند اما تمام مسیرهایشان Fal/Replicate است؛
+        // خالی‌شدن حساب آن provider نباید کل محصول را از کار بیندازد.
+        $hasAttemptedOpenRouter = collect(array_keys($attemptedRoutes))
+            ->contains(fn (string $route): bool => str_starts_with($route, 'openrouter|'));
+        $runtimeFallbacks = $product->getAttribute('strict_model_priority') && $hasAttemptedOpenRouter
             ? []
             : $this->runtimeOpenRouterFallbacks($product, $attemptedRoutes);
 
@@ -415,6 +421,12 @@ class AiProviderRouter
         $requiresImageInput = $taskType !== 'text_to_image'
             || (int) ($product->min_reference_images ?? 0) > 0;
 
+        $preferredModels = [
+            'google/gemini-3.1-flash-lite-image',
+            'openai/gpt-image-1-mini',
+            'google/gemini-2.5-flash-image',
+        ];
+
         return AiModel::query()
             ->where('provider', 'openrouter')
             ->where('is_active', true)
@@ -427,6 +439,9 @@ class AiProviderRouter
                 return (string) $model->openrouter_model_id !== '' && !isset($attemptedRoutes[$route]);
             })
             ->sortBy(fn (AiModel $model): array => [
+                ($preferredIndex = array_search((string) $model->openrouter_model_id, $preferredModels, true)) === false
+                    ? count($preferredModels)
+                    : $preferredIndex,
                 abs($model->pricingGrade() - $targetGrade),
                 $model->lab_priority === null ? 999 : (int) $model->lab_priority,
                 (int) $model->id,

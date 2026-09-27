@@ -534,6 +534,22 @@ class OpenRouterService implements AiImageProviderInterface
             }
         }
 
+        if (str_starts_with($modelId, 'bytedance-seed/seedream-')) {
+            // Seedream در Images API فقط اندازه‌های کاتالوگ خودش را قبول
+            // می‌کند. کیفیت‌های کسب‌وکاری وطن (مثل 720/1080/2160) باید قبل
+            // از ارسال تبدیل شوند؛ در غیر این صورت OpenRouter درخواست را با
+            // خطای 400 رد می‌کند و یک تلاش سالم از دست می‌رود.
+            $resolution = strtolower((string) ($payload['resolution'] ?? ''));
+            $payload['resolution'] = match ($resolution) {
+                '480', '480p', '512' => '512',
+                '720', '720p', '768' => '768',
+                '1080', '1080p', '1k' => '1K',
+                '1440', '1440p', '2k' => '2K',
+                '2160', '2160p', '4k' => '4K',
+                default => $payload['resolution'] ?? '1K',
+            };
+        }
+
         if (str_starts_with($modelId, 'microsoft/mai-image-')) {
             // MAI Image 2.5 فقط aspect_ratio، n و input_references را اعلام
             // کرده است؛ فیلدهای رزولوشن/فرمت عمومی نباید به آن ارسال شوند.
