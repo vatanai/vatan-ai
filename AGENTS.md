@@ -106,5 +106,3 @@ find . -type f -perm 600 -not -path "./vendor/*" -not -path "./node_modules/*" -
 ```
 
 (`.env` عمداً مستثنی شده — اون باید خصوصی بمونه و اصلاً دیپلوی هم نمی‌شه.)
-
-## Imported Claude Cowork project instructions

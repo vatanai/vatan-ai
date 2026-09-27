@@ -1,334 +1,105 @@
-# AIPIX — PROJECT BRAIN 🧠
-> این فایل مغز مشترک همه چت‌هاست. هر چت جدید اول این فایل رو کامل بخون.
-> آخرین آپدیت: ۱۴۰۵/۰۴/۰۶
+# وطن (Vatan AI / AIPIX) — نقشه‌ی کلی پروژه
+
+> **این فایل باید در ابتدای هر چت/سشن جدید خونده بشه** — درست مثل `CLAUDE.md` و `AGENTS.md` در همین ریشه‌ی پروژه.
+> این نسخه در ۲۷ شهریور ۱۴۰۵ (۲۷ سپتامبر ۲۰۲۶) کاملاً بازنویسی شد، چون نسخه‌ی قبلی این فایل به‌شدت قدیمی بود و وضعیت واقعی پروژه رو نشون نمی‌داد (مثلاً می‌گفت «بک‌اند شروع نشده» در حالی که پروژه الان صدها migration و کنترلر واقعی داره).
+>
+> **قانون این فایل:** فقط واقعیت‌های تایید‌شده از روی کد اینجا نوشته می‌شه، نه حدس یا «درصد پیشرفت». برای جزئیات دقیق هر بخش، همیشه خود کد یا مستند اختصاصی همون بخش رو بررسی کن.
 
 ---
 
 ## ۱. پروژه چیست
 
-**AIPIX** یک پلتفرم SaaS تولید محتوای AI است.
+**Vatan AI** (نام داخلی قدیمی: AIPIX) یک پلتفرم SaaS تولید محتوای تصویری/ویدیویی با هوش مصنوعیه، روی دامنه‌ی **aivatan.com**.
 
-- کاربر عکس/متن/ویدیو آپلود می‌کند
-- سیستم از طریق OpenRouter به مدل‌های AI وصل می‌شود
-- خروجی تصویر/ویدیو تولید و به کاربر تحویل داده می‌شود
-- کاربر نه پرامپت می‌بیند، نه مدل AI — کاملاً بلک‌باکس
-- خروجی‌ها در پروفایل کاربر ذخیره می‌شوند
+- کاربر عکس/متن آپلود می‌کنه
+- سیستم از طریق OpenRouter / Fal / (قبلاً Liara AI — الان در حال retire شدن، به `doc/`های مرتبط نگاه کن) به مدل‌های AI وصل می‌شه
+- خروجی تصویر/ویدیو تولید و در گالری/پروفایل کاربر ذخیره می‌شه
+- کاربر نه پرامپت می‌بینه نه اسم مدل — کاملاً بلک‌باکس
+- سیستم کامل بازاریابی/فروش هم داره: رفرال، کمپین‌های تلگرامی، پلن/اشتراک با درگاه پرداخت زیبال، تخفیف، و یک CRM داخلی برای تیم (پرسنل، تسک، حضور و غیاب)
 
-**مخاطب:** عموم مردم، کسب‌وکارها، خلاقان محتوا
+این دیگه یک پروژه‌ی نوپا نیست — یک سیستم بزرگ و در حال تولید زنده‌ست: **۲۸۶ migration**، **~۱۴۰ مدل Eloquent**، **~۸۰ کنترلر**.
 
 ---
 
-## ۲. Tech Stack
+## ۲. Tech Stack (تایید‌شده از composer.json / package.json)
 
 | لایه | ابزار |
 |------|-------|
-| Backend | Laravel (PHP) |
-| Frontend | Blade + Tailwind CSS |
-| Icons | Font Awesome 6.5 |
-| Charts | Chart.js 4.4 |
-| Font | Vazirmatn (RTL) |
-| AI | OpenRouter API |
-| Hosting | Cloudiva |
+| Backend | Laravel 13، PHP ^8.3 |
+| Frontend | Blade + Tailwind CSS v4 (بیلد با Vite) |
+| Icons | Font Awesome 7 (رایگان) |
+| Charts | Chart.js 4.5 |
+| Database | MySQL |
+| AI | OpenRouter، Fal، (Liara AI در حال حذف) |
+| پرداخت | درگاه Zibal |
+| پیامک | ملی‌پیامک |
+| تلگرام | بات اختصاصی + Mini App |
+| اتوماسیون | n8n (استودیو ویدیو) |
+| هاستینگ تولیدی | **Cloudiva** — سرویس `vatanai-laravel-cloudiva`، دامنه `aivatan.com` (به هیچ‌وجه Liara نیست — فایل‌های هاستینگ Liara حذف و آرشیو شدن) |
 | Direction | RTL (فارسی) |
 
----
+**سند رسمی طراحی ظاهری پنل ادمین:** `doc/design-system.md` (و قوانین سخت‌گیرانه‌اش در `CLAUDE.md`/`AGENTS.md`) — رنگ/فونت/کلاس اینجا تکرار نمی‌شه تا با اون سند واگرا نشه.
 
-## ۳. Design System
-
-### CSS Variables (Dark Theme — پیش‌فرض):
-```css
---bg: #0c0c10        /* پس‌زمینه اصلی */
---s1: #111116        /* لایه اول کارت */
---s2: #16161c        /* لایه دوم کارت */
---b1: #222230        /* بوردر */
---b2: #2e2e3e        /* بوردر hover */
---text: #ffffff      /* متن اصلی */
---text2: #a8c4a8     /* متن ثانویه */
---text3: #4d7a56     /* متن کم‌رنگ */
---green: #0BBF53     /* سبز اصلی برند */
---accent: #a07af5    /* بنفش اصلی */
---red: #f05c5c       /* خطا */
---orange: #f5923a    /* هشدار */
-```
-
-### Design Tokens:
-- **border-radius کارت:** 12px
-- **border-radius دکمه:** 8px
-- **border-radius badge:** 99px (pill)
-- **فونت:** Vazirmatn — وزن‌های 300، 400، 500، 600، 700، 800
-- **سایز متن پایه:** 13px
-- **فاصله‌گذاری:** gap-based (نه margin)
-
-### کلاس‌های پایه موجود (در admin.css):
-```
-.crm-btn          → دکمه پایه
-.crm-btn-primary  → دکمه اصلی (accent)
-.crm-btn-danger   → دکمه خطرناک (red)
-.crm-badge        → badge پایه
-.crm-badge-green/purple/amber/red/blue/gray
-.crm-stat-card    → کارت آمار
-.crm-form-input   → input استاندارد
-.crm-modal        → مودال
-.crm-section-title → تیتر بخش
-```
+**راهنمای رسمی دیپلوی:** `doc/deployment-guide.md` (و `CLAUDE.md`/`AGENTS.md`) — روال دقیق دیپلوی هم اینجا تکرار نمی‌شه، همیشه از همونجا بخون.
 
 ---
 
-## ۴. ساختار فایل‌ها
+## ۳. نقشه‌ی ماژول‌ها (از routes/web.php و resources/views)
 
-```
-resources/views/
-├── layouts/
-│   ├── admin.blade.php      ← Layout پنل ادمین (sidebar اینجاست)
-│   ├── app.blade.php        ← Layout سایت کاربر
-│   └── nav.blade.php        ← ناوبار سایت
-├── admin/
-│   ├── dashboard.blade.php  ← ✅ موجود (CRM + داشبورد) — 3256 خط
-│   ├── crm.blade.php        ← ⚠️ خالی
-│   ├── products.blade.php   ← ⚠️ خالی — باید ساخته شود
-│   ├── products-create.blade.php ← ⚠️ خالی — باید ساخته شود
-│   └── source.html          ← reference قدیمی
-├── app/
-│   ├── home.blade.php       ← ✅ موجود
-│   ├── explore.blade.php    ← ✅ موجود
-│   ├── create.blade.php     ← ✅ موجود
-│   ├── profile.blade.php    ← ✅ موجود
-│   └── ...
-└── site/
-    ├── home.blade.php       ← ✅ موجود
-    └── index.blade.php      ← ✅ موجود
+### سایت عمومی (بدون لاگین) — `resources/views/site/`, `resources/views/articles/`
+لندینگ اصلی، صفحه‌ی قیمت‌گذاری، درباره‌ما، مرکز مقالات (`/articles`، با دسته/نویسنده/فید RSS/سایت‌مپ)، لندینگ‌های سئویی مستقل (مثل `/increase-image-quality`، `/character-sheet`)، پرداخت/رسید.
 
-public/admin/
-├── css/admin.css            ← ✅ کامل — کلاس‌های CRM
-└── js/
-    ├── admin.js
-    ├── crm.js               ← ✅ موجود (localStorage-based)
-    └── crm_js_final.js
+### اپلیکیشن کاربر (بعد از ورود عمدتاً) — prefix `/app`, `resources/views/app/`
+خانه، اکسپلور/ترندها، کاتالوگ محصولات، صفحه‌ی «بساز» (تک‌محصولی و استودیوی چندمرحله‌ای)، تاریخچه‌ی تولید عکس/ویدیو، گالری/پروفایل کاربر (فایل‌ها، ذخیره‌شده‌ها، لایک‌ها، رفرال، پروفایل چهره برای consistency)، دانلود محصول.
 
-routes/web.php               ← ✅ موجود
-doc/design-system-colors.txt ← ✅ موجود
-```
+### احراز هویت
+ورود/ثبت‌نام با OTP پیامکی (ملی‌پیامک) و رمز، فراموشی رمز، تکمیل پروفایل بعد از OTP.
+
+### پنل مدیریت — prefix `/admin`, `resources/views/admin/**`
+زیرسیستم‌های اصلی (هرکدوم پوشه‌ی مجزا توی `resources/views/admin/`):
+- **محصولات/دسته‌بندی/تخفیف/سفارشات/پلن‌ها** — `products`, `categories`, `discounts`, `orders`, `plans`
+- **مدل‌های AI** — `ai-models` (انتخاب مدل per-محصول، fallback، تست مدل)
+- **کردیت خدمات** — `service-credits` (شارژ/مصرف کردیت کاربران)
+- **مالی (Finance)** — `finance` (تراکنش، پرونده مالی، مرجع مالی)
+- **رشد و بازاریابی (Growth/Marketing)** — `growth`, `marketing-technology` (اتریبیوشن، لینک، منبع داده)
+- **تلگرام** — `telegram` (بات، کمپین، کاربران، Mini App)
+- **CRM داخلی تیم** — کنترلرهای `Admin/Crm/*` (پرسنل، تسک، حضور و غیاب، پروژه، فعالیت، کامنت) — **این CRM داخلیه، برای مدیریت خود تیم وطن، نه CRM مشتریان**
+- **رفرال/همکاری فروش** — `referrals` + مدل‌های `SalesPartner*`, `CustomerJourney*`
+- **آزمایشگاه (Lab)** — `lab` (تست تجربی مدل‌ها/خروجی)
+- **استودیو ویدیو** — `create-studio` + `VideoStudioController`
+- **گالری کاربران** — `UserGalleryController` (مدیریت محتوای تولیدشده‌ی کاربران، پیشنهاد، اطلاع‌رسانی)
+- **مقالات/بلاگ**، **صفحات سایت (Home Builder / SitePage)**، **بنرها/ترندها (Explore)**، **پشتیبانی (Support tickets)**، **پیامک (SMS campaigns/templates)**، **مدیریت کاربران/ادمین‌ها**
+
+> برای هر تغییر روی `resources/views/admin/**` یا `layouts/admin.blade.php`: قوانین سخت‌گیرانه‌ی `CLAUDE.md`/`AGENTS.md` رو رعایت کن (توکن رنگ، پارشیال مشترک، ساختار صفحه، افزایش شماره‌ی VERSION).
+
+### وب‌هوک‌ها و API
+`/webhooks/telegram`, `/webhooks/telegram/product`, `AiWebhookController` (نتیجه‌ی تولید AI async)، `GrowthDataWebhookController`, `MarketingMetaWebhookController`.
 
 ---
 
-## ۵. Routes موجود
+## ۴. گیت و دیپلوی
 
-```php
-// Root
-GET /                        → redirect('/site/home')
-GET /site                    → redirect('/site/home')
-
-// Site (Landing)
-GET /site/home               → site.home          (name: site.home)
-GET /site/pricing            → site.pricing        (name: site.pricing)
-GET /site/about              → site.about          (name: site.about)
-
-// Auth
-GET /login                   → login.index         (name: login)
-
-// App (User)
-GET /app                     → redirect('/app/home')
-GET /app/home                → app.home            (name: app.home)
-GET /app/explore             → app.explore         (name: app.explore)
-GET /app/create              → app.create          (name: app.create)
-GET /app/ideas               → app.ideas           (name: app.ideas)
-GET /app/profile             → app.profile         (name: app.profile)
-GET /app/product/{id}        → app.product         (name: app.product)
-
-// Admin
-GET /admin/dashboard                   → admin.dashboard        (name: admin.dashboard)
-GET /admin/dashboard/crm               → admin.crm              (name: admin.crm)
-GET /admin/dashboard/products          → admin.products         (name: admin.products)
-GET /admin/dashboard/products/create   → admin.products-create  (name: admin.products-create)
-GET /admin/dashboard/users             → admin.users            (name: admin.users)
-GET /admin/dashboard/jobs              → admin.jobs             (name: admin.jobs)
-GET /admin/dashboard/payments          → admin.payments         (name: admin.payments)
-GET /admin/dashboard/bloggers          → admin.bloggers         (name: admin.bloggers)
-```
+- ریموت: `https://github.com/vatanai/vatan-ai.git`
+- برنچ کاری فعلی معمولاً: `crm-integration`
+- **قبل از هر دیپلوی طبق `CLAUDE.md`/`AGENTS.md` عمل کن** — سرویس صحیح `vatanai-laravel-cloudiva` روی Cloudiva هست، Liara دیگه استفاده نمی‌شه.
+- دیتابیس لوکال و Production کاملاً جدا هستن (به بخش مرتبط توی `CLAUDE.md` نگاه کن).
 
 ---
 
-## ۶. معماری محصول
+## ۵. لاگ تغییرات مهم زیرساختی (نه فیچر) — برای اینکه چت‌های بعدی بی‌خبر نباشن
 
-### مدل داده محصول:
-هر محصول دارای این بخش‌هاست:
-- **Identity:** نام، دسته، وضعیت، تگ‌ها
-- **Media:** thumbnail، sample output، before/after
-- **AI Config:** مدل primary + fallback‌ها، prompt template
-- **Input Schema:** فیلدهای دینامیک از کاربر (عکس/متن/ویدیو/لینک/تاریخ/...)
-- **Output Config:** نوع خروجی، رزولوشن، watermark
-- **Pricing:** کردیت، سطح قیمتی، تخفیف
-- **Display:** استایل کارت، badge، رنگ
-
-### دسته‌بندی محصولات:
-```
-PEOPLE / BUSINESS / EVENTS / FAMILY / KIDS / PETS / ENTERTAINMENT / PRODUCTS / AVATARS / VIDEOS
-```
-
-### AI Pipeline:
-کاربر submit → Validation → ساخت prompt → OpenRouter (Primary) → اگه fail شد Fallback → Post-process → ذخیره → تحویل
+| تاریخ | تغییر |
+|---|---|
+| ۱۴۰۵/۰۶/۲۷ (2026-09-27) | فایل‌های هاستینگ قدیمی Liara (`liara.json`, `.liaraignore`, Dockerfile/entrypoint قدیمی) حذف و در `archive/liara-legacy-hosting-20260927.zip` آرشیو شدن. هاست تولیدی فقط Cloudiva است. |
+| ۱۴۰۵/۰۶/۲۷ (2026-09-27) | این فایل (`PROJECT.md`) کاملاً بازنویسی شد؛ نسخه‌ی قدیمی (که وضعیت واقعی پروژه رو نشون نمی‌داد) در `archive/PROJECT.md-legacy-20260927.md` نگه‌داری شده. |
+| قبل‌تر | خطای ۵۰۰ صفحه‌ی فایل‌های پروفایل (`ProfileController::mediaPage`) به‌خاطر متغیر `$mediaKind` که توی closureهای تودرتو منتقل نمی‌شد رفع شد (کامیت `b7a0225`). الگوی مشابهی جای دیگه‌ی پروژه پیدا نشد. |
 
 ---
 
-## ۷. وضعیت کلی پروژه
+## ۶. برای شروع کار در یک چت جدید
 
-| بخش | وضعیت | درصد |
-|-----|--------|------|
-| طراحی معماری | ✅ Done | 100% |
-| Design System | ✅ Done | 100% |
-| Layout ادمین | ✅ Done | 85% |
-| Dashboard/CRM | ✅ Done | 90% |
-| پنل محصولات | ⚠️ Empty | 0% |
-| سایت کاربر (UI) | 🔄 Partial | 40% |
-| Backend/API | ❌ Not Started | 0% |
-| AI Integration | 🔄 Basic Test | 10% |
-| CRM آنلاین | ❌ localStorage only | 5% |
-| Deploy | 🔄 در حال انجام | — |
-
----
-
-## ۸. تسک رجیستری
-
-### 🔴 بحرانی (باید همین الان):
-- [ ] Deploy روی Cloudiva
-- [ ] ساخت admin/products.blade.php
-- [ ] ساخت admin/products-create.blade.php
-
-### 🟠 مهم (این هفته):
-- [ ] اضافه کردن منوی محصولات به Sidebar
-- [ ] ساخت admin/products-categories.blade.php
-- [ ] ساخت admin/products-pricing.blade.php
-- [ ] ساخت admin/orders.blade.php
-- [ ] ساخت admin/analytics.blade.php
-
-### 🟡 ضروری (هفته آینده):
-- [ ] Database migrations + Models
-- [ ] Products API
-- [ ] Orders API + AI Pipeline
-- [ ] CRM آنلاین (localStorage → database)
-
-### 🟢 بعداً:
-- [ ] Users API + Auth کامل
-- [ ] Payment integration
-- [ ] Marketing pages
-- [ ] Launch
-
----
-
-## ۹. چت‌بندی پروژه
-
-> هر چت = یک فایل/صفحه. بعد از اتمام هر چت، وضعیت همین فایل رو آپدیت کن.
-
-### 🧠 مغز پروژه — BRAIN (همیشه open):
-- نگه‌داری PROJECT.md
-- تصمیمات استراتژیک
-- هیچ کدی اینجا نمی‌زنیم
-
-### 📦 پنل ادمین:
-| اسم چت | فایل هدف | وضعیت |
-|--------|----------|--------|
-| پنل ادمین — منو و سایدبار | layouts/admin.blade.php | ⏳ Pending |
-| طراحی صفحه داشبورد *(موجود)* | admin/dashboard.blade.php | 🔄 نیاز به KPI محصولات |
-| پنل ادمین — لیست محصولات | admin/products.blade.php | ⏳ Pending |
-| پنل ادمین — ثبت محصول (بخش اول) | products-create — Identity+Media | ⏳ Pending |
-| پنل ادمین — ثبت محصول (بخش دوم) | products-create — AI Config+Schema | ⏳ Pending |
-| پنل ادمین — ثبت محصول (بخش سوم) | products-create — Output+Pricing+Display | ⏳ Pending |
-| پنل ادمین — دسته‌بندی‌ها | admin/products-categories.blade.php | ⏳ Pending |
-| پنل ادمین — قیمت‌گذاری و تخفیف | admin/products-pricing.blade.php | ⏳ Pending |
-| پنل ادمین — سفارشات | admin/orders.blade.php | ⏳ Pending |
-| پنل ادمین — گزارش و آنالیتیکس | admin/analytics.blade.php | ⏳ Pending |
-
-### 🌐 سایت کاربر:
-| اسم چت | فایل هدف | وضعیت |
-|--------|----------|--------|
-| طراحی صفحه لندینگ aivatan.com *(موجود)* | site/home.blade.php | 🔄 Partial |
-| طراحی صفحه خانه اپلیکیشن *(موجود)* | app/home.blade.php | 🔄 Partial |
-| طراحی صفحه اکسپلور | app/explore.blade.php | ⏳ Pending |
-| طراحی صفحه بساز *(موجود)* | app/create.blade.php | 🔄 Partial |
-| طراحی صفحه پروفایل *(موجود)* | app/profile.blade.php | 🔄 Partial |
-| صفحه لاگین *(موجود)* | login/index.blade.php | 🔄 Partial |
-
-### 🎨 سیستم طراحی:
-| اسم چت | هدف | وضعیت |
-|--------|-----|--------|
-| طراحی دکمه های سفارشی *(موجود)* | کامپوننت‌های مشترک | 🔄 Partial |
-
-### ⚙️ بک‌اند:
-| اسم چت | هدف | وضعیت |
-|--------|-----|--------|
-| بک‌اند — دیتابیس و مدل‌ها | migrations + models | ⏳ Pending |
-| بک‌اند — API محصولات | ProductController | ⏳ Pending |
-| بک‌اند — API سفارشات و AI | OrderController + OpenRouter | ⏳ Pending |
-| بک‌اند — API کاربران و احراز هویت | UserController + Auth | ⏳ Pending |
-
-### 📊 سی‌آر‌ام:
-| اسم چت | هدف | وضعیت |
-|--------|-----|--------|
-| سی‌آر‌ام آنلاین | localStorage → database + API | ⏳ Pending |
-
----
-
-## ۱۰. دسترسی‌های هر چت
-
-هر چت جدید باید:
-1. **این فایل رو بخونه** → `PROJECT.md`
-2. **فولدر پروژه رو وصل کنه** → `/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/ai-vatan-v4`
-3. **فقط فایل هدف خودش رو ویرایش کنه**
-4. **به فایل‌های دیگه دست نزنه**
-5. **بعد از اتمام، وضعیت رو اینجا آپدیت کنه**
-
----
-
-## ۱۱. Role Prompts
-
-### 🎨 UI Agent:
-```
-تو یه UI/UX متخصص هستی که روی پروژه AIPIX کار می‌کنی.
-اول PROJECT.md رو بخون. فولدر پروژه رو وصل کن.
-هدف این چت: [نام فایل]
-Design system: Vazirmatn + Tailwind + Font Awesome + Chart.js
-CSS variables توی PROJECT.md هستن. کلاس‌های موجود رو توی admin.css رعایت کن.
-فقط فایل هدف رو ویرایش کن. گام به گام و بعد از تأیید من.
-```
-
-### ⚙️ Backend Agent:
-```
-تو یه Laravel developer هستی که روی پروژه AIPIX کار می‌کنی.
-اول PROJECT.md رو بخون. فولدر پروژه رو وصل کن.
-هدف این چت: [نام migration/model/controller]
-Stack: Laravel + MySQL + OpenRouter API
-فقط فایل‌های هدف رو ایجاد/ویرایش کن. به فایل‌های موجود دست نزن مگه ضرورت باشه.
-```
-
-### 📊 CRM Agent:
-```
-تو یه full-stack developer هستی که CRM پروژه AIPIX رو آنلاین می‌کنی.
-اول PROJECT.md رو بخون. فولدر پروژه رو وصل کن.
-هدف: تبدیل CRM از localStorage به database + API
-فایل CRM موجود: public/admin/js/crm.js (2204 خط — localStorage-based)
-```
-
----
-
-## ۱۲. قوانین کار (Rules)
-
-1. **هیچ‌وقت** بدون تأیید شروع نکن
-2. **گام به گام** پیش برو — یه گام = یه commit
-3. **فقط فایل هدف** رو لمس کن
-4. **بعد از هر گام** وضعیت PROJECT.md رو آپدیت کن
-5. **لیمیت چت** رو در نظر بگیر — اگه چت سنگین شد، بگو که چت جدید باز کنیم
-6. **Design system** رو همیشه رعایت کن
-7. **RTL** رو فراموش نکن
-
----
-
-## ۱۳. Deployment
-
-- **هاستینگ:** Cloudiva (`vatanai-laravel-cloudiva`)
-- **فایل config:** تنظیمات سرویس در پنل Cloudiva
-- **مسیر پروژه:** `/Users/mohsenmac/01. mohsen/VATAN WEB/01. vatan ai/website/ai-vatan-v4`
-- **مسیر در Bash:** `/sessions/nice-quirky-pasteur/mnt/ai-vatan-v4/`
-
----
-
-*آخرین آپدیت توسط: BRAIN Chat — تاریخ: ۱۴۰۵/۰۴/۰۶*
+1. این فایل + `CLAUDE.md`/`AGENTS.md` رو بخون (باید خودکار لود بشن چون فولدر پروژه وصله).
+2. اگه کار روی پنل ادمینه، `doc/design-system.md` رو هم چک کن.
+3. اگه کار روی دیپلوی/زیرساخته، `doc/deployment-guide.md` رو چک کن.
+4. کار رو با گام‌های کوچیک و تایید کاربر پیش ببر؛ بدون تایید صریح، دیپلوی/پوش/تغییر دیتابیس تولیدی انجام نده.
+5. بعد از هر تغییر زیرساختی مهم (نه هر فیچر کوچیک)، یه خط توی جدول بخش ۵ همین فایل اضافه کن.
