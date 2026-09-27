@@ -22,40 +22,36 @@ class ServiceCreditOverviewService
         // داشبورد نباید برای دریافت موجودی سرویس‌های خارجی منتظر بماند.
         // در بازهٔ کوتاه، آخرین تصویر معتبر نمایش داده می‌شود و پس از منقضی‌شدن
         // آن، Laravel بروزرسانی را در پایان چرخهٔ درخواست انجام می‌دهد.
-        if ($dashboardOnly) {
-            $cacheKey = 'finance.dashboard_credit_overview';
+        $cacheKey = $dashboardOnly ? 'finance.dashboard_credit_overview' : 'finance.admin_credit_overview';
 
-            try {
-                $overview = Cache::flexible(
-                    $cacheKey,
-                    [30, 300],
-                    fn (): array => $this->cachePayload($this->buildOverview($dashboardOnly)),
-                );
+        try {
+            $overview = Cache::flexible(
+                $cacheKey,
+                [30, 300],
+                fn (): array => $this->cachePayload($this->buildOverview($dashboardOnly)),
+            );
 
-                // کش فقط داده‌ی ساده نگه می‌دارد؛ مدل‌ها قبل از رسیدن به View
-                // دوباره در حافظه ساخته می‌شوند.
-                if (!is_array($overview) || !is_array($overview['accounts'] ?? null)) {
-                    throw new \UnexpectedValueException('Invalid cached dashboard credit overview.');
-                }
-
-                return $this->hydrateCachedOverview($overview);
-            } catch (\Throwable $exception) {
-                report($exception);
-                Cache::forget($cacheKey);
-
-                $freshOverview = $this->buildOverview($dashboardOnly);
-                $safePayload = $this->cachePayload($freshOverview);
-                $rebuiltCache = Cache::flexible(
-                    $cacheKey,
-                    [30, 300],
-                    fn (): array => $safePayload,
-                );
-
-                return $this->hydrateCachedOverview($rebuiltCache);
+            // کش فقط داده‌ی ساده نگه می‌دارد؛ مدل‌ها قبل از رسیدن به View
+            // دوباره در حافظه ساخته می‌شوند.
+            if (!is_array($overview) || !is_array($overview['accounts'] ?? null)) {
+                throw new \UnexpectedValueException('Invalid cached dashboard credit overview.');
             }
-        }
 
-        return $this->buildOverview($dashboardOnly);
+            return $this->hydrateCachedOverview($overview);
+        } catch (\Throwable $exception) {
+            report($exception);
+            Cache::forget($cacheKey);
+
+            $freshOverview = $this->buildOverview($dashboardOnly);
+            $safePayload = $this->cachePayload($freshOverview);
+            $rebuiltCache = Cache::flexible(
+                $cacheKey,
+                [30, 300],
+                fn (): array => $safePayload,
+            );
+
+            return $this->hydrateCachedOverview($rebuiltCache);
+        }
     }
 
     /**
@@ -104,10 +100,10 @@ class ServiceCreditOverviewService
             : ServiceCreditTransaction::query()
                 ->whereIn('service_credit_account_id', $accountIds)
                 ->selectRaw(
-                    'service_credit_account_id, SUM(amount) as total_usage, '
+                    'service_credit_account_id, SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as total_usage, '
                     . 'SUM(CASE WHEN type = ? AND occurred_at >= ? AND occurred_at <= ? THEN amount ELSE 0 END) as month_usage, '
                     . 'SUM(CASE WHEN type = ? AND occurred_at >= ? AND occurred_at <= ? THEN amount ELSE 0 END) as today_usage',
-                    ['usage', now()->startOfMonth(), now()->endOfMonth(), 'usage', today()->startOfDay(), today()->endOfDay()]
+                    ['usage', 'usage', now()->startOfMonth(), now()->endOfMonth(), 'usage', today()->startOfDay(), today()->endOfDay()]
                 )
                 ->groupBy('service_credit_account_id')
                 ->get()
@@ -137,10 +133,6 @@ class ServiceCreditOverviewService
                 $todayUsage = (float) GeneratedImage::whereDate('created_at', today())->sum('cost');
                 $monthUsage = (float) GeneratedImage::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('cost');
             }
-        } elseif ($account->sync_driver === 'liara') {
-            $live = $this->liaraCredits();
-            $todayUsage = (float) ($live['today_usage'] ?? 0);
-            $monthUsage = (float) ($live['month_usage'] ?? 0);
         } elseif ($account->sync_driver === 'fal') {
             $live = $this->falCredits();
         } elseif ($account->sync_driver === 'replicate') {
@@ -247,41 +239,6 @@ class ServiceCreditOverviewService
             }
 
             return ['online' => false, 'error' => 'دریافت آنلاین موجودی ناموفق بود'];
-        });
-    }
-
-    private function liaraCredits(): array
-    {
-        return Cache::remember('finance.liara_credits', now()->addMinutes(3), function () {
-            $token = config('services.liara.account_api_token');
-            if (!$token) return ['online' => false, 'error' => 'توکن API حساب Liara تنظیم نشده است'];
-
-            try {
-                $client = Http::withToken($token)->acceptJson()->timeout(12);
-                $base = rtrim(config('services.liara.account_api_url'), '/');
-                $billing = $client->get($base . '/v1/billing')->throw()->json();
-                $usage = $client->get($base . '/v1/usage-report')->throw()->json();
-
-                // API حساب Liara اعداد مالی را به تومان برمی‌گرداند؛ واحد داخلی این بخش ریال است.
-                $balanceIrr = (float) data_get($billing, 'user.balance', 0) * 10;
-                $hourlyIrr = (float) data_get($usage, 'totalHourlyPrice', 0) * 10;
-                $monthlyIrr = (float) data_get($usage, 'totalMonthlyPrice', 0) * 10;
-                $tehranNow = now('Asia/Tehran');
-                $elapsedToday = ($tehranNow->timestamp - $tehranNow->copy()->startOfDay()->timestamp) / 3600;
-
-                return [
-                    'online' => true,
-                    'balance_is_live' => true,
-                    'balance' => $balanceIrr,
-                    'today_usage' => $hourlyIrr * $elapsedToday,
-                    'month_usage' => $monthlyIrr,
-                    'hourly_usage' => $hourlyIrr,
-                    'usage_is_estimate' => true,
-                ];
-            } catch (\Throwable $e) {
-                report($e);
-                return ['online' => false, 'error' => 'دریافت آنلاین اطلاعات Liara ناموفق بود'];
-            }
         });
     }
 

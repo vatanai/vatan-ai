@@ -23,6 +23,7 @@ use App\Models\ReferralReward;
 use App\Models\ReferralVisit;
 use App\Services\UserGalleryService;
 use App\Services\UserStorageService;
+use App\Services\ProfileMediaThumbnailService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -362,20 +363,33 @@ class UserGalleryController extends Controller
             $pairs = collect($ordersByUser->get($user->id, collect()))->map(function (Order $order) use ($inputItems, $imagesByOrder, $videosByOrder, $outputItemsByOrder, &$consumedImageIds, &$consumedVideoIds): ?array {
                 $orderImages = collect($imagesByOrder->get($order->id, collect()));
                 $orderVideos = collect($videosByOrder->get($order->id, collect()));
-                $snapshots = collect($outputItemsByOrder->get((string) $order->id, collect()));
-                $snapshotImageIds = $snapshots->where('source_type', 'output_image')->pluck('source_id')->map(fn ($id) => (int) $id);
-                $snapshotVideoIds = $snapshots->where('source_type', 'output_video')->pluck('source_id')->map(fn ($id) => (int) $id);
-                $outputs = $snapshots->map(function (UserGalleryItem $item) use ($order): array {
-                    $isVideo = $item->source_type === 'output_video';
-                    return [
-                        'type' => $isVideo ? 'video' : 'image',
-                        'url' => $isVideo
-                            ? route('admin.users.gallery.original', [$order->user_id, $item->id])
-                            : route('admin.users.gallery.preview', [$order->user_id, $item->id]),
-                        'label' => $isVideo ? 'خروجی ویدیو' : 'خروجی عکس',
-                        'id' => $item->id,
-                    ];
-                })->concat($orderImages->reject(fn (GeneratedImage $image): bool => $snapshotImageIds->contains((int) $image->id))->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس', 'id' => $image->id]))
+                $snapshots = collect($outputItemsByOrder->get((string) $order->id, collect()))
+                    ->map(function (UserGalleryItem $item) use ($order): ?array {
+                        $isVideo = $item->source_type === 'output_video';
+                        $url = $this->galleryItemMediaUrl($item, (int) $order->user_id, !$isVideo);
+                        if (!$url) {
+                            return null;
+                        }
+
+                        return [
+                            'type' => $isVideo ? 'video' : 'image',
+                            'url' => $url,
+                            'label' => $isVideo ? 'خروجی ویدیو' : 'خروجی عکس',
+                            'id' => $item->id,
+                            'source_id' => (int) $item->source_id,
+                        ];
+                    })
+                    ->filter()
+                    ->values();
+                // فقط snapshot واقعاً موجود باید جای فایل اصلی را بگیرد؛ رکوردی که
+                // فایلش از storage حذف شده نباید fallback سالم را هم پنهان کند.
+                $snapshotImageIds = $snapshots->where('type', 'image')->pluck('source_id');
+                $snapshotVideoIds = $snapshots->where('type', 'video')->pluck('source_id');
+                $outputs = $snapshots->map(function (array $snapshot): array {
+                    unset($snapshot['source_id']);
+
+                    return $snapshot;
+                })->concat($orderImages->reject(fn (GeneratedImage $image): bool => $snapshotImageIds->contains((int) $image->id))->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $this->generatedImageMediaUrl($image), 'label' => 'خروجی عکس', 'id' => $image->id]))
                     ->concat($orderVideos->reject(fn (GeneratedVideo $video): bool => $snapshotVideoIds->contains((int) $video->id))->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو', 'id' => $video->id]))
                     ->filter(fn (array $output): bool => filled($output['url']))->values();
                 if ($outputs->isEmpty()) {
@@ -398,16 +412,21 @@ class UserGalleryController extends Controller
 
             // خروجی‌هایی که سفارششان حذف شده یا به سفارش متصل نشده‌اند نیز گم نشوند.
             $orphanOutputs = $userOutputItems->filter(fn (UserGalleryItem $item): bool => ! is_numeric(data_get($item->metadata, 'order_id')))
-                ->map(function (UserGalleryItem $item) use ($user): array {
+                ->map(function (UserGalleryItem $item) use ($user): ?array {
                     $isVideo = $item->source_type === 'output_video';
+                    $url = $this->galleryItemMediaUrl($item, (int) $user->id, !$isVideo);
+                    if (!$url) {
+                        return null;
+                    }
+
                     return [
                         'type' => $isVideo ? 'video' : 'image',
-                        'url' => $isVideo ? route('admin.users.gallery.original', [$user->id, $item->id]) : route('admin.users.gallery.preview', [$user->id, $item->id]),
+                        'url' => $url,
                         'label' => $isVideo ? 'خروجی ویدیو' : 'خروجی عکس',
                     ];
                 })
                 ->concat($userImages->reject(fn (GeneratedImage $image): bool => $consumedImageIds->contains($image->id))
-                ->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $image->imageUrl(), 'label' => 'خروجی عکس'])
+                ->map(fn (GeneratedImage $image): array => ['type' => 'image', 'url' => $this->generatedImageMediaUrl($image), 'label' => 'خروجی عکس'])
                 ->concat($userVideos->reject(fn (GeneratedVideo $video): bool => $consumedVideoIds->contains($video->id))
                     ->map(fn (GeneratedVideo $video): array => ['type' => 'video', 'url' => $video->playbackUrl(), 'label' => 'خروجی ویدیو'])))
                 ->filter(fn (array $output): bool => filled($output['url']))->values();
@@ -812,18 +831,23 @@ class UserGalleryController extends Controller
 
     private function inputItemsForBuild(Order $order, $items): array
     {
-        $media = collect($items)->map(function (UserGalleryItem $item) use ($order): array {
+        $media = collect($items)->map(function (UserGalleryItem $item) use ($order): ?array {
             $mime = strtolower((string) $item->mime_type);
             $type = str_starts_with($mime, 'video/') ? 'video' : (str_starts_with($mime, 'text/') ? 'text' : 'image');
+            $url = $type === 'text'
+                ? route('admin.orders.show', $order)
+                : $this->galleryItemMediaUrl($item, (int) $order->user_id, $type === 'image');
+            if (!$url) {
+                return null;
+            }
+
             return [
                 'type' => $type,
-                'url' => $type === 'image'
-                    ? route('admin.users.gallery.preview', [$order->user_id, $item->id])
-                    : route('admin.users.gallery.original', [$order->user_id, $item->id]),
+                'url' => $url,
                 'label' => $type === 'video' ? 'ویدیوی ورودی' : ($type === 'text' ? 'متن ورودی' : 'عکس ورودی'),
                 'text' => $type === 'text' ? data_get($item->metadata, 'text') : null,
             ];
-        })->values();
+        })->filter()->values();
 
         if ($media->isNotEmpty()) {
             return $media->take(6)->all();
@@ -834,7 +858,16 @@ class UserGalleryController extends Controller
             array_merge((array) data_get($payload, 'source_upload_paths', []), [data_get($payload, 'source_upload_path')]),
             fn ($path): bool => is_scalar($path) && filled($path),
         ))))
-            ->map(fn ($path): array => ['type' => 'image', 'url' => filter_var($path, FILTER_VALIDATE_URL) ? (string) $path : asset('storage/' . ltrim((string) $path, '/')), 'label' => 'عکس ورودی', 'text' => null]);
+            ->map(function ($path): ?array {
+                if (filter_var($path, FILTER_VALIDATE_URL)) {
+                    return ['type' => 'image', 'url' => (string) $path, 'label' => 'عکس ورودی', 'text' => null];
+                }
+
+                $path = ltrim((string) $path, '/');
+                return Storage::disk('public')->exists($path)
+                    ? ['type' => 'image', 'url' => asset('storage/' . $path), 'label' => 'عکس ورودی', 'text' => null]
+                    : null;
+            })->filter();
         $inputPrompt = data_get($payload, 'prompt') ?: data_get($payload, 'fields.prompt');
         if (filled($inputPrompt)) {
             $fallback->prepend(['type' => 'text', 'url' => route('admin.orders.show', $order), 'label' => 'متن ورودی', 'text' => (string) $inputPrompt]);
@@ -847,6 +880,32 @@ class UserGalleryController extends Controller
         }
 
         return $fallback->take(6)->values()->all();
+    }
+
+    private function galleryItemMediaUrl(UserGalleryItem $item, int $userId, bool $preferThumbnail = false): ?string
+    {
+        $disk = Storage::disk($item->disk ?: 'user_gallery');
+        if ($preferThumbnail && $item->thumbnail_path && $disk->exists($item->thumbnail_path)) {
+            return route('admin.users.gallery.thumbnail', [$userId, $item->id]);
+        }
+
+        $previewPath = $item->preview_path ?: $item->original_path;
+        if ($preferThumbnail && $previewPath && $disk->exists($previewPath)) {
+            return route('admin.users.gallery.preview', [$userId, $item->id]);
+        }
+
+        return $item->original_path && $disk->exists($item->original_path)
+            ? route('admin.users.gallery.original', [$userId, $item->id])
+            : null;
+    }
+
+    private function generatedImageMediaUrl(GeneratedImage $image): ?string
+    {
+        if (!$image->imageUrl()) {
+            return null;
+        }
+
+        return route('admin.users.gallery.generated-image-thumbnail', $image);
     }
 
     private function statusLabel(?string $status): string
@@ -886,6 +945,18 @@ class UserGalleryController extends Controller
         $this->ensureItemBelongsToUser($user, $item);
 
         return $gallery->response($item);
+    }
+
+    public function generatedImageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
+    {
+        return $thumbnails->serve($generatedImage, 160);
+    }
+
+    public function thumbnail(User $user, UserGalleryItem $item, UserGalleryService $gallery)
+    {
+        $this->ensureItemBelongsToUser($user, $item);
+
+        return $gallery->response($item, false, true);
     }
 
     public function bulkDestroy(Request $request, UserGalleryService $gallery)

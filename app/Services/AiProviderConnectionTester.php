@@ -25,9 +25,6 @@ class AiProviderConnectionTester
                 ->get((string) config('services.fal.platform_base_url', 'https://api.fal.ai') . '/v1/models/pricing', [
                     'endpoint_id' => 'fal-ai/flux/schnell',
                 ]),
-            'liara' => Http::withToken($credentials['api_key'])
-                ->connectTimeout(15)->timeout($credentials['timeout'])
-                ->get(rtrim($credentials['base_url'], '/') . '/models'),
             default => Http::withToken($credentials['api_key'])
                 ->connectTimeout(15)->timeout($credentials['timeout'])
                 ->get(rtrim($credentials['base_url'], '/') . '/models'),

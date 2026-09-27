@@ -258,12 +258,16 @@ class Product extends Model
         if (data_get($configuration, 'quality_architecture_enabled', true) === false) {
             return [];
         }
-        // معماری اصلی سه‌گرید منبع قطعی است؛ مسیر قدیمی free_quality_models
-        // فقط برای محصولات قبلی که هنوز مدل استاندارد اصلی ندارند fallback است.
-        $selection = data_get($configuration, "quality_models.{$qualityKey}", []);
-        if ((!is_array($selection) || empty($selection)) && $isFreeUser && $qualityKey === 'standard') {
-            $selection = data_get($configuration, 'free_quality_models.standard', []);
+        // کاربر بدون پلن برای کیفیت استاندارد باید ابتدا از مسیر اقتصادی مخصوص
+        // اعتبار هدیه استفاده کند؛ در نبود آن، تنظیم عمومی همان کیفیت fallback است.
+        if ($isFreeUser && $qualityKey === 'standard') {
+            $freeSelection = data_get($configuration, 'free_quality_models.standard', []);
+            if (is_array($freeSelection) && ! empty($freeSelection)) {
+                return $freeSelection;
+            }
         }
+
+        $selection = data_get($configuration, "quality_models.{$qualityKey}", []);
 
         return is_array($selection) ? $selection : [];
     }

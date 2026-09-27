@@ -1,5 +1,71 @@
 <script>
   (function () {
+    var lazyMedia = document.querySelectorAll('.trends-card-media[data-src]:not(video)');
+
+    function revealMedia(media) {
+      var source = media.getAttribute('data-src');
+      if (!source) return;
+      media.src = source;
+      media.removeAttribute('data-src');
+    }
+
+    if ('IntersectionObserver' in window) {
+      var imageObserver = new IntersectionObserver(function (entries, observer) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          revealMedia(entry.target);
+          observer.unobserve(entry.target);
+        });
+      }, { rootMargin: '80px 0px' });
+
+      lazyMedia.forEach(function (media) { imageObserver.observe(media); });
+    } else {
+      lazyMedia.forEach(revealMedia);
+    }
+
+    function loadAndPlayVideo(card) {
+      var video = card.querySelector('[data-src].trends-card-video');
+      if (!video) {
+        video = card.querySelector('.trends-card-video');
+      }
+      if (!video) return;
+
+      var source = video.getAttribute('data-src');
+      if (source) {
+        video.src = source;
+        video.removeAttribute('data-src');
+        video.addEventListener('playing', function () {
+          video.classList.add('is-ready');
+        }, { once: true });
+      }
+
+      var playback = video.play();
+      if (playback && typeof playback.catch === 'function') {
+        playback.catch(function () {});
+      }
+    }
+
+    function pauseVideo(card) {
+      var video = card.querySelector('.trends-card-video');
+      if (video && !video.paused) video.pause();
+    }
+
+    document.querySelectorAll('[data-trends-video-card]').forEach(function (card) {
+      card.addEventListener('pointerenter', function (event) {
+        if (event.pointerType !== 'touch') loadAndPlayVideo(card);
+      });
+      card.addEventListener('pointerleave', function () { pauseVideo(card); });
+      card.addEventListener('focusin', function () { loadAndPlayVideo(card); });
+      card.addEventListener('focusout', function () { pauseVideo(card); });
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) return;
+      document.querySelectorAll('[data-trends-video-card]').forEach(pauseVideo);
+    });
+  }());
+
+  (function () {
     document.querySelectorAll('[data-trends-tab-group]').forEach(function (group) {
       var tabs = group.querySelectorAll('[data-tab-target]');
       var panels = group.querySelectorAll('.trends-tab-panel');

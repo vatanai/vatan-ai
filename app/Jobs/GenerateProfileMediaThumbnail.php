@@ -37,6 +37,7 @@ class GenerateProfileMediaThumbnail implements ShouldQueue, ShouldBeUnique
         }
 
         $thumbnails->generate($image);
+        $thumbnails->generate($image, 160);
     }
 
     public function uniqueId(): string

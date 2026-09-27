@@ -422,6 +422,8 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/service-credits', [ServiceCreditController::class, 'index'])->name('service-credits.index');
     Route::get('/service-credits/providers', [ServiceCreditController::class, 'providers'])->name('service-credits.providers');
     Route::get('/service-credits/transactions', [ServiceCreditController::class, 'transactions'])->name('service-credits.transactions');
+    Route::get('/service-credits/build-transactions', [ServiceCreditController::class, 'buildTransactions'])->name('service-credits.build-transactions');
+    Route::get('/service-credits/images/{generatedImage}/thumbnail', [ServiceCreditController::class, 'imageThumbnail'])->name('service-credits.image-thumbnail');
     Route::post('/service-credits/accounts', [ServiceCreditController::class, 'storeAccount'])->name('service-credits.accounts.store');
     Route::put('/service-credits/accounts/{account}', [ServiceCreditController::class, 'updateAccount'])->name('service-credits.accounts.update');
     Route::post('/service-credits/transactions', [ServiceCreditController::class, 'storeTransaction'])->name('service-credits.transactions.store');
@@ -484,6 +486,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
 
     // گالری ورودی‌های کاربران؛ مسیرهای فایل قبل از پارامترهای عمومی کاربران ثبت شده‌اند.
     Route::get('/users/gallery', [UserGalleryController::class, 'index'])->name('users.gallery.index');
+    Route::get('/users/gallery/generated-images/{generatedImage}/thumbnail', [UserGalleryController::class, 'generatedImageThumbnail'])->name('users.gallery.generated-image-thumbnail');
     Route::delete('/users/gallery/bulk', [UserGalleryController::class, 'bulkDestroy'])->name('users.gallery.bulk-destroy');
     Route::get('/users/face-profiles', [UserGalleryController::class, 'faceProfiles'])->name('users.face-profiles.index');
     Route::post('/users/gallery/settings', [UserGalleryController::class, 'updateSettings'])->name('users.gallery.settings');
@@ -495,6 +498,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/users/{user}/gallery/referral-report', [UserGalleryController::class, 'referralReport'])->name('users.gallery.referral-report');
     Route::get('/users/{user}/gallery/referral-report/export', [UserGalleryController::class, 'referralReportCsv'])->name('users.gallery.referral-report.export');
     Route::get('/users/{user}/gallery/{item}/preview', [UserGalleryController::class, 'preview'])->name('users.gallery.preview');
+    Route::get('/users/{user}/gallery/{item}/thumbnail', [UserGalleryController::class, 'thumbnail'])->name('users.gallery.thumbnail');
     Route::get('/users/{user}/gallery/{item}/original', [UserGalleryController::class, 'original'])->name('users.gallery.original');
     Route::delete('/users/{user}/gallery/{item}', [UserGalleryController::class, 'destroy'])->name('users.gallery.destroy');
 

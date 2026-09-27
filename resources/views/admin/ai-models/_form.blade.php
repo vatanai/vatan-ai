@@ -25,7 +25,7 @@
         <label class="form-label">نسخه‌ی مدل (`Replicate`)<input class="input-pro mt-1 w-full ltr text-left font-mono" dir="ltr" name="external_version" value="{{ old('external_version', $model->external_version ?? '') }}" placeholder="اختیاری برای مدل‌های رسمی"></label>
         <label class="form-label">provider
           <select class="input-pro mt-1 w-full" name="provider" id="provider-select" required>
-            @foreach(['fal' => 'Fal.ai', 'replicate' => 'Replicate', 'liara' => 'Liara AI', 'openrouter' => 'OpenRouter'] as $key => $label)
+            @foreach(['fal' => 'Fal.ai', 'replicate' => 'Replicate', 'openrouter' => 'OpenRouter'] as $key => $label)
               <option value="{{ $key }}" @selected($currentProvider === $key)>{{ $label }}</option>
             @endforeach
           </select>

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class LabRun extends Model
 {
@@ -15,6 +16,12 @@ class LabRun extends Model
         'build_seconds' => 'integer', 'tokens_used' => 'integer',
         'started_at' => 'datetime', 'completed_at' => 'datetime',
     ];
+    protected static function booted(): void
+    {
+        static::creating(function (LabRun $run): void {
+            $run->build_uuid ??= (string) Str::uuid();
+        });
+    }
     public function experiment(): BelongsTo { return $this->belongsTo(LabExperiment::class, 'lab_experiment_id'); }
     public function aiModel(): BelongsTo { return $this->belongsTo(AiModel::class); }
     public function outputs(): HasMany { return $this->hasMany(LabRunOutput::class); }

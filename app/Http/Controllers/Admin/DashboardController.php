@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Services\ServiceCreditOverviewService;
-use App\Services\ServiceCreditTransactionReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -125,9 +123,8 @@ class DashboardController extends Controller
                     'icon' => 'fa-gauge-high',
                     'url' => route('admin.service-credits.providers'),
                     'shortcuts' => [
-                        ['title' => 'نمای کلی اعتبار', 'url' => route('admin.service-credits.index'), 'icon' => 'fa-gauge-high'],
-                        ['title' => 'میزان اعتبار پرووایدرها', 'url' => route('admin.service-credits.providers'), 'icon' => 'fa-battery-three-quarters'],
-                        ['title' => 'بررسی تراکنش‌ها', 'url' => route('admin.service-credits.transactions'), 'icon' => 'fa-arrow-right-arrow-left'],
+                        ['title' => 'مرکز اعتبار سرویس‌ها', 'url' => route('admin.service-credits.providers'), 'icon' => 'fa-battery-three-quarters'],
+                        ['title' => 'ساخت و تراکنش‌ها', 'url' => route('admin.service-credits.transactions'), 'icon' => 'fa-arrow-right-arrow-left'],
                         ['title' => 'مدیریت اعتبار کاربران', 'url' => route('admin.users.tokens'), 'icon' => 'fa-user-tag'],
                     ],
                 ],
@@ -233,29 +230,18 @@ class DashboardController extends Controller
             ]);
         }
 
-        // سرویس‌های سنگین فقط پس از انتخاب مرکز فرماندهی resolve می‌شوند.
-        $creditData = app(ServiceCreditOverviewService::class)->get(true);
-        $creditTransactions = app(ServiceCreditTransactionReport::class)->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
-
         return view('admin.dashboard', [
             ...$this->viewData(),
             'dashboardSection' => null,
-            'creditOverview' => $creditData,
-            'creditTransactions' => $creditTransactions,
         ]);
     }
 
     public function fragment(string $section)
     {
         if ($section === 'home') {
-            $creditData = app(ServiceCreditOverviewService::class)->get(true);
-            $creditTransactions = app(ServiceCreditTransactionReport::class)->latest(5, (float) ($creditData['exchange']['rate'] ?? 0));
-
             return response(view('admin.partials.pages.dashboard-main', [
                 ...$this->viewData(),
                 'dashboardSection' => null,
-                'creditOverview' => $creditData,
-                'creditTransactions' => $creditTransactions,
             ])->render())->header('Content-Type', 'text/html; charset=UTF-8');
         }
 

@@ -6,6 +6,7 @@ use App\Support\Jalali;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GeneratedImage extends Model
 {
@@ -14,6 +15,7 @@ class GeneratedImage extends Model
         'product_id',
         'order_id',
         'ai_provider_request_id',
+        'build_uuid',
         'image_path',
         'user_prompt',
         'cost',
@@ -24,6 +26,18 @@ class GeneratedImage extends Model
     protected $casts = [
         'expires_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (GeneratedImage $image): void {
+            if ($image->order_id && ($image->isDirty('order_id') || ! $image->build_uuid)) {
+                $image->build_uuid = Order::query()->whereKey($image->order_id)->value('build_uuid');
+            } elseif ($image->ai_provider_request_id && ($image->isDirty('ai_provider_request_id') || ! $image->build_uuid)) {
+                $image->build_uuid = AiProviderRequest::query()->whereKey($image->ai_provider_request_id)->value('build_uuid');
+            }
+            $image->build_uuid ??= (string) Str::uuid();
+        });
+    }
 
     public function user(): BelongsTo
     {
@@ -78,6 +92,6 @@ class GeneratedImage extends Model
 
         return Storage::disk('public')->exists($this->image_path)
             ? asset('storage/' . ltrim($this->image_path, '/'))
-            : asset('storage/' . ltrim($this->image_path, '/'));
+            : null;
     }
 }

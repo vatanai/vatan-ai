@@ -20,9 +20,9 @@ class ServiceCreditSynchronizer
         }
 
         Cache::forget('finance.openrouter_credits');
-        Cache::forget('finance.liara_credits');
         Cache::forget('finance.fal_credits');
         Cache::forget('finance.replicate_credits');
+        Cache::forget('finance.admin_credit_overview');
         $accounts = $this->overview->get()['accounts'];
         $result = ['synced' => 0, 'transactions_created' => 0, 'changes' => []];
 

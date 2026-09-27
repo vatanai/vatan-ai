@@ -54,7 +54,11 @@
   .trends-time-column h3 { margin: 0 0 8px; color: var(--vatan-text-page); font-size: 12px; font-weight: 800; }
 
   .trends-card { position: relative; display: block; overflow: hidden; aspect-ratio: 3 / 4; border-radius: 13px; background: rgba(255,255,255,.06); color: inherit; text-decoration: none; isolation: isolate; }
+  .trends-card--deferred { content-visibility: auto; contain-intrinsic-size: auto 320px; }
   .trends-card-media { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; z-index: 0; }
+  .trends-card-media[data-src] { background: rgba(255,255,255,.035); }
+  .trends-card-video { opacity: 0; transition: opacity .2s ease; }
+  .trends-card-video.is-ready { opacity: 1; }
   .trends-card-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, rgba(0,0,0,.2), transparent 38%, rgba(0,0,0,.86)); }
   .trends-download-badge { position: absolute; top: 8px; left: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 1px solid rgba(255,255,255,.18); border-radius: 7px; background: rgba(0,0,0,.55); color: #fff; font-size: 9px; font-weight: 800; backdrop-filter: blur(8px); }
   .trends-card-type { position: absolute; top: 9px; right: 9px; z-index: 2; color: rgba(255,255,255,.85); font-size: 11px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }

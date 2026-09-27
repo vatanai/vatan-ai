@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Jalali;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class GeneratedVideo extends Model
 {
@@ -13,6 +14,7 @@ class GeneratedVideo extends Model
         'product_id',
         'order_id',
         'ai_provider_request_id',
+        'build_uuid',
         'external_request_id',
         'idempotency_key',
         'correlation_id',
@@ -68,6 +70,18 @@ class GeneratedVideo extends Model
         'completed_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (GeneratedVideo $video): void {
+            if ($video->order_id && ($video->isDirty('order_id') || ! $video->build_uuid)) {
+                $video->build_uuid = Order::query()->whereKey($video->order_id)->value('build_uuid');
+            } elseif ($video->ai_provider_request_id && ($video->isDirty('ai_provider_request_id') || ! $video->build_uuid)) {
+                $video->build_uuid = AiProviderRequest::query()->whereKey($video->ai_provider_request_id)->value('build_uuid');
+            }
+            $video->build_uuid ??= (string) Str::uuid();
+        });
+    }
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function product(): BelongsTo { return $this->belongsTo(Product::class); }

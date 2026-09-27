@@ -27,7 +27,7 @@ class AdminProductAiQuickAssignmentTest extends TestCase
     {
         $product = $this->makeProduct('single-ai');
         $originalStructure = $product->only(['prompt_template', 'fallback_models', 'input_schema']);
-        $model = AiModel::query()->where('provider', 'liara')->where('liara_plan', 'turing')->firstOrFail();
+        $model = AiModel::query()->where('provider', 'openrouter')->where('is_active', true)->firstOrFail();
 
         $response = $this->actingAs($this->admin, 'admin')->patchJson(
             route('admin.products.update_ai_model', $product),
@@ -81,7 +81,7 @@ class AdminProductAiQuickAssignmentTest extends TestCase
     {
         Storage::fake('public');
         $category = Category::query()->firstOrFail();
-        $model = AiModel::query()->where('provider', 'liara')->firstOrFail();
+        $model = AiModel::query()->where('provider', 'openrouter')->where('is_active', true)->firstOrFail();
         $slug = 'local-registration-check-' . uniqid();
 
         $response = $this->actingAs($this->admin, 'admin')->post(

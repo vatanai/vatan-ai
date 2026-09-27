@@ -106,7 +106,8 @@
                   <div class="relative min-w-0 min-h-0 border-l border-[var(--border)]">
                     @if(!empty($pair['before'][0]))
                       @php($media = $pair['before'][0])
-                      @if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="w-full h-full object-cover" preload="metadata" muted playsinline></video>@else<img src="{{ $media['url'] }}" alt="{{ $media['label'] }}" class="w-full h-full object-cover" loading="lazy">@endif
+                      <span class="absolute inset-0 flex items-center justify-center px-2 text-center text-[9px] text-[var(--text-soft)]">تصویر در دسترس نیست</span>
+                      @if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline data-gallery-media></video>@else<img src="{{ $media['url'] }}" alt="" class="absolute inset-0 w-full h-full object-cover" loading="lazy" data-gallery-media>@endif
                       @if(count($pair['before']) > 1)<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-main)]">+{{ count($pair['before']) - 1 }}</span>@endif
                     @else
                       <span class="w-full h-full flex items-center justify-center text-center text-[9px] text-[var(--text-soft)]">ورودی ثبت نشده</span>
@@ -116,7 +117,8 @@
                   <div class="relative min-w-0 min-h-0">
                     @if(!empty($pair['after'][0]))
                       @php($media = $pair['after'][0])
-                      <a href="{{ $media['url'] }}" target="_blank" rel="noopener" class="block w-full h-full">@if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="w-full h-full object-cover" preload="metadata" muted playsinline></video>@else<img src="{{ $media['url'] }}" alt="{{ $media['label'] }}" class="w-full h-full object-cover" loading="lazy">@endif</a>
+                      <span class="absolute inset-0 flex items-center justify-center px-2 text-center text-[9px] text-[var(--text-soft)]">تصویر در دسترس نیست</span>
+                      <a href="{{ $media['url'] }}" target="_blank" rel="noopener" class="absolute inset-0 block">@if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="w-full h-full object-cover" preload="metadata" muted playsinline data-gallery-media></video>@else<img src="{{ $media['url'] }}" alt="" class="w-full h-full object-cover" loading="lazy" data-gallery-media>@endif</a>
                       @if(count($pair['after']) > 1)<span class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-main)]">+{{ count($pair['after']) - 1 }}</span>@endif
                     @else
                       <span class="w-full h-full flex items-center justify-center text-center text-[9px] text-[var(--text-soft)]">خروجی ثبت نشده</span>
@@ -141,6 +143,16 @@
   </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-gallery-media]').forEach((media) => {
+    const hideBrokenMedia = () => {
+      media.hidden = true;
+      const link = media.closest('a');
+      if (link) link.removeAttribute('href');
+    };
+    media.addEventListener('error', hideBrokenMedia, { once: true });
+    if (media.tagName === 'IMG' && media.complete && media.naturalWidth === 0) hideBrokenMedia();
+  });
+
   const cardForm = document.getElementById('gallery-card-bulk-form');
   if (cardForm) {
     const master = document.getElementById('gallery-card-select-all');

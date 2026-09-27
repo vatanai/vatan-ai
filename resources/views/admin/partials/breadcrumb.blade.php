@@ -45,6 +45,11 @@
         }
     } elseif (request()->is('admin/service-credits*')) {
         $addBreadcrumb('اعتبار سرویس‌ها');
+        if (request()->is('admin/service-credits/transactions')) {
+            $addBreadcrumb('ساخت و تراکنش‌ها');
+        } else {
+            $addBreadcrumb('مرکز اعتبار سرویس‌ها');
+        }
     } elseif (request()->is('admin/users*')) {
         $addBreadcrumb('کاربران');
         if (request()->is('admin/users/gallery*')) {

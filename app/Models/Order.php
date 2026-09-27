@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
     protected $fillable = [
-        'order_number', 'user_id', 'product_id', 'discount_id', 'status',
+        'order_number', 'build_uuid', 'user_id', 'product_id', 'discount_id', 'status',
         'payment_status', 'processing_status', 'original_credits',
         'discount_credits', 'final_credits', 'refunded_credits', 'discount_code',
         'promotional_credits_used', 'paid_credits_used',
@@ -32,6 +33,7 @@ class Order extends Model
     protected static function booted(): void
     {
         static::creating(function (Order $order) {
+            $order->build_uuid ??= (string) Str::uuid();
             if (!$order->order_number) {
                 do {
                     $number = 'ORD-' . now()->format('ymd') . '-' . random_int(1000, 9999);

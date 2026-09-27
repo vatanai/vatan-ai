@@ -94,8 +94,9 @@ class ModelTierServiceTest extends TestCase
         $freeExecution = $service->executionProductForQuality($product, null, 'standard', 'free');
         $professionalExecution = $service->executionProductForQuality($product, null, 'professional', 'pro');
 
-        $this->assertSame('standard/model', $freeExecution->primary_model);
-        $this->assertSame('replicate', $freeExecution->ai_provider);
+        $this->assertSame('gift/model', $freeExecution->primary_model);
+        $this->assertSame('openrouter', $freeExecution->ai_provider);
+        $this->assertSame(['gift/backup'], $freeExecution->fallback_models);
         $this->assertSame('pro/model', $professionalExecution->primary_model);
         $this->assertSame('replicate', $professionalExecution->ai_provider);
     }

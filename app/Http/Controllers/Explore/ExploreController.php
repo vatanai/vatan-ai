@@ -41,7 +41,11 @@ class ExploreController extends Controller
     public function trending(TrendsService $trends, SitePageService $pages)
     {
         $page = $pages->byKey('trends');
-        $data = $trends->buildPage((int) ($page?->content('items_per_page', 24) ?? 24));
+        $data = $trends->buildPage(
+            (int) ($page?->content('items_per_page', 24) ?? 24),
+            (int) ($page?->content('cache_ttl', 300) ?? 300),
+            (int) ($page?->version ?? 1),
+        );
 
         return view('app.trends.index', $data);
     }

@@ -38,8 +38,8 @@
   @php $isCreditMenu = request()->is('admin/service-credits*'); @endphp
   <div class="nav-link {{ $isCreditMenu ? 'active' : '' }}" onclick="toggleSub('service-credits-submenu', this)"><div class="nav-icon"><i class="fa-solid fa-gauge-high"></i></div><div class="nav-label">اعتبار سرویس‌ها</div>@if(isset($creditOverview) && ($creditOverview['totals']['low_count'] ?? 0) > 0)<span class="nav-status-badge warn">{{ $creditOverview['totals']['low_count'] }}</span>@endif<i class="fa-solid fa-chevron-down nav-chev {{ $isCreditMenu ? 'open' : '' }}"></i></div>
   <div class="submenu {{ $isCreditMenu ? 'open' : '' }}" id="service-credits-submenu"><div class="sub-track">
-    <a href="{{ route('admin.service-credits.providers') }}" class="sub-item {{ request()->is('admin/service-credits/providers') || request()->is('admin/service-credits') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">میزان اعتبار پرووایدرها</div></a>
-    <a href="{{ route('admin.service-credits.transactions') }}" class="sub-item {{ request()->is('admin/service-credits/transactions') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">بررسی تراکنش‌ها</div></a>
+    <a href="{{ route('admin.service-credits.providers') }}" class="sub-item {{ request()->is('admin/service-credits/providers') || request()->is('admin/service-credits') || request()->is('admin/service-credits/build-transactions') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">مرکز اعتبار سرویس‌ها</div></a>
+    <a href="{{ route('admin.service-credits.transactions') }}" class="sub-item {{ request()->is('admin/service-credits/transactions') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ساخت و تراکنش‌ها</div></a>
   </div></div>
 </div>
 

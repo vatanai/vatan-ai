@@ -20,13 +20,13 @@
 
     <div class="trends-feed-grid">
       @forelse($trendProducts as $index => $card)
-        @include('app.trends.partials.product-card', ['card' => $card])
+        @include('app.trends.partials.product-card', ['card' => $card, 'cardIndex' => $index])
 
         @foreach($trendBanners as $banner)
-          @if(in_array($banner->display_target, ['desktop', 'both'], true) && $banner->row_number * 4 === $index + 1)
+          @if(in_array($banner['display_target'], ['desktop', 'both'], true) && $banner['row_number'] * 4 === $index + 1)
             @include('app.trends.partials.banner', ['banner' => $banner, 'device' => 'desktop'])
           @endif
-          @if(in_array($banner->display_target, ['mobile', 'both'], true) && $banner->row_number * 2 === $index + 1)
+          @if(in_array($banner['display_target'], ['mobile', 'both'], true) && $banner['row_number'] * 2 === $index + 1)
             @include('app.trends.partials.banner', ['banner' => $banner, 'device' => 'mobile'])
           @endif
         @endforeach

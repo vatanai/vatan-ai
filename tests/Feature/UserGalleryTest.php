@@ -38,11 +38,20 @@ class UserGalleryTest extends TestCase
         $this->assertTrue($item->expires_at->isFuture());
         Storage::disk('user_gallery')->assertExists($item->original_path);
         Storage::disk('user_gallery')->assertExists($item->preview_path);
+        Storage::disk('user_gallery')->assertExists($item->thumbnail_path);
+        $this->assertSame('image/webp', $item->thumbnail_mime_type);
         $this->assertDatabaseHas('user_gallery_events', ['action' => 'stored', 'user_id' => $user->id]);
+
+        $thumbnailResponse = $gallery->response($item, false, true);
+        $cacheControl = (string) $thumbnailResponse->headers->get('Cache-Control');
+        $this->assertStringContainsString('private', $cacheControl);
+        $this->assertStringContainsString('immutable', $cacheControl);
+        $this->assertStringContainsString('max-age=31536000', $cacheControl);
 
         $gallery->deleteItem($item);
         Storage::disk('user_gallery')->assertMissing($item->original_path);
         Storage::disk('user_gallery')->assertMissing($item->preview_path);
+        Storage::disk('user_gallery')->assertMissing($item->thumbnail_path);
         $this->assertDatabaseMissing('user_gallery_items', ['id' => $item->id]);
     }
 

@@ -9,14 +9,12 @@ use Illuminate\Support\Facades\Cache;
  * ══════════════════════════════════════════════════════════════════════
  * ProviderStatus — کلید مرکزی روشن/خاموش سرویس‌های هوش مصنوعی
  * ─────────────────────────────────────────────────────────────────────
- * هدف: بدون حذف یا خراب‌کردن هیچ کدی از OpenRouterService یا LiaraAiService،
- * فقط با یک کلید ساده در پنل ادمین بتوانیم یک provider را «فریز» کنیم.
+ * با یک کلید ساده در پنل ادمین می‌توان هر provider را «فریز» کرد.
  *
  * ذخیره‌سازی: علاوه بر Cache، وضعیت صریح ادمین داخل settings همان provider
  * ذخیره می‌شود تا با پاک‌شدن Cache یا تغییر workerها از بین نرود.
  *
  * پیش‌فرض‌ها (اولین بار که کاربر هنوز چیزی تنظیم نکرده):
- *   - liara      → true  (فعال — سرویس اصلی داخل ایران، بدون VPN)
  *   - openrouter → true  (فعال — قابل انتخاب در ثبت محصول)
  *   - fal/replicate → اگر کلید داشته باشند فعال، وگرنه خاموش
  *
@@ -27,11 +25,10 @@ use Illuminate\Support\Facades\Cache;
 class ProviderStatus
 {
     /** لیست providerهای شناخته‌شده در سیستم. */
-    public const PROVIDERS = ['liara', 'openrouter', 'fal', 'replicate'];
+    public const PROVIDERS = ['openrouter', 'fal', 'replicate'];
 
     /** مقادیر پیش‌فرض روشن/خاموش برای اولین بار (تا وقتی ادمین دستی عوض نکرده). */
     protected const DEFAULTS = [
-        'liara'      => true,
         'openrouter' => true,
         'fal'        => false,
         'replicate'  => false,
@@ -95,7 +92,7 @@ class ProviderStatus
     /**
      * وضعیت همه providerها به‌صورت آرایه — برای نمایش در UI ادمین.
      *
-     * @return array<string,bool>  ['liara' => true, 'openrouter' => false]
+     * @return array<string,bool>  ['openrouter' => true, 'fal' => false]
      */
     public static function all(): array
     {

@@ -19,7 +19,7 @@ class AiTestController extends Controller
 
     /**
      * تست مستقیم پرامپت از پنل ادمین (صفحه افزودن محصول — گام دوم)
-     * پرامپت را می‌گیرد، به سرویس مناسب (لیارا یا OpenRouter) می‌فرستد، و عکس تولیدشده را برمی‌گرداند.
+     * پرامپت را به سرویس فعال می‌فرستد و عکس تولیدشده را برمی‌گرداند.
      * مسیر: POST /admin/ai-models/test-prompt
      */
     public function testPrompt(Request $request)

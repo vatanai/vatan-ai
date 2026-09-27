@@ -9,21 +9,60 @@ use App\Models\TrendBanner;
 use App\Models\TrendOccasion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class TrendsService
 {
-    public function buildPage(int $limit = 24): array
+    public function buildPage(int $limit = 24, int $cacheTtl = 300, int $pageVersion = 1): array
+    {
+        $limit = max(6, min(100, $limit));
+        $cacheTtl = max(0, min(3600, $cacheTtl));
+
+        if ($cacheTtl === 0) {
+            return $this->hydratePage($this->buildUncachedPage($limit));
+        }
+
+        $payload = Cache::remember(
+            "app:trends:page:v4:{$pageVersion}:{$limit}",
+            now()->addSeconds($cacheTtl),
+            fn (): array => $this->buildUncachedPage($limit),
+        );
+
+        return $this->hydratePage($payload);
+    }
+
+    protected function buildUncachedPage(int $limit): array
     {
         return [
             'trendProducts' => $this->popularProducts(function (Builder $query) {
                 $query->where('is_trending', true);
-            }, max(6, min(100, $limit)))->map(fn (Product $product) => $this->card($product))->values(),
+            }, $limit)->map(fn (Product $product) => $this->card($product))->values()->all(),
             'trendBanners' => TrendBanner::query()
+                ->select(['id', 'title', 'image_desktop', 'image_mobile', 'display_target', 'row_number', 'sort_order'])
                 ->where('is_active', true)
                 ->orderBy('row_number')
                 ->orderBy('sort_order')
                 ->orderBy('id')
-                ->get(),
+                ->get()
+                ->map(fn (TrendBanner $banner): array => [
+                    'id' => $banner->id,
+                    'title' => $banner->title,
+                    'desktop_url' => $banner->imageUrl('desktop'),
+                    'mobile_url' => $banner->imageUrl('mobile'),
+                    'display_target' => $banner->display_target,
+                    'row_number' => $banner->row_number,
+                    'sort_order' => $banner->sort_order,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    protected function hydratePage(array $payload): array
+    {
+        return [
+            'trendProducts' => collect($payload['trendProducts'] ?? []),
+            'trendBanners' => collect($payload['trendBanners'] ?? []),
         ];
     }
 
@@ -180,6 +219,24 @@ class TrendsService
     protected function productQuery(): Builder
     {
         return Product::query()
+            ->select([
+                'id',
+                'name_fa',
+                'name_en',
+                'slug',
+                'product_code',
+                'category',
+                'subcategory',
+                'status',
+                'is_featured',
+                'is_trending',
+                'thumbnail',
+                'cover',
+                'sample_outputs',
+                'media_type',
+                'preview_video_url',
+                'created_at',
+            ])
             ->where('status', 'active')
             ->withCount(['downloads', 'generations']);
     }
@@ -192,13 +249,14 @@ class TrendsService
 
         $isVideo = in_array($product->media_type, ['video', 'both'], true)
             && filled($product->preview_video_url);
+        $imageUrl = $product->displayImageUrl();
 
         return [
             'id' => $product->id,
             'name' => $product->name_fa ?: $product->name_en,
             'tag' => $product->subcategory ?: $product->category ?: 'وطن AI',
-            'src' => $isVideo ? $this->videoUrl($product->preview_video_url) : $product->displayImageUrl(),
-            'poster' => $product->displayImageUrl(),
+            'src' => $isVideo ? $this->videoUrl($product->preview_video_url) : $imageUrl,
+            'poster' => $imageUrl,
             'video' => $isVideo,
             'link' => route('app.product', $product->route_slug) . '?source=trends',
             'downloads' => (int) ($product->downloads_count ?? 0),

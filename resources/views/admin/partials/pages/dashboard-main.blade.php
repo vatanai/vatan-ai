@@ -20,7 +20,6 @@
           ['slug' => 'fal', 'name' => 'Fal.ai', 'icon' => 'fa-wand-magic-sparkles'],
           ['slug' => 'replicate', 'name' => 'Replicate', 'icon' => 'fa-cubes'],
           ['slug' => 'openrouter', 'name' => 'OpenRouter', 'icon' => 'fa-route'],
-          ['slug' => 'liara', 'name' => 'Liara', 'icon' => 'fa-cloud-arrow-up'],
         ];
       @endphp
       <div class="grid grid-cols-3 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:14px;">

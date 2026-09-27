@@ -21,7 +21,10 @@ class AiModelController extends Controller
 {
     public function index(Request $request, ExchangeRateService $exchangeRate)
     {
-        $models = AiModel::latest()->get();
+        $models = AiModel::query()
+            ->whereIn('provider', ProviderStatus::PROVIDERS)
+            ->latest()
+            ->get();
         return view('admin.ai-models.index', [
             'models' => $models,
             'exchange' => $exchangeRate->usdToIrr(),
@@ -34,7 +37,10 @@ class AiModelController extends Controller
 
     public function providers(ServiceCreditOverviewService $creditOverview, AiProviderLimitService $limitService)
     {
-        $models = AiModel::latest()->get();
+        $models = AiModel::query()
+            ->whereIn('provider', ProviderStatus::PROVIDERS)
+            ->latest()
+            ->get();
         $providerStatus = ProviderStatus::all();
         $providerSettings = collect(ProviderStatus::PROVIDERS)->mapWithKeys(function (string $provider) {
             try {
@@ -66,8 +72,7 @@ class AiModelController extends Controller
      * این متد در پنل ادمین یک کلید کوچک بالای لیست مدل‌ها می‌سازد؛
      * وقتی کاربر روی آن می‌زند، وضعیت provider در تنظیمات امن و Cache ذخیره می‌شود
      * و کل سیستم (فرم ثبت محصول، روتر تولید تصویر و ...) فوراً از آن پیروی می‌کند.
-     * کد OpenRouterService یا LiaraAiService دست‌نخورده باقی می‌ماند — فقط
-     * یک flag روشن/خاموش عوض می‌شود.
+     * فقط وضعیت اجرایی provider عوض می‌شود.
      *
      * مسیر: POST /admin/ai-models/toggle-provider
      */
@@ -81,7 +86,7 @@ class AiModelController extends Controller
         ProviderStatus::setEnabled($data['provider'], (bool) $data['enabled']);
 
         $label = match ($data['provider']) {
-            'liara' => 'لیارا', 'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate',
+            'openrouter' => 'OpenRouter', 'fal' => 'Fal.ai', 'replicate' => 'Replicate',
         };
         $stateFa = $data['enabled'] ? 'روشن' : 'خاموش';
 
@@ -91,6 +96,7 @@ class AiModelController extends Controller
 
     public function toggleModel(Request $request, AiModel $aiModel)
     {
+        abort_unless(in_array($aiModel->provider, ProviderStatus::PROVIDERS, true), 404);
         $aiModel->update(['is_active' => ! $aiModel->is_active]);
 
         return $this->modelActionRedirect($request, $aiModel)
@@ -99,6 +105,7 @@ class AiModelController extends Controller
 
     public function toggleProductSelection(Request $request, AiModel $aiModel)
     {
+        abort_unless(in_array($aiModel->provider, ProviderStatus::PROVIDERS, true), 404);
         $aiModel->update(['featured_in_lab' => ! $aiModel->featured_in_lab]);
 
         return $this->modelActionRedirect($request, $aiModel)
@@ -220,7 +227,6 @@ class AiModelController extends Controller
             'external_version'     => $validatedData['external_version'] ?? null,
             'provider_name'        => $validatedData['provider_name'],
             'provider'             => $request->input('provider', 'openrouter'),
-            'liara_plan'           => $request->input('provider') === 'liara' ? $request->input('liara_plan') : null,
             'output_modality'      => $validatedData['output_modality'],
             'task_type'            => $validatedData['task_type'] ?? null,
             'supports_image_input' => $request->input('supports_image_input', '0') == '1',
@@ -267,14 +273,14 @@ class AiModelController extends Controller
 
     public function edit($id)
     {
-        $model = AiModel::findOrFail($id);
+        $model = AiModel::query()->whereIn('provider', ProviderStatus::PROVIDERS)->findOrFail($id);
         $categories = Category::roots()->active()->orderBy('sort_order')->orderBy('name_fa')->get();
         return view('admin.ai-models.edit', compact('model', 'categories'));
     }
 
     public function update(UpdateAiModelRequest $request, $id)
     {
-        $model = AiModel::findOrFail($id);
+        $model = AiModel::query()->whereIn('provider', ProviderStatus::PROVIDERS)->findOrFail($id);
 
         // قوانین اعتبارسنجی به App\Http\Requests\Admin\UpdateAiModelRequest منتقل شد.
         $validatedData = $request->validated();
@@ -305,7 +311,6 @@ class AiModelController extends Controller
             'external_version'     => $validatedData['external_version'] ?? null,
             'provider_name'        => $validatedData['provider_name'],
             'provider'             => $request->input('provider', $model->provider ?? 'openrouter'),
-            'liara_plan'           => $request->input('provider', $model->provider) === 'liara' ? $request->input('liara_plan') : null,
             'output_modality'      => $validatedData['output_modality'],
             'task_type'            => $validatedData['task_type'] ?? null,
             'supports_image_input' => $validatedData['supports_image_input'],
@@ -339,7 +344,7 @@ class AiModelController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $model = AiModel::findOrFail($id);
+        $model = AiModel::query()->whereIn('provider', ProviderStatus::PROVIDERS)->findOrFail($id);
 
         // حذف فیزیکی عکس مدل از سرور هنگام حذف از دیتابیس
         $safeName = str_replace(['/', '\\', ':', '*'], '-', $model->openrouter_model_id);

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceCreditAccount;
 use App\Models\ServiceCreditTransaction;
+use App\Models\GeneratedImage;
+use App\Services\ProfileMediaThumbnailService;
 use App\Services\ServiceCreditOverviewService;
 use App\Services\ServiceCreditSynchronizer;
 use App\Services\ServiceCreditTransactionReport;
@@ -35,27 +37,37 @@ class ServiceCreditController extends Controller
 
     public function providers(
         ServiceCreditOverviewService $overview,
+        ServiceCreditTransactionReport $transactionReport,
     ): View
     {
+        $overviewData = $this->overviewData($overview);
+
         return view('admin.service-credits.index', [
-            ...$this->overviewData($overview),
-            'mode' => 'providers',
-            'providerStats' => collect(),
+            ...$overviewData,
+            ...$transactionReport->overviewMetrics((float) ($overviewData['exchange']['rate'] ?? 0)),
         ]);
     }
 
-    public function transactions(
-        ServiceCreditOverviewService $overview,
-        ServiceCreditTransactionReport $transactionReport,
-        Request $request
-    ): View
+    public function transactions(ServiceCreditTransactionReport $transactionReport, Request $request): View
     {
-        $data = $this->overviewData($overview);
-        return view('admin.service-credits.index', [
-            ...$data,
-            ...$transactionReport->build($request),
-            'mode' => 'transactions',
-        ]);
+        $data = $transactionReport->build($request);
+
+        return view($request->boolean('fragment')
+            ? 'admin.service-credits.partials.report-panel'
+            : 'admin.service-credits.transactions', $data);
+    }
+
+    public function buildTransactions(): RedirectResponse
+    {
+        return redirect()->route('admin.service-credits.providers');
+    }
+
+    public function imageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
+    {
+        // A failed preview must never fall back to sending the original image.
+        if (! $thumbnails->generate($generatedImage, 160)) abort(404);
+
+        return $thumbnails->serve($generatedImage, 160);
     }
 
     public function storeAccount(Request $request): RedirectResponse
@@ -73,6 +85,7 @@ class ServiceCreditController extends Controller
         $data['show_on_dashboard'] = $request->boolean('show_on_dashboard');
         $data['alerts_enabled'] = $request->boolean('alerts_enabled');
         ServiceCreditAccount::create($data);
+        Cache::forget('finance.admin_credit_overview');
         return back()->with('success', 'اکانت جدید اضافه شد.');
     }
 
@@ -87,7 +100,8 @@ class ServiceCreditController extends Controller
         $data['show_on_dashboard'] = $request->boolean('show_on_dashboard');
         $data['alerts_enabled'] = $request->boolean('alerts_enabled');
         $account->update($data);
-        foreach (['openrouter', 'liara', 'fal', 'replicate'] as $provider) {
+        Cache::forget('finance.admin_credit_overview');
+        foreach (['openrouter', 'fal', 'replicate'] as $provider) {
             Cache::forget('finance.' . $provider . '_credits');
         }
         return back()->with('success', 'تنظیمات اکانت ذخیره شد.');
@@ -111,6 +125,7 @@ class ServiceCreditController extends Controller
             $account->update(['manual_balance' => max(0, (float) $account->manual_balance + $delta)]);
             ServiceCreditTransaction::create([...$data, 'admin_id' => auth('admin')->id()]);
         });
+        Cache::forget('finance.admin_credit_overview');
 
         return back()->with('success', 'تراکنش ثبت و موجودی به‌روزرسانی شد.');
     }
@@ -119,6 +134,8 @@ class ServiceCreditController extends Controller
     {
         $result = $synchronizer->sync();
         Cache::forget('finance.usd_irr');
+        Cache::forget('finance.admin_credit_overview');
+        Cache::forget('finance.dashboard_credit_overview');
         return back()->with(
             'success',
             "اطلاعات آنلاین تازه‌سازی شد؛ {$result['transactions_created']} تغییر جدید در تراکنش‌ها ثبت شد."
