@@ -499,7 +499,7 @@
 
   /* ─── معماری کیفیت خروجیِ مشترک با گام دوم ثبت محصول ─── */
   const productQualityConfigurationState = {
-    mode: 'single', url: '', ids: [], productName: '', configuration: {}, saving: false,
+    mode: 'single', url: '', ids: [], productName: '', configuration: {}, saving: false, savingPreset: false, presetDirty: false,
   };
   const productQualitySearchState = {};
   const productQualityCards = [
@@ -529,16 +529,19 @@
   }
 
   function completeProductQualityConfiguration(configuration) {
-    const presetKey = configuration?.quality_preset_key || 'preset_1';
+    const availableKeys = Object.keys(productQualityPresets());
+    const presetKey = configuration?.quality_preset_key || window.PRODUCT_MODEL_QUALITY_DEFAULT_KEY || availableKeys[0] || '';
     const preset = presetQualityConfiguration(presetKey);
     const result = {
-      quality_preset_key: productQualityPresets()[presetKey] ? presetKey : 'preset_1',
-      quality_architecture_enabled: configuration?.quality_architecture_enabled !== false,
+      quality_preset_key: (productQualityPresets()[presetKey] || presetKey === 'custom') ? presetKey : (availableKeys[0] || 'custom'),
+      quality_architecture_enabled: presetKey === 'custom'
+        ? configuration?.quality_architecture_enabled !== false
+        : preset?.quality_architecture_enabled ?? configuration?.quality_architecture_enabled ?? true,
       quality_models: {},
       free_quality_models: {},
     };
     productQualityCards.concat(productFreeQualityCards).forEach(function (card) {
-      const saved = configuration?.[card.group]?.[card.key] || {};
+      const saved = presetKey === 'custom' ? (configuration?.[card.group]?.[card.key] || {}) : {};
       const fallback = preset?.[card.group]?.[card.key] || emptyQualityPair();
       result[card.group][card.key] = {
         primary: {
@@ -560,11 +563,9 @@
 
   function productQualityModelsFor(card, role, provider) {
     const all = productAiModels();
-    const sameGrade = all.filter(function (model) { return Number(model.gradeNumber) === Number(card.grade); });
-    const candidates = role === 'primary' && sameGrade.length ? sameGrade : all;
     const primary = productQualitySelection(card, 'primary');
     const primaryProvider = primary.provider || '';
-    return candidates.filter(function (model) {
+    return all.filter(function (model) {
       // مدل جایگزین می‌تواند از همان پرووایدر باشد؛ فقط انتخاب عین مدل اصلی
       // را می‌بندیم تا مسیر جایگزین واقعاً یک مدل متفاوت داشته باشد.
       const isSameModel = role === 'fallback'
@@ -655,7 +656,7 @@
       presetSelect.disabled = !entries.length;
       presetSelect.innerHTML = entries.length ? entries.map(function ([key, preset]) {
         return '<option value="' + pmEsc(key) + '"' + (configuration.quality_preset_key === key ? ' selected' : '') + '>' + pmEsc(preset.name || key) + '</option>';
-      }).join('') : '<option value="">پیش‌فرضی در دیتابیس ثبت نشده است</option>';
+      }).join('') + '<option value="custom"' + (configuration.quality_preset_key === 'custom' ? ' selected' : '') + '>تنظیم سفارشی</option>' : '<option value="">پیش‌فرضی در دیتابیس ثبت نشده است</option>';
     }
     const enabled = configuration.quality_architecture_enabled !== false;
     document.getElementById('product-quality-architecture-content')?.classList.toggle('hidden', !enabled);
@@ -682,6 +683,7 @@
     productQualityConfigurationState.ids = [];
     productQualityConfigurationState.productName = button.dataset.productName || '';
     productQualityConfigurationState.configuration = completeProductQualityConfiguration(configuration);
+    productQualityConfigurationState.presetDirty = false;
     openProductQualityConfigurationDialogWindow('معماری کیفیت خروجی مدل', productQualityConfigurationState.productName);
   }
 
@@ -698,6 +700,7 @@
     const presetKeys = Object.keys(productQualityPresets());
     const defaultPresetKey = window.PRODUCT_MODEL_QUALITY_DEFAULT_KEY || presetKeys[0] || 'preset_1';
     productQualityConfigurationState.configuration = completeProductQualityConfiguration({ quality_preset_key: defaultPresetKey, quality_architecture_enabled: true });
+    productQualityConfigurationState.presetDirty = false;
     openProductQualityConfigurationDialogWindow('تنظیم مدل‌های هوش مصنوعی', ids.length.toLocaleString('fa-IR') + ' محصول انتخاب شده');
   }
 
@@ -722,6 +725,7 @@
     productQualityConfigurationState.configuration[group][key][role] = {
       model_id: select.value || '', provider: productQualityConfigurationState.configuration[group][key][role]?.provider || '',
     };
+    productQualityConfigurationState.presetDirty = true;
     renderProductQualityConfigurationDialog();
   }
 
@@ -732,16 +736,25 @@
     if (!group || !key || !role) return;
     const pair = productQualityConfigurationState.configuration[group][key];
     pair[role] = { model_id: '', provider: select.value || '' };
+    productQualityConfigurationState.presetDirty = true;
     renderProductQualityConfigurationDialog();
   }
 
   function applyProductQualityPreset(key) {
+    if (key === 'custom') {
+      productQualityConfigurationState.configuration.quality_preset_key = 'custom';
+      productQualityConfigurationState.presetDirty = false;
+      renderProductQualityConfigurationDialog();
+      return;
+    }
     const preset = presetQualityConfiguration(key);
     if (!Object.keys(preset).length) {
       showProductNotice('این پیش‌فرض در نسخه‌ی فعلی سایت موجود نیست؛ ابتدا migrationهای دیتابیس را اجرا کنید.', 'error');
       return;
     }
     productQualityConfigurationState.configuration.quality_preset_key = key;
+    productQualityConfigurationState.configuration.quality_architecture_enabled = preset.quality_architecture_enabled !== false;
+    productQualityConfigurationState.presetDirty = false;
     productQualityCards.concat(productFreeQualityCards).forEach(function (card) {
       productQualityConfigurationState.configuration[card.group][card.key] = cloneProductQualityValue(preset?.[card.group]?.[card.key] || emptyQualityPair());
     });
@@ -750,29 +763,74 @@
 
   function toggleProductQualityArchitecture() {
     productQualityConfigurationState.configuration.quality_architecture_enabled = productQualityConfigurationState.configuration.quality_architecture_enabled === false;
+    productQualityConfigurationState.presetDirty = true;
     renderProductQualityConfigurationDialog();
   }
 
   function productQualityPresetPayload() {
     const configuration = productQualityConfigurationState.configuration;
     return {
+      quality_architecture_enabled: configuration.quality_architecture_enabled,
       quality_models: cloneProductQualityValue(configuration.quality_models),
       free_quality_models: cloneProductQualityValue(configuration.free_quality_models),
     };
   }
 
+  async function createProductQualityPreset() {
+    if (productQualityConfigurationState.saving || productQualityConfigurationState.savingPreset) return;
+    const input = document.getElementById('product-quality-new-preset-name');
+    const state = document.getElementById('product-quality-configuration-state');
+    const name = input?.value.trim();
+    if (!name) {
+      state.style.color = 'var(--danger)';
+      state.textContent = 'نام پیش‌فرض جدید را وارد کنید.';
+      return;
+    }
+    productQualityConfigurationState.savingPreset = true;
+    state.style.color = 'var(--warning)';
+    state.textContent = 'در حال ساخت پیش‌فرض…';
+    try {
+      const response = await fetch(window.PRODUCT_MODEL_QUALITY_PRESET_STORE_URL, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '', 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, configuration: productQualityPresetPayload() }),
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'ساخت پیش‌فرض انجام نشد.');
+      const preset = data.preset;
+      productQualityPresets()[preset.preset_key] = {
+        name: preset.name,
+        configuration: preset.configuration,
+        url: data.update_url,
+      };
+      productQualityConfigurationState.configuration.quality_preset_key = preset.preset_key;
+      productQualityConfigurationState.presetDirty = false;
+      if (input) input.value = '';
+      renderProductQualityConfigurationDialog();
+      state.style.color = 'var(--success)';
+      state.textContent = 'پیش‌فرض جدید از تنظیمات فعلی ساخته شد.';
+    } catch (error) {
+      state.style.color = 'var(--danger)';
+      state.textContent = error.message || 'ساخت پیش‌فرض انجام نشد.';
+    } finally {
+      productQualityConfigurationState.savingPreset = false;
+    }
+  }
+
   async function fixProductQualityPreset() {
+    if (productQualityConfigurationState.saving || productQualityConfigurationState.savingPreset) return;
     const key = productQualityConfigurationState.configuration.quality_preset_key;
     const preset = productQualityPresets()[key];
     const state = document.getElementById('product-quality-configuration-state');
     if (!preset?.url) {
       state.style.color = 'var(--danger)';
-      state.textContent = 'پیش‌فرض انتخاب‌شده از سرور دریافت نشده است؛ ابتدا migrationهای دیتابیس را اجرا کنید.';
+      state.textContent = 'ابتدا یک پیش‌فرض معتبر را از لیست انتخاب کنید.';
       showProductNotice(state.textContent, 'error');
       return;
     }
     state.style.color = 'var(--warning)';
     state.textContent = 'در حال ذخیره پیش‌فرض…';
+    productQualityConfigurationState.savingPreset = true;
     try {
       const response = await fetch(preset.url, {
         method: 'PATCH',
@@ -782,12 +840,15 @@
       const data = await response.json().catch(function () { return {}; });
       if (!response.ok) throw new Error(Object.values(data.errors || {})[0]?.[0] || data.message || 'ذخیره پیش‌فرض انجام نشد.');
       productQualityPresets()[key].configuration = data.preset?.configuration || productQualityPresetPayload();
+      productQualityConfigurationState.presetDirty = false;
       state.style.color = 'var(--success)';
       state.textContent = data.message || 'تنظیمات این پیش‌فرض ذخیره شد.';
     } catch (error) {
       state.style.color = 'var(--danger)';
       state.textContent = error.message || 'ذخیره پیش‌فرض انجام نشد.';
       showProductNotice(state.textContent, 'error');
+    } finally {
+      productQualityConfigurationState.savingPreset = false;
     }
   }
 
@@ -798,7 +859,7 @@
       showProductNotice('هیچ محصولی برای اعمال تنظیمات انتخاب نشده است.', 'warning');
       return;
     }
-    if (!productQualityConfigurationState.url || productQualityConfigurationState.saving) {
+    if (!productQualityConfigurationState.url || productQualityConfigurationState.saving || productQualityConfigurationState.savingPreset) {
       showProductNotice('مسیر ذخیره‌سازی تنظیمات در این صفحه آماده نیست. صفحه را تازه‌سازی کنید.', 'error');
       return;
     }
@@ -812,7 +873,11 @@
     if (submit) submit.disabled = true;
     state.style.color = 'var(--warning)';
     state.textContent = productQualityConfigurationState.mode === 'bulk' ? 'در حال اعمال تنظیمات…' : 'در حال ذخیره تنظیمات…';
-    const payload = { model_configuration: productQualityConfigurationState.configuration };
+    const payload = {
+      model_configuration: productQualityConfigurationState.configuration,
+      update_preset: productQualityConfigurationState.presetDirty
+        && Boolean(productQualityPresets()[productQualityConfigurationState.configuration.quality_preset_key]),
+    };
     if (productQualityConfigurationState.mode === 'bulk') payload.ids = productQualityConfigurationState.ids;
     try {
       const response = await fetch(productQualityConfigurationState.url, {

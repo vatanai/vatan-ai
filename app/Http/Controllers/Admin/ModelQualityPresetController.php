@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiModel;
 use App\Models\ModelQualityPreset;
 use App\Models\Product;
+use App\Services\ModelQualityPresetSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,9 @@ class ModelQualityPresetController extends Controller
                 $updates['is_default_for_product_creation'] = (bool) $data['is_default_for_product_creation'];
             }
             if ($updates) $modelQualityPreset->update($updates);
+            if (array_key_exists('configuration', $data)) {
+                app(ModelQualityPresetSync::class)->synchronize($modelQualityPreset);
+            }
             if (($data['is_default_for_product_creation'] ?? false) === true) {
                 static::clearProductCreationDefaultsExcept($modelQualityPreset);
             } elseif (! ModelQualityPreset::query()->where('is_default_for_product_creation', true)->exists()) {
@@ -155,8 +159,7 @@ class ModelQualityPresetController extends Controller
             $primary = (array) data_get($configuration, "{$group}.{$quality}.primary", []);
             $fallback = (array) data_get($configuration, "{$group}.{$quality}.fallback", []);
             foreach (['primary' => $primary, 'fallback' => $fallback] as $role => $selection) {
-                $valid = AiModel::query()->where('is_active', true)
-                        ->where('featured_in_lab', true)
+                $valid = AiModel::query()->selectableForProduct()
                         ->where('provider', $selection['provider'] ?? null)
                         ->where('openrouter_model_id', $selection['model_id'] ?? null)
                         ->exists();

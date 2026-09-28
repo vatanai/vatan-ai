@@ -255,6 +255,22 @@ class Product extends Model
     public function qualityModelConfiguration(string $qualityKey, bool $isFreeUser = false): array
     {
         $configuration = (array) ($this->model_configuration ?? []);
+        $presetKey = (string) data_get($configuration, 'quality_preset_key', '');
+        if ($presetKey !== '' && $presetKey !== 'custom') {
+            $presetConfiguration = ModelQualityPreset::query()
+                ->where('preset_key', $presetKey)
+                ->value('configuration');
+            $presetConfiguration = is_string($presetConfiguration)
+                ? (json_decode($presetConfiguration, true) ?: [])
+                : (array) $presetConfiguration;
+            if ($presetConfiguration) {
+                foreach (['quality_models', 'free_quality_models', 'quality_architecture_enabled'] as $key) {
+                    if (array_key_exists($key, $presetConfiguration)) {
+                        $configuration[$key] = $presetConfiguration[$key];
+                    }
+                }
+            }
+        }
         if (data_get($configuration, 'quality_architecture_enabled', true) === false) {
             return [];
         }

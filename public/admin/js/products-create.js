@@ -1382,6 +1382,12 @@ async function submitForm(statusValue) {
     failed.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
+  if (typeof window.saveStepTwoModelQualityPresetIfDirty === 'function'
+      && !await window.saveStepTwoModelQualityPresetIfDirty()) {
+    goStep(2);
+    showGlobalError('ذخیره پیش‌فرض مدل انجام نشد؛ خطای نمایش‌داده‌شده در گام دوم را بررسی کنید.');
+    return;
+  }
   document.getElementById('product-status').value = statusValue;
 
   document.querySelectorAll('#tags-wrap [data-tag-chip]').forEach((chip, idx) => {

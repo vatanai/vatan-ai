@@ -24,10 +24,6 @@
   ];
   $sourceProduct = $duplicateFrom ?? $product ?? null;
   $savedConfiguration = old('model_configuration', (array) ($sourceProduct?->model_configuration ?? []));
-  $architectureEnabled = (bool) old(
-    'model_configuration.quality_architecture_enabled',
-    data_get($savedConfiguration, 'quality_architecture_enabled', true)
-  );
   $presetPayloads = collect($modelQualityPresets ?? [])
     ->mapWithKeys(fn ($preset) => [$preset->preset_key => [
       'name' => $preset->name,
@@ -46,8 +42,15 @@
     ?: 'preset_1';
   $currentPresetKey = data_get($savedConfiguration, 'quality_preset_key') ?: $defaultPresetKey;
   $selectedPresetConfiguration = data_get($presetPayloads, "{$currentPresetKey}.configuration", data_get($presetPayloads, "{$defaultPresetKey}.configuration", []));
-  $selectionFor = function (string $group, string $quality, string $role) use ($savedConfiguration, $selectedPresetConfiguration) {
-    $selected = data_get($savedConfiguration, "{$group}.{$quality}.{$role}", data_get($selectedPresetConfiguration, "{$group}.{$quality}.{$role}", []));
+  $useSavedSelections = $currentPresetKey === 'custom' || session()->hasOldInput('model_configuration');
+  $visibleConfiguration = $useSavedSelections ? $savedConfiguration : $selectedPresetConfiguration;
+  $architectureEnabled = (bool) data_get(
+    $visibleConfiguration,
+    'quality_architecture_enabled',
+    data_get($savedConfiguration, 'quality_architecture_enabled', true)
+  );
+  $selectionFor = function (string $group, string $quality, string $role) use ($visibleConfiguration, $selectedPresetConfiguration) {
+    $selected = data_get($visibleConfiguration, "{$group}.{$quality}.{$role}", data_get($selectedPresetConfiguration, "{$group}.{$quality}.{$role}", []));
     return is_array($selected) ? $selected : [];
   };
 @endphp
@@ -78,7 +81,7 @@
         <i class="fa-solid fa-gear"></i> مدیریت پیش‌فرض‌ها
       </button>
       <button type="button" class="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[10.5px] font-bold bg-[var(--primary-l)] text-[var(--primary)] border border-[var(--primary-m)]" data-fix-quality-preset>
-        <i class="fa-solid fa-thumbtack"></i> فیکس کردن تنظیمات
+        <i class="fa-solid fa-floppy-disk"></i> ذخیره روی همین پیش‌فرض
       </button>
       <span class="text-[10px] text-[var(--text3)]" data-preset-save-status></span>
       <input type="hidden" name="model_configuration[quality_architecture_enabled]" value="{{ $architectureEnabled ? 1 : 0 }}" data-quality-architecture-enabled>
@@ -213,6 +216,11 @@
   const presetCreateUrl = root.dataset.presetCreateUrl || '';
   const presetSelect = root.querySelector('[data-quality-preset]');
   const status = root.querySelector('[data-preset-save-status]');
+  // تغییر فیلدهای مدل نباید انتخاب کاربر را به «سفارشی» عوض کند؛ مقصد
+  // ذخیره همان گزینه‌ای است که دراپ‌داون پیش‌فرض‌ها نشان می‌دهد.
+  let presetDirty = false;
+  let presetRevision = 0;
+  let presetSavePromise = null;
   const selectors = Array.from(root.querySelectorAll('[data-quality-model]'));
   const providerSelectors = Array.from(root.querySelectorAll('[data-quality-provider-select]'));
   const presetDialog = document.getElementById('model-quality-preset-dialog');
@@ -276,25 +284,27 @@
   presetDialog?.querySelector('[data-add-quality-preset]')?.addEventListener('click', async () => {
     const input = presetDialog.querySelector('[data-new-quality-preset-name]');
     const name = input?.value.trim();
-    const source = presets[presetSelect?.value] || Object.values(presets)[0];
     if (!name) { setPresetManagementStatus('نام پیش‌فرض جدید را وارد کنید.', true); return; }
-    if (!source?.configuration) { setPresetManagementStatus('برای ساخت پیش‌فرض جدید، ابتدا یک پیش‌فرض کامل لازم است.', true); return; }
+    // همیشه از تنظیمات فعلیِ روی صفحه ساخته می‌شود، نه از نسخه‌ی قدیمی
+    // پیش‌فرض؛ بنابراین همه‌ی تغییرات دیده‌شده عیناً مبنای مورد جدید هستند.
+    const liveConfiguration = currentConfiguration();
     try {
       setPresetManagementStatus('در حال افزودن…');
-      const result = await requestPreset(presetCreateUrl, 'POST', { name, configuration: source.configuration });
+      const result = await requestPreset(presetCreateUrl, 'POST', { name, configuration: liveConfiguration });
       const created = result.preset;
       presets[created.preset_key] = {
         name: created.name,
-        configuration: created.configuration || source.configuration,
+        configuration: created.configuration || liveConfiguration,
         is_default_for_product_creation: Boolean(created.is_default_for_product_creation),
       };
       presetUrls[created.preset_key] = result.update_url;
       presetDeleteUrls[created.preset_key] = result.delete_url;
       refreshPresetSelect(created.preset_key);
       applyPreset(presets[created.preset_key].configuration);
+      presetDirty = false;
       renderPresetManager();
       if (input) input.value = '';
-      announcePresetChange('پیش‌فرض جدید اضافه شد و همین‌جا باقی ماند.');
+      announcePresetChange('پیش‌فرض جدید از تنظیمات فعلی ساخته و ذخیره شد.');
     } catch (error) { setPresetManagementStatus(error.message, true); }
   });
   presetList?.addEventListener('click', async (event) => {
@@ -325,6 +335,7 @@
         const nextKey = presetSelect?.value === key ? Object.keys(presets)[0] : presetSelect?.value;
         refreshPresetSelect(nextKey);
         if (nextKey && presets[nextKey]) applyPreset(presets[nextKey].configuration);
+        presetDirty = false;
       }
       renderPresetManager();
       announcePresetChange(action === 'rename' ? 'نام پیش‌فرض ذخیره شد.' : action === 'default' ? 'انتخاب نخست ثبت محصول تغییر کرد.' : 'پیش‌فرض حذف شد.');
@@ -348,22 +359,15 @@
     });
   };
 
-  // پیش‌فرض فقط نقطه‌ی شروع است. به‌محض تغییر دستی یک provider یا مدل،
-  // انتخاب محصول سفارشی می‌شود و نام پیش‌فرض قبلی دیگر به‌اشتباه حفظ نمی‌شود.
-  const markPresetAsCustom = () => {
+  const markPresetAsDirty = () => {
     if (!presetSelect) return;
-    if (!presetSelect.querySelector('option[value="custom"]')) {
-      const option = document.createElement('option');
-      option.value = 'custom';
-      option.textContent = 'تنظیم سفارشی';
-      presetSelect.appendChild(option);
-    }
-    if (presetSelect.value !== 'custom') {
-      presetSelect.value = 'custom';
-      if (status) {
-        status.textContent = 'تغییر دستی ذخیره شد؛ این محصول اکنون تنظیم سفارشی دارد.';
-        status.style.color = 'var(--warning)';
-      }
+    presetDirty = presetSelect.value !== 'custom';
+    presetRevision++;
+    if (status) {
+      status.textContent = presetSelect.value === 'custom'
+        ? 'تنظیم سفارشی فعال است؛ این تغییر فقط با محصول ذخیره می‌شود.'
+        : 'تغییرات این پیش‌فرض هنوز ذخیره نشده است.';
+      status.style.color = 'var(--warning)';
     }
   };
 
@@ -424,13 +428,19 @@
       const providerSelect = pairedProviderSelect(select);
       const target = Array.from(select.options).find((option) => option.value === selection.model_id && option.dataset.provider === selection.provider);
       if (providerSelect) providerSelect.value = selection.provider || '';
-      select.value = target ? target.value : '';
+      if (target) target.selected = true;
+      else select.value = '';
       refreshSelect(select, selection.provider || '');
     });
+    setArchitectureState(configuration?.quality_architecture_enabled !== false);
     document.dispatchEvent(new CustomEvent('product-quality-configuration-changed'));
   };
   const currentConfiguration = () => {
-    const configuration = { quality_models: {}, free_quality_models: {} };
+    const configuration = {
+      quality_architecture_enabled: architectureEnabledInput?.value === '1',
+      quality_models: {},
+      free_quality_models: {},
+    };
     selectors.forEach((select) => {
       const group = select.dataset.group;
       const quality = select.dataset.quality;
@@ -448,7 +458,7 @@
     refreshSelect(select);
     select.addEventListener('change', () => {
       sync(select);
-      markPresetAsCustom();
+      markPresetAsDirty();
       if (select.dataset.role === 'primary') {
         const fallback = root.querySelector('[data-quality-model][data-group="' + select.dataset.group + '"][data-quality="' + select.dataset.quality + '"][data-role="fallback"]');
         if (fallback) refreshSelect(fallback);
@@ -462,7 +472,7 @@
       if (!select) return;
       select.value = '';
       refreshSelect(select, providerSelect.value);
-      markPresetAsCustom();
+      markPresetAsDirty();
       if (providerSelect.dataset.role === 'primary') {
         const fallback = root.querySelector('[data-quality-model][data-group="' + providerSelect.dataset.group + '"][data-quality="' + providerSelect.dataset.quality + '"][data-role="fallback"]');
         if (fallback) refreshSelect(fallback);
@@ -474,6 +484,8 @@
     input.addEventListener('input', () => filterQualityModelOptions(input));
   });
   presetSelect?.addEventListener('change', () => {
+    presetRevision++;
+    presetDirty = false;
     const preset = presets[presetSelect.value];
     if (presetSelect.value === 'custom') {
       if (status) {
@@ -497,32 +509,44 @@
   };
   architectureToggle?.addEventListener('click', () => {
     setArchitectureState(architectureToggle.getAttribute('aria-expanded') !== 'true');
+    markPresetAsDirty();
   });
-  root.querySelector('[data-fix-quality-preset]')?.addEventListener('click', async () => {
-    const key = presetSelect?.value;
-    const url = presetUrls[key];
+  const saveSelectedPreset = async (force = false) => {
+    if (presetSavePromise) return presetSavePromise;
+    if (!force && !presetDirty) return true;
+    const key = (presetSelect?.value && presetSelect.value !== 'custom') ? presetSelect.value : null;
+    const url = key ? presetUrls[key] : null;
     if (!url) {
-      if (status) status.textContent = 'پیش‌فرض انتخاب‌شده در دسترس نیست.';
-      return;
+      if (status) { status.textContent = 'ابتدا یک پیش‌فرض را از لیست انتخاب کنید.'; status.style.color = 'var(--danger)'; }
+      return false;
     }
-    if (status) status.textContent = 'در حال ذخیره…';
-    try {
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-        },
-        body: JSON.stringify({ configuration: currentConfiguration() }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'ذخیره تنظیمات انجام نشد.');
-      presets[key] = { ...(presets[key] || {}), configuration: result.preset.configuration };
-      if (status) status.textContent = 'تنظیمات این پیش‌فرض ذخیره شد.';
-    } catch (error) {
-      if (status) status.textContent = error.message || 'ذخیره تنظیمات انجام نشد.';
-    }
-  });
+    const button = root.querySelector('[data-fix-quality-preset]');
+    if (button) button.disabled = true;
+    if (status) { status.textContent = 'در حال ذخیره…'; status.style.color = 'var(--text3)'; }
+    const revision = presetRevision;
+    const configuration = currentConfiguration();
+    presetSavePromise = (async () => {
+      try {
+        const result = await requestPreset(url, 'PATCH', { configuration });
+        presets[key] = { ...(presets[key] || {}), configuration: result.preset.configuration };
+        if (presetSelect?.value !== key || presetRevision !== revision) {
+          if (status) { status.textContent = 'تنظیمات هنگام ذخیره تغییر کرد؛ دوباره ذخیره کنید.'; status.style.color = 'var(--warning)'; }
+          return false;
+        }
+        presetDirty = false;
+        if (status) { status.textContent = 'تنظیمات این پیش‌فرض ذخیره شد.'; status.style.color = 'var(--success)'; }
+        return true;
+      } catch (error) {
+        if (status) { status.textContent = error.message || 'ذخیره تنظیمات انجام نشد.'; status.style.color = 'var(--danger)'; }
+        return false;
+      } finally {
+        presetSavePromise = null;
+        if (button) button.disabled = false;
+      }
+    })();
+    return presetSavePromise;
+  };
+  root.querySelector('[data-fix-quality-preset]')?.addEventListener('click', () => saveSelectedPreset(true));
+  window.saveStepTwoModelQualityPresetIfDirty = () => saveSelectedPreset(false);
 })();
 </script>

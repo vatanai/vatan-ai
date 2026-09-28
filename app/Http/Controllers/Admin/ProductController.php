@@ -21,6 +21,7 @@ use App\Services\VideoPreviewOptimizer;
 use App\Services\VideoProductConfigService;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
+use App\Services\ModelQualityPresetSync;
 use App\Services\ProviderPricingService;
 use App\Services\ProductLabCostService;
 use App\Support\ProviderStatus;
@@ -1312,6 +1313,7 @@ class ProductController extends Controller
     {
         $data = $request->validate([
             'model_configuration' => ['required', 'array'],
+            'update_preset' => ['sometimes', 'boolean'],
             ...$this->modelTierRules(),
         ]);
 
@@ -1320,10 +1322,15 @@ class ProductController extends Controller
             (array) ($product->model_configuration ?? [])
         );
 
-        $product->model_configuration = $configuration;
-        $this->applyBusinessTierAsLegacyExecution($product, $configuration);
-        $this->applyQualityCreditPricingAsLegacyFields($product, $configuration);
-        $product->save();
+        DB::transaction(function () use ($request, $product, $configuration): void {
+            if ($request->boolean('update_preset')) {
+                $this->updateSelectedQualityPreset($configuration);
+            }
+            $product->model_configuration = $configuration;
+            $this->applyBusinessTierAsLegacyExecution($product, $configuration);
+            $this->applyQualityCreditPricingAsLegacyFields($product, $configuration);
+            $product->save();
+        });
 
         return response()->json([
             'ok' => true,
@@ -1430,8 +1437,15 @@ class ProductController extends Controller
             // وابستگی عملیات گروهی به داده‌ی ناقص یا قدیمیِ مرورگر را می‌گیرد.
             'preset_key' => ['nullable', Rule::exists('model_quality_presets', 'preset_key')],
             'model_configuration' => ['nullable', 'array'],
+            'update_preset' => ['sometimes', 'boolean'],
             ...$this->modelTierRules(),
         ]);
+
+        if ($request->boolean('update_preset') && filled($data['preset_key'] ?? null)) {
+            throw ValidationException::withMessages([
+                'update_preset' => 'برای ویرایش پیش‌فرض، تنظیمات کامل مدل را ارسال کنید.',
+            ]);
+        }
 
         $presetKey = filled($data['preset_key'] ?? null) ? (string) $data['preset_key'] : null;
         $rawConfiguration = (array) ($data['model_configuration'] ?? []);
@@ -1445,7 +1459,7 @@ class ProductController extends Controller
             }
             $rawConfiguration = array_replace(
                 (array) $preset->configuration,
-                ['quality_preset_key' => $preset->preset_key, 'quality_architecture_enabled' => true]
+                ['quality_preset_key' => $preset->preset_key]
             );
         }
 
@@ -1459,7 +1473,10 @@ class ProductController extends Controller
         // قبلی ادغام می‌کنیم تا داده‌های نامرتبط (پرامپت/سطوح قدیمی) از بین نروند.
         $this->normalizeAndValidateQualityModelConfiguration($rawConfiguration);
 
-        $updated = DB::transaction(function () use ($data, $rawConfiguration) {
+        $updated = DB::transaction(function () use ($data, $rawConfiguration, $request) {
+            if ($request->boolean('update_preset')) {
+                $this->updateSelectedQualityPreset($rawConfiguration);
+            }
             $products = Product::whereIn('id', $data['ids'])->lockForUpdate()->get();
             foreach ($products as $product) {
                 $configuration = $this->normalizeAndValidateQualityModelConfiguration(
@@ -1482,6 +1499,38 @@ class ProductController extends Controller
                 ? "پیش‌فرض مدل «{$presetKey}» روی {$updated} محصول اعمال شد."
                 : "معماری مدل‌های هوش مصنوعی {$updated} محصول ذخیره شد.",
         ]);
+    }
+
+    /** ذخیره یک معماری کامل روی همان پیش‌فرض و همهٔ محصولات متصل به آن. */
+    private function updateSelectedQualityPreset(array $configuration): void
+    {
+        $key = (string) ($configuration['quality_preset_key'] ?? '');
+        $preset = $key !== 'custom'
+            ? ModelQualityPreset::query()->where('preset_key', $key)->lockForUpdate()->first()
+            : null;
+        if (! $preset) {
+            throw ValidationException::withMessages([
+                'model_configuration.quality_preset_key' => 'یک پیش‌فرض معتبر را برای ذخیره انتخاب کنید.',
+            ]);
+        }
+
+        $modelConfiguration = $this->mergeQualityModelConfiguration($configuration);
+        $this->validateQualityModelEntries(
+            (array) $modelConfiguration['quality_models'],
+            (array) $modelConfiguration['free_quality_models'],
+            true
+        );
+
+        $preset->configuration = array_replace(
+            (array) $preset->configuration,
+            $modelConfiguration,
+            ['quality_architecture_enabled' => filter_var(
+                $configuration['quality_architecture_enabled'] ?? true,
+                FILTER_VALIDATE_BOOLEAN
+            )]
+        );
+        $preset->save();
+        app(ModelQualityPresetSync::class)->synchronize($preset);
     }
 
     /** اعمال یک پیش‌تنظیم روی همه محصولات منتخب در لیست. */
@@ -2013,9 +2062,8 @@ class ProductController extends Controller
         }
 
         $presetKey = (string) data_get($configuration, 'quality_preset_key', data_get($fallback, 'quality_preset_key', ModelQualityPreset::defaultKey()));
-        // با تغییر دستی حتی یک مدل، محصول دیگر نماینده‌ی هیچ پیش‌فرض ذخیره‌شده‌ای
-        // نیست و باید به‌عنوان تنظیم سفارشی نگه‌داری شود؛ در غیر این صورت فرم
-        // بعد از ویرایش دوباره همان نام «آزمایش شده» را نشان می‌دهد.
+        // کلید پیش‌فرض عمداً حفظ می‌شود تا ویرایش‌های گام دوم و پنجره‌ی فهرست
+        // روی همان پیش‌فرض ذخیره شوند. فقط انتخاب صریح «سفارشی» این پیوند را قطع می‌کند.
         $normalized['quality_preset_key'] = $presetKey === 'custom' || in_array($presetKey, ModelQualityPreset::availableKeys(), true)
             ? $presetKey
             : ModelQualityPreset::defaultKey();
@@ -2214,9 +2262,16 @@ class ProductController extends Controller
      */
     private function mergeQualityModelConfiguration(array $configuration, array $fallback = []): array
     {
-        $default = ModelQualityPreset::query()
-            ->where('is_default_for_product_creation', true)
-            ->value('configuration');
+        $selectedKey = (string) ($configuration['quality_preset_key'] ?? '');
+        $default = $selectedKey !== '' && $selectedKey !== 'custom'
+            ? ModelQualityPreset::query()->where('preset_key', $selectedKey)->value('configuration')
+            : null;
+
+        if (! $default) {
+            $default = ModelQualityPreset::query()
+                ->where('is_default_for_product_creation', true)
+                ->value('configuration');
+        }
 
         if (!$default) {
             $default = ModelQualityPreset::query()->orderBy('id')->value('configuration');

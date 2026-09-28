@@ -780,6 +780,7 @@ window.PRODUCT_MATCHING_IDS = @json($matchingProductIds ?? []);
 window.PRODUCT_MODEL_TIER_DEFAULTS = @json($modelTierDefaultsForJs);
 window.PRODUCT_MODEL_TIER_DEFINITIONS = @json($modelTierDefinitionsForJs);
 window.PRODUCT_MODEL_QUALITY_PRESETS = @json($modelQualityPresetsForJs);
+window.PRODUCT_MODEL_QUALITY_PRESET_STORE_URL = @json(route('admin.model-quality-presets.store'));
 window.PRODUCT_QUALITY_CREDIT_PRESETS = @json($qualityCreditPresetsForJs);
 window.PRODUCT_MODEL_QUALITY_DEFAULT_KEY = @json($modelQualityDefaultPresetKey);
 window.PRODUCT_BULK_MODEL_QUALITY_URL = @json(route('admin.products.bulk_update_model_quality_configuration'));
@@ -847,7 +848,9 @@ window.PRODUCT_QUALITY_CREDIT_PRESET_STORE_URL = @json(route('admin.product-cred
         <div class="flex items-center gap-2 flex-wrap">
           <label class="sr-only" for="product-quality-preset">پیش‌فرض‌ها</label>
           <select id="product-quality-preset" class="input-pro" style="height:36px;min-width:120px;" onchange="applyProductQualityPreset(this.value)"></select>
-          <button type="button" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="fixProductQualityPreset()"><i class="fa-solid fa-thumbtack text-[10px]"></i> فیکس کردن تنظیمات</button>
+          <input id="product-quality-new-preset-name" type="text" class="input-pro" style="height:36px;min-width:150px;" maxlength="100" placeholder="نام پیش‌فرض جدید">
+          <button type="button" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="createProductQualityPreset()"><i class="fa-solid fa-plus text-[10px]"></i> افزودن پیش‌فرض</button>
+          <button type="button" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="fixProductQualityPreset()"><i class="fa-solid fa-floppy-disk text-[10px]"></i> ذخیره روی همین پیش‌فرض</button>
           <button type="button" id="product-quality-architecture-toggle" class="btn-pro btn-pro-ghost" style="height:36px;" onclick="toggleProductQualityArchitecture()"><i class="fa-solid fa-toggle-on text-[12px]"></i> <span>روشن</span></button>
         </div>
       </div>
