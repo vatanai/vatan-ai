@@ -213,6 +213,35 @@ class OpenRouterServiceTest extends TestCase
         });
     }
 
+    public function test_gemini_flash_lite_clamps_paid_quality_to_its_only_supported_1k_resolution(): void
+    {
+        Http::fake([
+            'https://openrouter.test/api/v1/images' => Http::response([
+                'data' => [['b64_json' => base64_encode('image')]],
+            ]),
+        ]);
+
+        $reference = 'data:image/jpeg;base64,' . base64_encode('reference');
+
+        app(OpenRouterService::class)->generateImageFromPrompt(
+            'google/gemini-3.1-flash-lite-image',
+            'Edit this portrait',
+            '1080',
+            '3:4',
+            1,
+            ['input_references' => [[
+                'type' => 'image_url',
+                'image_url' => ['url' => $reference],
+            ]]]
+        );
+
+        Http::assertSent(function (Request $request) use ($reference): bool {
+            return $request['resolution'] === '1K'
+                && $request['aspect_ratio'] === '3:4'
+                && $request['input_references'][0]['image_url']['url'] === $reference;
+        });
+    }
+
     public function test_gpt_image_payload_converts_resolution_and_portrait_ratio(): void
     {
         Http::fake([

@@ -473,8 +473,13 @@ class OpenRouterService implements AiImageProviderInterface
         if (str_starts_with($modelId, 'google/') && str_contains($modelId, 'image')) {
             // Gemini 2.5 فقط aspect_ratio، n و input_references را می‌پذیرد؛
             // نسل‌های 3 و 3.1 علاوه بر آن resolution را هم قبول می‌کنند.
+            // نسخه Flash Lite Image برخلاف نسخه کامل فقط خروجی 1K دارد؛
+            // تبدیل کیفیت کسب‌وکاری 1080 به 2K باعث می‌شود تمام endpointهای
+            // OpenRouter درخواست را قبل از ساخت تصویر با HTTP 400 رد کنند.
             if ($modelId === 'google/gemini-2.5-flash-image') {
                 unset($payload['resolution']);
+            } elseif (str_contains($modelId, 'flash-lite-image')) {
+                $payload['resolution'] = '1K';
             } else {
                 $resolution = strtoupper((string) ($payload['resolution'] ?? '1K'));
                 $payload['resolution'] = match ($resolution) {
