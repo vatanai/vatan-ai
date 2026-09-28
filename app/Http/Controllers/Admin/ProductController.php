@@ -21,6 +21,7 @@ use App\Services\VideoPreviewOptimizer;
 use App\Services\VideoProductConfigService;
 use App\Services\OpenRouterService;
 use App\Services\ExchangeRateService;
+use App\Services\ImageGenerationRetryPolicy;
 use App\Services\ModelQualityPresetSync;
 use App\Services\ProviderPricingService;
 use App\Services\ProductLabCostService;
@@ -1521,13 +1522,15 @@ class ProductController extends Controller
             true
         );
 
-        $preset->configuration = array_replace(
-            (array) $preset->configuration,
-            $modelConfiguration,
-            ['quality_architecture_enabled' => filter_var(
-                $configuration['quality_architecture_enabled'] ?? true,
-                FILTER_VALIDATE_BOOLEAN
-            )]
+        $preset->configuration = app(ImageGenerationRetryPolicy::class)->withDefaults(
+            array_replace(
+                (array) $preset->configuration,
+                $modelConfiguration,
+                ['quality_architecture_enabled' => filter_var(
+                    $configuration['quality_architecture_enabled'] ?? true,
+                    FILTER_VALIDATE_BOOLEAN
+                )]
+            )
         );
         $preset->save();
         app(ModelQualityPresetSync::class)->synchronize($preset);

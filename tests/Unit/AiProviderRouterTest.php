@@ -7,6 +7,8 @@ use App\Services\AiProviderRouter;
 use App\Services\OpenRouterService;
 use App\Services\Providers\FalImageProvider;
 use App\Support\ProviderStatus;
+use Carbon\CarbonInterval;
+use Illuminate\Support\Sleep;
 use Mockery;
 use Tests\TestCase;
 
@@ -18,6 +20,13 @@ class AiProviderRouterTest extends TestCase
 
         config(['cache.default' => 'array']);
         ProviderStatus::setEnabled('openrouter', true);
+    }
+
+    protected function tearDown(): void
+    {
+        Sleep::fake(false);
+
+        parent::tearDown();
     }
 
     public function test_product_explicitly_assigned_to_openrouter_uses_openrouter_even_for_shared_model_id(): void
@@ -179,5 +188,95 @@ class AiProviderRouterTest extends TestCase
             ->generateForProduct($product, 'test', '1K', '1:1');
 
         $this->assertSame('google/gemini-3.1-flash-lite-image', $result['model']);
+    }
+
+    public function test_retry_policy_tries_the_same_primary_three_times_before_configured_fallback(): void
+    {
+        Sleep::fake();
+        ProviderStatus::setEnabled('fal', true);
+
+        $product = new Product([
+            'primary_model' => 'primary/model',
+            'ai_provider' => 'openrouter',
+            'fallback_models' => ['fallback/model'],
+            'fallback_model_providers' => ['fal'],
+            'timeout' => 90,
+            'model_configuration' => [
+                'quality_preset_key' => 'custom',
+                'image_retry_policy' => [
+                    'enabled' => true,
+                    'primary_max_attempts' => 3,
+                    'primary_retry_delays_seconds' => [5, 10],
+                    'fallback_max_attempts' => 1,
+                ],
+            ],
+        ]);
+        $product->strict_model_priority = true;
+
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldReceive('generateForProduct')
+            ->times(3)
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'primary/model'
+                && $candidate->ai_provider === 'openrouter'
+            )
+            ->andThrow(new \RuntimeException('Connection timed out'));
+
+        $fal = Mockery::mock(FalImageProvider::class);
+        $fal->shouldReceive('generateForProduct')
+            ->once()
+            ->ordered()
+            ->withArgs(fn (Product $candidate): bool =>
+                $candidate->primary_model === 'fallback/model'
+                && $candidate->ai_provider === 'fal'
+            )
+            ->andReturn(['model' => 'fallback/model', 'data' => []]);
+
+        $result = (new AiProviderRouter($openRouter, $fal))
+            ->generateForProduct($product, 'test', '2K', '1:1');
+
+        $this->assertSame('fallback/model', $result['model']);
+        Sleep::assertSleptTimes(2);
+        Sleep::assertSlept(fn (CarbonInterval $duration): bool => $duration->totalSeconds === 5.0);
+        Sleep::assertSlept(fn (CarbonInterval $duration): bool => $duration->totalSeconds === 10.0);
+    }
+
+    public function test_permanent_primary_error_skips_retries_and_goes_directly_to_fallback(): void
+    {
+        Sleep::fake();
+        ProviderStatus::setEnabled('fal', true);
+
+        $product = new Product([
+            'primary_model' => 'primary/model',
+            'ai_provider' => 'openrouter',
+            'fallback_models' => ['fallback/model'],
+            'fallback_model_providers' => ['fal'],
+            'model_configuration' => [
+                'quality_preset_key' => 'custom',
+                'image_retry_policy' => [
+                    'enabled' => true,
+                    'primary_max_attempts' => 3,
+                    'primary_retry_delays_seconds' => [5, 10],
+                    'fallback_max_attempts' => 1,
+                ],
+            ],
+        ]);
+        $product->strict_model_priority = true;
+
+        $openRouter = Mockery::mock(OpenRouterService::class);
+        $openRouter->shouldReceive('generateForProduct')
+            ->once()
+            ->andThrow(new \RuntimeException('OpenRouter HTTP 422: validation failed'));
+        $fal = Mockery::mock(FalImageProvider::class);
+        $fal->shouldReceive('generateForProduct')
+            ->once()
+            ->andReturn(['model' => 'fallback/model', 'data' => []]);
+
+        $result = (new AiProviderRouter($openRouter, $fal))
+            ->generateForProduct($product, 'test', '2K', '1:1');
+
+        $this->assertSame('fallback/model', $result['model']);
+        Sleep::assertNeverSlept();
     }
 }

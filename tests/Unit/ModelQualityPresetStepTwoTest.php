@@ -118,12 +118,19 @@ class ModelQualityPresetStepTwoTest extends TestCase
         $this->assertSame($updatedModels['quality_models'], $preset->configuration['quality_models']);
         $this->assertSame($updatedModels['free_quality_models'], $preset->configuration['free_quality_models']);
         $this->assertSame($original['quality_credit_costs'], $preset->configuration['quality_credit_costs']);
+        $this->assertSame([
+            'enabled' => true,
+            'primary_max_attempts' => 3,
+            'primary_retry_delays_seconds' => [5, 10],
+            'fallback_max_attempts' => 1,
+        ], $preset->configuration['image_retry_policy']);
         $linked->refresh();
         $unrelated->refresh();
         $this->assertSame($updatedModels['quality_models'], $linked->model_configuration['quality_models']);
         $this->assertSame($updatedModels['free_quality_models'], $linked->model_configuration['free_quality_models']);
         $this->assertSame($original['quality_credit_costs'], $linked->model_configuration['quality_credit_costs']);
         $this->assertSame($original['quality_models'], $unrelated->model_configuration['quality_models']);
+        $this->assertSame($preset->configuration['image_retry_policy'], $linked->model_configuration['image_retry_policy']);
         $this->assertSame($updatedModels['quality_models']['best']['primary']['model_id'], $linked->primary_model);
         $this->assertSame($updatedModels['quality_models']['best']['fallback']['model_id'], $linked->fallback_models[0]);
 

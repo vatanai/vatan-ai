@@ -7,6 +7,7 @@ use App\Models\AiModel;
 use App\Models\Product;
 use App\Support\ProviderStatus;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Exception;
 
 /**
@@ -228,6 +229,14 @@ class AiProviderRouter
         $disabledProviders = [];
         $exhaustedProviders = [];
         $attemptedRoutes = [];
+        $retryPolicy = app(ImageGenerationRetryPolicy::class)->forProduct($product);
+        $routeAttemptLimits = collect($models)
+            ->map(fn ($_model, int $index): int => ! $retryPolicy['enabled']
+                ? 1
+                : ($index === 0
+                    ? (int) $retryPolicy['primary_max_attempts']
+                    : (int) $retryPolicy['fallback_max_attempts']))
+            ->all();
 
         foreach ($models as $index => $modelId) {
             $provider = $providers[$index] ?? $this->findModel($modelId)?->provider;
@@ -246,26 +255,72 @@ class AiProviderRouter
                 ]);
                 continue;
             }
-            $candidate = $product->replicate();
-            $candidate->primary_model = $modelId;
-            $candidate->ai_provider = $provider;
-            $candidate->fallback_models = [];
-            if (! $this->configureImageAttemptTimeout($candidate, $requestDeadline)) {
-                break;
-            }
             $attemptedRoutes[$provider . '|' . $modelId] = true;
-            try {
-                return $run($this->serviceForModelId($modelId, $provider), $candidate);
-            } catch (\Throwable $error) {
-                $lastError = $error;
-                if ($this->isProviderExhaustionError($error)) {
-                    $exhaustedProviders[$provider] = $this->providerFailureReason($error);
+            $routeMaxAttempts = max(1, (int) ($routeAttemptLimits[$index] ?? 1));
+            $routeError = null;
+
+            for ($attempt = 1; $attempt <= $routeMaxAttempts; $attempt++) {
+                $candidate = $product->replicate();
+                $candidate->primary_model = $modelId;
+                $candidate->ai_provider = $provider;
+                $candidate->fallback_models = [];
+
+                $remainingAttempts = $this->plannedAttemptsRemaining($routeAttemptLimits, $index, $attempt);
+                $remainingDelays = $index === 0
+                    ? array_sum(array_slice(
+                        (array) $retryPolicy['primary_retry_delays_seconds'],
+                        max(0, $attempt - 1),
+                    ))
+                    : 0;
+                if (! $this->configureImageAttemptTimeout(
+                    $candidate,
+                    $requestDeadline,
+                    $remainingAttempts,
+                    $remainingDelays,
+                )) {
+                    break 2;
                 }
-                Log::warning('AiProviderRouter: product model failed, trying next provider/model', [
-                    'product_id' => $product->id, 'model' => $modelId, 'provider' => $provider,
-                    'message' => $error->getMessage(),
-                ]);
+
+                try {
+                    return $run($this->serviceForModelId($modelId, $provider), $candidate);
+                } catch (\Throwable $error) {
+                    $routeError = $lastError = $error;
+                    $canRetrySameModel = $retryPolicy['enabled']
+                        && $attempt < $routeMaxAttempts
+                        && $this->isRetryableImageError($error);
+                    $delay = $canRetrySameModel
+                        ? (int) ($retryPolicy['primary_retry_delays_seconds'][$attempt - 1] ?? 0)
+                        : 0;
+
+                    Log::warning('AiProviderRouter: image model attempt failed', [
+                        'product_id' => $product->id,
+                        'model' => $modelId,
+                        'provider' => $provider,
+                        'attempt' => $attempt,
+                        'max_attempts' => $routeMaxAttempts,
+                        'retryable' => $canRetrySameModel,
+                        'retry_delay_seconds' => $delay,
+                        'message' => $error->getMessage(),
+                    ]);
+
+                    if (! $canRetrySameModel || ! $this->canWaitForRetry($requestDeadline, $delay)) {
+                        break;
+                    }
+
+                    Sleep::for($delay)->seconds();
+                }
             }
+
+            if ($routeError && $this->isProviderExhaustionError($routeError)) {
+                $exhaustedProviders[$provider] = $this->providerFailureReason($routeError);
+            }
+            Log::warning('AiProviderRouter: model exhausted, trying configured fallback', [
+                'product_id' => $product->id,
+                'model' => $modelId,
+                'provider' => $provider,
+                'attempts' => $routeMaxAttempts,
+                'message' => $routeError?->getMessage(),
+            ]);
         }
 
         // وقتی مسیر محصول قفل شده (strict_model_priority) — یعنی روتر اجازه
@@ -280,6 +335,7 @@ class AiProviderRouter
         $primaryModelId = $models[0] ?? null;
         if ($product->getAttribute('strict_model_priority')
             && $lastError
+            && ! $retryPolicy['enabled']
             && $primaryProvider === 'openrouter'
             && $primaryModelId
             && count($models) > 1
@@ -377,7 +433,12 @@ class AiProviderRouter
         throw new Exception('هیچ مدل فعال و قابل‌استفاده‌ای برای این محصول پیدا نشد.');
     }
 
-    private function configureImageAttemptTimeout(Product $candidate, float $requestDeadline): bool
+    private function configureImageAttemptTimeout(
+        Product $candidate,
+        float $requestDeadline,
+        int $plannedAttempts = 1,
+        int $plannedDelaySeconds = 0,
+    ): bool
     {
         $remainingSeconds = (int) floor($requestDeadline - microtime(true));
         if ($remainingSeconds < 15) {
@@ -386,9 +447,26 @@ class AiProviderRouter
 
         $configuredTimeout = (int) ($candidate->timeout ?: config('services.openrouter.timeout', 60));
         $attemptTimeout = max(15, (int) config('services.openrouter.image_attempt_timeout', 90));
-        $candidate->timeout = min($configuredTimeout, $attemptTimeout, $remainingSeconds);
+        $availableForAttempts = max(15, $remainingSeconds - max(0, $plannedDelaySeconds));
+        $fairAttemptBudget = max(15, (int) floor($availableForAttempts / max(1, $plannedAttempts)));
+        $candidate->timeout = min($configuredTimeout, $attemptTimeout, $fairAttemptBudget);
 
         return true;
+    }
+
+    private function plannedAttemptsRemaining(array $routeAttemptLimits, int $routeIndex, int $currentAttempt): int
+    {
+        $remaining = max(1, (int) ($routeAttemptLimits[$routeIndex] ?? 1) - $currentAttempt + 1);
+        foreach (array_slice($routeAttemptLimits, $routeIndex + 1) as $limit) {
+            $remaining += max(1, (int) $limit);
+        }
+
+        return $remaining;
+    }
+
+    private function canWaitForRetry(float $requestDeadline, int $delaySeconds): bool
+    {
+        return ($requestDeadline - microtime(true)) >= ($delaySeconds + 15);
     }
 
     private function shouldPreferFastImageRoute(Product $product, string $resolution, array $extraPayload): bool
@@ -463,11 +541,38 @@ class AiProviderRouter
             || str_contains($message, 'http 402')
             || str_contains($message, 'http 403')
             || str_contains($message, 'http 429')
-            || str_contains($message, 'http 5')
             || str_contains($message, 'insufficient credit')
             || str_contains($message, 'rate limit')
             || str_contains($message, 'quota')
             || str_contains($message, 'api_key');
+    }
+
+    private function isRetryableImageError(\Throwable $error): bool
+    {
+        $message = strtolower($error->getMessage());
+
+        foreach ([
+            'http 400', 'http 401', 'http 402', 'http 403', 'http 404', 'http 422',
+            'insufficient credit', 'invalid api', 'api_key', 'unsupported', 'validation',
+            'content policy', 'moderation', 'safety',
+        ] as $permanentFailure) {
+            if (str_contains($message, $permanentFailure)) {
+                return false;
+            }
+        }
+
+        foreach ([
+            'http 408', 'http 409', 'http 425', 'http 429', 'http 5',
+            'timeout', 'timed out', 'connection', 'temporar', 'unavailable',
+            'server error', 'gateway', 'overloaded', 'rate limit', 'generation failed',
+            'prediction failed', 'request failed', 'تکمیل نشد', 'ناموفق',
+        ] as $transientFailure) {
+            if (str_contains($message, $transientFailure)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function providerFailureReason(\Throwable $error): string

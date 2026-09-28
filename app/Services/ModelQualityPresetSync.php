@@ -28,6 +28,9 @@ class ModelQualityPresetSync
         foreach (['quality_models', 'free_quality_models'] as $group) {
             $configuration[$group] = (array) ($presetConfiguration[$group] ?? []);
         }
+        if (array_key_exists('image_retry_policy', $presetConfiguration)) {
+            $configuration['image_retry_policy'] = (array) $presetConfiguration['image_retry_policy'];
+        }
         if (array_key_exists('quality_architecture_enabled', $presetConfiguration)) {
             $configuration['quality_architecture_enabled'] = (bool) $presetConfiguration['quality_architecture_enabled'];
         }

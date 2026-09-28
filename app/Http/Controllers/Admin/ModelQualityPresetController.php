@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiModel;
 use App\Models\ModelQualityPreset;
 use App\Models\Product;
+use App\Services\ImageGenerationRetryPolicy;
 use App\Services\ModelQualityPresetSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,9 +27,11 @@ class ModelQualityPresetController extends Controller
         if (array_key_exists('configuration', $data)) {
             // فرم گام دوم فقط بخش مدل‌ها را می‌فرستد؛ هزینه‌های سه‌گرید نباید
             // هنگام فیکس‌کردن مدل‌ها بی‌صدا از پیش‌فرض حذف شوند.
-            $data['configuration'] = array_replace_recursive(
-                (array) $modelQualityPreset->configuration,
-                (array) $data['configuration']
+            $data['configuration'] = app(ImageGenerationRetryPolicy::class)->withDefaults(
+                array_replace_recursive(
+                    (array) $modelQualityPreset->configuration,
+                    (array) $data['configuration']
+                )
             );
             $this->validateConfiguration($data['configuration']);
         }
@@ -73,6 +76,7 @@ class ModelQualityPresetController extends Controller
         $configuration = $data['configuration'] ?? ModelQualityPreset::query()->orderBy('id')->value('configuration');
         $configuration = is_array($configuration) ? $configuration : json_decode((string) $configuration, true);
         $configuration = is_array($configuration) ? $configuration : [];
+        $configuration = app(ImageGenerationRetryPolicy::class)->withDefaults($configuration);
         $this->validateConfiguration($configuration);
 
         $preset = DB::transaction(function () use ($data, $configuration): ModelQualityPreset {
