@@ -66,10 +66,9 @@ class ServiceCreditController extends Controller
 
     public function imageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
     {
-        // A failed preview must never fall back to sending the original image.
-        if (! $thumbnails->generate($generatedImage, 160)) abort(404);
-
-        return $thumbnails->serve($generatedImage, 160);
+        // خروجی ذخیره‌شده به‌صورت لینک بیرونی مستقیم باز می‌شود؛ خروجی محلی اگر
+        // بندانگشتی‌اش ساخته نشود، به‌جای ۴۰۴ (عکس شکسته) خود فایل اصلی را می‌فرستد.
+        return $thumbnails->serve($generatedImage, 160, true);
     }
 
     public function orderInput(Order $order, int $index)

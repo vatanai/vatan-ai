@@ -57,7 +57,26 @@ class ProfileMediaThumbnailService
         ]);
     }
 
-    public function serve(GeneratedImage $image, int $maxEdge = self::MAX_EDGE): BinaryFileResponse|RedirectResponse
+    /**
+     * اگر بندانگشتی قبلاً ساخته شده باشد، آدرس مستقیم فایل استاتیک آن را برمی‌گرداند
+     * تا مرورگر بدون درگیرکردن PHP (و صف محدود workerها) تصویر را بگیرد.
+     * خروجی اصلی هم از قبل روی همین دیسک public و با /storage در دسترس است.
+     */
+    public function cachedPublicUrl(GeneratedImage $image, int $maxEdge = self::MAX_EDGE): ?string
+    {
+        $sourcePath = trim((string) $image->image_path);
+        if ($sourcePath === '' || filter_var($sourcePath, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $thumbnailPath = $this->thumbnailPath($image, $maxEdge);
+
+        return Storage::disk('public')->exists($thumbnailPath)
+            ? asset('storage/' . $thumbnailPath)
+            : null;
+    }
+
+    public function serve(GeneratedImage $image, int $maxEdge = self::MAX_EDGE, bool $fallbackToOriginal = false): BinaryFileResponse|RedirectResponse
     {
         $sourcePath = trim((string) $image->image_path);
         if ($sourcePath === '') {
@@ -75,7 +94,18 @@ class ProfileMediaThumbnailService
 
         $thumbnailPath = $this->generate($image, $maxEdge);
         if ($thumbnailPath === null) {
-            abort(404);
+            // در پنل مدیریت، عکس سالمی که فقط نسخهٔ کوچکش ساخته نشد (فرمت
+            // پشتیبانی‌نشده، نبود WebP در GD، کمبود حافظه و...) نباید «شکسته» دیده شود.
+            abort_unless($fallbackToOriginal, 404);
+
+            $response = response()->file($disk->path($sourcePath), [
+                'Content-Type' => $disk->mimeType($sourcePath) ?: 'application/octet-stream',
+            ]);
+            $response->setPrivate();
+            $response->setMaxAge(3600);
+            $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+            return $response;
         }
 
         $response = response()->file($disk->path($thumbnailPath));

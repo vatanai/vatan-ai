@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AiProviderRequest;
+use App\Models\FaceProfile;
 use App\Models\GeneratedImage;
 use App\Models\GeneratedVideo;
 use App\Models\Order;
@@ -535,13 +536,18 @@ class ServiceCreditTransactionReport
         }
         $images = $images->unique('id')->values();
         $videos = $videos->unique('id')->values();
+        $faceProfileIds = $orders->map(fn (Order $order) => data_get((array) $order->input_payload, 'face_profile_id'))
+            ->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id)->unique()->values();
+        $faceProfiles = $faceProfileIds->isNotEmpty()
+            ? FaceProfile::query()->whereIn('id', $faceProfileIds)->get()->keyBy('id')
+            : collect();
         $gallery = $orderIds->isNotEmpty()
             ? UserGalleryItem::query()->whereIn('order_id', $orderIds)
                 ->whereIn('source_type', ['upload', 'input_image', 'input_text', 'input_video'])
                 ->orderByDesc('id')->get()->groupBy('order_id')
             : collect();
 
-        return $page->map(function (array $row) use ($orders, $providerRequests, $images, $videos, $gallery): array {
+        return $page->map(function (array $row) use ($orders, $providerRequests, $images, $videos, $gallery, $faceProfiles): array {
             $orderId = $row['order_id'];
             $order = $orderId ? $orders->get($orderId) : null;
             $rowRequests = $orderId
@@ -564,6 +570,7 @@ class ServiceCreditTransactionReport
                 $row['input_media'] = $items->isNotEmpty()
                     ? $this->galleryInputMedia($items, $order)
                     : $this->inputMediaForOrderPayload($order);
+                $row['input_media'] = $this->withFaceProfileMedia($row['input_media'], $order, $faceProfiles);
             }
 
             $validImages = $rowImages->map(fn (GeneratedImage $image) => [
@@ -590,7 +597,8 @@ class ServiceCreditTransactionReport
 
             $previewImage = $validImages->first()['model'] ?? null;
             if ($previewImage instanceof GeneratedImage) {
-                $row['output_preview_url'] = route('admin.service-credits.image-thumbnail', $previewImage);
+                $row['output_preview_url'] = app(ProfileMediaThumbnailService::class)->cachedPublicUrl($previewImage, 160)
+                    ?: route('admin.service-credits.image-thumbnail', $previewImage);
             }
             if ($row['media_missing'] && $row['output_urls'] === []) {
                 $row['note'] = trim(implode(' ', array_filter([$row['note'], 'فایل خروجی در فضای ذخیره‌سازی موجود نیست.'])));
@@ -619,6 +627,44 @@ class ServiceCreditTransactionReport
                 'text' => $type === 'text' ? data_get($item->metadata, 'text') : null,
             ];
         })->filter()->values()->all();
+    }
+
+    /**
+     * عکس‌های کارکتر شیت (پروفایل چهره) هم ورودی واقعی مدل هستند اما هیچ‌وقت در
+     * گالری ورودی‌ها ثبت نمی‌شوند؛ بدون این بخش، ساخت‌های مبتنی بر کارکتر شیت
+     * همیشه بدون عکس ورودی نمایش داده می‌شدند.
+     */
+    private function withFaceProfileMedia(array $media, Order $order, Collection $faceProfiles): array
+    {
+        $profileId = data_get((array) $order->input_payload, 'face_profile_id');
+        $profile = is_numeric($profileId) ? $faceProfiles->get((int) $profileId) : null;
+        if (! $profile instanceof FaceProfile) {
+            return $media;
+        }
+
+        $disk = Storage::disk('public');
+        $label = 'کارکتر شیت' . (filled($profile->name) ? ': ' . $profile->name : '');
+        $faceMedia = collect($profile->referenceImageEntries())
+            ->map(function (array $image) use ($disk, $label): ?array {
+                $path = (string) $image['path'];
+                if (filter_var($path, FILTER_VALIDATE_URL)) {
+                    $url = $path;
+                } else {
+                    $path = ltrim($path, '/');
+                    if (! $disk->exists($path)) return null;
+                    $url = asset('storage/' . $path);
+                }
+
+                return ['type' => 'image', 'url' => $url, 'original_url' => $url, 'preview_url' => $url, 'label' => $label, 'text' => null];
+            })->filter()->values();
+        if ($faceMedia->isEmpty()) {
+            return $media;
+        }
+
+        // متن جایگزین «ورودی پروفایل چهره» وقتی خود عکس‌ها نمایش داده می‌شوند لازم نیست.
+        $rest = collect($media)->reject(fn (array $item): bool => ($item['type'] ?? null) === 'text' && ($item['label'] ?? null) === 'ورودی پروفایل چهره');
+
+        return $rest->concat($faceMedia)->take(6)->values()->all();
     }
 
     private function orderOutputUrls(Order $order): array

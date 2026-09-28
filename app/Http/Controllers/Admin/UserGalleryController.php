@@ -37,6 +37,8 @@ use Illuminate\Support\Str;
 class UserGalleryController extends Controller
 {
     private const INPUT_SOURCE_TYPES = ['upload', 'input_image', 'input_text', 'input_video'];
+    /** خروجی‌های نگه‌داشته‌شده در گالری که فقط برای نمایش (نه حذف) قابل سرو هستند. */
+    private const OUTPUT_SOURCE_TYPES = ['output_image', 'output_video'];
 
     public function index(Request $request)
     {
@@ -850,7 +852,7 @@ class UserGalleryController extends Controller
         })->filter()->values();
 
         if ($media->isNotEmpty()) {
-            return $media->take(6)->all();
+            return $this->withFaceProfileMedia($media->all(), $order);
         }
 
         $payload = (array) $order->input_payload;
@@ -879,7 +881,48 @@ class UserGalleryController extends Controller
             $fallback->push(['type' => 'video', 'url' => (string) data_get($payload, 'source_video_url'), 'label' => 'ویدیوی ورودی', 'text' => null]);
         }
 
-        return $fallback->take(6)->values()->all();
+        return $this->withFaceProfileMedia($fallback->values()->all(), $order);
+    }
+
+    /** @var array<int, FaceProfile|null> */
+    private array $faceProfileCache = [];
+
+    /**
+     * عکس‌های کارکتر شیت (پروفایل چهره) ورودی واقعی مدل هستند ولی در گالری
+     * ورودی‌ها ثبت نمی‌شوند؛ بدون این بخش، این ساخت‌ها بدون عکس ورودی دیده می‌شدند.
+     */
+    private function withFaceProfileMedia(array $media, Order $order): array
+    {
+        $profileId = data_get((array) $order->input_payload, 'face_profile_id');
+        if (! is_numeric($profileId)) {
+            return array_slice($media, 0, 6);
+        }
+
+        $profileId = (int) $profileId;
+        if (! array_key_exists($profileId, $this->faceProfileCache)) {
+            $this->faceProfileCache[$profileId] = FaceProfile::query()->find($profileId);
+        }
+        $profile = $this->faceProfileCache[$profileId];
+        if (! $profile) {
+            return array_slice($media, 0, 6);
+        }
+
+        $disk = Storage::disk('public');
+        $label = 'کارکتر شیت' . (filled($profile->name) ? ': ' . $profile->name : '');
+        $faceMedia = collect($profile->referenceImageEntries())
+            ->map(function (array $image) use ($disk, $label): ?array {
+                $path = (string) $image['path'];
+                if (filter_var($path, FILTER_VALIDATE_URL)) {
+                    return ['type' => 'image', 'url' => $path, 'label' => $label, 'text' => null];
+                }
+                $path = ltrim($path, '/');
+
+                return $disk->exists($path)
+                    ? ['type' => 'image', 'url' => asset('storage/' . $path), 'label' => $label, 'text' => null]
+                    : null;
+            })->filter()->values();
+
+        return collect($media)->concat($faceMedia)->take(6)->values()->all();
     }
 
     private function galleryItemMediaUrl(UserGalleryItem $item, int $userId, bool $preferThumbnail = false): ?string
@@ -905,7 +948,10 @@ class UserGalleryController extends Controller
             return null;
         }
 
-        return route('admin.users.gallery.generated-image-thumbnail', $image);
+        // بندانگشتیِ آماده مستقیم به‌صورت فایل استاتیک سرو می‌شود تا ده‌ها عکس
+        // کارت‌ها برای گرفتن worker محدود PHP صف نکشند و نیمه‌کاره نمانند.
+        return app(ProfileMediaThumbnailService::class)->cachedPublicUrl($image, 160)
+            ?: route('admin.users.gallery.generated-image-thumbnail', $image);
     }
 
     private function statusLabel(?string $status): string
@@ -942,19 +988,19 @@ class UserGalleryController extends Controller
 
     public function preview(User $user, UserGalleryItem $item, UserGalleryService $gallery)
     {
-        $this->ensureItemBelongsToUser($user, $item);
+        $this->ensureMediaItemBelongsToUser($user, $item);
 
         return $gallery->response($item);
     }
 
     public function generatedImageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
     {
-        return $thumbnails->serve($generatedImage, 160);
+        return $thumbnails->serve($generatedImage, 160, true);
     }
 
     public function thumbnail(User $user, UserGalleryItem $item, UserGalleryService $gallery)
     {
-        $this->ensureItemBelongsToUser($user, $item);
+        $this->ensureMediaItemBelongsToUser($user, $item);
 
         return $gallery->response($item, false, true);
     }
@@ -1013,7 +1059,7 @@ class UserGalleryController extends Controller
 
     public function original(User $user, UserGalleryItem $item, UserGalleryService $gallery)
     {
-        $this->ensureItemBelongsToUser($user, $item);
+        $this->ensureMediaItemBelongsToUser($user, $item);
 
         return $gallery->response($item, true);
     }
@@ -1030,6 +1076,18 @@ class UserGalleryController extends Controller
     {
         abort_unless((int) $item->user_id === (int) $user->id, 404);
         abort_unless(in_array($item->source_type, self::INPUT_SOURCE_TYPES, true), 404);
+    }
+
+    /**
+     * نمایش فایل (پیش‌نمایش/بندانگشتی/اصلی) هم برای ورودی‌ها و هم برای نسخهٔ
+     * نگه‌داشته‌شدهٔ خروجی‌ها مجاز است؛ کارت‌های «قبل/بعد» گالری کاربران لینک
+     * خروجی‌ها را از همین مسیرها می‌سازند و محدودکردن آن به ورودی‌ها باعث ۴۰۴ و
+     * نمایش‌ندادن عکس‌های ساخته‌شده می‌شد. حذف همچنان فقط برای ورودی‌هاست.
+     */
+    private function ensureMediaItemBelongsToUser(User $user, UserGalleryItem $item): void
+    {
+        abort_unless((int) $item->user_id === (int) $user->id, 404);
+        abort_unless(in_array($item->source_type, array_merge(self::INPUT_SOURCE_TYPES, self::OUTPUT_SOURCE_TYPES), true), 404);
     }
 
     private function decorateItems($items): void
