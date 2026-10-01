@@ -22,6 +22,7 @@ use App\Services\ProfileMediaThumbnailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -400,19 +401,28 @@ public function gallery()
         $validated = $request->validate([
             'q' => ['required', 'string', 'min:1', 'max:120'],
         ]);
-        $terms = $productSearch->terms((string) $validated['q']);
+        $terms = collect($productSearch->terms((string) $validated['q']))
+            ->map(fn (string $term): string => $this->normalizeReferralProductSearchTerm($term))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($terms === []) {
+            return response()->json(['items' => []]);
+        }
 
         $products = Product::query()
             ->where('status', 'active')
-            ->where(function ($query) use ($terms): void {
+            ->where(function (Builder $query) use ($terms): void {
                 foreach ($terms as $term) {
                     $like = '%'.addcslashes($term, '%_\\').'%';
 
-                    $query->where(function ($match) use ($like): void {
-                        $match->where('name_fa', 'like', $like)
-                            ->orWhere('name_en', 'like', $like)
-                            ->orWhere('slug', 'like', $like)
-                            ->orWhere('product_code', 'like', $like);
+                    $query->where(function (Builder $match) use ($like): void {
+                        foreach (['name_fa', 'name_en', 'slug', 'product_code'] as $column) {
+                            $match
+                                ->orWhere($column, 'like', $like)
+                                ->orWhereRaw($this->normalizedReferralProductColumn($column).' LIKE ?', [$like]);
+                        }
                     });
                 }
             })
@@ -427,6 +437,27 @@ public function gallery()
                 'name_en' => $product->name_en,
             ])->values(),
         ]);
+    }
+
+    /**
+     * برای جست‌وجوی رفرال، نیم‌فاصله و شکل‌های رایج حروف عربی/فارسی را یکدست می‌کند.
+     * خود ستون هم در SQL با همین قاعده نرمال می‌شود تا «کت واک» و «کت‌واک» هر دو نتیجه بدهند.
+     */
+    private function normalizeReferralProductSearchTerm(string $term): string
+    {
+        return mb_strtolower(
+            str_replace(
+                ["\u{064A}", "\u{0649}", "\u{0643}", "\u{200C}", "\u{200D}", "\u{FEFF}", ' '],
+                ['ی', 'ی', 'ک', '', '', '', ''],
+                trim($term),
+            ),
+            'UTF-8',
+        );
+    }
+
+    private function normalizedReferralProductColumn(string $column): string
+    {
+        return "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({$column}, 'ي', 'ی'), 'ى', 'ی'), 'ك', 'ک'), '‌', ''), '‍', ''), '﻿', ''))";
     }
 
     /** صفحهٔ بعدی گرید خروجی‌ها؛ cursor باعث می‌شود با رشد تاریخچه offset سنگین نشود. */

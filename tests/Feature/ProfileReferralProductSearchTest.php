@@ -40,6 +40,20 @@ class ProfileReferralProductSearchTest extends TestCase
         );
     }
 
+    public function test_referral_search_matches_product_names_with_zero_width_spacing_and_arabic_letters(): void
+    {
+        $user = User::factory()->create(['status' => 'active']);
+        $target = $this->createProduct("کت\u{200C}واک كسب و کار", 'referral-normalized-product', 'active');
+
+        $response = $this->actingAs($user)->getJson(route('profile.referral-products.search', [
+            'q' => 'کتواک کسب',
+        ]));
+
+        $response->assertOk()
+            ->assertJsonPath('items.0.id', $target->id)
+            ->assertJsonPath('items.0.name', "کت\u{200C}واک كسب و کار");
+    }
+
     private function createProduct(string $name, string $slug, string $status): Product
     {
         return Product::query()->create([
