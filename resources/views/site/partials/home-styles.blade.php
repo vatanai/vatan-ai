@@ -86,7 +86,7 @@
       gap: 8px;
       font-size: 13px;
       font-weight: 600;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       background: var(--green-dim);
       border: 1px solid rgba(207,254,0,0.25);
       border-radius: 99px;
@@ -363,7 +363,7 @@
       gap: 8px;
       font-size: 13px;
       font-weight: 600;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       background: var(--green-dim);
       border: 1px solid rgba(207,254,0,0.25);
       border-radius: 99px;
@@ -390,7 +390,7 @@
       letter-spacing: -0.5px;
     }
     .hero-title .highlight {
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       position: relative;
     }
 
@@ -424,7 +424,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       font-size: 10px;
       flex-shrink: 0;
     }
@@ -662,7 +662,7 @@
       margin: 0 auto 20px;
       font-size: 22px;
       font-weight: 900;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       position: relative;
       z-index: 1;
     }
@@ -773,7 +773,7 @@
     }
     .sample-card-foot .time-badge {
       font-size: 11px;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       background: var(--green-dim);
       padding: 3px 10px;
       border-radius: 99px;
@@ -1033,7 +1033,7 @@
       color: var(--text2);
       margin-right: 6px;
     }
-    .pricing-price.free .amount { color: var(--green); }
+    .pricing-price.free .amount { color: var(--green-ink, var(--green)); }
 
     .pricing-outputs {
       font-size: 14px;
@@ -1067,7 +1067,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--green);
+      color: var(--green-ink, var(--green));
       font-size: 9px;
       flex-shrink: 0;
       margin-top: 2px;
@@ -1136,7 +1136,7 @@
     .faq-item.open .faq-arrow {
       transform: rotate(180deg);
       background: var(--green-dim);
-      color: var(--green);
+      color: var(--green-ink, var(--green));
     }
 
     .faq-a {
@@ -1260,7 +1260,7 @@
     }
     .footer-admin-box:hover {
       border-color: rgba(207,254,0,0.4);
-      color: var(--green);
+      color: var(--green-ink, var(--green));
     }
     .footer-admin-box i { font-size: 12px; }
 

@@ -1,0 +1,244 @@
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  لایه‌ی حالت روز — اپ کاربری و سایت اصلی وطن
+ * ═══════════════════════════════════════════════════════════════
+ *  طراحی پایه‌ی سایت «شب» است و این فایل فقط در حالت روز (html.light) اعمال می‌شود.
+ *  همه‌ی رنگ‌ها از توکن‌های public/css/theme-tokens.css خوانده می‌شوند (بدون hex مستقیم،
+ *  جز رنگ‌های ثابت برند). سند: doc/app-site-theme.md
+ *
+ *  این فایل عمداً آخرین استایل هر صفحه است (انتهای <body> در layouts/app.blade.php و
+ *  صفحات مستقل) تا روی استایل‌های داخلی صفحات و کلاس‌های Tailwind اولویت داشته باشد.
+ *  قرارداد انتخابگرها: همیشه با html.light شروع می‌شوند؛ هیچ قانونی روی حالت شب اثر ندارد.
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ───────────────────────────────────────────────
+   ۰. پایه — پس‌زمینه‌ی صفحه و نگاشت توکن‌های قدیمی
+   (resources/css/app.css و public/css/profile.css)
+─────────────────────────────────────────────── */
+html.light {
+  --bg: var(--vt-page);
+  --bg-page: var(--vt-page);
+  --bg-surface: var(--vt-surface);
+  --bg-card: var(--vt-card);
+  --text-primary: var(--vt-text);
+  --text-secondary: var(--vt-text-2);
+  --icon: var(--vt-text);
+  --border-subtle: var(--vt-border);
+  --s1: var(--vt-surface);
+  --s2: var(--vt-card);
+  --b1: var(--vt-border);
+  --red: var(--vt-danger);
+  --orange: var(--vt-warning);
+  --accent: var(--vt-accent);
+  --green-ink: var(--vt-brand-ink);
+  --green-dim: var(--vt-brand-soft);
+  --text: var(--vt-text);
+  --text2: var(--vt-text-2);
+  color-scheme: light;
+  background-color: var(--vt-page);
+}
+html.light body {
+  background-color: var(--vt-page);
+  color: var(--vt-text);
+}
+html.light ::selection { background: var(--vt-brand); color: var(--vt-on-brand); }
+
+/* ───────────────────────────────────────────────
+   ۱. هدر دسکتاپ (layouts/nav.blade.php)
+─────────────────────────────────────────────── */
+html.light #vatan-topnav {
+  box-shadow: 0 1px 0 rgba(12, 12, 16, 0.03), 0 6px 20px -14px rgba(12, 12, 16, 0.18);
+}
+html.light #vatan-topnav a[aria-label="رفتن به خانه اپ"] > img,
+html.light .app-mobile-header .app-mobile-brand img {
+  filter: var(--vatan-logo-filter);
+}
+html.light #vatan-topnav .topnav-link {
+  color: var(--vatan-header-text-muted);
+}
+html.light #vatan-topnav .topnav-link:hover {
+  color: var(--vt-text);
+  background-color: var(--vt-surface-2);
+}
+html.light #vatan-topnav .topnav-link.is-active,
+html.light #vatan-topnav .topnav-link.is-active .topnav-link-icon svg {
+  color: var(--vt-text);
+  background-color: var(--vt-brand-soft);
+}
+
+/* موجودی توکن */
+html.light .topnav-token-box {
+  background: var(--vt-card);
+  border-color: var(--vt-border);
+}
+html.light .topnav-token-icon { background: var(--vt-text); }
+html.light .topnav-token-label,
+html.light .topnav-token-number { color: var(--vt-text); }
+
+/* دکمه تم */
+html.light #vatan-topnav .topnav-theme-btn {
+  background: var(--vt-card);
+  border-color: var(--vt-border);
+  color: var(--vt-text);
+}
+html.light #vatan-topnav .topnav-theme-btn:hover { background: var(--vt-surface-2); }
+html.light .theme-menu {
+  background: var(--vt-card);
+  border-color: var(--vt-border);
+  box-shadow: var(--vt-shadow-pop);
+}
+html.light .theme-menu-item { color: var(--vt-text-2); }
+html.light .theme-menu-item:hover { background: var(--vt-surface-2); color: var(--vt-text); }
+html.light .theme-menu-item.is-active { background: var(--vt-brand-soft); color: var(--vt-text); }
+
+/* خرید اشتراک — دکمه‌ی لیمویی توپر */
+html.light .sub-btn { background: var(--vt-brand); }
+html.light .sub-btn::before { display: none; }
+html.light .sub-btn span,
+html.light .sub-btn span i { color: var(--vt-on-brand); }
+html.light .sub-btn:hover { background: var(--vt-brand-hover); }
+
+/* منوی پروفایل */
+html.light .topnav-popup {
+  --tp-nav-bg: var(--vt-card);
+  --tp-nav-border: var(--vt-border);
+  --tp-nav-shadow: rgba(12, 12, 16, 0.16);
+  --tp-item-color: var(--vt-text-2);
+  --tp-hr-color: var(--vt-border);
+  --tp-danger: var(--vt-danger);
+}
+html.light .topnav-popup-window .tp-user-name { color: var(--vt-text); }
+html.light .topnav-popup-window ul button:hover,
+html.light .topnav-popup-window ul button:not(.is-danger).is-selected { color: var(--vt-on-brand); }
+html.light .topnav-popup-window ul button.is-danger:hover,
+html.light .topnav-popup-window ul button.is-danger:hover i,
+html.light .topnav-popup-window ul button.is-danger:hover span { color: #ffffff; }
+
+/* ───────────────────────────────────────────────
+   ۲. اکسپلور (app/ideas.blade.php)
+─────────────────────────────────────────────── */
+html.light .xp-subtitle { color: var(--vt-text-2); }
+html.light .xp-search-box,
+html.light .xp-filter-btn,
+html.light .xp-cat-box {
+  background: var(--vt-card);
+  border-color: var(--vt-border);
+}
+html.light .xp-search-box:focus-within { border-color: var(--vt-border-strong); box-shadow: var(--vt-shadow-card); }
+html.light .xp-search-input::placeholder { color: var(--vt-text-3); }
+html.light .xp-search-submit, html.light .xp-search-clear { color: var(--vt-text-3); }
+html.light .xp-search-submit:hover, html.light .xp-search-clear:hover { color: var(--vt-text); }
+html.light .xp-filter-btn, html.light .xp-cat-box { color: var(--vt-text-2); }
+html.light .xp-filter-btn:hover, html.light .xp-filter-btn[aria-expanded="true"],
+html.light .xp-cat-box:hover { background: var(--vt-brand); border-color: var(--vt-brand); color: var(--vt-on-brand); }
+html.light .xp-filter-panel { background: var(--vt-card); border-color: var(--vt-border); box-shadow: var(--vt-shadow-pop); }
+html.light .xp-filter-label { color: var(--vt-text-3); }
+html.light .xp-filter-chip { background: var(--vt-page); border-color: var(--vt-border); color: var(--vt-text-2); }
+html.light .xp-filter-chip.active { background: var(--vt-brand); border-color: var(--vt-brand); color: var(--vt-on-brand); }
+html.light .xp-filter-select { background: var(--vt-page); border-color: var(--vt-border); color: var(--vt-text); }
+html.light .xp-filter-actions { border-top-color: var(--vt-border); }
+html.light .xp-filter-clear { border-color: var(--vt-border); color: var(--vt-text-2); }
+html.light .xp-filter-apply { color: var(--vt-on-brand); }
+html.light .xp-tile { background: var(--vt-surface-2); box-shadow: var(--vt-shadow-card); }
+
+/* ───────────────────────────────────────────────
+   ۳. ورود و ثبت‌نام (auth/index.blade.php + auth/partials/auth-styles)
+─────────────────────────────────────────────── */
+html.light .auth-page { background: var(--vt-page); color: var(--vt-text); }
+html.light .auth-glow { opacity: .22; }
+html.light .auth-shell { background: var(--vt-card); border-color: var(--vt-border); box-shadow: var(--vt-shadow-pop); }
+html.light .auth-logo img, html.light .brand-icon, html.light .brand-logo { filter: var(--vatan-logo-filter); }
+html.light .auth-subtitle,
+html.light .social-separator,
+html.light .back-action,
+html.light .resend-row,
+html.light .terms-consent-copy { color: var(--vt-text-2); }
+html.light .field-label { color: var(--vt-text); }
+html.light .field-label span { color: var(--vt-text-3); }
+html.light .field-label b { color: var(--vt-danger); }
+html.light .field-wrap,
+html.light .otp-box,
+html.light .birth-grid input,
+html.light .birth-grid select,
+html.light .social-method,
+html.light .terms-consent { background: var(--vt-page); border-color: var(--vt-border); color: var(--vt-text); }
+html.light .field-wrap:focus-within,
+html.light .otp-box:focus,
+html.light .birth-grid input:focus,
+html.light .birth-grid select:focus { border-color: var(--vt-text); box-shadow: 0 0 0 3px var(--vt-brand-soft); }
+html.light .field-wrap i, html.light .social-icon.google { color: var(--vt-text-3); }
+html.light .field-wrap input { color: var(--vt-text); }
+html.light .field-wrap input::placeholder, html.light .birth-grid input::placeholder { color: var(--vt-text-3); }
+html.light input:-webkit-autofill,
+html.light input:-webkit-autofill:hover,
+html.light input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--vt-text) !important;
+  caret-color: var(--vt-text) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--vt-page) inset !important;
+  box-shadow: 0 0 0 1000px var(--vt-page) inset !important;
+}
+html.light .field-error { color: var(--vt-danger); }
+html.light .primary-action { color: var(--vt-on-brand); }
+html.light .social-separator:before, html.light .social-separator:after { background: var(--vt-border); }
+html.light .social-method em { color: var(--vt-warning); }
+html.light .resend-row button:disabled { color: var(--vt-text-3); }
+html.light .terms-consent:hover { border-color: var(--vt-border-strong); background: var(--vt-card); }
+html.light .terms-consent-box { border-color: var(--vt-border-strong); color: var(--vt-on-brand); }
+html.light .auth-brand-col { border-color: var(--vt-border); background: var(--vt-surface-2); }
+html.light .brand-orbit { opacity: .35; }
+html.light .auth-loading { background: rgba(255, 255, 255, .72); color: var(--vt-text); }
+
+/* بازیابی رمز عبور (auth/forgot-password.blade.php — کلاس‌های Tailwind قدیمی) */
+html.light body.vt-legacy-auth,
+html.light .vt-legacy-auth .bg-\[\#0a0a0c\] { background: var(--vt-page); color: var(--vt-text); }
+html.light .vt-legacy-auth .bg-\[\#111114\]\/80 { background: var(--vt-card); box-shadow: var(--vt-shadow-pop); }
+html.light .vt-legacy-auth .bg-\[\#16161a\] { background: var(--vt-page); }
+html.light .vt-legacy-auth [class*="border-white/"] { border-color: var(--vt-border); }
+html.light .vt-legacy-auth .text-white,
+html.light .vt-legacy-auth .text-gray-100 { color: var(--vt-text); }
+html.light .vt-legacy-auth .text-gray-400 { color: var(--vt-text-2); }
+html.light .vt-legacy-auth .text-gray-500 { color: var(--vt-text-3); }
+html.light .vt-legacy-auth .placeholder-gray-600::placeholder { color: var(--vt-text-3); }
+html.light .vt-legacy-auth .text-emerald-400 { color: var(--vt-success); }
+html.light .vt-legacy-auth .text-rose-400 { color: var(--vt-danger); }
+
+/* ───────────────────────────────────────────────
+   ۴. مودال‌های سراسری (partials/token-alert-modal, welcome-token-modal)
+─────────────────────────────────────────────── */
+html.light #globalTokenModal,
+html.light #globalRefundModal,
+html.light #welcomeTokenModal { background: var(--vt-overlay); }
+html.light #globalTokenModalContent,
+html.light #globalRefundModalContent,
+html.light #welcomeTokenModalContent {
+  background: var(--vt-card);
+  border-color: var(--vt-border);
+  box-shadow: var(--vt-shadow-pop);
+}
+html.light #globalTokenModalContent .text-gray-100,
+html.light #globalRefundModalContent .text-gray-100,
+html.light #welcomeTokenModalContent .text-gray-200 { color: var(--vt-text); }
+html.light #globalTokenModalContent .text-gray-400,
+html.light #globalRefundModalContent .text-gray-400,
+html.light #globalRefundModalContent .text-gray-300,
+html.light #welcomeTokenModalContent .text-gray-400,
+html.light #welcomeTokenModalContent .text-gray-500 { color: var(--vt-text-2); }
+html.light #globalTokenModalContent button[class*="bg-white/"],
+html.light #globalRefundModalContent button[class*="bg-white/"],
+html.light #welcomeTokenModalContent button[class*="bg-white/"] { background: var(--vt-page); }
+html.light #globalTokenModalContent button[class*="bg-white/"]:hover,
+html.light #globalRefundModalContent button[class*="bg-white/"]:hover { background: var(--vt-surface-2); color: var(--vt-text); }
+html.light #globalTokenModalContent .text-\[var\(--green\)\] {
+  background: var(--vt-brand);
+  border-color: var(--vt-brand);
+  color: var(--vt-on-brand);
+  box-shadow: 0 10px 24px -10px rgb(120 150 0 / 45%);
+}
+html.light #globalRefundModalContent .text-emerald-400,
+html.light #welcomeTokenModalContent .text-emerald-400 { color: var(--vt-success); }
+html.light #welcomeTokenModalContent h3.bg-clip-text {
+  background: none;
+  -webkit-text-fill-color: var(--vt-success);
+  color: var(--vt-success);
+}

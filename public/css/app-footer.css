@@ -32,9 +32,9 @@ body.vatan-app-shell > .app-footer {
 
 html.light body.vatan-app-shell > .app-footer {
   --app-footer-bg: var(--vatan-bg-page);
-  --app-footer-text: rgba(12, 12, 16, .6);
-  --app-footer-text-hover: #0c0c10;
-  --app-footer-border: #e5e6e6;
+  --app-footer-text: var(--vt-text-2, rgba(12, 12, 16, .6));
+  --app-footer-text-hover: var(--vt-text, #0c0c10);
+  --app-footer-border: var(--vt-border, #e3e5df);
 }
 
 .app-footer__inner {
@@ -81,7 +81,7 @@ html.light body.vatan-app-shell > .app-footer {
 }
 
 html.light .app-footer__brand img {
-  filter: invert(1);
+  filter: var(--vatan-logo-filter, invert(1));
 }
 
 .app-footer__copy {

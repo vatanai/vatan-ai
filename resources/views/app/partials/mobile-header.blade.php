@@ -105,8 +105,8 @@
     .app-mobile-theme button { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:5px 7px; border:1px solid var(--tp-nav-border); border-radius:9px; background:transparent; color:var(--tp-item-color); font:600 10px 'YekanBakh',sans-serif; cursor:pointer; }
     .app-mobile-theme button i { order:0; font-size:13px; }
     .app-mobile-theme button span { order:1; }
-    .app-mobile-theme button.is-active { background:rgba(207,254,0,.14); border-color:#cffe00; color:#cffe00; }
-    html.light .app-mobile-theme button.is-active { color:#cffe00; }
+    .app-mobile-theme button.is-active { background:rgba(207,254,0,.14); border-color:#cffe00; color:var(--vt-brand-ink, #cffe00); }
+    html.light .app-mobile-theme button.is-active { color:var(--vt-brand-ink, #cffe00); }
   }
   @media (max-width:370px) {
     .app-mobile-header { padding-left:8px; padding-right:8px; }

@@ -50,7 +50,7 @@
 
 <style>
 .cp-summary__badge--warn { color:#f5923a; font-size:12px; }
-.cp-summary__badge--ok   { color:#cffe00; font-size:12px; }
+.cp-summary__badge--ok   { color:var(--vt-brand-ink, #cffe00); font-size:12px; }
 #cp-submit-btn:active { transform:scale(0.97); opacity:0.9; }
 #cp-submit-btn:disabled { opacity:0.6; cursor:not-allowed; }
 </style>

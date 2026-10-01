@@ -340,4 +340,19 @@ class User extends Authenticatable
     {
         return $this->likedProducts()->where('product_id', $productId)->exists();
     }
+    /**
+     * تنظیمات پست‌های Instagram برای کامنت هوشمند
+     */
+    public function instagramPostSettings(): HasMany
+    {
+        return $this->hasMany(InstagramPostSetting::class);
+    }
+
+    /**
+     * دیدگاه‌های Instagram موجود این کاربر
+     */
+    public function instagramComments(): HasMany
+    {
+        return $this->hasMany(InstagramComment::class);
+    }
 }

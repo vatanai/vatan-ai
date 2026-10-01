@@ -267,7 +267,7 @@
     align-items: center;
     justify-content: center;
     transition: border-color 0.2s ease, background 0.2s ease;
-    color: var(--green);
+    color: var(--green-ink, var(--green));
     transform: translateY(-2px);
   }
   .ig-plus:hover .ig-plus-inner {
@@ -514,7 +514,7 @@
   .ig-quick-icon svg {
     width: 18px;
     height: 18px;
-    color: var(--green);
+    color: var(--green-ink, var(--green));
     display: block;
   }
 
@@ -548,16 +548,22 @@
   }
 
   html.light .ig-box {
-    background: color-mix(in srgb, var(--bg-card) 96%, var(--green) 4%);
-    border-color: color-mix(in srgb, var(--border-subtle) 76%, var(--green) 24%);
-    box-shadow: 0 18px 45px -28px color-mix(in srgb, var(--green) 34%, transparent);
+    background: var(--vt-card);
+    border-color: var(--vt-border);
+    box-shadow: var(--vt-shadow-card);
   }
   html.light .ig-plus-inner,
   html.light .ig-quick-item {
-    background: color-mix(in srgb, var(--bg-surface) 96%, var(--green) 4%);
+    background: var(--vt-page);
+    border-color: var(--vt-border);
+  }
+  html.light .ig-quick-item:hover {
+    background: var(--vt-card);
+    border-color: var(--vt-border-strong);
+    box-shadow: var(--vt-shadow-card);
   }
   html.light .ig-quick-icon {
-    background: color-mix(in srgb, var(--bg-card) 90%, var(--green) 10%);
+    background: var(--vt-brand-soft);
   }
 
   .ig-attachments {
@@ -606,7 +612,7 @@
   .ig-search-result img { width:38px;height:38px;border-radius:9px;object-fit:cover;flex:none; }
   .ig-search-result strong { display:block;font-size:11.5px; }
   .ig-search-result small { display:block;margin-top:2px;color:var(--text-secondary);font-size:9px; }
-  .ig-search-all { display:flex;justify-content:center;padding:8px;color:var(--green);font-size:10px;font-weight:800;text-decoration:none;border-top:1px solid var(--border-subtle); }
+  .ig-search-all { display:flex;justify-content:center;padding:8px;color:var(--green-ink, var(--green));font-size:10px;font-weight:800;text-decoration:none;border-top:1px solid var(--border-subtle); }
   .ig-search-empty { padding:12px;text-align:center;color:var(--text-secondary);font-size:10.5px; }
 
   @media (max-width: 639px) {
@@ -667,56 +673,33 @@
     .ig-quick-row { gap: 8px; }
   }
 
-  /* ===== LIGHT MODE — باکس سرچ ===== */
-  html.light .home-search-card {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+  /* ===== LIGHT MODE — باکس سرچ (توکن‌های theme-tokens.css) ===== */
+  html.light .home-search-card,
+  html.light .home-search-inner,
+  html.light .home-chip {
+    background: var(--vt-card);
+    border: 1px solid var(--vt-border);
   }
-  html.light .home-search-inner {
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  html.light .home-search-input {
-    color: #000000;
-  }
+  html.light .home-search-input,
+  html.light .home-chip-line1,
+  html.light .home-section-title-right,
+  html.light .home-greeting-title { color: var(--vt-text); }
   html.light .home-search-input::placeholder,
   html.light .search-input::placeholder {
-    color: rgba(0, 0, 0, 0.45);
+    color: var(--vt-text-3);
     font-size: 14px;
   }
-  html.light .home-search-hint {
-    color: rgba(0, 0, 0, 0.4);
-  }
-  html.light .home-chip {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
-  html.light .home-chip-line1 {
-    color: #000000;
-  }
-  html.light .home-chip-line2 {
-    color: rgba(0, 0, 0, 0.5);
-  }
-  html.light .home-section-title-right {
-    color: #000000;
-  }
-  html.light .home-section-title-caption {
-    color: rgba(0, 0, 0, 0.5);
-  }
-  html.light .home-greeting-title {
-    color: #000000;
-  }
-  html.light .home-greeting-sub {
-    color: #000000;
-  }
+  html.light .home-search-hint,
+  html.light .home-chip-line2,
+  html.light .home-section-title-caption,
+  html.light .home-greeting-sub,
+  html.light .home-products-subtitle { color: var(--vt-text-2); }
   html.light .home-section-viewall {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    color: #000000;
+    background: var(--vt-card);
+    border: 1px solid var(--vt-border);
+    color: var(--vt-text);
   }
-  html.light .home-products-subtitle {
-    color: #555555;
-  }
+  html.light .home-section-viewall:hover { border-color: var(--vt-border-strong); }
 
   .home-products {
     padding-bottom: 120px;
@@ -768,7 +751,7 @@
 
   .home-section-title-left {
     font-size: 13px;
-    color: #cffe00;
+    color: var(--vt-brand-ink, #cffe00);
   }
 
   .home-products-subtitle {

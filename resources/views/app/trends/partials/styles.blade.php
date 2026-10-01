@@ -10,7 +10,7 @@
 
   .trends-header { padding: calc(env(safe-area-inset-top) + 18px) 16px 24px; }
   .trends-heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-  .trends-eyebrow { display: inline-flex; align-items: center; gap: 6px; color: #cffe00; font-size: 11px; font-weight: 800; }
+  .trends-eyebrow { display: inline-flex; align-items: center; gap: 6px; color: var(--vt-brand-ink, #cffe00); font-size: 11px; font-weight: 800; }
   .trends-title { margin: 6px 0 0; color: var(--vatan-text-page); font-size: 24px; font-weight: 900; line-height: 1.3; }
   .trends-subtitle { max-width: 620px; margin: 7px 0 0; color: rgba(255,255,255,.58); font-size: 12px; line-height: 1.8; }
   html.light .trends-subtitle { color: rgba(12,12,16,.58); }
@@ -34,7 +34,7 @@
   .trends-search-result span { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
   .trends-search-result strong { overflow: hidden; color: var(--vatan-text-page); font-size: 12px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
   .trends-search-result small { overflow: hidden; color: rgba(255,255,255,.5); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .trends-search-all { display: block; padding: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #cffe00; font-size: 11px; font-weight: 800; text-align: center; text-decoration: none; }
+  .trends-search-all { display: block; padding: 12px; border-top: 1px solid rgba(255,255,255,.08); color: var(--vt-brand-ink, #cffe00); font-size: 11px; font-weight: 800; text-align: center; text-decoration: none; }
   .trends-search-empty { padding: 18px 12px; color: rgba(255,255,255,.58); font-size: 11px; text-align: center; }
   html.light .trends-search-results { border-color: rgba(0,0,0,.1); background: rgba(255,255,255,.98); box-shadow: 0 18px 42px rgba(0,0,0,.15); }
   html.light .trends-search-result + .trends-search-result,
@@ -48,7 +48,7 @@
   .trends-section-heading h2 { margin: 0; color: var(--vatan-text-page); font-size: 17px; font-weight: 900; }
   .trends-section-heading p { margin: 4px 0 0; color: rgba(255,255,255,.5); font-size: 11px; line-height: 1.7; }
   html.light .trends-section-heading p { color: rgba(12,12,16,.52); }
-  .trends-section-action { flex-shrink: 0; color: #cffe00; font-size: 11px; font-weight: 800; text-decoration: none; }
+  .trends-section-action { flex-shrink: 0; color: var(--vt-brand-ink, #cffe00); font-size: 11px; font-weight: 800; text-decoration: none; }
 
   .trends-time-grid, .trends-three-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .trends-time-column h3 { margin: 0 0 8px; color: var(--vatan-text-page); font-size: 12px; font-weight: 800; }

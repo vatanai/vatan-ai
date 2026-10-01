@@ -14,7 +14,7 @@
 
 .create-products-eyebrow {
   display: block;
-  color: var(--green);
+  color: var(--green-ink, var(--green));
   font-size: 10px;
   font-weight: 850;
 }
@@ -134,7 +134,7 @@
 }
 
 .create-product-card-credit {
-  color: var(--green);
+  color: var(--green-ink, var(--green));
   font-weight: 750;
 }
 
@@ -154,7 +154,7 @@
 }
 
 .create-products-scroll-hint i {
-  color: var(--green);
+  color: var(--green-ink, var(--green));
 }
 
 .create-products-empty {
@@ -173,7 +173,7 @@
 }
 
 .create-products-empty i {
-  color: var(--green);
+  color: var(--green-ink, var(--green));
   font-size: 30px;
 }
 

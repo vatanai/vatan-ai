@@ -4,11 +4,8 @@
      آیکون‌های FontAwesome چون فونت خودشان را از کلاس می‌گیرند دست‌نخورده می‌مانند. */
   #vatan-topnav { font-family: 'YekanBakh', sans-serif; }
 
-  /* ── حالت روز: متن و آیکون منوی سلکت‌شده کاملاً سفید (آیکون‌ها currentColor هستند) ── */
-  html.light .topnav-link.is-active,
-  html.light .topnav-link.is-active .topnav-link-icon svg {
-    color: #ffffff;
-  }
+
+  /* رنگ‌های حالت روز هدر در public/css/theme-light.css (بخش ۱) تعریف شده‌اند. */
 
   /* انیمیشن ورود روان مودال */
   @keyframes dropFadeIn {
@@ -177,9 +174,6 @@
     flex-shrink: 0;
     transition: opacity 0.15s, border-color 0.15s;
   }
-  html.light .topnav-token-box {
-    background: #1a1a1a;
-  }
 
   .topnav-token-box:hover {
     opacity: 0.85;
@@ -266,11 +260,6 @@
     box-shadow: 0 10px 30px rgba(0,0,0,.35);
     z-index: 320;
   }
-  html.light .theme-menu {
-    background: #ffffff;
-    border-color: rgba(0,0,0,.1);
-    box-shadow: 0 10px 30px rgba(0,0,0,.12);
-  }
 
   .theme-menu-item {
     display: flex;
@@ -288,25 +277,16 @@
     transition: background-color .15s ease, color .15s ease;
     text-align: right;
   }
-  html.light .theme-menu-item { color: rgba(0,0,0,.65); }
 
   .theme-menu-item:hover {
     background: rgba(255,255,255,.08);
     color: #fff;
   }
-  html.light .theme-menu-item:hover {
-    background: rgba(0,0,0,.05);
-    color: #000;
-  }
 
   .theme-menu-item.is-active {
     background: rgba(207,254,0,.15);
-    color: #cffe00;
+    color: var(--vt-brand-ink, #cffe00);
     font-weight: 700;
-  }
-  html.light .theme-menu-item.is-active {
-    background: rgba(207,254,0,.12);
-    color: #0a9c44;
   }
 
   .theme-menu-icon {
@@ -365,13 +345,12 @@
     background-color: #1d2209;
     z-index: 0;
   }
-  html.light .sub-btn::before { background-color: #1d2209; }
   .sub-btn span {
     position: relative; z-index: 1;
     display: flex; align-items: center; gap: 7px;
-    font-size: 14.3px; font-weight: 800; color: #cffe00; white-space: nowrap;
+    font-size: 14.3px; font-weight: 800; color: var(--vt-brand-ink, #cffe00); white-space: nowrap;
   }
-  .sub-btn span i { font-size: 15.84px; color: #cffe00; }
+  .sub-btn span i { font-size: 15.84px; color: var(--vt-brand-ink, #cffe00); }
   .sub-btn:hover {
     /* حالت هاور: همون گرادینت متحرک قبلی روی خط دور */
     background: linear-gradient(to right,#5f7400,#7d9800,#5f7400,#5f7400,#cffe00,#7d9800);
@@ -387,11 +366,6 @@
     --tp-nav-shadow: rgba(0,0,0,0.45); --tp-item-color: rgba(255,255,255,0.72);
     --tp-hr-color: rgba(255,255,255,0.08); --tp-danger: #ff4a4a;
     display: inline-block; position: relative;
-  }
-  html.light .topnav-popup {
-    --tp-nav-bg: #121218; --tp-nav-border: rgba(255,255,255,0.1);
-    --tp-nav-shadow: rgba(0,0,0,0.45); --tp-item-color: rgba(255,255,255,0.72);
-    --tp-hr-color: rgba(255,255,255,0.08);
   }
   .topnav-popup input { display: none; }
   .topnav-burger {
@@ -420,7 +394,6 @@
   .topnav-popup-window .tp-userinfo { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 10px; }
   .topnav-popup-window .tp-user-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:800; color:var(--tp-item-color); }
   html:not(.light) .topnav-popup-window .tp-user-name { color: #fff; }
-  html.light .topnav-popup-window .tp-user-name { color: #fff; }
   .topnav-popup-window .tp-user-phone { margin-right: auto; font-size: 12.65px; font-weight: 600; color: var(--tp-item-color); opacity: 0.6; text-align: left; white-space: nowrap; }
   .topnav-popup-window ul { margin: 0; padding: 0; list-style: none; }
   .topnav-popup-window ul button {

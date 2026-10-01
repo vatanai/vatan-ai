@@ -19,7 +19,7 @@
 
     {{-- بخش اول: تصاویر خلق شده هوش مصنوعی --}}
     <div class="section-title" style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #cffe00; font-size: 18px;">✦</span>
+        <span style="color: var(--vt-brand-ink, #cffe00); font-size: 18px;">✦</span>
         <h2 style="font-size: 16px; font-weight: 700; margin: 0;">تصاویر خلق شده (هوش مصنوعی)</h2>
     </div>
     
@@ -45,7 +45,7 @@
 
     {{-- بخش دوم: ورودی‌های ثبت‌شدهٔ هر آزمایش در گالری خصوصی --}}
     <div class="section-title" style="margin: 48px 0 16px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #cffe00; font-size: 18px;">✦</span>
+        <span style="color: var(--vt-brand-ink, #cffe00); font-size: 18px;">✦</span>
         <h2 style="font-size: 16px; font-weight: 700; margin: 0;">ورودی‌های ثبت‌شدهٔ ساخت</h2>
     </div>
     <div class="image-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">

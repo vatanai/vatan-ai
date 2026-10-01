@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/app-footer.css') }}?v={{ filemtime(public_path('css/app-footer.css')) }}">
     @include('layouts.partials.nav-styles')
-    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('assets/site/css/home-preview.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/site/css/home-preview.css') }}?v={{ filemtime(public_path('assets/site/css/home-preview.css')) }}">
     <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/character-sheet-landing.css') }}">
     <script>
         (function () {
@@ -40,7 +40,7 @@
                 var resolved = resolve(mode);
                 html.classList.toggle('light', resolved === 'light');
                 html.classList.toggle('dark', resolved === 'dark');
-                document.querySelector('[data-vatan-theme-color]')?.setAttribute('content', resolved === 'light' ? '#F5F7F6' : '#0B0F0D');
+                document.querySelector('[data-vatan-theme-color]')?.setAttribute('content', resolved === 'light' ? '#F4F5F2' : '#0B0F0D');
             }
             window.vatanGetThemeMode = function () { return localStorage.getItem('vatan-theme') || 'dark'; };
             window.vatanSetTheme = function (mode) { if (['light', 'dark', 'system'].includes(mode)) { localStorage.setItem('vatan-theme', mode); apply(mode); } };
@@ -193,5 +193,6 @@
     <section class="vp-app-footer-wrap vp-app-footer-wrap--public" aria-label="فوتر اپ وطن">@include('app.partials.footer')</section>
     @include('layouts.partials.nav-scripts')
     <script src="{{ \App\Support\AppAsset::url('assets/site/js/home-preview.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}">
 </body>
 </html>

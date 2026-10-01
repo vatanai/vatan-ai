@@ -19,6 +19,7 @@ class TelegramProductDraft extends Model
         'awaiting_edit',
         'awaiting_product_code',
         'awaiting_save_choice',
+        'awaiting_explore_tiles',
         'awaiting_setting_prompt',
     ];
 

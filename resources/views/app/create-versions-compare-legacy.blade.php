@@ -20,5 +20,6 @@
       'instance' => $page === 'create' ? 'redesign' : 'compare-legacy-product',
   ])
   <script src="{{ \App\Support\AppAsset::url('js/create-samples-workspace.js') }}"></script>
+    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}">
 </body>
 </html>

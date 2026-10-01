@@ -20,8 +20,8 @@
     </div>
     @elseif($product->pricing_model === 'free')
     <div style="margin-top:12px;display:flex;align-items:center;gap:6px;padding:8px 12px;background:rgba(207,254,0,0.08);border:1px solid rgba(207,254,0,0.2);border-radius:10px;">
-      <i class="fa-solid fa-check-circle" style="color:#cffe00;font-size:12px;"></i>
-      <span style="font-size:12px;color:#cffe00;font-weight:700;">رایگان</span>
+      <i class="fa-solid fa-check-circle" style="color:var(--vt-brand-ink, #cffe00);font-size:12px;"></i>
+      <span style="font-size:12px;color:var(--vt-brand-ink, #cffe00);font-weight:700;">رایگان</span>
     </div>
     @endif
   </div>

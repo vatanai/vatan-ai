@@ -144,7 +144,7 @@
 /* دکمه «شروع ساخت» — هم‌ظاهر با دکمه نهایی صفحه ساخت محصول */
 .vatan-gen-btn {
   width:100%;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:0 16px;border:0;border-radius:11px;background:var(--green);color:var(--bg-page);
+  padding:0 16px;border:0;border-radius:11px;background:var(--green);color:var(--vt-on-brand, var(--bg-page));
   box-shadow:0 8px 25px color-mix(in srgb,var(--green) 14%,transparent);
   cursor:pointer;direction:ltr;transition:filter .18s ease,transform .14s ease;
   font-family: 'YekanBakh', sans-serif;

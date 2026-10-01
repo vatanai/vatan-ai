@@ -101,7 +101,7 @@
             <label for="referralProductSearch">محصول مقصد</label>
             <div class="referral-product-search-wrap">
               <svg class="referral-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
-              <input id="referralProductSearch" type="search" autocomplete="off" placeholder="نام محصول را جست‌وجو کن" role="combobox" aria-expanded="false" aria-controls="referralProductOptions" aria-autocomplete="list">
+              <input id="referralProductSearch" type="search" autocomplete="off" placeholder="نام محصول را جست‌وجو کن" role="combobox" aria-expanded="false" aria-controls="referralProductOptions" aria-autocomplete="list" data-product-search-url="{{ route('profile.referral-products.search') }}">
             </div>
             <input type="hidden" name="product_id" id="referralProductId" required>
             <div class="referral-product-options" id="referralProductOptions" role="listbox">

@@ -13,6 +13,7 @@
 @endpush
 
 @push('styles')
+  <link rel="stylesheet" href="{{ asset('assets/site/css/home-preview.css') }}?v={{ filemtime(public_path('assets/site/css/home-preview.css')) }}">
   <link rel="stylesheet" href="{{ asset('assets/site/css/sitemap.css') }}?v={{ filemtime(public_path('assets/site/css/sitemap.css')) }}">
 @endpush
 

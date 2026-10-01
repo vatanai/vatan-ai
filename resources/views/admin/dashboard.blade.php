@@ -37,6 +37,7 @@
           'productslist' => 'products-list', 'createproduct' => 'products-create',
           'categories' => 'products-categories', 'pricing' => 'products-pricing',
           'ai' => 'ai-hub', 'models' => 'ai-models', 'prompts' => 'ai-prompts', 'logs' => 'ai-logs',
+          'instagram' => 'instagram-dashboard',
           default => 'misc',
         })
       @endif

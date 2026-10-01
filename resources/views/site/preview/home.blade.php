@@ -35,7 +35,7 @@
             function applyTheme(resolved) {
                 html.classList.toggle('light', resolved === 'light');
                 html.classList.toggle('dark', resolved === 'dark');
-                if (themeColorMeta) themeColorMeta.setAttribute('content', resolved === 'light' ? '#F5F7F6' : '#0B0F0D');
+                if (themeColorMeta) themeColorMeta.setAttribute('content', resolved === 'light' ? '#F4F5F2' : '#0B0F0D');
             }
 
             window.vatanGetThemeMode = function () {
@@ -60,12 +60,13 @@
     </script>
     @include('partials.site-icons')
     <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/fonts.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/theme-tokens.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('css/plan-cards.css') }}?v={{ filemtime(public_path('css/plan-cards.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/app-footer.css') }}?v={{ filemtime(public_path('css/app-footer.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/support-widget.css') }}?v={{ filemtime(public_path('css/support-widget.css')) }}">
     @include('layouts.partials.nav-styles')
-    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('assets/site/css/home-preview.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/site/css/home-preview.css') }}?v={{ filemtime(public_path('assets/site/css/home-preview.css')) }}">
 </head>
 <body class="vatan-preview">
     @include('site.preview.partials.header')
@@ -92,5 +93,6 @@
     @include('layouts.partials.nav-scripts')
     @include('support.partials.widget')
     <script src="{{ \App\Support\AppAsset::url('assets/site/js/home-preview.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}">
 </body>
 </html>

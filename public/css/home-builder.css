@@ -34,10 +34,10 @@
   .home-section-title-caption { margin: 2px 0 0 0; font-size: 10px; font-weight: 400; color: rgba(255,255,255,.5); }
   .home-section-viewall { flex-shrink: 0; display:inline-flex; align-items:center; justify-content:center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 6.48px; padding: 4px 10px; font-size: 10.45px; font-weight: 300; color: #fff; cursor: pointer; white-space: nowrap; text-decoration:none; }
   .home-section-viewall:hover { background:#cffe00; border-color:#cffe00; color:#111; }
-  html.light .home-section-title-right { color: #000; }
-  html.light .home-section-title-caption { color: rgba(0,0,0,.5); }
-  html.light .home-section-viewall { background: rgba(0,0,0,.05); border: 1px solid rgba(0,0,0,.1); color: #000; }
-  html.light .home-section-viewall:hover { background:#cffe00; border-color:#cffe00; color:#111; }
+  html.light .home-section-title-right { color: var(--vt-text); }
+  html.light .home-section-title-caption { color: var(--vt-text-2); }
+  html.light .home-section-viewall { background: var(--vt-card); border: 1px solid var(--vt-border); color: var(--vt-text); }
+  html.light .home-section-viewall:hover { background: var(--vt-brand); border-color: var(--vt-brand); color: var(--vt-text); }
 
   /* ── Hero ── */
   .hb-hero { position: relative; margin-top:31px; border-radius: 16px; overflow: hidden; min-height: 220px; background-size: cover; background-position: center; background-color: rgba(255,255,255,.06); display: flex; align-items: flex-end; }
@@ -72,8 +72,8 @@
   .hb-cat-card-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; overflow: hidden; }
   .hb-cat-card-icon img { width: 100%; height: 100%; object-fit: cover; }
   .hb-cat-card-name { font-size: 11px; color: #fff; }
-  html.light .hb-cat-card-icon { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.1); }
-  html.light .hb-cat-card-name { color: #000; }
+  html.light .hb-cat-card-icon { background: var(--vt-card); border-color: var(--vt-border); }
+  html.light .hb-cat-card-name { color: var(--vt-text); }
 
   /* ── بلوک متنی ── */
   .hb-text-block { margin-top:31px; direction: rtl; }
@@ -85,9 +85,9 @@
   .hb-text-block--statement .hb-text-body { max-width:620px; margin-inline:auto; }
   .hb-text-heading { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: #fff; }
   .hb-text-body { margin: 0; font-size: 13px; line-height: 1.9; color: rgba(255,255,255,.7); }
-  html.light .hb-text-heading { color: #000; }
-  html.light .hb-text-body { color: rgba(0,0,0,.65); }
-  html.light .hb-text-block--statement { background:linear-gradient(135deg,rgba(207,254,0,.16),rgba(0,0,0,.02)); border-color:rgba(0,0,0,.08); }
+  html.light .hb-text-heading { color: var(--vt-text); }
+  html.light .hb-text-body { color: var(--vt-text-2); }
+  html.light .hb-text-block--statement { background:linear-gradient(135deg,rgba(207,254,0,.16),rgba(0,0,0,.02)); border-color: var(--vt-border); }
 
   /* ── فاصله‌گذار ── */
   .hb-spacer.hb-h-standard { height:31px; }
@@ -124,8 +124,8 @@
   .hb-card-cost { display: flex; align-items: center; gap: 4px; font-size: 10px; color: rgba(255,255,255,.55); margin-bottom: 4px; }
   .hb-card-title { font-size: 12.5px; font-weight: 700; color: #fff; margin: 0; }
   .hb-card-desc { font-size: 10.5px; color: rgba(255,255,255,.5); margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  html.light .hb-card-cost, html.light .hb-card-desc { color: rgba(0,0,0,.5); }
-  html.light .hb-card-title { color: #000; }
+  html.light .hb-card-cost, html.light .hb-card-desc { color: var(--vt-text-2); }
+  html.light .hb-card-title { color: var(--vt-text); }
 
   /* ── Layout ۱: اسلایدر لبه‌نما (Peek Scroll) — شات Photoshoot ── */
   .hb-peek-wrap { position: relative; margin-top: 8px; }
@@ -134,15 +134,15 @@
   .hb-peek-item { flex: 0 0 auto; width: 150px; scroll-snap-align: start; cursor: pointer; }
   .hb-peek-card { position:relative; width:100%; aspect-ratio:4/5; border-radius:var(--hb-product-card-radius); overflow:hidden; border:1.5px solid transparent; transition:border-color .25s ease,transform .25s ease; background-size:cover; background-position:center; }
   .hb-peek-item:hover .hb-peek-card, .hb-peek-item.is-active .hb-peek-card { border-color: #cffe00; transform: translateY(-2px); }
-  .hb-peek-item:hover .hb-card-title, .hb-peek-item.is-active .hb-card-title { color: #cffe00; }
-  html.light .hb-peek-item:hover .hb-card-title, html.light .hb-peek-item.is-active .hb-card-title { color: #127a52; }
+  .hb-peek-item:hover .hb-card-title, .hb-peek-item.is-active .hb-card-title { color: var(--vt-brand-ink, #cffe00); }
+  html.light .hb-peek-item:hover .hb-card-title, html.light .hb-peek-item.is-active .hb-card-title { color: var(--vt-text); }
   .hb-peek-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 55%); }
   .hb-peek-go { position: absolute; top: 8px; left: 8px; width: 26px; height: 26px; border-radius: 50%; background: #cffe00; color: #111; display: flex; align-items: center; justify-content: center; font-size: 11px; opacity: 0; transform: scale(.6); transition: all .25s ease; }
   .hb-peek-item:hover .hb-peek-go, .hb-peek-item.is-active .hb-peek-go { opacity: 1; transform: scale(1); }
   .hb-peek-meta { padding-top: 8px; }
   .hb-peek-nav { position: absolute; top: 38%; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.15); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; }
   .hb-peek-nav.hb-prev { right: -8px; } .hb-peek-nav.hb-next { left: -8px; }
-  html.light .hb-peek-nav { background: rgba(255,255,255,.9); border-color: rgba(0,0,0,.1); color: #111; }
+  html.light .hb-peek-nav { background: var(--vt-card); border-color: var(--vt-border); color: var(--vt-text); }
   @media (max-width: 639px) { .hb-peek-nav { display: none; } .hb-peek-item { width: 130px; } }
   @media (min-width: 1024px) { .hb-peek-item { width: 190px; } }
 
@@ -163,7 +163,7 @@
   .hb-family-card { position:relative; min-height:420px; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; color:#fff; text-decoration:none; border:1.5px solid transparent; transition:.3s ease; }
   .hb-family-card:hover { border-color:#cffe00; transform:translateY(-3px); box-shadow:0 18px 36px rgba(0,0,0,.5); }
   .hb-family-shade { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.05) 70%); }
-  .hb-family-kicker { position:absolute; top:14px; right:14px; padding:5px 10px; border-radius:99px; background:rgba(0,0,0,.54); color:#cffe00; font-size:9px; font-weight:800; }
+  .hb-family-kicker { position:absolute; top:14px; right:14px; padding:5px 10px; border-radius:99px; background:rgba(0,0,0,.54); color:var(--vt-brand-ink, #cffe00); font-size:9px; font-weight:800; }
   .hb-family-copy { position:absolute; right:17px; bottom:16px; left:17px; }
   .hb-family-copy b,.hb-family-copy small { display:block; } .hb-family-copy b { font-size:16px; } .hb-family-copy small { margin-top:4px; color:rgba(255,255,255,.68); font-size:10px; line-height:1.7; }
   @media (max-width:639px) { .hb-family-duo { grid-template-columns:1fr; gap:10px; } .hb-family-card { min-height:72vh; border-radius:0; } }
@@ -190,11 +190,11 @@
   .hb-intro-badge { display:inline-flex; align-items:center; gap:6px; font-size:9px; font-weight:700; color:rgba(255,255,255,.7); background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); padding:4px 9px; border-radius:99px; width:fit-content; margin-bottom:9px; }
   .hb-intro-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #cffe00; }
   .hb-intro-heading { font-size:16px; font-weight:800; color:#fff; margin:0 0 3px; line-height:1.35; }
-  .hb-intro-heading-accent { color: #cffe00; }
+  .hb-intro-heading-accent { color: var(--vt-brand-ink, #cffe00); }
   .hb-intro-desc { font-size:10.5px; color:rgba(255,255,255,.55); line-height:1.65; margin:0 0 10px; }
   .hb-intro-steps { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
   .hb-intro-step { display:flex; align-items:center; gap:7px; font-size:10.5px; color:rgba(255,255,255,.85); }
-  .hb-intro-step-num { width:18px; height:18px; border-radius:50%; background:rgba(207,254,0,.12); color:#cffe00; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .hb-intro-step-num { width:18px; height:18px; border-radius:50%; background:rgba(207,254,0,.12); color:var(--vt-brand-ink, #cffe00); font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .hb-intro-note { display:flex; align-items:center; gap:5px; font-size:9.5px; color:rgba(207,254,0,.85); margin-bottom:10px; }
   .hb-intro-cta { margin-top:auto; display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#cffe00; color:#111; font-weight:700; font-size:11px; padding:8px 12px; border-radius:9px; text-decoration:none; }
   .hb-wide-item { flex:0 0 auto; width:190px; text-decoration:none; }
@@ -207,7 +207,7 @@
   .hb-intro-dual-card { position:relative; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; border:1.5px solid transparent; box-shadow:none; text-decoration:none; }
   .hb-intro-dual-card:hover { border-color:#cffe00; box-shadow:0 0 20px rgba(207,254,0,.3); }
   .hb-intro-dual-credit { display:flex; align-items:center; gap:4px; margin-bottom:3px; color:rgba(255,255,255,.65); font-size:9.5px; font-weight:600; }
-  .hb-intro-dual-credit i { color:#cffe00; }
+  .hb-intro-dual-credit i { color:var(--vt-brand-ink, #cffe00); }
   @media (max-width:639px) {
     .hb-intro-row { flex-direction:column; overflow:visible; gap:12px; }
     .hb-intro-row .hb-intro-card, .hb-intro-row.is-fixed .hb-intro-card { position:relative; right:auto; width:55%; min-width:190px; padding:12px; box-shadow:none; align-self:flex-start; }
@@ -217,11 +217,11 @@
     .hb-intro-dual-products { width:calc(100% + 32px); height:430px; margin-inline:-16px; padding-inline:0; grid-auto-columns:145px; overflow-x:auto; }
   }
   @media (min-width:1024px) { .hb-wide-item { width:200px; } }
-  html.light .hb-intro-card { background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.08); }
-  html.light .hb-intro-heading { color: #000; }
-  html.light .hb-intro-desc { color: rgba(0,0,0,.55); }
-  html.light .hb-intro-step { color: rgba(0,0,0,.8); }
-  html.light .hb-intro-badge { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.1); color: rgba(0,0,0,.6); }
+  html.light .hb-intro-card { background: var(--vt-card); border-color: var(--vt-border); }
+  html.light .hb-intro-heading { color: var(--vt-text); }
+  html.light .hb-intro-desc { color: var(--vt-text-2); }
+  html.light .hb-intro-step { color: var(--vt-text); }
+  html.light .hb-intro-badge { background: var(--vt-card); border-color: var(--vt-border); color: var(--vt-text-2); }
 
   /* ── Layout ۴: اسلایدر کارت بزرگ — شات Create ── */
   .hb-large-row { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; padding: 8px 2px 14px; margin-top: 4px; direction: rtl; }
@@ -238,10 +238,10 @@
   .hb-large-desc { font-size: 11.5px; color: rgba(255,255,255,.55); margin: 0; line-height: 1.7; }
   @media (min-width: 640px) { .hb-large-card { width: 340px; } }
   @media (min-width: 1024px) { .hb-large-card { width: 31%; max-width: 380px; } }
-  html.light .hb-large-card { background: rgba(0,0,0,.02); border-color: rgba(0,0,0,.08); }
-  html.light .hb-large-card:hover { border-color:#cffe00; }
-  html.light .hb-large-title { color: #000; }
-  html.light .hb-large-desc { color: rgba(0,0,0,.5); }
+  html.light .hb-large-card { background: var(--vt-card); border-color: var(--vt-border); }
+  html.light .hb-large-card:hover { border-color: var(--vt-brand); }
+  html.light .hb-large-title { color: var(--vt-text); }
+  html.light .hb-large-desc { color: var(--vt-text-2); }
 
   /* ── Layout ۵: تب دسته‌بندی + اسلایدر — شات دسته‌بندی بالای Photoshoot ── */
   .hb-tabs-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 14px; direction: rtl; }
@@ -252,12 +252,12 @@
   .hb-tabs-panel.is-active { display: block; }
   .hb-tabs-panel .home-card { border:1.5px solid transparent; }
   .hb-tabs-panel .home-card:hover { border-color:#cffe00; }
-  html.light .hb-tab-pill { background: rgba(0,0,0,.04); border-color: rgba(0,0,0,.1); color: rgba(0,0,0,.6); }
-  html.light .hb-tab-pill.is-active { background: #cffe00; color: #111; }
+  html.light .hb-tab-pill { background: var(--vt-card); border-color: var(--vt-border); color: var(--vt-text-2); }
+  html.light .hb-tab-pill.is-active { background: var(--vt-brand); color: var(--vt-text); }
 
   /* ── خط کردیت روی کارت‌های اورلی‌دار (اسلایدر/گرید/مجموعه پیش‌فرض) ── */
   .home-card-credit { margin: 3px 0 0; font-size: 9.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 4px; }
-  .home-card-credit i { color: #cffe00; font-size: 8.5px; }
+  .home-card-credit i { color: var(--vt-brand-ink, #cffe00); font-size: 8.5px; }
 
   /* ── استایل نمونه «کارت شیشه‌ای» (Glass) ── */
   .hb-glass-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding: 8px 2px 14px; margin-top: 4px; direction: rtl; }
@@ -266,7 +266,7 @@
   .hb-glass-item:hover { transform: translateY(-3px); border-color: rgba(207,254,0,.55); }
   .hb-glass-media { width:100%; aspect-ratio:1/1; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; }
   .hb-glass-body { padding: 8px 4px 4px; }
-  html.light .hb-glass-item { background: rgba(0,0,0,.03); border-color: rgba(0,0,0,.1); }
+  html.light .hb-glass-item { background: var(--vt-card); border-color: var(--vt-border); }
   @media (max-width: 639px) { .hb-glass-item { width: 146px; } }
   @media (min-width: 1024px) { .hb-glass-item { width: 190px; } }
 
@@ -275,13 +275,13 @@
   .hb-neon-row::-webkit-scrollbar { display: none; }
   .hb-neon-card { position:relative; flex:0 0 auto; width:152px; aspect-ratio:4/5; border-radius:var(--hb-product-card-radius); overflow:hidden; background-size:cover; background-position:center; border:1.5px solid transparent; box-shadow:none; transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease; }
   .hb-neon-card:hover { border-color: #cffe00; box-shadow: 0 0 22px rgba(207,254,0,.35); transform: translateY(-2px); }
-  .hb-neon-credit { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,.6); color: #cffe00; font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 99px; }
+  .hb-neon-credit { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,.6); color: var(--vt-brand-ink, #cffe00); font-size: 9.5px; font-weight: 800; padding: 3px 8px; border-radius: 99px; }
   .hb-neon-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.72) 0%, transparent 55%); }
   .hb-neon-info { position: absolute; bottom: 8px; right: 10px; left: 10px; text-align: right; }
   .hb-neon-name { margin: 0; font-size: 12px; font-weight: 700; color: #fff; }
   .hb-neon-tag { margin: 1px 0 0; font-size: 10px; color: rgba(255,255,255,.6); }
   html.light .hb-neon-card { box-shadow:none; }
-  html.light .hb-neon-card:hover { border-color:#cffe00; box-shadow:0 0 22px rgba(207,254,0,.35); }
+  html.light .hb-neon-card:hover { border-color: var(--vt-brand); box-shadow:0 0 22px rgba(207,254,0,.35); }
   @media (max-width: 639px) { .hb-neon-card { width: 134px; } }
   @media (min-width: 1024px) { .hb-neon-card { width: 186px; } }
 
@@ -291,11 +291,11 @@
   .hb-cinema-card { flex:0 0 auto; width:min(78vw,390px); text-decoration:none; }
   .hb-cinema-media { position:relative; aspect-ratio:16/9; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; border:1px solid rgba(255,255,255,.1); }
   .hb-cinema-shade { position:absolute; inset:0; background:linear-gradient(90deg,transparent 20%,rgba(0,0,0,.12) 52%,rgba(0,0,0,.88) 100%); }
-  .hb-cinema-index { position:absolute; top:14px; right:16px; font-size:11px; letter-spacing:2px; color:#cffe00; font-weight:800; }
+  .hb-cinema-index { position:absolute; top:14px; right:16px; font-size:11px; letter-spacing:2px; color:var(--vt-brand-ink, #cffe00); font-weight:800; }
   .hb-cinema-copy { position:absolute; right:16px; bottom:15px; left:54px; }
   .hb-cinema-copy p { margin:0; color:#fff; font-size:16px; font-weight:900; }
   .hb-cinema-copy span { display:block; margin-top:3px; color:rgba(255,255,255,.62); font-size:10.5px; }
-  .hb-cinema-credit { position:absolute; left:13px; bottom:14px; display:flex; align-items:center; gap:4px; color:#cffe00; font-size:9.5px; font-weight:800; }
+  .hb-cinema-credit { position:absolute; left:13px; bottom:14px; display:flex; align-items:center; gap:4px; color:var(--vt-brand-ink, #cffe00); font-size:9.5px; font-weight:800; }
   .hb-cinema-card:hover .hb-cinema-media { border-color:#cffe00; }
   @media (max-width:639px) { .hb-cinema-card { width:82vw; } .hb-cinema-copy p { font-size:13px; } }
 
@@ -312,10 +312,10 @@
   .hb-minimal-copy { padding:9px 2px 0; }
   .hb-minimal-copy p { margin:5px 0 0; font-size:12.5px; font-weight:800; color:#fff; }
   .hb-minimal-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:9.5px; color:rgba(255,255,255,.48); }
-  .hb-minimal-copy b { color:#cffe00; font-weight:800; }
-  html.light .hb-minimal-card, html.light .hb-minimal-copy p { color:#111; }
-  html.light .hb-minimal-meta { color:rgba(0,0,0,.48); }
-  html.light .hb-minimal-card:hover .hb-minimal-media { border-color:#cffe00; }
+  .hb-minimal-copy b { color:var(--vt-brand-ink, #cffe00); font-weight:800; }
+  html.light .hb-minimal-card, html.light .hb-minimal-copy p { color: var(--vt-text); }
+  html.light .hb-minimal-meta { color: var(--vt-text-2); }
+  html.light .hb-minimal-card:hover .hb-minimal-media { border-color: var(--vt-brand); }
   @media (max-width:639px) { .hb-minimal-card { width:145px; } }
 
   /* ── مدل اختصاصی وطن: گرید ادیتوریال ── */
@@ -323,7 +323,7 @@
   .hb-editorial-card { position:relative; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; text-decoration:none; border:1px solid rgba(255,255,255,.1); }
   .hb-editorial-card.is-featured { grid-row:span 2; }
   .hb-editorial-shade { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.82),transparent 62%); }
-  .hb-editorial-kicker { position:absolute; top:12px; right:12px; padding:4px 9px; border-radius:99px; background:rgba(0,0,0,.55); color:#cffe00; font-size:9px; font-weight:800; }
+  .hb-editorial-kicker { position:absolute; top:12px; right:12px; padding:4px 9px; border-radius:99px; background:rgba(0,0,0,.55); color:var(--vt-brand-ink, #cffe00); font-size:9px; font-weight:800; }
   .hb-editorial-copy { position:absolute; right:13px; bottom:12px; left:12px; }
   .hb-editorial-copy p { margin:0; color:#fff; font-size:13px; font-weight:900; }
   .hb-editorial-copy span { color:rgba(255,255,255,.58); font-size:9.5px; }
@@ -335,7 +335,7 @@
   .hb-hover-showcase { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-top:12px; }
   .hb-hover-card { min-width:0; color:#fff; text-decoration:none; }
   .hb-hover-media { position:relative; aspect-ratio:4/5; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; border:1.5px solid transparent; transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease; }
-  .hb-hover-model-name { position:absolute; top:9px; right:9px; z-index:3; padding:4px 8px; border-radius:99px; background:rgba(0,0,0,.62); color:#cffe00; font-size:9px; font-weight:800; }
+  .hb-hover-model-name { position:absolute; top:9px; right:9px; z-index:3; padding:4px 8px; border-radius:99px; background:rgba(0,0,0,.62); color:var(--vt-brand-ink, #cffe00); font-size:9px; font-weight:800; }
   .hb-hover-shade { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.82),transparent 62%); transition:opacity .3s ease; }
   .hb-hover-info { position:absolute; z-index:2; right:11px; left:11px; bottom:10px; transition:transform .3s ease,opacity .3s ease; }
   .hb-hover-info p { margin:0; color:#fff; font-size:12px; font-weight:800; }
@@ -347,7 +347,7 @@
   .hb-hover-card.hover_reveal:hover .hb-hover-info { opacity:1; transform:translateY(0); }
   .hb-hover-card.hover_reveal:hover .hb-hover-shade { opacity:1; }
   .hb-hover-card.hover_lift:hover .hb-hover-media { transform:translateY(-7px); box-shadow:0 18px 32px rgba(0,0,0,.55); }
-  html.light .hb-hover-card small { color:rgba(0,0,0,.42); }
+  html.light .hb-hover-card small { color: var(--vt-text-3); }
   @media (max-width:900px) { .hb-hover-showcase { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
   /* فضای امن افکت: هاله داخل مرز کانتینر اسکرول بریده نمی‌شود. */
@@ -399,7 +399,7 @@
   .hb-library-card.hb-hover-effect--shine:hover .hb-effect-shine { opacity:1; animation:hb-shine .8s ease forwards; }
   .hb-section.hb-hover-effect--shine :is(.home-card,.hb-peek-card,.hb-bento-item,.hb-wide-card,.hb-intro-dual-card,.hb-large-card,.hb-glass-item,.hb-neon-card,.hb-cinema-media,.hb-minimal-media,.hb-editorial-card,.hb-motion-media,.hb-video-loop-card)::after { content:''; position:absolute; z-index:8; inset:-30% auto -30% -45%; width:32%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); transform:skewX(-18deg); opacity:0; pointer-events:none; }
   .hb-section.hb-hover-effect--shine :is(.home-card,.hb-peek-card,.hb-bento-item,.hb-wide-card,.hb-intro-dual-card,.hb-large-card,.hb-glass-item,.hb-neon-card,.hb-cinema-media,.hb-minimal-media,.hb-editorial-card,.hb-motion-media,.hb-video-loop-card):hover::after { opacity:1; animation:hb-shine .8s ease forwards; }
-  .hb-effect-token { position:absolute; z-index:3; top:10px; left:10px; color:#cffe00; }
+  .hb-effect-token { position:absolute; z-index:3; top:10px; left:10px; color:var(--vt-brand-ink, #cffe00); }
   .hb-library-card.hb-hover-effect--token_bounce:hover .hb-effect-token { animation:hb-token-bounce .55s ease-in-out infinite alternate; }
   .hb-section.hb-hover-effect--token_bounce :is(.home-card,.hb-wide-item,.hb-intro-dual-card,.hb-large-card,.hb-neon-card,.hb-cinema-card,.hb-minimal-card,.hb-motion-card):hover :is(.home-card-credit i,.hb-card-credit i,.hb-intro-dual-credit i,.hb-cinema-credit i,.hb-minimal-copy b i,.hb-motion-meta b i) { display:inline-block; animation:hb-token-bounce .55s ease-in-out infinite alternate; }
   @keyframes hb-pulse { to { transform:scale(1.025); box-shadow:0 0 20px rgba(207,254,0,.25); } }
@@ -416,7 +416,7 @@
   .hb-library-media { position:relative; aspect-ratio:4/5; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; overflow:hidden; }
   .hb-library-caption { position:absolute; z-index:2; right:9px; left:9px; bottom:9px; padding:7px; border-radius:9px; background:rgba(0,0,0,.68); }
   .hb-library-caption b,.hb-library-caption small { display:block; }
-  .hb-library-caption b { font-size:10px; } .hb-library-caption small { color:#cffe00; font-size:8px; direction:ltr; }
+  .hb-library-caption b { font-size:10px; } .hb-library-caption small { color:var(--vt-brand-ink, #cffe00); font-size:8px; direction:ltr; }
 
   /* پنج مدل سکشن متحرک */
   .hb-motion-row,.hb-video-loop-row { display:flex; gap:14px; overflow-x:auto; scrollbar-width:none; }
@@ -424,8 +424,8 @@
   .hb-motion-card { flex:0 0 170px; color:#fff; text-decoration:none; }
   .hb-motion-media { position:relative; aspect-ratio:4/5; overflow:hidden; border-radius:var(--hb-product-card-radius); background-size:cover; background-position:center; }
   .hb-motion-meta { display:flex; justify-content:space-between; gap:8px; padding-top:7px; font-size:10px; }
-  .hb-motion-meta b { color:#cffe00; white-space:nowrap; }
-  .hb-motion-orbit { position:absolute; z-index:2; top:10px; left:10px; color:#cffe00; }
+  .hb-motion-meta b { color:var(--vt-brand-ink, #cffe00); white-space:nowrap; }
+  .hb-motion-orbit { position:absolute; z-index:2; top:10px; left:10px; color:var(--vt-brand-ink, #cffe00); }
   .hb-motion-shine { position:absolute; inset:-25% auto -25% -40%; width:28%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); transform:skewX(-18deg); }
   .hb-motion-row--token .hb-motion-meta b i { animation:hb-token-bounce .55s ease-in-out infinite alternate; }
   .hb-motion-row--float .hb-motion-card { animation:hb-float 2.8s ease-in-out infinite alternate; animation-delay:calc(var(--hb-motion-index) * -.18s); }
@@ -514,3 +514,48 @@
     .hb-intro-row--dual { background:transparent; }
   }
 
+
+  /* ══════════════════════════════════════════════════════════════
+     حالت روز — کارت‌های محصول (توکن‌های public/css/theme-tokens.css)
+     کارت‌هایی که متنشان زیر تصویر است در روز یک قاب سفید با حاشیه و سایه‌ی نرم می‌گیرند
+     تا مثل حالت شب از زمینه جدا دیده شوند. روی لایه‌های تیره‌ی روی عکس، رنگ لیمویی
+     متن‌ها حفظ می‌شود (--vt-brand-ink به همان لیمویی برمی‌گردد).
+     ══════════════════════════════════════════════════════════════ */
+  html.light .hb-peek-item,
+  html.light .hb-wide-item,
+  html.light .hb-minimal-card {
+    padding: 6px 6px 10px;
+    border: 1px solid var(--vt-border);
+    border-radius: calc(var(--hb-product-card-radius) + 4px);
+    background: var(--vt-card);
+    box-shadow: var(--vt-shadow-card);
+    transition: box-shadow .25s ease, border-color .25s ease, transform .25s ease;
+  }
+  html.light .hb-peek-item:hover, html.light .hb-peek-item.is-active,
+  html.light .hb-wide-item:hover,
+  html.light .hb-minimal-card:hover {
+    border-color: var(--vt-border-strong);
+    box-shadow: var(--vt-shadow-hover);
+  }
+  html.light .hb-peek-item:hover .hb-peek-card, html.light .hb-peek-item.is-active .hb-peek-card { border-color: transparent; }
+  html.light .hb-peek-meta, html.light .hb-wide-meta { padding: 9px 4px 0; }
+  html.light .hb-minimal-copy { padding: 9px 4px 0; }
+  html.light .hb-minimal-card:hover .hb-minimal-media { border-color: transparent; }
+  html.light .hb-large-card { box-shadow: var(--vt-shadow-card); }
+  html.light .hb-large-card:hover { border-color: var(--vt-border-strong); box-shadow: var(--vt-shadow-hover); }
+  html.light .hb-card-cost .fa-bolt, html.light .hb-card-cost i { color: var(--vt-text); }
+  html.light .hb-editorial-card,
+  html.light .hb-library-caption,
+  html.light .hb-peek-card,
+  html.light .hb-wide-card,
+  html.light .hb-motion-media,
+  html.light .hb-neon-card,
+  html.light .hb-cinema-card,
+  html.light .hb-video-loop-card { --vt-brand-ink: var(--vt-brand); }
+  html.light .hb-editorial-card { border-color: transparent; box-shadow: var(--vt-shadow-card); }
+  html.light .hb-text-block--statement { background: linear-gradient(135deg, var(--vt-brand-soft), var(--vt-card) 70%); }
+  html.light .hb-neon-card:hover { box-shadow: 0 0 0 3px var(--vt-brand-soft), var(--vt-shadow-hover); }
+  html.light .hb-intro-step { color: var(--vt-text); }
+  html.light .hb-intro-step-num { background: var(--vt-brand); color: var(--vt-on-brand); }
+  html.light .hb-intro-note { color: var(--vt-text-2); }
+  html.light .hb-intro-card { background: var(--vt-card); border-color: var(--vt-border); box-shadow: var(--vt-shadow-card); }

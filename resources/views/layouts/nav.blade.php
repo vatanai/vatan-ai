@@ -33,7 +33,7 @@
 
       @foreach($navItemsBefore as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white hover:bg-[#161616] [&.is-active]:text-[#cffe00] [&.is-active]:font-bold [&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -49,7 +49,7 @@
 
       @foreach($navItemsAfter as $item)
         <a href="{{ route($item['route']) }}" 
-           class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+           class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white hover:bg-[#161616] [&.is-active]:text-[#cffe00] [&.is-active]:font-bold [&.is-active]:bg-[#1d2209]"
            data-key="{{ $item['key'] }}">
 
           <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>$item['key'],'state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>$item['key'],'state'=>'on','size'=>17,'class'=>'ni-on'])</span>
@@ -59,7 +59,7 @@
 
       {{-- پروفایل — همیشه نمایش داده می‌شود (مهمان و کاربر لاگین‌کرده) و همیشه به صفحه پروفایل می‌رود، نه لاگین --}}
       <a href="{{ route('app.profile') }}"
-         class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white [.light_&]:hover:text-white hover:bg-[#161616] [.light_&]:hover:bg-[#161616] [&.is-active]:text-[#cffe00] [.light_&][&.is-active]:text-white [&.is-active]:font-bold [&.is-active]:bg-[#1d2209] [.light_&][&.is-active]:bg-[#1d2209]"
+         class="topnav-link text-[14px] font-medium text-[#a2abb7] no-underline px-3.5 py-1.5 rounded-[12px] transition-all duration-200 whitespace-nowrap hover:text-white hover:bg-[#161616] [&.is-active]:text-[#cffe00] [&.is-active]:font-bold [&.is-active]:bg-[#1d2209]"
          data-key="profile">
 
         <span class="topnav-link-icon">@include('partials.nav-svg',['key'=>'profile','state'=>'off','size'=>17,'class'=>'ni-off'])@include('partials.nav-svg',['key'=>'profile','state'=>'on','size'=>17,'class'=>'ni-on'])</span>

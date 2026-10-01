@@ -1,19 +1,117 @@
 /*
  * قوانین مشترک تم روز و شب — اپ کاربری و سایت اصلی وطن
- * منبع رسمی رنگ پس‌زمینه صفحه و هدر است؛ مقدارها را در فایل‌های صفحه تکرار نکنید.
- * هر تغییر در این توکن‌ها فقط با درخواست صریح کاربر انجام شود.
+ * منبع رسمی توکن‌های رنگ است؛ مقدارها را در فایل‌های صفحه تکرار نکنید.
+ * سند: doc/app-site-theme.md — هر تغییر در این توکن‌ها فقط با درخواست صریح کاربر انجام شود.
+ *
+ * قرارداد لیمویی:
+ *   --vt-brand       فقط برای «پرکردن» (دکمه، نشانگر، نوار) — در هر دو تم لیمویی
+ *   --vt-brand-ink   برای «متن/آیکون/خط» که در شب لیمویی بود — در روز مشکی (لیمویی روی سفید خوانا نیست)
+ *   --vt-mark        هایلایت تیترهای تأکیدی — در روز خط‌کش لیمویی زیر متن مشکی
  */
 
 :root {
-  --vatan-bg-page: #000000;
-  --vatan-text-page: #ffffff;
+  /* سطح‌ها */
+  --vt-page: #000000;
+  --vt-surface: #111116;
+  --vt-surface-2: #16161c;
+  --vt-card: #16161c;
+  --vt-card-hover: #1a1a21;
+  --vt-glass: rgba(255, 255, 255, 0.06);
+  --vt-glass-2: rgba(255, 255, 255, 0.1);
+  --vt-overlay: rgba(0, 0, 0, 0.6);
+
+  /* حاشیه */
+  --vt-border: #222230;
+  --vt-border-soft: rgba(255, 255, 255, 0.08);
+  --vt-border-strong: rgba(255, 255, 255, 0.16);
+
+  /* متن */
+  --vt-text: #ffffff;
+  --vt-text-2: rgba(255, 255, 255, 0.62);
+  --vt-text-3: rgba(255, 255, 255, 0.45);
+
+  /* برند */
+  --vt-brand: #cffe00;
+  --vt-brand-hover: #b8e600;
+  --vt-on-brand: #0c0c10;
+  --vt-brand-ink: #cffe00;
+  --vt-brand-soft: rgba(207, 254, 0, 0.1);
+  --vt-brand-tint: rgba(207, 254, 0, 0.06);
+  --vt-brand-line: rgba(207, 254, 0, 0.22);
+  --vt-mark-color: #cffe00;
+  --vt-mark-bg: none;
+
+  /* وضعیت‌ها — نسخه‌ی «ink» برای متن روی سطح */
+  --vt-danger: #f05c5c;
+  --vt-danger-soft: rgba(240, 92, 92, 0.12);
+  --vt-warning: #f5923a;
+  --vt-warning-soft: rgba(245, 146, 58, 0.12);
+  --vt-success: #0bbf53;
+  --vt-success-soft: rgba(11, 191, 83, 0.12);
+  --vt-accent: #a07af5;
+  --vt-accent-soft: rgba(160, 122, 245, 0.14);
+
+  /* سایه */
+  --vt-shadow-card: 0 10px 30px rgba(0, 0, 0, 0.18);
+  --vt-shadow-hover: 0 18px 44px rgba(0, 0, 0, 0.28);
+  --vt-shadow-pop: 0 20px 60px rgba(0, 0, 0, 0.45);
+
+  /* هدر مشترک */
+  --vatan-bg-page: var(--vt-page);
+  --vatan-text-page: var(--vt-text);
   --vatan-header-bg: #000000;
   --vatan-header-text: #ffffff;
   --vatan-header-text-muted: #a2abb7;
   --vatan-header-border: rgba(255, 255, 255, 0.1);
+  --vatan-header-chip: rgba(255, 255, 255, 0.06);
+  --vatan-logo-filter: none;
 }
 
 html.light {
-  --vatan-bg-page: #ffffff;
-  --vatan-text-page: #0c0c10;
+  --vt-page: #f4f5f2;
+  --vt-surface: #ffffff;
+  --vt-surface-2: #eceee8;
+  --vt-card: #ffffff;
+  --vt-card-hover: #ffffff;
+  --vt-glass: rgba(12, 12, 16, 0.04);
+  --vt-glass-2: rgba(12, 12, 16, 0.07);
+  --vt-overlay: rgba(12, 12, 16, 0.45);
+
+  --vt-border: #e3e5df;
+  --vt-border-soft: #e3e5df;
+  --vt-border-strong: #c9ccc4;
+
+  --vt-text: #0c0c10;
+  --vt-text-2: #55595e;
+  --vt-text-3: #74787c;
+
+  --vt-brand: #cffe00;
+  --vt-brand-hover: #b8e600;
+  --vt-on-brand: #0c0c10;
+  --vt-brand-ink: #0c0c10;
+  --vt-brand-soft: #eeffb0;
+  --vt-brand-tint: #f8fee4;
+  --vt-brand-line: #d6f266;
+  --vt-mark-color: #0c0c10;
+  --vt-mark-bg: linear-gradient(transparent 60%, #cffe00 60%, #cffe00 92%, transparent 92%);
+
+  --vt-danger: #d63a3a;
+  --vt-danger-soft: #fdecec;
+  --vt-warning: #b85a0e;
+  --vt-warning-soft: #fff1e3;
+  --vt-success: #0a8a3e;
+  --vt-success-soft: #e4f6eb;
+  --vt-accent: #7a4fe0;
+  --vt-accent-soft: #f1ebff;
+
+  --vt-shadow-card: 0 1px 2px rgba(12, 12, 16, 0.04), 0 8px 24px -12px rgba(12, 12, 16, 0.14);
+  --vt-shadow-hover: 0 2px 4px rgba(12, 12, 16, 0.05), 0 18px 40px -16px rgba(12, 12, 16, 0.24);
+  --vt-shadow-pop: 0 24px 60px -12px rgba(12, 12, 16, 0.25);
+
+  --vatan-header-bg: #ffffff;
+  --vatan-header-text: #0c0c10;
+  --vatan-header-text-muted: #55595e;
+  --vatan-header-border: #e3e5df;
+  --vatan-header-chip: #eceee8;
+  --vatan-logo-filter: invert(1);
 }

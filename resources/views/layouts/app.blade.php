@@ -111,7 +111,7 @@
       .mobile-page-back:hover,
       .mobile-page-back:focus-visible {
         border-color: var(--green);
-        color: var(--green);
+        color: var(--green-ink, var(--green));
         outline: none;
       }
       .mobile-page-back i { font-size: 17px; }
@@ -269,5 +269,7 @@
 
   @stack('scripts')
 
+  {{-- لایه‌ی حالت روز — عمداً آخرین استایل صفحه است تا روی استایل‌های داخلی صفحات اولویت داشته باشد (doc/app-site-theme.md) --}}
+  <link href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}" rel="stylesheet">
 </body>
 </html>

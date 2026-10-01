@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.theme-init')
     @include('partials.site-icons')
     <title>بازیابی رمز عبور — وطن استودیو</title>
 
     <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ \App\Support\AppAsset::url('css/theme-tokens.css') }}" rel="stylesheet">
     @vite(['resources/css/app.css'])
     <style>
         html { scrollbar-width: none; }
@@ -20,7 +22,7 @@
         .step-content.active { display: block; }
     </style>
 </head>
-<body class="m-0 bg-[#0a0a0c] text-white font-[IRANSansXFaNum,_sans-serif] antialiased overflow-x-hidden">
+<body class="vt-legacy-auth m-0 bg-[#0a0a0c] text-white font-[IRANSansXFaNum,_sans-serif] antialiased overflow-x-hidden">
 
     {{-- نئون سبز بک‌گراند --}}
     <div class="fixed inset-0 -z-10 bg-[#0a0a0c] overflow-hidden">
@@ -235,5 +237,6 @@
             }).catch(() => { btn.disabled = false; showError('ارتباط با سرور قطع شد.'); });
         }
     </script>
+    <link href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}" rel="stylesheet">
 </body>
 </html>

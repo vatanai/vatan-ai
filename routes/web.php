@@ -169,6 +169,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/partner-interest', [ProfileController::class, 'requestPartnerProgram'])->name('profile.partner-interest');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
     Route::get('/profile/media', [ProfileController::class, 'media'])->name('profile.media');
+    Route::get('/profile/referral-products/search', [ProfileController::class, 'referralProducts'])->name('profile.referral-products.search');
     Route::get('/profile/generated-images/{generatedImage}/thumbnail', [ProfileController::class, 'generatedImageThumbnail'])
         ->name('profile.generated-images.thumbnail');
     Route::delete('/profile/generated-images/{generatedImage}', [ProfileController::class, 'destroyGeneratedImage'])->name('profile.generated-images.destroy');
@@ -553,6 +554,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('/video-studio/experimental/hook-colors', [VideoStudioController::class, 'storeHookColor'])->name('video-studio.experimental.hook-colors.store');
     Route::delete('/video-studio/experimental/hook-colors/defaults/{target}/{colorKey}', [VideoStudioController::class, 'destroyDefaultHookColor'])->name('video-studio.experimental.hook-colors.defaults.destroy');
     Route::delete('/video-studio/experimental/hook-colors/{color}', [VideoStudioController::class, 'destroyHookColor'])->name('video-studio.experimental.hook-colors.destroy');
+    Route::get('/instagram', fn() => redirect('/admin/dashboard/instagram'))->name('instagram.dashboard');
     Route::get('/create-studio', [\App\Http\Controllers\Admin\CreateStudioController::class, 'index'])->name('create-studio.index');
     Route::put('/create-studio/pricing-settings', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updatePricingSettings'])->name('create-studio.pricing-settings.update');
     Route::post('/create-studio/cost-rules', [\App\Http\Controllers\Admin\CreateStudioController::class, 'storeCostRule'])->name('create-studio.cost-rules.store');
@@ -820,4 +822,36 @@ Route::prefix('api/v1/admin')->name('admin.api.')->middleware('auth:admin')->gro
     Route::post('/users/bulk-token',         [AdminUserController::class, 'bulkUpdateToken'])->name('users.bulk_token.update');
     Route::post('/token-history/{id}/sms',   [AdminUserController::class, 'resendTokenSms'])->name('token_history.sms');
     Route::get('/token-history',             [AdminUserController::class, 'globalTokenHistory'])->name('token_history');
+});
+
+// ─── Instagram Automation API ────────────────────────
+Route::prefix('api/v1/instagram')->name('instagram.api.')->group(function () {
+    Route::post('/webhook', [App\Http\Controllers\InstagramWebhookController::class, 'receiveComment'])->name('webhook');
+    Route::patch('/webhook/{comment_id}/status', [App\Http\Controllers\InstagramWebhookController::class, 'updateStatus'])->name('webhook.status');
+    Route::get('/comments', [App\Http\Controllers\InstagramWebhookController::class, 'getComments'])->name('comments');
+    Route::get('/stats', [App\Http\Controllers\InstagramWebhookController::class, 'getStats'])->name('stats');
+});
+
+// ─── Instagram Post Settings (Dashboard) ────────────────────────
+Route::middleware('auth')->prefix('dashboard/instagram')->name('instagram.')->group(function () {
+    Route::resource('posts', \App\Http\Controllers\InstagramPostSettingController::class);
+    
+    // Post Management Actions
+    Route::post('/posts/{post}/activate', [\App\Http\Controllers\InstagramPostSettingController::class, 'activate'])->name('posts.activate');
+    Route::post('/posts/{post}/deactivate', [\App\Http\Controllers\InstagramPostSettingController::class, 'deactivate'])->name('posts.deactivate');
+    
+    // Keyword Management
+    Route::post('/posts/{post}/keywords', [\App\Http\Controllers\InstagramPostSettingController::class, 'addKeyword'])->name('posts.keywords.add');
+    Route::delete('/posts/{post}/keywords/{keyword}', [\App\Http\Controllers\InstagramPostSettingController::class, 'deleteKeyword'])->name('posts.keywords.delete');
+    
+    // Product Management
+    Route::post('/posts/{post}/products', [\App\Http\Controllers\InstagramPostSettingController::class, 'addProduct'])->name('posts.products.add');
+    Route::put('/posts/{post}/products/{product}', [\App\Http\Controllers\InstagramPostSettingController::class, 'updateProduct'])->name('posts.products.update');
+    Route::delete('/posts/{post}/products/{product}', [\App\Http\Controllers\InstagramPostSettingController::class, 'deleteProduct'])->name('posts.products.delete');
+    
+    // Response Configuration
+    Route::post('/posts/{post}/responses', [\App\Http\Controllers\InstagramPostSettingController::class, 'setResponses'])->name('posts.responses.set');
+    
+    // Analytics
+    Route::get('/posts/{post}/analytics', [\App\Http\Controllers\InstagramPostSettingController::class, 'getAnalytics'])->name('posts.analytics');
 });

@@ -357,6 +357,17 @@
   var productOptions = document.getElementById('referralProductOptions');
   var productSelection = document.getElementById('referralProductSelection');
   var productButtons = productOptions ? Array.prototype.slice.call(productOptions.querySelectorAll('.referral-product-option')) : [];
+  var initialProductItems = productButtons.map(function (button) {
+    var englishName = button.querySelector('small');
+    return {
+      id: button.getAttribute('data-product-id') || '',
+      name: button.getAttribute('data-product-name') || button.textContent.trim(),
+      name_en: englishName ? englishName.textContent.trim() : ''
+    };
+  });
+  var productSearchUrl = productSearch ? productSearch.getAttribute('data-product-search-url') : '';
+  var productSearchTimer = null;
+  var productSearchSequence = 0;
 
   function setProductOptionsVisibility(show) {
     if (!productOptions || !productSearch) return;
@@ -364,7 +375,55 @@
     productSearch.setAttribute('aria-expanded', show ? 'true' : 'false');
   }
 
-  function filterProducts() {
+  function showProductOptionsMessage(message, className) {
+    if (!productOptions) return;
+    productOptions.replaceChildren();
+    var state = document.createElement('div');
+    state.className = 'referral-product-options-empty ' + (className || '');
+    state.textContent = message;
+    productOptions.appendChild(state);
+    productButtons = [];
+    setProductOptionsVisibility(true);
+  }
+
+  function renderProductOptions(items) {
+    if (!productOptions) return;
+    productOptions.removeAttribute('aria-busy');
+    productOptions.replaceChildren();
+    productButtons = [];
+
+    (items || []).forEach(function (item) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'referral-product-option';
+      button.setAttribute('role', 'option');
+      button.setAttribute('data-product-id', String(item.id || ''));
+      button.setAttribute('data-product-name', item.name || item.name_en || 'محصول وطن');
+
+      var title = document.createElement('span');
+      title.textContent = item.name || item.name_en || 'محصول وطن';
+      button.appendChild(title);
+
+      if (item.name_en) {
+        var englishName = document.createElement('small');
+        englishName.dir = 'ltr';
+        englishName.textContent = item.name_en;
+        button.appendChild(englishName);
+      }
+
+      productOptions.appendChild(button);
+      productButtons.push(button);
+    });
+
+    if (!productButtons.length) {
+      showProductOptionsMessage('محصولی با این نام پیدا نشد.', 'referral-product-filter-empty');
+      return;
+    }
+
+    setProductOptionsVisibility(true);
+  }
+
+  function filterLocalProducts() {
     if (!productSearch || !productOptions) return;
     var query = productSearch.value.trim().toLocaleLowerCase('fa-IR');
     var visibleCount = 0;
@@ -392,25 +451,67 @@
     setProductOptionsVisibility(true);
   }
 
+  function searchProducts() {
+    if (!productSearch || !productOptions) return;
+    var query = productSearch.value.trim();
+
+    window.clearTimeout(productSearchTimer);
+    productSearchSequence += 1;
+
+    if (!query) {
+      renderProductOptions(initialProductItems);
+      return;
+    }
+
+    if (!productSearchUrl) {
+      filterLocalProducts();
+      return;
+    }
+
+    var sequence = productSearchSequence;
+    productSearchTimer = window.setTimeout(function () {
+      productOptions.setAttribute('aria-busy', 'true');
+      showProductOptionsMessage('در حال جست‌وجوی محصولات…', 'referral-product-search-loading');
+
+      var separator = productSearchUrl.indexOf('?') === -1 ? '?' : '&';
+      fetch(productSearchUrl + separator + 'q=' + encodeURIComponent(query), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      }).then(function (response) {
+        if (!response.ok) throw new Error('referral-product-search-failed');
+        return response.json();
+      }).then(function (payload) {
+        if (sequence !== productSearchSequence) return;
+        renderProductOptions(payload.items || []);
+      }).catch(function () {
+        if (sequence !== productSearchSequence) return;
+        showProductOptionsMessage('جست‌وجوی محصول انجام نشد؛ دوباره تلاش کن.', 'referral-product-search-error');
+      }).finally(function () {
+        if (sequence === productSearchSequence) productOptions.removeAttribute('aria-busy');
+      });
+    }, 220);
+  }
+
   if (productSearch && productId && productSubmit) {
     productSearch.addEventListener('focus', function () {
-      filterProducts();
+      searchProducts();
     });
     productSearch.addEventListener('input', function () {
       productId.value = '';
       productSubmit.disabled = true;
       if (productSelection) productSelection.textContent = 'یک محصول را از نتایج انتخاب کن.';
-      filterProducts();
+      searchProducts();
     });
 
-    productButtons.forEach(function (button) {
-      button.addEventListener('click', function () {
+    productOptions.addEventListener('click', function (event) {
+      var button = event.target.closest('.referral-product-option');
+      if (button && productOptions.contains(button)) {
         productId.value = button.getAttribute('data-product-id') || '';
         productSearch.value = button.getAttribute('data-product-name') || button.textContent.trim();
         productSubmit.disabled = !productId.value;
         if (productSelection) productSelection.textContent = 'محصول انتخاب‌شده: ' + productSearch.value;
         setProductOptionsVisibility(false);
-      });
+      }
     });
 
     if (productForm) {

@@ -28,4 +28,18 @@ class ProcessTelegramProductDraftJob implements ShouldQueue
             $service->process($draft);
         }
     }
+
+    /**
+     * اگه جاب بعد از تلاش‌های مجاز شکست بخوره یا تایم‌اوت بشه (مثلاً به‌خاطر کمبود منابع سرور یا
+     * کندی OpenRouter)، درفت برای همیشه توی وضعیت processing گیر نکنه؛ یه خطای قابل‌فهم ثبت می‌شه
+     * تا هم توی پنل ادمین دیده بشه، هم بات تلگرام به‌جای گیر کردن، پیام خطا نشون بده.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        $draft = TelegramProductDraft::query()->find($this->draftId);
+        $draft?->forceFill([
+            'state' => 'failed',
+            'error_message' => \Illuminate\Support\Str::limit($exception->getMessage(), 1000, ''),
+        ])->save();
+    }
 }

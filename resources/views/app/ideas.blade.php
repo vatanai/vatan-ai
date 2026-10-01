@@ -150,7 +150,7 @@
     color: rgba(255,255,255,0.45); cursor: pointer; text-decoration: none;
   }
   .xp-search-submit:hover,
-  .xp-search-clear:hover { color: #cffe00; }
+  .xp-search-clear:hover { color: var(--vt-brand-ink, #cffe00); }
   html.light .xp-search-box {
     background: rgba(0,0,0,0.05);
     border-color: rgba(0,0,0,0.1);

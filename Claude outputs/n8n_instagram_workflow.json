@@ -1,0 +1,344 @@
+{
+  "name": "Instagram Comment Auto-Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "interval": [
+          1
+        ]
+      },
+      "id": "trigger-check-comments",
+      "name": "Check Comments Every 1 Minute",
+      "type": "n8n-nodes-base.interval",
+      "typeVersion": 1,
+      "position": [
+        250,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "instagramGraph",
+        "operation": "getComments",
+        "mediaId": "={{ $json.mediaId }}",
+        "fields": [
+          "timestamp",
+          "text",
+          "username",
+          "id",
+          "user_id"
+        ]
+      },
+      "id": "get-instagram-comments",
+      "name": "Get New Instagram Comments",
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [
+        450,
+        250
+      ],
+      "credentials": {
+        "instagramOAuth2Api": "instagram_business_oauth"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.composio.dev/v1/actions/instagram_graph/get_comments",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "composio_api_key",
+        "requestMethod": "POST",
+        "sendBody": true,
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": [
+          {
+            "name": "media_id",
+            "value": "={{ $json.mediaId }}"
+          },
+          {
+            "name": "fields",
+            "value": "id,text,timestamp,user_id,username,hidden"
+          }
+        ]
+      },
+      "id": "composio-get-comments",
+      "name": "Composio: Get Instagram Comments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "key": "default",
+              "condition": "default",
+              "routed": true
+            },
+            {
+              "key": "keyword",
+              "condition": "ifExpression",
+              "value": "={{ $json.text.toLowerCase().includes('product') || $json.text.toLowerCase().includes('price') || $json.text.toLowerCase().includes('buy') || $json.text.toLowerCase().includes('order') || $json.text.toLowerCase().includes('available') }}"
+            }
+          ]
+        }
+      },
+      "id": "filter-keyword",
+      "name": "Filter by Keyword",
+      "type": "n8n-nodes-base.switchNode",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.composio.dev/v1/actions/instagram_graph/get_user_info",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "composio_api_key",
+        "sendBody": true,
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": [
+          {
+            "name": "user_id",
+            "value": "={{ $json.user_id }}"
+          },
+          {
+            "name": "fields",
+            "value": "id,username,name,biography,followers_count,follows"
+          }
+        ]
+      },
+      "id": "check-follower-status",
+      "name": "Check if User Follows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        850,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "openrouter_api_key",
+        "sendBody": true,
+        "bodyParametersUi": "json",
+        "body": "{\n  \"model\": \"gpt-3.5-turbo\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a professional customer service representative for a business. Respond to customer inquiries about products in a friendly, professional manner. Keep responses under 100 words. Always include a link to learn more if appropriate. Respond in the same language as the customer.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.text }}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 150,\n  \"top_p\": 1\n}"
+      },
+      "id": "generate-ai-response",
+      "name": "Generate AI Response with OpenRouter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1050,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.composio.dev/v1/actions/instagram_graph/send_direct_message",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "composio_api_key",
+        "sendBody": true,
+        "bodyParametersUi": "keyvalue",
+        "bodyParameters": [
+          {
+            "name": "recipient_id",
+            "value": "={{ $json.user_id }}"
+          },
+          {
+            "name": "message",
+            "value": "={{ $json.response.choices[0].message.content }}"
+          }
+        ]
+      },
+      "id": "send-instagram-dm",
+      "name": "Send Instagram DM Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1250,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WEBHOOK_URL }}/api/instagram/webhook",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "laravel_webhook_auth",
+        "sendBody": true,
+        "bodyParametersUi": "json",
+        "body": "{\n  \"instagram_comment_id\": \"{{ $json.id }}\",\n  \"instagram_user_id\": \"{{ $json.user_id }}\",\n  \"instagram_username\": \"{{ $json.username }}\",\n  \"instagram_media_id\": \"{{ $json.media_id }}\",\n  \"comment_text\": \"{{ $json.text }}\",\n  \"contains_keyword\": true,\n  \"user_is_following\": {{ $json.follows || false }},\n  \"ai_response\": \"{{ $json.response.choices[0].message.content }}\",\n  \"status\": \"sent\",\n  \"metadata\": {\n    \"composio_response\": {{ JSON.stringify($json) }}\n  }\n}"
+      },
+      "id": "save-to-laravel",
+      "name": "Save Comment to Laravel DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1450,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": [
+            {
+              "key": "default",
+              "condition": "default",
+              "routed": true
+            }
+          ]
+        }
+      },
+      "id": "handle-non-followers",
+      "name": "Skip Non-Followers",
+      "type": "n8n-nodes-base.switchNode",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WEBHOOK_URL }}/api/instagram/webhook",
+        "authentication": "genericCredentialType",
+        "genericCredentials": "laravel_webhook_auth",
+        "sendBody": true,
+        "bodyParametersUi": "json",
+        "body": "{\n  \"instagram_comment_id\": \"{{ $json.id }}\",\n  \"instagram_user_id\": \"{{ $json.user_id }}\",\n  \"instagram_username\": \"{{ $json.username }}\",\n  \"instagram_media_id\": \"{{ $json.media_id }}\",\n  \"comment_text\": \"{{ $json.text }}\",\n  \"contains_keyword\": false,\n  \"user_is_following\": false,\n  \"ai_response\": null,\n  \"status\": \"skipped\",\n  \"metadata\": {\n    \"reason\": \"no_keyword_match\"\n  }\n}"
+      },
+      "id": "save-skipped-comment",
+      "name": "Save Skipped Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        850,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "notification",
+        "notificationType": "slack",
+        "slackChannel": "#instagram-automation",
+        "slackMessage": "✅ Instagram Comment Processed\n\n👤 @{{ $json.username }}\n💬 Comment: {{ $json.text }}\n🤖 Response: {{ $json.response.choices[0].message.content }}\n\nStatus: Sent ✓"
+      },
+      "id": "notify-slack",
+      "name": "Notify Slack (Optional)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "trigger-check-comments": {
+      "main": [
+        [
+          {
+            "node": "composio-get-comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "composio-get-comments": {
+      "main": [
+        [
+          {
+            "node": "filter-keyword",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "filter-keyword": {
+      "main": [
+        [
+          {
+            "node": "check-follower-status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "save-skipped-comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "check-follower-status": {
+      "main": [
+        [
+          {
+            "node": "generate-ai-response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate-ai-response": {
+      "main": [
+        [
+          {
+            "node": "send-instagram-dm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send-instagram-dm": {
+      "main": [
+        [
+          {
+            "node": "save-to-laravel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "save-to-laravel": {
+      "main": [
+        [
+          {
+            "node": "notify-slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveDataOnSuccess": "all",
+    "saveDataOnError": "all",
+    "executionOrder": "v1"
+  }
+}

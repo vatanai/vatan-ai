@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>ورود به پلتفرم هوش مصنوعی وطن</title>
+  @include('partials.theme-init')
   @include('partials.site-icons')
   <link href="{{ asset('css/fonts.css') }}" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="{{ \App\Support\AppAsset::url('css/theme-tokens.css') }}" rel="stylesheet">
   @vite(['resources/css/app.css'])
   @include('auth.partials.auth-styles')
 </head>
@@ -94,5 +96,6 @@
     </aside>
   </main>
   @include('auth.partials.auth-scripts')
+  <link href="{{ \App\Support\AppAsset::url('css/theme-light.css') }}" rel="stylesheet">
 </body>
 </html>

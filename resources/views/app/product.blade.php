@@ -176,7 +176,7 @@
   cursor:pointer;
   transition:color .2s ease;
 }
-.pd-tag:hover{ color:var(--green); }
+.pd-tag:hover{ color:var(--green-ink, var(--green)); }
 
 /* باکس توضیحات */
 .pd-desc-box{
@@ -227,8 +227,8 @@
   font-family:inherit;
 }
 .pd-token:hover{ border-color:var(--green); }
-.pd-token i{ color:var(--green); font-size:13px; }
-.pd-token b{ color:var(--green); font-weight:800; }
+.pd-token i{ color:var(--green-ink, var(--green)); font-size:13px; }
+.pd-token b{ color:var(--green-ink, var(--green)); font-weight:800; }
 /* پاپ‌آپ توضیح توکن — زیر باکس توکن باز می‌شود */
 .pd-token-pop{
   position:absolute;
@@ -250,7 +250,7 @@
   transition:all .2s ease;
   z-index:30;
 }
-.pd-token-pop b{ color:var(--green); }
+.pd-token-pop b{ color:var(--green-ink, var(--green)); }
 .pd-token-pop.show{ opacity:1; visibility:visible; transform:none; }
 
 .pd-iconbtn{
@@ -269,7 +269,7 @@
   transition:all .2s ease;
 }
 .pd-iconbtn:hover{ border-color:var(--green); transform:translateY(-1px); }
-.pd-iconbtn.is-on{ color:var(--green); border-color:var(--green); }
+.pd-iconbtn.is-on{ color:var(--green-ink, var(--green)); border-color:var(--green); }
 /* دکمه لایک: در حالت فعال قرمز */
 .pd-iconbtn.is-liked{ color:var(--red); border-color:var(--red); }
 .pd-iconbtn.is-liked:hover{ border-color:var(--red); }
@@ -480,14 +480,14 @@
 .product-share-option{width:100%;display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--border-subtle);border-radius:14px;background:var(--bg-surface);color:var(--text-primary);text-align:right;cursor:pointer;font-family:inherit;transition:border-color .2s,background .2s}
 .product-share-option:hover{border-color:var(--green);background:var(--bg-page)}
 .product-share-option>span{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--bg-page);color:var(--text-secondary)}
-.product-share-option.is-earning>span{background:var(--bg-affiliate);color:var(--green)}
+.product-share-option.is-earning>span{background:var(--bg-affiliate);color:var(--green-ink, var(--green))}
 .product-share-option>div{display:grid;gap:4px;min-width:0;flex:1}
 .product-share-option strong{font-size:12px;font-weight:900;color:var(--text-primary)}
 .product-share-option small{font-size:9.5px;line-height:1.7;color:var(--text-secondary)}
 .product-share-option>i{font-size:10px;color:var(--text-secondary)}
 .product-share-option:disabled{opacity:.5;cursor:not-allowed}
-.product-share-code{direction:ltr;display:inline-flex;width:max-content;margin-top:2px;padding:3px 7px;border-radius:7px;background:var(--bg-page);color:var(--green);font-size:9px;font-weight:800}
-.product-share-feedback{min-height:18px;margin:10px 2px -4px;font-size:10px;color:var(--green)}
+.product-share-code{direction:ltr;display:inline-flex;width:max-content;margin-top:2px;padding:3px 7px;border-radius:7px;background:var(--bg-page);color:var(--green-ink, var(--green));font-size:9px;font-weight:800}
+.product-share-feedback{min-height:18px;margin:10px 2px -4px;font-size:10px;color:var(--green-ink, var(--green))}
 
 /* ═══════════ فقط موبایل (زیر 768px) — تبلت دقیقاً مثل دسکتاپ است ═══════════ */
 @media (max-width:767px){

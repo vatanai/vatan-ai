@@ -20,7 +20,8 @@
     || request()->is('admin/referrals*')
     || request()->is('admin/growth*');
   $isWebsiteMenu = $isWebsiteSiteMenu || $isWebsiteAppMenu || request()->is('admin/content*') || request()->is('admin/sms*');
-  $isStudioMenu = $isVideoStudio2;
+  $isInstagramMenu = request()->is('admin/instagram*');
+  $isStudioMenu = $isVideoStudio2 || $isInstagramMenu;
   $isTelegramSettingsMenu = request()->is('admin/settings/telegram*') || request()->is('admin/telegram*');
   $isMarketingTechnologyMenu = request()->is('admin/marketing-technology*');
 @endphp
@@ -68,8 +69,9 @@
 {{-- استودیو تولید --}}
 <div class="nav-item">
   <div class="nav-link {{ $isStudioMenu ? 'active' : '' }}" onclick="toggleSub('studio-submenu-new', this)"><div class="nav-icon"><i class="fa-solid fa-photo-film"></i></div><div class="nav-label">استودیو تولید</div><i class="fa-solid fa-chevron-down nav-chev {{ $isStudioMenu ? 'open' : '' }}"></i></div>
-  <div class="submenu {{ $isStudioMenu ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
+  <div class="submenu {{ $isStudioMenu || request()->is('admin/instagram*') ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
     <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">{{ config('video_studio.admin_label', 'تولید محتوای خودکار') }}</div></a>
+    <a href="{{ route('admin.instagram.dashboard') }}" class="sub-item {{ request()->is('admin/instagram*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">اینستاگرام — کامنت هوشمند</div></a>
   </div></div>
 </div>
 

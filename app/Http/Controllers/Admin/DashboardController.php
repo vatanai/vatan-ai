@@ -20,6 +20,7 @@ class DashboardController extends Controller
         'models' => 'ai-models',
         'prompts' => 'ai-prompts',
         'logs' => 'ai-logs',
+        'instagram' => 'instagram-dashboard',
     ];
 
     private function viewData(): array

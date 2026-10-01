@@ -16,6 +16,7 @@ use App\Models\UserUpload;
 use App\Models\GeneratedVideo;
 use App\Models\SalesPartnerLead;
 use App\Services\CustomerJourneyService;
+use App\Services\ProductSearchService;
 use App\Services\UserStorageService;
 use App\Services\ProfileMediaThumbnailService;
 use Illuminate\Http\JsonResponse;
@@ -393,6 +394,41 @@ public function gallery()
         return response()->json(['html' => $html]);
     }
 
+    /** جست‌وجوی زندهٔ محصولات فعال برای ساخت لینک همکاری در فروش. */
+    public function referralProducts(Request $request, ProductSearchService $productSearch): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:1', 'max:120'],
+        ]);
+        $terms = $productSearch->terms((string) $validated['q']);
+
+        $products = Product::query()
+            ->where('status', 'active')
+            ->where(function ($query) use ($terms): void {
+                foreach ($terms as $term) {
+                    $like = '%'.addcslashes($term, '%_\\').'%';
+
+                    $query->where(function ($match) use ($like): void {
+                        $match->where('name_fa', 'like', $like)
+                            ->orWhere('name_en', 'like', $like)
+                            ->orWhere('slug', 'like', $like)
+                            ->orWhere('product_code', 'like', $like);
+                    });
+                }
+            })
+            ->latest('id')
+            ->limit(25)
+            ->get(['id', 'name_fa', 'name_en']);
+
+        return response()->json([
+            'items' => $products->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->name_fa ?: $product->name_en,
+                'name_en' => $product->name_en,
+            ])->values(),
+        ]);
+    }
+
     /** صفحهٔ بعدی گرید خروجی‌ها؛ cursor باعث می‌شود با رشد تاریخچه offset سنگین نشود. */
     public function media(Request $request): JsonResponse
     {
@@ -454,8 +490,8 @@ public function gallery()
             'referralData' => $referralData,
             'referralProducts' => Product::query()
                 ->where('status', 'active')
-                ->orderBy('name_fa')
-                ->limit(200)
+                ->latest('id')
+                ->limit(40)
                 ->get(['id', 'name_fa', 'name_en']),
             'creatorRewardProducts' => $creatorRewardProducts,
             'creatorRewardCredits' => $creatorRewardCredits,

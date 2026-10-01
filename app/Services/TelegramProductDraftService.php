@@ -22,6 +22,20 @@ use Illuminate\Validation\ValidationException;
 
 class TelegramProductDraftService
 {
+    /**
+     * قاب‌های نمایش محصول در هوم/اکسپلور — کلیدها دقیقاً همان مقادیر ستون `explore_tiles`
+     * و چک‌باکس‌های گام ۵ داشبورد هستند.
+     */
+    private const EXPLORE_TILE_LABELS = [
+        '1x1' => '۱×۱ (مربع)',
+        '2x2' => '۲×۲ (بزرگ)',
+        '1x2' => '۱×۲ (عمودی)',
+        '2x1' => '۲×۱ (افقی)',
+    ];
+
+    /** پیش‌فرض همان پیش‌فرض داشبورد است: فقط قاب مربع. */
+    private const DEFAULT_EXPLORE_TILES = ['1x1'];
+
     public function __construct(
         private readonly ProductImageOptimizer $images,
         private readonly OpenRouterService $openRouter,
@@ -84,6 +98,15 @@ class TelegramProductDraftService
         if (in_array($draft->state, ['review', 'duplicate'], true) && ! $draft->reviewed_at) {
             $draft->forceFill(['reviewed_at' => now()])->save();
             return $this->reviewResponse($draft);
+        }
+
+        // قبلاً این متد برای state=failed هیچ متن/پیامی برنمی‌گردوند (فقط status خام)، در نتیجه
+        // بات تلگرام هیچ پیامی نداشت که به کاربر نشون بده و کاربر بدون هیچ توضیحی گیر می‌کرد.
+        if ($draft->state === 'failed' && ! $draft->reviewed_at) {
+            $draft->forceFill(['reviewed_at' => now()])->save();
+            return $this->response($draft->chat_id, 'آماده‌سازی اطلاعات با خطا روبه‌رو شد؛ لطفاً توضیح محصول را دوباره ارسال کنید.', [
+                ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+            ], ['status' => 'failed', 'draft_id' => $draft->id]);
         }
 
         return [
@@ -300,6 +323,8 @@ class TelegramProductDraftService
             'cancel_edit' => $this->cancelEdit($draft, $chatId),
             'edit' => $this->editPrompt($draft, $chatId, $action[2] ?? ''),
             'confirm' => $this->confirmMetadata($draft, $chatId),
+            'tile' => $manager->can('publish_product') ? $this->toggleExploreTile($draft, $chatId, (string) ($action[2] ?? ''), $input) : $this->response($chatId, 'دسترسی انتشار محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']),
+            'tiles_done' => $manager->can('publish_product') ? $this->finishExploreTiles($draft, $chatId) : $this->response($chatId, 'دسترسی انتشار محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']),
             'save_draft' => $this->save($draft, 'draft', $chatId),
             'publish' => $manager->can('publish_product') ? $this->save($draft, 'active', $chatId) : $this->response($chatId, 'دسترسی انتشار محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']),
             default => $this->response($chatId, 'این دکمه دیگر معتبر نیست. لطفاً وضعیت فعلی را دوباره بررسی کنید.'),
@@ -364,6 +389,9 @@ class TelegramProductDraftService
         }
         if ($draft->state === 'awaiting_edit') {
             return $this->applyEdit($draft, $chatId, $text);
+        }
+        if ($draft->state === 'awaiting_explore_tiles') {
+            return $this->exploreTilesResponse($draft, $chatId);
         }
 
         return $this->response($chatId, 'لطفاً یکی از دکمه‌های پیام قبلی را انتخاب کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
@@ -549,9 +577,18 @@ class TelegramProductDraftService
         return $this->reviewResponse($draft->fresh());
     }
 
-    private function save(TelegramProductDraft $draft, string $status, string $chatId): array
+    private function save(TelegramProductDraft $draft, string $status, string $chatId, bool $tilesConfirmed = false): array
     {
-        if (! in_array($draft->state, ['review', 'awaiting_save_choice'], true)) {
+        // فشردن دوباره‌ی «ثبت» وقتی کاربر وسط انتخاب قاب‌هاست: فقط همان کیبورد انتخاب دوباره نشان داده می‌شود.
+        if ($draft->state === 'awaiting_explore_tiles' && ! $tilesConfirmed) {
+            return $this->exploreTilesResponse($draft, $chatId);
+        }
+        // duplicate هم مجاز است: هشدار «عنوان مشابه» داخل متن بازبینی دیده شده و فشردن «ثبت» یعنی تأیید آگاهانه.
+        $saveStates = ['review', 'duplicate', 'awaiting_save_choice'];
+        if ($tilesConfirmed) {
+            $saveStates[] = 'awaiting_explore_tiles';
+        }
+        if (! in_array($draft->state, $saveStates, true)) {
             return $this->response($chatId, 'این فرآیند هنوز برای ذخیره آماده نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
         }
         $ai = (array) $draft->ai_result;
@@ -568,10 +605,18 @@ class TelegramProductDraftService
             $draft->forceFill(['state' => 'published', 'completed_at' => now()])->save();
             return $this->savedResponse($draft->fresh(), $product->fresh(), $chatId, 'active');
         }
+        if ($draft->state === 'duplicate' && empty($ai['duplicate_acknowledged'])) {
+            $ai['duplicate_acknowledged'] = true;
+            $draft->forceFill(['ai_result' => $ai])->save();
+        }
         $duplicate = $this->duplicateProduct((string) ($ai['name_fa'] ?? ''), (string) ($ai['name_en'] ?? ''));
-        if ($duplicate) {
+        if ($duplicate && empty($ai['duplicate_acknowledged'])) {
             $draft->forceFill(['state' => 'duplicate', 'reviewed_at' => null, 'ai_result' => array_merge($ai, ['duplicate_product_id' => $duplicate->id])])->save();
             return $this->reviewResponse($draft->fresh());
+        }
+        // انتشار در سایت: قبل از ساخت محصول، قاب‌های نمایش در اکسپلور از مدیر پرسیده می‌شود.
+        if ($status === 'active' && ! $tilesConfirmed) {
+            return $this->beginExploreTiles($draft, $ai, $chatId);
         }
 
         $model = AiModel::query()->selectableForProduct()->whereIn('provider', ProviderStatus::enabled() ?: ['__none__'])->first()
@@ -650,7 +695,7 @@ class TelegramProductDraftService
                 'card_shape' => 'portrait',
                 'gallery_layout' => 'grid',
                 'accent_color' => '#a07af5',
-                'explore_tiles' => ['1x1', '2x2', '1x2', '2x1'],
+                'explore_tiles' => $this->selectedExploreTiles($ai),
                 'is_new' => true,
             ]);
             if ($draft->manager?->admin_id) {
@@ -678,6 +723,101 @@ class TelegramProductDraftService
         });
 
         return $this->savedResponse($draft->fresh(), $product, $chatId, $status);
+    }
+
+    /**
+     * قاب‌های انتخاب‌شده‌ی یک درفت؛ اگر چیزی انتخاب نشده باشد پیش‌فرض (فقط ۱×۱).
+     * خروجی همیشه به ترتیب ثابتِ کلیدهای مجاز است و هیچ مقدار ناشناسی در آن نمی‌ماند.
+     */
+    private function selectedExploreTiles(array $ai): array
+    {
+        $chosen = array_map('strval', (array) ($ai['explore_tiles'] ?? []));
+        $selected = array_values(array_filter(
+            array_keys(self::EXPLORE_TILE_LABELS),
+            static fn (string $key): bool => in_array($key, $chosen, true),
+        ));
+
+        return $selected !== [] ? $selected : self::DEFAULT_EXPLORE_TILES;
+    }
+
+    private function beginExploreTiles(TelegramProductDraft $draft, array $ai, string $chatId): array
+    {
+        $ai['explore_tiles'] = $this->selectedExploreTiles($ai);
+        $draft->forceFill(['state' => 'awaiting_explore_tiles', 'reviewed_at' => now(), 'ai_result' => $ai])->save();
+
+        return $this->exploreTilesResponse($draft->fresh(), $chatId);
+    }
+
+    /**
+     * پیام انتخاب قاب‌های اکسپلور. n8n دکمه‌ها را دقیقاً به همین ترتیب از `buttons` می‌سازد:
+     * [۱×۱، ۲×۲، ۱×۲، ۲×۱، ثبت نهایی، لغو]. `edit_message` یعنی همان پیام قبلی ویرایش شود (نه پیام تازه).
+     */
+    private function exploreTilesResponse(TelegramProductDraft $draft, string $chatId, ?string $editMessageId = null, ?string $notice = null): array
+    {
+        $selected = $this->selectedExploreTiles((array) $draft->ai_result);
+        $tileButtons = [];
+        foreach (self::EXPLORE_TILE_LABELS as $key => $label) {
+            $tileButtons[] = [
+                'text' => (in_array($key, $selected, true) ? '✅ ' : '⬜ ') . $label,
+                'callback_data' => 'product:tile:' . $key,
+            ];
+        }
+        $done = ['text' => '✅ ثبت و انتشار محصول', 'callback_data' => 'product:tiles_done'];
+        $cancel = ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'];
+        $rows = [[$tileButtons[0], $tileButtons[1]], [$tileButtons[2], $tileButtons[3]], [$done], [$cancel]];
+        $active = implode('، ', array_map(static fn (string $key): string => self::EXPLORE_TILE_LABELS[$key], $selected));
+        $text = "🖼 نحوه نمایش محصول در هوم و اکسپلور\n\n"
+            . "قاب‌هایی را که این محصول اجازه‌ی نمایش در آن‌ها را دارد روشن کنید (حداقل یک قاب باید روشن بماند).\n\n"
+            . "قاب‌های روشن: {$active}\n\n"
+            . 'بعد از انتخاب، «ثبت و انتشار محصول» را بزنید.';
+        if ($notice !== null && $notice !== '') {
+            $text .= "\n\n⚠️ {$notice}";
+        }
+
+        return $this->response($chatId, $text, [$tileButtons[0], $tileButtons[1], $tileButtons[2], $tileButtons[3], $done, $cancel], [
+            'status' => 'awaiting_explore_tiles',
+            'ui' => 'explore_tiles',
+            'draft_id' => $draft->id,
+            'explore_tiles' => $selected,
+            'edit_message' => $editMessageId !== null && $editMessageId !== '',
+            'edit_message_id' => $editMessageId,
+            'reply_markup' => ['inline_keyboard' => $rows],
+        ]);
+    }
+
+    private function toggleExploreTile(TelegramProductDraft $draft, string $chatId, string $key, array $input): array
+    {
+        if ($draft->state !== 'awaiting_explore_tiles') {
+            return $this->response($chatId, 'این فرآیند دیگر در وضعیت بررسی نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+        }
+        $ai = (array) $draft->ai_result;
+        $selected = $this->selectedExploreTiles($ai);
+        $notice = null;
+        if (array_key_exists($key, self::EXPLORE_TILE_LABELS)) {
+            if (in_array($key, $selected, true)) {
+                if (count($selected) === 1) {
+                    $notice = 'حداقل یک قاب باید روشن بماند.';
+                } else {
+                    $selected = array_values(array_diff($selected, [$key]));
+                }
+            } else {
+                $selected[] = $key;
+            }
+        }
+        $ai['explore_tiles'] = $this->selectedExploreTiles(['explore_tiles' => $selected]);
+        $draft->forceFill(['ai_result' => $ai])->save();
+        $messageId = filled($input['message_id'] ?? null) ? (string) $input['message_id'] : null;
+
+        return $this->exploreTilesResponse($draft->fresh(), $chatId, $messageId, $notice);
+    }
+
+    private function finishExploreTiles(TelegramProductDraft $draft, string $chatId): array
+    {
+        if ($draft->state !== 'awaiting_explore_tiles') {
+            return $this->response($chatId, 'این فرآیند دیگر در وضعیت بررسی نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
+        }
+
+        return $this->save($draft, 'active', $chatId, true);
     }
 
     private function reviewResponse(TelegramProductDraft $draft): array
@@ -747,7 +887,12 @@ class TelegramProductDraftService
         if (! in_array($draft->state, ['review', 'duplicate'], true)) {
             return $this->response($chatId, 'ابتدا باید نتیجه‌ی آماده‌شده را بررسی کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
         }
-        if ($draft->state === 'duplicate') return $this->reviewResponse($draft->fresh());
+        // اخطار «عنوان مشابه» فقط یه هشدار اطلاع‌رسانیه، نه یه قفل بن‌بست: کاربر بعد از دیدنش با
+        // زدن «تأیید» می‌تونه آگاهانه ادامه بده. بدون این، تأیید فقط همون پیام رو دوباره نشون می‌داد
+        // و کاربر هیچ راهی برای ثبت نداشت مگر عوض کردن دستیِ اسم.
+        if ($draft->state === 'duplicate') {
+            $draft->forceFill(['ai_result' => array_merge((array) $draft->ai_result, ['duplicate_acknowledged' => true])])->save();
+        }
         $draft->forceFill(['state' => 'awaiting_save_choice', 'reviewed_at' => now()])->save();
         $isEdit = (bool) data_get($draft->input_payload, 'edit_existing');
         $text = $isEdit ? 'اطلاعات اصلاح‌شده تأیید شد. نوع ذخیره‌ی تغییرات را انتخاب کنید.' : 'نام و توضیحات تأیید شد. حالا نوع ثبت محصول را انتخاب کنید.';
@@ -828,7 +973,7 @@ class TelegramProductDraftService
     private function editPrompt(TelegramProductDraft $draft, string $chatId, string $field): array
     {
         $labels = ['metadata' => 'نام و توضیحات محصول', 'name_fa' => 'نام فارسی', 'name_en' => 'نام انگلیسی', 'description_fa' => 'توضیح فارسی'];
-        if (! isset($labels[$field]) || ! in_array($draft->state, ['review', 'duplicate', 'awaiting_save_choice'], true)) {
+        if (! isset($labels[$field]) || ! in_array($draft->state, ['review', 'duplicate', 'awaiting_save_choice', 'awaiting_explore_tiles'], true)) {
             return $this->response($chatId, 'این بخش فعلاً قابل اصلاح نیست.');
         }
         $draft->forceFill(['state' => 'awaiting_edit', 'pending_edit_field' => $field])->save();

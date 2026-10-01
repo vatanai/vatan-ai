@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Instagram Smart Comments</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap">
+    <style>
+        /* ─────────────────────────────────────────────────────────
+           Design Plan: Modern Instagram analytics platform
+           - Color: Instagram gradient (purple/pink/orange) + neutral greys
+           - Type: Vazirmatn for Persian, Inter for numbers/English
+           - Layout: Sidebar navigation + main content grid
+           ───────────────────────────────────────────────────────── */
+
+        :root {
+            --primary: #E1306C;
+            --primary-light: #FD1D1D;
+            --accent: #833AB4;
+            --accent-light: #F77737;
+
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8F9FA;
+            --bg-tertiary: #EFF2F5;
+
+            --text-primary: #050505;
+            --text-secondary: #65676B;
+            --text-tertiary: #8A8D91;
+
+            --border: #DBDBDB;
+            --success: #31A24C;
+            --warning: #E4405F;
+            --danger: #D32F2F;
+
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+
+            --font-display: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-body: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Inter', monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg-primary: #121212;
+                --bg-secondary: #1E1E1E;
+                --bg-tertiary: #272727;
+
+                --text-primary: #F0F0F0;
+                --text-secondary: #B0B0B0;
+                --text-tertiary: #808080;
+
+                --border: #383838;
+
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1E1E1E;
+            --bg-tertiary: #272727;
+
+            --text-primary: #F0F0F0;
+            --text-secondary: #B0B0B0;
+            --text-tertiary: #808080;
+
+            --border: #383838;
+
+            color-scheme: dark;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* ─────────── Header ─────────── */
+        .header {
+            background: linear-gradient(135deg, #833AB4 0%, #E1306C 50%, #FD1D1D 100%);
+            color: white;
+            padding: 24px 20px;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-brand::before {
+            content: "📱";
+            font-size: 24px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: var(--font-body);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-secondary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        /* ─────────── Navigation ─────────── */
+        .nav-tabs {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 0;
+            padding: 0 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .nav-tab {
+            padding: 16px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* ─────────── Container ─────────── */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* ─────────── Grid Layout ─────────── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+
+        /* ─────────── Cards ─────────── */
+        .card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .card-subtitle {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* ─────────── Stat Tile ─────────── */
+        .stat-tile {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: var(--font-mono);
+            margin: 8px 0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ─────────── Status Badge ─────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: rgba(49, 162, 76, 0.1);
+            color: var(--success);
+        }
+
+        .badge-testing {
+            background: rgba(232, 245, 233, 0.5);
+            color: #1B5E20;
+        }
+
+        .badge-inactive {
+            background: rgba(211, 47, 47, 0.1);
+            color: var(--danger);
+        }
+
+        /* ─────────── Post List ─────────── */
+        .post-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .post-item:hover {
+            border-color: var(--primary);
+            background: var(--bg-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .post-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 15px;
+        }
+
+        .post-meta {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .post-stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ─────────── Templates ─────────── */
+        .templates {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .template-card {
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary);
+            border-style: solid;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .template-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .template-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ─────────── Charts ─────────── */
+        .chart-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-tertiary);
+        }
+
+        /* ─────────── Forms ─────────── */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: var(--font-body);
+            font-size: 13px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(225, 48, 108, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: var(--font-body);
+        }
+
+        /* ─────────── Table ─────────── */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            padding: 12px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* ─────────── Responsive ─────────── */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .post-header {
+                flex-direction: column;
+            }
+
+            .post-meta {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .templates {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* ─────────── Animations ─────────── */
+        @media (prefers-reduced-motion: no-preference) {
+            .card,
+            .post-item,
+            .template-card {
+                animation: fadeIn 0.3s ease-out;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        }
+
+        /* ─────────── Modal ─────────── */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="header-brand">اینستاگرام هوشمند</div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="openModal('template-modal')">+ پست جدید</button>
+                <button class="btn btn-primary" onclick="exportData()">📥 خروجی Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('posts')">📝 پست‌ها</button>
+        <button class="nav-tab" onclick="switchTab('analytics')">📊 تحلیلات</button>
+        <button class="nav-tab" onclick="switchTab('settings')">⚙️ تنظیمات</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Posts Section -->
+        <div id="posts" class="section active">
+            <div style="margin-bottom: 24px;">
+                <h2 style="font-size: 20px; margin-bottom: 16px; color: var(--text-primary);">قالب‌های آماده</h2>
+                <div class="templates">
+                    <div class="template-card" onclick="createPostFromTemplate('new-product')">
+                        <div class="template-icon">🆕</div>
+                        <div class="template-name">محصول جدید</div>
+                    </div>
+                    <div class="template-card" onclick="createPostFromTemplate('discount')">
+                        <div class="template-icon">🏷️</div>
+                        <div class="template-name">تخفیف/فروش</div>
+                    </div>
+                    <div class="template-card" onclick="createPostFromTemplate('free-sample')">
+                        <div class="template-icon">🎁</div>
+                        <div class="template-name">نمونه رایگان</div>
+                    </div>
+                    <div class="template-card" onclick="createPostFromTemplate('custom')">
+                        <div class="template-icon">✨</div>
+                        <div class="template-name">سفارشی</div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 style="font-size: 20px; margin-bottom: 16px; color: var(--text-primary);">پست‌های تحت نظارت</h2>
+                <div id="posts-list">
+                    <!-- Posts will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="analytics" class="section">
+            <div class="grid grid-4">
+                <div class="stat-tile">
+                    <div class="stat-label">کل کامنت‌ها</div>
+                    <div class="stat-value">۱۲۸</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">کلمات کلیدی</div>
+                    <div class="stat-value">۱۱۲</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">DM ارسالی</div>
+                    <div class="stat-value">۱۰۶</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">تبدیل</div>
+                    <div class="stat-value">۲۴</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">روند فعالیت</div>
+                    </div>
+                    <div class="chart-container">📈 نمودار روند روزانه</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">توزیع ساعتی</div>
+                    </div>
+                    <div class="chart-container">🕐 کدام ساعت بیشترین تعامل</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <div class="card-title">عملکرد محصولات</div>
+                    </div>
+                    <div class="chart-container">📊 مقایسه بیشترین فروخته شده</div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <div class="card-title">funnel تحویل</div>
+                </div>
+                <div style="padding: 20px 0;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>کل کامنت‌ها</span>
+                            <span style="font-weight: 600; color: var(--primary);">۱۲۸ (100%)</span>
+                        </div>
+                        <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                            <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #833AB4, #E1306C); border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>درخواست فالو</span>
+                            <span style="font-weight: 600; color: var(--primary);">۸۳ (65%)</span>
+                        </div>
+                        <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                            <div style="width: 65%; height: 100%; background: linear-gradient(90deg, #FD1D1D, #F77737); border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>فالو تکمیل</span>
+                            <span style="font-weight: 600; color: var(--success);">۷۲ (56%)</span>
+                        </div>
+                        <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                            <div style="width: 56%; height: 100%; background: var(--success); border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>خرید/تبدیل</span>
+                            <span style="font-weight: 600; color: var(--success);">۲۴ (19%)</span>
+                        </div>
+                        <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                            <div style="width: 19%; height: 100%; background: var(--success); border-radius: 4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="section">
+            <div class="card" style="max-width: 600px;">
+                <div class="card-header">
+                    <div class="card-title">تنظیمات حساب</div>
+                </div>
+
+                <div class="form-group">
+                    <label>نام کاربری اینستاگرام</label>
+                    <input type="text" placeholder="@yourinstagram" value="@yourbusiness">
+                </div>
+
+                <div class="form-group">
+                    <label>API Key - Composio</label>
+                    <input type="text" placeholder="ck_..." value="">
+                </div>
+
+                <div class="form-group">
+                    <label>API Key - OpenRouter</label>
+                    <input type="text" placeholder="sk-or-v1-..." value="">
+                </div>
+
+                <div class="form-group">
+                    <label>تاخیر پاسخ کامنت (ثانیه)</label>
+                    <input type="number" value="3" min="0" max="300">
+                </div>
+
+                <div class="form-group">
+                    <label>تاخیر ارسال محصول (ثانیه)</label>
+                    <input type="number" value="5" min="0" max="300">
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-success">💾 ذخیره تغییرات</button>
+                    <button class="btn btn-secondary">🔄 تست اتصال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Modal -->
+    <div id="template-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">ایجاد پست جدید</div>
+
+            <div class="form-group">
+                <label>عنوان پست</label>
+                <input type="text" placeholder="مثلاً: محصول جدید - T-Shirt">
+            </div>
+
+            <div class="form-group">
+                <label>Instagram Post ID</label>
+                <input type="text" placeholder="123456789...">
+            </div>
+
+            <div class="form-group">
+                <label>وضعیت</label>
+                <select>
+                    <option>درحال تست</option>
+                    <option>فعال</option>
+                    <option>غیرفعال</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>کلمات کلیدی (جدا شده با کاما)</label>
+                <input type="text" placeholder="محصول، قیمت، خرید">
+            </div>
+
+            <div class="form-group">
+                <label>فالو اجباری</label>
+                <div style="display: flex; gap: 12px; margin-top: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-weight: 400; margin: 0;">
+                        <input type="radio" name="follow" value="yes" checked>
+                        بله
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-weight: 400; margin: 0;">
+                        <input type="radio" name="follow" value="no">
+                        خیر
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('template-modal')">انصراف</button>
+                <button class="btn btn-success" onclick="savePost()">✓ ایجاد پست</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Create post from template
+        function createPostFromTemplate(template) {
+            const templates = {
+                'new-product': 'محصول جدید',
+                'discount': 'تخفیف پایان هفته',
+                'free-sample': 'نمونه رایگان',
+                'custom': ''
+            };
+            const modal = document.querySelector('#template-modal input');
+            if (modal) modal.value = templates[template] || '';
+            openModal('template-modal');
+        }
+
+        // Save post
+        function savePost() {
+            alert('پست با موفقیت ایجاد شد! ✅');
+            closeModal('template-modal');
+            renderPosts();
+        }
+
+        // Render posts list
+        function renderPosts() {
+            const posts = [
+                { id: 1, title: 'T-Shirt جدید', status: 'active', comments: 42, dms: 18, conversion: 7 },
+                { id: 2, title: 'تخفیف ۲۰٪', status: 'active', comments: 215, dms: 87, conversion: 28 },
+                { id: 3, title: 'نمونه رایگان', status: 'testing', comments: 1, dms: 0, conversion: 0 }
+            ];
+
+            const html = posts.map(post => `
+                <div class="post-item">
+                    <div class="post-header">
+                        <div>
+                            <div class="post-title">#${post.id} - ${post.title}</div>
+                            <span class="badge badge-${post.status}">${post.status === 'active' ? '🟢 فعال' : '🟡 درحال تست'}</span>
+                        </div>
+                        <div class="post-actions">
+                            <button class="btn btn-secondary btn-sm">✏️ ویرایش</button>
+                            <button class="btn btn-secondary btn-sm">📊 آنالیز</button>
+                        </div>
+                    </div>
+                    <div class="post-meta">
+                        <div class="post-stat">💬 <strong>${post.comments}</strong> کامنت</div>
+                        <div class="post-stat">📧 <strong>${post.dms}</strong> DM</div>
+                        <div class="post-stat">✅ <strong>${post.conversion}</strong> تبدیل</div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('posts-list').innerHTML = html;
+        }
+
+        // Export data
+        function exportData() {
+            alert('داده‌ها به صورت Excel خروجی شدند! 📥');
+        }
+
+        // Initialize
+        renderPosts();
+    </script>
+</body>
+</html>
