@@ -554,6 +554,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::post('/video-studio/experimental/hook-colors', [VideoStudioController::class, 'storeHookColor'])->name('video-studio.experimental.hook-colors.store');
     Route::delete('/video-studio/experimental/hook-colors/defaults/{target}/{colorKey}', [VideoStudioController::class, 'destroyDefaultHookColor'])->name('video-studio.experimental.hook-colors.defaults.destroy');
     Route::delete('/video-studio/experimental/hook-colors/{color}', [VideoStudioController::class, 'destroyHookColor'])->name('video-studio.experimental.hook-colors.destroy');
+    Route::get('/instagram-test-setup', [\App\Http\Controllers\Admin\InstagramTestController::class, 'setupTestData'])->name('instagram.test-setup');
     Route::get('/instagram', fn() => redirect('/admin/dashboard/instagram'))->name('instagram.dashboard');
     Route::get('/create-studio', [\App\Http\Controllers\Admin\CreateStudioController::class, 'index'])->name('create-studio.index');
     Route::put('/create-studio/pricing-settings', [\App\Http\Controllers\Admin\CreateStudioController::class, 'updatePricingSettings'])->name('create-studio.pricing-settings.update');
