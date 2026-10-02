@@ -18,6 +18,7 @@ use App\Models\SmartInstagram\WorkspaceMember;
 use App\Services\SmartInstagram\Ai\KnowledgeService;
 use App\Services\SmartInstagram\Ai\SalesAssistant;
 use App\Services\SmartInstagram\Automation\AutomationTemplates;
+use App\Services\SmartInstagram\ComposioMessageMapper;
 use App\Services\SmartInstagram\OutboundService;
 use App\Services\SmartInstagram\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -160,6 +161,58 @@ class SmartInstagramFlowTest extends TestCase
 
         $conversation->forceFill(['last_inbound_at' => now(), 'needs_human' => true])->save();
         $this->assertSame('blocked', $service->queue($conversation->fresh(), 'پاسخ خودکار', 'ai')->status);
+    }
+
+    public function test_comment_replies_do_not_consume_the_direct_message_automation_cap(): void
+    {
+        config(['smart_instagram.outbound_enabled' => true]);
+        $channel = $this->sandboxChannel();
+        $ws = app(WorkspaceContext::class)->id();
+        $contact = Contact::query()->create(['workspace_id' => $ws, 'external_id' => 'c-cap']);
+        $conversation = Conversation::query()->create([
+            'workspace_id' => $ws, 'channel_id' => $channel->id, 'contact_id' => $contact->id,
+            'status' => 'unanswered', 'last_inbound_at' => now(),
+        ]);
+        foreach (['c1', 'c2', 'c3'] as $commentId) {
+            Message::query()->create([
+                'workspace_id' => $ws, 'conversation_id' => $conversation->id, 'external_id' => $commentId,
+                'direction' => 'in', 'source_type' => 'comment', 'body' => 'سلفی',
+                'meta' => ['comment_id' => $commentId], 'occurred_at' => now(),
+            ]);
+        }
+
+        $service = app(OutboundService::class);
+        foreach (['c1', 'c2', 'c3'] as $commentId) {
+            $reply = $service->queue($conversation->fresh(), 'اطلاعات کامنت '.$commentId, 'automation', 'public_reply', ['target_ref' => $commentId]);
+            $this->assertNotSame('blocked', $reply->status);
+        }
+        $this->assertSame(3, OutboundMessage::query()->where('kind', 'public_reply')->count());
+
+        $dm = $service->queue($conversation->fresh(), 'دایرکت خودکار', 'automation', 'dm');
+        $this->assertNotSame('blocked', $dm->status);
+        $this->assertSame(1, OutboundMessage::query()->where('kind', 'dm')->count());
+    }
+
+    public function test_composio_mapper_puts_phone_sent_messages_in_customer_conversation(): void
+    {
+        $channel = $this->sandboxChannel();
+        $channel->forceFill(['username' => 'ai_vatan', 'external_account_id' => 'me', 'settings' => ['composio_instagram_user_id' => 'me']])->save();
+
+        $payload = app(ComposioMessageMapper::class)->map([
+            'id' => 'ig_out_1',
+            'created_time' => now()->toIso8601String(),
+            'from' => ['id' => 'own_ig', 'username' => 'ai_vatan'],
+            'to' => ['data' => [['id' => 'customer_1', 'username' => 'redruby.dubai']]],
+            'message' => '',
+            'attachments' => ['data' => [['image_data' => ['url' => 'https://cdn.example.test/card.jpg']]]],
+        ], 'conversation_1', $channel);
+
+        $this->assertSame('out', $payload['direction']);
+        $this->assertSame('me', $payload['account_id']);
+        $this->assertSame('customer_1', $payload['sender']['id']);
+        $this->assertSame('redruby.dubai', $payload['sender']['username']);
+        $this->assertSame('image', $payload['attachments'][0]['type']);
+        $this->assertSame('https://cdn.example.test/card.jpg', $payload['attachments'][0]['url']);
     }
 
     public function test_price_comment_template_runs_safely_live_and_in_test_mode(): void

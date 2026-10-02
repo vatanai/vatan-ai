@@ -96,10 +96,14 @@ class SendPolicy
             return $this->deny('همین متن به‌تازگی برای این مشتری ارسال شده است.');
         }
 
-        if ($origin === 'automation') {
+        // پاسخ عمومی و پاسخ خصوصی کامنت، برای هر کامنت به‌صورت جداگانه محدود می‌شوند
+        // و نباید سقف پیام‌های دایرکت خودکار را مصرف کنند. در غیر این صورت یک قانون
+        // دو اقدامی بعد از اولین کامنت، تمام کامنت‌های بعدی را بی‌دلیل مسدود می‌کرد.
+        if ($origin === 'automation' && $kind === 'dm') {
             $todayCount = OutboundMessage::query()
                 ->where('contact_id', $contact->id)
                 ->where('origin', 'automation')
+                ->where('kind', 'dm')
                 ->whereIn('status', ['pending', 'sending', 'sent'])
                 ->where('created_at', '>=', now()->subDay())
                 ->count();

@@ -7,6 +7,7 @@ use App\Models\MarketingEvent;
 use App\Models\SmartInstagram\AutomationRule;
 use App\Services\ComposioClient;
 use App\Services\SmartInstagram\ChannelService;
+use App\Services\SmartInstagram\ComposioMessageMapper;
 use App\Services\SmartInstagram\WorkspaceContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -16,11 +17,11 @@ use Illuminate\Support\Str;
 /** همگام‌سازی خواندنی دایرکت‌ها، رسانه‌ها و کامنت‌های حساب متصل Composio. */
 class SmartInstagramSyncComposio extends Command
 {
-    protected $signature = 'smart-instagram:sync-composio {--limit=25 : تعداد گفتگوها و رسانه‌های هر اجرا} {--comments : دریافت کامنت‌های رسانه‌ها هم انجام شود}';
+    protected $signature = 'smart-instagram:sync-composio {--limit=25 : تعداد گفتگوها و رسانه‌های هر اجرا} {--comments : دریافت کامنت‌های رسانه‌ها هم انجام شود} {--comments-only : فقط کامنت‌ها دریافت شوند} {--full-history : همه‌ی صفحه‌های پیام هر گفتگو هم خوانده شوند}';
 
     protected $description = 'دریافت خواندنی داده‌های اینستاگرام از Composio و ورود آن به اینستاگرام هوشمند';
 
-    public function handle(ComposioClient $client, WorkspaceContext $context, ChannelService $channels): int
+    public function handle(ComposioClient $client, WorkspaceContext $context, ChannelService $channels, ComposioMessageMapper $mapper): int
     {
         if (!Schema::hasTable('marketing_events')) {
             $this->warn('جداول اینستاگرام هوشمند هنوز ساخته نشده‌اند.');
@@ -44,31 +45,58 @@ class SmartInstagramSyncComposio extends Command
         $stored = 0;
         $duplicates = 0;
         $failed = 0;
+        $historyComplete = true;
+        $fullHistory = !$this->option('comments-only') && (
+            (bool) $this->option('full-history')
+            || !filled(data_get($channel->settings, 'composio_message_backfill_completed_at'))
+        );
 
-        $conversations = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_CONVERSATIONS', ['limit' => $limit], $channel);
-        if (!$conversations['ok']) {
-            $this->error($conversations['message']);
+        if (!$this->option('comments-only')) {
+            $conversations = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_CONVERSATIONS', ['limit' => $limit], $channel);
+            if (!$conversations['ok']) {
+                $this->error($conversations['message']);
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
+
+            foreach ($this->rows($conversations['data'], ['conversations', 'data']) as $conversation) {
+                $conversationId = (string) ($conversation['id'] ?? $conversation['conversation_id'] ?? '');
+                if ($conversationId === '') {
+                    continue;
+                }
+                $after = null;
+                $page = 0;
+                do {
+                    $arguments = ['conversation_id' => $conversationId, 'limit' => 100];
+                    if ($after) {
+                        $arguments['after'] = $after;
+                    }
+                    $messages = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_MESSAGES', $arguments, $channel);
+                    if (!$messages['ok']) {
+                        $failed++;
+                        break;
+                    }
+                    foreach ($this->rows($messages['data'], ['messages', 'data']) as $message) {
+                        $event = $this->storeEvent($mapper->map($message, $conversationId, $channel));
+                        $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
+                    }
+                    $nextAfter = data_get($messages['data'], 'paging.cursors.after');
+                    $after = $fullHistory && $nextAfter && $nextAfter !== $after ? (string) $nextAfter : null;
+                    $page++;
+                } while ($after && $page < 20);
+                if ($after) {
+                    $historyComplete = false;
+                }
+            }
         }
 
-        foreach ($this->rows($conversations['data'], ['conversations', 'data']) as $conversation) {
-            $conversationId = (string) ($conversation['id'] ?? $conversation['conversation_id'] ?? '');
-            if ($conversationId === '') {
-                continue;
-            }
-            $messages = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_MESSAGES', ['conversation_id' => $conversationId, 'limit' => 200], $channel);
-            if (!$messages['ok']) {
-                $failed++;
-                continue;
-            }
-            foreach ($this->rows($messages['data'], ['messages', 'data']) as $message) {
-                $event = $this->storeEvent($this->messagePayload($message, $conversationId));
-                $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
-            }
+        if ($fullHistory && $historyComplete && $failed === 0) {
+            $settings = (array) $channel->settings;
+            $settings['composio_message_backfill_completed_at'] = now()->toIso8601String();
+            $channel->forceFill(['settings' => $settings])->save();
         }
 
-        if ($this->option('comments')) {
+        if ($this->option('comments') || $this->option('comments-only')) {
             $mediaResult = $this->executeTool($client, 'INSTAGRAM_GET_IG_USER_MEDIA', [
                 'ig_user_id' => config('services.composio.instagram_user_id', 'me'),
                 'limit' => $limit,
@@ -182,27 +210,6 @@ class SmartInstagramSyncComposio extends Command
             }
         }
         return array_is_list($data) ? array_values(array_filter($data, 'is_array')) : [];
-    }
-
-    private function messagePayload(array $message, string $conversationId): array
-    {
-        $sender = (array) ($message['from'] ?? $message['sender'] ?? []);
-        $attachments = [];
-        foreach ((array) ($message['attachments'] ?? []) as $attachment) {
-            $attachments[] = ['type' => (string) ($attachment['type'] ?? 'file'), 'url' => data_get($attachment, 'payload.url') ?: ($attachment['url'] ?? null)];
-        }
-
-        return [
-            'type' => 'dm',
-            'id' => (string) ($message['id'] ?? $message['message_id'] ?? ''),
-            'sender' => ['id' => (string) ($sender['id'] ?? ''), 'username' => $sender['username'] ?? null, 'name' => $sender['name'] ?? null],
-            'text' => $message['message'] ?? $message['text'] ?? null,
-            'timestamp' => $message['created_time'] ?? $message['timestamp'] ?? now()->toIso8601String(),
-            'attachments' => $attachments,
-            'conversation_id' => $conversationId,
-            'account_id' => config('services.composio.instagram_user_id', 'me'),
-            '_source' => 'composio',
-        ];
     }
 
     private function commentPayload(array $comment, string $mediaId): array

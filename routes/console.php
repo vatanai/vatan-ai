@@ -158,6 +158,12 @@ Schedule::command('smart-instagram:maintenance')
     ->everyTenMinutes()
     ->withoutOverlapping();
 
-Schedule::command('smart-instagram:sync-composio --comments --limit=100')
+// کامنت باید حداکثر با یک چرخه‌ی کوتاه وارد موتور اتومیشن شود؛ پیام‌ها جداگانه
+// هم‌گام می‌شوند تا دریافت تعداد زیاد دایرکت‌ها پاسخ کامنت را عقب نیندازد.
+Schedule::command('smart-instagram:sync-composio --comments-only --limit=100')
+    ->everyMinute()
+    ->withoutOverlapping(4);
+
+Schedule::command('smart-instagram:sync-composio --limit=100')
     ->everyFiveMinutes()
     ->withoutOverlapping(4);
