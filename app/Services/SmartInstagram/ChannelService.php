@@ -95,7 +95,8 @@ class ChannelService
             'external_account_id' => $channel->external_account_id ?: $settings['composio_instagram_user_id'],
             'username' => $channel->username ?: 'ai_vatan',
             'status' => $channel->status === 'error' ? 'pending' : ($channel->status ?: 'connected'),
-            'outbound_enabled' => false,
+            // مجوز ارسال یک تنظیم عملیاتی است و نباید با هر همگام‌سازی اتصال بازنشانی شود.
+            'outbound_enabled' => $channel->exists ? (bool) $channel->outbound_enabled : false,
             'settings' => array_merge((array) $channel->settings, $settings),
             'last_error' => null,
         ]);
