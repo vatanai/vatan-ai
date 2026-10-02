@@ -1,0 +1,325 @@
+/* ══════════════════════════════════════════════════════════════
+   اینستاگرام هوشمند — استایل اختصاصی ماژول
+   فقط از توکن‌های design-tokens.css (var(--...)) استفاده می‌کند؛ هیچ رنگ یا توکن تازه‌ای ندارد.
+   نکته: --accent در پنل توسط resources/css/app.css بنفش بازتعریف می‌شود؛ برای لیمویی شب از
+   --nav-active-t استفاده شده (شب = #C2FD75، روز = primary).
+   همه‌ی کلاس‌ها با پیشوند si- هستند تا با بقیه‌ی پنل تداخل نداشته باشند.
+════════════════════════════════════════════════════════════════ */
+
+.si { --si-gap: 14px; font-family: 'YekanBakh', sans-serif; }
+.si *, .si *::before, .si *::after { box-sizing: border-box; }
+.si a { text-decoration: none; }
+.si [hidden] { display: none !important; }
+
+/* --- سربرگ صفحه --- */
+.si-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.si-head-title { font-size: 20px; font-weight: 800; color: var(--text-h); letter-spacing: -.2px; line-height: 1.4; }
+.si-head-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 3px; line-height: 1.8; max-width: 720px; }
+.si-head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* --- پیام‌ها --- */
+.si-flash { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; font-size: 12.5px; font-weight: 600; margin-bottom: 14px; border: 1px solid; }
+.si-flash > button[data-si-dismiss] { margin-inline-start: auto; background: none; border: 0; color: inherit; cursor: pointer; opacity: .7; }
+.si-flash.is-success { background: var(--success-l); color: var(--success); border-color: var(--success-m); }
+.si-flash.is-warning { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
+.si-flash.is-danger { background: var(--danger-l); color: var(--danger); border-color: var(--danger-m); }
+.si-flash.is-info { background: var(--info-l); color: var(--info); border-color: var(--info-m); }
+.si-flash ul { margin: 0; padding-inline-start: 16px; }
+
+/* --- شبکه‌ها --- */
+.si-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--si-gap); margin-bottom: 18px; }
+.si-stats.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.si-stats.is-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.si-grid-2 { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--si-gap); margin-bottom: var(--si-gap); }
+.si-grid-even { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--si-gap); margin-bottom: var(--si-gap); }
+.si-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--si-gap); margin-bottom: var(--si-gap); }
+.si-stack { display: flex; flex-direction: column; gap: var(--si-gap); }
+.si .stat-card { min-width: 0; text-decoration: none; }
+.si .stat-card-label { white-space: normal; line-height: 1.5; }
+.si-stat-hint { font-size: 10.5px; color: var(--text-soft); margin-top: 2px; }
+.si-stat-hint.is-danger { color: var(--danger); }
+.si-stat-hint.is-success { color: var(--success); }
+a.stat-card:hover { border-color: var(--primary); }
+
+/* --- پنل (روی content-card) --- */
+.si-panel { padding: 16px; min-width: 0; }
+.si-panel.is-flush { padding: 0; overflow: hidden; }
+.si-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.si-panel.is-flush .si-panel-head { padding: 14px 16px 0; }
+.si-panel-title { font-size: 14px; font-weight: 800; color: var(--text-h); display: flex; align-items: center; gap: 8px; }
+.si-panel-title i { color: var(--primary); font-size: 13px; }
+body:not(.light) .si-panel-title i { color: var(--nav-active-t); }
+.si-panel-sub { font-size: 11.5px; color: var(--text-soft); margin-top: 2px; }
+.si .si-link, .si-link { font-size: 11.5px; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 5px; }
+body:not(.light) .si a.si-link, body:not(.light) .si .si-link { color: var(--nav-active-t); }
+.si-link:hover { text-decoration: underline; }
+
+/* --- دسترسی سریع --- */
+.si-quick { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.si-quick a {
+  display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px;
+  background: var(--card-bg); border: 1px solid var(--border); color: var(--text-h);
+  font-size: 12.5px; font-weight: 700; transition: border-color .16s, transform .16s;
+  min-width: 0;
+}
+.si-quick a:hover { border-color: var(--primary); transform: translateY(-1px); }
+.si-quick-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--primary-l); color: var(--primary); font-size: 13px; }
+body:not(.light) .si-quick-icon { color: var(--nav-active-t); }
+.si-quick span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- نوار وضعیت سیستم --- */
+.si-status-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+
+/* --- ردیف‌های فهرست --- */
+.si-rows { display: flex; flex-direction: column; }
+.si-row { display: flex; align-items: center; gap: 11px; padding: 11px 2px; border-bottom: 1px solid var(--divider); min-width: 0; color: inherit; }
+.si-row:last-child { border-bottom: 0; }
+a.si-row:hover { background: var(--nav-hover); border-radius: 10px; }
+.si-row-main { flex: 1; min-width: 0; }
+.si-row-title { font-size: 12.5px; font-weight: 700; color: var(--text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.si-row-sub { font-size: 11px; color: var(--text-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.si-row-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 10.5px; color: var(--text-soft); }
+
+.si-avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: var(--card-bg); font-weight: 800; font-size: 13px;
+}
+body:not(.light) .si-avatar { color: var(--nav-active-t); }
+.si-avatar.is-lg { width: 54px; height: 54px; font-size: 19px; }
+.si-avatar.is-sm { width: 28px; height: 28px; font-size: 11px; }
+
+.si-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; background: var(--text-soft); }
+.si-dot.is-success { background: var(--success); }
+.si-dot.is-warning { background: var(--warning); }
+.si-dot.is-danger { background: var(--danger); }
+.si-dot.is-info { background: var(--info); }
+
+.si-muted { color: var(--text-soft); font-size: 11.5px; }
+.si-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; direction: ltr; unicode-bidi: embed; font-size: 11px; }
+.si-num { font-variant-numeric: tabular-nums; }
+.si-ltr { direction: ltr; unicode-bidi: embed; }
+.si-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* --- جدول --- */
+.si-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.si .table-pro tbody td { padding: 11px 14px; }
+.si .table-pro .si-td-strong { color: var(--text-h); font-weight: 700; }
+.si-table-empty { padding: 26px 14px; text-align: center; color: var(--text-soft); font-size: 12px; }
+
+/* --- فیلتر و ابزار --- */
+.si-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.si-toolbar form { display: contents; }
+.si-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.si-chips::-webkit-scrollbar { display: none; }
+.si-search { position: relative; flex: 1; min-width: 180px; }
+.si-search i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-soft); font-size: 12px; pointer-events: none; }
+.si-search .input-pro { width: 100%; padding-right: 34px; }
+.si .chip-filter { text-decoration: none; }
+
+/* --- فرم --- */
+.si-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.si-form.is-1 { grid-template-columns: minmax(0, 1fr); }
+.si-form.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.si-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.si-field.is-full { grid-column: 1 / -1; }
+.si-field > label, .si-label { font-size: 11.5px; font-weight: 700; color: var(--text-main); }
+.si-help { font-size: 10.5px; color: var(--text-soft); line-height: 1.7; }
+.si-error { font-size: 10.5px; color: var(--danger); }
+.si .input-pro { width: 100%; font-family: inherit; }
+.si textarea.input-pro { height: auto; min-height: 92px; padding: 10px 12px; line-height: 1.9; resize: vertical; }
+.si textarea.input-pro.is-tall { min-height: 220px; }
+.si input[type="file"].input-pro { padding: 7px 10px; height: auto; }
+.si-check { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer; user-select: none; }
+.si-check input { width: 16px; height: 16px; accent-color: var(--primary); }
+.si-form-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; grid-column: 1 / -1; padding-top: 4px; }
+.si-divider { height: 1px; background: var(--divider); margin: 14px 0; border: 0; }
+
+/* --- تب‌ها --- */
+.si-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.si-tabs::-webkit-scrollbar { display: none; }
+
+/* --- نمودار میله‌ای سبک (CSS) --- */
+.si-bars { display: flex; align-items: flex-end; gap: 3px; height: 150px; padding-top: 8px; }
+.si-bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; min-width: 3px; height: 100%; position: relative; }
+.si-bar .is-in, .si-bar .is-out { display: block; border-radius: 3px 3px 0 0; min-height: 1px; }
+.si-bar .is-in { background: var(--primary); }
+.si-bar .is-out { background: var(--info); }
+.si-bar:hover .si-bar-tip { opacity: 1; }
+.si-bar-tip { position: absolute; bottom: calc(100% + 4px); right: 50%; transform: translateX(50%); background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font-size: 10px; color: var(--text-main); white-space: nowrap; opacity: 0; pointer-events: none; z-index: 5; box-shadow: var(--shadow-card); }
+.si-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-soft); margin-top: 8px; }
+.si-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-inline-end: 5px; vertical-align: middle; }
+
+.si-hbar { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 12px; }
+.si-hbar-label { width: 110px; flex-shrink: 0; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.si-hbar-track { flex: 1; height: 8px; border-radius: 6px; background: var(--input-bg); overflow: hidden; }
+.si-hbar-fill { display: block; height: 100%; border-radius: 6px; background: var(--primary); }
+body:not(.light) .si-hbar-fill { background: var(--nav-active-t); }
+.si-hbar-value { width: 44px; text-align: left; color: var(--text-h); font-weight: 700; flex-shrink: 0; }
+
+/* --- صندوق گفتگو (سه‌ستونه؛ در موبایل هر ستون یک نما) --- */
+.si-inbox {
+  display: grid; grid-template-columns: 320px minmax(0, 1fr) 300px; gap: 0;
+  height: calc(100vh - 150px); min-height: 560px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-card);
+}
+.si-inbox-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.si-inbox-list { border-left: 1px solid var(--border); }
+.si-inbox-side { border-right: 1px solid var(--border); overflow-y: auto; }
+.si-inbox-list-head { padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 9px; }
+.si-inbox-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.si-conv {
+  display: flex; gap: 10px; padding: 12px; border-bottom: 1px solid var(--divider); color: inherit;
+  transition: background .14s; position: relative;
+}
+.si-conv:hover { background: var(--nav-hover); }
+.si-conv.is-active { background: var(--primary-l); }
+.si-conv.is-active::before { content: ''; position: absolute; right: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 3px; background: var(--primary); }
+body:not(.light) .si-conv.is-active::before { background: var(--nav-active-t); }
+.si-conv-main { flex: 1; min-width: 0; }
+.si-conv-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.si-conv-name { font-size: 12.5px; font-weight: 800; color: var(--text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.si-conv-time { font-size: 10px; color: var(--text-soft); flex-shrink: 0; }
+.si-conv-preview { font-size: 11.5px; color: var(--text-soft); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.si-conv-preview.is-unread { color: var(--text-h); font-weight: 700; }
+.si-conv-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.si-conv-tags .badge-pro { font-size: 9.5px; padding: 3px 6px; }
+.si-unread { min-width: 18px; height: 18px; border-radius: 9px; background: var(--primary); color: var(--card-bg); font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
+
+.si-chat-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); min-height: 62px; }
+.si-chat-head-main { flex: 1; min-width: 0; }
+.si-chat-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.si-back { display: none; }
+.si-chat-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--page-bg); min-height: 0; }
+.si-msg { max-width: 76%; display: flex; flex-direction: column; gap: 4px; }
+.si-msg.is-in { align-self: flex-start; }
+.si-msg.is-out { align-self: flex-end; align-items: flex-end; }
+.si-msg.is-note { align-self: center; max-width: 88%; }
+.si-bubble { padding: 9px 12px; border-radius: 14px; font-size: 12.5px; line-height: 1.9; word-break: break-word; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-h); }
+.si-msg.is-in .si-bubble { border-start-start-radius: 4px; }
+.si-msg.is-out .si-bubble { background: var(--primary); color: var(--card-bg); border-color: var(--primary); border-start-end-radius: 4px; }
+body:not(.light) .si-msg.is-out .si-bubble, body:not(.light) .si-unread { color: var(--nav-active-t); }
+.si-msg.is-note .si-bubble { background: var(--warning-l); border-color: var(--warning-m); border-style: dashed; color: var(--text-main); }
+.si-msg.is-pending .si-bubble { opacity: .72; border-style: dashed; }
+.si-text { white-space: pre-wrap; }
+.si-msg-meta { font-size: 10px; color: var(--text-soft); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.si-day { align-self: center; font-size: 10.5px; color: var(--text-soft); background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; }
+.si-source { font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text-soft); }
+.si-attach { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.si-attach img { max-width: 220px; max-height: 220px; border-radius: 10px; border: 1px solid var(--border); display: block; }
+.si-attach audio, .si-attach video { max-width: 260px; width: 100%; }
+
+.si-suggest { margin: 0 14px 10px; border: 1px solid var(--primary-m); background: var(--primary-l); border-radius: 14px; padding: 11px 12px; }
+.si-suggest-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.si-suggest-body { font-size: 12.5px; color: var(--text-h); line-height: 1.9; white-space: pre-wrap; }
+.si-suggest-reason { font-size: 11px; color: var(--text-soft); margin-top: 6px; }
+.si-suggest-actions { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+
+.si-composer { border-top: 1px solid var(--border); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--card-bg); }
+.si-composer-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.si-composer textarea.input-pro { min-height: 64px; max-height: 200px; }
+.si-composer-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
+.si-side-section { padding: 14px; border-bottom: 1px solid var(--border); }
+.si-side-section:last-child { border-bottom: 0; }
+.si-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; font-size: 11.5px; }
+.si-kv dt { color: var(--text-soft); }
+.si-kv dd { margin: 0; color: var(--text-h); font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+.si-score { display: flex; align-items: center; gap: 8px; }
+.si-score .progress-track { width: auto; flex: 1; min-width: 40px; }
+.si-score b, .si-score span { flex-shrink: 0; }
+
+.si-chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; }
+
+/* --- کانبان قیف فروش --- */
+.si-kanban { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.si-kanban-col { background: var(--input-bg); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; min-height: 220px; max-height: calc(100vh - 290px); scroll-snap-align: start; }
+.si-kanban-head { padding: 11px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.si-kanban-title { font-size: 12.5px; font-weight: 800; color: var(--text-h); }
+.si-kanban-body { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.si-deal { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+.si-deal-title { font-size: 12px; font-weight: 700; color: var(--text-h); }
+.si-deal-meta { font-size: 10.5px; color: var(--text-soft); margin-top: 4px; display: flex; justify-content: space-between; gap: 6px; }
+.si-deal form { margin-top: 8px; display: flex; gap: 6px; }
+.si-deal select.input-pro { height: 30px; font-size: 11px; padding: 0 8px; }
+
+/* --- کارت‌های قالب / گرید کارت --- */
+.si-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.si-tile { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; color: inherit; transition: border-color .16s, transform .16s; min-width: 0; }
+a.si-tile:hover { border-color: var(--primary); transform: translateY(-1px); }
+.si-tile-title { font-size: 13px; font-weight: 800; color: var(--text-h); display: flex; gap: 8px; align-items: center; }
+.si-tile-desc { font-size: 11.5px; color: var(--text-soft); line-height: 1.8; }
+
+/* --- سازنده‌ی اقدام اتومیشن --- */
+.si-action { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--input-bg); display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.si-action + .si-action { margin-top: 8px; }
+.si-action .si-action-extra { display: grid; gap: 8px; }
+.si-simulate-result { margin-top: 10px; font-size: 12px; }
+.si-check-list { display: flex; flex-direction: column; gap: 5px; margin: 6px 0; }
+.si-check-list div { display: flex; gap: 7px; align-items: center; }
+
+/* --- آزمایشگاه دستیار --- */
+.si-play-out { border: 1px dashed var(--border); border-radius: 14px; padding: 14px; min-height: 160px; background: var(--input-bg); }
+.si-play-reply { font-size: 13px; line-height: 2; color: var(--text-h); white-space: pre-wrap; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.si-source-chip { display: block; font-size: 11px; color: var(--text-main); background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-top: 6px; line-height: 1.8; }
+
+.si-pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 2; color: var(--text-main); background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px; max-height: 360px; overflow-y: auto; }
+.si-ul { margin: 0; padding-inline-start: 18px; font-size: 12px; line-height: 2; color: var(--text-main); }
+
+.si-step { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: 12px; color: var(--text-main); line-height: 1.8; }
+.si-step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--primary-l); color: var(--primary); font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+body:not(.light) .si-step-num { color: var(--nav-active-t); }
+
+.si-copy { display: flex; gap: 6px; align-items: center; }
+.si-copy .input-pro { direction: ltr; font-size: 11px; }
+
+.si-pagination { padding: 12px 16px; border-top: 1px solid var(--divider); }
+.si-pagination nav { display: flex; justify-content: center; }
+.si-pagination svg { width: 16px; height: 16px; }
+
+/* --- ریسپانسیو --- */
+@media (max-width: 1280px) {
+  .si-inbox { grid-template-columns: 290px minmax(0, 1fr); }
+  .si-inbox-side { display: none; }
+  .si-inbox.show-side .si-inbox-side { display: flex; position: absolute; inset: 0 auto 0 0; width: min(320px, 92%); background: var(--card-bg); z-index: 20; box-shadow: var(--shadow-sb); border-right: 1px solid var(--border); }
+  .si-inbox { position: relative; }
+  .si-quick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .si-stats.is-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1281px) {
+  .si-side-toggle { display: none !important; }
+}
+@media (max-width: 1100px) {
+  .si-grid-2, .si-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .si-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .si-inbox { grid-template-columns: minmax(0, 1fr); height: calc(100vh - 245px); height: calc(100dvh - 245px); min-height: 460px; }
+  .si-inbox.has-selected .si-inbox-list { display: none; }
+  .si-inbox:not(.has-selected) .si-inbox-chat { display: none; }
+  .si-inbox-list { border-left: 0; }
+  .si-back { display: inline-flex; }
+  .si-msg { max-width: 90%; }
+}
+@media (max-width: 768px) {
+  .si-grid-even { grid-template-columns: minmax(0, 1fr); }
+  .si-form, .si-form.is-3 { grid-template-columns: minmax(0, 1fr); }
+  .si-quick { display: flex; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .si-quick::-webkit-scrollbar { display: none; }
+  .si-quick a { flex: 0 0 auto; min-width: 150px; padding: 10px; }
+  .si-action { grid-template-columns: minmax(0, 1fr); }
+  .si-head-title { font-size: 17px; }
+  .si-stats.is-3, .si-stats.is-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .si-kanban { grid-auto-columns: 82%; }
+  .si-hbar-label { width: 86px; }
+}
+@media (max-width: 420px) {
+  .si-stats, .si-stats.is-3, .si-stats.is-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .si .stat-card { padding: 12px; gap: 9px; }
+  .si .stat-card-icon { width: 34px; height: 34px; font-size: 14px; }
+  .si .stat-card-value { font-size: 17px; }
+  .si-chat-actions .btn-pro span { display: none; }
+}
+
+/* نوار پیشرفت مشترک در این ماژول از --accent (بنفش‌شده توسط app.css) استفاده نکند. */
+.si .progress-fill { background: linear-gradient(90deg, var(--primary), var(--logo-green)); }

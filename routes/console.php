@@ -21,6 +21,12 @@ Schedule::command('finance:refresh-exchange-rate --slot=evening')
     ->timezone('Asia/Tehran')
     ->withoutOverlapping(10);
 
+// استودیو محصول: پاک‌سازی عکس‌های ورودی موقت بعد از ۴۸ ساعت
+Schedule::command('product-shots:prune')
+    ->dailyAt('04:10')
+    ->timezone('Asia/Tehran')
+    ->withoutOverlapping();
+
 Schedule::command('credits:sync')
     ->everyMinute()
     ->withoutOverlapping(10);
@@ -146,3 +152,12 @@ Artisan::command('telegram:product-manager {action} {--telegram-id=} {--name=} {
     $manager->forceFill(['is_active' => $action !== 'disable'])->save();
     $this->info($action === 'add' ? 'مدیر ثبت محصول اضافه شد.' : 'وضعیت مدیر ثبت محصول تغییر کرد.');
 })->purpose('افزودن و مدیریت مدیران مجاز ثبت محصول در تلگرام');
+
+// اینستاگرام هوشمند — بازیابی رویدادها و ارسال‌های جامانده
+Schedule::command('smart-instagram:maintenance')
+    ->everyTenMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('smart-instagram:sync-composio --comments')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(4);

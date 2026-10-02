@@ -30,9 +30,14 @@
         $addBreadcrumb('مدیریت وبسایت');
         $addBreadcrumb('مدیریت سایت');
         $addBreadcrumb('پشتیبانی و تیکت‌ها');
-    } elseif (request()->is('admin/products*') || request()->is('admin/categories*') || request()->is('admin/lab*')) {
+    } elseif (request()->is('admin/products*') || request()->is('admin/product-shots*') || request()->is('admin/categories*') || request()->is('admin/lab*')) {
         $addBreadcrumb('مدیریت محصولات');
-        if (request()->is('admin/categories*')) {
+        if (request()->is('admin/product-shots*')) {
+            $addBreadcrumb('استودیو محصول');
+            if (request()->is('admin/product-shots/products/create*')) {
+                $addBreadcrumb('ثبت محصول پروداکتی');
+            }
+        } elseif (request()->is('admin/categories*')) {
             $addBreadcrumb('دسته‌بندی‌ها');
         } elseif (request()->is('admin/lab*')) {
             $addBreadcrumb('آزمایشگاه');
@@ -122,6 +127,12 @@
             $addBreadcrumb('مدیریت ادمین‌ها');
         } elseif (request()->is('admin/settings/new-user-gift')) {
             $addBreadcrumb('هدیه ثبت‌نام کاربران جدید');
+        }
+    } elseif (request()->is('admin/smart-instagram*')) {
+        $addBreadcrumb('استودیو تولید');
+        $addBreadcrumb('اینستاگرام هوشمند');
+        if (!empty($siCrumb)) {
+            $addBreadcrumb($siCrumb);
         }
     } elseif (request()->is('admin/telegram*') || request()->is('admin/video-studio*')) {
         $addBreadcrumb('استودیو تولید');

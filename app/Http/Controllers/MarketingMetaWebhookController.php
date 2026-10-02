@@ -60,6 +60,25 @@ class MarketingMetaWebhookController extends Controller
                 ]);
                 $stored++;
             }
+
+            // دایرکت‌های اینستاگرام در قالب entry[].messaging[] می‌آیند (نه changes) — افزوده برای «اینستاگرام هوشمند».
+            foreach ((array) ($entry['messaging'] ?? []) as $messaging) {
+                $messaging = (array) $messaging;
+                $externalId = (string) data_get($messaging, 'message.mid', '');
+                if ($externalId === '') continue; // read/reaction/postback فعلاً ثبت نمی‌شوند
+                if (MarketingEvent::query()->where('event_type', 'dm.received')->where('external_id', $externalId)->exists()) continue;
+                MarketingEvent::query()->create([
+                    'event_uuid' => (string) Str::uuid(),
+                    'event_type' => 'dm.received',
+                    'channel' => 'instagram',
+                    'processing_status' => 'received',
+                    'external_id' => $externalId,
+                    'actor_ref' => data_get($messaging, 'sender.id'),
+                    'payload' => $messaging,
+                    'occurred_at' => now(),
+                ]);
+                $stored++;
+            }
         }
 
         return response()->json(['ok' => true, 'stored' => $stored]);

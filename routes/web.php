@@ -372,6 +372,11 @@ Route::middleware('guest:admin')->group(function () {
 });
 
 // ─── Admin Panel Area (Protected) ────────────────────────
+// «استودیو محصول» (پک شات) — روت‌های جدا، پیش از catch-all ادمین ثبت می‌شوند.
+require __DIR__ . '/product-shots.php';
+// «اینستاگرام هوشمند» — روت‌های جدا، پیش از catch-all ادمین ثبت می‌شوند.
+require __DIR__ . '/smart-instagram.php';
+
 Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function () {
     Route::prefix('telegram')->name('telegram.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\TelegramAdminController::class, 'index'])->name('index');

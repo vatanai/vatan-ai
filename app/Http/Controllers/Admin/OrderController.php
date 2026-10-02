@@ -222,7 +222,14 @@ class OrderController extends Controller
 
     private function listing(Request $request, string $view)
     {
-        $query = Order::query()->with(['user:id,name,last_name,email,phone', 'product:id,name_fa,product_code']);
+        // فقط ستون‌های موردنیاز این فهرست را بخوان؛ orders شامل فیلدهای متنی/JSON بزرگی است
+        // و select * هنگام مرتب‌سازی روی دیتابیس شلوغ می‌تواند به خطای کمبود حافظه برسد.
+        $query = Order::query()
+            ->select([
+                'id', 'order_number', 'user_id', 'product_id', 'status', 'payment_status',
+                'processing_status', 'final_credits', 'discount_credits', 'source', 'created_at',
+            ])
+            ->with(['user:id,name,last_name,email,phone', 'product:id,name_fa,product_code']);
 
         if ($view === 'processing') $query->whereIn('processing_status', ['queued', 'processing', 'retrying']);
         if ($view === 'failed') $query->where(fn ($q) => $q->where('processing_status', 'failed')->orWhere('status', 'review'));

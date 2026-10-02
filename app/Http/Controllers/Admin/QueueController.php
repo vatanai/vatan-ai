@@ -120,9 +120,15 @@ class QueueController extends Controller
         }
 
         if (Schema::hasTable('orders')) {
-            $orders = Order::with(['user:id,name,last_name', 'product:id,name_fa'])
+            // snapshot فقط چند فیلد را لازم دارد؛ از بارگذاری payloadهای بزرگ سفارش و sort روی updated_at پرهیز کن.
+            $orders = Order::query()
+                ->select([
+                    'id', 'order_number', 'user_id', 'product_id', 'processing_status', 'ai_provider',
+                    'ai_model', 'attempts', 'processing_duration_ms', 'error_message', 'updated_at',
+                ])
+                ->with(['user:id,name,last_name', 'product:id,name_fa'])
                 ->whereIn('processing_status', ['queued', 'processing', 'retrying', 'failed'])
-                ->latest('updated_at')->limit(100)->get();
+                ->latest('id')->limit(100)->get();
             foreach ($orders as $order) {
                 $rows->push([
                     'source' => 'order',

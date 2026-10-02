@@ -12,6 +12,7 @@
     || request()->is('admin/create-studio*')
     || (request()->is('admin/home-builder*') && !$isHomePageGallery);
   $isProductsMenu = request()->is('admin/products*')
+    || request()->is('admin/product-shots*')
     || request()->is('admin/categories*')
     || request()->is('admin/lab*');
   $isSalesMenu = request()->is('admin/plans*')
@@ -21,7 +22,8 @@
     || request()->is('admin/growth*');
   $isWebsiteMenu = $isWebsiteSiteMenu || $isWebsiteAppMenu || request()->is('admin/content*') || request()->is('admin/sms*');
   $isInstagramMenu = request()->is('admin/instagram*');
-  $isStudioMenu = $isVideoStudio2 || $isInstagramMenu;
+  $isSmartInstagramMenu = request()->is('admin/smart-instagram*');
+  $isStudioMenu = $isVideoStudio2 || $isInstagramMenu || $isSmartInstagramMenu;
   $isTelegramSettingsMenu = request()->is('admin/settings/telegram*') || request()->is('admin/telegram*');
   $isMarketingTechnologyMenu = request()->is('admin/marketing-technology*');
 @endphp
@@ -51,6 +53,7 @@
     <a href="{{ route('admin.products') }}" class="sub-item {{ request()->is('admin/products') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">لیست محصولات عکس</div></a>
     <a href="{{ route('admin.products.videos') }}" class="sub-item {{ request()->is('admin/products/videos') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">لیست محصولات ویدیو</div></a>
     <a href="{{ route('admin.products.create') }}" class="sub-item {{ request()->is('admin/products/create') || request()->is('admin/products/create/*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ثبت محصول عکس</div></a>
+    <a href="{{ route('admin.product-shots.index') }}" class="sub-item {{ request()->is('admin/product-shots*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">استودیو محصول</div></a>
     <a href="{{ route('admin.products.video.v2.create') }}" class="sub-item {{ request()->is('admin/products/videos/v2/create') || request()->is('admin/products/videos/v2/create/*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ثبت محصول ویدیو — نسخه جدید</div></a>
     <a href="{{ route('admin.products.video.create') }}" class="sub-item {{ request()->is('admin/products/videos/create') || request()->is('admin/products/videos/create/*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">ثبت محصول ویدیو — نسخه پشتیبان</div></a>
     <div class="sub-item sub-item-parent {{ request()->is('admin/lab*') ? 'active' : '' }}" onclick="toggleSubSub('products-lab-submenu-new', this)"><div class="sub-dot"></div><div class="sub-label">آزمایشگاه</div><i class="fa-solid fa-chevron-down sub-chev"></i></div>
@@ -71,6 +74,7 @@
   <div class="nav-link {{ $isStudioMenu ? 'active' : '' }}" onclick="toggleSub('studio-submenu-new', this)"><div class="nav-icon"><i class="fa-solid fa-photo-film"></i></div><div class="nav-label">استودیو تولید</div><i class="fa-solid fa-chevron-down nav-chev {{ $isStudioMenu ? 'open' : '' }}"></i></div>
   <div class="submenu {{ $isStudioMenu || request()->is('admin/instagram*') ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
     <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">{{ config('video_studio.admin_label', 'تولید محتوای خودکار') }}</div></a>
+    @include('admin.smart-instagram.partials.sidebar')
     <a href="{{ route('admin.instagram.dashboard') }}" class="sub-item {{ request()->is('admin/instagram*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">اینستاگرام — کامنت هوشمند</div></a>
   </div></div>
 </div>

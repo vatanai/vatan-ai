@@ -130,6 +130,18 @@ return [
         ))))),
     ],
 
+    'composio' => [
+        'api_key' => env('COMPOSIO_API_KEY'),
+        'base_url' => env('COMPOSIO_API_BASE_URL', 'https://backend.composio.dev/api/v3.1'),
+        'connected_account_id' => env('COMPOSIO_CONNECTED_ACCOUNT_ID'),
+        'user_id' => env('COMPOSIO_USER_ID'),
+        'toolkit_version' => env('COMPOSIO_TOOLKIT_VERSION', 'latest'),
+        'instagram_user_id' => env('COMPOSIO_INSTAGRAM_USER_ID', 'me'),
+        'graph_api_version' => env('COMPOSIO_GRAPH_API_VERSION', 'v24.0'),
+        'connect_timeout' => (int) env('COMPOSIO_CONNECT_TIMEOUT', 10),
+        'timeout' => (int) env('COMPOSIO_TIMEOUT', 45),
+    ],
+
     'melipayamak' => [
         'api_key' => env('MELIPAYAMAK_API_KEY'),
         'base_url' => env('MELIPAYAMAK_BASE_URL', 'https://console.melipayamak.com/api'),
