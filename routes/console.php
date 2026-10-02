@@ -158,6 +158,6 @@ Schedule::command('smart-instagram:maintenance')
     ->everyTenMinutes()
     ->withoutOverlapping();
 
-Schedule::command('smart-instagram:sync-composio --comments')
+Schedule::command('smart-instagram:sync-composio --comments --limit=100')
     ->everyFiveMinutes()
     ->withoutOverlapping(4);

@@ -69,3 +69,26 @@ fi
 ) >> storage/logs/queue-worker.log 2>&1 &
 
 echo $! > storage/app/queue-worker.pid
+
+# Laravel's scheduler is not a daemon by itself. Run it once per minute so
+# scheduled integrations (including Smart Instagram polling) are actually
+# evaluated in the production container. The advisory lock prevents duplicate
+# scheduler loops when the platform invokes this hook more than once.
+SCHEDULER_LOCK="storage/app/scheduler-worker.lock"
+exec 10>"$SCHEDULER_LOCK"
+if command -v flock >/dev/null 2>&1; then
+    if ! flock -n 10; then
+        exit 0
+    fi
+elif ps -eo args 2>/dev/null | grep -F 'artisan schedule:run' | grep -v grep >/dev/null 2>&1; then
+    exit 0
+fi
+
+(
+    while true; do
+        php artisan schedule:run --no-interaction >> storage/logs/scheduler-worker.log 2>&1
+        sleep 60
+    done
+) &
+
+echo $! > storage/app/scheduler-worker.pid
