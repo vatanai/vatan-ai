@@ -266,6 +266,7 @@ class AutomationEngine
                 }
                 $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', $type, [
                     'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
+                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'در صف ارسال', 'outbound_id' => $out->id];
@@ -273,6 +274,7 @@ class AutomationEngine
             case 'send_dm':
                 $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', 'dm', [
                     'automation_run_id' => $run->id, 'idempotency_key' => $key,
+                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'در صف ارسال', 'outbound_id' => $out->id];

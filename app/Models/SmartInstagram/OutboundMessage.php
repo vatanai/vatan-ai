@@ -12,13 +12,14 @@ class OutboundMessage extends Model
 
     protected $fillable = [
         'workspace_id', 'channel_id', 'conversation_id', 'contact_id', 'kind', 'target_ref', 'body', 'origin', 'admin_id',
-        'automation_run_id', 'ai_suggestion_id', 'status', 'policy_reason', 'window_expires_at', 'attempts',
+        'automation_run_id', 'ai_suggestion_id', 'allow_human_lock', 'status', 'policy_reason', 'window_expires_at', 'attempts',
         'next_attempt_at', 'external_id', 'error', 'provider_response', 'idempotency_key', 'message_id', 'sent_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'allow_human_lock' => 'boolean',
             'window_expires_at' => 'datetime',
             'next_attempt_at' => 'datetime',
             'sent_at' => 'datetime',

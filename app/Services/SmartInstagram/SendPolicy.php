@@ -17,7 +17,7 @@ class SendPolicy
     /**
      * @return array{allowed:bool,reason:?string,window_expires_at:?Carbon}
      */
-    public function evaluate(Conversation $conversation, string $kind, string $origin, string $body, ?string $targetRef = null): array
+    public function evaluate(Conversation $conversation, string $kind, string $origin, string $body, ?string $targetRef = null, bool $allowHumanLock = false): array
     {
         $conversation->loadMissing('channel', 'contact');
         $channel = $conversation->channel;
@@ -43,7 +43,7 @@ class SendPolicy
         if ($automated && $contact->opted_out) {
             return $this->deny('مخاطب در فهرست توقف است.');
         }
-        if ($automated && ($conversation->ai_paused || $conversation->needs_human)) {
+        if ($automated && !$allowHumanLock && ($conversation->ai_paused || $conversation->needs_human)) {
             return $this->deny('گفتگو به انسان واگذار شده است؛ ارسال خودکار متوقف است.');
         }
 

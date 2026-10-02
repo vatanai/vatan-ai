@@ -20,13 +20,14 @@ class OutboundService
     }
 
     /**
-     * @param array{admin_id?:?int,automation_run_id?:?int,ai_suggestion_id?:?int,target_ref?:?string,idempotency_key?:?string,dispatch?:bool} $options
+     * @param array{admin_id?:?int,automation_run_id?:?int,ai_suggestion_id?:?int,target_ref?:?string,idempotency_key?:?string,dispatch?:bool,allow_human_lock?:bool} $options
      */
     public function queue(Conversation $conversation, string $body, string $origin, string $kind = 'dm', array $options = []): OutboundMessage
     {
         $body = trim($body);
         $targetRef = $options['target_ref'] ?? null;
-        $decision = $this->policy->evaluate($conversation, $kind, $origin, $body, $targetRef);
+        $allowHumanLock = (bool) ($options['allow_human_lock'] ?? false);
+        $decision = $this->policy->evaluate($conversation, $kind, $origin, $body, $targetRef, $allowHumanLock);
         $key = $options['idempotency_key'] ?? ($origin.':'.$conversation->id.':'.Str::uuid());
 
         $existing = OutboundMessage::query()->where('idempotency_key', $key)->first();
@@ -46,6 +47,7 @@ class OutboundService
             'admin_id' => $options['admin_id'] ?? null,
             'automation_run_id' => $options['automation_run_id'] ?? null,
             'ai_suggestion_id' => $options['ai_suggestion_id'] ?? null,
+            'allow_human_lock' => $allowHumanLock,
             'status' => $decision['allowed'] ? 'pending' : 'blocked',
             'policy_reason' => $decision['reason'],
             'window_expires_at' => $decision['window_expires_at'],
@@ -72,7 +74,7 @@ class OutboundService
         $conversation = $outbound->conversation;
 
         // بررسی دوباره درست پیش از ارسال: ممکن است در فاصله‌ی صف، گفتگو به انسان واگذار شده باشد.
-        if (in_array($outbound->origin, ['ai', 'automation'], true) && ($conversation->ai_paused || $conversation->needs_human || $conversation->contact->opted_out)) {
+        if (in_array($outbound->origin, ['ai', 'automation'], true) && !$outbound->allow_human_lock && ($conversation->ai_paused || $conversation->needs_human || $conversation->contact->opted_out)) {
             $outbound->forceFill(['status' => 'blocked', 'policy_reason' => 'پیش از ارسال، گفتگو به انسان واگذار یا متوقف شد.'])->save();
 
             return $outbound;
