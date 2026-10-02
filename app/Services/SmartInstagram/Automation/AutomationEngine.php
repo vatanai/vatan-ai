@@ -371,7 +371,11 @@ class AutomationEngine
         }
 
         $title = trim($this->render((string) ($action['card_title'] ?? $product?->name_fa ?? ''), $contact));
+        $message = trim($this->render((string) ($action['card_message'] ?? ''), $contact));
         $subtitle = trim($this->render((string) ($action['card_subtitle'] ?? $product?->description_fa ?? ''), $contact));
+        if ($message !== '') {
+            $subtitle = $message;
+        }
         $imageUrl = trim((string) ($action['card_image_url'] ?? ($product?->displayImageUrl() ?? '')));
         $buttonUrl = trim((string) ($action['card_button_url'] ?? ($product ? route('app.product', $product->route_slug) : '')));
         $buttonText = trim($this->render((string) ($action['card_button_text'] ?? 'مشاهده صفحه'), $contact));
@@ -396,7 +400,7 @@ class AutomationEngine
                     'type' => 'template',
                     'payload' => ['template_type' => 'generic', 'elements' => [$element]],
                 ],
-                'fallback_text' => trim($title."\n".$buttonUrl),
+                'fallback_text' => trim(implode("\n", array_filter([$message, $title, $buttonUrl]))),
             ],
         ];
     }

@@ -10,6 +10,7 @@
       <select name="actions[{{ $i }}][product_id]" class="input-pro" data-field="product_id"><option value="">انتخاب محصول از کاتالوگ</option>@foreach(($products ?? collect()) as $product)<option value="{{ $product->id }}" @selected((int) ($action['product_id'] ?? 0) === $product->id)>{{ $product->name_fa }}</option>@endforeach</select>
       <input name="actions[{{ $i }}][card_title]" class="input-pro" maxlength="100" placeholder="عنوان کارت (اختیاری؛ پیش‌فرض نام محصول)" value="{{ $action['card_title'] ?? '' }}">
       <textarea name="actions[{{ $i }}][card_subtitle]" class="input-pro" rows="2" maxlength="160" placeholder="توضیح کوتاه کارت (اختیاری)">{{ $action['card_subtitle'] ?? '' }}</textarea>
+      <textarea name="actions[{{ $i }}][card_message]" class="input-pro" rows="2" maxlength="500" placeholder="متن دایرکت کارت (اختیاری)">{{ $action['card_message'] ?? '' }}</textarea>
       <input name="actions[{{ $i }}][card_image_url]" class="input-pro si-ltr" maxlength="1000" placeholder="لینک تصویر عمومی (اختیاری با انتخاب محصول)" value="{{ $action['card_image_url'] ?? '' }}">
       <input name="actions[{{ $i }}][card_button_text]" class="input-pro" maxlength="30" placeholder="متن دکمه؛ مثلاً مشاهده صفحه" value="{{ $action['card_button_text'] ?? '' }}">
       <input name="actions[{{ $i }}][card_button_url]" class="input-pro si-ltr" maxlength="1000" placeholder="لینک صفحه هدف (اختیاری با انتخاب محصول)" value="{{ $action['card_button_url'] ?? '' }}">

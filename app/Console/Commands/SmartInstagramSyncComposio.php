@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\SmartInstagram\ProcessInstagramEvent;
 use App\Models\MarketingEvent;
+use App\Models\SmartInstagram\AutomationRule;
 use App\Services\ComposioClient;
 use App\Services\SmartInstagram\ChannelService;
 use App\Services\SmartInstagram\WorkspaceContext;
@@ -74,24 +75,21 @@ class SmartInstagramSyncComposio extends Command
                 'fields' => 'id,caption,media_type,permalink,timestamp,username',
             ], $channel);
             if ($mediaResult['ok']) {
-                foreach ($this->rows($mediaResult['data'], ['media', 'data']) as $media) {
+                $mediaRows = $this->rows($mediaResult['data'], ['media', 'data']);
+                $targetMediaIds = $this->targetMediaIds($channel, $mediaRows);
+                foreach ($mediaRows as $media) {
                     $mediaId = (string) ($media['id'] ?? '');
                     if ($mediaId === '') {
                         continue;
                     }
-                    $comments = $this->executeTool($client, 'INSTAGRAM_GET_IG_MEDIA_COMMENTS', [
-                        'ig_media_id' => $mediaId,
-                        'limit' => $limit,
-                        'fields' => 'id,text,username,timestamp,from,hidden,media,parent_id',
-                    ], $channel);
-                    if (!$comments['ok']) {
-                        $failed++;
+                    if ($targetMediaIds !== [] && !in_array($mediaId, $targetMediaIds, true)) {
                         continue;
                     }
-                    foreach ($this->rows($comments['data'], ['comments', 'data']) as $comment) {
-                        $event = $this->storeEvent($this->commentPayload($comment, $mediaId));
-                        $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
-                    }
+                    $this->ingestMediaComments($client, $channel, $mediaId, $limit, $stored, $duplicates, $failed);
+                }
+                $knownMediaIds = array_values(array_filter(array_map(fn ($media) => (string) ($media['id'] ?? ''), $mediaRows)));
+                foreach (array_diff($targetMediaIds, $knownMediaIds) as $mediaId) {
+                    $this->ingestMediaComments($client, $channel, (string) $mediaId, $limit, $stored, $duplicates, $failed);
                 }
             } else {
                 $failed++;
@@ -101,6 +99,64 @@ class SmartInstagramSyncComposio extends Command
         $this->info("stored: {$stored} · duplicates: {$duplicates} · failed: {$failed}");
 
         return $failed > 0 && $stored === 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    private function ingestMediaComments(ComposioClient $client, $channel, string $mediaId, int $limit, int &$stored, int &$duplicates, int &$failed): void
+    {
+        $comments = $this->executeTool($client, 'INSTAGRAM_GET_IG_MEDIA_COMMENTS', [
+            'ig_media_id' => $mediaId,
+            'limit' => $limit,
+            'fields' => 'id,text,username,timestamp,from,hidden,media,parent_id',
+        ], $channel);
+        if (!$comments['ok']) {
+            $failed++;
+            return;
+        }
+        foreach ($this->rows($comments['data'], ['comments', 'data']) as $comment) {
+            $event = $this->storeEvent($this->commentPayload($comment, $mediaId));
+            $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
+        }
+    }
+
+    /** @return array<int,string> */
+    private function targetMediaIds($channel, array $mediaRows): array
+    {
+        $rules = AutomationRule::query()
+            ->where('workspace_id', $channel->workspace_id)
+            ->whereIn('status', ['active', 'test'])
+            ->where('trigger', 'comment_keyword')
+            ->get(['scope_ref', 'conditions']);
+        if ($rules->isEmpty()) {
+            return [];
+        }
+
+        $hasGlobalRule = $rules->contains(function ($rule): bool {
+            return !$rule->scope_ref && !data_get($rule->conditions, 'post_url');
+        });
+        if ($hasGlobalRule) {
+            return [];
+        }
+
+        $ids = $rules->pluck('scope_ref')->filter()->map(fn ($id) => (string) $id)->values()->all();
+        foreach ($rules as $rule) {
+            $shortcode = $this->instagramShortcode((string) data_get($rule->conditions, 'post_url', ''));
+            if ($shortcode === null) {
+                continue;
+            }
+            foreach ($mediaRows as $media) {
+                $permalink = (string) ($media['permalink'] ?? '');
+                if ($permalink !== '' && str_contains($permalink, '/'.$shortcode)) {
+                    $ids[] = (string) ($media['id'] ?? '');
+                }
+            }
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    private function instagramShortcode(string $url): ?string
+    {
+        return preg_match('~instagram\.com/(?:p|reel|tv)/([^/?#]+)~i', $url, $matches) === 1 ? $matches[1] : null;
     }
 
     /** @return array{ok:bool,message:string,data:array} */
