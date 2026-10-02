@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\SmartInstagram;
 
 use App\Models\Admin;
+use App\Models\Product;
 use App\Models\SmartInstagram\AutomationRule;
 use App\Models\SmartInstagram\AutomationRun;
 use App\Services\SmartInstagram\Automation\AutomationEngine;
@@ -152,6 +153,7 @@ class AutomationController extends Controller
             'triggers' => AutomationEngine::TRIGGERS,
             'actionsMap' => AutomationEngine::ACTIONS,
             'admins' => Admin::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'products' => Product::query()->where('status', 'active')->orderBy('name_fa')->get(['id', 'name_fa', 'description_fa', 'slug', 'cover', 'thumbnail']),
         ]);
     }
 
@@ -178,6 +180,12 @@ class AutomationController extends Controller
             'actions.*.admin_id' => ['nullable', 'integer'],
             'actions.*.stage' => ['nullable', 'string', 'max:30'],
             'actions.*.due_hours' => ['nullable', 'integer', 'between:1,720'],
+            'actions.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'actions.*.card_title' => ['nullable', 'string', 'max:100'],
+            'actions.*.card_subtitle' => ['nullable', 'string', 'max:160'],
+            'actions.*.card_image_url' => ['nullable', 'url', 'max:1000'],
+            'actions.*.card_button_text' => ['nullable', 'string', 'max:30'],
+            'actions.*.card_button_url' => ['nullable', 'url', 'max:1000'],
         ]);
 
         $keywords = array_values(array_filter(array_map('trim', preg_split('/[\n،,]+/u', (string) ($data['keywords'] ?? '')) ?: [])));
@@ -192,6 +200,12 @@ class AutomationController extends Controller
             'admin_id' => isset($a['admin_id']) ? (int) $a['admin_id'] : null,
             'stage' => $a['stage'] ?? null,
             'due_hours' => isset($a['due_hours']) ? (int) $a['due_hours'] : null,
+            'product_id' => isset($a['product_id']) ? (int) $a['product_id'] : null,
+            'card_title' => isset($a['card_title']) ? trim((string) $a['card_title']) : null,
+            'card_subtitle' => isset($a['card_subtitle']) ? trim((string) $a['card_subtitle']) : null,
+            'card_image_url' => isset($a['card_image_url']) ? trim((string) $a['card_image_url']) : null,
+            'card_button_text' => isset($a['card_button_text']) ? trim((string) $a['card_button_text']) : null,
+            'card_button_url' => isset($a['card_button_url']) ? trim((string) $a['card_button_url']) : null,
         ], fn ($v) => $v !== null && $v !== ''))->values();
 
         foreach ($actions as $i => $action) {
@@ -200,6 +214,12 @@ class AutomationController extends Controller
             }
             if (in_array($action['type'], ['public_reply', 'private_reply'], true) && $data['trigger'] !== 'comment_keyword') {
                 abort(back()->withInput()->withErrors(["actions.$i.type" => 'پاسخ به کامنت فقط با شروع‌کننده‌ی «کلمه‌ی کلیدی در کامنت» ممکن است.']));
+            }
+            if ($action['type'] === 'product_card' && $data['trigger'] !== 'comment_keyword') {
+                abort(back()->withInput()->withErrors(["actions.$i.type" => 'کارت محصول فقط با شروع‌کننده‌ی «کلمه‌ی کلیدی در کامنت» ممکن است.']));
+            }
+            if ($action['type'] === 'product_card' && empty($action['product_id']) && (empty($action['card_title']) || empty($action['card_image_url']) || empty($action['card_button_url']))) {
+                abort(back()->withInput()->withErrors(["actions.$i.product_id" => 'یک محصول انتخاب کنید یا عنوان، تصویر و لینک کارت را کامل وارد کنید.']));
             }
         }
 

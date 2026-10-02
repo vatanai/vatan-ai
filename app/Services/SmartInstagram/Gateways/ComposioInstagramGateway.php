@@ -39,6 +39,35 @@ class ComposioInstagramGateway implements InstagramChannelGateway
             : GatewayResult::failure($result['message'], $result['retryable'], ['status' => $result['status']]);
     }
 
+    public function sendPrivateCard(Channel $channel, string $commentId, array $payload): GatewayResult
+    {
+        $version = trim((string) config('services.composio.graph_api_version', 'v24.0'), '/');
+        $result = $this->client->proxy(
+            '/'.$version.'/'.rawurlencode((string) $this->setting($channel, 'composio_instagram_user_id', config('services.composio.instagram_user_id', 'me'))).'/messages',
+            'POST',
+            ['recipient' => ['comment_id' => $commentId], 'message' => ['attachment' => (array) ($payload['attachment'] ?? [])]],
+            [],
+            $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
+        );
+        if ($result['ok'] || empty($payload['fallback_text'])) {
+            return $result['ok']
+                ? GatewayResult::success('کارت محصول از مسیر `Composio` ارسال شد.', $result['external_id'], $result['data'])
+                : GatewayResult::failure($result['message'], $result['retryable'], ['status' => $result['status']]);
+        }
+
+        $fallback = $this->client->proxy(
+            '/'.$version.'/'.rawurlencode($commentId).'/private_replies',
+            'POST',
+            ['message' => (string) $payload['fallback_text']],
+            [],
+            $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
+        );
+
+        return $fallback['ok']
+            ? GatewayResult::success('کارت در این حساب قابل ارسال نبود؛ لینک محصول به‌صورت متنی ارسال شد.', $fallback['external_id'], ['fallback' => true])
+            : GatewayResult::failure($result['message'], $result['retryable'], ['status' => $result['status']]);
+    }
+
     public function replyToComment(Channel $channel, string $commentId, string $text): GatewayResult
     {
         $result = $this->execute($channel, 'INSTAGRAM_POST_IG_COMMENT_REPLIES', [

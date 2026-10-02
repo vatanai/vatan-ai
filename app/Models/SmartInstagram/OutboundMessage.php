@@ -11,7 +11,7 @@ class OutboundMessage extends Model
     protected $table = 'instagram_outbound_messages';
 
     protected $fillable = [
-        'workspace_id', 'channel_id', 'conversation_id', 'contact_id', 'kind', 'target_ref', 'body', 'origin', 'admin_id',
+        'workspace_id', 'channel_id', 'conversation_id', 'contact_id', 'kind', 'target_ref', 'body', 'message_payload', 'origin', 'admin_id',
         'automation_run_id', 'ai_suggestion_id', 'allow_human_lock', 'status', 'policy_reason', 'window_expires_at', 'attempts',
         'next_attempt_at', 'external_id', 'error', 'provider_response', 'idempotency_key', 'message_id', 'sent_at',
     ];
@@ -20,6 +20,7 @@ class OutboundMessage extends Model
     {
         return [
             'allow_human_lock' => 'boolean',
+            'message_payload' => 'array',
             'window_expires_at' => 'datetime',
             'next_attempt_at' => 'datetime',
             'sent_at' => 'datetime',

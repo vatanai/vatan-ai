@@ -21,6 +21,11 @@ class SandboxInstagramGateway implements InstagramChannelGateway
         return $this->sendDirectMessage($channel, $commentId, $text);
     }
 
+    public function sendPrivateCard(Channel $channel, string $commentId, array $payload): GatewayResult
+    {
+        return $this->sendDirectMessage($channel, $commentId, (string) ($payload['fallback_text'] ?? 'کارت محصول'));
+    }
+
     public function replyToComment(Channel $channel, string $commentId, string $text): GatewayResult
     {
         return $this->sendDirectMessage($channel, $commentId, $text);

@@ -10,6 +10,7 @@ use App\Models\SmartInstagram\Deal;
 use App\Models\SmartInstagram\Message;
 use App\Models\SmartInstagram\Tag;
 use App\Models\SmartInstagram\Task;
+use App\Models\Product;
 use App\Services\SmartInstagram\OperationLogger;
 use App\Services\SmartInstagram\OutboundService;
 use App\Services\SmartInstagram\PersianText;
@@ -34,6 +35,7 @@ class AutomationEngine
     public const ACTIONS = [
         'public_reply' => 'پاسخ عمومی زیر کامنت',
         'private_reply' => 'پاسخ خصوصی به کامنت',
+        'product_card' => 'ارسال کارت محصول به کامنت‌کننده',
         'send_dm' => 'ارسال دایرکت',
         'ai_suggest' => 'ساخت پیشنهاد هوش مصنوعی',
         'add_tag' => 'افزودن برچسب',
@@ -45,7 +47,7 @@ class AutomationEngine
         'stop' => 'توقف سایر قوانین',
     ];
 
-    private const MESSAGING = ['public_reply', 'private_reply', 'send_dm'];
+    private const MESSAGING = ['public_reply', 'private_reply', 'product_card', 'send_dm'];
 
     public function __construct(
         private readonly OutboundService $outbound,
@@ -235,7 +237,7 @@ class AutomationEngine
             }
 
             try {
-                $result = $this->runAction($type, $action, $rule, $run, $message, $conversation, $index);
+                $result = $this->runAction($type, $action, $rule, $run, $message, $conversation, $index, $guards);
                 $decisions[] = ['action' => $type] + $result;
                 if (($result['ok'] ?? true) === false) {
                     $failures++;
@@ -252,7 +254,7 @@ class AutomationEngine
         return $stop;
     }
 
-    private function runAction(string $type, array $action, AutomationRule $rule, AutomationRun $run, Message $message, Conversation $conversation, int $index): array
+    private function runAction(string $type, array $action, AutomationRule $rule, AutomationRun $run, Message $message, Conversation $conversation, int $index, array $guards): array
     {
         $contact = $conversation->contact;
         $key = "auto:{$rule->id}:{$rule->version}:{$message->id}:{$index}";
@@ -270,6 +272,25 @@ class AutomationEngine
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'در صف ارسال', 'outbound_id' => $out->id];
+
+            case 'product_card':
+                $commentId = (string) data_get($message->meta, 'comment_id', '');
+                if ($commentId === '') {
+                    return ['ok' => false, 'result' => 'این پیام کامنت نیست'];
+                }
+                $card = $this->productCard($action, $contact);
+                if (!$card['ok']) {
+                    return ['ok' => false, 'result' => $card['error']];
+                }
+                $out = $this->outbound->queue($conversation, $card['title'], 'automation', 'private_reply', [
+                    'target_ref' => $commentId,
+                    'message_payload' => $card['payload'],
+                    'automation_run_id' => $run->id,
+                    'idempotency_key' => $key,
+                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
+                ]);
+
+                return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'کارت محصول در صف ارسال قرار گرفت', 'outbound_id' => $out->id];
 
             case 'send_dm':
                 $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', 'dm', [
@@ -339,6 +360,45 @@ class AutomationEngine
         }
 
         return ['ok' => false, 'result' => 'اقدام ناشناخته'];
+    }
+
+    /** @return array{ok:bool,title?:string,payload?:array,error?:string} */
+    private function productCard(array $action, Contact $contact): array
+    {
+        $product = null;
+        if (!empty($action['product_id'])) {
+            $product = Product::query()->whereKey((int) $action['product_id'])->where('status', 'active')->first();
+        }
+
+        $title = trim($this->render((string) ($action['card_title'] ?? $product?->name_fa ?? ''), $contact));
+        $subtitle = trim($this->render((string) ($action['card_subtitle'] ?? $product?->description_fa ?? ''), $contact));
+        $imageUrl = trim((string) ($action['card_image_url'] ?? ($product?->displayImageUrl() ?? '')));
+        $buttonUrl = trim((string) ($action['card_button_url'] ?? ($product ? route('app.product', $product->route_slug) : '')));
+        $buttonText = trim($this->render((string) ($action['card_button_text'] ?? 'مشاهده صفحه'), $contact));
+
+        if ($title === '' || $imageUrl === '' || $buttonUrl === '' || !filter_var($imageUrl, FILTER_VALIDATE_URL) || !filter_var($buttonUrl, FILTER_VALIDATE_URL)) {
+            return ['ok' => false, 'error' => 'کارت محصول باید عنوان، تصویر عمومی و لینک معتبر داشته باشد.'];
+        }
+
+        $element = array_filter([
+            'title' => mb_substr($title, 0, 80),
+            'image_url' => $imageUrl,
+            'subtitle' => $subtitle !== '' ? mb_substr($subtitle, 0, 80) : null,
+            'default_action' => ['type' => 'web_url', 'url' => $buttonUrl],
+            'buttons' => [['type' => 'web_url', 'url' => $buttonUrl, 'title' => mb_substr($buttonText ?: 'مشاهده', 0, 20)]],
+        ], fn ($value) => $value !== null && $value !== '');
+
+        return [
+            'ok' => true,
+            'title' => $title,
+            'payload' => [
+                'attachment' => [
+                    'type' => 'template',
+                    'payload' => ['template_type' => 'generic', 'elements' => [$element]],
+                ],
+                'fallback_text' => trim($title."\n".$buttonUrl),
+            ],
+        ];
     }
 
     private function finish(AutomationRule $rule, AutomationRun $run, string $status, array $decisions): bool

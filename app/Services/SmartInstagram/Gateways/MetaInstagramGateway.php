@@ -28,6 +28,20 @@ class MetaInstagramGateway implements InstagramChannelGateway
         return $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => ['text' => $text]]);
     }
 
+    public function sendPrivateCard(Channel $channel, string $commentId, array $payload): GatewayResult
+    {
+        $result = $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => $this->messageFromCard($payload)]);
+        if ($result->ok || empty($payload['fallback_text'])) {
+            return $result;
+        }
+
+        $fallback = $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => ['text' => (string) $payload['fallback_text']]]);
+
+        return $fallback->ok
+            ? GatewayResult::success('کارت در این حساب قابل ارسال نبود؛ لینک محصول به‌صورت متنی ارسال شد.', $fallback->externalId, ['fallback' => true])
+            : $result;
+    }
+
     public function replyToComment(Channel $channel, string $commentId, string $text): GatewayResult
     {
         [$token] = $this->credentials($channel);
@@ -78,6 +92,11 @@ class MetaInstagramGateway implements InstagramChannelGateway
         }
 
         return $this->wrap(fn () => $this->client($channel, $token)->post('/'.$accountId.'/messages', $payload));
+    }
+
+    private function messageFromCard(array $payload): array
+    {
+        return ['attachment' => (array) ($payload['attachment'] ?? [])];
     }
 
     private function wrap(\Closure $request): GatewayResult

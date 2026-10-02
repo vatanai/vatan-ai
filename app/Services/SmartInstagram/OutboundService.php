@@ -20,7 +20,7 @@ class OutboundService
     }
 
     /**
-     * @param array{admin_id?:?int,automation_run_id?:?int,ai_suggestion_id?:?int,target_ref?:?string,idempotency_key?:?string,dispatch?:bool,allow_human_lock?:bool} $options
+     * @param array{admin_id?:?int,automation_run_id?:?int,ai_suggestion_id?:?int,target_ref?:?string,message_payload?:?array,idempotency_key?:?string,dispatch?:bool,allow_human_lock?:bool} $options
      */
     public function queue(Conversation $conversation, string $body, string $origin, string $kind = 'dm', array $options = []): OutboundMessage
     {
@@ -43,6 +43,7 @@ class OutboundService
             'kind' => $kind,
             'target_ref' => $targetRef,
             'body' => $body,
+            'message_payload' => $options['message_payload'] ?? null,
             'origin' => $origin,
             'admin_id' => $options['admin_id'] ?? null,
             'automation_run_id' => $options['automation_run_id'] ?? null,
@@ -88,7 +89,9 @@ class OutboundService
         $outbound->forceFill(['status' => 'sending', 'attempts' => $outbound->attempts + 1])->save();
         $gateway = $this->gateways->for($conversation->channel);
         $result = match ($outbound->kind) {
-            'private_reply' => $gateway->sendPrivateReply($conversation->channel, (string) $outbound->target_ref, $outbound->body),
+            'private_reply' => is_array($outbound->message_payload)
+                ? $gateway->sendPrivateCard($conversation->channel, (string) $outbound->target_ref, $outbound->message_payload)
+                : $gateway->sendPrivateReply($conversation->channel, (string) $outbound->target_ref, $outbound->body),
             'public_reply' => $gateway->replyToComment($conversation->channel, (string) $outbound->target_ref, $outbound->body),
             default => $gateway->sendDirectMessage($conversation->channel, (string) $conversation->contact->external_id, $outbound->body),
         };
@@ -100,12 +103,12 @@ class OutboundService
                 'external_id' => $result->externalId,
                 'direction' => 'out',
                 'source_type' => $outbound->kind === 'dm' ? 'dm' : 'comment',
-                'message_type' => 'text',
+                'message_type' => is_array($outbound->message_payload) ? 'product_card' : 'text',
                 'body' => $outbound->body,
                 'sent_by' => $outbound->origin,
                 'admin_id' => $outbound->admin_id,
                 'delivery_status' => 'sent',
-                'meta' => array_filter(['outbound_id' => $outbound->id, 'kind' => $outbound->kind, 'comment_id' => $outbound->kind !== 'dm' ? $outbound->target_ref : null]),
+                'meta' => array_filter(['outbound_id' => $outbound->id, 'kind' => $outbound->kind, 'comment_id' => $outbound->kind !== 'dm' ? $outbound->target_ref : null, 'card' => is_array($outbound->message_payload) ? $outbound->message_payload['attachment'] ?? null : null]),
                 'occurred_at' => now(),
             ]);
             $outbound->forceFill([

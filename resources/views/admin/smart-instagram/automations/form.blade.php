@@ -38,11 +38,11 @@
         </div>
         <div id="si-actions">
           @foreach($actions as $i => $action)
-            @include('admin.smart-instagram.automations.partials.action', ['i' => $i, 'action' => $action])
+            @include('admin.smart-instagram.automations.partials.action', ['i' => $i, 'action' => $action, 'products' => $products ?? collect()])
           @endforeach
         </div>
-        <template id="si-action-template">@include('admin.smart-instagram.automations.partials.action', ['i' => '__i__', 'action' => ['type' => 'send_dm']])</template>
-        <p class="si-help" style="margin-top:10px">در متن‌ها از <code>{name}</code> و <code>{username}</code> استفاده کنید. پاسخ عمومی/خصوصی فقط برای شروع‌کننده‌ی کامنت معنا دارد. هر ارسال پیش از خروج، از درگاه قانون‌محور (پنجره‌ی ۲۴ساعته، تکرار، سقف روزانه، قفل انسانی) عبور می‌کند.</p>
+        <template id="si-action-template">@include('admin.smart-instagram.automations.partials.action', ['i' => '__i__', 'action' => ['type' => 'send_dm'], 'products' => $products ?? collect()])</template>
+        <p class="si-help" style="margin-top:10px">در متن‌ها از <code>{name}</code> و <code>{username}</code> استفاده کنید. «کارت محصول» برای شروع‌کننده‌ی کامنت، تصویر و عنوان محصول را همراه دکمه‌ی لینک‌دار می‌فرستد. هر ارسال پیش از خروج، از درگاه قانون‌محور (پنجره‌ی ۲۴ساعته، تکرار، سقف روزانه، قفل انسانی) عبور می‌کند.</p>
       </section>
     </div>
 

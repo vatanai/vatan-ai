@@ -14,6 +14,9 @@ interface InstagramChannelGateway
 
     public function sendPrivateReply(Channel $channel, string $commentId, string $text): GatewayResult;
 
+    /** ارسال کارت محصول به‌عنوان پاسخ خصوصی همان کامنت. */
+    public function sendPrivateCard(Channel $channel, string $commentId, array $payload): GatewayResult;
+
     public function replyToComment(Channel $channel, string $commentId, string $text): GatewayResult;
 
     public function health(Channel $channel): GatewayResult;
