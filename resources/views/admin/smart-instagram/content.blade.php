@@ -25,7 +25,7 @@
         <tbody>
           @forelse($composioMedia as $media)
             <tr>
-              <td><span class="si-td-strong">{{ IlluminateSupportStr::limit($media['caption'] ?? 'بدون کپشن', 90) }}</span></td>
+              <td><span class="si-td-strong">{{ \Illuminate\Support\Str::limit($media['caption'] ?? 'بدون کپشن', 90) }}</span></td>
               <td>{{ $media['media_type'] ?? '—' }}</td>
               <td class="si-muted">{{ $media['timestamp'] ?? '—' }}</td>
               <td class="si-mono">{{ $media['id'] ?? '—' }}</td>
