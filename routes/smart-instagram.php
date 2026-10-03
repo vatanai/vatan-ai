@@ -115,3 +115,19 @@ Route::prefix('admin/smart-instagram')
         Route::post('/health/events/{event}/reprocess', [HealthController::class, 'reprocess'])->name('health.reprocess');
         Route::post('/health/outbound/{outbound}/retry', [HealthController::class, 'retryOutbound'])->name('health.retry');
     });
+
+// ─── Instagram DM + Comments Webhooks (Phase 0) ────────────────────────
+// ورودی Meta API (CSRF در bootstrap/app.php مستثنی شده است)
+Route::get('/api/instagram/webhook', [\App\Http\Controllers\InstagramWebhookController_Phase0::class, 'verify'])
+    ->middleware('throttle:60,1')
+    ->name('webhooks.instagram.verify');
+
+Route::post('/api/instagram/webhook', [\App\Http\Controllers\InstagramWebhookController_Phase0::class, 'handle'])
+    ->middleware('throttle:120,1')
+    ->name('webhooks.instagram.handle');
+
+// ─── Telegram Bot Webhook (Phase 0) ────────────────────────
+// ورودی Telegram Bot API (CSRF در bootstrap/app.php مستثنی شده است)
+Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramWebhookController_Phase0::class, 'handle'])
+    ->middleware('throttle:120,1')
+    ->name('webhooks.telegram.handle');
