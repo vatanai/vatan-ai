@@ -83,6 +83,22 @@
   $$('[data-si-toggle-side]').forEach(function (b) {
     b.addEventListener('click', function () { var inbox = $('.si-inbox'); inbox && inbox.classList.toggle('show-side'); });
   });
+  $$('[data-si-refresh]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      b.disabled = true;
+      b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+      window.location.reload();
+    });
+  });
+  $$('[data-si-timeline-tab]').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var value = tab.getAttribute('data-si-timeline-tab');
+      $$('[data-si-timeline-tab]').forEach(function (t) { t.classList.toggle('active', t === tab); });
+      $$('[data-si-message-source]').forEach(function (message) {
+        message.hidden = value !== 'all' && message.getAttribute('data-si-message-source') !== value;
+      });
+    });
+  });
 
   var inbox = $('.si-inbox[data-poll]');
   if (inbox) {

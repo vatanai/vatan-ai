@@ -30,6 +30,16 @@ class HomeSection extends Model
         'collection',
         'text',
         'spacer',
+        // ویترین (سیستم نمایشی یکدست — config/home_builder.php)
+        'vt_hero',
+        'vt_tools',
+        'vt_row',
+        'vt_tabs',
+        'vt_before_after',
+        'vt_video_row',
+        'vt_cta_banner',
+        'vt_occasions',
+        'vt_masonry',
     ];
 
     public const DEFAULT_PAGE_KEY = 'app_home';

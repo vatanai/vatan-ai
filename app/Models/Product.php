@@ -736,7 +736,8 @@ class Product extends Model
         if (! \App\Services\ProductShots\ProductShotFeature::hasSchema()) {
             return $query;
         }
-        if (app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor(auth()->user())) {
+        // گارد web صریح: در پنل مدیریت گارد پیش‌فرض admin است و Admin به availableFor() نمی‌خورد.
+        if (app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor(auth('web')->user())) {
             return $query;
         }
 

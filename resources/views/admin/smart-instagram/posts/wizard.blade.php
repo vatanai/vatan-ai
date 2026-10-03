@@ -27,8 +27,10 @@
     'permalink' => $p->permalink, 'verified' => $p->isVerified(),
   ]]);
   $sipConfig = [
+    'isEdit' => $isEdit,
     'posts' => $postsJson,
     'products' => $products->keyBy('id'),
+    'productSuggestions' => array_values($productSuggestions ?? []),
     'presets' => $presets,
     'username' => $channel?->username ?: 'vatan.ai',
     'sampleName' => 'محسن',
@@ -80,7 +82,8 @@
               <div class="si-field"><label for="ai-hint">نکته برای هوش مصنوعی (اختیاری)</label><input id="ai-hint" class="input-pro" maxlength="500" data-ai-hint placeholder="مثلاً: تخفیف ۲۰٪ تا جمعه، لحن خودمونی"></div>
             </div>
             <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-              <button type="button" class="btn-pro btn-pro-primary" data-ai-run><i class="fa-solid fa-sparkles text-[11px]"></i> پر کردن خودکار</button>
+              <button type="button" class="btn-pro btn-pro-primary" data-ai-run><i class="fa-solid fa-sparkles text-[11px]"></i> اعمال هوش مصنوعی</button>
+              <span class="badge-pro badge-success" data-ai-applied-check hidden><i class="fa-solid fa-circle-check"></i> بخش‌های انتخاب‌شده کامل شد</span>
               <span class="si-help">از کپشن پست انتخاب‌شده، محصول کارت و کلمات کلیدی استفاده می‌شود. هیچ پیامی ارسال نمی‌شود.</span>
             </div>
             <div class="sip-ai-status" data-ai-status aria-live="polite"></div>
@@ -110,6 +113,7 @@
         @foreach($steps as $i => $step)
           <button type="button" class="sip-step-btn {{ $i === 0 ? 'is-current' : '' }}" data-step-go="{{ $i }}">
             <span class="sip-step-num">{{ Ui::n($i + 1) }}</span>
+            <span class="sip-step-check" data-step-check hidden><i class="fa-solid fa-check"></i></span>
             <span class="sip-step-txt"><b>{{ $step['title'] }}</b><small>{{ $step['sub'] }}</small></span>
           </button>
         @endforeach
@@ -204,6 +208,7 @@
               </div>
             </template>
             <p class="si-help" data-kw-empty style="margin-top:10px" @if($kwRows->isNotEmpty()) hidden @endif>هنوز کلمه‌ای اضافه نشده.</p>
+            <p class="si-help" style="margin-top:10px"><i class="fa-solid fa-wand-magic-sparkles"></i> اگر در کپشن کلمه‌ای را داخل «گیومه» یا با هشتگ بنویسید، هنگام انتخاب پست خودکار اینجا پیشنهاد می‌شود؛ قبل از ذخیره قابل ویرایش است.</p>
           </div>
           <div class="sip-block">
             <div class="sip-block-title"><i class="fa-solid fa-vial"></i> آزمون سریع</div>
@@ -278,6 +283,15 @@
               </div>
             </div>
 
+            <div class="sip-block">
+              <div class="sip-block-title"><i class="fa-solid fa-arrow-down-wide-short"></i> ترتیب اجرای سناریو</div>
+              <div class="sip-radio-cards">
+                <label class="sip-radio-card"><input type="radio" name="settings[flow][order]" value="dm_first" @checked(data_get($s, 'flow.order', 'comment_first') === 'dm_first')><b>اول دایرکت، بعد پاسخ کامنت</b>ابتدا پیام خصوصی برای بازکردن مسیر گفتگو ارسال می‌شود، سپس پاسخ عمومی زیر همان کامنت.</label>
+                <label class="sip-radio-card"><input type="radio" name="settings[flow][order]" value="comment_first" @checked(data_get($s, 'flow.order', 'comment_first') !== 'dm_first')><b>اول پاسخ کامنت، بعد دایرکت</b>ترتیب فعلی و مناسب وقتی است که می‌خواهید ابتدا پاسخ عمومی دیده شود.</label>
+              </div>
+              <span class="si-help">این گزینه فقط ترتیب صف ارسال را تعیین می‌کند؛ متن‌ها، شرط فالو و قوانین ایمنی تغییری نمی‌کنند.</span>
+            </div>
+
             <div class="sip-block" data-opening-fields>
               <div class="sip-block-title"><i class="fa-regular fa-paper-plane"></i> پیام آغاز دایرکت</div>
               <div class="si-form">
@@ -314,7 +328,7 @@
             <div class="sip-block">
               <div class="sip-block-title"><i class="fa-regular fa-image"></i> تصویر کارت</div>
               <div class="sip-img-pick">
-                <div class="sip-img-preview" data-card-img-preview><i class="fa-solid fa-image"></i></div>
+                <div class="sip-img-preview sip-card-img-preview" data-card-img-preview><i class="fa-solid fa-image"></i></div>
                 <div>
                   <div class="si-chips" style="flex-wrap:wrap">
                     @foreach(['post' => ['fa-photo-film', 'کاور همین پست'], 'product' => ['fa-bag-shopping', 'تصویر محصول'], 'url' => ['fa-link', 'لینک تصویر'], 'none' => ['fa-ban', 'بدون تصویر']] as $k => [$ic, $l])
@@ -328,12 +342,20 @@
             </div>
             <div class="sip-block">
               <div class="si-form">
-                <div class="si-field is-full"><label for="c-product">محصول مرتبط (اختیاری)</label>
-                  <select id="c-product" class="input-pro" name="settings[card][product_id]" data-card-product>
-                    <option value="">— بدون محصول —</option>
-                    @foreach($products as $product)<option value="{{ $product['id'] }}" @selected((int) data_get($s, 'card.product_id') === $product['id'])>{{ $product['name'] }}</option>@endforeach
+                <div class="si-field is-full"><label for="c-product">محصول هدف</label>
+                  <div class="sip-product-search"><i class="fa-solid fa-magnifying-glass"></i><input id="c-product-search" class="input-pro" type="search" data-product-search placeholder="نام، توضیح یا کد محصول را جست‌وجو کنید…" autocomplete="off"></div>
+                  <div class="sip-product-suggestions" data-product-suggestions>
+                    @foreach(array_filter($productSuggestions ?? []) as $suggestedId)
+                      @php($suggested = $products->firstWhere('id', $suggestedId))
+                      @if($suggested)<button type="button" class="chip-filter" data-product-suggestion="{{ $suggested['id'] }}">{{ $suggested['name'] }}</button>@endif
+                    @endforeach
+                  </div>
+                  <select id="c-product" class="input-pro" name="settings[card][product_id]" data-card-product required>
+                    <option value="">محصول هدف را انتخاب کنید</option>
+                    @foreach($products as $product)<option value="{{ $product['id'] }}" data-search="{{ $product['name'].' '.$product['description'].' '.$product['id'] }}" @selected((int) data_get($s, 'card.product_id') === $product['id'])>{{ $product['name'] }}</option>@endforeach
                   </select>
-                  <span class="si-help">اگر انتخاب شود، دکمه‌های لینک بدون آدرس به صفحه‌ی همین محصول می‌روند.</span>
+                  <div class="sip-product-card" data-product-card hidden></div>
+                  <span class="si-help">انتخاب محصول هدف الزامی است؛ لینک و تصویر کارت از همین محصول استفاده می‌شود.</span>
                 </div>
                 <div class="si-field"><label for="c-title">تیتر کارت</label><input id="c-title" class="input-pro" name="settings[card][title]" maxlength="80" data-counter="80" data-ai-field="card_title" value="{{ data_get($s, 'card.title') }}" placeholder="خالی = نام محصول یا کپشن پست"><div class="sip-counter" data-counter-out></div></div>
                 <div class="si-field"><label for="c-sub">توضیح کوتاه</label><input id="c-sub" class="input-pro" name="settings[card][subtitle]" maxlength="80" data-counter="80" data-ai-field="card_subtitle" value="{{ data_get($s, 'card.subtitle') }}"><div class="sip-counter" data-counter-out></div></div>

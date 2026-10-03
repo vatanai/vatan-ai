@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پیش‌نمایش ویترین اپ هوم وطن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --vt-page:#000000;--vt-surface:#111116;--vt-surface-2:#16161C;--vt-card:#16161C;
+  --vt-border:#222230;--vt-border-strong:rgba(255,255,255,.16);
+  --vt-text:#FFFFFF;--vt-text-2:rgba(255,255,255,.62);--vt-text-3:rgba(255,255,255,.45);
+  --vt-brand:#CFFE00;--vt-on-brand:#0C0C10;--vt-brand-ink:#CFFE00;
+  --vt-brand-soft:rgba(207,254,0,.10);--vt-brand-line:rgba(207,254,0,.22);
+  --vt-accent:#A07AF5;--vt-danger:#F05C5C;
+  --vt-shadow-card:none;--vt-shadow-hover:0 18px 40px rgba(0,0,0,.55);
+  --img:https://aivatan.com;
+}
+html.light{
+  --vt-page:#F4F5F2;--vt-surface:#FFFFFF;--vt-surface-2:#ECEEE8;--vt-card:#FFFFFF;
+  --vt-border:#E3E5DF;--vt-border-strong:#C9CCC4;
+  --vt-text:#0C0C10;--vt-text-2:#55595E;--vt-text-3:#74787C;
+  --vt-brand-ink:#0C0C10;--vt-brand-soft:#EEFFB0;--vt-brand-line:#D6F266;--vt-accent:#7A4FE0;
+  --vt-shadow-card:0 1px 2px rgba(0,0,0,.05);--vt-shadow-hover:0 14px 30px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:YekanBakh,Vazirmatn,Tahoma,sans-serif;background:#2a2a30;color:var(--vt-text);min-height:100vh}
+html.light body{background:#d9dbd5}
+a{color:inherit;text-decoration:none}
+
+/* ---------- toolbar ---------- */
+.tb{position:sticky;top:0;z-index:50;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;padding:10px 16px;background:rgba(10,10,14,.85);backdrop-filter:blur(10px);border-bottom:1px solid #26262e}
+.tb b{color:#fff;font-size:13px;margin-left:10px}
+.tb button{font:inherit;font-size:13px;border:1px solid #34343e;background:#17171d;color:#ddd;border-radius:999px;padding:7px 14px;cursor:pointer}
+.tb button.on{background:#CFFE00;color:#0C0C10;border-color:#CFFE00;font-weight:700}
+.tb .sep{width:1px;height:22px;background:#34343e;margin:0 4px}
+
+/* ---------- device frame ---------- */
+.stage{display:flex;justify-content:center;padding:24px 12px 60px}
+.frame{width:100%;max-width:1280px;background:var(--vt-page);border-radius:18px;overflow:hidden;container-type:inline-size;container-name:app;transition:max-width .35s ease;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.frame.mobile{max-width:390px;border-radius:34px;border:8px solid #0b0b0f}
+.app{padding:0 0 90px}
+
+/* app header (simplified copy of live) */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--vt-border);background:var(--vt-page)}
+.logo{font-weight:900;font-size:22px;letter-spacing:-.5px}
+.logo span{color:var(--vt-brand-ink)}
+.hdr-r{display:flex;gap:8px;align-items:center}
+.pill{border:1px solid var(--vt-border);background:var(--vt-surface);border-radius:999px;padding:7px 12px;font-size:12px;color:var(--vt-text-2)}
+.pill.brand{background:var(--vt-brand);color:var(--vt-on-brand);border-color:var(--vt-brand);font-weight:700}
+
+.wrap{padding:0 24px}
+@container app (max-width:560px){.wrap{padding:0 14px}.hdr{padding:12px 14px}.hide-m{display:none!important}}
+
+/* item label (only in preview) */
+.tag{display:inline-flex;align-items:center;gap:6px;margin:34px 0 10px;font-size:11px;font-weight:700;color:var(--vt-on-brand);background:var(--vt-brand);padding:4px 10px;border-radius:6px}
+.tag i{font-style:normal;opacity:.65;font-weight:500}
+.preview-only .tag{display:none}
+
+/* section head */
+.sh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+.sh h2{font-size:22px;font-weight:800;line-height:1.4}
+.sh p{font-size:13px;color:var(--vt-text-2);margin-top:2px}
+.sh .more{flex-shrink:0;font-size:12px;color:var(--vt-text-2);border:1px solid var(--vt-border);padding:7px 12px;border-radius:999px;white-space:nowrap}
+.sh .more:hover{color:var(--vt-text);border-color:var(--vt-border-strong)}
+@container app (max-width:560px){.sh h2{font-size:17px}.sh p{font-size:12px}}
+
+/* badges */
+.bd{position:absolute;top:10px;right:10px;z-index:3;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:var(--vt-brand);color:var(--vt-on-brand);letter-spacing:.2px}
+.bd.hot{background:#F05C5C;color:#fff}
+.bd.vid{background:rgba(0,0,0,.55);color:#fff;backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18)}
+.bd.biz{background:var(--vt-accent);color:#fff}
+
+/* =========== 1. HERO SPOTLIGHT =========== */
+.hero{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:12px;height:460px}
+.hcard{position:relative;border-radius:20px;overflow:hidden;background:#111 center/cover no-repeat;isolation:isolate}
+.hcard:first-child{grid-row:1/3}
+.hcard video,.hcard .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:center/cover no-repeat;transition:transform .8s ease}
+.hcard:hover .bg,.hcard:hover video{transform:scale(1.05)}
+.hcard::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.15) 55%,rgba(0,0,0,0) 100%);z-index:1}
+.hcard .cap{position:absolute;right:22px;left:22px;bottom:20px;z-index:2;color:#fff}
+.hcard .cap small{display:inline-block;font-size:11px;color:#CFFE00;font-weight:700;margin-bottom:6px}
+.hcard .cap h3{font-size:30px;font-weight:900;line-height:1.3}
+.hcard:not(:first-child) .cap h3{font-size:18px}
+.hcard .cap p{font-size:13px;opacity:.8;margin-top:6px;max-width:440px}
+.cta{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:#CFFE00;color:#0C0C10;font-weight:800;font-size:13px;padding:10px 18px;border-radius:12px}
+.hcard:not(:first-child) .cta{padding:7px 12px;font-size:12px;margin-top:10px}
+.dots{display:none;justify-content:center;gap:6px;margin-top:10px}
+.dots span{width:6px;height:6px;border-radius:9px;background:var(--vt-border-strong)}
+.dots span.on{width:20px;background:var(--vt-brand)}
+@container app (max-width:560px){
+  .hero{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:auto;gap:10px;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+  .hero::-webkit-scrollbar{display:none}
+  .hcard{flex:0 0 88%;aspect-ratio:4/5;scroll-snap-align:center}
+  .hcard .cap h3,.hcard:not(:first-child) .cap h3{font-size:22px}
+  .hcard:not(:first-child) .cta{padding:10px 16px;font-size:13px}
+  .dots{display:flex}
+}
+
+/* =========== prompt bar (kept) =========== */
+.prompt{margin-top:16px;display:flex;align-items:center;gap:10px;background:var(--vt-surface);border:1px solid var(--vt-border);border-radius:16px;padding:10px 10px 10px 10px}
+.prompt .plus{width:40px;height:40px;border-radius:12px;border:1px dashed var(--vt-border-strong);display:grid;place-items:center;color:var(--vt-brand-ink);font-size:20px;flex-shrink:0}
+.prompt input{flex:1;background:none;border:0;color:var(--vt-text);font:inherit;font-size:14px;outline:none;min-width:0}
+.prompt .go{background:var(--vt-brand);color:var(--vt-on-brand);font-weight:800;font-size:13px;padding:11px 18px;border-radius:12px;white-space:nowrap}
+
+/* =========== 2. TOOLS STRIP =========== */
+.tools{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.tool{position:relative;border-radius:16px;overflow:hidden;background:var(--vt-card);border:1px solid var(--vt-border);transition:transform .25s,border-color .25s,box-shadow .25s;box-shadow:var(--vt-shadow-card)}
+.tool:hover{transform:translateY(-3px);border-color:var(--vt-brand-line);box-shadow:var(--vt-shadow-hover)}
+.tool .th{aspect-ratio:1/1;background:center/cover no-repeat}
+.tool .nm{padding:9px 10px 11px;font-size:12.5px;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tool .nm small{display:block;font-size:10.5px;color:var(--vt-text-3);font-weight:500;margin-top:2px}
+.tool .bd{top:6px;right:6px;font-size:9px;padding:2px 6px}
+@container app (max-width:1000px){.tools{grid-template-columns:repeat(4,1fr)}}
+@container app (max-width:560px){.tools{gap:8px}.tool{border-radius:14px}.tool .nm{font-size:11px;padding:7px 4px 8px}.tool .nm small{display:none}}
+
+/* =========== shared product card =========== */
+.row{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;padding-bottom:4px}
+.row::-webkit-scrollbar{display:none}
+.pc{position:relative;flex:0 0 calc((100% - 48px)/5);border-radius:16px;overflow:hidden;background:var(--vt-card);border:1px solid var(--vt-border);scroll-snap-align:start;transition:transform .3s,box-shadow .3s,border-color .3s;box-shadow:var(--vt-shadow-card)}
+.pc:hover{transform:translateY(-4px);box-shadow:var(--vt-shadow-hover);border-color:var(--vt-border-strong)}
+.pc .im{aspect-ratio:3/4;background:#1a1a20 center/cover no-repeat;position:relative;overflow:hidden}
+.pc .im i{position:absolute;inset:0;background:inherit;transition:transform .6s}
+.pc:hover .im i{transform:scale(1.07)}
+.pc .go{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;background:#CFFE00;color:#0C0C10;font-size:12px;font-weight:800;text-align:center;border-radius:10px;padding:8px;opacity:0;transform:translateY(8px);transition:.25s}
+.pc:hover .go{opacity:1;transform:none}
+.pc .meta{padding:10px 12px 12px}
+.pc .meta b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .meta span{display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:11.5px;color:var(--vt-text-3)}
+.pc .meta em{font-style:normal;color:var(--vt-brand-ink);font-weight:700}
+@container app (max-width:1000px){.pc{flex-basis:calc((100% - 24px)/3)}}
+@container app (max-width:560px){
+  .row{margin:0 -14px;padding:0 14px 4px;gap:10px}
+  .pc{flex-basis:42%}
+  .pc .go{display:none}
+  .pc .meta{padding:8px 10px 10px}.pc .meta b{font-size:12.5px}
+}
+
+/* =========== 3. INDUSTRY TABS =========== */
+.tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{font:inherit;font-size:13px;white-space:nowrap;border:1px solid var(--vt-border);background:var(--vt-surface);color:var(--vt-text-2);padding:8px 14px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.tabs button small{font-size:10.5px;opacity:.7}
+.tabs button.on{background:var(--vt-brand);color:var(--vt-on-brand);border-color:var(--vt-brand);font-weight:700}
+@container app (max-width:560px){.tabs{margin:0 -14px 12px;padding:0 14px}.tabs button{font-size:12px;padding:7px 12px}}
+
+/* =========== 4. BEFORE / AFTER =========== */
+.ba{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bac{border-radius:18px;overflow:hidden;background:var(--vt-card);border:1px solid var(--vt-border)}
+.cmp{position:relative;aspect-ratio:1/1;overflow:hidden;cursor:ew-resize;user-select:none;touch-action:pan-y}
+.cmp .a,.cmp .b{position:absolute;inset:0;background:center/cover no-repeat}
+.cmp .b{filter:grayscale(1) contrast(.75) brightness(.9) blur(1.2px)}
+.cmp .a{clip-path:inset(0 0 0 var(--p,50%))}
+.cmp .ln{position:absolute;top:0;bottom:0;left:var(--p,50%);width:2px;background:#CFFE00;z-index:3}
+.cmp .ln::after{content:"⇆";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#CFFE00;color:#0C0C10;display:grid;place-items:center;font-weight:900;font-size:15px}
+.cmp .l1,.cmp .l2{position:absolute;bottom:10px;z-index:3;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.6);color:#fff}
+.cmp .l1{left:10px}.cmp .l2{right:10px;background:#CFFE00;color:#0C0C10}
+.bac .meta{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bac .meta b{font-size:14px}
+.bac .meta a{font-size:12px;font-weight:800;color:var(--vt-on-brand);background:var(--vt-brand);padding:7px 12px;border-radius:10px;white-space:nowrap}
+@container app (max-width:760px){.ba{display:flex;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}.bac{flex:0 0 78%}}
+
+/* =========== 5. VIDEO PRESETS =========== */
+.vrow .pc{flex-basis:calc((100% - 60px)/6)}
+.vrow .pc .im{aspect-ratio:9/16}
+.vrow .pc video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s;z-index:1}
+.vrow .pc:hover video{opacity:1}
+.play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.3);display:grid;place-items:center;color:#fff;font-size:14px;transition:.25s}
+.vrow .pc:hover .play{opacity:0}
+.vrow .pc .ov{position:absolute;inset:auto 0 0 0;padding:30px 10px 10px;background:linear-gradient(to top,rgba(0,0,0,.85),transparent);z-index:2;color:#fff}
+.vrow .pc .ov b{font-size:13px;display:block}
+.vrow .pc .ov span{font-size:11px;opacity:.75}
+@container app (max-width:1000px){.vrow .pc{flex-basis:calc((100% - 36px)/4)}}
+@container app (max-width:560px){.vrow .pc{flex-basis:40%}}
+
+/* =========== 6. OCCASIONS =========== */
+.occ{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.oc{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:1/1.15;background:#111 center/cover no-repeat;isolation:isolate;transition:transform .3s}
+.oc:hover{transform:translateY(-3px)}
+.oc::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8),rgba(0,0,0,0) 60%);z-index:1}
+.oc div{position:absolute;bottom:10px;right:12px;left:12px;z-index:2;color:#fff}
+.oc b{font-size:15px;display:block}
+.oc span{font-size:11px;opacity:.75}
+@container app (max-width:1000px){.occ{grid-template-columns:repeat(3,1fr)}}
+@container app (max-width:560px){.occ{display:flex;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}.oc{flex:0 0 34%}}
+
+/* =========== 7. BUSINESS CTA BANNER =========== */
+.biz{position:relative;display:grid;grid-template-columns:1.2fr 1fr;border-radius:22px;overflow:hidden;background:var(--vt-surface);border:1px solid var(--vt-brand-line)}
+.biz .tx{padding:30px 32px;display:flex;flex-direction:column;justify-content:center}
+.biz .tx small{color:var(--vt-brand-ink);font-weight:800;font-size:12px}
+.biz .tx h3{font-size:26px;font-weight:900;margin:8px 0;line-height:1.4}
+.biz .tx p{font-size:13.5px;color:var(--vt-text-2);line-height:1.9}
+.biz .tx .row2{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.biz .tx .row2 a{font-size:13px;font-weight:800;padding:11px 18px;border-radius:12px;background:var(--vt-brand);color:var(--vt-on-brand)}
+.biz .tx .row2 a.g{background:transparent;color:var(--vt-text);border:1px solid var(--vt-border-strong)}
+.biz .col{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
+.biz .col div{border-radius:14px;background:center/cover no-repeat}
+.biz .col div:first-child{grid-row:1/3}
+@container app (max-width:760px){.biz{grid-template-columns:1fr}.biz .col{height:220px;order:-1}.biz .tx{padding:18px}.biz .tx h3{font-size:19px}}
+
+/* =========== 8. MASONRY EXPLORE =========== */
+.mas{columns:5 200px;column-gap:12px}
+.mi{break-inside:avoid;margin-bottom:12px;position:relative;border-radius:14px;overflow:hidden;display:block;background:var(--vt-card)}
+.mi img{width:100%;display:block;transition:transform .5s}
+.mi:hover img{transform:scale(1.05)}
+.mi .cp{position:absolute;inset:auto 0 0 0;padding:26px 10px 9px;background:linear-gradient(to top,rgba(0,0,0,.8),transparent);color:#fff;font-size:12px;font-weight:700;opacity:0;transition:.25s}
+.mi:hover .cp{opacity:1}
+@container app (max-width:560px){.mas{columns:2;column-gap:8px}.mi{margin-bottom:8px}.mi .cp{opacity:1;font-size:11px}}
+.allbtn{display:flex;justify-content:center;margin-top:18px}
+.allbtn a{font-weight:800;font-size:14px;padding:13px 26px;border-radius:14px;background:var(--vt-surface);border:1px solid var(--vt-border-strong)}
+
+/* bottom nav (mobile) */
+.bnav{display:none}
+@container app (max-width:560px){
+  .bnav{display:flex;justify-content:space-around;align-items:center;position:sticky;bottom:10px;margin:24px 14px 0;height:60px;border-radius:30px;background:var(--vt-surface);border:1px solid var(--vt-border)}
+  .bnav span{font-size:18px;color:var(--vt-text-2)}
+  .bnav span.on{width:46px;height:46px;border-radius:50%;background:var(--vt-brand);color:var(--vt-on-brand);display:grid;place-items:center}
+}
+
+/* notes panel */
+.notes{max-width:1280px;margin:0 auto 18px;padding:0 12px;color:#ddd;font-size:13px;line-height:2}
+.notes .box{background:#15151b;border:1px solid #2a2a33;border-radius:14px;padding:14px 18px}
+.notes b{color:#CFFE00}
+</style>
+</head>
+<body>
+
+<div class="tb">
+  <b>پیش‌نمایش ویترین جدید اپ هوم</b>
+  <button id="bD" class="on" onclick="dev('d')">دسکتاپ</button>
+  <button id="bM" onclick="dev('m')">موبایل</button>
+  <span class="sep"></span>
+  <button id="bN" class="on" onclick="theme(0)">شب</button>
+  <button id="bL" onclick="theme(1)">روز</button>
+  <span class="sep"></span>
+  <button id="bT" class="on" onclick="tags()">برچسب آیتم‌ها</button>
+</div>
+
+<div class="stage"><div class="frame" id="frame"><div class="app" id="app">
+
+  <header class="hdr">
+    <div class="logo">وطن<span>.</span></div>
+    <div class="hdr-r"><span class="pill hide-m">خانه</span><span class="pill hide-m">ویترین</span><span class="pill">۳ ✦</span><span class="pill brand">خرید اشتراک</span></div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- 1 -->
+    <div class="tag">آیتم ۱ <i>· هیرو اسپات‌لایت (ویدیو/تصویر + دکمه ساخت)</i></div>
+    <div class="hero" id="hero">
+      <a class="hcard" href="#">
+        <video src="https://aivatan.com/assets/videos/old-photo-motion.mp4" autoplay muted loop playsinline poster="https://aivatan.com/storage/products/main/6b74431a-1e76-4be1-ac27-0b1466335beb.webp"></video>
+        <span class="bd">جدید</span>
+        <div class="cap"><small>ویدیو با هوش مصنوعی</small><h3>عکس محصولت رو<br>به ویدیو تبلیغاتی تبدیل کن</h3><p>یک عکس بفرست؛ ویدیوی آماده‌ی ریلز و استوری تحویل بگیر.</p><span class="cta">همین رو بساز ←</span></div>
+      </a>
+      <a class="hcard" href="#"><i class="bg" style="background-image:url(https://aivatan.com/storage/products/main/m8ulElxp4nqcYf6FQHqMgNnHWehXNEHlaBoIyPun.webp)"></i><span class="bd biz">کسب‌وکار</span><div class="cap"><small>عکس محصول</small><h3>پوستر ادیتوریال عطر</h3><span class="cta">بساز ←</span></div></a>
+      <a class="hcard" href="#"><i class="bg" style="background-image:url(https://aivatan.com/storage/products/main/pXJN07GDahW8PHbPhbEoaO26xKXGIBcVgHOvVTir.webp)"></i><span class="bd hot">پرطرفدار</span><div class="cap"><small>ویترین فروشگاه</small><h3>ویترین لوکس کیف</h3><span class="cta">بساز ←</span></div></a>
+    </div>
+    <div class="dots"><span class="on"></span><span></span><span></span></div>
+
+    <div class="prompt"><span class="plus">+</span><input placeholder="فقط بنویس دنبال چی هستی… مثلاً «عکس کفش روی پایه مرمری»"><span class="go">جست‌وجوی هوشمند</span></div>
+
+    <!-- 2 -->
+    <div class="tag">آیتم ۲ <i>· نوار ابزارها (دسترسی به همه گروه‌های محصول)</i></div>
+    <div class="sh"><div><h2>با وطن چی می‌تونی بسازی؟</h2><p>همه ابزارها یک‌جا؛ هر کدوم رو بزنی مستقیم می‌ری سراغ قالب‌هاش</p></div></div>
+    <div class="tools">
+      <a class="tool" href="#"><span class="bd biz">کسب‌وکار</span><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/M8VI1kye4Y0HvQtkRWjliGQcb34KYBrE396Pu5R3.webp)"></div><div class="nm">عکس محصول<small>۲۸ قالب</small></div></a>
+      <a class="tool" href="#"><span class="bd">جدید</span><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/6b74431a-1e76-4be1-ac27-0b1466335beb.webp)"></div><div class="nm">ویدیو هوش مصنوعی<small>ریلز و تبلیغ</small></div></a>
+      <a class="tool" href="#"><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/t6dwb8doCzAMSxCB14nlu2WvuoiJyt1PkVvFmPKN.webp)"></div><div class="nm">پوستر تبلیغاتی<small>۲۶ قالب</small></div></a>
+      <a class="tool" href="#"><div class="th" style="background-image:url(https://aivatan.com/storage/products/telegram/5c5e5a6a-8c97-4aa7-b077-17856fb613f3.webp)"></div><div class="nm">استوری و پست<small>۳۷ قالب</small></div></a>
+      <a class="tool" href="#"><span class="bd hot">پرطرفدار</span><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/94ff7e9e-9223-4bfe-b8a2-7e47e82f5a2d.webp)"></div><div class="nm">افزایش کیفیت<small>عکس قدیمی و تار</small></div></a>
+      <a class="tool" href="#"><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/15abbe2b-31dd-43ee-8930-df358743a9f7.webp)"></div><div class="nm">پرتره حرفه‌ای<small>۱۴۲ قالب</small></div></a>
+      <a class="tool" href="#"><div class="th" style="background-image:url(https://aivatan.com/storage/products/main/cd424bd2-61e9-4794-8875-b32670717098.webp)"></div><div class="nm">کاراکتر شیت<small>۸ قالب</small></div></a>
+      <a class="tool" href="#"><div class="th" style="background-image:url(https://aivatan.com/storage/products/telegram/e437186f-b8ff-4cb1-8218-4786661eae91.webp)"></div><div class="nm">تولد و مناسبت<small>۱۴ قالب</small></div></a>
+    </div>
+
+    <!-- 3 -->
+    <div class="tag">آیتم ۳ <i>· ردیف صنف با تب (هر تب = یک دسته از داشبورد)</i></div>
+    <div class="sh"><div><h2>عکس فروش برای صنف خودت</h2><p>صنفت رو انتخاب کن؛ قالب‌های همون کسب‌وکار رو ببین</p></div><a class="more" href="#">مشاهده همه</a></div>
+    <div class="tabs" id="tabs">
+      <button class="on" data-t="all">همه <small>۲۷</small></button>
+      <button data-t="shoe">کیف و کفش <small>۴</small></button>
+      <button data-t="gold">طلا و جواهر <small>۴</small></button>
+      <button data-t="perf">عطر و آرایشی <small>۹</small></button>
+      <button data-t="fash">پوشاک و مد <small>۴</small></button>
+      <button data-t="cafe">کافه و رستوران <small>۱</small></button>
+      <button data-t="gym">باشگاه <small>۴</small></button>
+    </div>
+    <div class="row" id="indRow"></div>
+
+    <!-- 4 -->
+    <div class="tag">آیتم ۴ <i>· قبل / بعد (اسلایدر کشیدنی — «قبل» از داشبورد آپلود می‌شه)</i></div>
+    <div class="sh"><div><h2>از عکس ساده تا عکس فروش</h2><p>بکش و تفاوت رو ببین</p></div><a class="more" href="#">نمونه‌های بیشتر</a></div>
+    <div class="ba">
+      <div class="bac"><div class="cmp"><i class="b" style="background-image:url(https://aivatan.com/storage/products/main/gDEoHHwwOBW7qZYldk39UjrYGLl1AELlhGjWGxGc.webp)"></i><i class="a" style="background-image:url(https://aivatan.com/storage/products/main/gDEoHHwwOBW7qZYldk39UjrYGLl1AELlhGjWGxGc.webp)"></i><span class="ln"></span><span class="l1">قبل</span><span class="l2">بعد</span></div><div class="meta"><b>تبلیغ لوکس دستبند</b><a href="#">بساز</a></div></div>
+      <div class="bac"><div class="cmp"><i class="b" style="background-image:url(https://aivatan.com/storage/products/main/dff3924e-cc32-443e-b402-0b3956902843.webp)"></i><i class="a" style="background-image:url(https://aivatan.com/storage/products/main/dff3924e-cc32-443e-b402-0b3956902843.webp)"></i><span class="ln"></span><span class="l1">قبل</span><span class="l2">بعد</span></div><div class="meta"><b>افزایش کیفیت عکس</b><a href="#">بساز</a></div></div>
+      <div class="bac"><div class="cmp"><i class="b" style="background-image:url(https://aivatan.com/storage/products/covers/Wv4BCIAlWjTAzKkrtdKDU34hBr7zEVRGla74Mmdp.jpg)"></i><i class="a" style="background-image:url(https://aivatan.com/storage/products/covers/Wv4BCIAlWjTAzKkrtdKDU34hBr7zEVRGla74Mmdp.jpg)"></i><span class="ln"></span><span class="l1">قبل</span><span class="l2">بعد</span></div><div class="meta"><b>رندر سینمایی محصول</b><a href="#">بساز</a></div></div>
+    </div>
+
+    <!-- 5 -->
+    <div class="tag">آیتم ۵ <i>· قالب‌های ویدیویی عمودی (پخش با هاور، مثل افکت‌های هیگزفیلد)</i></div>
+    <div class="sh"><div><h2>ویدیو برای ریلز و استوری</h2><p>روی کارت برو تا پیش‌نمایش پخش بشه</p></div><a class="more" href="#">همه ویدیوها</a></div>
+    <div class="row vrow" id="vRow"></div>
+
+    <!-- 6 -->
+    <div class="tag">آیتم ۶ <i>· مناسبت‌ها (کارت دسته با تعداد)</i></div>
+    <div class="sh"><div><h2>مناسبت‌های پیش رو</h2><p>قالب آماده برای فروش در روزهای خاص</p></div></div>
+    <div class="occ">
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/main/273e4090-0e57-4440-9445-adc3204b8fc7.webp)"><div><b>تولد</b><span>۱۴ قالب</span></div></a>
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/telegram/c29f3dd0-310e-46f2-a759-8d3ac9bee9fd.webp)"><div><b>ازدواج</b><span>۴ قالب</span></div></a>
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/main/efbd7fb6-9ea6-490e-96a2-caafed14e25f.webp)"><div><b>پاییز</b><span>۳ قالب</span></div></a>
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/telegram/5936eda7-21e5-46e7-b203-39a3d4eb016f.webp)"><div><b>کودک</b><span>۱۳ قالب</span></div></a>
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/telegram/1bc3c8c8-362f-4b05-b033-b4a0e9c51504.webp)"><div><b>عاشقانه</b><span>۷ قالب</span></div></a>
+      <a class="oc" href="#" style="background-image:url(https://aivatan.com/storage/products/telegram/58c27f9b-b912-4416-b1cc-f4de8e9abb8e.webp)"><div><b>خانوادگی</b><span>۷ قالب</span></div></a>
+    </div>
+
+    <!-- 7 -->
+    <div class="tag">آیتم ۷ <i>· بنر دعوت کسب‌وکار (متن، دکمه و ۳ تصویر از داشبورد)</i></div>
+    <div class="biz">
+      <div class="tx"><small>ویژه فروشگاه‌ها و برندها</small><h3>کسب‌وکارت رو معرفی کن،<br>اعتبار هدیه بگیر</h3><p>صنفت رو بگو تا قالب‌های مخصوص خودت رو ببینی و اولین عکس محصولت رو رایگان بسازی.</p><div class="row2"><a href="#">معرفی کسب‌وکار</a><a class="g" href="#">نمونه کارها</a></div></div>
+      <div class="col"><div style="background-image:url(https://aivatan.com/storage/products/main/l5zRsUOpqBinsedrbxrTei47M4XpeNWX3tWHtjyN.webp)"></div><div style="background-image:url(https://aivatan.com/storage/products/main/bbNFmoCnXibGHvqbKTlWF3GLnJsOrqHvqVSu4MK6.webp)"></div><div style="background-image:url(https://aivatan.com/storage/products/main/tNfgWpZyaedSa8uDoITuLy0Zqfs2FbvzMjQdHTIl.webp)"></div></div>
+    </div>
+
+    <!-- 8 -->
+    <div class="tag">آیتم ۸ <i>· اکسپلور موزاییکی (همه محصولات، بارگذاری تدریجی)</i></div>
+    <div class="sh"><div><h2>همه ایده‌ها</h2><p>۲۹۱ قالب آماده؛ بچرخ و انتخاب کن</p></div><a class="more" href="#">فیلتر</a></div>
+    <div class="mas" id="mas"></div>
+    <div class="allbtn"><a href="#">مشاهده همه ۲۹۱ محصول</a></div>
+
+  </div>
+
+  <nav class="bnav"><span class="on">⌂</span><span>↗</span><span>＋</span><span>⌕</span><span>◯</span></nav>
+</div></div></div>
+
+<script>
+const S='https://aivatan.com/storage/products/';
+const ind=[
+ ['shoe','تبلیغ سینمایی کتانی لوکس','main/l5zRsUOpqBinsedrbxrTei47M4XpeNWX3tWHtjyN.webp','جدید'],
+ ['perf','پوستر ادیتوریال عطر لوکس','main/m8ulElxp4nqcYf6FQHqMgNnHWehXNEHlaBoIyPun.webp','پرطرفدار'],
+ ['shoe','ویترین لوکس کیف','main/pXJN07GDahW8PHbPhbEoaO26xKXGIBcVgHOvVTir.webp',''],
+ ['gold','تبلیغ لوکس دستبند جواهر','main/gDEoHHwwOBW7qZYldk39UjrYGLl1AELlhGjWGxGc.webp',''],
+ ['perf','پوستر تبلیغاتی حرفه‌ای محصول','main/t6dwb8doCzAMSxCB14nlu2WvuoiJyt1PkVvFmPKN.webp',''],
+ ['shoe','تبلیغ مینیمال کتونی','main/M8VI1kye4Y0HvQtkRWjliGQcb34KYBrE396Pu5R3.webp',''],
+ ['gold','جواهرات ظریف','main/bbNFmoCnXibGHvqbKTlWF3GLnJsOrqHvqVSu4MK6.webp',''],
+ ['perf','محصولات فروشگاهی','main/tNfgWpZyaedSa8uDoITuLy0Zqfs2FbvzMjQdHTIl.webp',''],
+ ['gold','اکسسوری','main/2a0a1112-3c73-48c6-b69c-c395ab9431a2.webp',''],
+ ['perf','رندر سینمایی محصول معلق','covers/Wv4BCIAlWjTAzKkrtdKDU34hBr7zEVRGla74Mmdp.jpg','جدید'],
+ ['gym','مرد ورزشکار','main/GVB0WCPpY3RJkIbtv85q4sFFgA42iZdDR61L5eA0.webp',''],
+ ['gym','ورزش دخترونه','main/vQy5UKiXytfiFEMo7ydXxeZIQb816FCHbqaanJSj.webp',''],
+ ['gym','قدرت خالص','main/5ztLAOguXNebNz7ErlTA8FCgPVbLzV2YOC2RatsI.webp',''],
+ ['cafe','کافه کیوت','main/ljUx5qDqpqQyu1QgNuzsPfrbfeXtS4JlRSvX2MER.webp',''],
+ ['fash','پرتره لوکس سبک زندگی مردانه','main/bdf04973-2991-4aba-a47e-fd72cb40f923.webp',''],
+ ['fash','پرتره فشن سیاه‌وسفید','main/15abbe2b-31dd-43ee-8930-df358743a9f7.webp',''],
+];
+const cat={shoe:'کیف و کفش',gold:'طلا و جواهر',perf:'عطر و آرایشی',fash:'پوشاک و مد',cafe:'کافه و رستوران',gym:'باشگاه'};
+function card(n,img,badge,sub){
+ const bc=badge==='پرطرفدار'?'bd hot':'bd';
+ return `<a class="pc" href="#">${badge?`<span class="${bc}">${badge}</span>`:''}<div class="im" style="background-image:url(${S+img})"><i></i><span class="go">همین رو بساز</span></div><div class="meta"><b>${n}</b><span>${sub}<em>⚡ ۱۲ کردیت</em></span></div></a>`;
+}
+function renderInd(t){
+ document.getElementById('indRow').innerHTML=ind.filter(x=>t==='all'||x[0]===t).map(x=>card(x[1],x[2],x[3],cat[x[0]])).join('');
+}
+renderInd('all');
+document.getElementById('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));renderInd(b.dataset.t)});
+
+const vids=[['متحرک‌سازی عکس قدیمی','main/6b74431a-1e76-4be1-ac27-0b1466335beb.webp'],['نجات در لبه صخره','main/6b74431a-1e76-4be1-ac27-0b1466335beb.webp'],['استوری مردانه','telegram/5c5e5a6a-8c97-4aa7-b077-17856fb613f3.webp'],['پوستر سینمایی تاریک','telegram/03e09623-e50a-4eb5-8f96-f4028f17e9b3.webp'],['پرتره سینمایی مترو','main/tCxwqS3ArqSpyjihtBySizLvDcNkF4OZlOUeUe9b.webp'],['سلفی آینه‌ای سینمایی','main/6yCwi6qN8gtMzhrM63paZzSH4I1zSQyENaqzkpQi.webp'],['تبلیغ کتانی','main/l5zRsUOpqBinsedrbxrTei47M4XpeNWX3tWHtjyN.webp']];
+document.getElementById('vRow').innerHTML=vids.map(v=>`<a class="pc" href="#"><span class="bd vid">▶ ویدیو</span><div class="im" style="background-image:url(${S+v[1]})"><i></i><video muted loop playsinline preload="none" src="https://aivatan.com/assets/videos/old-photo-motion.mp4"></video><span class="play">▶</span><div class="ov"><b>${v[0]}</b><span>۵ ثانیه · ۹:۱۶</span></div></div></a>`).join('');
+document.querySelectorAll('.vrow .pc').forEach(c=>{const v=c.querySelector('video');c.onmouseenter=()=>v.play().catch(()=>{});c.onmouseleave=()=>{v.pause()}});
+
+const mas=['telegram/c29f3dd0-310e-46f2-a759-8d3ac9bee9fd.webp','main/M8VI1kye4Y0HvQtkRWjliGQcb34KYBrE396Pu5R3.webp','telegram/9ae4fe5e-57ec-40ad-93af-66ebeb912ed4.webp','main/0048e411-d815-475b-973a-6924d6f666d2.webp','main/m8ulElxp4nqcYf6FQHqMgNnHWehXNEHlaBoIyPun.webp','telegram/9c6afb8e-b136-4162-baee-9895d0a75b46.webp','main/cd424bd2-61e9-4794-8875-b32670717098.webp','main/2zPwMnfdKmSxPM69LNbnzUaPWax6xXVjThniy7Tt.webp','main/gDEoHHwwOBW7qZYldk39UjrYGLl1AELlhGjWGxGc.webp','telegram/f454895c-4c21-4036-ac35-af5776fb8c59.webp','main/550bccf4-e415-4306-9d85-70b94fabbc27.webp','main/pXJN07GDahW8PHbPhbEoaO26xKXGIBcVgHOvVTir.webp','telegram/271a5634-4041-419d-b82e-2525ab98bdfb.webp','main/ae0d92c0-81ce-436d-9b13-4255dc8baa75.webp','main/zrfvyRgs2ooGfrxMAPXVoIsnuIYxljSFnozrfT03.webp'];
+const names=['سلفی عروسی','مینیمال کتونی','پرتره خیابانی','منِ کوچولو','عطر لوکس','مادر و فرزند','کاراکتر شیت','دنیای لگویی','دستبند جواهر','بیلیارد سینمایی','آفتابگردان','ویترین کیف','پرتره آبرنگی','ردپای جنوب','دختر و گربه'];
+document.getElementById('mas').innerHTML=mas.map((m,i)=>`<a class="mi" href="#"><img loading="lazy" src="${S+m}" alt=""><span class="cp">${names[i]}</span></a>`).join('');
+
+document.querySelectorAll('.cmp').forEach(c=>{const set=x=>{const r=c.getBoundingClientRect();let p=(x-r.left)/r.width*100;p=Math.max(3,Math.min(97,p));c.style.setProperty('--p',p+'%')};let d=false;c.addEventListener('pointerdown',e=>{d=true;set(e.clientX)});addEventListener('pointerup',()=>d=false);c.addEventListener('pointermove',e=>{if(d||e.pointerType==='mouse')set(e.clientX)})});
+
+function dev(m){document.getElementById('frame').classList.toggle('mobile',m==='m');bD.classList.toggle('on',m!=='m');bM.classList.toggle('on',m==='m')}
+function theme(l){document.documentElement.classList.toggle('light',!!l);bN.classList.toggle('on',!l);bL.classList.toggle('on',!!l)}
+function tags(){const a=document.getElementById('app');a.classList.toggle('preview-only');bT.classList.toggle('on',!a.classList.contains('preview-only'))}
+</script>
+</body>
+</html>

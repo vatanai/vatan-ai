@@ -225,6 +225,20 @@ class VideoGenerationService
         if ($studioQuote && $studioQuote['credits_per_output'] !== null) {
             $creditCost = (int) $studioQuote['credits_per_output'] + $featureCost + ($identityRequested ? 2 : 0);
         }
+        // تصاویر ورودی (چه data URI پروفایل چهره، چه فایل آپلودی webp/avif)
+        // یک‌بار به JPEG عمومی تبدیل می‌شوند تا همهٔ پروایدرها بتوانند آن را
+        // دریافت کنند و تا پایان نهایی درخواست (نه بلافاصله بعد از ارسال) بمانند.
+        $providerImages = $this->prepareProviderImages($options);
+        $workflowKey = (string) ($options['workflow'] ?? $config['workflow'] ?? 'text_to_video');
+        $modelChain = $this->buildModelChain($product, $model, [
+            'workflow' => $workflowKey,
+            'has_images' => $providerImages['refs'] !== [],
+            'image_count' => count($providerImages['refs']),
+            'has_video' => !empty($options['source_video_url']),
+            'duration' => $duration,
+            'resolution' => $resolution,
+            'aspect_ratio' => $aspectRatio,
+        ]);
         $order = Order::create([
             'user_id' => $user->id,
             'product_id' => $product->id,
@@ -257,7 +271,12 @@ class VideoGenerationService
                 'face_profile_id' => $options['face_profile_id'] ?? null,
                 'source_upload_path' => $options['source_upload_path'] ?? null,
                 'source_upload_paths' => array_values(array_filter((array) ($options['source_upload_paths'] ?? []))),
-                'temporary_upload_paths' => array_values(array_filter((array) ($options['temporary_upload_paths'] ?? []))),
+                'temporary_upload_paths' => array_values(array_unique(array_filter(array_merge(
+                    (array) ($options['temporary_upload_paths'] ?? []),
+                    $providerImages['created_paths'],
+                )))),
+                'provider_image_refs' => $providerImages['refs'],
+                'model_chain' => $modelChain,
                 'source_video_path' => $options['source_video_path'] ?? null,
                 'source_audio_path' => $options['source_audio_path'] ?? null,
                 'source_video_url' => $options['source_video_url'] ?? null,
@@ -317,6 +336,9 @@ class VideoGenerationService
         try {
             if ($creditCost > 0) $reservation = $this->wallet->reserve($user, $creditCost, $order);
         } catch (ValidationException $exception) {
+            foreach ($providerImages['created_paths'] as $createdPath) {
+                $this->userStorage->deletePublicFile($createdPath);
+            }
             $order->update(['status' => 'review', 'payment_status' => 'failed', 'processing_status' => 'stopped', 'error_message' => 'اعتبار کافی نیست.']);
             throw $exception;
         }
@@ -358,26 +380,23 @@ class VideoGenerationService
         ];
 
         $lastError = null;
-        foreach ($this->candidateModels($generation->product) as $candidate) {
+        foreach ($this->chainModels($generation) as $candidate) {
             try {
-                $this->submitCandidate($generation, $generation->order, $candidate, $generation->product, (string) $generation->user_prompt, $options);
+                $this->submitCandidate($generation, $generation->order, $candidate, $generation->product, (string) $generation->user_prompt, $this->optionsForCandidate($candidate, $options));
                 $generation->update(['submitted_at' => now(), 'next_poll_at' => now()->addSeconds(15)]);
-                $this->cleanupTemporaryInputs($generation);
+                // فایل‌های ورودی تا وضعیت نهایی نگه داشته می‌شوند؛ پروایدرها تصویر
+                // را معمولاً چند ثانیه بعد از پذیرش (هنگام شروع پردازش) دانلود می‌کنند.
                 if (config('queue.default') !== 'sync') {
                     PollStudioVideoGeneration::dispatch($generation->id)->delay(now()->addSeconds(15));
                 }
                 return;
             } catch (Throwable $error) {
                 $lastError = $error;
-                $this->markAttempted($generation, $candidate);
-                Log::warning('Video submission failed', [
-                    'generated_video_id' => $generation->id,
-                    'correlation_id' => $generation->correlation_id,
-                    'provider' => $candidate->provider,
-                    'model' => $candidate->openrouter_model_id,
-                    'retryable' => $this->isRetryableProviderError($error->getMessage()),
-                ]);
-                if (!$this->isRetryableProviderError($error->getMessage())) {
+                $this->recordFailedAttempt($generation, $candidate, $error->getMessage());
+                // خطای سیاست ایمنی روی همهٔ مدل‌ها تکرار می‌شود؛ بقیهٔ خطاها
+                // (پارامتر ناسازگار، مدل غیرفعال، قطعی موقت و ...) با مدل بعدی
+                // زنجیره جبران می‌شوند.
+                if (!$this->shouldTryNextModel($error->getMessage())) {
                     break;
                 }
             }
@@ -392,8 +411,8 @@ class VideoGenerationService
         if (!$generation || $generation->external_request_id || in_array($generation->status, ['completed', 'failed', 'canceled'], true)) {
             return;
         }
-        $retryable = $this->isRetryableProviderError($exception->getMessage());
-        $this->failAndRestore($generation, $this->publicErrorMessage($exception->getMessage()), 'failed', null, $retryable ? 'PROVIDER_UNAVAILABLE' : 'PROVIDER_REJECTED', $retryable);
+        $retryable = $this->shouldTryNextModel($exception->getMessage());
+        $this->failAndRestore($generation, $this->publicErrorMessage($exception->getMessage()), 'failed', null, $this->errorCodeFor($exception->getMessage()), $retryable);
     }
 
     public function pollQueued(int $generationId): void
@@ -618,10 +637,25 @@ class VideoGenerationService
                     'provider_metadata' => $normalized['provider_metadata'] ?? null,
                 ]);
             }
-            if (!$generation->cancel_requested_at && $status === 'failed' && $this->isRetryableProviderError($providerMessage) && $this->retryFallback($generation, $providerMessage)) {
-                return $generation->fresh();
-            }
             $actualCost = $this->actualProviderCostForOrder($generation->order_id);
+            if ($status === 'failed' && !$generation->cancel_requested_at && $actualCost === null) {
+                // OpenRouter و Fal برای تولید ناموفق هزینه‌ای ثبت نمی‌کنند؛ نبودِ
+                // usage.cost در وضعیت failed یعنی هزینهٔ صفر، نه نیاز به بررسی دستی.
+                AiProviderRequest::query()
+                    ->where('order_id', $generation->order_id)
+                    ->where('external_request_id', (string) $generation->external_request_id)
+                    ->whereNull('actual_cost_usd')
+                    ->update(['actual_cost_usd' => 0]);
+                $actualCost = $this->actualProviderCostForOrder($generation->order_id);
+            }
+            if (!$generation->cancel_requested_at && $status === 'failed') {
+                $this->recordFailedAttempt($generation, null, $providerMessage, false);
+                if ($this->shouldTryNextModel($providerMessage)
+                    && ($actualCost === null || $actualCost <= 0)
+                    && $this->retryFallback($generation, $providerMessage)) {
+                    return $generation->fresh();
+                }
+            }
             if ($generation->external_request_id && $actualCost === null) {
                 return $this->holdForCostReview($generation, $generation->cancel_requested_at
                     ? 'درخواست لغو شد، اما هزینهٔ واقعی سرویس هنوز مشخص نشده است.'
@@ -962,20 +996,29 @@ class VideoGenerationService
 
     private function retryFallback(GeneratedVideo $generation, string $reason): bool
     {
-        if (!$this->isRetryableProviderError($reason)) return false;
+        if (!$this->shouldTryNextModel($reason)) return false;
         $product = $generation->product;
         $payload = (array) $generation->input_payload;
         $attempted = collect((array) ($payload['attempted_models'] ?? []))->map(fn ($row) => ($row['provider'] ?? '') . '|' . ($row['model'] ?? ''))->all();
-        foreach ($this->candidateModels($product) as $candidate) {
+        $baseOptions = $payload + [
+            'duration' => (int) $generation->duration_seconds,
+            'aspect_ratio' => data_get($payload, 'aspect_ratio', $product->videoConfiguration()['default_aspect_ratio']),
+            'resolution' => data_get($payload, 'resolution', $product->videoConfiguration()['default_resolution']),
+        ];
+        foreach ($this->chainModels($generation) as $candidate) {
             if (in_array($candidate->provider . '|' . $candidate->openrouter_model_id, $attempted, true)) continue;
             try {
-                $this->submitCandidate($generation, $generation->order, $candidate, $product, (string) $generation->user_prompt, $payload + ['duration' => $generation->duration_seconds, 'aspect_ratio' => data_get($payload, 'aspect_ratio', $product->videoConfiguration()['default_aspect_ratio']), 'resolution' => data_get($payload, 'resolution', $product->videoConfiguration()['default_resolution'])]);
-                $generation->order?->recordEvent('fallback', 'مدل جایگزین فعال شد', $reason);
+                $this->submitCandidate($generation, $generation->order, $candidate, $product, (string) $generation->user_prompt, $this->optionsForCandidate($candidate, $baseOptions));
+                $generation->update(['submitted_at' => now(), 'next_poll_at' => now()->addSeconds(15)]);
+                $generation->order?->recordEvent('fallback', 'مدل جایگزین فعال شد', 'مدل بعدی زنجیره: ' . $candidate->openrouter_model_id . ' (' . $candidate->provider . ')');
+                if (config('queue.default') !== 'sync') {
+                    PollStudioVideoGeneration::dispatch($generation->id)->delay(now()->addSeconds(15));
+                }
                 return true;
             } catch (\Throwable $error) {
-                $this->markAttempted($generation, $candidate);
                 $reason = $error->getMessage();
-                if (!$this->isRetryableProviderError($reason)) return false;
+                $this->recordFailedAttempt($generation, $candidate, $reason);
+                if (!$this->shouldTryNextModel($reason)) return false;
             }
         }
         return false;
@@ -1038,7 +1081,344 @@ class VideoGenerationService
         if ($this->isRetryableProviderError($message)) {
             return 'ارتباط با سرویس ساخت موقتاً برقرار نشد؛ می‌توانید دوباره تلاش کنید.';
         }
-        return 'سرویس‌دهنده این درخواست را نپذیرفت؛ ورودی‌ها و مدل انتخاب‌شده را بررسی کنید.';
+        return 'ساخت ویدیو با مدل انتخابی و مدل‌های جایگزین انجام نشد؛ اعتبار شما برگشت داده شد. لطفاً متن یا تصویر ورودی را کمی تغییر دهید و دوباره تلاش کنید.';
+    }
+
+    /** هر خطایی به‌جز ردشدن به‌دلیل سیاست ایمنی، با مدل بعدی زنجیره جبران می‌شود. */
+    public function shouldTryNextModel(string $message): bool
+    {
+        return !$this->isSafetyRejection($message);
+    }
+
+    /**
+     * متن خام خطای پروایدر فقط برای ادمین (رویداد سفارش و لاگ) ثبت می‌شود تا
+     * علت واقعی ردشدن قابل پیگیری باشد؛ کاربر پیام عمومی می‌بیند.
+     */
+    private function recordFailedAttempt(GeneratedVideo $generation, ?AiModel $model, string $message, bool $markAttempted = true): void
+    {
+        if ($model && $markAttempted) {
+            $this->markAttempted($generation, $model);
+        }
+        $payload = (array) $generation->fresh()?->input_payload;
+        $modelLabel = $model
+            ? $model->openrouter_model_id . ' (' . $model->provider . ')'
+            : (string) ($payload['active_model'] ?? '') . ' (' . (string) ($payload['active_provider'] ?? '') . ')';
+        $safeMessage = Str::limit(preg_replace('/\s+/', ' ', $message) ?: 'خطای نامشخص', 700, '…');
+        $errors = (array) ($payload['attempt_errors'] ?? []);
+        $errors[] = ['model' => $modelLabel, 'message' => $safeMessage, 'at' => now()->toIso8601String()];
+        $payload['attempt_errors'] = array_slice($errors, -8);
+        $generation->update(['input_payload' => $payload]);
+
+        $generation->order?->recordEvent('provider_attempt_failed', 'تلاش مدل ناموفق: ' . $modelLabel, $safeMessage);
+        Log::warning('Video model attempt failed; moving to next model in chain', [
+            'generated_video_id' => $generation->id,
+            'correlation_id' => $generation->correlation_id,
+            'model' => $modelLabel,
+            'provider_error_message' => $safeMessage,
+        ]);
+    }
+
+    /** @return array<int, AiModel> */
+    private function chainModels(GeneratedVideo $generation): array
+    {
+        $chain = (array) data_get($generation->input_payload, 'model_chain', []);
+        if ($chain === []) {
+            return $this->candidateModels($generation->product);
+        }
+
+        $models = [];
+        foreach ($chain as $row) {
+            $provider = (string) ($row['provider'] ?? '');
+            $id = (string) ($row['model'] ?? '');
+            if ($provider === '' || $id === '') continue;
+            $model = AiModel::query()
+                ->where('is_active', true)
+                ->where('output_modality', 'video')
+                ->where('provider', $provider)
+                ->where('openrouter_model_id', $id)
+                ->first();
+            if ($model && filled($this->credentials->for($model->provider)['api_key'] ?? null)) {
+                $models[] = $model;
+            }
+        }
+
+        return $models;
+    }
+
+    /**
+     * زنجیرهٔ ۴ مرحله‌ای: مدل انتخابی + دو مدل OpenRouter هم‌رده از نظر هزینه
+     * + یک مدل Fal (یا Replicate) به‌عنوان پشتیبان نهایی خارج از OpenRouter.
+     *
+     * @return array<int, array{provider: string, model: string}>
+     */
+    private function buildModelChain(Product $product, AiModel $primary, array $context): array
+    {
+        $chain = [['provider' => $primary->provider, 'model' => (string) $primary->openrouter_model_id]];
+        $seen = [$primary->provider . '|' . $primary->openrouter_model_id => true];
+        $add = function (AiModel $model) use (&$chain, &$seen): void {
+            $key = $model->provider . '|' . $model->openrouter_model_id;
+            if (isset($seen[$key])) return;
+            $seen[$key] = true;
+            $chain[] = ['provider' => $model->provider, 'model' => (string) $model->openrouter_model_id];
+        };
+
+        $openRouterSlots = 2;
+        $configured = [];
+        $ids = array_values((array) $product->fallback_models);
+        $providers = array_values((array) $product->fallback_model_providers);
+        foreach ($ids as $index => $id) {
+            $provider = (string) ($providers[$index] ?? '');
+            if ($provider === '' || blank($id)) continue;
+            $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
+                ->where('provider', $provider)->where('openrouter_model_id', (string) $id)->first();
+            if ($model) $configured[] = $model;
+        }
+
+        $openRouterPool = collect($configured)->where('provider', 'openrouter')
+            ->filter(fn (AiModel $model): bool => $this->isChainCompatible($model, $context));
+        $primaryCost = $this->estimateChainCost($primary, $context);
+        $similar = $this->openRouterVideoPool()
+            ->reject(fn (AiModel $model): bool => isset($seen[$model->provider . '|' . $model->openrouter_model_id]))
+            ->filter(fn (AiModel $model): bool => $this->isChainCompatible($model, $context))
+            ->sortBy(function (AiModel $model) use ($primaryCost, $context): array {
+                $cost = $this->estimateChainCost($model, $context);
+                $exactDuration = $this->durationFits($model, (int) $context['duration'], 0) ? 0 : 1;
+                $distance = ($primaryCost !== null && $cost !== null) ? abs($cost - $primaryCost) : 999;
+                return [$exactDuration, $distance, $model->id];
+            });
+        foreach ($openRouterPool->concat($similar) as $model) {
+            if ($openRouterSlots <= 0) break;
+            $before = count($chain);
+            $add($model);
+            if (count($chain) > $before) $openRouterSlots--;
+        }
+
+        $external = collect($configured)->whereIn('provider', ['fal', 'replicate'])->first()
+            ?: $this->externalFallbackModel($context);
+        if ($external && filled($this->credentials->for($external->provider)['api_key'] ?? null)) {
+            $add($external);
+        }
+
+        return $chain;
+    }
+
+    private function openRouterVideoPool(): \Illuminate\Support\Collection
+    {
+        return AiModel::query()
+            ->where('is_active', true)
+            ->where('output_modality', 'video')
+            ->where('provider', 'openrouter')
+            ->whereNotNull('capability_config')
+            ->whereIn('task_type', ['text_to_video', 'image_to_video', 'face_animation'])
+            ->whereIn('openrouter_model_id', AiModel::STUDIO_VIDEO_CURATED)
+            ->get();
+    }
+
+    private function externalFallbackModel(array $context): ?AiModel
+    {
+        $preferred = $context['has_images']
+            ? AiModel::EXTERNAL_VIDEO_FALLBACK['image_to_video']
+            : AiModel::EXTERNAL_VIDEO_FALLBACK['text_to_video'];
+        foreach ($preferred as [$provider, $id]) {
+            $model = AiModel::query()->where('is_active', true)->where('output_modality', 'video')
+                ->where('provider', $provider)->where('openrouter_model_id', $id)->first();
+            if ($model) return $model;
+        }
+
+        return null;
+    }
+
+    private function isChainCompatible(AiModel $model, array $context): bool
+    {
+        $capabilities = (array) ($model->capability_config ?? []);
+        $workflow = (string) ($context['workflow'] ?? 'text_to_video');
+        if ($workflow === 'image_sequence_to_video') $workflow = 'image_to_video';
+        if (!empty($context['has_video'])) {
+            if (!($model->task_type === 'video_to_video' || data_get($capabilities, 'supports_video_to_video') === true || $model->supports_video_input === true)) return false;
+        } elseif (!empty($context['has_images'])) {
+            if (!($model->task_type === 'image_to_video' || $model->task_type === 'face_animation' || data_get($capabilities, 'supports_image_to_video') === true)) return false;
+            $maxImages = (int) data_get($capabilities, 'max_reference_images', data_get($capabilities, 'max_images', 1));
+            if ((int) ($context['image_count'] ?? 1) > 1 && $maxImages < 2) return false;
+        } elseif (!($model->task_type === 'text_to_video' || data_get($capabilities, 'supports_text_to_video') === true)) {
+            return false;
+        }
+
+        // مدت دقیق یا نزدیک‌ترین مدت پشتیبانی‌شده تا ۳ ثانیه بیشتر پذیرفته است.
+        return $this->durationFits($model, (int) ($context['duration'] ?? 5), 3);
+    }
+
+    private function durationFits(AiModel $model, int $duration, int $tolerance): bool
+    {
+        $supported = array_map('intval', (array) data_get($model->capability_config, 'supported_durations', []));
+        if ($supported === []) return true;
+        foreach ($supported as $value) {
+            if ($value >= $duration && $value - $duration <= $tolerance) return true;
+        }
+
+        return false;
+    }
+
+    private function estimateChainCost(AiModel $model, array $context): ?float
+    {
+        try {
+            $service = $this->providers->videoServiceFor($model->provider);
+            if (method_exists($service, 'estimateCost')) {
+                $cost = $service->estimateCost($model, [
+                    'workflow' => $context['has_images'] ? 'image_to_video' : 'text_to_video',
+                    'resolution' => $context['resolution'] ?? '720p',
+                    'duration' => $context['duration'] ?? 5,
+                ]);
+                if (is_numeric($cost)) return (float) $cost;
+            }
+        } catch (Throwable) {
+        }
+
+        return $model->cost_per_generation_usd ? (float) $model->cost_per_generation_usd * max(1, (int) ($context['duration'] ?? 5)) : null;
+    }
+
+    /**
+     * گزینه‌های کاربر را با قابلیت واقعی هر مدل زنجیره هماهنگ می‌کند تا مدل
+     * جایگزین به‌خاطر مدت/کیفیت/نسبت ناسازگار رد نشود.
+     */
+    private function optionsForCandidate(AiModel $model, array $options): array
+    {
+        $capabilities = (array) ($model->capability_config ?? []);
+        $durations = array_map('intval', (array) ($capabilities['supported_durations'] ?? []));
+        $duration = (int) ($options['duration'] ?? 5);
+        if ($durations !== [] && !in_array($duration, $durations, true)) {
+            sort($durations);
+            $options['duration'] = collect($durations)->first(fn (int $value): bool => $value >= $duration) ?? end($durations);
+        }
+        $resolutions = array_map('strval', (array) ($capabilities['supported_resolutions'] ?? []));
+        $resolution = (string) ($options['resolution'] ?? '720p');
+        if ($resolutions !== [] && !in_array(strtolower($resolution), array_map('strtolower', $resolutions), true)) {
+            $options['resolution'] = in_array('720p', $resolutions, true) ? '720p' : $resolutions[0];
+        }
+        $ratios = array_map('strval', (array) ($capabilities['supported_aspect_ratios'] ?? []));
+        $ratio = (string) ($options['aspect_ratio'] ?? '16:9');
+        if ($ratios !== [] && !in_array($ratio, $ratios, true)) {
+            $portrait = in_array($ratio, ['9:16', '3:4', '4:5', '2:3', '9:21'], true);
+            $options['aspect_ratio'] = $portrait && in_array('9:16', $ratios, true)
+                ? '9:16'
+                : (in_array('16:9', $ratios, true) ? '16:9' : $ratios[0]);
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return array{refs: array<int, string>, created_paths: array<int, string>}
+     */
+    private function prepareProviderImages(array $options): array
+    {
+        $list = array_values(array_filter(
+            (array) ($options['source_image_data_list'] ?? []),
+            fn ($value): bool => is_string($value) && trim($value) !== '',
+        ));
+        if ($list === [] && !empty($options['source_image_data'])) {
+            $list = [(string) $options['source_image_data']];
+        }
+        $uploadPaths = array_values(array_filter((array) ($options['source_upload_paths'] ?? []), 'is_string'));
+        if ($list === []) {
+            $list = $uploadPaths;
+        }
+
+        $disk = Storage::disk('public');
+        $urlToPath = [];
+        foreach ($uploadPaths as $path) {
+            $urlToPath[asset('storage/' . ltrim($path, '/'))] = $path;
+        }
+
+        $refs = [];
+        $created = [];
+        foreach (array_slice($list, 0, 20) as $item) {
+            $binary = null;
+            if (str_starts_with($item, 'data:') && str_contains($item, 'base64,')) {
+                $decoded = base64_decode((string) Str::after($item, 'base64,'), true);
+                $binary = $decoded === false ? null : $decoded;
+            } elseif (isset($urlToPath[$item]) && $disk->exists($urlToPath[$item])) {
+                $binary = $disk->get($urlToPath[$item]);
+            } elseif (!filter_var($item, FILTER_VALIDATE_URL) && $disk->exists(ltrim($item, '/'))) {
+                $binary = $disk->get(ltrim($item, '/'));
+            } elseif (filter_var($item, FILTER_VALIDATE_URL)) {
+                $refs[] = $item;
+                continue;
+            }
+            if (!$binary) continue;
+
+            $path = $this->storeProviderImage($binary);
+            if ($path) {
+                $refs[] = $path;
+                $created[] = $path;
+            }
+        }
+
+        return ['refs' => $refs, 'created_paths' => $created];
+    }
+
+    /** تصویر را به JPEG استاندارد (حداکثر ضلع ۲۰۴۸) تبدیل و روی دیسک عمومی ذخیره می‌کند. */
+    private function storeProviderImage(string $binary): ?string
+    {
+        $jpeg = null;
+        if (function_exists('imagecreatefromstring')) {
+            $image = @imagecreatefromstring($binary);
+            if ($image !== false) {
+                $width = imagesx($image);
+                $height = imagesy($image);
+                $scale = min(1, 2048 / max(1, $width, $height));
+                $targetWidth = max(1, (int) round($width * $scale));
+                $targetHeight = max(1, (int) round($height * $scale));
+                $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+                imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
+                imagecopyresampled($canvas, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+                ob_start();
+                imagejpeg($canvas, null, 90);
+                $jpeg = (string) ob_get_clean();
+                imagedestroy($canvas);
+                imagedestroy($image);
+            }
+        }
+
+        $extension = 'jpg';
+        if (!$jpeg) {
+            $info = @getimagesizefromstring($binary);
+            if (!$info) return null;
+            $jpeg = $binary;
+            $extension = match ($info['mime'] ?? '') {
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+        }
+
+        $path = 'uploads/video-inputs/provider/' . Str::uuid() . '.' . $extension;
+        return Storage::disk('public')->put($path, $jpeg) ? $path : null;
+    }
+
+    /**
+     * آدرسی که پروایدر بتواند تصویر را از آن بخواند. روی سرور واقعی آدرس
+     * HTTPS عمومی است؛ در محیط لوکال (که از بیرون در دسترس نیست) data URI.
+     */
+    private function providerImageUrl(string $ref): ?string
+    {
+        if (filter_var($ref, FILTER_VALIDATE_URL)) return $ref;
+        $disk = Storage::disk('public');
+        if (!$disk->exists($ref)) return null;
+        $url = asset('storage/' . ltrim($ref, '/'));
+        if ($this->isPubliclyReachableUrl($url)) return $url;
+
+        $mime = $disk->mimeType($ref) ?: 'image/jpeg';
+        return 'data:' . $mime . ';base64,' . base64_encode($disk->get($ref));
+    }
+
+    private function isPubliclyReachableUrl(string $url): bool
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if (parse_url($url, PHP_URL_SCHEME) !== 'https' || $host === '') return false;
+        if ($host === 'localhost' || str_ends_with($host, '.test') || str_ends_with($host, '.local') || str_ends_with($host, '.localhost')) return false;
+        if (filter_var($host, FILTER_VALIDATE_IP) && !filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return false;
+
+        return true;
     }
 
     private function buildProviderInput(AiModel $model, Product $product, string $prompt, array $options): array
@@ -1080,7 +1460,13 @@ class VideoGenerationService
         if ($sourceImages === [] && !empty($options['source_image_data'])) {
             $sourceImages = [(string) $options['source_image_data']];
         }
-        if (!empty($options['source_upload_paths'])) {
+        if (!empty($options['provider_image_refs'])) {
+            // مسیر جدید: تصاویر JPEG آماده‌شده در start با آدرس قابل دسترس پروایدر.
+            $sourceImages = array_values(array_filter(array_map(
+                fn ($ref): ?string => is_string($ref) ? $this->providerImageUrl($ref) : null,
+                (array) $options['provider_image_refs'],
+            )));
+        } elseif (!empty($options['source_upload_paths'])) {
             $sourceImages = [];
             foreach ((array) $options['source_upload_paths'] as $path) {
                 if (!is_string($path) || !Storage::disk('public')->exists($path)) continue;
@@ -1108,7 +1494,9 @@ class VideoGenerationService
                 if ($supportedAspectRatios !== []) $input['aspect_ratio'] = (string) $options['aspect_ratio'];
             }
             $audioRequested = (bool) (($config['audio_allowed'] ?? false) && ($options['generate_audio'] ?? $config['audio_default'] ?? false));
-            if ($audioRequested && data_get($capabilities, 'supports_audio') === true) $input['generate_audio'] = true;
+            // پیش‌فرض OpenRouter برای مدل‌های صوت‌دار «با صدا» است که هزینه را
+            // بالا می‌برد؛ وضعیت صدا همیشه صریح ارسال می‌شود.
+            if (data_get($capabilities, 'supports_audio') === true) $input['generate_audio'] = $audioRequested;
             if ($negativePrompt !== '' && in_array('negative_prompt', $passthrough, true)) $input['negative_prompt'] = $negativePrompt;
             if (isset($options['seed']) && (data_get($capabilities, 'supports_seed') === true || in_array('seed', $passthrough, true))) {
                 $input['seed'] = (int) $options['seed'];
@@ -1289,7 +1677,9 @@ class VideoGenerationService
 
         $credentials = $this->credentials->for($provider);
         $apiKey = trim((string) ($credentials['api_key'] ?? ''));
-        $baseHost = strtolower((string) parse_url((string) ($credentials['base_url'] ?? ''), PHP_URL_HOST));
+        $baseUrl = (string) ($credentials['base_url'] ?? '');
+        if ($baseUrl === '' && $provider === 'openrouter') $baseUrl = 'https://openrouter.ai/api/v1';
+        $baseHost = strtolower((string) parse_url($baseUrl, PHP_URL_HOST));
         $downloadHost = strtolower((string) parse_url($url, PHP_URL_HOST));
         if ($apiKey === '' || $baseHost === '' || !hash_equals($baseHost, $downloadHost)) return [];
 

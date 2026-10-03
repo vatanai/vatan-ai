@@ -17,6 +17,15 @@ class HomeSectionRenderService
     /** Scoped to prepareMany only; never retained between page renders. */
     private ?Collection $manualProducts = null;
 
+    /** شناسه محصولاتی که سکشن‌های ویترین قبلی همین صفحه نمایش داده‌اند (فقط داخل prepareMany). */
+    private ?Collection $seenProductIds = null;
+
+    /** انواع ویترین که فهرست محصول دارند. */
+    private const VITRINE_PRODUCT_TYPES = ['vt_hero', 'vt_row', 'vt_video_row', 'vt_masonry'];
+
+    /** انواعی که منبع «انتخاب دستی» دارند و محصولاتشان یک‌جا واکشی می‌شود. */
+    private const MANUAL_SOURCE_TYPES = ['product_slider', 'product_grid', 'collection', 'vt_hero', 'vt_row', 'vt_video_row', 'vt_masonry', 'vt_before_after'];
+
     public function __construct(protected HomeSectionLinkService $linkService)
     {
     }
@@ -33,6 +42,14 @@ class HomeSectionRenderService
                 'viewAllUrl' => $this->linkService->viewAllUrl($section),
             ],
             'category_slider' => $this->prepareCategorySlider($section),
+            'vt_hero', 'vt_row', 'vt_video_row', 'vt_masonry' => $this->prepareVitrineProducts($section),
+            'vt_before_after' => $this->prepareBeforeAfter($section),
+            'vt_tools', 'vt_occasions' => $this->prepareCategoryTiles($section),
+            'vt_tabs' => $this->prepareVitrineTabs($section),
+            'vt_cta_banner' => [
+                'section' => $section,
+                'products' => $this->resolveManualProducts($section, 3),
+            ],
             default => [
                 'section' => $section,
             ],
@@ -87,30 +104,34 @@ class HomeSectionRenderService
     public function prepareMany(Collection $sections): Collection
     {
         $previous = $this->manualProducts;
+        $previousSeen = $this->seenProductIds;
         $ids = $sections
-            ->filter(fn (HomeSection $section) => in_array($section->type, ['product_slider', 'product_grid', 'collection'], true)
-                && $section->setting('source', 'latest') === 'manual')
+            ->filter(fn (HomeSection $section) => $section->type === 'vt_cta_banner'
+                || (in_array($section->type, self::MANUAL_SOURCE_TYPES, true)
+                    && $section->setting('source', 'latest') === 'manual'))
             ->flatMap(function (HomeSection $section) {
                 $limit = (int) $section->setting('limit', 8);
 
-                return $this->manualProductIds($section, $limit > 0 ? min($limit, 24) : 8);
+                return $this->manualProductIds($section, $limit > 0 ? min($limit, 48) : 8);
             })->unique()->values();
 
         try {
+            $this->seenProductIds = collect();
             $this->manualProducts = $ids->isEmpty() ? collect() : Product::query()
                 ->where('status', 'active')->hideUnavailableProductModes()->whereIn('id', $ids)->get()->keyBy('id');
 
             return $sections->map(fn (HomeSection $section) => $this->prepare($section));
         } finally {
             $this->manualProducts = $previous;
+            $this->seenProductIds = $previousSeen;
         }
     }
 
-    protected function resolveProducts(HomeSection $section): Collection
+    protected function resolveProducts(HomeSection $section, ?int $limitOverride = null): Collection
     {
         $query = Product::query()->where('status', 'active')->hideUnavailableProductModes();
-        $isVideoLayout = $section->type === 'product_slider'
-            && in_array($section->layout, ['video_loop', 'video_spotlight'], true);
+        $isVideoLayout = $section->type === 'vt_video_row' || ($section->type === 'product_slider'
+            && in_array($section->layout, ['video_loop', 'video_spotlight'], true));
 
         // سکشن‌های ویدیویی نباید با تغییر منبع در پنل، محصول عکس نمایش دهند.
         // این محدودیت در خود Query اعمال می‌شود تا هم برای منبع خودکار و هم دستی
@@ -121,7 +142,8 @@ class HomeSectionRenderService
 
         $source = (string) $section->setting('source', 'latest');
         $limit = (int) $section->setting('limit', 8);
-        $limit = $limit > 0 ? min($limit, 24) : 8;
+        $maxLimit = str_starts_with($section->type, 'vt_') ? 48 : 24;
+        $limit = $limitOverride ?? ($limit > 0 ? min($limit, $maxLimit) : 8);
 
         if ($source === 'manual') {
             $products = $this->resolveManualProducts($section, $limit);
@@ -180,6 +202,9 @@ class HomeSectionRenderService
                 break;
             case 'cheap':
                 $query->orderBy('credit_cost');
+                break;
+            case 'random':
+                $query->inRandomOrder();
                 break;
             default:
                 $query->latest();
@@ -273,8 +298,12 @@ class HomeSectionRenderService
             return collect();
         }
 
-        $products = $this->manualProducts ?? Product::query()
-            ->where('status', 'active')->hideUnavailableProductModes()->whereIn('id', $ids)->get()->keyBy('id');
+        $products = $this->manualProducts ?? collect();
+        $missing = $ids->reject(fn (int $id) => $products->has($id))->values();
+        if ($missing->isNotEmpty()) {
+            $products = $products->union(Product::query()
+                ->where('status', 'active')->hideUnavailableProductModes()->whereIn('id', $missing)->get()->keyBy('id'));
+        }
 
         return $ids->map(fn (int $id) => $products->get($id))->filter()->values();
     }
@@ -288,6 +317,241 @@ class HomeSectionRenderService
             ->filter()
             ->unique()
             ->take($limit)
+            ->values();
+    }
+
+    // ══════════ ویترین ══════════
+
+    protected function prepareVitrineProducts(HomeSection $section): array
+    {
+        $limit = max(1, min(48, (int) $section->setting('limit', 8)));
+        $avoid = in_array($section->type, ['vt_row', 'vt_masonry'], true)
+            && filter_var($section->setting('avoid_duplicates', true), FILTER_VALIDATE_BOOLEAN);
+
+        $products = $avoid
+            ? $this->withoutSeen($this->resolveProducts($section, min(48, $limit + $this->seenCount())))->take($limit)->values()
+            : $this->resolveProducts($section)->values();
+
+        if ($section->type === 'vt_video_row'
+            && $products->count() < max(1, (int) $section->setting('min_items', 3))) {
+            $products = collect();
+        }
+
+        $this->rememberSeen($products);
+
+        $data = [
+            'section' => $section,
+            'products' => $products,
+            // هیرو دکمه‌ی خودش را دارد و موزاییک دکمه‌ی «مشاهده همه» را پایین شبکه نشان می‌دهد.
+            'viewAllUrl' => in_array($section->type, ['vt_hero', 'vt_masonry'], true) ? null : $this->linkService->viewAllUrl($section),
+        ];
+
+        if ($section->type === 'vt_masonry') {
+            $data['totalProducts'] = Product::query()->where('status', 'active')->hideUnavailableProductModes()->count();
+        }
+
+        return $data;
+    }
+
+    /** کارت‌های قبل/بعد فقط برای محصولاتی ساخته می‌شوند که واقعاً تصویر «قبل» دارند. */
+    protected function prepareBeforeAfter(HomeSection $section): array
+    {
+        $limit = max(1, min(9, (int) $section->setting('limit', 3)));
+
+        if ($section->setting('source', 'with_before') === 'manual') {
+            $candidates = $this->resolveManualProducts($section, 24);
+        } else {
+            $candidates = Product::query()
+                ->where('status', 'active')
+                ->hideUnavailableProductModes()
+                ->whereNotNull('before_images')
+                ->where('before_images', '!=', '[]')
+                ->where('before_images', '!=', '')
+                ->latest()
+                ->limit(30)
+                ->get();
+        }
+
+        $items = $candidates
+            ->map(function (Product $product) {
+                $before = $this->publicImageUrl(collect((array) $product->before_images)->filter()->first());
+
+                return $before ? ['product' => $product, 'before' => $before, 'after' => $product->displayImageUrl()] : null;
+            })
+            ->filter()
+            ->take($limit)
+            ->values();
+
+        $this->rememberSeen($items->pluck('product'));
+
+        return ['section' => $section, 'items' => $items];
+    }
+
+    /** کاشی‌های دسته‌بندی (نوار ابزارها و مناسبت‌ها) با تصویر آخرین محصول و تعداد قالب هر دسته. */
+    protected function prepareCategoryTiles(HomeSection $section): array
+    {
+        [$categories, $productsByCategory] = $this->vitrineCategoryProducts($section, 1);
+        $overrides = $this->parseOverrides((string) $section->setting('tile_overrides', ''));
+        $min = $section->type === 'vt_occasions' ? max(1, (int) $section->setting('min_products', 2)) : 1;
+
+        $tiles = $categories->map(function (Category $category) use ($productsByCategory, $overrides, $min) {
+            $products = $productsByCategory->get($category->id, collect());
+            if ($products->count() < $min) {
+                return null;
+            }
+            $override = $overrides[$category->name_fa] ?? [];
+
+            return [
+                'title' => $override[0] ?? $category->name_fa,
+                'badge' => $override[1] ?? null,
+                'count' => $products->count(),
+                'image' => $products->first()?->displayImageUrl() ?? $this->publicImageUrl($category->image),
+                'url' => $category->url(),
+            ];
+        })->filter()->values();
+
+        return ['section' => $section, 'tiles' => $tiles];
+    }
+
+    /** ردیف تب‌دار ویترین: هر تب یک دسته‌ی انتخابی؛ تب‌های کم‌محصول مخفی می‌شوند. */
+    protected function prepareVitrineTabs(HomeSection $section): array
+    {
+        $perTab = max(2, min(20, (int) $section->setting('products_per_tab', 10)));
+        $min = max(1, (int) $section->setting('min_products_per_tab', 3));
+        $avoid = filter_var($section->setting('avoid_duplicates', false), FILTER_VALIDATE_BOOLEAN);
+        [$categories, $productsByCategory] = $this->vitrineCategoryProducts($section, $perTab + ($avoid ? $this->seenCount() : 0));
+        $overrides = $this->parseOverrides((string) $section->setting('tab_overrides', ''));
+
+        $tabs = $categories->map(function (Category $category) use ($productsByCategory, $perTab, $min, $avoid, $overrides) {
+            $products = $productsByCategory->get($category->id, collect());
+            if ($avoid) {
+                $products = $this->withoutSeen($products);
+            }
+            $products = $products->take($perTab)->values();
+            if ($products->count() < $min) {
+                return null;
+            }
+
+            return [
+                'key' => 'c' . $category->id,
+                'label' => $overrides[$category->name_fa][0] ?? $category->name_fa,
+                'products' => $products,
+                'url' => $category->url(),
+            ];
+        })->filter()->values();
+
+        $all = $tabs->flatMap(fn (array $tab) => $tab['products'])->unique('id')->take($perTab)->values();
+        $this->rememberSeen($tabs->flatMap(fn (array $tab) => $tab['products']));
+
+        return [
+            'section' => $section,
+            'tabs' => $tabs,
+            'allProducts' => $all,
+            'showAllTab' => filter_var($section->setting('show_all_tab', true), FILTER_VALIDATE_BOOLEAN) && $tabs->count() > 1,
+            'viewAllUrl' => $this->linkService->viewAllUrl($section),
+        ];
+    }
+
+    /**
+     * دسته‌های انتخابی (به ترتیب انتخاب) + محصولات هر دسته (شامل زیرشاخه‌ها) با یک Query واحد.
+     *
+     * @return array{0: Collection<int, Category>, 1: Collection<int, Collection<int, Product>>}
+     */
+    protected function vitrineCategoryProducts(HomeSection $section, int $perCategory): array
+    {
+        $ids = collect((array) $section->setting('category_ids', []))
+            ->map(fn ($id) => (int) (is_array($id) ? ($id['id'] ?? 0) : $id))
+            ->filter()->unique()->take(12)->values();
+        if ($ids->isEmpty()) {
+            return [collect(), collect()];
+        }
+
+        $allCategories = Category::query()->active()->get(['id', 'parent_id']);
+        $categories = Category::query()->active()->whereIn('id', $ids)->get()->keyBy('id');
+        $categories = $ids->map(fn (int $id) => $categories->get($id))->filter()->values();
+        $groups = $categories->mapWithKeys(fn (Category $category) => [
+            $category->id => $this->descendantIdsFromCollection($category->id, $allCategories),
+        ]);
+        $allIds = $groups->flatten()->unique()->values()->all();
+        if ($allIds === []) {
+            return [$categories, collect()];
+        }
+
+        $products = Product::query()
+            ->where('status', 'active')
+            ->hideUnavailableProductModes()
+            ->where(fn ($q) => $q->whereIn('category_id', $allIds)
+                ->orWhereHas('categories', fn ($c) => $c->whereIn('categories.id', $allIds)))
+            ->with(['categories:id'])
+            ->latest()
+            ->limit(800)
+            ->get();
+
+        $byCategory = collect();
+        foreach ($categories as $category) {
+            $groupIds = $groups->get($category->id);
+            $byCategory[$category->id] = $products->filter(
+                fn (Product $product) => $groupIds->contains((int) $product->category_id)
+                    || $product->categories->contains(fn (Category $related) => $groupIds->contains((int) $related->id))
+            )->values();
+        }
+
+        return [$categories, $byCategory];
+    }
+
+    /** هر خط: «نام دسته | مقدار ۱ | مقدار ۲» → [نام دسته => [مقدار ۱, مقدار ۲]] */
+    protected function parseOverrides(string $text): array
+    {
+        $map = [];
+        foreach (preg_split('/\R/u', $text) ?: [] as $line) {
+            $parts = array_map('trim', explode('|', $line));
+            if (count($parts) < 2 || $parts[0] === '') {
+                continue;
+            }
+            $map[$parts[0]] = array_values(array_map(fn ($v) => $v === '' ? null : $v, array_slice($parts, 1)));
+        }
+
+        return $map;
+    }
+
+    protected function publicImageUrl(?string $path): ?string
+    {
+        $path = trim((string) $path);
+        if ($path === '') {
+            return null;
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/')) {
+            return url($path);
+        }
+
+        return asset('storage/' . ltrim($path, '/'));
+    }
+
+    protected function seenCount(): int
+    {
+        return $this->seenProductIds?->count() ?? 0;
+    }
+
+    protected function withoutSeen(Collection $products): Collection
+    {
+        if (! $this->seenProductIds || $this->seenProductIds->isEmpty()) {
+            return $products->values();
+        }
+
+        return $products->reject(fn (Product $product) => $this->seenProductIds->contains($product->id))->values();
+    }
+
+    protected function rememberSeen(Collection $products): void
+    {
+        if ($this->seenProductIds === null) {
+            return;
+        }
+        $this->seenProductIds = $this->seenProductIds
+            ->concat($products->filter()->map(fn (Product $product) => $product->id))
+            ->unique()
             ->values();
     }
 

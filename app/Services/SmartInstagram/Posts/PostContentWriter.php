@@ -37,10 +37,12 @@ class PostContentWriter
             'follow' => '"follow_text":"...","follow_retry_text":"...","follow_button":"..."',
             'card' => '"card_intro":"...","card_title":"...","card_subtitle":"...","card_buttons":["..."]',
         ];
-        $system = "تو کپی‌رایتر فروش اینستاگرامی برند هستی و فقط فارسی روان و محاوره‌ی مؤدب می‌نویسی.\n"
-            ."## سبک گفتمان برند\n".Str::limit((string) $this->profiles->active()->persona_prompt, 1500)."\n\n"
+        $profile = $this->profiles->active();
+        $system = $this->settings->sharedRules()."\n"
+            ."## سبک گفتمان برند\n".Str::limit((string) $profile->persona_prompt, 1500)."\n"
+            ."## عبارت‌های ممنوع\n".implode('، ', (array) $profile->forbidden_phrases ?: ['—'])."\n\n"
             ."## وظیفه‌ها\n{$instructions}\n\n"
-            ."قواعد: متغیر {name} را برای نام مخاطب نگه دار. اعداد، قیمت و تخفیفی که در ورودی نیست ننویس. محدودیت نویسه‌ها را دقیق رعایت کن.\n"
+            ."قواعد تکمیلی: متغیرهای {name} و {username} را برای جای‌گذاری بعدی سالم نگه دار. اگر دایرکت یا فالو در تنظیمات این سناریو فعال نیست، درباره‌ی آن وعده نده.\n"
             .'خروجی فقط یک JSON با این کلیدها: {'.collect($sections)->map(fn ($k) => $schema[$k])->implode(',').'}';
 
         $user = collect([

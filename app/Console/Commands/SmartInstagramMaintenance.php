@@ -6,7 +6,9 @@ use App\Jobs\SmartInstagram\ProcessInstagramEvent;
 use App\Jobs\SmartInstagram\SendOutboundMessage;
 use App\Models\MarketingEvent;
 use App\Models\SmartInstagram\OutboundMessage;
+use App\Models\SmartInstagram\PostCampaign;
 use App\Services\SmartInstagram\EventNormalizer;
+use App\Services\SmartInstagram\Posts\PostFlowService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 
@@ -20,7 +22,7 @@ class SmartInstagramMaintenance extends Command
 
     protected $description = 'بازیابی رویدادها و ارسال‌های جامانده‌ی اینستاگرام هوشمند';
 
-    public function handle(): int
+    public function handle(PostFlowService $flows): int
     {
         if (!Schema::hasTable('instagram_outbound_messages')) {
             return self::SUCCESS;
@@ -45,7 +47,13 @@ class SmartInstagramMaintenance extends Command
             SendOutboundMessage::dispatch($outbound->id)->onQueue(config('smart_instagram.queues.outbound', 'default'));
         }
 
-        $this->info("events: {$events->count()} · outbound: {$stuck->count()}");
+        // این فرمان هر ده دقیقه اجرا می‌شود، اما فقط پیام‌های حداقل یک ساعت قدیمی را دوباره بررسی می‌کند.
+        $rechecked = 0;
+        PostCampaign::query()->where('status', 'active')->whereNotNull('automation_rule_id')->limit(100)->get()->each(function (PostCampaign $campaign) use ($flows, &$rechecked): void {
+            $rechecked += $flows->retryCampaign($campaign, 60);
+        });
+
+        $this->info("events: {$events->count()} · outbound: {$stuck->count()} · rechecked: {$rechecked}");
 
         return self::SUCCESS;
     }

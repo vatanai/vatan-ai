@@ -305,7 +305,7 @@ class AutomationEngine
                 if ($commentId === '') {
                     return ['ok' => false, 'result' => 'این پیام کامنت نیست'];
                 }
-                $out = $this->outbound->queue($conversation, $this->replyText($type, $action, $message, $contact), 'automation', $type, [
+                $out = $this->outbound->queue($conversation, $this->replyText($type, $action, $message, $contact, $rule), 'automation', $type, [
                     'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
                     'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
                     'delay_seconds' => (int) ($action['delay_seconds'] ?? 0),
@@ -455,11 +455,11 @@ class AutomationEngine
     }
 
     /** متن پاسخ کامنت: چند سبک چرخشی + پاسخ شخصی‌سازی‌شده با هوش مصنوعی (در صورت فعال‌بودن). */
-    private function replyText(string $type, array $action, Message $message, Contact $contact): string
+    private function replyText(string $type, array $action, Message $message, Contact $contact, ?AutomationRule $rule = null): string
     {
         $variants = array_values(array_filter((array) ($action['variants'] ?? [])));
         if ($type === 'public_reply' && !empty($action['ai_personalize'])) {
-            $written = app(\App\Services\SmartInstagram\Posts\CommentReplyWriter::class)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')]);
+            $written = app(\App\Services\SmartInstagram\Posts\CommentReplyWriter::class)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')], $rule);
             if ($written) {
                 return $written;
             }

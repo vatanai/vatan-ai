@@ -2,6 +2,7 @@
 
 namespace App\Services\HomeBuilder;
 
+use App\Models\Category;
 use App\Models\HomeSection;
 use App\Models\Product;
 
@@ -29,8 +30,8 @@ class HomeSectionPreviewService
 
         $item = $this->renderService->prepare($section);
 
-        $isVideoLayout = $type === 'product_slider'
-            && in_array($data['layout'], ['video_loop', 'video_spotlight'], true);
+        $isVideoLayout = $type === 'vt_video_row' || ($type === 'product_slider'
+            && in_array($data['layout'], ['video_loop', 'video_spotlight'], true));
 
         if (isset($item['products']) && $item['products']->isEmpty() && ! $isVideoLayout) {
             $section->settings = array_merge($settings, ['source' => 'latest']);
@@ -108,8 +109,37 @@ class HomeSectionPreviewService
                 'view_all_link_mode' => 'auto',
             ],
             'spacer' => ['spacing_mode' => 'auto', 'height' => 'medium'],
+            'vt_hero' => [
+                'placement' => 'flow', 'source' => 'latest', 'limit' => 3,
+                'kicker' => 'ویترین وطن', 'heading' => 'عکس محصولت رو حرفه‌ای کن',
+                'subheading' => 'یک عکس بفرست؛ خروجی آماده‌ی فروش تحویل بگیر.', 'cta_label' => 'همین رو بساز',
+            ],
+            'vt_tools' => ['category_ids' => $this->topCategoryIds(8), 'hide_quick_chips' => true],
+            'vt_row' => ['source' => 'latest', 'limit' => 10, 'show_view_all' => true, 'view_all_link_mode' => 'auto'],
+            'vt_tabs' => ['category_ids' => $this->topCategoryIds(5), 'products_per_tab' => 10, 'min_products_per_tab' => 1, 'show_all_tab' => true, 'show_view_all' => true],
+            'vt_before_after' => ['source' => 'with_before', 'limit' => 3, 'cta_label' => 'بساز'],
+            'vt_video_row' => ['source' => 'video', 'limit' => 10, 'min_items' => 1, 'show_view_all' => true],
+            'vt_cta_banner' => [
+                'kicker' => 'ویژه فروشگاه‌ها و برندها', 'heading' => 'کسب‌وکارت رو معرفی کن، اعتبار هدیه بگیر',
+                'body' => 'صنفت رو بگو تا قالب‌های مخصوص خودت رو ببینی.', 'cta_label' => 'معرفی کسب‌وکار', 'cta_link' => '/app/products',
+                'cta2_label' => 'نمونه کارها', 'cta2_link' => '/app/products',
+                'product_ids' => Product::query()->where('status', 'active')->latest()->limit(3)->pluck('id')->map(fn ($id) => ['id' => $id])->all(),
+            ],
+            'vt_occasions' => ['category_ids' => $this->topCategoryIds(6), 'min_products' => 1],
+            'vt_masonry' => ['source' => 'latest', 'limit' => 15, 'sort' => 'latest', 'avoid_duplicates' => false],
             default => [],
         };
+    }
+
+    /** پرمحصول‌ترین دسته‌ها — فقط برای پیش‌نمایش داشبورد وقتی هنوز دسته‌ای انتخاب نشده. */
+    private function topCategoryIds(int $limit): array
+    {
+        return Category::query()->active()
+            ->withCount(['products' => fn ($q) => $q->where('status', 'active')])
+            ->orderByDesc('products_count')
+            ->limit($limit)
+            ->pluck('id')
+            ->all();
     }
 
     private function previewImage(): ?string

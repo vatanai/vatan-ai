@@ -31,6 +31,14 @@
         @endforeach
       </div>
       <div class="si-chips">
+        <span class="si-muted" style="align-self:center;font-size:10px">تفکیک پیام‌ها:</span>
+        @foreach(['dm' => 'دایرکت', 'comment' => 'کامنت'] as $key => $label)
+          <a href="{{ route('admin.smart-instagram.inbox', array_filter(['filter' => $filter !== 'open' ? $filter : null, 'q' => $search ?: null, 'source' => $key])) }}" class="chip-filter {{ $source === $key ? 'active' : '' }}">{{ $label }}</a>
+        @endforeach
+        <a href="{{ route('admin.smart-instagram.inbox', array_filter(['filter' => $filter !== 'open' ? $filter : null, 'q' => $search ?: null])) }}" class="chip-filter {{ $source === '' ? 'active' : '' }}">همه</a>
+      </div>
+      <div class="si-chips">
+        <span class="si-muted" style="align-self:center;font-size:10px">منبع:</span>
         <a href="{{ route('admin.smart-instagram.inbox', array_filter(['filter' => $filter !== 'open' ? $filter : null, 'q' => $search ?: null])) }}" class="chip-filter {{ $source === '' ? 'active' : '' }}">همه‌ی منابع</a>
         @foreach(config('smart_instagram.sources') as $key => $label)
           <a href="{{ route('admin.smart-instagram.inbox', array_filter(['filter' => $filter !== 'open' ? $filter : null, 'q' => $search ?: null, 'source' => $key])) }}" class="chip-filter {{ $source === $key ? 'active' : '' }}">{{ $label }}</a>
@@ -94,6 +102,7 @@
           </div>
         </div>
         <div class="si-chat-actions">
+          <button type="button" class="icon-action-btn" data-si-refresh title="بروزرسانی گفتگو" aria-label="بروزرسانی گفتگو"><i class="fa-solid fa-rotate"></i></button>
           @if($canReply)
             @if((int) $selected->assigned_admin_id !== (int) auth('admin')->id())
               <form method="POST" action="{{ route('admin.smart-instagram.inbox.update', $selected) }}">@csrf @method('PATCH')
@@ -110,13 +119,18 @@
         </div>
       </header>
 
+      <div class="si-composer-tabs si-timeline-tabs" data-si-timeline-tabs>
+        <button type="button" class="chip-filter active" data-si-timeline-tab="all">همه پیام‌ها</button>
+        <button type="button" class="chip-filter" data-si-timeline-tab="dm">دایرکت</button>
+        <button type="button" class="chip-filter" data-si-timeline-tab="comment">کامنت</button>
+      </div>
       <div class="si-chat-body" id="si-chat-body">
         @php($siLastDay = null)
         @forelse($timeline as $message)
           @php($siDay = Ui::date($message->occurred_at))
           @if($siDay !== $siLastDay)<div class="si-day">{{ $siDay }}</div>@php($siLastDay = $siDay)@endif
           @php($siDir = $message->is_internal_note ? 'note' : ($message->direction === 'in' ? 'in' : 'out'))
-          <div class="si-msg is-{{ $siDir }}">
+          <div class="si-msg is-{{ $siDir }}" data-si-message-source="{{ $message->source_type }}">
             <div class="si-bubble">
               @if($message->body || $message->attachments->isEmpty())<div class="si-text">{{ $message->body ?: '—' }}</div>@endif
               @if($message->attachments->isNotEmpty())

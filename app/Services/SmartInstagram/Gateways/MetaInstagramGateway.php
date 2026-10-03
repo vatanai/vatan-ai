@@ -25,21 +25,20 @@ class MetaInstagramGateway implements InstagramChannelGateway, RichInstagramGate
 
     public function sendPrivateReply(Channel $channel, string $commentId, string $text): GatewayResult
     {
-        return $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => ['text' => $text]]);
+        [$token] = $this->credentials($channel);
+        if ($token === '') {
+            return GatewayResult::failure('اتصال `Meta` برای این کانال کامل نشده است.');
+        }
+
+        return $this->wrap(fn () => $this->client($channel, $token)->post('/'.rawurlencode($commentId).'/private_replies', ['message' => $text]));
     }
 
     public function sendPrivateCard(Channel $channel, string $commentId, array $payload): GatewayResult
     {
-        $result = $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => $this->messageFromCard($payload)]);
-        if ($result->ok || empty($payload['fallback_text'])) {
-            return $result;
-        }
+        $text = trim((string) ($payload['fallback_text'] ?? ''))
+            ?: trim((string) data_get($payload, 'attachment.payload.elements.0.title', 'لینک محصول برای شما آماده است.'));
 
-        $fallback = $this->postMessage($channel, ['recipient' => ['comment_id' => $commentId], 'message' => ['text' => (string) $payload['fallback_text']]]);
-
-        return $fallback->ok
-            ? GatewayResult::success('کارت در این حساب قابل ارسال نبود؛ لینک محصول به‌صورت متنی ارسال شد.', $fallback->externalId, ['fallback' => true])
-            : $result;
+        return $this->sendPrivateReply($channel, $commentId, $text);
     }
 
     public function replyToComment(Channel $channel, string $commentId, string $text): GatewayResult
@@ -152,6 +151,17 @@ class MetaInstagramGateway implements InstagramChannelGateway, RichInstagramGate
 
     public function sendRichMessage(Channel $channel, array $recipient, array $message, ?string $fallbackText = null): GatewayResult
     {
+        // پاسخ خصوصی به کامنت در `Meta` فقط از endpoint اختصاصی و پیام متنی پشتیبانی می‌کند؛
+        // ارسال payload کارت به endpoint عمومی باعث خطای متناوب و ثبت دروغین موفقیت می‌شد.
+        if (!empty($recipient['comment_id'])) {
+            $text = trim((string) ($fallbackText ?: data_get($message, 'text', '')));
+            if ($text === '') {
+                $text = trim((string) data_get($message, 'attachment.payload.elements.0.title', 'لینک محصول برای شما آماده است.'));
+            }
+
+            return $this->sendPrivateReply($channel, (string) $recipient['comment_id'], $text);
+        }
+
         $result = $this->postMessage($channel, ['recipient' => $recipient, 'message' => $message]);
         if ($result->ok || !$fallbackText) {
             return $result;

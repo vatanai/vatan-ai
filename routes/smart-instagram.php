@@ -44,6 +44,7 @@ Route::prefix('admin/smart-instagram')
         Route::get('/posts/{campaign}/edit', [PostController::class, 'edit'])->whereNumber('campaign')->name('posts.edit');
         Route::put('/posts/{campaign}', [PostController::class, 'update'])->whereNumber('campaign')->name('posts.update');
         Route::post('/posts/{campaign}/status', [PostController::class, 'status'])->whereNumber('campaign')->name('posts.status');
+        Route::post('/posts/{campaign}/recheck', [PostController::class, 'recheck'])->whereNumber('campaign')->middleware('throttle:20,1')->name('posts.recheck');
         Route::post('/posts/{campaign}/simulate', [PostController::class, 'simulate'])->whereNumber('campaign')->name('posts.simulate');
         Route::post('/posts/{campaign}/sync', [PostController::class, 'syncOne'])->whereNumber('campaign')->middleware('throttle:20,1')->name('posts.sync-one');
         Route::post('/posts/{campaign}/versions/{version}/restore', [PostController::class, 'restore'])->whereNumber('campaign')->name('posts.restore');

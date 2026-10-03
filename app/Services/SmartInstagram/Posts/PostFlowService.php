@@ -7,11 +7,13 @@ use App\Models\SmartInstagram\AutomationRun;
 use App\Models\SmartInstagram\Contact;
 use App\Models\SmartInstagram\Conversation;
 use App\Models\SmartInstagram\Message;
+use App\Models\SmartInstagram\OutboundMessage;
 use App\Models\SmartInstagram\PostCampaign;
 use App\Models\SmartInstagram\PostFlowSession;
 use App\Models\SmartInstagram\Tag;
 use App\Services\SmartInstagram\Gateways\GatewayManager;
 use App\Services\SmartInstagram\Gateways\RichInstagramGateway;
+use App\Services\SmartInstagram\ContactNameResolver;
 use App\Services\SmartInstagram\OperationLogger;
 use App\Services\SmartInstagram\OutboundService;
 use App\Services\SmartInstagram\PersianText;
@@ -35,6 +37,7 @@ class PostFlowService
         private readonly OutboundService $outbound,
         private readonly GatewayManager $gateways,
         private readonly OperationLogger $logger,
+        private readonly ContactNameResolver $names,
     ) {
     }
 
@@ -224,11 +227,12 @@ class PostFlowService
         $base = 'postflow:'.$session->id;
 
         $intro = $this->render((string) data_get($settings, 'card.intro_text', ''), $contact);
+        $outbounds = [];
         if ($intro !== '') {
-            $this->outbound->queue($conversation, $intro, 'automation', 'dm', ['idempotency_key' => $base.':intro', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
+            $outbounds[] = $this->outbound->queue($conversation, $intro, 'automation', 'dm', ['idempotency_key' => $base.':intro', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
         }
         if ($card['ok']) {
-            $this->outbound->queue($conversation, $card['title'], 'automation', 'dm', [
+            $outbounds[] = $this->outbound->queue($conversation, $card['title'], 'automation', 'dm', [
                 'idempotency_key' => $base.':card',
                 'automation_run_id' => $session->automation_run_id,
                 'message_payload' => ['message' => $card['message'], 'fallback_text' => $card['fallback']],
@@ -239,10 +243,17 @@ class PostFlowService
         }
         $after = $this->render((string) data_get($settings, 'card.after_text', ''), $contact);
         if ($after !== '') {
-            $this->outbound->queue($conversation, $after, 'automation', 'dm', ['idempotency_key' => $base.':after', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
+            $outbounds[] = $this->outbound->queue($conversation, $after, 'automation', 'dm', ['idempotency_key' => $base.':after', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
         }
 
-        $session->forceFill(['stage' => 'completed', 'completed_at' => now()])->save();
+        $blocked = !$card['ok'] || collect($outbounds)->contains(fn ($outbound) => in_array($outbound->status, ['blocked', 'failed'], true));
+        $session->forceFill([
+            'stage' => $blocked ? 'delivery_failed' : 'completed',
+            'completed_at' => $blocked ? null : now(),
+        ])->save();
+        if ($blocked) {
+            $this->logger->log('post_flow.delivery_failed', 'بخشی از کارت ارسال نشد و برای بررسی مجدد نگه داشته شد.', $session, ['outbound_ids' => collect($outbounds)->pluck('id')->all()], 'warning');
+        }
     }
 
     /** کلیک روی دکمه‌ی «پاسخ سریع/دریافت اطلاعات» کارت → ارسال متن تنظیم‌شده. */
@@ -328,11 +339,33 @@ class PostFlowService
 
     public function render(string $text, ?Contact $contact): string
     {
-        $name = $contact?->display_name ? (explode(' ', trim($contact->display_name))[0] ?: $contact->display_name) : ($contact?->username ?: 'دوست عزیز');
+        return $this->names->render($text, $contact);
+    }
 
-        return trim(strtr($text, [
-            '{name}' => $name,
-            '{username}' => $contact?->username ? '@'.$contact->username : '',
-        ]));
+    /** پیام‌های ناموفق/مسدود سناریو را برای بررسی مجدد دوباره وارد صف می‌کند. */
+    public function retryCampaign(PostCampaign $campaign, int $olderThanMinutes = 0): int
+    {
+        $ruleId = (int) $campaign->automation_rule_id;
+        if ($ruleId <= 0) {
+            return 0;
+        }
+
+        $runIds = AutomationRun::query()->where('rule_id', $ruleId)->pluck('id');
+        if ($runIds->isEmpty()) {
+            return 0;
+        }
+
+        $query = OutboundMessage::query()->whereIn('automation_run_id', $runIds)->whereIn('status', ['failed', 'blocked']);
+        if ($olderThanMinutes > 0) {
+            $query->where('updated_at', '<', now()->subMinutes($olderThanMinutes));
+        }
+
+        $count = 0;
+        $query->orderBy('id')->limit(100)->get()->each(function (OutboundMessage $outbound) use (&$count): void {
+            $this->outbound->retry($outbound);
+            $count++;
+        });
+
+        return $count;
     }
 }

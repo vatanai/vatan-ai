@@ -292,6 +292,48 @@ class AiModel extends Model
     }
 
     /** ترتیب رسمی انتخاب سرویس در استودیوی عمومی: OpenRouter، سپس Fal.ai، سپس Replicate. */
+    /**
+     * فهرست مدل‌های ویدیویی معروف و پایدار که در استودیو نمایش داده می‌شوند و
+     * زنجیرهٔ جایگزین از بین آن‌ها ساخته می‌شود. مدل‌های ابزاری (ارتقا کیفیت،
+     * ویرایش ویدیو، آواتار) عمداً حذف شده‌اند؛ چیزی در دیتابیس پاک نمی‌شود.
+     */
+    public const STUDIO_VIDEO_CURATED = [
+        'google/veo-3.1',
+        'google/veo-3.1-fast',
+        'google/veo-3.1-lite',
+        'openai/sora-2-pro',
+        'bytedance/seedance-2.0',
+        'bytedance/seedance-2.0-fast',
+        'bytedance/seedance-2.0-mini',
+        'bytedance/seedance-2.5',
+        'bytedance/seedance-1-5-pro',
+        'kwaivgi/kling-v3.0-pro',
+        'kwaivgi/kling-v3.0-std',
+        'kwaivgi/kling-video-o1',
+        'alibaba/wan-3.0',
+        'alibaba/wan-2.7',
+        'alibaba/wan-2.6',
+        'minimax/hailuo-2.3',
+        'minimax/hailuo-3',
+        'x-ai/grok-imagine-video',
+        'x-ai/grok-imagine-video-1.5',
+        'runway/gen-4.5',
+    ];
+
+    /** پشتیبان نهایی (مرحلهٔ ۴) خارج از OpenRouter، به ترتیب اولویت. */
+    public const EXTERNAL_VIDEO_FALLBACK = [
+        'image_to_video' => [
+            ['fal', 'bytedance/seedance-2.0/fast/image-to-video'],
+            ['fal', 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video'],
+            ['fal', 'fal-ai/veo3.1/fast/image-to-video'],
+        ],
+        'text_to_video' => [
+            ['fal', 'bytedance/seedance-2.0/fast/text-to-video'],
+            ['fal', 'fal-ai/kling-video/v2.5-turbo/pro/text-to-video'],
+            ['fal', 'fal-ai/wan/v2.2-a14b/text-to-video'],
+        ],
+    ];
+
     public const STUDIO_PROVIDER_PRIORITY = [
         'openrouter' => 0,
         'fal' => 1,

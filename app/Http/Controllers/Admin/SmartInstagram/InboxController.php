@@ -51,7 +51,10 @@ class InboxController extends Controller
         }
 
         $list = (clone $base)->inboxFilter($filter)
-            ->when($source !== '' && array_key_exists($source, config('smart_instagram.sources')), fn (Builder $q) => $q->where('last_source', $source))
+            ->when($source !== '' && array_key_exists($source, config('smart_instagram.sources')), function (Builder $q) use ($source): void {
+                // یک گفتگو ممکن است هم کامنت و هم دایرکت داشته باشد؛ فیلتر باید بر اساس خود پیام‌ها باشد، نه آخرین منبع گفتگو.
+                $q->whereHas('messages', fn (Builder $m) => $m->where('source_type', $source));
+            })
             ->when($search !== '', function (Builder $q) use ($search): void {
                 $term = '%'.$search.'%';
                 $q->where(function (Builder $w) use ($term): void {

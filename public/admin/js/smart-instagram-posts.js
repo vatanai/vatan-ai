@@ -19,6 +19,22 @@
     try { t = t.replace(/[^\p{L}\p{N}\s]+/gu, ' '); } catch (e) { t = t.replace(/[!-\/:-@\[-`{-~،؛؟«»]+/g, ' '); }
     return t.replace(/\s+/g, ' ').trim();
   }
+  function captionKeywords(caption) {
+    var values = [], seen = {};
+    var add = function (value) {
+      value = String(value || '').replace(/\s+/g, ' ').trim().replace(/^[\s.,،؛;:：!?؟!()[\]{}<>|/\\]+|[\s.,،؛;:：!?؟!()[\]{}<>|/\\]+$/g, '');
+      if (!value || value.length < 2 || value.length > 120) return;
+      var key = normalize(value);
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      values.push(value);
+    };
+    var quoted = String(caption || '').match(/[«“”"]([^«»“”"]{2,120})[»“”"]/gu) || [];
+    quoted.forEach(function (v) { add(v.slice(1, -1)); });
+    var hashtags = String(caption || '').match(/#[\p{L}\p{N}_‌-]{2,120}/gu) || [];
+    hashtags.forEach(function (v) { add(v.slice(1)); });
+    return values.slice(0, 5);
+  }
   function matches(text, keyword, mode) {
     var hay = normalize(text);
     if (mode === 'pattern') {
@@ -137,6 +153,8 @@
     this.steps = $$('[data-step]', form);
     this.current = 0;
     this.visited = { 0: true };
+    this.autoKeywordSeed = !CFG.isEdit;
+    this.replacingKeywords = false;
     var self = this;
     var preview = $('[data-sip-preview]');
     this.phone = preview ? new Phone(preview, function () { return self.state(); }) : null;
@@ -146,6 +164,7 @@
     $('[data-step-prev]', form).addEventListener('click', function () { self.go(self.current - 1); });
 
     this.initPosts();
+    this.initProducts();
     this.initKeywords();
     this.initCounters(form);
     this.initVars();
@@ -158,6 +177,7 @@
     form.addEventListener('change', function () { self.refresh(); });
     form.addEventListener('submit', function (e) { self.onSubmit(e); });
     this.go(0, true);
+    this.refresh();
   }
 
   Wizard.prototype.go = function (i, silent) {
@@ -169,6 +189,8 @@
     $$('[data-step-go]').forEach(function (b, k) {
       b.classList.toggle('is-current', k === i);
       b.classList.toggle('is-done', k !== i && self.visited[k] && self.validate(k, false));
+      var check = $('[data-step-check]', b);
+      if (check) check.hidden = !(k !== i && self.visited[k] && self.validate(k, false));
       b.setAttribute('aria-current', k === i ? 'step' : 'false');
     });
     var bar = $('[data-step-progress]');
@@ -193,6 +215,7 @@
     if (i === 2 && this.isOn('[data-toggle-reply]') && !this.styles().some(function (s) { return s.trim(); })) return 'حداقل یک سبک پاسخ بنویسید یا پاسخ عمومی را خاموش کنید.';
     if (i === 4 && this.isOn('[data-toggle-dm]')) {
       var product = ($('[data-card-product]', f) || {}).value;
+      if (!product) return 'محصول هدف برای ارسال دایرکت الزامی است.';
       var ok = $$('[data-btn-row]', f).some(function (r) {
         return $('[data-btn-label]', r).value.trim() && $('[data-btn-type]', r).value === 'web_url' && ($('[data-btn-url]', r).value.trim() || product);
       });
@@ -270,7 +293,14 @@
   Wizard.prototype.refresh = function () {
     this.applyToggles();
     this.updateImagePreview();
+    this.updateProductCard();
     this.testKeyword();
+    var self = this;
+    $$('[data-step-go]').forEach(function (b, k) {
+      var done = k !== self.current && self.visited[k] && self.validate(k, false);
+      b.classList.toggle('is-done', !!done);
+      var check = $('[data-step-check]', b); if (check) check.hidden = !done;
+    });
     if (this.phone) this.phone.render();
     if (this.current === this.steps.length - 1) this.summary();
   };
@@ -278,11 +308,52 @@
   /* ── قدم ۱: انتخاب پست ── */
   Wizard.prototype.initPosts = function () {
     var search = $('[data-post-search]');
-    if (!search) return;
-    search.addEventListener('input', function () {
-      var q = normalize(search.value);
-      $$('[data-post-item]').forEach(function (item) { item.hidden = q !== '' && normalize(item.getAttribute('data-search')).indexOf(q) === -1; });
+    if (search) {
+      search.addEventListener('input', function () {
+        var q = normalize(search.value);
+        $$('[data-post-item]').forEach(function (item) { item.hidden = q !== '' && normalize(item.getAttribute('data-search')).indexOf(q) === -1; });
+      });
+    }
+    var self = this;
+    $$('[data-post-input]', this.form).forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (!input.checked || !self.autoKeywordSeed) return;
+        var post = CFG.posts && CFG.posts[input.value];
+        var words = captionKeywords(post && post.caption);
+        if (words.length) self.applyCaptionKeywords(words);
+      });
     });
+  };
+
+  /* ── محصول هدف: جست‌وجو، پیشنهاد و کارت خلاصه ── */
+  Wizard.prototype.initProducts = function () {
+    var self = this;
+    var search = $('[data-product-search]', this.form);
+    var select = $('[data-card-product]', this.form);
+    if (!select) return;
+    var filter = function () {
+      var q = normalize(search ? search.value : '');
+      Array.prototype.forEach.call(select.options, function (option) {
+        option.hidden = !!q && option.value !== '' && normalize(option.getAttribute('data-search') || option.textContent).indexOf(q) === -1;
+      });
+    };
+    if (search) search.addEventListener('input', filter);
+    select.addEventListener('change', function () { self.updateProductCard(); self.refresh(); });
+    $$('[data-product-suggestion]', this.form).forEach(function (button) {
+      button.addEventListener('click', function () {
+        select.value = button.getAttribute('data-product-suggestion') || '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+    filter();
+  };
+  Wizard.prototype.updateProductCard = function () {
+    var box = $('[data-product-card]', this.form); var product = this.product();
+    if (!box) return;
+    if (!product) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    box.innerHTML = (product.image ? '<img src="' + esc(product.image) + '" alt="" loading="lazy"><div>' : '<div class="sip-product-card-noimage"><i class="fa-regular fa-image"></i></div><div>')
+      + '<b>' + esc(product.name || '') + '</b><small>' + esc((product.description || '').slice(0, 150)) + '</small><a href="' + esc(product.url || '#') + '" target="_blank" rel="noopener">مشاهده محصول <i class="fa-solid fa-arrow-up-left-from-circle"></i></a></div>';
   };
 
   /* ── قدم ۲: کلمات کلیدی ── */
@@ -290,6 +361,7 @@
     var self = this;
     var input = $('[data-kw-new]', this.form);
     var add = function () {
+      self.autoKeywordSeed = false;
       String(input.value).split(/[,،\n]+/).forEach(function (w) { self.addKeyword(w); });
       input.value = '';
       input.focus();
@@ -299,7 +371,7 @@
     input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
     $('[data-kw-list]', this.form).addEventListener('click', function (e) {
       var rm = e.target.closest('[data-kw-remove]');
-      if (rm) { rm.closest('[data-kw-row]').remove(); self.reindexKeywords(); self.refresh(); }
+      if (rm) { self.autoKeywordSeed = false; rm.closest('[data-kw-row]').remove(); self.reindexKeywords(); self.refresh(); }
     });
     var test = $('[data-kw-test]', this.form);
     if (test) test.addEventListener('input', function () { self.testKeyword(); });
@@ -315,7 +387,19 @@
     $('[data-name=keyword]', tpl).value = word;
     if (word.indexOf('*') !== -1) $('[data-name=match_mode]', tpl).value = 'pattern';
     $('[data-kw-list]', this.form).appendChild(tpl);
+    if (!this.replacingKeywords) this.autoKeywordSeed = false;
     this.reindexKeywords();
+  };
+  Wizard.prototype.applyCaptionKeywords = function (words) {
+    var list = $('[data-kw-list]', this.form);
+    if (!list || !words.length) return;
+    this.replacingKeywords = true;
+    list.innerHTML = '';
+    words.forEach(function (word) { this.addKeyword(word); }, this);
+    this.replacingKeywords = false;
+    this.autoKeywordSeed = true;
+    this.reindexKeywords();
+    this.refresh();
   };
   Wizard.prototype.reindexKeywords = function () {
     var rows = $$('[data-kw-row]', this.form);
@@ -482,8 +566,7 @@
       });
     });
     var run = $('[data-ai-run]', box); var status = $('[data-ai-status]', box);
-    run.addEventListener('click', function () {
-      var sections = $$('[data-ai-section]:checked', box).map(function (c) { return c.value; });
+    var execute = function (sections, trigger) {
       if (!sections.length) { status.textContent = 'حداقل یک بخش را انتخاب کنید.'; return; }
       var postEl = $('[data-post-input]:checked', self.form) || $('input[type=hidden][data-post-input]', self.form);
       var body = {
@@ -494,13 +577,35 @@
         hint: ($('[data-ai-hint]', box) || {}).value || null,
         keywords: $$('[data-kw-row] [data-name=keyword]', self.form).map(function (i) { return i.value; })
       };
-      run.disabled = true;
+      if (trigger) trigger.disabled = true;
       status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال نوشتن…';
       request(CFG.routes.generate, body).then(function (res) {
         if (!res.ok) { status.textContent = res.message || 'پاسخی دریافت نشد.'; return; }
         var n = self.applyAi(res.fields || {});
+        var complete = $('[data-ai-applied-check]', box);
+        if (complete && n > 0 && trigger === run) complete.hidden = false;
         status.innerHTML = '<span style="color:var(--success)"><i class="fa-solid fa-circle-check"></i> ' + faDigits(n) + ' فیلد پر شد' + (res.model ? ' · ' + esc(res.model) : '') + ' — بازبینی و در صورت نیاز ویرایش کنید.</span>';
-      }).catch(function (err) { status.textContent = err.message; }).then(function () { run.disabled = false; });
+      }).catch(function (err) { status.textContent = err.message; }).then(function () { if (trigger) trigger.disabled = false; });
+    };
+    run.addEventListener('click', function () {
+      execute($$('[data-ai-section]:checked', box).map(function (c) { return c.value; }), run);
+    });
+    var fieldSection = function (key) {
+      if (key.indexOf('public_replies.') === 0) return 'public_reply';
+      if (key.indexOf('opening_') === 0) return 'opening';
+      if (key.indexOf('follow_') === 0) return 'follow';
+      return 'card';
+    };
+    $$('[data-ai-field], [data-btn-label]', self.form).forEach(function (field) {
+      var label = field.parentElement && ($('label', field.parentElement) || $('.sip-style-tag', field.parentElement));
+      if (!label || $('[data-ai-tools]', label)) return;
+      var key = field.getAttribute('data-ai-field') || 'card_buttons'; var tools = document.createElement('span');
+      tools.className = 'sip-ai-field-tools'; tools.setAttribute('data-ai-tools', '');
+      tools.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles" title="تولیدشده با هوش مصنوعی"></i><button type="button" data-ai-refresh-field title="تولید نمونه‌ی تازه"><i class="fa-solid fa-rotate"></i></button>';
+      label.appendChild(tools);
+      $('[data-ai-refresh-field]', tools).addEventListener('click', function () {
+        execute([fieldSection(key)], this);
+      });
     });
     var save = $('[data-ai-save]', box);
     if (save) save.addEventListener('click', function () {
@@ -521,6 +626,7 @@
       var max = +el.getAttribute('maxlength') || 0;
       el.value = max ? String(value).slice(0, max) : value;
       el.classList.remove('sip-flash-field'); void el.offsetWidth; el.classList.add('sip-flash-field');
+      el.setAttribute('data-ai-applied', '1');
       if (el.matches('[data-counter]')) self.updateCounter(el);
       count++;
     };

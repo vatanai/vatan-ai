@@ -42,10 +42,11 @@ class StudioWorkflowController extends Controller
             ->whereIn('task_type', ['text_to_video', 'image_to_video', 'face_animation'])
             ->whereNotNull('openrouter_model_id')
             ->where('openrouter_model_id', '<>', '')
+            ->whereIn('openrouter_model_id', AiModel::STUDIO_VIDEO_CURATED)
             ->get()
             ->sortBy(function (AiModel $model): array {
                 $providerPriority = AiModel::STUDIO_PROVIDER_PRIORITY[$model->provider] ?? 99;
-                $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_MODEL_PRIORITY, true);
+                $priority = array_search($model->openrouter_model_id, AiModel::STUDIO_VIDEO_CURATED, true);
                 $taskOrder = array_search($model->task_type, ['text_to_video', 'image_to_video', 'video_to_video', 'face_animation'], true);
                 return [$providerPriority, $priority === false ? 1000 : $priority, $taskOrder === false ? 100 : $taskOrder, $model->id];
             })
@@ -152,9 +153,10 @@ class StudioWorkflowController extends Controller
         $runner = clone $product;
         $runner->primary_model = $model->openrouter_model_id;
         $runner->ai_provider = $model->provider;
-        [$fallbackModels, $fallbackProviders] = $this->fallbackRoutes($model, $workflow, $request, $modelSchemas);
-        $runner->fallback_models = $fallbackModels;
-        $runner->fallback_model_providers = $fallbackProviders;
+        // زنجیرهٔ جایگزین (۲ مدل OpenRouter هم‌هزینه + ۱ مدل Fal) در خود
+        // VideoGenerationService ساخته و همراه سفارش ذخیره می‌شود.
+        $runner->fallback_models = [];
+        $runner->fallback_model_providers = [];
         $providerOptions = (array) $runner->provider_options;
         $videoConfig = $runner->videoConfiguration();
         $videoConfig['workflow'] = $isImageWorkflow ? 'image_to_video' : $workflow;

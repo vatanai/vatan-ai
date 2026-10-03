@@ -5,3 +5,6 @@
   رنگ‌ها هم‌راستا با پالت فعلی صفحه Home (پس‌زمینه تیره #000000 / روشن #ffffff) هستند.
 --}}
 <link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/home-builder.css') }}">
+{{-- ویترین (انواع vt_*): یک کارت، یک هاور، یک فایل — doc/home-vitrine.md --}}
+<link rel="stylesheet" href="{{ \App\Support\AppAsset::url('css/home-vitrine.css') }}">
+<script src="{{ \App\Support\AppAsset::url('js/home-vitrine.js') }}" defer></script>

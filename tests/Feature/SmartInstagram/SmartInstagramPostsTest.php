@@ -143,6 +143,28 @@ class SmartInstagramPostsTest extends TestCase
         $this->assertSame(0, OutboundMessage::query()->count());
     }
 
+    public function test_caption_keywords_are_used_when_form_does_not_send_keywords_and_order_is_compiled(): void
+    {
+        $this->actingAs($this->leader(), 'admin');
+        $post = $this->makePost($this->sandbox());
+        $post->forceFill(['caption' => 'برای دریافت لینک، کلمه «سلفی» را کامنت کن #محصول'])->save();
+        $payload = $this->payload($post);
+        unset($payload['keywords']);
+        $payload['settings']['flow']['order'] = 'dm_first';
+
+        $this->post(route('admin.smart-instagram.posts.store'), $payload)->assertSessionHasNoErrors();
+
+        $campaign = PostCampaign::query()->with('keywords', 'rule')->firstOrFail();
+        $this->assertSame(['سلفی', 'محصول'], $campaign->keywords->pluck('keyword')->all());
+        $this->assertSame(['post_flow', 'public_reply', 'add_tag', 'stop'], collect($campaign->rule->actions)->pluck('type')->all());
+
+        $simulation = $this->postJson(route('admin.smart-instagram.posts.simulate', $campaign), ['text' => 'سلفی', 'follows' => 'yes'])
+            ->assertOk()->json();
+        $this->assertSame('دایرکت', $simulation['steps'][0]['where']);
+        $lastStep = end($simulation['steps']);
+        $this->assertSame('کامنت', $lastStep['where']);
+    }
+
     public function test_follow_gate_flow_delivers_multi_button_card_after_follow(): void
     {
         config(['smart_instagram.outbound_enabled' => true]);
@@ -182,6 +204,89 @@ class SmartInstagramPostsTest extends TestCase
         $buttons = data_get($card->message_payload, 'message.attachment.payload.elements.0.buttons');
         $this->assertCount(3, (array) $buttons);
         $this->assertSame(0, OutboundMessage::query()->whereIn('status', ['failed', 'blocked'])->count());
+    }
+
+    public function test_live_comment_personalization_receives_campaign_post_and_customer_context(): void
+    {
+        config(['smart_instagram.ai.enabled' => true, 'smart_instagram.outbound_enabled' => true]);
+        $this->actingAs($this->leader(), 'admin');
+        $post = $this->makePost($this->sandbox());
+        $payload = $this->payload($post);
+        $payload['settings']['reply']['ai_personalize'] = true;
+        $this->post(route('admin.smart-instagram.posts.store'), $payload)->assertSessionHasNoErrors();
+
+        $captured = [];
+        Http::fake(['*/chat/completions' => function ($request) use (&$captured) {
+            $captured[] = $request->data();
+
+            return Http::response([
+                'model' => 'test/model',
+                'usage' => ['prompt_tokens' => 40, 'completion_tokens' => 12],
+                'choices' => [['message' => ['content' => json_encode(['reply' => 'محسن جان، جزئیات این کیف رو توی دایرکت ببین 🌿'])]]],
+            ]);
+        }]);
+
+        $this->ingest([
+            'type' => 'comment',
+            'id' => 'c-ai',
+            'sender' => ['id' => 'u-ai', 'username' => 'mohsen_shop', 'name' => 'محسن'],
+            'text' => 'لینک این کیف رو می‌فرستی؟',
+            'media_id' => 'reel_1',
+        ])->assertOk();
+
+        $this->assertNotEmpty($captured);
+        $request = collect($captured)->last(fn (array $data) => str_contains((string) data_get($data, 'messages.0.content'), 'قواعد مشترک و الزامی'));
+        $this->assertNotNull($request);
+        $system = collect($request['messages'])->firstWhere('role', 'system')['content'];
+        $user = collect($request['messages'])->firstWhere('role', 'user')['content'];
+        $this->assertStringContainsString('قواعد مشترک و الزامی', $system);
+        $this->assertStringContainsString('متن رباتیک', $system);
+        $this->assertStringContainsString('کیف چرم دست‌دوز', $user);
+        $this->assertStringContainsString('لینک این کیف رو می‌فرستی؟', $user);
+        $this->assertStringContainsString('جریان دایرکت فعال است: بله', $user);
+        $this->assertStringContainsString('محسن جان', OutboundMessage::query()->where('kind', 'public_reply')->value('body'));
+    }
+
+    public function test_ai_writer_generates_all_post_sections_with_shared_prompt_contract(): void
+    {
+        config(['smart_instagram.ai.enabled' => true]);
+        $this->actingAs($this->leader(), 'admin');
+        $post = $this->makePost($this->sandbox());
+        $captured = null;
+        Http::fake(['*/chat/completions' => function ($request) use (&$captured) {
+            $captured = $request->data();
+
+            return Http::response([
+                'model' => 'test/model',
+                'usage' => ['prompt_tokens' => 60, 'completion_tokens' => 30],
+                'choices' => [['message' => ['content' => json_encode([
+                    'public_replies' => ['{name} جان، جزئیات رو توی دایرکت ببین 🌿'],
+                    'opening_text' => 'سلام {name} جان، برای دیدن لینک روی دکمه بزن.',
+                    'opening_button' => 'دیدن لینک',
+                    'follow_text' => '{name} جان، اول پیج رو دنبال کن و بعد بزن فالو کردم.',
+                    'follow_retry_text' => 'اگر فالو کردی، دوباره روی دکمه بزن.',
+                    'follow_button' => 'فالو کردم',
+                    'card_intro' => 'اینم اطلاعاتی که خواستی.',
+                    'card_title' => 'کیف چرم دست‌دوز',
+                    'card_subtitle' => 'جزئیات محصول را ببین',
+                    'card_buttons' => ['مشاهده محصول'],
+                ])]]],
+            ]);
+        }]);
+
+        $response = $this->postJson(route('admin.smart-instagram.posts.ai.generate'), [
+            'sections' => ['public_reply', 'opening', 'follow', 'card'],
+            'post_id' => $post->id,
+            'keywords' => ['لینک'],
+            'hint' => 'لحن خودمانی و کوتاه',
+        ])->assertOk()->assertJsonPath('ok', true);
+
+        $response->assertJsonPath('fields.opening_button', 'دیدن لینک')
+            ->assertJsonPath('fields.follow_button', 'فالو کردم')
+            ->assertJsonPath('fields.card_buttons.0', 'مشاهده محصول');
+        $this->assertNotNull($captured);
+        $this->assertStringContainsString('قواعد مشترک و الزامی', $captured['messages'][0]['content']);
+        $this->assertStringContainsString('کیف چرم دست‌دوز', $captured['messages'][1]['content']);
     }
 
     public function test_test_mode_and_manual_posts_never_send(): void

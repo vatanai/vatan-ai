@@ -160,6 +160,7 @@ const HomeBuilder = (function () {
     wrap.innerHTML = visibleFields.map((field) => fieldHtml(field, state.settingsValues[field.key])).join('');
 
     visibleFields.filter((f) => f.type === 'product_multiselect').forEach((f) => initProductPicker(f.key));
+    visibleFields.filter((f) => f.type === 'category_multiselect').forEach((f) => renderCatChips(f.key));
 
     const sourceEl = document.getElementById('hb-sf-source');
     if (sourceEl) {
@@ -210,6 +211,16 @@ const HomeBuilder = (function () {
     }
     if (field.type === 'number') {
       return `<div>${label}<input type="number" id="${id}" class="input-pro" value="${escapeHtml(val)}" min="${field.min ?? ''}" max="${field.max ?? ''}"></div>`;
+    }
+    if (field.type === 'category_multiselect') {
+      // انتخاب چندتایی دسته با حفظ ترتیب انتخاب (ترتیب تب‌ها/کاشی‌ها در فرانت همین است).
+      window.__hbCatPick = window.__hbCatPick || {};
+      window.__hbCatPick[field.key] = (Array.isArray(value) ? value : []).map((v) => String(v && v.id !== undefined ? v.id : v)).filter(Boolean);
+      const opts = window.HB_CATEGORIES.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+      return `<div>${label}
+        <div id="hb-cat-${field.key}-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;"></div>
+        <select id="hb-cat-${field.key}-add" class="input-pro" onchange="HomeBuilder.pickCategory('${field.key}', this)"><option value="">+ افزودن دسته‌بندی...</option>${opts}</select>
+      </div>`;
     }
     if (field.type === 'image') {
       return `<div>${label}<input type="text" id="${id}" class="input-pro" value="${escapeHtml(val)}" placeholder="آدرس تصویر (URL)" dir="ltr"></div>`;
@@ -289,6 +300,36 @@ const HomeBuilder = (function () {
   function unpickProduct(key, id) {
     window.__hbProductPick[key] = (window.__hbProductPick[key] || []).filter((p) => String(p.id) !== String(id));
     renderPickChips(key);
+    scheduleLivePreview();
+  }
+
+  function renderCatChips(key) {
+    const chips = document.getElementById(`hb-cat-${key}-chips`);
+    if (!chips) return;
+    const picked = (window.__hbCatPick && window.__hbCatPick[key]) || [];
+    const nameOf = (id) => (window.HB_CATEGORIES.find((c) => String(c.id) === String(id)) || {}).name || ('#' + id);
+    chips.innerHTML = picked.length
+      ? picked.map((id, i) => `
+          <span style="display:inline-flex;align-items:center;gap:6px;background:var(--primary-l);color:var(--primary);border:1px solid var(--primary-m);border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;">
+            ${i + 1}. ${escapeHtml(nameOf(id))}
+            <button type="button" onclick="HomeBuilder.unpickCategory('${key}', '${id}')" style="background:transparent;border:0;color:inherit;cursor:pointer;font-size:12px;line-height:1;">×</button>
+          </span>`).join('')
+      : '<span style="font-size:11px;color:var(--text-soft);">هنوز دسته‌ای انتخاب نشده</span>';
+  }
+
+  function pickCategory(key, selectEl) {
+    const id = String(selectEl.value || '');
+    selectEl.value = '';
+    if (!id) return;
+    window.__hbCatPick[key] = window.__hbCatPick[key] || [];
+    if (!window.__hbCatPick[key].includes(id)) window.__hbCatPick[key].push(id);
+    renderCatChips(key);
+    scheduleLivePreview();
+  }
+
+  function unpickCategory(key, id) {
+    window.__hbCatPick[key] = (window.__hbCatPick[key] || []).filter((v) => String(v) !== String(id));
+    renderCatChips(key);
     scheduleLivePreview();
   }
 
@@ -396,6 +437,12 @@ const HomeBuilder = (function () {
     typeInfo.settings_fields.forEach((field) => {
       if (field.type === 'product_multiselect') {
         out[field.key] = (window.__hbProductPick && window.__hbProductPick[field.key]) || [];
+        return;
+      }
+      if (field.type === 'category_multiselect') {
+        if (document.getElementById(`hb-cat-${field.key}-chips`)) {
+          out[field.key] = ((window.__hbCatPick && window.__hbCatPick[field.key]) || []).map((v) => Number(v));
+        }
         return;
       }
       const el = document.getElementById(`hb-sf-${field.key}`);
@@ -526,7 +573,7 @@ const HomeBuilder = (function () {
     openAddDrawer, closeAddDrawer, selectLayout,
     openEditDrawer, closeEditDrawer, pickEditLayout, saveSection,
     duplicate, setStatus, destroy,
-    pickProduct, unpickProduct, setPreviewDevice,
+    pickProduct, unpickProduct, pickCategory, unpickCategory, setPreviewDevice,
   };
 })();
 </script>

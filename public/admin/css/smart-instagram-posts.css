@@ -5,9 +5,9 @@
 ════════════════════════════════════════════════════════════════ */
 
 /* ───────── فهرست پست‌ها ───────── */
-.sip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.sip-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; direction: ltr; }
 .sip-card {
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; overflow: hidden;
+  direction: rtl; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
   display: flex; flex-direction: column; min-width: 0; box-shadow: var(--shadow-card);
   transition: transform .2s, border-color .2s;
 }
@@ -92,6 +92,7 @@ body:not(.light) .sip-kw { color: var(--nav-active-t); }
 body:not(.light) .sip-step-btn.is-current .sip-step-num { color: var(--nav-active-t); }
 .sip-step-btn.is-done .sip-step-num { background: var(--success-l); border-color: var(--success-m); color: var(--success); }
 .sip-step-btn.has-error { border-color: var(--danger); }
+.sip-step-check { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--success); color: var(--card-bg); font-size: 9px; flex: 0 0 auto; }
 .sip-progress { height: 4px; border-radius: 4px; background: var(--input-bg); overflow: hidden; margin: -8px 0 16px; }
 .sip-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--logo-green)); transition: width .35s cubic-bezier(.4,0,.2,1); }
 
@@ -112,8 +113,8 @@ body:not(.light) .sip-step-icon { color: var(--nav-active-t); }
 body:not(.light) .sip-block-title i { color: var(--nav-active-t); }
 
 /* انتخاب پست */
-.sip-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 470px; overflow-y: auto; padding: 2px; }
-.sip-pick { position: relative; cursor: pointer; border-radius: 16px; overflow: hidden; border: 2px solid transparent; background: var(--input-bg); aspect-ratio: 4 / 5; display: block; }
+.sip-pick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-height: 470px; overflow-y: auto; padding: 2px; direction: ltr; }
+.sip-pick { position: relative; cursor: pointer; direction: rtl; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: var(--input-bg); aspect-ratio: 4 / 5; display: block; }
 .sip-pick input { position: absolute; opacity: 0; pointer-events: none; }
 .sip-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sip-pick::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0) 60%); pointer-events: none; }
@@ -177,8 +178,20 @@ body:not(.light) .sip-flow-step i { color: var(--nav-active-t); }
 .sip-btn-row .sip-btn-tools { display: flex; flex-direction: column; gap: 4px; }
 .sip-btn-row .icon-action-btn { width: 28px; height: 28px; }
 .sip-img-pick { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: start; }
+.sip-img-pick:has(.sip-card-img-preview) { grid-template-columns: 192px minmax(0, 1fr); }
 .sip-img-preview { width: 96px; height: 96px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--text-soft); font-size: 22px; }
 .sip-img-preview img { width: 100%; height: 100%; object-fit: cover; }
+.sip-card-img-preview { width: 192px; height: 192px; }
+.sip-product-search { position: relative; margin-bottom: 8px; }
+.sip-product-search > i { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-soft); z-index: 1; }
+.sip-product-search input { padding-right: 34px; }
+.sip-product-suggestions { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px; }
+.sip-product-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px; margin-top: 9px; border: 1px solid var(--success-m); border-radius: 14px; background: var(--success-l); }
+.sip-product-card img, .sip-product-card-noimage { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--input-bg); display: flex; align-items: center; justify-content: center; color: var(--text-soft); }
+.sip-product-card b, .sip-product-card small, .sip-product-card a { display: block; }
+.sip-product-card b { color: var(--text-h); font-size: 12px; }
+.sip-product-card small { color: var(--text-soft); font-size: 10px; line-height: 1.7; margin: 2px 0; }
+.sip-product-card a { color: var(--primary); font-size: 10.5px; font-weight: 800; }
 
 /* جمع‌بندی */
 .sip-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -203,6 +216,11 @@ body:not(.light) .sip-flow-step i { color: var(--nav-active-t); }
 .sip-ai-checks label:has(input:checked) { border-color: var(--primary); background: var(--primary-l); }
 .sip-ai-checks input { accent-color: var(--primary); }
 .sip-ai-status { font-size: 11.5px; color: var(--text-soft); margin-top: 8px; min-height: 18px; }
+.sip-ai-field-tools { display: inline-flex; align-items: center; gap: 5px; margin-right: 6px; color: var(--info); direction: ltr; }
+.sip-ai-field-tools > i { display: none; font-size: 10px; }
+.si-field:has([data-ai-applied]) .sip-ai-field-tools > i, .sip-style:has([data-ai-applied]) .sip-ai-field-tools > i { display: inline-block; }
+.sip-ai-field-tools button { width: 22px; height: 22px; border: 1px solid var(--danger-m); border-radius: 7px; background: var(--danger-l); color: var(--danger); cursor: pointer; font-size: 10px; }
+.sip-ai-field-tools button:disabled { opacity: .5; cursor: wait; }
 .sip-flash-field { animation: sip-flash 1.4s ease; }
 @keyframes sip-flash { 0%, 40% { box-shadow: 0 0 0 4px var(--success-m); border-color: var(--success); } 100% { box-shadow: none; } }
 
@@ -299,7 +317,11 @@ body:not(.light) .sip-flow-step i { color: var(--nav-active-t); }
   .sip-aside.is-collapsed .sip-phone { display: none; }
   .sip-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+@media (max-width: 1100px) {
+  .sip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 768px) {
+  .sip-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sip-stepper { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
   .sip-step-txt { display: none; }
   .sip-step-btn { justify-content: center; padding: 8px 4px; }
@@ -313,7 +335,10 @@ body:not(.light) .sip-flow-step i { color: var(--nav-active-t); }
   .sip-phone { --ph-w: 300px; border-radius: 52px; }
   .sip-funnel-row { grid-template-columns: 110px minmax(0, 1fr) 40px; }
   .sip-grid { grid-template-columns: minmax(0, 1fr); }
+  .sip-img-pick:has(.sip-card-img-preview) { grid-template-columns: minmax(0, 1fr); }
+  .sip-card-img-preview { width: min(192px, 100%); height: auto; aspect-ratio: 1; }
 }
 @media (max-width: 380px) {
+  .sip-pick-grid { grid-template-columns: minmax(0, 1fr); }
   .sip-phone { --ph-w: 270px; }
 }

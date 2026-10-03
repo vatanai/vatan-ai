@@ -19,7 +19,7 @@
     'image' => $element['image_url'] ?? null, 'title' => $element['title'] ?? ($card['title'] ?? ''), 'subtitle' => $element['subtitle'] ?? '',
     'buttons' => collect($element['buttons'] ?? [])->map(fn ($b) => ['label' => $b['title'] ?? ''])->values(),
   ];
-  $stageLabels = ['awaiting_click' => 'منتظر زدن دکمه', 'awaiting_follow' => 'منتظر فالو', 'completed' => 'کارت دریافت کرد'];
+  $stageLabels = ['awaiting_click' => 'منتظر زدن دکمه', 'awaiting_follow' => 'منتظر فالو', 'delivery_failed' => 'نیازمند بررسی مجدد', 'completed' => 'کارت دریافت کرد'];
   $sessionsTotal = max(1, (int) $funnel->sum());
   $followLabels = ['following' => 'فالوور بود', 'not_following' => 'فالو نکرده بود', 'unknown' => 'نامشخص'];
   $igStats = [['fa-heart', 'لایک', $post->like_count], ['fa-comment', 'کامنت', $post->comments_count], ['fa-bookmark', 'ذخیره', $post->saved_count], ['fa-paper-plane', 'اشتراک', $post->shares_count]];
@@ -33,6 +33,7 @@
   <a href="{{ route('admin.smart-instagram.posts.index') }}" class="btn-pro btn-pro-secondary"><i class="fa-solid fa-arrow-right text-[11px]"></i> فهرست</a>
   @if($canManage)
     <form method="POST" action="{{ route('admin.smart-instagram.posts.sync-one', $campaign) }}">@csrf<button class="btn-pro btn-pro-secondary"><i class="fa-solid fa-rotate text-[11px]"></i> به‌روزرسانی آمار</button></form>
+    <form method="POST" action="{{ route('admin.smart-instagram.posts.recheck', $campaign) }}">@csrf<button class="btn-pro btn-pro-secondary"><i class="fa-solid fa-arrows-rotate text-[11px]"></i> بررسی مجدد ارسال‌ها</button></form>
     @if($campaign->status === 'active')
       <form method="POST" action="{{ route('admin.smart-instagram.posts.status', $campaign) }}">@csrf<input type="hidden" name="status" value="paused"><button class="btn-pro btn-pro-secondary"><i class="fa-solid fa-pause text-[11px]"></i> توقف</button></form>
     @else

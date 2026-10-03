@@ -55,18 +55,21 @@ class PostCampaignService
             ],
             'dm' => [
                 'mode' => 'opening_then_card',
-                'opening_text' => "سلام {name} 👋\nممنون که کامنت گذاشتی! برای دریافت لینک، روی دکمه‌ی زیر بزن.",
+                'opening_text' => "سلام {name} جان 👋\nدیدم دنبال اطلاعات این پست بودی؛ برای دریافتش روی دکمه‌ی زیر بزن.",
                 'opening_button' => 'ارسال لینک',
             ],
+            'flow' => [
+                'order' => 'comment_first',
+            ],
             'follow' => [
-                'text' => 'برای دریافت لینک، اول پیج ما رو فالو کن 🙏 بعد روی «فالو کردم» بزن.',
-                'retry_text' => 'هنوز فالوت ثبت نشده 🤔 لطفاً پیج رو فالو کن و دوباره روی «فالو کردم» بزن.',
+                'text' => '{name} جان، برای اینکه لینک رو برات بفرستیم اول پیج رو دنبال کن 🙏 بعد روی «فالو کردم» بزن.',
+                'retry_text' => '{name} جان، هنوز فالو تأیید نشده؛ اگر انجامش دادی دوباره روی «فالو کردم» بزن.',
                 'button' => 'فالو کردم ✅',
                 'unknown_policy' => 'send',
                 'max_checks' => 3,
             ],
             'card' => [
-                'intro_text' => 'بفرما، اینم لینکی که خواستی 👇',
+                'intro_text' => 'بفرما {name} جان، اینم اطلاعاتی که خواستی 👇',
                 'image_source' => 'post',
                 'image_url' => '',
                 'product_id' => null,
@@ -85,6 +88,47 @@ class PostCampaignService
                 'add_tag' => true,
             ],
         ];
+    }
+
+    /** کلمات کلیدی صریحی را که مدیر داخل کپشن نشانه‌گذاری کرده استخراج می‌کند. */
+    public function keywordsFromCaption(?string $caption): array
+    {
+        $caption = trim((string) $caption);
+        if ($caption === '') {
+            return [];
+        }
+
+        $found = [];
+        $add = function (string $value) use (&$found): void {
+            $value = trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+            $value = trim((string) (preg_replace('/^[\s\p{P}\p{S}]+|[\s\p{P}\p{S}]+$/u', '', $value) ?? $value));
+            if ($value === '' || mb_strlen($value) > 120 || mb_strlen($value) < 2) {
+                return;
+            }
+            $normalized = PersianText::normalize($value);
+            if ($normalized === '' || isset($found[$normalized])) {
+                return;
+            }
+            $found[$normalized] = [
+                'keyword' => $value,
+                'match_mode' => 'contains',
+                'is_active' => true,
+            ];
+        };
+
+        // اولویت با عبارتی است که مدیر عمداً داخل کوتیشن/گیومه نوشته است.
+        preg_match_all('/[«“”"]([^«»“”"]{2,120})[»“”"]/u', $caption, $quoted);
+        foreach ((array) ($quoted[1] ?? []) as $value) {
+            $add($value);
+        }
+
+        // هشتگ‌ها نیز در کپشن معمولاً نقش کلمه‌ی فعال‌کننده را دارند.
+        preg_match_all('/(?<![\p{L}\p{N}_])#([\p{L}\p{N}_‌-]{2,120})/u', $caption, $hashtags);
+        foreach ((array) ($hashtags[1] ?? []) as $value) {
+            $add($value);
+        }
+
+        return array_values(array_slice($found, 0, 5));
     }
 
     /**
@@ -263,9 +307,10 @@ class PostCampaignService
         $activeKeywords = $campaign->keywords->where('is_active', true);
 
         $actions = [];
+        $publicAction = null;
         if ($campaign->public_reply_enabled) {
             $styles = array_values(array_filter((array) data_get($settings, 'reply.styles', [])));
-            $actions[] = array_filter([
+            $publicAction = array_filter([
                 'type' => 'public_reply',
                 'text' => $styles[0] ?? '{name} جان، توی دایرکت برات فرستادیم 🌿',
                 'variants' => $styles,
@@ -273,8 +318,14 @@ class PostCampaignService
                 'delay_seconds' => (int) ($limits['reply_delay_seconds'] ?? 0),
             ], fn ($v) => $v !== null && $v !== [] && $v !== 0 && $v !== false);
         }
-        if ($campaign->dm_enabled) {
-            $actions[] = ['type' => 'post_flow', 'campaign_id' => $campaign->id];
+        $flowAction = $campaign->dm_enabled ? ['type' => 'post_flow', 'campaign_id' => $campaign->id] : null;
+        $orderedMessaging = data_get($settings, 'flow.order') === 'dm_first'
+            ? [$flowAction, $publicAction]
+            : [$publicAction, $flowAction];
+        foreach ($orderedMessaging as $action) {
+            if ($action !== null) {
+                $actions[] = $action;
+            }
         }
         if ($limits['add_tag'] ?? true) {
             $actions[] = ['type' => 'add_tag', 'tag' => 'کامنت‌گذار پست'];
@@ -330,6 +381,7 @@ class PostCampaignService
         $s['reply']['styles'] = array_values(array_slice(array_filter(array_map(fn ($v) => Str::limit(trim((string) $v), 300, ''), (array) ($input['reply']['styles'] ?? $defaults['reply']['styles']))), 0, 3));
         $s['reply']['ai_personalize'] = filter_var($input['reply']['ai_personalize'] ?? false, FILTER_VALIDATE_BOOL);
         $s['dm']['mode'] = in_array($s['dm']['mode'], ['opening_then_card', 'direct_card'], true) ? $s['dm']['mode'] : 'opening_then_card';
+        $s['flow']['order'] = in_array(data_get($s, 'flow.order'), ['comment_first', 'dm_first'], true) ? data_get($s, 'flow.order') : 'comment_first';
         $s['dm']['opening_text'] = Str::limit(trim((string) $s['dm']['opening_text']), 900, '');
         $s['dm']['opening_button'] = Str::limit(trim((string) $s['dm']['opening_button']) ?: 'ارسال لینک', 20, '');
         $s['follow']['button'] = Str::limit(trim((string) $s['follow']['button']) ?: 'فالو کردم ✅', 20, '');

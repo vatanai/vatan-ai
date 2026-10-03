@@ -75,7 +75,6 @@
   <div class="submenu {{ $isStudioMenu || request()->is('admin/instagram*') ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
     <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">{{ config('video_studio.admin_label', 'تولید محتوای خودکار') }}</div></a>
     @include('admin.smart-instagram.partials.sidebar')
-    <a href="{{ route('admin.instagram.dashboard') }}" class="sub-item {{ request()->is('admin/instagram*') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">اینستاگرام — کامنت هوشمند</div></a>
   </div></div>
 </div>
 

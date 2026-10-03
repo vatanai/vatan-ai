@@ -74,6 +74,169 @@ return [
     'product_source_fields' => $productSourceFields,
 
     'types' => [
+        // ══════════ ویترین (سیستم نمایشی یکدست اپ هوم — سبک هیگزفیلد) ══════════
+        // همه‌ی انواع vt_* از یک کارت و یک هاور مشترک استفاده می‌کنند (public/css/home-vitrine.css).
+        // محصولات تکراری بین سکشن‌های ویترین یک صفحه خودکار حذف می‌شوند (avoid_duplicates).
+
+        'vt_hero' => [
+            'label' => 'ویترین · هیرو اسپات‌لایت',
+            'description' => 'اسلاید بزرگ با ویدیو/تصویر و دکمه «همین رو بساز»؛ دسکتاپ ۱ بزرگ + ۲ کوچک، موبایل اسلایدی',
+            'icon' => 'fa-solid fa-clapperboard',
+            'layouts' => [
+                'default' => ['label' => 'یک بزرگ + دو کوچک', 'thumb' => 'hero-default.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'placement', 'label' => 'جای نمایش', 'type' => 'select', 'options' => [
+                    'top' => 'بالای صفحه (قبل از جست‌وجو)',
+                    'flow' => 'به ترتیب سکشن‌ها',
+                ], 'default' => 'top'],
+                ...$productSourceFields,
+                ['key' => 'limit', 'label' => 'تعداد اسلاید', 'type' => 'number', 'default' => 3, 'min' => 1, 'max' => 5],
+                ['key' => 'kicker', 'label' => 'برچسب کوچک اسلاید اول', 'type' => 'text', 'placeholder' => 'مثلاً ویدیو با هوش مصنوعی'],
+                ['key' => 'heading', 'label' => 'تیتر اسلاید اول (خالی = نام محصول)', 'type' => 'text'],
+                ['key' => 'subheading', 'label' => 'توضیح اسلاید اول', 'type' => 'textarea'],
+                ['key' => 'video_url', 'label' => 'ویدیوی اسلاید اول (اختیاری؛ خالی = ویدیوی پیش‌نمایش محصول)', 'type' => 'text', 'placeholder' => '/assets/videos/...mp4'],
+                ['key' => 'cta_label', 'label' => 'متن دکمه', 'type' => 'text', 'default' => 'همین رو بساز'],
+                ['key' => 'autoplay', 'label' => 'چرخش خودکار اسلایدها در موبایل', 'type' => 'checkbox', 'default' => true],
+            ],
+        ],
+
+        'vt_tools' => [
+            'label' => 'ویترین · نوار ابزارها',
+            'description' => 'کاشی‌های مربعی برای دسترسی سریع به گروه‌های محصول؛ هر کاشی = یک دسته‌بندی',
+            'icon' => 'fa-solid fa-grip',
+            'layouts' => [
+                'default' => ['label' => 'کاشی مربعی', 'thumb' => 'grid-4.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'category_ids', 'label' => 'دسته‌بندی‌ها (به همین ترتیب؛ تا ۱۰ مورد)', 'type' => 'category_multiselect'],
+                ['key' => 'tile_overrides', 'label' => 'عنوان/برچسب سفارشی — هر خط: نام دسته | عنوان نمایشی | برچسب', 'type' => 'textarea', 'placeholder' => "کاربردی | افزایش کیفیت | پرطرفدار"],
+                ['key' => 'hide_quick_chips', 'label' => 'مخفی‌کردن چیپ‌های کوچک زیر جست‌وجو', 'type' => 'checkbox', 'default' => true],
+            ],
+        ],
+
+        'vt_row' => [
+            'label' => 'ویترین · ردیف محصول',
+            'description' => 'ردیف افقی با کارت استاندارد ویترین (۳:۴) یا حرکت پیوسته',
+            'icon' => 'fa-solid fa-film',
+            'layouts' => [
+                'default' => ['label' => 'ردیف اسکرولی', 'thumb' => 'row-default.svg'],
+                'marquee' => ['label' => 'حرکت پیوسته', 'thumb' => 'row-compact.svg'],
+            ],
+            'settings_fields' => [
+                ...$productSourceFields,
+                ['key' => 'limit', 'label' => 'تعداد آیتم', 'type' => 'number', 'default' => 12, 'min' => 1, 'max' => 24],
+                ['key' => 'sort', 'label' => 'مرتب‌سازی', 'type' => 'select', 'options' => [
+                    'latest' => 'جدیدترین', 'popular' => 'محبوب‌ترین', 'expensive' => 'گران‌ترین (کردیت)', 'cheap' => 'ارزان‌ترین (کردیت)',
+                ], 'default' => 'latest'],
+                ['key' => 'avoid_duplicates', 'label' => 'حذف محصولاتی که در سکشن‌های ویترین بالاتر آمده‌اند', 'type' => 'checkbox', 'default' => true],
+                ...$viewAllFields,
+            ],
+        ],
+
+        'vt_tabs' => [
+            'label' => 'ویترین · ردیف تب‌دار',
+            'description' => 'تب‌های دسته‌بندی (مثل صنف‌ها) + ردیف محصول هر تب',
+            'icon' => 'fa-solid fa-table-columns',
+            'layouts' => [
+                'default' => ['label' => 'تب + ردیف', 'thumb' => 'row-tabs.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'category_ids', 'label' => 'تب‌ها (دسته‌بندی‌ها؛ به همین ترتیب)', 'type' => 'category_multiselect'],
+                ['key' => 'tab_overrides', 'label' => 'نام سفارشی تب — هر خط: نام دسته | نام تب', 'type' => 'textarea'],
+                ['key' => 'products_per_tab', 'label' => 'تعداد محصول هر تب', 'type' => 'number', 'default' => 10, 'min' => 2, 'max' => 20],
+                ['key' => 'min_products_per_tab', 'label' => 'تب‌های با محصول کمتر از این عدد مخفی شوند', 'type' => 'number', 'default' => 3, 'min' => 1, 'max' => 10],
+                ['key' => 'show_all_tab', 'label' => 'نمایش تب «همه»', 'type' => 'checkbox', 'default' => true],
+                ['key' => 'avoid_duplicates', 'label' => 'حذف محصولاتی که در سکشن‌های ویترین بالاتر آمده‌اند', 'type' => 'checkbox', 'default' => false],
+                ...$viewAllFields,
+            ],
+        ],
+
+        'vt_before_after' => [
+            'label' => 'ویترین · قبل / بعد',
+            'description' => 'کارت مقایسه‌ی کشیدنی؛ «قبل» از تصاویر قبل محصول و «بعد» از تصویر اصلی محصول',
+            'icon' => 'fa-solid fa-left-right',
+            'layouts' => [
+                'default' => ['label' => 'سه کارت مقایسه', 'thumb' => 'grid-3.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'source', 'label' => 'منبع محصولات', 'type' => 'select', 'options' => [
+                    'with_before' => 'خودکار: محصولاتی که تصویر «قبل» دارند',
+                    'manual' => 'انتخاب دستی محصولات',
+                ], 'default' => 'with_before'],
+                ['key' => 'product_ids', 'label' => 'انتخاب محصولات (فقط محصولات دارای تصویر «قبل» نمایش داده می‌شوند)', 'type' => 'product_multiselect', 'show_if_source' => ['manual']],
+                ['key' => 'limit', 'label' => 'تعداد کارت', 'type' => 'number', 'default' => 3, 'min' => 1, 'max' => 9],
+                ['key' => 'cta_label', 'label' => 'متن دکمه', 'type' => 'text', 'default' => 'بساز'],
+            ],
+        ],
+
+        'vt_video_row' => [
+            'label' => 'ویترین · ویدیوهای عمودی',
+            'description' => 'کارت‌های ۹:۱۶ که با هاور (دسکتاپ) یا رسیدن به صفحه (موبایل) پخش می‌شوند',
+            'icon' => 'fa-solid fa-circle-play',
+            'layouts' => [
+                'default' => ['label' => 'ردیف ۹:۱۶', 'thumb' => 'row-large.svg'],
+            ],
+            'settings_fields' => [
+                ...$productSourceFields,
+                ['key' => 'limit', 'label' => 'تعداد آیتم', 'type' => 'number', 'default' => 10, 'min' => 1, 'max' => 24],
+                ['key' => 'min_items', 'label' => 'اگر ویدیو کمتر از این عدد بود سکشن نمایش داده نشود', 'type' => 'number', 'default' => 3, 'min' => 1, 'max' => 10],
+                ...$viewAllFields,
+            ],
+        ],
+
+        'vt_cta_banner' => [
+            'label' => 'ویترین · بنر دعوت',
+            'description' => 'بنر دو ستونه با متن، دو دکمه و سه تصویر از محصولات انتخابی',
+            'icon' => 'fa-solid fa-bullhorn',
+            'layouts' => [
+                'default' => ['label' => 'متن + کلاژ', 'thumb' => 'banner-rounded.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'kicker', 'label' => 'برچسب کوچک', 'type' => 'text'],
+                ['key' => 'heading', 'label' => 'تیتر', 'type' => 'text'],
+                ['key' => 'body', 'label' => 'متن', 'type' => 'textarea'],
+                ['key' => 'cta_label', 'label' => 'متن دکمه اصلی', 'type' => 'text'],
+                ['key' => 'cta_link', 'label' => 'لینک دکمه اصلی', 'type' => 'text'],
+                ['key' => 'cta2_label', 'label' => 'متن دکمه دوم (اختیاری)', 'type' => 'text'],
+                ['key' => 'cta2_link', 'label' => 'لینک دکمه دوم', 'type' => 'text'],
+                ['key' => 'product_ids', 'label' => 'سه محصول برای کلاژ تصویر', 'type' => 'product_multiselect'],
+            ],
+        ],
+
+        'vt_occasions' => [
+            'label' => 'ویترین · کارت دسته‌ها (مناسبت‌ها)',
+            'description' => 'کارت‌های تصویری دسته‌بندی با تعداد قالب',
+            'icon' => 'fa-solid fa-gift',
+            'layouts' => [
+                'default' => ['label' => 'کارت دسته', 'thumb' => 'grid-4.svg'],
+            ],
+            'settings_fields' => [
+                ['key' => 'category_ids', 'label' => 'دسته‌بندی‌ها (به همین ترتیب)', 'type' => 'category_multiselect'],
+                ['key' => 'tile_overrides', 'label' => 'عنوان سفارشی — هر خط: نام دسته | عنوان نمایشی', 'type' => 'textarea'],
+                ['key' => 'min_products', 'label' => 'دسته‌های با محصول کمتر از این عدد مخفی شوند', 'type' => 'number', 'default' => 2, 'min' => 1, 'max' => 10],
+            ],
+        ],
+
+        'vt_masonry' => [
+            'label' => 'ویترین · اکسپلور موزاییکی',
+            'description' => 'شبکه‌ی آجری از همه محصولات + دکمه «مشاهده همه»',
+            'icon' => 'fa-solid fa-border-all',
+            'layouts' => [
+                'default' => ['label' => 'موزاییک', 'thumb' => 'grid-bento.svg'],
+            ],
+            'settings_fields' => [
+                ...$productSourceFields,
+                ['key' => 'limit', 'label' => 'تعداد آیتم', 'type' => 'number', 'default' => 30, 'min' => 6, 'max' => 48],
+                ['key' => 'sort', 'label' => 'مرتب‌سازی', 'type' => 'select', 'options' => [
+                    'latest' => 'جدیدترین', 'popular' => 'محبوب‌ترین', 'random' => 'تصادفی (هر بار متفاوت)',
+                ], 'default' => 'random'],
+                ['key' => 'avoid_duplicates', 'label' => 'حذف محصولاتی که در سکشن‌های ویترین بالاتر آمده‌اند', 'type' => 'checkbox', 'default' => true],
+                ['key' => 'all_button_label', 'label' => 'متن دکمه پایین (‎:count‎ = تعداد کل محصولات)', 'type' => 'text', 'default' => 'مشاهده همه :count محصول'],
+                ['key' => 'all_button_link', 'label' => 'لینک دکمه پایین', 'type' => 'text', 'default' => '/app/products'],
+            ],
+        ],
+
 
         'hero' => [
             'label' => 'هدر / بنر اصلی',
@@ -303,6 +466,7 @@ return [
                 ['key' => 'mobile_height', 'label' => 'فاصله موبایل (px)', 'type' => 'number', 'default' => 31, 'min' => 0, 'max' => 200, 'show_if_setting' => ['key' => 'spacing_mode', 'values' => ['manual']]],
             ],
         ],
+
 
     ],
 

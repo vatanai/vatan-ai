@@ -162,10 +162,10 @@ class OutboundService
     /** بازآزمایی دستی پیام ناموفق از پنل سلامت. */
     public function retry(OutboundMessage $outbound): OutboundMessage
     {
-        if ($outbound->status !== 'failed') {
+        if (!in_array($outbound->status, ['failed', 'blocked'], true)) {
             return $outbound;
         }
-        $outbound->forceFill(['status' => 'pending', 'attempts' => 0, 'error' => null])->save();
+        $outbound->forceFill(['status' => 'pending', 'attempts' => 0, 'error' => null, 'policy_reason' => null, 'next_attempt_at' => null])->save();
         SendOutboundMessage::dispatch($outbound->id)->onQueue(config('smart_instagram.queues.outbound', 'default'));
 
         return $outbound;

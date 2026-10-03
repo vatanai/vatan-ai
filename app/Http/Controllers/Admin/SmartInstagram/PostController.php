@@ -66,7 +66,10 @@ class PostController extends Controller
             'settings' => $campaigns->defaults(),
         ]);
 
-        return $this->wizard($campaign, $selected, $sync, collect([['keyword' => 'لینک', 'match_mode' => 'contains', 'is_active' => true]]));
+        $captionKeywords = $selected ? $campaigns->keywordsFromCaption($selected->caption) : [];
+        $captionKeywords = $captionKeywords ?: [['keyword' => 'لینک', 'match_mode' => 'contains', 'is_active' => true]];
+
+        return $this->wizard($campaign, $selected, $sync, collect($captionKeywords));
     }
 
     public function edit(PostCampaign $campaign, PostSyncService $sync): View
@@ -88,7 +91,7 @@ class PostController extends Controller
         if ($post->campaign) {
             return redirect()->route('admin.smart-instagram.posts.edit', $post->campaign)->with('warning', 'برای این پست قبلاً سناریو ثبت شده است.');
         }
-        $data = $this->validated($request, $post);
+        $data = $this->validated($request, $post, $campaigns);
         $campaign = $campaigns->save($post, $data, null, $this->admin()?->id);
 
         return redirect()->route('admin.smart-instagram.posts.show', $campaign)->with('success', $this->savedMessage($campaign, $post));
@@ -98,7 +101,7 @@ class PostController extends Controller
     {
         $this->authorizeAbility('manage_automation');
         $this->own($campaign);
-        $data = $this->validated($request, $campaign->post);
+        $data = $this->validated($request, $campaign->post, $campaigns);
         $campaign = $campaigns->save($campaign->post, $data, $campaign, $this->admin()?->id);
 
         return redirect()->route('admin.smart-instagram.posts.show', $campaign)->with('success', $this->savedMessage($campaign, $campaign->post));
@@ -141,6 +144,17 @@ class PostController extends Controller
         return back()->with('success', 'وضعیت سناریو: '.PostCampaignService::STATUSES[$data['status']]);
     }
 
+    public function recheck(PostCampaign $campaign, PostFlowService $flow): RedirectResponse
+    {
+        $this->authorizeAbility('manage_automation');
+        $this->own($campaign);
+        $count = $flow->retryCampaign($campaign);
+
+        return back()->with($count > 0 ? 'success' : 'warning', $count > 0
+            ? $count.' ارسال ناموفق/مسدود دوباره بررسی شد.'
+            : 'ارسال ناموفق آماده‌ی بررسی مجددی برای این سناریو پیدا نشد.');
+    }
+
     public function destroy(PostCampaign $campaign, PostCampaignService $campaigns): RedirectResponse
     {
         $this->authorizeAbility('manage_automation');
@@ -174,20 +188,28 @@ class PostController extends Controller
         $s = (array) $campaign->settings;
         $steps = [];
         if ($result['matched']) {
-            if ($campaign->public_reply_enabled) {
-                $steps[] = ['where' => 'کامنت', 'title' => 'پاسخ عمومی', 'text' => data_get($s, 'reply.ai_personalize') ? 'پاسخ شخصی‌سازی‌شده با هوش مصنوعی (نمونه‌ی سبک): '.data_get($s, 'reply.styles.0') : implode(' | ', (array) data_get($s, 'reply.styles', []))];
-            }
+            $publicStep = $campaign->public_reply_enabled ? [[
+                'where' => 'کامنت',
+                'title' => 'پاسخ عمومی',
+                'text' => data_get($s, 'reply.ai_personalize')
+                    ? 'پاسخ شخصی‌سازی‌شده با هوش مصنوعی (نمونه‌ی سبک): '.data_get($s, 'reply.styles.0')
+                    : implode(' | ', (array) data_get($s, 'reply.styles', [])),
+            ]] : [];
+            $dmSteps = [];
             if ($campaign->dm_enabled) {
                 $direct = !$campaign->follow_required && data_get($s, 'dm.mode') === 'direct_card';
                 if (!$direct) {
-                    $steps[] = ['where' => 'دایرکت', 'title' => 'پیام آغاز + دکمه «'.data_get($s, 'dm.opening_button').'»', 'text' => data_get($s, 'dm.opening_text')];
+                    $dmSteps[] = ['where' => 'دایرکت', 'title' => 'پیام آغاز + دکمه «'.data_get($s, 'dm.opening_button').'»', 'text' => data_get($s, 'dm.opening_text')];
                     if ($campaign->follow_required && ($data['follows'] ?? 'yes') !== 'yes') {
-                        $steps[] = ['where' => 'دایرکت', 'title' => ($data['follows'] ?? '') === 'unknown' ? 'وضعیت فالو نامشخص — '.(data_get($s, 'follow.unknown_policy') === 'send' ? 'ارسال کارت' : 'درخواست فالو') : 'درخواست فالو + دکمه «'.data_get($s, 'follow.button').'»', 'text' => data_get($s, 'follow.text')];
+                        $dmSteps[] = ['where' => 'دایرکت', 'title' => ($data['follows'] ?? '') === 'unknown' ? 'وضعیت فالو نامشخص — '.(data_get($s, 'follow.unknown_policy') === 'send' ? 'ارسال کارت' : 'درخواست فالو') : 'درخواست فالو + دکمه «'.data_get($s, 'follow.button').'»', 'text' => data_get($s, 'follow.text')];
                     }
                 }
                 $card = $flow->cardMessage($campaign);
-                $steps[] = ['where' => 'دایرکت', 'title' => 'کارت', 'text' => $card['ok'] ? $card['title'].' — '.collect(data_get($card, 'message.attachment.payload.elements.0.buttons', []))->pluck('title')->implode(' / ') : $card['error'], 'ok' => $card['ok']];
+                $dmSteps[] = ['where' => 'دایرکت', 'title' => 'کارت', 'text' => $card['ok'] ? $card['title'].' — '.collect(data_get($card, 'message.attachment.payload.elements.0.buttons', []))->pluck('title')->implode(' / ') : $card['error'], 'ok' => $card['ok']];
             }
+            $steps = data_get($s, 'flow.order') === 'dm_first'
+                ? array_merge($dmSteps, $publicStep)
+                : array_merge($publicStep, $dmSteps);
         }
 
         return response()->json($result + ['steps' => $steps]);
@@ -299,14 +321,33 @@ class PostController extends Controller
         } catch (\Throwable) {
         }
 
+        $productRows = Product::query()->where('status', 'active')->orderByDesc('created_at')->orderByDesc('id')->limit(500)
+            ->get(['id', 'name_fa', 'description_fa', 'slug', 'product_code', 'cover', 'thumbnail', 'sample_outputs'])
+            ->map(fn (Product $p) => [
+                'id' => $p->id,
+                'name' => $p->name_fa,
+                'description' => trim(strip_tags((string) $p->description_fa)),
+                'image' => $p->displayImageUrl(),
+                'url' => route('app.product', $p->route_slug),
+            ])->values();
+        $caption = PersianText::normalize((string) ($selected?->caption ?? ''));
+        $captionTerms = collect(preg_split('/\s+/u', $caption, -1, PREG_SPLIT_NO_EMPTY))
+            ->filter(fn ($term) => mb_strlen($term) >= 3)->values();
+        $productSuggestions = $productRows->take(10)->map(function (array $product) use ($captionTerms): array {
+            $haystack = PersianText::normalize($product['name'].' '.$product['description']);
+            $score = $captionTerms->sum(fn ($term) => str_contains($haystack, $term) ? 1 : 0);
+            $product['_score'] = $score;
+
+            return $product;
+        })->sortByDesc('_score')->take(10)->values()->map(fn (array $product) => $product['id'])->all();
+
         return view('admin.smart-instagram.posts.wizard', [
             'campaign' => $campaign,
             'selected' => $selected,
             'posts' => $posts,
             'keywords' => $keywords->values(),
-            'products' => Product::query()->where('status', 'active')->orderBy('name_fa')->limit(300)
-                ->get(['id', 'name_fa', 'slug', 'product_code', 'cover', 'thumbnail', 'sample_outputs'])
-                ->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name_fa, 'image' => $p->displayImageUrl(), 'url' => route('app.product', $p->route_slug)])->values(),
+            'products' => $productRows,
+            'productSuggestions' => $productSuggestions,
             'aiSettings' => app(PostAiSettings::class)->get(),
             'aiSections' => PostAiSettings::SECTIONS,
             'canEditAi' => $this->context->can($this->admin(), 'manage_knowledge'),
@@ -319,17 +360,18 @@ class PostController extends Controller
         ]);
     }
 
-    private function validated(Request $request, Post $post): array
+    private function validated(Request $request, Post $post, PostCampaignService $campaigns): array
     {
         $request->validate([
             'title' => ['nullable', 'string', 'max:190'],
             'intent' => ['nullable', 'in:draft,test,active'],
-            'keywords' => ['required', 'array', 'min:1', 'max:30'],
+            'keywords' => ['nullable', 'array', 'max:30'],
             'keywords.*.keyword' => ['nullable', 'string', 'max:120'],
             'keywords.*.match_mode' => ['nullable', 'in:'.implode(',', array_keys(PostCampaignService::MATCH_MODES))],
             'settings' => ['required', 'array'],
             'settings.reply.styles' => ['nullable', 'array', 'max:3'],
             'settings.reply.styles.*' => ['nullable', 'string', 'max:300'],
+            'settings.flow.order' => ['nullable', 'in:comment_first,dm_first'],
             'settings.dm.opening_text' => ['nullable', 'string', 'max:900'],
             'settings.dm.opening_button' => ['nullable', 'string', 'max:20'],
             'settings.follow.text' => ['nullable', 'string', 'max:900'],
@@ -356,11 +398,17 @@ class PostController extends Controller
 
         $keywords = collect((array) $request->input('keywords'))->filter(fn ($k) => PersianText::normalize((string) ($k['keyword'] ?? '')) !== '');
         if ($keywords->isEmpty()) {
-            abort(back()->withInput()->withErrors(['keywords' => 'حداقل یک کلمه‌ی کلیدی وارد کنید.']));
+            $keywords = collect($campaigns->keywordsFromCaption($post->caption));
+        }
+        if ($keywords->isEmpty()) {
+            abort(back()->withInput()->withErrors(['keywords' => 'کلمه‌ی کلیدی در فرم یا کپشن پیدا نشد؛ حداقل یک کلمه وارد کنید.']));
         }
         $settings = (array) $request->input('settings');
         $dmEnabled = $request->boolean('dm_enabled');
         if ($dmEnabled) {
+            if (!filled(data_get($settings, 'card.product_id'))) {
+                abort(back()->withInput()->withErrors(['settings.card.product_id' => 'برای ارسال دایرکت، انتخاب محصول هدف الزامی است.']));
+            }
             $buttons = collect((array) data_get($settings, 'card.buttons', []))->filter(fn ($b) => trim((string) ($b['label'] ?? '')) !== '');
             $hasLink = $buttons->contains(fn ($b) => ($b['type'] ?? 'web_url') === 'web_url' && (filled($b['url'] ?? null) || filled(data_get($settings, 'card.product_id'))));
             if (!$hasLink) {

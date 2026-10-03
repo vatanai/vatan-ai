@@ -13,8 +13,27 @@
     }
   </script>
 
+  @php
+    // ویترین: هیروی «بالای صفحه» قبل از جست‌وجو رندر می‌شود و جای تیتر خوشامد را می‌گیرد؛
+    // اگر «نوار ابزارها» منتشر باشد، چیپ‌های کوچک زیر جست‌وجو تکراری‌اند و پنهان می‌شوند.
+    $vtTopItems = $renderedSections->filter(fn ($i) => $i['section']->type === 'vt_hero'
+      && $i['section']->setting('placement', 'top') === 'top')->values();
+    $vtFlowItems = $renderedSections->reject(fn ($i) => $i['section']->type === 'vt_hero'
+      && $i['section']->setting('placement', 'top') === 'top')->values();
+    $vtHideQuickChips = $renderedSections->contains(fn ($i) => $i['section']->type === 'vt_tools'
+      && filter_var($i['section']->setting('hide_quick_chips', true), FILTER_VALIDATE_BOOLEAN)
+      && ($i['tiles'] ?? collect())->isNotEmpty());
+    $vtHasTopHero = $vtTopItems->contains(fn ($i) => ($i['products'] ?? collect())->isNotEmpty());
+  @endphp
+
+  @include('app.home-builder.partials.styles')
+
+  @foreach($vtTopItems as $item)
+    @include('app.home-builder.dispatcher', ['item' => $item])
+  @endforeach
+
   {{-- ===== SECTION 2: خوش‌آمدگویی هوشمند ===== --}}
-  @if(!isset($sitePage) || $sitePage->content('show_page_title', true))
+  @if(!$vtHasTopHero && (!isset($sitePage) || $sitePage->content('show_page_title', true)))
     <section class="home-greeting">
       <p class="home-greeting-title">{{ isset($sitePage) ? $sitePage->title : 'سلام، خوش اومدی' }}</p>
       <p class="home-greeting-sub">{{ isset($sitePage) ? $sitePage->subtitle : 'می‌خوای چی خلق کنی؟' }}</p>
@@ -54,9 +73,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
           <span>جست و جوی هوشمند</span>
         </button>
+        @unless($vtHideQuickChips)
         <div class="ig-left">
           @include('app.partials.home-quick-chips')
         </div>
+        @endunless
       </div>
 
     </div>
@@ -64,10 +85,8 @@
   @endif
 
   {{-- ===== SECTION 4: Sectionهای داینامیک صفحه هوم (مدیریت از پنل ادمین → مدیریت صفحه هوم) ===== --}}
-  @include('app.home-builder.partials.styles')
-
   <section class="home-products">
-    @forelse($renderedSections as $item)
+    @forelse($vtFlowItems as $item)
       @include('app.home-builder.dispatcher', ['item' => $item])
     @empty
       {{-- هنوز هیچ Section منتشرشده‌ای برای صفحه هوم تعریف نشده --}}
