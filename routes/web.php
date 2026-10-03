@@ -401,6 +401,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth:admin')->group(function
     Route::put('/settings/telegram/product-bot/master-prompt', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateMasterPrompt'])->name('settings.telegram.product-bot.master-prompt.update');
     Route::post('/settings/telegram/product-bot/managers', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'storeManager'])->name('settings.telegram.product-bot.managers.store');
     Route::put('/settings/telegram/product-bot/managers/{manager}', [\App\Http\Controllers\Admin\TelegramProductBotSettingsController::class, 'updateManager'])->name('settings.telegram.product-bot.managers.update');
+// دسته‌بندی‌ها و اصناف
+    Route::post('/categories/occupations', [CategoryController::class, 'storeOccupation'])->name('categories.occupations.store');
+    Route::put('/categories/occupations/{occupation}', [CategoryController::class, 'updateOccupation'])->name('categories.occupations.update');
+    Route::delete('/categories/occupations/{occupation}', [CategoryController::class, 'destroyOccupation'])->name('categories.occupations.destroy');
 // مسیرهای کامل CRUD دسته‌بندی
     Route::resource('categories', CategoryController::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');

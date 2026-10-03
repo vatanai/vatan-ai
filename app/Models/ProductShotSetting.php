@@ -14,6 +14,8 @@ class ProductShotSetting extends Model
         'enabled', 'audience', 'whitelist_user_ids', 'whitelist_phones', 'max_shots_per_run',
         'client_concurrency', 'daily_cost_cap_usd', 'preflight_enabled', 'preflight_model',
         'qc_enabled', 'qc_model', 'qc_auto_retry', 'credit_price_toman',
+        'preflight_prompt', 'preflight_blocking_issues', 'preflight_min_side',
+        'product_sheet_enabled', 'product_sheet_size',
     ];
 
     protected $casts = [
@@ -27,6 +29,10 @@ class ProductShotSetting extends Model
         'qc_enabled' => 'boolean',
         'qc_auto_retry' => 'boolean',
         'credit_price_toman' => 'integer',
+        'preflight_blocking_issues' => 'array',
+        'preflight_min_side' => 'integer',
+        'product_sheet_enabled' => 'boolean',
+        'product_sheet_size' => 'integer',
     ];
 
     private static ?self $cached = null;
@@ -59,9 +65,14 @@ class ProductShotSetting extends Model
             'client_concurrency' => 1,
             'daily_cost_cap_usd' => 5,
             'preflight_enabled' => true,
+            'preflight_prompt' => null,
+            'preflight_blocking_issues' => ['no_product', 'blur', 'different_product'],
+            'preflight_min_side' => 900,
             'qc_enabled' => true,
             'qc_auto_retry' => true,
             'credit_price_toman' => 585,
+            'product_sheet_enabled' => true,
+            'product_sheet_size' => 2048,
         ];
     }
 }

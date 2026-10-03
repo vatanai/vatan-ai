@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
  * • ذخیره در Database
  * • فوری پردازش برای Response
  */
-class InstagramWebhookController extends Controller
+class InstagramWebhookController_Phase0 extends Controller
 {
     /**
      * تأیید Webhook (GET request از Meta)

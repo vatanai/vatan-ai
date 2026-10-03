@@ -5,6 +5,7 @@ namespace Tests\Feature\ProductShots;
 use App\Models\Admin;
 use App\Models\AiModel;
 use App\Models\Category;
+use App\Models\Occupation;
 use App\Models\Product;
 use App\Models\ProductShot;
 use App\Models\ShotLibrary;
@@ -31,7 +32,8 @@ class ProductShotAdminTest extends TestCase
 
     private function imageModel(): AiModel
     {
-        return AiModel::query()->where('is_active', true)->where('output_modality', 'image')->where('supports_image_input', true)->where('provider', 'openrouter')->firstOrFail();
+        return AiModel::query()->where('is_active', true)->where('output_modality', 'image')->where('supports_image_input', true)
+            ->where('provider', 'openrouter')->firstOrFail();
     }
 
     private function category(): Category
@@ -48,6 +50,7 @@ class ProductShotAdminTest extends TestCase
             'enabled' => '1', 'audience' => 'whitelist', 'whitelist_user_ids' => '5, 9', 'whitelist_phones' => '09121112233',
             'max_shots_per_run' => 6, 'client_concurrency' => 1, 'daily_cost_cap_usd' => 3, 'credit_price_toman' => 585,
             'preflight_enabled' => '1', 'qc_enabled' => '1',
+            'preflight_min_side' => 900, 'product_sheet_size' => 2048, 'product_sheet_enabled' => '1',
         ])->assertRedirect(route('admin.product-shots.index'));
 
         $settings = \App\Models\ProductShotSetting::query()->first();
@@ -110,21 +113,30 @@ class ProductShotAdminTest extends TestCase
         $shots = ShotLibrary::query()->ordered()->take(3)->get();
         $model = $this->imageModel();
         $cat = $this->category();
+        $occupation = Occupation::query()->firstOrFail();
 
         $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))
             ->assertOk()
-            ->assertSee('استودیوی تمیز فروشگاهی')
+            ->assertSee('data-step-panel="5"', false)
+            ->assertSee('حفظ هویت برند')
             ->assertSee($shots[0]->name_fa);
 
         $payload = [
-            'name_fa' => 'پک سرم', 'name_en' => 'Serum Pack', 'niche' => 'beauty', 'status' => 'active',
-            'ai_model_id' => $model->id, 'category_ids' => [$cat->id], 'product_description' => 'amber serum bottle',
+            'name_fa' => 'پک سرم', 'name_en' => 'Serum Pack', 'status' => 'active',
+            'occupation_ids' => [$occupation->id], 'category_ids' => [$cat->id], 'product_description' => 'amber serum bottle',
+            'quality_models' => [
+                'standard' => ['primary_id' => $model->id],
+                'professional' => ['primary_id' => $model->id],
+                'best' => ['primary_id' => $model->id],
+            ],
+            'preflight_enabled' => '1', 'preflight_min_side' => 900, 'product_sheet_enabled' => '1', 'product_sheet_size' => 2048,
             'brand_identity_enabled' => '1',
             'brand_identity_prompt' => 'Keep the brand palette warm and minimal.',
+            'explore_tiles' => ['1x1', '1x2'],
             'shots' => [
-                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'sort' => 0],
-                $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'sort' => 1],
-                $shots[2]->id => ['enabled' => '0', 'is_default' => '0', 'credits' => '', 'sort' => 2],
+                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5','1:1'], 'aspect_ratio_default' => '4:5', 'sort' => 0],
+                $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'quality_credits' => ['standard'=>8,'professional'=>12,'best'=>18], 'allowed_aspect_ratios' => ['4:5','9:16'], 'aspect_ratio_default' => '4:5', 'aspect_ratio_user_selectable' => '1', 'sort' => 1],
+                $shots[2]->id => ['enabled' => '0', 'is_default' => '0', 'credits' => '', 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5'], 'aspect_ratio_default' => '4:5', 'sort' => 2],
             ],
         ];
         $this->actingAs($this->admin, 'admin')->post(route('admin.product-shots.products.store'), $payload)->assertRedirect();
@@ -139,6 +151,8 @@ class ProductShotAdminTest extends TestCase
         $this->assertSame((int) $this->admin->id, (int) $product->created_by);
         $this->assertSame(2, $product->enabledProductShots()->count());
         $this->assertSame([$cat->id], $product->categories()->pluck('categories.id')->all());
+        $this->assertSame([$occupation->id], $product->occupations()->pluck('occupations.id')->all());
+        $this->assertSame(15, $product->productShots()->where('shot_id', $shots[0]->id)->firstOrFail()->credits('professional'));
 
         // ویرایش از فرم قدیمی به فرم جدید هدایت می‌شود
         $this->actingAs($this->admin, 'admin')->get(route('admin.products.create', $product))
@@ -157,8 +171,12 @@ class ProductShotAdminTest extends TestCase
         $this->enableShots('admins');
         $shot = ShotLibrary::query()->firstOrFail();
         $this->actingAs($this->admin, 'admin')->post(route('admin.product-shots.products.store'), [
-            'name_fa' => 'x', 'name_en' => 'x', 'niche' => 'beauty', 'status' => 'active', 'ai_model_id' => $this->imageModel()->id,
-            'shots' => [$shot->id => ['enabled' => '1']],
+            'name_fa' => 'x', 'name_en' => 'x', 'status' => 'active',
+            'occupation_ids' => [Occupation::query()->firstOrFail()->id],
+            'quality_models' => collect(['standard','professional','best'])->mapWithKeys(fn($quality)=>[$quality=>['primary_id'=>$this->imageModel()->id]])->all(),
+            'preflight_min_side' => 900, 'product_sheet_size' => 2048,
+            'shots' => [$shot->id => ['enabled' => '1', 'is_default' => '1', 'quality_credits'=>['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios'=>['4:5'], 'aspect_ratio_default'=>'4:5']],
+            'explore_tiles' => ['1x1'],
         ])->assertSessionHasErrors('category_ids');
     }
 

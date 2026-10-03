@@ -47,10 +47,10 @@ class ProductShotController extends Controller
                     'cover' => $product->displayImageUrl(),
                 ],
                 'shots' => $this->packs->shotCards($product),
-                'aspect_ratios' => array_values((array) config('product_shots.aspect_ratios')),
-                'default_aspect_ratio' => (string) config('product_shots.default_aspect_ratio', '4:5'),
+                'quality_levels' => (array) config('product_shots.quality_levels'),
+                'default_quality' => (string) config('product_shots.default_quality', 'standard'),
                 'max_shots' => (int) $settings->max_shots_per_run,
-                'max_extra_angles' => (int) config('product_shots.max_extra_angles', 2),
+                'max_extra_angles' => (int) config('product_shots.max_extra_angles', 3),
                 'max_upload_mb' => (int) config('product_shots.max_upload_mb', 12),
                 'concurrency' => max(1, min(3, (int) $settings->client_concurrency)),
                 'balance' => $user ? (int) $user->tokens : 0,
@@ -60,6 +60,7 @@ class ProductShotController extends Controller
                 'profile_url' => route('app.profile'),
                 'urls' => [
                     'preflight' => route('app.product-shots.preflight', $product->slug),
+                    'preflight_set' => route('app.product-shots.preflight-set', $product->slug),
                     'batches' => route('app.product-shots.batches.store', $product->slug),
                 ],
             ],
@@ -94,9 +95,8 @@ class ProductShotController extends Controller
         }
 
         $isMain = $request->input('role', 'main') === 'main';
-        $report = $isMain
-            ? $this->vision->preflight($stored['path'])
-            : ['verdict' => 'green', 'usable' => true, 'issues' => [], 'issue_labels' => [], 'crop_box' => null, 'suggestion_fa' => '', 'product_description' => null, 'checked_by' => 'skipped', 'model' => null];
+        $preflightConfig = (array) data_get($product->shot_settings, 'preflight', []);
+        $report = $this->vision->preflight($stored['path'], null, $preflightConfig);
 
         $fixed = null;
         if ($isMain && $report['verdict'] === 'yellow') {
@@ -130,6 +130,43 @@ class ProductShotController extends Controller
             'checked_by' => $report['checked_by'],
             'original_url' => asset('storage/' . $stored['path']),
             'fixed_url' => $fixed ? asset('storage/' . $fixed['path']) : null,
+            'diagnostics' => $report['diagnostics'] ?? null,
+        ]);
+    }
+
+    public function preflightSet(Request $request, Product $product): JsonResponse
+    {
+        $this->ensureShotProduct($product);
+        $data = $request->validate([
+            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 3))],
+            'uploads.*.id' => ['required', 'string', 'max:64'],
+            'uploads.*.use_fixed' => ['nullable', 'boolean'],
+        ]);
+        $paths = [];
+        foreach ($data['uploads'] as $upload) {
+            $meta = $this->packs->upload((string) $upload['id']);
+            if (! $meta || (int) ($meta['user_id'] ?? 0) !== (int) $request->user()->id || (int) ($meta['product_id'] ?? 0) !== (int) $product->id) {
+                return response()->json(['ok' => false, 'message' => 'یکی از عکس‌ها پیدا نشد یا منقضی شده است؛ دوباره بارگذاری کنید.'], 422);
+            }
+            $paths[] = ! empty($upload['use_fixed']) && ! empty($meta['fixed_path']) ? $meta['fixed_path'] : $meta['path'];
+        }
+        $configuration = (array) data_get($product->shot_settings, 'preflight', []);
+        $report = $this->vision->preflightSet($paths, null, $configuration);
+        $sheet = $this->images->createProductSheet(
+            $paths,
+            trim((string) config('product_shots.upload_dir'), '/') . '/sheet-previews/' . now()->format('Y/m/d'),
+            (int) ($configuration['product_sheet_size'] ?? config('product_shots.product_sheet_size', 2048)),
+        );
+
+        return response()->json([
+            'ok' => true,
+            'verdict' => $report['verdict'],
+            'usable' => $report['usable'],
+            'issues' => $report['issue_labels'],
+            'suggestion' => $report['suggestion_fa'],
+            'coverage' => $report['coverage'],
+            'checked_by' => $report['checked_by'],
+            'product_sheet_url' => $sheet ? asset('storage/' . $sheet['path']) : null,
         ]);
     }
 
@@ -137,19 +174,28 @@ class ProductShotController extends Controller
     {
         $this->ensureShotProduct($product);
         $data = $request->validate([
-            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 2))],
+            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 3))],
             'uploads.*.id' => ['required', 'string', 'max:64'],
             'uploads.*.use_fixed' => ['nullable', 'boolean'],
             'shots' => ['required', 'array', 'min:1', 'max:20'],
             'shots.*' => ['string', 'max:80'],
-            'aspect_ratio' => ['nullable', 'string', 'max:10'],
+            'quality_level' => ['required', Rule::in(array_keys((array) config('product_shots.quality_levels')))],
+            'shot_ratios' => ['nullable', 'array'],
+            'shot_ratios.*' => ['string', Rule::in((array) config('product_shots.aspect_ratios'))],
         ], [
             'uploads.required' => 'یک عکس از محصول بارگذاری کنید.',
             'shots.required' => 'حداقل یک شات انتخاب کنید.',
         ]);
 
         $user = $request->user();
-        $batch = $this->packs->createBatch($user, $product, $data['uploads'], $data['shots'], (string) ($data['aspect_ratio'] ?? ''));
+        $batch = $this->packs->createBatch(
+            $user,
+            $product,
+            $data['uploads'],
+            $data['shots'],
+            (string) $data['quality_level'],
+            (array) ($data['shot_ratios'] ?? []),
+        );
         $this->dispatcher->dispatchBatch($batch);
 
         return response()->json([

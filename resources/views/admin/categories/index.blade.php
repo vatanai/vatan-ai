@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@section('title', 'مدیریت دسته‌بندی‌ها — وطن استودیو')
+@section('title', 'دسته‌بندی و اصناف — وطن استودیو')
 
 @section('content')
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0" dir="rtl">
@@ -7,12 +7,14 @@
   <div class="admin-content flex-1 overflow-y-auto p-6 max-[768px]:p-[18px]" id="content">
     <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">مدیریت دسته‌بندی‌ها</h1>
-        <p class="text-xs text-[var(--text-soft)]">تعداد دقیق محصولات یکتا، آخرین ثبت محصول و مدیریت دسته‌بندی‌ها</p>
+        <h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">دسته‌بندی و اصناف</h1>
+        <p class="text-xs text-[var(--text-soft)]">مدیریت ساختار محتوایی محصولات و صنف‌های قابل انتخاب در محصولات پروداکتی</p>
       </div>
+      @if(request('tab') !== 'occupations')
       <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold bg-[var(--primary)] text-[var(--accent)] no-underline">
         <i class="fa-solid fa-plus"></i> افزودن دسته‌بندی
       </a>
+      @endif
     </div>
 
     @if(session('success'))
@@ -20,7 +22,16 @@
         <i class="fa-solid fa-circle-check text-[var(--success)] ml-1"></i>{{ session('success') }}
       </div>
     @endif
+    @if($errors->any())
+      <div class="mb-4 rounded-xl border border-[var(--danger)] p-3 text-xs text-[var(--text-main)] bg-[var(--card-bg)]"><ul class="list-disc pr-5">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+    @endif
 
+    <div class="inline-flex gap-1 p-1 mb-5 rounded-xl bg-[var(--card-bg)] border border-[var(--border)]">
+      <a href="{{ route('admin.categories.index') }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') !== 'occupations' ? 'bg-[var(--primary)] text-[var(--accent)]' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-folder-tree"></i> دسته‌بندی‌ها</a>
+      <a href="{{ route('admin.categories.index', ['tab' => 'occupations']) }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') === 'occupations' ? 'bg-[var(--primary)] text-[var(--accent)]' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-store"></i> اصناف <span class="opacity-70">{{ number_format($occupationTotal) }}</span></a>
+    </div>
+
+    @if(request('tab') !== 'occupations')
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
       <div class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-4 shadow-[var(--shadow-card)]">
         <div class="flex items-center justify-between mb-3"><span class="text-xs text-[var(--text-soft)]">همه دسته‌بندی‌ها</span><span class="w-9 h-9 rounded-lg bg-[var(--input-bg)] text-[var(--primary)] flex items-center justify-center"><i class="fa-solid fa-layer-group"></i></span></div>
@@ -122,6 +133,51 @@
       </div>
     </div>
     @if($categories->hasPages())<div class="mt-5">{{ $categories->links() }}</div>@endif
+    @else
+      <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-5">
+        <form method="POST" action="{{ route('admin.categories.occupations.store') }}" class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-5 shadow-[var(--shadow-card)] h-fit">
+          @csrf
+          <div class="text-sm font-bold text-[var(--text-main)] pb-3 mb-4 border-b border-[var(--divider)]"><i class="fa-solid fa-store text-[var(--primary)] ml-1"></i> افزودن صنف</div>
+          <div class="space-y-3">
+            <label class="block text-xs font-bold text-[var(--text-main)]">نام فارسی <span class="text-[var(--danger)]">*</span><input name="name_fa" required value="{{ old('name_fa') }}" class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></label>
+            <label class="block text-xs font-bold text-[var(--text-main)]">نام انگلیسی<input name="name_en" value="{{ old('name_en') }}" dir="ltr" class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></label>
+            <label class="block text-xs font-bold text-[var(--text-main)]">گروه <span class="text-[var(--danger)]">*</span><select name="group_key" required class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]">@foreach(\App\Models\Occupation::GROUPS as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></label>
+            <label class="block text-xs font-bold text-[var(--text-main)]">شناسه انگلیسی<input name="slug" dir="ltr" placeholder="اختیاری؛ خودکار ساخته می‌شود" class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></label>
+            <label class="block text-xs font-bold text-[var(--text-main)]">توضیح<textarea name="description" rows="3" class="mt-2 w-full p-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></textarea></label>
+            <div class="grid grid-cols-2 gap-3"><label class="block text-xs font-bold text-[var(--text-main)]">ترتیب<input type="number" name="sort" min="0" value="0" class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></label><label class="flex items-center gap-2 mt-7 text-xs text-[var(--text-main)]"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" checked> فعال</label></div>
+          </div>
+          <button class="mt-4 w-full h-10 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold"><i class="fa-solid fa-plus ml-1"></i> افزودن صنف</button>
+        </form>
+
+        <div class="space-y-4">
+          <form method="GET" action="{{ route('admin.categories.index') }}" class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-3 flex flex-wrap gap-2">
+            <input type="hidden" name="tab" value="occupations"><input name="occupation_search" value="{{ request('occupation_search') }}" placeholder="جستجوی صنف..." class="flex-1 min-w-[220px] h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]">
+            <select name="occupation_group" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">همه گروه‌ها</option>@foreach(\App\Models\Occupation::GROUPS as $key => $label)<option value="{{ $key }}" @selected(request('occupation_group')===$key)>{{ $label }}</option>@endforeach</select>
+            <button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold">اعمال</button>
+          </form>
+          @forelse($occupations as $groupKey => $groupOccupations)
+            <section class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+              <div class="p-4 border-b border-[var(--divider)] flex items-center justify-between"><strong class="text-xs text-[var(--text-main)]">{{ \App\Models\Occupation::GROUPS[$groupKey] ?? $groupKey }}</strong><span class="text-[10px] text-[var(--text-soft)]">{{ number_format($groupOccupations->count()) }} صنف</span></div>
+              <div class="divide-y divide-[var(--divider)]">
+                @foreach($groupOccupations as $occupation)
+                  <form method="POST" action="{{ route('admin.categories.occupations.update', $occupation) }}" class="p-3 grid grid-cols-1 md:grid-cols-[minmax(140px,1fr)_minmax(150px,1fr)_150px_72px_auto] gap-2 items-center">
+                    @csrf @method('PUT')
+                    <input name="name_fa" required value="{{ $occupation->name_fa }}" class="h-9 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]">
+                    <input name="slug" required value="{{ $occupation->slug }}" dir="ltr" class="h-9 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]">
+                    <select name="group_key" class="h-9 px-2 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[11px] text-[var(--text-main)]">@foreach(\App\Models\Occupation::GROUPS as $key => $label)<option value="{{ $key }}" @selected($occupation->group_key===$key)>{{ $label }}</option>@endforeach</select>
+                    <input type="number" name="sort" min="0" value="{{ $occupation->sort }}" class="h-9 px-2 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]">
+                    <div class="flex items-center justify-end gap-2"><input type="hidden" name="name_en" value="{{ $occupation->name_en }}"><input type="hidden" name="description" value="{{ $occupation->description }}"><label class="text-[10px] text-[var(--text-soft)]"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" @checked($occupation->is_active)> فعال</label><button class="w-8 h-8 rounded-lg border border-[var(--border)] text-[var(--primary)]" title="ذخیره"><i class="fa-solid fa-floppy-disk"></i></button><button type="submit" form="occupation-delete-{{ $occupation->id }}" class="w-8 h-8 rounded-lg border border-[var(--border)] text-[var(--danger)]" title="حذف" onclick="return confirm('این صنف حذف شود؟')"><i class="fa-solid fa-trash-can"></i></button></div>
+                  </form>
+                  <form id="occupation-delete-{{ $occupation->id }}" method="POST" action="{{ route('admin.categories.occupations.destroy', $occupation) }}" class="hidden">@csrf @method('DELETE')</form>
+                @endforeach
+              </div>
+            </section>
+          @empty
+            <div class="p-10 text-center bg-[var(--card-bg)] border border-[var(--border)] rounded-xl text-xs text-[var(--text-soft)]">صنفی پیدا نشد.</div>
+          @endforelse
+        </div>
+      </div>
+    @endif
     <div id="copy-toast" class="fixed left-6 bottom-6 hidden rounded-lg bg-[var(--card-bg)] border border-[var(--success)] px-4 py-3 text-xs text-[var(--text-main)] shadow-[var(--shadow-card)]">لینک دسته‌بندی کپی شد.</div>
   </div>
 </main>

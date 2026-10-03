@@ -207,11 +207,83 @@ class ShotImageStore
         return $sum / 1024;
     }
 
-    private function persistJpeg(\GdImage $image, string $directory): array
+    /** امتیاز تقریبی وضوح لبه‌ها؛ برای هشدار محلی پیش از فراخوانی مدل بینایی. */
+    public function sharpnessScore(string $path): ?float
+    {
+        $disk = Storage::disk('public');
+        if (! $disk->exists($path)) return null;
+        $image = @imagecreatefromstring((string) $disk->get($path));
+        if (! $image) return null;
+        $small = imagescale($image, 96, 96, IMG_BILINEAR_FIXED);
+        imagedestroy($image);
+        if (! $small) return null;
+
+        $sum = 0.0;
+        $sumSq = 0.0;
+        $count = 0;
+        for ($y = 1; $y < 95; $y++) {
+            for ($x = 1; $x < 95; $x++) {
+                $center = $this->grayAt($small, $x, $y);
+                $laplace = (4 * $center) - $this->grayAt($small, $x - 1, $y) - $this->grayAt($small, $x + 1, $y)
+                    - $this->grayAt($small, $x, $y - 1) - $this->grayAt($small, $x, $y + 1);
+                $sum += $laplace;
+                $sumSq += $laplace * $laplace;
+                $count++;
+            }
+        }
+        imagedestroy($small);
+        if ($count === 0) return null;
+        $mean = $sum / $count;
+
+        return max(0.0, ($sumSq / $count) - ($mean * $mean));
+    }
+
+    /**
+     * ساخت شیت مرجع ۲×۲ با پس‌زمینه خنثی؛ تصاویر اصلی نیز جداگانه برای مدل حفظ می‌شوند.
+     * @param array<int,string> $paths
+     */
+    public function createProductSheet(array $paths, string $directory, int $size = 2048): ?array
+    {
+        $paths = array_values(array_slice(array_filter($paths), 0, 4));
+        if ($paths === []) return null;
+        $size = max(1024, min(3072, $size));
+        $canvas = imagecreatetruecolor($size, $size);
+        if (! $canvas) return null;
+        $background = imagecolorallocate($canvas, 245, 246, 246);
+        $divider = imagecolorallocate($canvas, 218, 220, 219);
+        imagefill($canvas, 0, 0, $background);
+
+        $gap = max(12, (int) round($size * 0.012));
+        $padding = max(24, (int) round($size * 0.025));
+        $cell = (int) floor(($size - ($padding * 2) - $gap) / 2);
+        $disk = Storage::disk('public');
+        foreach ($paths as $index => $path) {
+            if (! $disk->exists($path)) continue;
+            $source = @imagecreatefromstring((string) $disk->get($path));
+            if (! $source) continue;
+            $sw = imagesx($source); $sh = imagesy($source);
+            $scale = min(($cell - $gap * 2) / max(1, $sw), ($cell - $gap * 2) / max(1, $sh));
+            $dw = max(1, (int) round($sw * $scale));
+            $dh = max(1, (int) round($sh * $scale));
+            $column = $index % 2; $row = intdiv($index, 2);
+            $cx = $padding + ($column * ($cell + $gap));
+            $cy = $padding + ($row * ($cell + $gap));
+            imagefilledrectangle($canvas, $cx, $cy, $cx + $cell, $cy + $cell, $background);
+            imagerectangle($canvas, $cx, $cy, $cx + $cell, $cy + $cell, $divider);
+            $dx = $cx + (int) floor(($cell - $dw) / 2);
+            $dy = $cy + (int) floor(($cell - $dh) / 2);
+            imagecopyresampled($canvas, $source, $dx, $dy, 0, 0, $dw, $dh, $sw, $sh);
+            imagedestroy($source);
+        }
+
+        return $this->persistJpeg($canvas, $directory, 94);
+    }
+
+    private function persistJpeg(\GdImage $image, string $directory, int $quality = 90): array
     {
         $path = trim($directory, '/') . '/' . Str::uuid() . '.jpg';
         ob_start();
-        imagejpeg($image, null, 90);
+        imagejpeg($image, null, max(70, min(100, $quality)));
         $jpeg = (string) ob_get_clean();
         $width = imagesx($image);
         $height = imagesy($image);
@@ -271,5 +343,12 @@ class ShotImageStore
 
         return $box['w'] > 0.05 && $box['h'] > 0.05 && $box['x'] >= 0 && $box['y'] >= 0
             && $box['x'] + $box['w'] <= 1.001 && $box['y'] + $box['h'] <= 1.001;
+    }
+
+    private function grayAt(\GdImage $image, int $x, int $y): float
+    {
+        $rgb = imagecolorat($image, $x, $y);
+
+        return 0.299 * (($rgb >> 16) & 0xFF) + 0.587 * (($rgb >> 8) & 0xFF) + 0.114 * ($rgb & 0xFF);
     }
 }

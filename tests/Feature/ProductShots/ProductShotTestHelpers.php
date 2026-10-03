@@ -10,10 +10,29 @@ use App\Models\User;
 use App\Services\AiProviderRouter;
 use App\Services\OpenRouterService;
 use App\Services\ProductShots\ProductShotFeature;
+use Illuminate\Http\UploadedFile;
 use Mockery;
 
 trait ProductShotTestHelpers
 {
+    protected function productImage(string $name = 'product.jpg', int $width = 1000, int $height = 1200): UploadedFile
+    {
+        $image = imagecreatetruecolor($width, $height);
+        $background = imagecolorallocate($image, 235, 232, 224);
+        $product = imagecolorallocate($image, 110, 58, 38);
+        $label = imagecolorallocate($image, 245, 190, 72);
+        imagefill($image, 0, 0, $background);
+        imagefilledrectangle($image, (int) ($width * .27), (int) ($height * .15), (int) ($width * .73), (int) ($height * .86), $product);
+        imagefilledrectangle($image, (int) ($width * .32), (int) ($height * .4), (int) ($width * .68), (int) ($height * .62), $label);
+        imageline($image, 0, 0, $width - 1, $height - 1, $product);
+        ob_start();
+        imagejpeg($image, null, 92);
+        $contents = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return UploadedFile::fake()->createWithContent($name, $contents);
+    }
+
     protected function pngBase64(): string
     {
         $img = imagecreatetruecolor(64, 80);
@@ -72,7 +91,12 @@ trait ProductShotTestHelpers
         ], $extra));
 
         ShotLibrary::query()->ordered()->take($shotCount)->get()->each(function (ShotLibrary $shot, int $i) use ($product) {
-            ProductShot::create(['product_id' => $product->id, 'shot_id' => $shot->id, 'enabled' => true, 'is_default' => true, 'credits_override' => 10, 'sort' => $i]);
+            ProductShot::create([
+                'product_id' => $product->id, 'shot_id' => $shot->id, 'enabled' => true, 'is_default' => true,
+                'credits_override' => 10, 'sort' => $i, 'aspect_ratio_default' => '4:5',
+                'allowed_aspect_ratios' => ['4:5', '1:1', '9:16'], 'aspect_ratio_user_selectable' => true,
+                'model_configuration' => ['quality_credits' => ['standard' => 10, 'professional' => 15, 'best' => 20]],
+            ]);
         });
 
         return $product;

@@ -38,9 +38,12 @@ class ShotPromptBuilder
         $values['aspect_ratio'] = $aspectRatio;
         $values['fidelity'] = self::productFidelityBlock();
 
-        $template = trim((string) $shot->prompt_template) !== ''
+        $override = trim((string) ($context['prompt_override'] ?? ''));
+        $template = $override !== ''
+            ? $override
+            : (trim((string) $shot->prompt_template) !== ''
             ? (string) $shot->prompt_template
-            : self::DEFAULT_TEMPLATE;
+            : self::DEFAULT_TEMPLATE);
 
         $body = $this->fill($template, $values);
 
@@ -50,6 +53,9 @@ class ShotPromptBuilder
         }
         if (ShotGrammar::involvesHuman($tokens)) {
             $parts[] = self::humanSafetyBlock();
+        }
+        if (! empty($context['product_sheet'])) {
+            $parts[] = 'Reference handling: the first reference is a multi-angle product sheet and the following references are its original full-resolution views. Use all views only to understand the same product geometry and packaging. Create one product in the requested scene; never reproduce the sheet layout, borders, multiple panels or duplicate products.';
         }
         $parts[] = "Output requirements: aspect ratio {$aspectRatio}; high resolution; sharp focus on the product; realistic materials, shadows and reflections. Do not add any text, captions, logos, watermarks or price tags that are not on the real product.";
         if ($brandIdentity = $this->brandIdentityBlock($settings)) {

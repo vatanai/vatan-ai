@@ -21,7 +21,9 @@
     uploads: [],            // [{id, verdict, fixedUrl, useFixed}] — اندیس ۰ = عکس اصلی
     selected: {},           // shot_key => true
     showAll: false,
-    ratio: cfg.default_aspect_ratio || '4:5',
+    quality: cfg.default_quality || 'standard',
+    ratios: {},             // shot_key => نسبت انتخابی همان شات
+    setReport: null,
     balance: Number(cfg.balance || 0),
     building: false,
     batch: null,
@@ -44,7 +46,7 @@
 
   /* ───── شات‌ها ───── */
   var shots = Array.isArray(cfg.shots) ? cfg.shots : [];
-  shots.forEach(function (s) { if (s.is_default) state.selected[s.key] = true; });
+  shots.forEach(function (s) { if (s.is_default) state.selected[s.key] = true; state.ratios[s.key] = s.default_aspect_ratio || '4:5'; });
   if (!Object.keys(state.selected).length) shots.slice(0, 4).forEach(function (s) { state.selected[s.key] = true; });
   var hasHidden = shots.some(function (s) { return !s.is_default; });
 
@@ -59,15 +61,22 @@
       label.hidden = !state.showAll && !s.is_default && !on;
       var limitReached = !on && count >= cfg.max_shots;
       if (limitReached) label.classList.add('is-disabled');
+      var allowedRatios = Array.isArray(s.allowed_aspect_ratios) && s.allowed_aspect_ratios.length ? s.allowed_aspect_ratios : [s.default_aspect_ratio || '4:5'];
+      var ratioControl = on && s.aspect_ratio_user_selectable && allowedRatios.length > 1
+        ? '<select class="pp-shot-ratio" aria-label="نسبت ' + esc(s.name) + '">' + allowedRatios.map(function (ratio) { return '<option value="' + esc(ratio) + '"' + (state.ratios[s.key] === ratio ? ' selected' : '') + '>' + esc(ratio) + '</option>'; }).join('') + '</select>'
+        : '<small class="pp-shot-ratio-static" dir="ltr">' + esc(state.ratios[s.key] || allowedRatios[0]) + '</small>';
       label.innerHTML =
         '<input type="checkbox" ' + (on ? 'checked' : '') + (limitReached ? ' disabled' : '') + ' aria-label="' + esc(s.name) + '">' +
         '<span class="pp-shot-media">' + (s.sample_url ? '<img loading="lazy" alt="" src="' + esc(s.sample_url) + '">' : '<i class="fa-solid fa-image" aria-hidden="true"></i>') + '</span>' +
         '<span class="pp-shot-tick" aria-hidden="true"><i class="fa-solid fa-check"></i></span>' +
-        '<span class="pp-shot-body"><span class="pp-shot-name">' + esc(s.name) + '</span><span class="pp-shot-meta" style="display:block">' + fa(s.credits) + ' کردیت' + (s.tags && s.tags.length ? ' · ' + esc(s.tags.slice(0, 2).join('، ')) : '') + '</span></span>';
+        '<span class="pp-shot-body"><span class="pp-shot-name">' + esc(s.name) + '</span><span class="pp-shot-meta" style="display:block">' + fa(shotCredits(s)) + ' کردیت' + (s.tags && s.tags.length ? ' · ' + esc(s.tags.slice(0, 2).join('، ')) : '') + '</span>' + ratioControl + '</span>';
       label.querySelector('input').addEventListener('change', function (e) {
         if (e.target.checked) state.selected[s.key] = true; else delete state.selected[s.key];
         renderShots(); renderBar();
       });
+      var ratioSelect = label.querySelector('.pp-shot-ratio');
+      if (ratioSelect) ratioSelect.addEventListener('click', function (event) { event.preventDefault(); event.stopPropagation(); });
+      if (ratioSelect) ratioSelect.addEventListener('change', function (event) { state.ratios[s.key] = event.target.value; });
       wrap.appendChild(label);
     });
     var more = $('[data-more]');
@@ -80,14 +89,15 @@
   $('[data-more]').addEventListener('click', function () { state.showAll = !state.showAll; renderShots(); });
 
   function selectedKeys() { return shots.filter(function (s) { return state.selected[s.key]; }).map(function (s) { return s.key; }); }
-  function totalCredits() { return shots.reduce(function (sum, s) { return sum + (state.selected[s.key] ? Number(s.credits || 0) : 0); }, 0); }
+  function shotCredits(s) { return Number((s.quality_credits || {})[state.quality] != null ? s.quality_credits[state.quality] : s.credits || 0); }
+  function totalCredits() { return shots.reduce(function (sum, s) { return sum + (state.selected[s.key] ? shotCredits(s) : 0); }, 0); }
   function affordableCount() {
     var remaining = state.balance;
     var count = 0;
     shots.filter(function (s) { return state.selected[s.key]; }).sort(function (a, b) {
-      return Number(a.credits || 0) - Number(b.credits || 0);
+      return shotCredits(a) - shotCredits(b);
     }).some(function (s) {
-      var cost = Number(s.credits || 0);
+      var cost = shotCredits(s);
       if (cost > remaining) return true;
       remaining -= cost;
       count += 1;
@@ -96,19 +106,17 @@
     return count;
   }
 
-  /* ───── نسبت تصویر ───── */
-  var RATIO_LABELS = { '4:5': ['پست اینستاگرام', 18, 22], '1:1': ['مربع', 20, 20], '9:16': ['استوری و ریلز', 14, 24] };
-  function renderRatios() {
-    var wrap = $('[data-ratios]');
+  /* ───── سطح کیفیت ───── */
+  function renderQualities() {
+    var wrap = $('[data-qualities]');
     wrap.innerHTML = '';
-    (cfg.aspect_ratios || ['4:5']).forEach(function (r) {
-      var meta = RATIO_LABELS[r] || [r, 18, 18];
+    Object.keys(cfg.quality_levels || {standard: 'استاندارد'}).forEach(function (quality) {
       var label = document.createElement('label');
-      label.className = 'pp-ratio' + (state.ratio === r ? ' is-selected' : '');
-      label.innerHTML = '<input type="radio" name="pp-ratio" value="' + esc(r) + '" ' + (state.ratio === r ? 'checked' : '') + '>' +
-        '<span class="pp-ratio-shape" style="width:' + meta[1] + 'px;height:' + meta[2] + 'px" aria-hidden="true"></span>' +
-        '<span><strong>' + esc(meta[0]) + '</strong> <small dir="ltr">' + esc(r) + '</small></span>';
-      label.querySelector('input').addEventListener('change', function () { state.ratio = r; renderRatios(); });
+      label.className = 'pp-ratio' + (state.quality === quality ? ' is-selected' : '');
+      label.innerHTML = '<input type="radio" name="pp-quality" value="' + esc(quality) + '" ' + (state.quality === quality ? 'checked' : '') + '>' +
+        '<span class="pp-quality-icon" aria-hidden="true"><i class="fa-solid ' + (quality === 'best' ? 'fa-crown' : (quality === 'professional' ? 'fa-gem' : 'fa-bolt')) + '"></i></span>' +
+        '<span><strong>' + esc(cfg.quality_levels[quality]) + '</strong> <small>' + fa(shots.reduce(function (sum, s) { return sum + (state.selected[s.key] ? Number((s.quality_credits || {})[quality] || s.credits || 0) : 0); }, 0)) + ' کردیت</small></span>';
+      label.querySelector('input').addEventListener('change', function () { state.quality = quality; renderQualities(); renderShots(); renderBar(); });
       wrap.appendChild(label);
     });
   }
@@ -135,7 +143,14 @@
     var rm = el.querySelector('[data-slot-remove]'); if (rm) rm.hidden = true;
     var badge = el.querySelector('[data-slot-badge]'); if (badge) badge.hidden = true;
     state.uploads[i] = null;
+    resetSetReport();
     renderBar();
+  }
+
+  function resetSetReport() {
+    state.setReport = null;
+    var sheet = $('[data-product-sheet]');
+    if (sheet) sheet.hidden = true;
   }
 
   function badge(i, text, tone) {
@@ -149,8 +164,10 @@
     if (file.size > cfg.max_upload_mb * 1024 * 1024) { showCheck('red', 'حجم عکس بیشتر از ' + fa(cfg.max_upload_mb) + ' مگابایت است.', [], ''); return; }
     setSlotPreview(i, file);
     state.uploads[i] = { pending: true };
+    resetSetReport();
     renderBar();
-    if (i === 0) { badge(0, 'در حال بررسی عکس…'); showCheck('', 'در حال بررسی کیفیت عکس… (رایگان)', [], ''); }
+    badge(i, 'در حال بررسی…');
+    showCheck('', 'در حال بررسی کیفیت عکس… (رایگان)', [], '');
 
     var data = new FormData();
     data.append('image', file);
@@ -158,22 +175,22 @@
     request(cfg.urls.preflight, { method: 'POST', body: data }).then(function (res) {
       if (!res.ok || !res.body.ok) {
         state.uploads[i] = null;
-        if (i === 0) { badge(0, 'خطا', 'red'); showCheck('red', res.body.message || 'بررسی عکس انجام نشد؛ دوباره امتحان کن.', [], ''); }
+        badge(i, 'خطا', 'red');
+        showCheck('red', res.body.message || 'بررسی عکس انجام نشد؛ دوباره امتحان کن.', [], '');
         renderBar();
         return;
       }
       var b = res.body;
       state.uploads[i] = { id: b.upload_id, verdict: b.verdict, fixedUrl: b.fixed_url, useFixed: !!b.fixed_url };
-      if (i === 0) {
-        var labels = { green: 'عکس عالی است', yellow: 'قابل استفاده', red: 'نامناسب' };
-        badge(0, labels[b.verdict] || '', b.verdict);
-        var title = b.verdict === 'green' ? 'عکس مناسب است.' : (b.verdict === 'yellow' ? 'عکس قابل استفاده است، ولی بهتر می‌شود:' : 'این عکس برای ساخت مناسب نیست؛ عکس دیگری بفرست. هزینه‌ای کسر نشد.');
-        showCheck(b.verdict, title, b.issues || [], b.suggestion || '', b);
-      }
+      var labels = { green: 'عکس عالی است', yellow: 'قابل استفاده', red: 'نامناسب' };
+      badge(i, labels[b.verdict] || '', b.verdict);
+      var title = b.verdict === 'green' ? 'عکس مناسب است.' : (b.verdict === 'yellow' ? 'عکس قابل استفاده است، ولی بهتر می‌شود:' : 'این عکس برای ساخت مناسب نیست؛ عکس دیگری بفرست. هزینه‌ای کسر نشد.');
+      showCheck(b.verdict, title, b.issues || [], b.suggestion || '', i === 0 ? b : null);
       renderBar();
     }).catch(function () {
       state.uploads[i] = null;
-      if (i === 0) showCheck('red', 'ارتباط با سرور برقرار نشد.', [], '');
+      badge(i, 'خطا', 'red');
+      showCheck('red', 'ارتباط با سرور برقرار نشد.', [], '');
       renderBar();
     });
   }
@@ -211,11 +228,60 @@
     btn.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); clearSlot(Number(btn.closest('.pp-drop').getAttribute('data-slot'))); });
   });
 
+  function uploadPayload() {
+    return state.uploads.filter(function (u) { return u && u.id; }).map(function (u) {
+      return { id: u.id, use_fixed: !!u.useFixed };
+    });
+  }
+
+  function checkSet(silent) {
+    var uploads = uploadPayload();
+    if (!uploads.length || state.uploads.some(function (u) { return u && u.pending; })) return Promise.resolve(false);
+    var btn = $('[data-check-set]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="pp-spin" aria-hidden="true"></span> در حال بررسی';
+    return request(cfg.urls.preflight_set, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uploads: uploads })
+    }).then(function (res) {
+      if (!res.ok || !res.body.ok) {
+        state.setReport = null;
+        showCheck('red', res.body.message || 'بررسی مجموعه انجام نشد.', [], '');
+        return false;
+      }
+      state.setReport = res.body;
+      var sheet = $('[data-product-sheet]');
+      var image = $('[data-product-sheet-img]');
+      var copy = $('[data-product-sheet-copy]');
+      if (res.body.product_sheet_url) {
+        image.src = res.body.product_sheet_url;
+        sheet.hidden = false;
+      }
+      copy.innerHTML = '<strong>' + (res.body.usable ? 'پروداکت‌شیت آماده است' : 'مجموعه نیاز به اصلاح دارد') + '</strong>' +
+        '<span>' + esc(res.body.suggestion || 'زوایای انتخابی برای ساخت آماده‌اند.') + '</span>';
+      if (!silent || !res.body.usable) {
+        showCheck(res.body.verdict, res.body.usable ? 'مجموعه‌ی عکس‌ها آماده است.' : 'این مجموعه هنوز برای ساخت مناسب نیست.', res.body.issues || [], res.body.suggestion || '');
+      }
+      return !!res.body.usable;
+    }).catch(function () {
+      state.setReport = null;
+      showCheck('red', 'ارتباط با سرور برقرار نشد.', [], '');
+      return false;
+    }).then(function (usable) {
+      btn.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> بررسی مجموعه';
+      renderBar();
+      return usable;
+    });
+  }
+  $('[data-check-set]').addEventListener('click', function () { checkSet(false); });
+
   /* ───── نوار پایین ───── */
   function canBuild() {
     var main = state.uploads[0];
     var pending = state.uploads.some(function (u) { return u && u.pending; });
-    return !state.building && main && main.id && main.verdict !== 'red' && !pending && selectedKeys().length > 0;
+    var hasRejected = state.uploads.some(function (u) { return u && u.verdict === 'red'; });
+    return !state.building && main && main.id && !hasRejected && !pending && selectedKeys().length > 0;
   }
 
   function renderBar() {
@@ -233,6 +299,8 @@
     var btn = $('[data-build]');
     btn.disabled = !canBuild();
     if (!state.building) btn.querySelector('span').textContent = state.batch ? 'ساخت دوباره' : 'بساز';
+    var setBtn = $('[data-check-set]');
+    if (setBtn && !state.building) setBtn.disabled = !state.uploads.some(function (u) { return u && u.id; }) || state.uploads.some(function (u) { return u && u.pending; });
   }
 
   function showCreditAlert() {
@@ -304,7 +372,7 @@
 
   /* ───── ساخت ───── */
   function tileHtml(item) {
-    var ratio = (state.batch && state.batch.aspect_ratio || '4:5').split(':');
+    var ratio = (item.aspect_ratio || '4:5').split(':');
     var media = '<div class="pp-tile-media" style="aspect-ratio:' + ratio[0] + ' / ' + ratio[1] + '">';
     if (item.status === 'completed' && item.image_url) {
       media += '<img alt="' + esc(item.name) + '" src="' + esc(item.image_url) + '">';
@@ -400,19 +468,19 @@
     }, delay == null ? 2500 : delay);
   }
 
-  function build() {
+  function startBuild() {
     if (!cfg.is_authenticated) { window.location.href = cfg.login_url; return; }
     if (!canBuild()) return;
     if (totalCredits() > state.balance) { showCreditAlert(); return; }
     stopSliderTimer();
     state.building = true; renderBar();
-    var uploads = state.uploads.filter(function (u) { return u && u.id; }).map(function (u, idx) {
-      return { id: u.id, use_fixed: idx === 0 ? !!u.useFixed : false };
-    });
+    var uploads = uploadPayload();
+    var shotRatios = {};
+    selectedKeys().forEach(function (key) { shotRatios[key] = state.ratios[key]; });
     request(cfg.urls.batches, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uploads: uploads, shots: selectedKeys(), aspect_ratio: state.ratio })
+      body: JSON.stringify({ uploads: uploads, shots: selectedKeys(), quality_level: state.quality, shot_ratios: shotRatios })
     }).then(function (res) {
       if (!res.ok || !res.body.ok) {
         state.building = false; renderBar();
@@ -433,9 +501,16 @@
       showCheck('red', 'ارتباط با سرور برقرار نشد.', [], '');
     });
   }
+  function build() {
+    if (!cfg.is_authenticated) { window.location.href = cfg.login_url; return; }
+    if (!canBuild()) return;
+    if (totalCredits() > state.balance) { showCreditAlert(); return; }
+    if (state.setReport && state.setReport.usable) { startBuild(); return; }
+    checkSet(true).then(function (usable) { if (usable) startBuild(); });
+  }
   $('[data-build]').addEventListener('click', build);
 
   renderShots();
-  renderRatios();
+  renderQualities();
   renderBar();
 })();

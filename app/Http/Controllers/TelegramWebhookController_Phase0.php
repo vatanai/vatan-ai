@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
  * • Commands: /start, /portfolio, /pricing, /demo, /help
  * • Sync message back to dashboard/instagram
  */
-class TelegramWebhookController extends Controller
+class TelegramWebhookController_Phase0 extends Controller
 {
     /**
      * دریافت رویدادهای Telegram

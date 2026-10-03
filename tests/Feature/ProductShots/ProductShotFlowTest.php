@@ -34,7 +34,7 @@ class ProductShotFlowTest extends TestCase
     private function startBatch($user, Product $product, ?array $shots = null): array
     {
         $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
-            'image' => UploadedFile::fake()->image('serum.jpg', 900, 1100),
+            'image' => $this->productImage('serum.jpg', 900, 1100),
         ], ['Accept' => 'application/json'])->assertOk()->json();
 
         $shots ??= $product->enabledProductShots()->map(fn ($ps) => $ps->shot->key)->all();
@@ -42,7 +42,8 @@ class ProductShotFlowTest extends TestCase
         return $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
             'uploads' => [['id' => $pre['upload_id']]],
             'shots' => $shots,
-            'aspect_ratio' => '9:16',
+            'quality_level' => 'standard',
+            'shot_ratios' => array_fill_keys($shots, '9:16'),
         ])->assertCreated()->json('batch');
     }
 
@@ -140,6 +141,49 @@ class ProductShotFlowTest extends TestCase
         $this->assertSame(70, (int) $user->fresh()->tokens);
     }
 
+    public function test_four_reference_images_product_sheet_quality_pricing_and_per_shot_ratio(): void
+    {
+        $this->enableShots('public', ['qc_enabled' => false]);
+        $this->mockVision();
+        $user = $this->makeUser(100);
+        $product = $this->makeShotProduct(1);
+        $shot = $product->enabledProductShots()->firstOrFail();
+        $uploads = [];
+
+        foreach (range(1, 4) as $index) {
+            $preflight = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
+                'image' => $this->productImage("angle-{$index}.jpg", 1000 + $index, 1200 + $index),
+                'role' => $index === 1 ? 'main' : 'angle',
+            ], ['Accept' => 'application/json'])->assertOk()->json();
+            $uploads[] = ['id' => $preflight['upload_id']];
+        }
+
+        $this->actingAs($user)->postJson(route('app.product-shots.preflight-set', $product->slug), ['uploads' => $uploads])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('usable', true)
+            ->assertJsonStructure(['product_sheet_url', 'coverage', 'issues']);
+
+        $batchPayload = $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
+            'uploads' => $uploads,
+            'shots' => [$shot->shot->key],
+            'quality_level' => 'best',
+            'shot_ratios' => [$shot->shot->key => '1:1'],
+        ])->assertCreated()->json('batch');
+
+        $batch = ShotBatch::query()->firstOrFail();
+        $item = $batch->items()->firstOrFail();
+        $this->assertCount(4, $batch->source_paths);
+        $this->assertNotNull($batch->product_sheet_path);
+        Storage::disk('public')->assertExists($batch->product_sheet_path);
+        $this->assertSame('best', $batch->quality_level);
+        $this->assertSame(20, (int) $batch->credits_quoted);
+        $this->assertSame('best', $item->quality_level);
+        $this->assertSame('1:1', $item->aspect_ratio);
+        $this->assertSame(20, (int) $item->credits);
+        $this->assertSame('1:1', $batchPayload['items'][0]['aspect_ratio']);
+    }
+
     public function test_one_failed_shot_refunds_only_itself_and_can_retry(): void
     {
         $this->enableShots('public', ['qc_enabled' => false]);
@@ -192,12 +236,13 @@ class ProductShotFlowTest extends TestCase
         $user = $this->makeUser(15);
         $product = $this->makeShotProduct(2);
         $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
-            'image' => UploadedFile::fake()->image('serum.jpg', 900, 1100),
+            'image' => $this->productImage('serum.jpg', 900, 1100),
         ], ['Accept' => 'application/json'])->assertOk()->json();
 
         $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
             'uploads' => [['id' => $pre['upload_id']]],
             'shots' => $product->enabledProductShots()->map(fn ($ps) => $ps->shot->key)->all(),
+            'quality_level' => 'standard',
         ])->assertStatus(422)->assertJsonValidationErrors('shots');
 
         $this->assertSame(15, (int) $user->fresh()->tokens);
@@ -259,6 +304,7 @@ class ProductShotFlowTest extends TestCase
         $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
             'uploads' => [['id' => $pre['upload_id']]],
             'shots' => ['beauty-hero-sun-travertine'],
+            'quality_level' => 'standard',
         ])->assertStatus(422);
         $this->assertSame(100, (int) $user->fresh()->tokens);
     }
@@ -270,7 +316,7 @@ class ProductShotFlowTest extends TestCase
         $product = $this->makeShotProduct(1);
 
         $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
-            'image' => UploadedFile::fake()->image('small.jpg', 300, 300),
+            'image' => $this->productImage('small.jpg', 300, 300),
         ], ['Accept' => 'application/json'])->assertOk()->json();
 
         $this->assertSame('yellow', $pre['verdict']);
@@ -300,12 +346,13 @@ class ProductShotFlowTest extends TestCase
         $product = $this->makeShotProduct(3);
 
         $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
-            'image' => UploadedFile::fake()->image('a.jpg', 900, 900),
+            'image' => $this->productImage('a.jpg', 900, 900),
         ], ['Accept' => 'application/json'])->json();
 
         $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
             'uploads' => [['id' => $pre['upload_id']]],
             'shots' => $product->enabledProductShots()->map(fn ($ps) => $ps->shot->key)->all(),
+            'quality_level' => 'standard',
         ])->assertStatus(422);
     }
 
@@ -347,7 +394,9 @@ class ProductShotFlowTest extends TestCase
         $config = json_decode($m[1] ?? '{}', true);
         $this->assertCount(3, $config['shots']);
         $this->assertSame(55, $config['balance']);
-        $this->assertSame(['4:5', '1:1', '9:16'], $config['aspect_ratios']);
+        $this->assertSame(['standard', 'professional', 'best'], array_keys($config['quality_levels']));
+        $this->assertSame(3, $config['max_extra_angles']);
+        $this->assertSame(['4:5', '1:1', '9:16'], $config['shots'][0]['allowed_aspect_ratios']);
 
         // صفحه‌ی جزئیات محصول به صفحه‌ی ساخت پک می‌رود
         $this->actingAs($user)->get(route('app.product', $product->route_slug))
@@ -387,9 +436,9 @@ class ProductShotFlowTest extends TestCase
         $product = $this->makeShotProduct(1);
 
         $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
-            'image' => UploadedFile::fake()->image('serum.jpg', 900, 1100),
+            'image' => $this->productImage('serum.jpg', 900, 1100),
         ], ['Accept' => 'application/json'])->json();
-        $payload = ['uploads' => [['id' => $pre['upload_id']]], 'shots' => ['beauty-hero-sun-travertine']];
+        $payload = ['uploads' => [['id' => $pre['upload_id']]], 'shots' => ['beauty-hero-sun-travertine'], 'quality_level' => 'standard'];
 
         $first = $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), $payload)->json('batch');
         $this->runShot($first, 0, $user)->assertOk();

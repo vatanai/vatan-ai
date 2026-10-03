@@ -1,0 +1,11 @@
+.git
+.env
+.DS_Store
+.phpunit.result.cache
+node_modules
+vendor
+npm-debug.log
+_to_delete
+tmp
+tests
+Claude outputs

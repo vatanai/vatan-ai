@@ -710,6 +710,12 @@ class Product extends Model
         return $this->hasMany(ProductShot::class)->orderBy('sort')->orderBy('id');
     }
 
+    /** اصناف فقط برای مسیر پروداکتی؛ دسته‌بندی‌های عمومی محصول مستقل می‌مانند. */
+    public function occupations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Occupation::class)->withTimestamps();
+    }
+
     /** شات‌های فعال همین محصول همراه با شات کتابخانه (فقط شات‌های فعال کتابخانه). */
     public function enabledProductShots(): \Illuminate\Support\Collection
     {

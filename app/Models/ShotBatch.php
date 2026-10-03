@@ -13,6 +13,7 @@ class ShotBatch extends Model
     protected $fillable = [
         'uuid', 'user_id', 'product_id', 'status', 'aspect_ratio', 'source_paths', 'preflight',
         'shots_total', 'credits_quoted', 'source', 'sources_deleted_at', 'completed_at',
+        'quality_level', 'product_sheet_path',
     ];
 
     protected $casts = [

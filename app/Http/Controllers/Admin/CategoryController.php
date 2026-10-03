@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Occupation;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -97,11 +100,73 @@ class CategoryController extends Controller
         $topCategoryId = $usageCounts->sortDesc()->keys()->first();
         $topCategory = $topCategoryId ? $allCategories->firstWhere('id', (int) $topCategoryId) : null;
         $totalUsage = (int) $usageCounts->sum();
+        $occupationQuery = Occupation::query()->withCount('products')->ordered();
+        if ($occupationSearch = trim((string) $request->input('occupation_search'))) {
+            $occupationQuery->where(fn ($query) => $query->where('name_fa', 'like', "%{$occupationSearch}%")
+                ->orWhere('name_en', 'like', "%{$occupationSearch}%")
+                ->orWhere('slug', 'like', "%{$occupationSearch}%"));
+        }
+        if ($group = trim((string) $request->input('occupation_group'))) $occupationQuery->where('group_key', $group);
+        $occupations = $occupationQuery->get()->groupBy('group_key');
+        $occupationTotal = Occupation::query()->count();
 
         return view('admin.categories.index', compact(
             'categories', 'totalCategories', 'activeCategories', 'emptyCategories',
-            'topCategory', 'totalUsage', 'usageCounts'
+            'topCategory', 'totalUsage', 'usageCounts', 'occupations', 'occupationTotal'
         ));
+    }
+
+    public function storeOccupation(Request $request)
+    {
+        $data = $this->validateOccupation($request);
+        $data['slug'] = $data['slug'] ?: $this->uniqueOccupationSlug($data['name_fa']);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['sort'] = (int) ($data['sort'] ?? 0);
+        Occupation::query()->create($data);
+
+        return redirect()->route('admin.categories.index', ['tab' => 'occupations'])->with('success', 'صنف جدید اضافه شد.');
+    }
+
+    public function updateOccupation(Request $request, Occupation $occupation)
+    {
+        $data = $this->validateOccupation($request, $occupation);
+        $data['slug'] = $data['slug'] ?: $occupation->slug;
+        $data['is_active'] = $request->boolean('is_active');
+        $data['sort'] = (int) ($data['sort'] ?? 0);
+        $occupation->update($data);
+
+        return redirect()->route('admin.categories.index', ['tab' => 'occupations'])->with('success', 'تغییرات صنف ذخیره شد.');
+    }
+
+    public function destroyOccupation(Occupation $occupation)
+    {
+        if ($occupation->products()->exists()) {
+            return back()->withErrors(['occupation' => 'این صنف به محصول متصل است و قابل حذف نیست؛ ابتدا آن را غیرفعال کنید.']);
+        }
+        $occupation->delete();
+
+        return redirect()->route('admin.categories.index', ['tab' => 'occupations'])->with('success', 'صنف حذف شد.');
+    }
+
+    private function validateOccupation(Request $request, ?Occupation $occupation = null): array
+    {
+        return $request->validate([
+            'name_fa' => ['required', 'string', 'max:120'],
+            'name_en' => ['nullable', 'string', 'max:120'],
+            'slug' => ['nullable', 'string', 'max:140', 'regex:/^[a-z0-9-]+$/', Rule::unique('occupations', 'slug')->ignore($occupation?->id)],
+            'group_key' => ['required', Rule::in(array_keys(Occupation::GROUPS))],
+            'description' => ['nullable', 'string', 'max:500'],
+            'sort' => ['nullable', 'integer', 'min:0', 'max:100000'],
+        ]);
+    }
+
+    private function uniqueOccupationSlug(string $name): string
+    {
+        $base = Str::slug(Str::ascii($name)) ?: 'occupation';
+        $slug = $base; $index = 1;
+        while (Occupation::query()->where('slug', $slug)->exists()) $slug = $base . '-' . (++$index);
+
+        return $slug;
     }
 
     private function categoryProductPairs()

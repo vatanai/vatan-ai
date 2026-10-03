@@ -17,6 +17,8 @@ Route::prefix('app/product-shots')
     ->group(function () {
         Route::post('/{product:slug}/preflight', [ProductShotController::class, 'preflight'])
             ->middleware('throttle:20,1')->name('preflight');
+        Route::post('/{product:slug}/preflight-set', [ProductShotController::class, 'preflightSet'])
+            ->middleware('throttle:12,1')->name('preflight-set');
         Route::post('/{product:slug}/batches', [ProductShotController::class, 'storeBatch'])
             ->middleware('throttle:10,1')->name('batches.store');
         Route::get('/batches/{shotBatch}', [ProductShotController::class, 'showBatch'])->name('batches.show');
@@ -39,6 +41,7 @@ Route::prefix('admin/product-shots')
         // ثبت محصول پروداکتی — فقط وقتی ماژول روشن است
         Route::middleware(EnsureProductShotsAvailable::class . ':admin')->group(function () {
             Route::get('/products/create/{product?}', [ProductShotAdminController::class, 'createProduct'])->name('products.create');
+            Route::get('/products/{product}/preview-page', [ProductShotAdminController::class, 'previewProductPage'])->name('products.preview-page');
             Route::post('/products', [ProductShotAdminController::class, 'storeProduct'])->name('products.store');
             Route::put('/products/{product}', [ProductShotAdminController::class, 'updateProduct'])->name('products.update');
             Route::post('/preview', [ProductShotAdminController::class, 'preview'])

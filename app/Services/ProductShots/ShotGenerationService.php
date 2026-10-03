@@ -7,6 +7,7 @@ use App\Models\AiProviderRequest;
 use App\Models\GeneratedImage;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductShot;
 use App\Models\ProductShotSetting;
 use App\Models\ShotBatch;
 use App\Models\ShotBatchItem;
@@ -92,12 +93,22 @@ class ShotGenerationService
             return $this->failWithoutCharge($item, $batch, 'SHOT_UNAVAILABLE', 'این شات دیگر در دسترس نیست. اعتباری کسر نشد.');
         }
 
-        $prompt = $this->prompts->build($product, $shot, $batch->aspect_ratio, [
+        $productShot = ProductShot::query()->where('product_id', $product->id)->where('shot_id', $shot->id)->first();
+        $aspectRatio = (string) ($item->aspect_ratio ?: config('product_shots.default_aspect_ratio', '4:5'));
+        $qualityLevel = (string) ($item->quality_level ?: $batch->quality_level ?: config('product_shots.default_quality', 'standard'));
+        $generationProduct = $this->generationProduct($product, $productShot, $qualityLevel);
+        $prompt = $this->prompts->build($product, $shot, $aspectRatio, [
             'product_description' => $batch->preflight['product_description'] ?? null,
+            'prompt_override' => $productShot?->prompt_override,
+            'product_sheet' => (bool) $batch->product_sheet_path,
         ]);
+        $referencePaths = array_values(array_filter(array_merge(
+            $batch->product_sheet_path ? [$batch->product_sheet_path] : [],
+            (array) $batch->source_paths,
+        )));
         $references = array_values(array_filter(array_map(
             fn ($path) => $this->images->reference((string) $path),
-            (array) $batch->source_paths
+            $referencePaths
         )));
         if ($references === []) {
             return $this->failWithoutCharge($item, $batch, 'SOURCE_MISSING', 'عکس محصول دیگر در دسترس نیست؛ لطفاً دوباره بارگذاری کنید. اعتباری کسر نشد.');
@@ -114,16 +125,18 @@ class ShotGenerationService
             'original_credits' => $item->credits,
             'discount_credits' => 0,
             'final_credits' => $item->credits,
-            'ai_model' => $product->primary_model,
-            'ai_provider' => $product->ai_provider,
+            'ai_model' => $generationProduct->primary_model,
+            'ai_provider' => $generationProduct->ai_provider,
             'attempts' => $item->attempts,
             'input_payload' => [
                 'product_mode' => 'product',
                 'shot_batch' => $batch->uuid,
                 'shot_key' => $item->shot_key,
-                'aspect_ratio' => $batch->aspect_ratio,
+                'aspect_ratio' => $aspectRatio,
+                'quality_level' => $qualityLevel,
                 'resolved_prompt' => $prompt,
                 'source_upload_paths' => array_values((array) $batch->source_paths),
+                'product_sheet_path' => $batch->product_sheet_path,
                 'input_media_count' => count((array) $batch->source_paths),
             ],
             'source' => 'product_shot',
@@ -157,7 +170,7 @@ class ShotGenerationService
                 'input_references' => array_map(fn ($ref) => ['type' => 'image_url', 'image_url' => ['url' => $ref]], $references),
                 'input_fidelity' => 'high',
                 'requested_output_resolution' => $resolution,
-                'requested_aspect_ratio' => $batch->aspect_ratio,
+                'requested_aspect_ratio' => $aspectRatio,
             ];
             if (! empty($product->negative_prompt)) {
                 $extra['negative_prompt'] = $product->negative_prompt;
@@ -165,7 +178,7 @@ class ShotGenerationService
 
             $costUsd = 0.0;
             $usedModel = null;
-            $attempt = $this->generateOnce($product, $prompt, $resolution, $batch->aspect_ratio, $extra);
+            $attempt = $this->generateOnce($generationProduct, $prompt, $resolution, $aspectRatio, $extra);
             $outputs[] = $attempt['path'];
             $costUsd += $attempt['cost'];
             $usedModel = $attempt['model'];
@@ -177,10 +190,10 @@ class ShotGenerationService
             if ($qc['checked'] && ! $qc['passed'] && $settings->qc_auto_retry) {
                 $qcRetries = 1;
                 $retry = $this->generateOnce(
-                    $product,
+                    $generationProduct,
                     $prompt . "\n\nIMPORTANT CORRECTION: the previous attempt changed the product. Reproduce the product from the reference image exactly; preserve its exact shape, colors and logo.",
                     $resolution,
-                    $batch->aspect_ratio,
+                    $aspectRatio,
                     $extra,
                 );
                 $outputs[] = $retry['path'];
@@ -234,7 +247,7 @@ class ShotGenerationService
             $order->update([
                 'status' => 'completed',
                 'processing_status' => 'completed',
-                'ai_model' => $usedModel ?: $product->primary_model,
+                'ai_model' => $usedModel ?: $generationProduct->primary_model,
                 'final_credits' => $item->credits,
                 'promotional_credits_used' => (int) ($reservation['promotional'] ?? 0),
                 'paid_credits_used' => (int) ($reservation['paid'] ?? 0),
@@ -308,19 +321,25 @@ class ShotGenerationService
      *
      * @return array{path:string, cost:float, model:?string, prompt:string, qc:array}
      */
-    public function preview(Product $product, ShotLibrary $shot, string $sourcePath, string $aspectRatio = '4:5', ?string $description = null): array
+    public function preview(Product $product, ShotLibrary $shot, array|string $sourcePaths, string $aspectRatio = '4:5', ?string $description = null, ?ProductShot $productShot = null, string $qualityLevel = 'standard'): array
     {
-        $prompt = $this->prompts->build($product, $shot, $aspectRatio, ['product_description' => $description]);
-        $ref = $this->images->reference($sourcePath);
-        if (! $ref) {
+        $sourcePaths = is_array($sourcePaths) ? array_values(array_filter($sourcePaths)) : [$sourcePaths];
+        $prompt = $this->prompts->build($product, $shot, $aspectRatio, [
+            'product_description' => $description,
+            'prompt_override' => $productShot?->prompt_override,
+            'product_sheet' => count($sourcePaths) > 1,
+        ]);
+        $refs = array_values(array_filter(array_map(fn ($path) => $this->images->reference((string) $path), $sourcePaths)));
+        if ($refs === []) {
             throw new RuntimeException('عکس تست پیدا نشد.');
         }
-        $result = $this->generateOnce($product, $prompt, (string) config('product_shots.output_resolution', '1080'), $aspectRatio, [
-            'input_references' => [['type' => 'image_url', 'image_url' => ['url' => $ref]]],
+        $generationProduct = $this->generationProduct($product, $productShot, $qualityLevel);
+        $result = $this->generateOnce($generationProduct, $prompt, (string) config('product_shots.output_resolution', '1080'), $aspectRatio, [
+            'input_references' => array_map(fn ($ref) => ['type' => 'image_url', 'image_url' => ['url' => $ref]], $refs),
             'input_fidelity' => 'high',
             'requested_aspect_ratio' => $aspectRatio,
         ]);
-        $qc = $this->vision->qualityCheck($sourcePath, $result['path']);
+        $qc = $this->vision->qualityCheck((string) $sourcePaths[0], $result['path']);
 
         return ['path' => $result['path'], 'cost' => $result['cost'], 'model' => $result['model'], 'prompt' => $prompt, 'qc' => $qc];
     }
@@ -367,6 +386,9 @@ class ShotGenerationService
         foreach ((array) $batch->source_paths as $path) {
             Storage::disk('public')->delete((string) $path);
         }
+        if ($batch->product_sheet_path) {
+            Storage::disk('public')->delete((string) $batch->product_sheet_path);
+        }
         $batch->update(['sources_deleted_at' => now()]);
     }
 
@@ -380,5 +402,21 @@ class ShotGenerationService
             str_contains($text, 'insufficient') || str_contains($text, 'quota') => 'سرویس ساخت موقتاً در دسترس نیست. اعتبار این شات برگشت.',
             default => 'ساخت این شات انجام نشد. اعتبار آن کامل برگشت؛ دوباره امتحان کنید.',
         };
+    }
+
+    private function generationProduct(Product $product, ?ProductShot $productShot, string $qualityLevel): Product
+    {
+        $global = (array) data_get($product->shot_settings, "quality_models.{$qualityLevel}", []);
+        $override = $productShot?->qualityModel($qualityLevel) ?? [];
+        $configuration = array_filter(array_replace($global, $override), fn ($value) => $value !== null && $value !== '' && $value !== []);
+        if ($configuration === []) return $product;
+
+        $configured = clone $product;
+        $configured->primary_model = (string) ($configuration['primary_model'] ?? $product->primary_model);
+        $configured->ai_provider = (string) ($configuration['primary_provider'] ?? $product->ai_provider);
+        $configured->fallback_models = array_values((array) ($configuration['fallback_models'] ?? $product->fallback_models));
+        $configured->fallback_model_providers = array_values((array) ($configuration['fallback_providers'] ?? $product->fallback_model_providers));
+
+        return $configured;
     }
 }

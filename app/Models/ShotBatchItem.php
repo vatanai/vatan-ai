@@ -14,6 +14,7 @@ class ShotBatchItem extends Model
         'shot_batch_id', 'shot_id', 'shot_key', 'shot_name_fa', 'status', 'credits', 'credits_charged',
         'credits_refunded', 'order_id', 'generated_image_id', 'image_path', 'attempts', 'qc_retries', 'qc',
         'cost_usd', 'ai_model', 'error_message', 'prompt', 'sort', 'started_at', 'finished_at',
+        'aspect_ratio', 'quality_level',
     ];
 
     protected $casts = [
@@ -73,6 +74,8 @@ class ShotBatchItem extends Model
             'can_retry' => $this->status === 'failed' && $this->attempts < self::MAX_ATTEMPTS,
             'error' => $this->status === 'failed' ? ($this->error_message ?: 'ساخت این شات انجام نشد.') : null,
             'qc' => $this->qc ? ['passed' => (bool) ($this->qc['passed'] ?? true), 'score' => $this->qc['score'] ?? null] : null,
+            'aspect_ratio' => $this->aspect_ratio,
+            'quality_level' => $this->quality_level,
         ];
     }
 }

@@ -21,20 +21,30 @@ class ShotPackService
     public const UPLOAD_CACHE_PREFIX = 'product-shots:upload:';
     public const UPLOAD_TTL_SECONDS = 21600; // ۶ ساعت
 
-    public function __construct(private ShotPromptBuilder $prompts) {}
+    public function __construct(
+        private ShotPromptBuilder $prompts,
+        private ShotImageStore $images,
+        private ShotVisionService $vision,
+    ) {}
 
     /** شات‌های فعال محصول برای نمایش به کاربر. */
     public function shotCards(Product $product): array
     {
+        $qualityLevels = (array) config('product_shots.quality_levels', []);
+
         return $product->enabledProductShots()->map(fn (ProductShot $ps) => [
             'key' => $ps->shot->key,
             'name' => $ps->shot->name_fa,
             'description' => $ps->shot->description_fa,
             'category' => $ps->shot->category,
             'credits' => $ps->credits(),
+            'quality_credits' => collect(array_keys($qualityLevels))->mapWithKeys(fn ($quality) => [$quality => $ps->credits($quality)])->all(),
             'is_default' => (bool) $ps->is_default,
             'sample_url' => $ps->sampleImageUrl(),
             'tags' => array_slice($ps->shot->tokenLabels(), 0, 3),
+            'default_aspect_ratio' => $ps->defaultRatio(),
+            'allowed_aspect_ratios' => $ps->allowedRatios(),
+            'aspect_ratio_user_selectable' => (bool) $ps->aspect_ratio_user_selectable,
         ])->values()->all();
     }
 
@@ -78,13 +88,11 @@ class ShotPackService
      * @param array<int, array{id:string, use_fixed?:bool}> $uploads اولی = عکس اصلی
      * @param array<int, string> $shotKeys
      */
-    public function createBatch(User $user, Product $product, array $uploads, array $shotKeys, string $aspectRatio): ShotBatch
+    public function createBatch(User $user, Product $product, array $uploads, array $shotKeys, string $qualityLevel, array $shotRatios = []): ShotBatch
     {
         $settings = ProductShotSetting::current();
-        $allowedRatios = (array) config('product_shots.aspect_ratios', ['4:5', '1:1', '9:16']);
-        if (! in_array($aspectRatio, $allowedRatios, true)) {
-            $aspectRatio = (string) config('product_shots.default_aspect_ratio', '4:5');
-        }
+        $qualityLevels = array_keys((array) config('product_shots.quality_levels', ['standard' => 'استاندارد']));
+        if (! in_array($qualityLevel, $qualityLevels, true)) $qualityLevel = (string) config('product_shots.default_quality', 'standard');
 
         $available = $product->enabledProductShots()->keyBy(fn (ProductShot $ps) => $ps->shot->key);
         $shotKeys = array_values(array_unique(array_map('strval', $shotKeys)));
@@ -97,13 +105,13 @@ class ShotPackService
             throw ValidationException::withMessages(['shots' => "حداکثر {$max} شات در هر ساخت قابل انتخاب است."]);
         }
 
-        $creditsQuoted = (int) $selected->sum(fn (ProductShot $ps) => $ps->credits());
+        $creditsQuoted = (int) $selected->sum(fn (ProductShot $ps) => $ps->credits($qualityLevel));
         $availableCredits = max(0, (int) $user->tokens);
         if ($creditsQuoted > $availableCredits) {
             $remaining = $availableCredits;
             $affordable = 0;
-            foreach ($selected->sortBy(fn (ProductShot $ps) => $ps->credits()) as $productShot) {
-                $cost = $productShot->credits();
+            foreach ($selected->sortBy(fn (ProductShot $ps) => $ps->credits($qualityLevel)) as $productShot) {
+                $cost = $productShot->credits($qualityLevel);
                 if ($cost > $remaining) {
                     break;
                 }
@@ -120,18 +128,17 @@ class ShotPackService
         $preflight = [];
         foreach (array_values($uploads) as $index => $upload) {
             $meta = $this->upload((string) ($upload['id'] ?? ''));
-            if (! $meta || (int) ($meta['user_id'] ?? 0) !== (int) $user->id) {
+            if (! $meta || (int) ($meta['user_id'] ?? 0) !== (int) $user->id || (int) ($meta['product_id'] ?? 0) !== (int) $product->id) {
                 throw ValidationException::withMessages(['uploads' => 'عکس محصول پیدا نشد یا منقضی شده؛ دوباره بارگذاری کنید.']);
             }
-            if ($index === 0 && ($meta['preflight']['verdict'] ?? 'green') === 'red') {
-                throw ValidationException::withMessages(['uploads' => 'این عکس برای ساخت مناسب نیست؛ عکس واضح‌تری بفرستید.']);
+            if (($meta['preflight']['verdict'] ?? 'green') === 'red') {
+                $message = trim((string) ($meta['preflight']['suggestion_fa'] ?? '')) ?: 'یکی از عکس‌ها برای ساخت مناسب نیست؛ عکس واضح‌تری بفرستید.';
+                throw ValidationException::withMessages(['uploads' => $message]);
             }
             $useFixed = ! empty($upload['use_fixed']) && ! empty($meta['fixed_path']);
             $sourcePaths[] = $useFixed ? $meta['fixed_path'] : $meta['path'];
-            if ($index === 0) {
-                $preflight = (array) ($meta['preflight'] ?? []);
-                $preflight['used_fixed'] = $useFixed;
-            }
+            $preflight['images'][$index] = (array) ($meta['preflight'] ?? []);
+            $preflight['images'][$index]['used_fixed'] = $useFixed;
         }
         if ($sourcePaths === []) {
             throw ValidationException::withMessages(['uploads' => 'یک عکس از محصول بارگذاری کنید.']);
@@ -156,27 +163,55 @@ class ShotPackService
             throw ValidationException::withMessages(['uploads' => 'عکس محصول پیدا نشد یا منقضی شده؛ دوباره بارگذاری کنید.']);
         }
 
-        return DB::transaction(function () use ($user, $product, $selected, $aspectRatio, $sourcePaths, $preflight, $creditsQuoted) {
+        $productConfiguration = (array) data_get($product->shot_settings, 'preflight', []);
+        $setReport = $this->vision->preflightSet($sourcePaths, $settings, $productConfiguration);
+        if (($setReport['verdict'] ?? 'green') === 'red') {
+            throw ValidationException::withMessages(['uploads' => $setReport['suggestion_fa'] ?: 'مجموعه تصاویر برای ساخت مناسب نیست.']);
+        }
+        $preflight['set'] = $setReport;
+        $preflight['product_description'] = $setReport['product_description'] ?? collect($preflight['images'] ?? [])->pluck('product_description')->filter()->first();
+
+        $sheetPath = null;
+        $sheetEnabled = array_key_exists('product_sheet_enabled', $productConfiguration)
+            ? (bool) $productConfiguration['product_sheet_enabled']
+            : (bool) $settings->product_sheet_enabled;
+        if ($sheetEnabled) {
+            $sheet = $this->images->createProductSheet(
+                $sourcePaths,
+                $batchDir . '/sheet',
+                (int) ($productConfiguration['product_sheet_size'] ?? $settings->product_sheet_size ?? config('product_shots.product_sheet_size', 2048)),
+            );
+            $sheetPath = $sheet['path'] ?? null;
+        }
+
+        return DB::transaction(function () use ($user, $product, $selected, $qualityLevel, $shotRatios, $sourcePaths, $sheetPath, $preflight, $creditsQuoted) {
             $batch = ShotBatch::create([
                 'user_id' => $user->id,
                 'product_id' => $product->id,
                 'status' => 'pending',
-                'aspect_ratio' => $aspectRatio,
+                'aspect_ratio' => 'mixed',
                 'source_paths' => $sourcePaths,
+                'product_sheet_path' => $sheetPath,
+                'quality_level' => $qualityLevel,
                 'preflight' => $preflight,
                 'shots_total' => $selected->count(),
                 'credits_quoted' => $creditsQuoted,
                 'source' => 'app',
             ]);
 
-            $selected->values()->each(function (ProductShot $ps, int $i) use ($batch) {
+            $selected->values()->each(function (ProductShot $ps, int $i) use ($batch, $qualityLevel, $shotRatios) {
+                $allowed = $ps->allowedRatios();
+                $requested = (string) ($shotRatios[$ps->shot->key] ?? '');
+                $ratio = $ps->aspect_ratio_user_selectable && in_array($requested, $allowed, true) ? $requested : $ps->defaultRatio();
                 ShotBatchItem::create([
                     'shot_batch_id' => $batch->id,
                     'shot_id' => $ps->shot_id,
                     'shot_key' => $ps->shot->key,
                     'shot_name_fa' => $ps->shot->name_fa,
                     'status' => 'pending',
-                    'credits' => $ps->credits(),
+                    'credits' => $ps->credits($qualityLevel),
+                    'quality_level' => $qualityLevel,
+                    'aspect_ratio' => $ratio,
                     'sort' => $i,
                 ]);
             });
@@ -194,6 +229,7 @@ class ShotPackService
             'uuid' => $batch->uuid,
             'status' => $batch->status,
             'aspect_ratio' => $batch->aspect_ratio,
+            'quality_level' => $batch->quality_level,
             'credits_quoted' => $batch->credits_quoted,
             'credits_charged' => (int) $items->sum('credits_charged'),
             'credits_refunded' => (int) $items->sum('credits_refunded'),

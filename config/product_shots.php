@@ -12,7 +12,15 @@ return [
     'vision_model' => env('PRODUCT_SHOTS_VISION_MODEL', 'google/gemini-2.5-flash-lite'),
 
     'max_upload_mb' => 12,
-    'max_extra_angles' => 2,
+    'max_extra_angles' => 3,
+    'quality_levels' => [
+        'standard' => 'استاندارد',
+        'professional' => 'حرفه‌ای',
+        'best' => 'بهترین خروجی',
+    ],
+    'default_quality' => 'standard',
+    'preflight_min_side' => 900,
+    'product_sheet_size' => 2048,
     'aspect_ratios' => ['4:5', '1:1', '9:16'],
     'default_aspect_ratio' => '4:5',
     'output_resolution' => env('PRODUCT_SHOTS_RESOLUTION', '1080'),

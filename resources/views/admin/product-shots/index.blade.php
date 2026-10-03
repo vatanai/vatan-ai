@@ -135,6 +135,15 @@
           <div class="ps-switch"><div><strong>ساخت مجدد خودکار در صورت رد QC</strong><span>حداکثر ۱ بار، بدون کسر کردیت اضافه از کاربر</span></div><label class="ps-toggle"><input type="checkbox" name="qc_auto_retry" value="1" @checked($settings->qc_auto_retry)><i></i></label></div>
         </div>
 
+        <div class="ps-card-title mt-2"><i class="fa-solid fa-images"></i> استاندارد عمومی ورودی و پروداکت‌شیت</div>
+        <div class="ps-grid mb-4">
+          <div class="ps-field"><label>حداقل ضلع تصویر ورودی</label><input type="number" name="preflight_min_side" min="500" max="3000" class="input-pro" value="{{ $settings->preflight_min_side ?? 900 }}"><div class="ps-hint">هر محصول می‌تواند این عدد را بازنویسی کند.</div></div>
+          <div class="ps-field"><label>اندازه پروداکت‌شیت</label><select name="product_sheet_size" class="input-pro">@foreach([1536,2048,3072] as $size)<option value="{{ $size }}" @selected((int)($settings->product_sheet_size ?? 2048)===$size)>{{ $size }} پیکسل</option>@endforeach</select></div>
+          <div class="ps-switch"><div><strong>ساخت پروداکت‌شیت چندزاویه‌ای</strong><span>شیت مرجع به‌همراه تصاویر اصلی برای مدل ارسال می‌شود</span></div><label class="ps-toggle"><input type="checkbox" name="product_sheet_enabled" value="1" @checked($settings->product_sheet_enabled ?? true)><i></i></label></div>
+        </div>
+        <div class="ps-field mb-4"><label>پرامپت عمومی کنترل تصاویر</label><textarea name="preflight_prompt" class="input-pro" dir="ltr" rows="4" maxlength="4000" placeholder="Optional global inspection rules...">{{ $settings->preflight_prompt }}</textarea></div>
+        <div class="mb-4"><div class="text-xs font-bold mb-2" style="color:var(--text-main)">خطاهای مسدودکننده عمومی</div><div class="ps-check-grid">@foreach(\App\Services\ProductShots\ShotVisionService::ISSUES as $issueKey=>$issueLabel)<label><input type="checkbox" name="preflight_blocking_issues[]" value="{{ $issueKey }}" @checked(in_array($issueKey,(array)$settings->preflight_blocking_issues,true))><span>{{ $issueLabel }}</span></label>@endforeach</div></div>
+
         <div class="flex justify-end"><button type="submit" class="btn-pro btn-pro-primary"><i class="fa-solid fa-floppy-disk text-[11px]"></i> ذخیره‌ی تنظیمات</button></div>
       </form>
     </section>

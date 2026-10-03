@@ -62,7 +62,7 @@
       <a href="{{ route('admin.lab.index') }}" class="sub-sub-item {{ request()->is('admin/lab') ? 'active' : '' }}"><div class="sub-sub-dot"></div><div class="sub-sub-label">لیست آزمایش‌ها</div></a>
       <a href="{{ route('admin.lab.reports') }}" class="sub-sub-item {{ request()->is('admin/lab/reports') ? 'active' : '' }}"><div class="sub-sub-dot"></div><div class="sub-sub-label">گزارش آزمایشگاه</div></a>
     </div></div>
-    <a href="{{ route('admin.categories.index') }}" class="sub-item {{ request()->is('admin/categories') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">دسته‌بندی‌ها</div></a>
+    <a href="{{ route('admin.categories.index') }}" class="sub-item {{ request()->is('admin/categories') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">دسته‌بندی و اصناف</div></a>
     <a href="{{ route('admin.categories.create') }}" class="sub-item {{ request()->is('admin/categories/create') ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">افزودن دسته‌بندی</div></a>
     <div class="sub-item"><div class="sub-dot"></div><div class="sub-label">گزارش محصولات</div><span class="nav-status-badge warn">بزودی</span></div>
     <div class="sub-item"><div class="sub-dot"></div><div class="sub-label">تنظیمات نمایش</div><span class="nav-status-badge warn">بزودی</span></div>

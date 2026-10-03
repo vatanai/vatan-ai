@@ -25,7 +25,7 @@
   <div class="pp-layout">
     {{-- ── گام ۱: عکس محصول ── --}}
     <section class="pp-step" aria-labelledby="pp-step1-title">
-      <header class="pp-step-head"><span class="pp-step-num">۱</span><div><h2 id="pp-step1-title">عکس محصولت</h2><p>یک عکس واضح از جلوی محصول. تا دو زاویه‌ی دیگر هم می‌توانی اضافه کنی.</p></div></header>
+      <header class="pp-step-head"><span class="pp-step-num">۱</span><div><h2 id="pp-step1-title">عکس‌های محصولت</h2><p>یک عکس واضح از روبه‌رو الزامی است؛ تا سه زاویه‌ی مکمل هم می‌توانی اضافه کنی.</p></div></header>
 
       <div class="pp-uploads">
         <label class="pp-drop pp-drop-main" data-slot="0">
@@ -37,14 +37,20 @@
         @for($i = 1; $i <= $packConfig['max_extra_angles']; $i++)
           <label class="pp-drop pp-drop-angle" data-slot="{{ $i }}">
             <input type="file" accept="image/jpeg,image/png,image/webp" data-slot-input="{{ $i }}">
-            <span class="pp-drop-empty"><i class="fa-solid fa-plus" aria-hidden="true"></i><small>زاویه‌ی {{ $i === 1 ? 'دوم' : 'سوم' }} (اختیاری)</small></span>
+            <span class="pp-drop-empty"><i class="fa-solid fa-plus" aria-hidden="true"></i><small>زاویه‌ی {{ [1=>'دوم',2=>'سوم',3=>'چهارم'][$i] ?? $i }} (اختیاری)</small></span>
             <img alt="زاویه‌ی دیگر محصول" hidden data-slot-img>
+            <span class="pp-slot-badge" hidden data-slot-badge></span>
             <button type="button" class="pp-slot-remove" hidden data-slot-remove aria-label="حذف این عکس"><i class="fa-solid fa-xmark"></i></button>
           </label>
         @endfor
       </div>
 
       <div class="pp-check" hidden data-check aria-live="polite"></div>
+      <div class="pp-sheet-check" data-sheet-check>
+        <div><strong>کنترل مجموعه و پروداکت‌شیت</strong><span>هوش مصنوعی یکسان‌بودن محصول، پوشش زاویه‌ها و کیفیت کل مجموعه را بررسی می‌کند.</span></div>
+        <button type="button" class="pp-btn pp-btn-ghost" data-check-set disabled><i class="fa-solid fa-magnifying-glass-chart"></i> بررسی مجموعه</button>
+      </div>
+      <div class="pp-product-sheet" data-product-sheet hidden><img alt="پروداکت‌شیت چندزاویه‌ای" data-product-sheet-img><div data-product-sheet-copy></div></div>
 
       <ul class="pp-tips">
         <li><i class="fa-regular fa-sun" aria-hidden="true"></i> نور روز، کنار پنجره</li>
@@ -61,10 +67,10 @@
       <button type="button" class="pp-more" data-more aria-expanded="false" hidden><i class="fa-solid fa-sliders" aria-hidden="true"></i> شات‌ها را شخصی‌سازی کن</button>
     </section>
 
-    {{-- ── گام ۳: نسبت ── --}}
+    {{-- ── گام ۳: کیفیت ── --}}
     <section class="pp-step" aria-labelledby="pp-step3-title">
-      <header class="pp-step-head"><span class="pp-step-num">۳</span><div><h2 id="pp-step3-title">کجا منتشر می‌کنی؟</h2></div></header>
-      <div class="pp-ratios" role="radiogroup" aria-label="نسبت تصویر" data-ratios></div>
+      <header class="pp-step-head"><span class="pp-step-num">۳</span><div><h2 id="pp-step3-title">کیفیت خروجی</h2><p>مدل و اعتبار هر سطح از قبل برای همین محصول تنظیم شده است.</p></div></header>
+      <div class="pp-ratios" role="radiogroup" aria-label="کیفیت خروجی" data-qualities></div>
     </section>
 
     {{-- ── نتیجه ── --}}

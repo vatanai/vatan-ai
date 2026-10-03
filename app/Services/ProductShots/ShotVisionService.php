@@ -23,17 +23,23 @@ class ShotVisionService
         'has_person' => 'فرد در عکس دیده می‌شود',
         'low_res' => 'کیفیت (رزولوشن) عکس پایین است',
         'no_product' => 'محصولی در عکس پیدا نشد',
+        'glare' => 'بازتاب نور، جزئیات محصول را پوشانده است',
+        'label_unreadable' => 'لوگو یا نوشته‌های اصلی محصول واضح نیست',
+        'perspective_distortion' => 'زاویه عکس شکل محصول را مخدوش کرده است',
+        'tiny_product' => 'محصول بخش کوچکی از تصویر را گرفته است',
+        'duplicate_angle' => 'این زاویه با تصویر دیگری تقریباً تکراری است',
+        'different_product' => 'تصاویر متعلق به یک محصول واحد نیستند',
     ];
 
     /** مشکلاتی که بدون عکس جدید قابل استفاده نیست. */
-    public const BLOCKING = ['no_product', 'blur'];
+    public const BLOCKING = ['no_product', 'blur', 'different_product'];
 
     public function __construct(private ShotImageStore $images) {}
 
     /**
      * @return array{verdict:string, usable:bool, issues:array<int,string>, issue_labels:array<int,string>, crop_box:?array, suggestion_fa:string, product_description:?string, checked_by:string, model:?string}
      */
-    public function preflight(string $path, ?ProductShotSetting $settings = null): array
+    public function preflight(string $path, ?ProductShotSetting $settings = null, array $configuration = []): array
     {
         $settings ??= ProductShotSetting::current();
         $issues = [];
@@ -44,20 +50,26 @@ class ShotVisionService
         $model = null;
 
         [$w, $h] = $this->images->dimensions($path);
-        if (min($w, $h) > 0 && min($w, $h) < 500) {
+        $minSide = max(500, (int) ($configuration['min_side'] ?? $settings->preflight_min_side ?? config('product_shots.preflight_min_side', 900)));
+        if (min($w, $h) > 0 && min($w, $h) < $minSide) {
             $issues[] = 'low_res';
         }
         $lum = $this->images->averageLuminance($path);
         if ($lum !== null && $lum < 55) {
             $issues[] = 'dark';
         }
+        $sharpness = $this->images->sharpnessScore($path);
+        if ($sharpness !== null && $sharpness < 24) {
+            $issues[] = 'blur';
+        }
 
-        if ($settings->preflight_enabled) {
+        $enabled = array_key_exists('enabled', $configuration) ? (bool) $configuration['enabled'] : (bool) $settings->preflight_enabled;
+        if ($enabled) {
             try {
-                $model = $settings->preflight_model ?: (string) config('product_shots.vision_model');
+                $model = trim((string) ($configuration['model'] ?? '')) ?: ($settings->preflight_model ?: (string) config('product_shots.vision_model'));
                 $result = app(OpenRouterService::class)->analyzeImagesJson(
                     $model,
-                    $this->preflightInstruction(),
+                    $this->preflightInstruction(trim((string) ($configuration['prompt'] ?? $settings->preflight_prompt ?? ''))),
                     [$this->images->visionReference($path)],
                     40,
                 );
@@ -81,7 +93,8 @@ class ShotVisionService
         }
 
         $issues = array_values(array_unique($issues));
-        $blocking = array_values(array_intersect($issues, self::BLOCKING));
+        $blockingIssues = array_values(array_filter(array_map('strval', (array) ($configuration['blocking_issues'] ?? $settings->preflight_blocking_issues ?? self::BLOCKING))));
+        $blocking = array_values(array_intersect($issues, $blockingIssues ?: self::BLOCKING));
         $verdict = $blocking ? 'red' : ($issues ? 'yellow' : 'green');
         if ($suggestion === '') {
             $suggestion = $this->defaultSuggestion($issues, $verdict);
@@ -97,6 +110,55 @@ class ShotVisionService
             'product_description' => $description,
             'checked_by' => $checkedBy,
             'model' => $model,
+            'diagnostics' => ['width' => $w, 'height' => $h, 'minimum_side' => $minSide, 'luminance' => $lum !== null ? round($lum, 1) : null, 'sharpness' => $sharpness !== null ? round($sharpness, 1) : null],
+        ];
+    }
+
+    /** کنترل مجموعه‌ی ۱ تا ۴ زاویه: یکسان‌بودن محصول، پوشش زاویه و تکراری‌نبودن. */
+    public function preflightSet(array $paths, ?ProductShotSetting $settings = null, array $configuration = []): array
+    {
+        $settings ??= ProductShotSetting::current();
+        $paths = array_values(array_slice(array_filter($paths), 0, 4));
+        if ($paths === []) {
+            return ['verdict' => 'red', 'usable' => false, 'issues' => ['no_product'], 'issue_labels' => [self::ISSUES['no_product']], 'suggestion_fa' => 'حداقل یک عکس واضح از محصول بارگذاری کنید.', 'coverage' => [], 'product_description' => null, 'checked_by' => 'local', 'model' => null];
+        }
+
+        $individual = array_map(fn (string $path) => $this->preflight($path, $settings, $configuration), $paths);
+        $issues = [];
+        foreach ($individual as $report) $issues = array_merge($issues, (array) ($report['issues'] ?? []));
+        $description = collect($individual)->pluck('product_description')->filter()->first();
+        $suggestion = '';
+        $coverage = [];
+        $checkedBy = count($paths) === 1 ? ($individual[0]['checked_by'] ?? 'local') : 'local';
+        $model = null;
+
+        if (count($paths) > 1 && (array_key_exists('enabled', $configuration) ? (bool) $configuration['enabled'] : (bool) $settings->preflight_enabled)) {
+            try {
+                $model = trim((string) ($configuration['model'] ?? '')) ?: ($settings->preflight_model ?: (string) config('product_shots.vision_model'));
+                $refs = array_values(array_filter(array_map(fn ($path) => $this->images->visionReference($path, 900), $paths)));
+                $result = app(OpenRouterService::class)->analyzeImagesJson($model, $this->setInstruction(trim((string) ($configuration['prompt'] ?? $settings->preflight_prompt ?? ''))), $refs, 55);
+                $data = (array) $result['content'];
+                foreach ((array) ($data['issues'] ?? []) as $issue) if (isset(self::ISSUES[(string) $issue])) $issues[] = (string) $issue;
+                if (($data['same_product'] ?? true) === false) $issues[] = 'different_product';
+                $coverage = array_values(array_map('strval', (array) ($data['angle_coverage'] ?? [])));
+                $suggestion = trim((string) ($data['suggestion_fa'] ?? ''));
+                $description = trim((string) ($data['product_description'] ?? '')) ?: $description;
+                $checkedBy = 'vision';
+            } catch (\Throwable $e) {
+                Log::warning('ProductShots set preflight vision failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $issues = array_values(array_unique($issues));
+        $blockingIssues = array_values(array_filter(array_map('strval', (array) ($configuration['blocking_issues'] ?? $settings->preflight_blocking_issues ?? self::BLOCKING))));
+        $verdict = array_intersect($issues, $blockingIssues ?: self::BLOCKING) ? 'red' : ($issues ? 'yellow' : 'green');
+        if ($suggestion === '') $suggestion = $this->defaultSuggestion($issues, $verdict);
+
+        return [
+            'verdict' => $verdict, 'usable' => $verdict !== 'red', 'issues' => $issues,
+            'issue_labels' => array_values(array_map(fn ($i) => self::ISSUES[$i], $issues)),
+            'suggestion_fa' => $suggestion, 'coverage' => $coverage, 'product_description' => $description,
+            'checked_by' => $checkedBy, 'model' => $model, 'images' => $individual,
         ];
     }
 
@@ -140,16 +202,29 @@ class ShotVisionService
         }
     }
 
-    public function preflightInstruction(): string
+    public function preflightInstruction(string $customPrompt = ''): string
     {
-        return 'You are a strict quality inspector for e-commerce product photos that will be used as the reference for AI product photography. '
+        $base = 'You are a strict quality inspector for e-commerce product photos that will be used as the reference for AI product photography. '
             . 'Inspect the image and return ONLY a JSON object with this exact shape: '
             . '{"usable":true,"issues":[],"crop_box":{"x":0,"y":0,"w":1,"h":1},"product_description":"","suggestion_fa":""}. '
-            . 'issues may contain only these codes: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product. '
+            . 'issues may contain only these codes: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product, glare, label_unreadable, perspective_distortion, tiny_product. '
             . 'usable=false only if there is no clear single physical product or it is too blurry to see its shape and label. '
             . 'crop_box is the tight bounding box of the main product in normalized 0..1 coordinates (x,y = top-left). '
             . 'product_description: a short English description of the physical product (type, shape, main colors, material, visible brand name), max 25 words. '
-            . 'suggestion_fa: one short, friendly Persian sentence telling the user how to take a better photo, or an empty string if the photo is good.';
+            . 'suggestion_fa: one precise, friendly Persian sentence telling the user exactly how to take a better photo, or an empty string if the photo is good.';
+
+        return $customPrompt !== '' ? $base . "\n\nProduct-specific inspection requirements (obey in addition to the JSON contract):\n" . $customPrompt : $base;
+    }
+
+    public function setInstruction(string $customPrompt = ''): string
+    {
+        $base = 'You inspect 1 to 4 reference photos intended to form a single high-quality product sheet for AI product photography. '
+            . 'Verify that every image shows the exact same physical product and variant. Check useful angle coverage, duplicated angles, sharpness, glare, label readability, cropping and perspective. '
+            . 'Return ONLY JSON: {"same_product":true,"issues":[],"angle_coverage":["front","side","back","detail"],"product_description":"","suggestion_fa":""}. '
+            . 'issues may contain only: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product, glare, label_unreadable, perspective_distortion, tiny_product, duplicate_angle, different_product. '
+            . 'suggestion_fa must be a clear Persian instruction mentioning the exact missing or bad angle. Never reject a valid single image merely because more angles are absent.';
+
+        return $customPrompt !== '' ? $base . "\n\nProduct-specific inspection requirements:\n" . $customPrompt : $base;
     }
 
     public function qcInstruction(): string
@@ -190,6 +265,12 @@ class ShotVisionService
             'has_person' => 'بهتر است فقط خود محصول در عکس باشد.',
             'low_res' => 'عکس با کیفیت بالاتر بفرست (حداقل ۱۰۰۰ پیکسل).',
             'no_product' => 'یک عکس واضح از جلوی محصول بفرست.',
+            'glare' => 'زاویه نور را تغییر بده تا بازتاب روی لوگو و بسته‌بندی نیفتد.',
+            'label_unreadable' => 'یک عکس نزدیک‌تر و کاملاً واضح از نوشته‌های اصلی محصول بفرست.',
+            'perspective_distortion' => 'دوربین را روبه‌روی محصول و بدون زاویه‌ی شدید نگه دار.',
+            'tiny_product' => 'به محصول نزدیک‌تر شو تا بیشتر کادر را پر کند.',
+            'duplicate_angle' => 'به‌جای زاویه تکراری، پشت یا نمای کناری محصول را اضافه کن.',
+            'different_product' => 'همه‌ی تصاویر باید دقیقاً مربوط به یک محصول و یک رنگ باشند.',
         ];
         $lines = array_values(array_intersect_key($tips, array_flip($issues)));
 
