@@ -1,0 +1,319 @@
+/* ══════════════════════════════════════════════════════════════
+   اینستاگرام هوشمند › ثبت پست — کارت پست‌ها، ویزارد مرحله‌ای و موکاپ آیفون
+   فقط از توکن‌های design-tokens.css استفاده می‌شود. رنگ‌های داخل صفحه‌ی گوشی
+   (سفید/خاکستری اینستاگرام) شبیه‌سازی رابط اینستاگرام‌اند و با rgb/rgba نوشته شده‌اند، نه توکن تازه‌ی پنل.
+════════════════════════════════════════════════════════════════ */
+
+/* ───────── فهرست پست‌ها ───────── */
+.sip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.sip-card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; overflow: hidden;
+  display: flex; flex-direction: column; min-width: 0; box-shadow: var(--shadow-card);
+  transition: transform .2s, border-color .2s;
+}
+.sip-card:hover { transform: translateY(-3px); border-color: var(--primary-m); }
+.sip-cover { position: relative; aspect-ratio: 4 / 4.3; background: var(--input-bg); overflow: hidden; }
+.sip-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s; }
+.sip-card:hover .sip-cover img { transform: scale(1.04); }
+.sip-cover-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-soft); font-size: 34px; }
+.sip-cover::after { content: ''; position: absolute; inset: auto 0 0 0; height: 46%; background: linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,0)); pointer-events: none; }
+.sip-cover-top { position: absolute; top: 12px; right: 12px; left: 12px; display: flex; justify-content: space-between; gap: 6px; z-index: 2; }
+.sip-cover-bottom { position: absolute; bottom: 12px; right: 14px; left: 14px; display: flex; justify-content: space-between; align-items: center; z-index: 2; color: rgb(255 255 255); font-size: 11px; }
+.sip-glass {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800; color: rgb(255 255 255);
+  background: rgba(0,0,0,.42); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.18);
+}
+.sip-glass .sip-led { width: 7px; height: 7px; border-radius: 50%; background: var(--text-soft); box-shadow: 0 0 0 3px rgba(255,255,255,.12); }
+.sip-glass .sip-led.is-active { background: var(--success); box-shadow: 0 0 0 3px rgba(22,163,74,.28); }
+.sip-glass .sip-led.is-test { background: var(--warning); }
+.sip-glass .sip-led.is-paused { background: var(--danger); }
+.sip-ig-link { color: rgb(255 255 255); opacity: .9; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+.sip-ig-link:hover { opacity: 1; text-decoration: underline; }
+.sip-body { padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.sip-title { font-size: 14px; font-weight: 800; color: var(--text-h); line-height: 1.6; }
+.sip-caption { font-size: 11.5px; color: var(--text-soft); line-height: 1.8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sip-ig-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.sip-ig-stat { background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 7px 4px; text-align: center; min-width: 0; }
+.sip-ig-stat i { font-size: 11px; color: var(--text-soft); }
+.sip-ig-stat b { display: block; font-size: 12.5px; font-weight: 800; color: var(--text-h); margin-top: 2px; }
+.sip-ig-stat .is-missing { font-size: 9px; font-weight: 700; color: var(--text-soft); white-space: nowrap; }
+.sip-keywords { display: flex; flex-wrap: wrap; gap: 5px; }
+.sip-kw { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--primary-l); color: var(--primary); border: 1px solid var(--primary-m); }
+body:not(.light) .sip-kw { color: var(--nav-active-t); }
+.sip-kw.is-off { background: var(--input-bg); color: var(--text-soft); border-color: var(--border); text-decoration: line-through; }
+.sip-auto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px dashed var(--border); border-radius: 14px; overflow: hidden; }
+.sip-auto > div { padding: 8px 6px; text-align: center; }
+.sip-auto > div + div { border-right: 1px dashed var(--border); }
+.sip-auto b { display: block; font-size: 15px; font-weight: 800; color: var(--text-h); }
+.sip-auto span { font-size: 10px; color: var(--text-soft); }
+.sip-last { font-size: 10.5px; color: var(--text-soft); display: flex; align-items: center; gap: 6px; }
+.sip-foot { display: flex; gap: 6px; align-items: center; padding: 10px 16px 14px; border-top: 1px solid var(--divider); margin-top: 6px; }
+.sip-foot .btn-pro { height: 34px; flex: 1; justify-content: center; }
+.sip-menu { position: relative; }
+.sip-menu > summary { list-style: none; cursor: pointer; }
+.sip-menu > summary::-webkit-details-marker { display: none; }
+.sip-menu-list {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 30; min-width: 190px;
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-card); padding: 6px;
+}
+.sip-menu-list form { margin: 0; }
+.sip-menu-list button, .sip-menu-list a {
+  display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border-radius: 9px; border: 0; background: none;
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--text-main); cursor: pointer; text-align: right; text-decoration: none;
+}
+.sip-menu-list button:hover, .sip-menu-list a:hover { background: var(--nav-hover); }
+.sip-menu-list .is-danger { color: var(--danger); }
+.sip-menu-list i { width: 14px; text-align: center; color: var(--text-soft); font-size: 11px; }
+
+.sip-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sip-mini { position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 1; background: var(--input-bg); border: 1px solid var(--border); display: block; }
+.sip-mini img { width: 100%; height: 100%; object-fit: cover; }
+.sip-mini::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0) 55%); }
+.sip-mini span { position: absolute; bottom: 8px; right: 8px; left: 8px; z-index: 2; color: rgb(255 255 255); font-size: 11px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+.sip-mini:hover { border-color: var(--primary); }
+
+/* ───────── ویزارد ───────── */
+.sip-wizard { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 20px; align-items: start; }
+.sip-aside { position: sticky; top: 12px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.sip-stepper { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-bottom: 16px; }
+.sip-step-btn {
+  display: flex; align-items: center; gap: 9px; padding: 10px; border-radius: 14px; border: 1px solid var(--border);
+  background: var(--card-bg); color: var(--text-soft); cursor: pointer; font: inherit; text-align: right; min-width: 0;
+  transition: border-color .18s, background .18s, color .18s;
+}
+.sip-step-btn:hover { border-color: var(--primary-m); }
+.sip-step-num { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: var(--input-bg); border: 1px solid var(--border); }
+.sip-step-txt { min-width: 0; }
+.sip-step-txt b { display: block; font-size: 11.5px; color: var(--text-h); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sip-step-txt small { display: block; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sip-step-btn.is-current { border-color: var(--primary); background: var(--primary-l); }
+.sip-step-btn.is-current .sip-step-num { background: var(--primary); border-color: var(--primary); color: var(--card-bg); }
+body:not(.light) .sip-step-btn.is-current .sip-step-num { color: var(--nav-active-t); }
+.sip-step-btn.is-done .sip-step-num { background: var(--success-l); border-color: var(--success-m); color: var(--success); }
+.sip-step-btn.has-error { border-color: var(--danger); }
+.sip-progress { height: 4px; border-radius: 4px; background: var(--input-bg); overflow: hidden; margin: -8px 0 16px; }
+.sip-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--logo-green)); transition: width .35s cubic-bezier(.4,0,.2,1); }
+
+.sip-step { display: none; animation: sip-in .32s ease both; }
+.sip-step.is-current { display: block; }
+@keyframes sip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sip-step-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+.sip-step-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--primary-l); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+body:not(.light) .sip-step-icon { color: var(--nav-active-t); }
+.sip-step-head h2 { font-size: 16px; font-weight: 800; color: var(--text-h); margin: 0; }
+.sip-step-head p { font-size: 12px; color: var(--text-soft); margin: 2px 0 0; line-height: 1.8; }
+.sip-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.sip-nav .is-end { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.sip-block { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
+.sip-block-title { font-size: 13px; font-weight: 800; color: var(--text-h); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sip-block-title i { color: var(--primary); }
+body:not(.light) .sip-block-title i { color: var(--nav-active-t); }
+
+/* انتخاب پست */
+.sip-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 470px; overflow-y: auto; padding: 2px; }
+.sip-pick { position: relative; cursor: pointer; border-radius: 16px; overflow: hidden; border: 2px solid transparent; background: var(--input-bg); aspect-ratio: 4 / 5; display: block; }
+.sip-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.sip-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sip-pick::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0) 60%); pointer-events: none; }
+.sip-pick-meta { position: absolute; bottom: 8px; right: 8px; left: 8px; z-index: 2; color: rgb(255 255 255); font-size: 10.5px; line-height: 1.6; }
+.sip-pick-meta b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; }
+.sip-pick-kind { position: absolute; top: 8px; right: 8px; z-index: 2; }
+.sip-pick-check { position: absolute; top: 8px; left: 8px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.8); background: rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; color: transparent; font-size: 11px; }
+.sip-pick:has(input:checked) { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-m); }
+.sip-pick:has(input:checked) .sip-pick-check { background: var(--primary); border-color: var(--primary); color: rgb(255 255 255); }
+.sip-pick.is-taken { opacity: .45; cursor: not-allowed; }
+.sip-pick-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-soft); font-size: 26px; }
+
+/* کلمات کلیدی */
+.sip-kw-add { display: flex; gap: 8px; }
+.sip-kw-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.sip-kw-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border); }
+.sip-kw-row .sip-kw-text { font-weight: 800; color: var(--text-h); font-size: 13px; }
+.sip-kw-row select.input-pro { height: 32px; font-size: 11.5px; }
+.sip-switch { position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 12px; color: var(--text-main); }
+.sip-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.sip-switch-ui { width: 40px; height: 22px; border-radius: 22px; background: var(--border); position: relative; transition: background .2s; flex-shrink: 0; }
+.sip-switch-ui::after { content: ''; position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--card-bg); transition: right .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.sip-switch input:checked + .sip-switch-ui { background: var(--primary); }
+.sip-switch input:checked + .sip-switch-ui::after { right: 21px; }
+.sip-switch input:focus-visible + .sip-switch-ui { outline: 2px solid var(--primary); outline-offset: 2px; }
+.sip-switch.is-lg .sip-switch-ui { width: 50px; height: 28px; }
+.sip-switch.is-lg .sip-switch-ui::after { width: 22px; height: 22px; }
+.sip-switch.is-lg input:checked + .sip-switch-ui::after { right: 25px; }
+.sip-toggle-card { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--input-bg); }
+.sip-toggle-card b { display: block; font-size: 13px; color: var(--text-h); }
+.sip-toggle-card small { font-size: 11px; color: var(--text-soft); line-height: 1.8; }
+.sip-tester { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.sip-tester-result { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+
+/* سبک‌های پاسخ */
+.sip-style { position: relative; }
+.sip-style + .sip-style { margin-top: 10px; }
+.sip-style-tag { position: absolute; top: -9px; right: 12px; font-size: 10px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-soft); z-index: 1; }
+.sip-vars { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.sip-var { font-size: 10.5px; padding: 3px 9px; border-radius: 8px; background: var(--input-bg); border: 1px dashed var(--border); color: var(--text-main); cursor: pointer; font-family: inherit; }
+.sip-var:hover { border-color: var(--primary); color: var(--primary); }
+.sip-counter { font-size: 10px; color: var(--text-soft); text-align: left; margin-top: 3px; }
+.sip-counter.is-over { color: var(--danger); font-weight: 800; }
+
+/* جریان فالو */
+.sip-flow { display: flex; align-items: stretch; gap: 8px; margin: 4px 0 14px; flex-wrap: wrap; }
+.sip-flow-step { flex: 1; min-width: 120px; padding: 10px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border); font-size: 11px; color: var(--text-main); line-height: 1.8; text-align: center; }
+.sip-flow-step i { display: block; font-size: 16px; color: var(--primary); margin-bottom: 4px; }
+body:not(.light) .sip-flow-step i { color: var(--nav-active-t); }
+.sip-flow-arrow { display: flex; align-items: center; color: var(--text-soft); }
+.sip-radio-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.sip-radio-card { position: relative; cursor: pointer; padding: 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); font-size: 11.5px; color: var(--text-main); line-height: 1.8; }
+.sip-radio-card input { position: absolute; opacity: 0; }
+.sip-radio-card b { display: block; font-size: 12.5px; color: var(--text-h); }
+.sip-radio-card:has(input:checked) { border-color: var(--primary); background: var(--primary-l); box-shadow: 0 0 0 3px var(--primary-m); }
+
+/* سازنده‌ی دکمه‌ها */
+.sip-buttons { display: flex; flex-direction: column; gap: 8px; }
+.sip-btn-row { display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; gap: 8px; padding: 10px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border); align-items: start; }
+.sip-btn-row .sip-btn-fields { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+.sip-btn-row .sip-btn-tools { display: flex; flex-direction: column; gap: 4px; }
+.sip-btn-row .icon-action-btn { width: 28px; height: 28px; }
+.sip-img-pick { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: start; }
+.sip-img-preview { width: 96px; height: 96px; border-radius: 14px; background: var(--input-bg); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--text-soft); font-size: 22px; }
+.sip-img-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+/* جمع‌بندی */
+.sip-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sip-summary div { display: flex; gap: 8px; align-items: center; padding: 9px 10px; border-radius: 12px; background: var(--input-bg); font-size: 11.5px; color: var(--text-main); }
+.sip-summary i.is-ok { color: var(--success); }
+.sip-summary i.is-warn { color: var(--warning); }
+
+/* باکس هوش مصنوعی */
+.sip-ai { border-radius: 20px; padding: 2px; margin-bottom: 16px; background: linear-gradient(120deg, var(--primary), var(--logo-green), var(--info)); }
+.sip-ai-inner { background: var(--card-bg); border-radius: 18px; padding: 14px 16px; }
+.sip-ai-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sip-ai-title { display: flex; align-items: center; gap: 10px; }
+.sip-ai-title .sip-step-icon { width: 38px; height: 38px; border-radius: 12px; font-size: 15px; }
+.sip-ai-title b { display: block; font-size: 13.5px; color: var(--text-h); }
+.sip-ai-title small { font-size: 11px; color: var(--text-soft); }
+.sip-seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--border); }
+.sip-seg button { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: var(--text-soft); padding: 6px 14px; border-radius: 9px; cursor: pointer; }
+.sip-seg button.is-active { background: var(--card-bg); color: var(--text-h); box-shadow: var(--shadow-card); }
+.sip-ai-pane { margin-top: 12px; }
+.sip-ai-checks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.sip-ai-checks label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); font-size: 11.5px; color: var(--text-main); cursor: pointer; }
+.sip-ai-checks label:has(input:checked) { border-color: var(--primary); background: var(--primary-l); }
+.sip-ai-checks input { accent-color: var(--primary); }
+.sip-ai-status { font-size: 11.5px; color: var(--text-soft); margin-top: 8px; min-height: 18px; }
+.sip-flash-field { animation: sip-flash 1.4s ease; }
+@keyframes sip-flash { 0%, 40% { box-shadow: 0 0 0 4px var(--success-m); border-color: var(--success); } 100% { box-shadow: none; } }
+
+/* ───────── موکاپ آیفون ۱۸ پرومکس ───────── */
+.sip-device-tabs { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--border); }
+.sip-device-tabs button { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: var(--text-soft); padding: 6px 16px; border-radius: 9px; cursor: pointer; }
+.sip-device-tabs button.is-active { background: var(--card-bg); color: var(--text-h); box-shadow: var(--shadow-card); }
+.sip-phone {
+  --ph-w: 340px;
+  width: var(--ph-w); aspect-ratio: 9 / 19.4; position: relative; border-radius: 58px; padding: 11px;
+  background: linear-gradient(145deg, rgb(150 146 140), rgb(88 85 82) 30%, rgb(196 192 186) 52%, rgb(70 68 66) 78%, rgb(140 136 130));
+  box-shadow: 0 0 0 1.5px rgba(0,0,0,.55), 0 30px 60px -18px rgba(0,0,0,.45), inset 0 0 2px rgba(255,255,255,.45);
+}
+.sip-phone::before { content: ''; position: absolute; left: -3px; top: 150px; width: 3px; height: 34px; border-radius: 3px 0 0 3px; background: rgb(110 106 102); box-shadow: 0 52px 0 rgb(110 106 102), 0 100px 0 rgb(110 106 102); }
+.sip-phone::after { content: ''; position: absolute; right: -3px; top: 200px; width: 3px; height: 76px; border-radius: 0 3px 3px 0; background: rgb(110 106 102); }
+.sip-screen { position: relative; width: 100%; height: 100%; border-radius: 48px; overflow: hidden; background: rgb(255 255 255); color: rgb(10 10 10); display: flex; flex-direction: column; box-shadow: 0 0 0 3px rgb(8 8 8); font-family: 'YekanBakh', sans-serif; }
+.sip-island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 104px; height: 30px; border-radius: 20px; background: rgb(0 0 0); z-index: 5; }
+.sip-statusbar { height: 46px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 28px 4px; font-size: 13px; font-weight: 800; direction: ltr; }
+.sip-statusbar span:last-child { display: flex; gap: 5px; font-size: 11px; }
+.sip-app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sip-home { height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.sip-home::before { content: ''; width: 120px; height: 5px; border-radius: 5px; background: rgb(15 15 15); }
+
+/* داخل گوشی: پست و کامنت */
+.ig-top { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid rgba(0,0,0,.08); font-size: 12px; font-weight: 800; }
+.ig-avatar { width: 30px; height: 30px; border-radius: 50%; padding: 2px; background: conic-gradient(from 210deg, var(--warning), var(--danger), var(--info), var(--warning)); flex-shrink: 0; }
+.ig-avatar span { display: flex; width: 100%; height: 100%; border-radius: 50%; background: var(--primary); border: 2px solid rgb(255 255 255); color: rgb(255 255 255); font-size: 11px; align-items: center; justify-content: center; }
+.ig-avatar.is-sm { width: 24px; height: 24px; padding: 0; background: none; }
+.ig-avatar.is-sm span { border: 0; font-size: 10px; background: rgb(200 200 200); color: rgb(60 60 60); }
+.ig-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; }
+.ig-scroll::-webkit-scrollbar { display: none; }
+.ig-media { aspect-ratio: 4 / 5; background: rgb(240 240 240); position: relative; }
+.ig-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ig-media .ig-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 32px; color: rgb(170 170 170); }
+.ig-actions { display: flex; gap: 14px; padding: 8px 12px 2px; font-size: 18px; direction: ltr; }
+.ig-actions i:last-child { margin-left: auto; }
+.ig-likes { padding: 0 12px; font-size: 11.5px; font-weight: 800; }
+.ig-cap { padding: 2px 12px 6px; font-size: 11.5px; line-height: 1.7; color: rgb(30 30 30); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ig-comments { padding: 6px 12px 12px; border-top: 1px solid rgba(0,0,0,.06); }
+.ig-comment { display: flex; gap: 8px; font-size: 11.5px; line-height: 1.7; margin-top: 8px; }
+.ig-comment.is-reply { margin-right: 30px; }
+.ig-comment b { font-weight: 800; margin-left: 4px; }
+.ig-comment small { display: block; color: rgb(140 140 140); font-size: 10px; margin-top: 1px; }
+.ig-keyword { background: rgba(255,214,0,.35); padding: 0 3px; border-radius: 4px; }
+.ig-style-dots { display: flex; gap: 5px; justify-content: center; padding: 6px 0 10px; }
+.ig-style-dots button { width: 7px; height: 7px; border-radius: 50%; border: 0; background: rgb(210 210 210); cursor: pointer; padding: 0; }
+.ig-style-dots button.is-active { background: var(--info); width: 18px; border-radius: 6px; }
+
+/* داخل گوشی: دایرکت */
+.ig-dm-head { display: flex; align-items: center; gap: 9px; padding: 6px 12px 8px; border-bottom: 1px solid rgba(0,0,0,.08); }
+.ig-dm-head b { font-size: 12.5px; display: flex; align-items: center; gap: 4px; }
+.ig-dm-head small { display: block; font-size: 10px; color: rgb(130 130 130); }
+.ig-dm-head .fa-circle-check { color: var(--info); font-size: 11px; }
+.ig-chat { padding: 10px 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ig-note { align-self: center; font-size: 9.5px; color: rgb(130 130 130); background: rgb(245 245 245); border-radius: 10px; padding: 4px 10px; margin: 4px 0; text-align: center; }
+.ig-msg { max-width: 82%; font-size: 11.5px; line-height: 1.75; padding: 8px 12px; border-radius: 20px; white-space: pre-wrap; word-break: break-word; }
+.ig-msg.is-in { align-self: flex-start; background: rgb(239 239 239); color: rgb(10 10 10); border-bottom-right-radius: 6px; }
+.ig-msg.is-out { align-self: flex-end; color: rgb(255 255 255); background: linear-gradient(135deg, var(--info), rgb(125 82 245)); border-bottom-left-radius: 6px; }
+.ig-quick { align-self: flex-start; display: flex; gap: 6px; flex-wrap: wrap; }
+.ig-quick span { font-size: 11px; font-weight: 800; padding: 6px 12px; border-radius: 18px; border: 1px solid rgb(210 210 210); color: var(--info); background: rgb(255 255 255); }
+.ig-card { align-self: flex-start; width: 82%; border-radius: 18px; overflow: hidden; background: rgb(255 255 255); border: 1px solid rgb(225 225 225); box-shadow: 0 2px 6px rgba(0,0,0,.05); }
+.ig-card-img { aspect-ratio: 1.91 / 1; background: rgb(236 236 236); position: relative; }
+.ig-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ig-card-img .ig-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgb(170 170 170); font-size: 22px; }
+.ig-card-body { padding: 9px 12px; }
+.ig-card-body b { display: block; font-size: 12px; line-height: 1.6; }
+.ig-card-body small { display: block; font-size: 10.5px; color: rgb(110 110 110); line-height: 1.6; margin-top: 2px; }
+.ig-card-btn { border-top: 1px solid rgb(232 232 232); padding: 9px; text-align: center; font-size: 11.5px; font-weight: 800; color: var(--info); }
+.ig-typing { align-self: flex-start; background: rgb(239 239 239); border-radius: 18px; padding: 8px 12px; display: flex; gap: 3px; }
+.ig-typing span { width: 6px; height: 6px; border-radius: 50%; background: rgb(150 150 150); animation: ig-dot 1.2s infinite; }
+.ig-typing span:nth-child(2) { animation-delay: .15s; }
+.ig-typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes ig-dot { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+.ig-composer { flex-shrink: 0; margin: 6px 10px 4px; border-radius: 22px; border: 1px solid rgb(225 225 225); padding: 8px 14px; font-size: 11px; color: rgb(150 150 150); display: flex; align-items: center; gap: 8px; }
+.sip-phone-note { font-size: 11px; color: var(--text-soft); text-align: center; max-width: 340px; line-height: 1.8; }
+.sip-follow-sim { display: inline-flex; gap: 6px; align-items: center; font-size: 11px; color: var(--text-soft); }
+
+/* ───────── جزئیات ───────── */
+.sip-hero { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
+.sip-hero-cover { border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 5; background: var(--input-bg); border: 1px solid var(--border); position: relative; }
+.sip-hero-cover img { width: 100%; height: 100%; object-fit: cover; }
+.sip-funnel { display: flex; flex-direction: column; gap: 8px; }
+.sip-funnel-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 50px; gap: 10px; align-items: center; font-size: 12px; }
+.sip-funnel-bar { height: 12px; border-radius: 8px; background: var(--input-bg); overflow: hidden; }
+.sip-funnel-bar span { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--primary), var(--logo-green)); }
+
+/* ───────── ریسپانسیو ───────── */
+@media (max-width: 1560px) {
+  .sip-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1200px) {
+  .sip-wizard { grid-template-columns: minmax(0, 1fr); }
+  .sip-aside { position: static; order: -1; }
+  .sip-aside.is-collapsed .sip-phone { display: none; }
+  .sip-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+  .sip-stepper { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .sip-step-txt { display: none; }
+  .sip-step-btn { justify-content: center; padding: 8px 4px; }
+  .sip-kw-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .sip-kw-row select { grid-column: 1 / -1; order: 5; }
+  .sip-btn-row, .sip-btn-row .sip-btn-fields { grid-template-columns: minmax(0, 1fr); }
+  .sip-btn-row .sip-btn-tools { flex-direction: row; }
+  .sip-hero { grid-template-columns: minmax(0, 1fr); }
+  .sip-hero-cover { max-width: 260px; }
+  .sip-summary { grid-template-columns: minmax(0, 1fr); }
+  .sip-phone { --ph-w: 300px; border-radius: 52px; }
+  .sip-funnel-row { grid-template-columns: 110px minmax(0, 1fr) 40px; }
+  .sip-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  .sip-phone { --ph-w: 270px; }
+}

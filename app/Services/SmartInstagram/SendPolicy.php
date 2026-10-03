@@ -17,7 +17,7 @@ class SendPolicy
     /**
      * @return array{allowed:bool,reason:?string,window_expires_at:?Carbon}
      */
-    public function evaluate(Conversation $conversation, string $kind, string $origin, string $body, ?string $targetRef = null, bool $allowHumanLock = false): array
+    public function evaluate(Conversation $conversation, string $kind, string $origin, string $body, ?string $targetRef = null, bool $allowHumanLock = false, bool $userInitiated = false): array
     {
         $conversation->loadMissing('channel', 'contact');
         $channel = $conversation->channel;
@@ -99,7 +99,8 @@ class SendPolicy
         // پاسخ عمومی و پاسخ خصوصی کامنت، برای هر کامنت به‌صورت جداگانه محدود می‌شوند
         // و نباید سقف پیام‌های دایرکت خودکار را مصرف کنند. در غیر این صورت یک قانون
         // دو اقدامی بعد از اولین کامنت، تمام کامنت‌های بعدی را بی‌دلیل مسدود می‌کرد.
-        if ($origin === 'automation' && $kind === 'dm') {
+        // پاسخ به تعامل همین لحظه‌ی مشتری در «ثبت پست» (کلیک روی دکمه/فالو کردم) سقف دایرکت خودکار را مصرف نمی‌کند.
+        if ($origin === 'automation' && $kind === 'dm' && !$userInitiated) {
             $todayCount = OutboundMessage::query()
                 ->where('contact_id', $contact->id)
                 ->where('origin', 'automation')

@@ -375,6 +375,12 @@ class ProductController extends Controller
             : false;
 
         $isVideoProductPage = $request->boolean('video_mode');
+        $showProductTypeChooser = ! $product
+            && ! $duplicateFrom
+            && ! $isVideoProductPage
+            && ! $request->is('admin/products/create/*')
+            && $request->query('mode') !== 'portrait'
+            && app(\App\Services\ProductShots\ProductShotFeature::class)->enabled();
         $relatedPhotoProducts = $isVideoProductPage
             ? Product::query()
                 ->whereIn('media_type', ['photo', 'both'])
@@ -385,7 +391,7 @@ class ProductController extends Controller
             : collect();
         if ($product) $product->loadMissing('sourcePhotoProducts');
 
-        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets', 'isVideoProductPage', 'relatedPhotoProducts'));
+        return view('admin.products.create', compact('aiModels', 'duplicateFrom', 'product', 'suggestedLikesCount', 'exchange', 'labTested', 'modelTierDefaults', 'modelQualityPresets', 'qualityCreditPresets', 'isVideoProductPage', 'relatedPhotoProducts', 'showProductTypeChooser'));
     }
 
     /**

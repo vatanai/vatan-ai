@@ -1,7 +1,7 @@
 /*
  * صفحه‌ی «بساز» پک شات محصول.
  * جریان: آپلود ← فیلتر کیفیت (بدون هزینه) ← انتخاب شات‌ها ← ساخت batch
- *        ← اجرای هر شات با یک درخواست جدا (هم‌زمانی محدود) ← کاشی‌های پیش‌رونده.
+ *        ← صف پس‌زمینه ← پیگیری وضعیت ← اسلایدر نتیجه.
  * شکست یک شات فقط همان شات را برمی‌گرداند و دکمه‌ی «دوباره» دارد.
  */
 (function () {
@@ -24,7 +24,10 @@
     ratio: cfg.default_aspect_ratio || '4:5',
     balance: Number(cfg.balance || 0),
     building: false,
-    batch: null
+    batch: null,
+    pollTimer: null,
+    sliderIndex: 0,
+    sliderTimer: null
   };
 
   var $ = function (sel, ctx) { return (ctx || root).querySelector(sel); };
@@ -78,6 +81,20 @@
 
   function selectedKeys() { return shots.filter(function (s) { return state.selected[s.key]; }).map(function (s) { return s.key; }); }
   function totalCredits() { return shots.reduce(function (sum, s) { return sum + (state.selected[s.key] ? Number(s.credits || 0) : 0); }, 0); }
+  function affordableCount() {
+    var remaining = state.balance;
+    var count = 0;
+    shots.filter(function (s) { return state.selected[s.key]; }).sort(function (a, b) {
+      return Number(a.credits || 0) - Number(b.credits || 0);
+    }).some(function (s) {
+      var cost = Number(s.credits || 0);
+      if (cost > remaining) return true;
+      remaining -= cost;
+      count += 1;
+      return false;
+    });
+    return count;
+  }
 
   /* ───── نسبت تصویر ───── */
   var RATIO_LABELS = { '4:5': ['پست اینستاگرام', 18, 22], '1:1': ['مربع', 20, 20], '9:16': ['استوری و ریلز', 14, 24] };
@@ -218,6 +235,73 @@
     if (!state.building) btn.querySelector('span').textContent = state.batch ? 'ساخت دوباره' : 'بساز';
   }
 
+  function showCreditAlert() {
+    var modal = $('[data-credit-alert]');
+    var count = affordableCount();
+    $('[data-credit-alert-message]').textContent = count > 0
+      ? 'اعتبار شما برای ساخت ' + fa(count) + ' عکس کافی است. چند شات را بردار یا اعتبارت را افزایش بده.'
+      : 'اعتبار فعلی برای ساخت هیچ‌کدام از شات‌های انتخابی کافی نیست.';
+    modal.hidden = false;
+    var focusable = modal.querySelector('button, a');
+    if (focusable) focusable.focus();
+  }
+
+  function hideCreditAlert() { $('[data-credit-alert]').hidden = true; }
+  $$('[data-credit-alert-close]').forEach(function (el) { el.addEventListener('click', hideCreditAlert); });
+
+  /* ───── اسلایدر خروجی؛ در همین صفحه هر ۴ ثانیه حرکت می‌کند ───── */
+  function sliderItems() { return $$('[data-tile]'); }
+  function stopSliderTimer() {
+    if (state.sliderTimer) window.clearInterval(state.sliderTimer);
+    state.sliderTimer = null;
+  }
+  function goToSlide(index, smooth) {
+    var items = sliderItems();
+    if (!items.length) return;
+    state.sliderIndex = (index + items.length) % items.length;
+    var track = $('[data-tiles]');
+    track.style.transition = smooth === false || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'none' : '';
+    track.style.transform = 'translateX(-' + (state.sliderIndex * 100) + '%)';
+    $$('[data-slider-dot]').forEach(function (dot, i) {
+      dot.classList.toggle('is-active', i === state.sliderIndex);
+      dot.setAttribute('aria-current', i === state.sliderIndex ? 'true' : 'false');
+    });
+    $('[data-slider-counter]').textContent = fa(state.sliderIndex + 1) + ' از ' + fa(items.length);
+  }
+  function renderSliderControls() {
+    var items = sliderItems();
+    var multi = items.length > 1;
+    $('[data-slider-prev]').hidden = !multi;
+    $('[data-slider-next]').hidden = !multi;
+    $('[data-slider-footer]').hidden = !multi;
+    var dots = $('[data-slider-dots]');
+    dots.innerHTML = '';
+    items.forEach(function (item, i) {
+      var dot = document.createElement('button');
+      dot.type = 'button';
+      dot.setAttribute('data-slider-dot', '');
+      dot.setAttribute('aria-label', 'نمایش اسلاید ' + fa(i + 1));
+      dot.addEventListener('click', function () { goToSlide(i, true); restartSliderTimer(); });
+      dots.appendChild(dot);
+    });
+    if (state.sliderIndex >= items.length) state.sliderIndex = 0;
+    goToSlide(state.sliderIndex, false);
+  }
+  function restartSliderTimer() {
+    stopSliderTimer();
+    if (!state.batch || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var open = state.batch.items.some(function (i) { return i.status === 'pending' || i.status === 'running'; });
+    if (!open && sliderItems().length > 1) {
+      state.sliderTimer = window.setInterval(function () { goToSlide(state.sliderIndex + 1, true); }, 4000);
+    }
+  }
+  $('[data-slider-prev]').addEventListener('click', function () { goToSlide(state.sliderIndex - 1, true); restartSliderTimer(); });
+  $('[data-slider-next]').addEventListener('click', function () { goToSlide(state.sliderIndex + 1, true); restartSliderTimer(); });
+  $('[data-slider]').addEventListener('mouseenter', stopSliderTimer);
+  $('[data-slider]').addEventListener('mouseleave', restartSliderTimer);
+  $('[data-slider]').addEventListener('focusin', stopSliderTimer);
+  $('[data-slider]').addEventListener('focusout', restartSliderTimer);
+
   /* ───── ساخت ───── */
   function tileHtml(item) {
     var ratio = (state.batch && state.batch.aspect_ratio || '4:5').split(':');
@@ -252,7 +336,8 @@
     tile.setAttribute('aria-busy', item.status === 'running' || item.status === 'pending' ? 'true' : 'false');
     tile.innerHTML = tileHtml(item);
     var retry = tile.querySelector('[data-retry]');
-    if (retry) retry.addEventListener('click', function () { runQueue([item.id]); });
+    if (retry) retry.addEventListener('click', function () { enqueueRetry(item.id); });
+    renderSliderControls();
   }
 
   function updateResultsStatus() {
@@ -272,42 +357,54 @@
     var dl = $('[data-download]');
     dl.hidden = done === 0 || open > 0;
     dl.href = state.batch.download_url;
+    if (open === 0) restartSliderTimer();
   }
 
   function itemById(id) { return state.batch.items.filter(function (i) { return i.id === id; })[0]; }
 
-  function runOne(id) {
+  function enqueueRetry(id) {
     var item = itemById(id);
     item.status = 'running'; renderTile(item); updateResultsStatus();
-    return request(state.batch.run_urls[id], { method: 'POST' }).then(function (res) {
+    request(state.batch.run_urls[id], { method: 'POST' }).then(function (res) {
       if (res.body && res.body.item) Object.assign(item, res.body.item);
       else { item.status = 'failed'; item.error = (res.body && res.body.message) || 'ساخت این شات انجام نشد.'; item.can_retry = true; }
       if (typeof res.body.balance === 'number') state.balance = res.body.balance;
-      if (res.body && res.body.error_code === 'INSUFFICIENT_CREDITS') item.error = 'اعتبار برای این شات کافی نیست. هزینه‌ای کسر نشد.';
+      if (res.ok) pollBatch(1200);
     }).catch(function () {
-      item.status = 'failed'; item.error = 'ارتباط قطع شد. اگر شات ساخته شده باشد با تازه‌سازی صفحه دیده می‌شود.'; item.can_retry = true;
+      item.status = 'failed'; item.error = 'ارتباط قطع شد. دوباره امتحان کن.'; item.can_retry = true;
     }).then(function () { renderTile(item); updateResultsStatus(); renderBar(); });
   }
 
-  function runQueue(ids) {
-    var queue = ids.slice();
-    var workers = Math.max(1, Math.min(3, Number(cfg.concurrency || 1)));
-    state.building = true; renderBar();
-    var btn = $('[data-build]');
-    btn.querySelector('span').innerHTML = '<span class="pp-spin" aria-hidden="true"></span> در حال ساخت';
-    function next() {
-      var id = queue.shift();
-      if (id == null) return Promise.resolve();
-      return runOne(id).then(next);
-    }
-    var pool = [];
-    for (var w = 0; w < workers; w++) pool.push(next());
-    return Promise.all(pool).then(function () { state.building = false; renderBar(); });
+  function applyBatch(batch) {
+    state.batch.status = batch.status;
+    state.batch.download_url = batch.download_url;
+    state.batch.show_url = batch.show_url;
+    if (typeof batch.balance === 'number') state.balance = batch.balance;
+    state.batch.items = batch.items;
+    state.batch.items.forEach(renderTile);
+    updateResultsStatus();
+  }
+
+  function pollBatch(delay) {
+    if (!state.batch || !state.batch.show_url) return;
+    if (state.pollTimer) window.clearTimeout(state.pollTimer);
+    state.pollTimer = window.setTimeout(function () {
+      request(state.batch.show_url).then(function (res) {
+        if (!res.ok || !res.body.batch) throw new Error('poll');
+        applyBatch(res.body.batch);
+        var open = state.batch.items.some(function (i) { return i.status === 'pending' || i.status === 'running'; });
+        state.building = open;
+        renderBar();
+        if (open) pollBatch(2500);
+      }).catch(function () { pollBatch(5000); });
+    }, delay == null ? 2500 : delay);
   }
 
   function build() {
     if (!cfg.is_authenticated) { window.location.href = cfg.login_url; return; }
     if (!canBuild()) return;
+    if (totalCredits() > state.balance) { showCreditAlert(); return; }
+    stopSliderTimer();
     state.building = true; renderBar();
     var uploads = state.uploads.filter(function (u) { return u && u.id; }).map(function (u, idx) {
       return { id: u.id, use_fixed: idx === 0 ? !!u.useFixed : false };
@@ -328,19 +425,15 @@
       $('[data-tiles]').innerHTML = '';
       state.batch.items.forEach(renderTile);
       updateResultsStatus();
-      if (res.body.warning) $('[data-results-status]').textContent = res.body.warning;
+      if (res.body.message) $('[data-results-status]').textContent = res.body.message;
       results.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-      runQueue(state.batch.items.map(function (i) { return i.id; }));
+      pollBatch(1200);
     }).catch(function () {
       state.building = false; renderBar();
       showCheck('red', 'ارتباط با سرور برقرار نشد.', [], '');
     });
   }
   $('[data-build]').addEventListener('click', build);
-
-  window.addEventListener('beforeunload', function (e) {
-    if (state.building) { e.preventDefault(); e.returnValue = ''; }
-  });
 
   renderShots();
   renderRatios();

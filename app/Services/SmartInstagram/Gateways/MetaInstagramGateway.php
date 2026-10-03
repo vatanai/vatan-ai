@@ -9,7 +9,7 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
 /** مسیر رسمی Meta Graph API؛ اعتبارنامه از marketing_integrations (رمزنگاری‌شده) خوانده می‌شود. */
-class MetaInstagramGateway implements InstagramChannelGateway
+class MetaInstagramGateway implements InstagramChannelGateway, RichInstagramGateway
 {
     /** کدهای خطای متا که با تلاش مجدد ممکن است برطرف شوند (محدودیت نرخ/خطای موقت). */
     private const RETRYABLE_CODES = [1, 2, 4, 17, 32, 341, 613];
@@ -144,5 +144,71 @@ class MetaInstagramGateway implements InstagramChannelGateway
             ->acceptJson()
             ->connectTimeout(10)
             ->timeout(20);
+    }
+
+    // ───── RichInstagramGateway («ثبت پست») ─────
+
+    private const MEDIA_FIELDS = 'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,shortcode,timestamp,like_count,comments_count';
+
+    public function sendRichMessage(Channel $channel, array $recipient, array $message, ?string $fallbackText = null): GatewayResult
+    {
+        $result = $this->postMessage($channel, ['recipient' => $recipient, 'message' => $message]);
+        if ($result->ok || !$fallbackText) {
+            return $result;
+        }
+        $fallback = $this->postMessage($channel, ['recipient' => $recipient, 'message' => ['text' => $fallbackText]]);
+
+        return $fallback->ok
+            ? GatewayResult::success('قالب پیشرفته پذیرفته نشد؛ نسخه‌ی متنی ارسال شد.', $fallback->externalId, ['fallback' => true])
+            : $result;
+    }
+
+    public function followStatus(Channel $channel, string $igsid): ?bool
+    {
+        [$token] = $this->credentials($channel);
+        if ($token === '' || $igsid === '') {
+            return null;
+        }
+        try {
+            $response = $this->client($channel, $token)->get('/'.rawurlencode($igsid), ['fields' => 'is_user_follow_business']);
+        } catch (\Throwable) {
+            return null;
+        }
+        $value = $response->successful() ? $response->json('is_user_follow_business') : null;
+
+        return is_bool($value) ? $value : null;
+    }
+
+    public function listMedia(Channel $channel, int $limit = 25): GatewayResult
+    {
+        [$token, $accountId] = $this->credentials($channel);
+        if ($token === '' || $accountId === '') {
+            return GatewayResult::failure('اتصال `Meta` برای این کانال کامل نشده است.');
+        }
+        $result = $this->wrap(fn () => $this->client($channel, $token)->get('/'.$accountId.'/media', ['fields' => self::MEDIA_FIELDS, 'limit' => $limit]));
+
+        return $result->ok ? GatewayResult::success('رسانه‌ها دریافت شد.', null, ['items' => (array) data_get($result->data, 'response.data', [])]) : $result;
+    }
+
+    public function getMedia(Channel $channel, string $mediaId): GatewayResult
+    {
+        [$token] = $this->credentials($channel);
+        if ($token === '') {
+            return GatewayResult::failure('اتصال `Meta` برای این کانال کامل نشده است.');
+        }
+        $result = $this->wrap(fn () => $this->client($channel, $token)->get('/'.rawurlencode($mediaId), ['fields' => self::MEDIA_FIELDS]));
+
+        return $result->ok ? GatewayResult::success('رسانه دریافت شد.', null, ['item' => (array) data_get($result->data, 'response', [])]) : $result;
+    }
+
+    public function mediaInsights(Channel $channel, string $mediaId): GatewayResult
+    {
+        [$token] = $this->credentials($channel);
+        if ($token === '') {
+            return GatewayResult::failure('اتصال `Meta` برای این کانال کامل نشده است.');
+        }
+        $result = $this->wrap(fn () => $this->client($channel, $token)->get('/'.rawurlencode($mediaId).'/insights', ['metric' => 'saved,shares,reach']));
+
+        return $result->ok ? GatewayResult::success('آمار دریافت شد.', null, InsightsParser::parse((array) data_get($result->data, 'response.data', []))) : $result;
     }
 }

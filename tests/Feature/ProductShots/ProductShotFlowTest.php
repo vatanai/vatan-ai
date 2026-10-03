@@ -2,14 +2,19 @@
 
 namespace Tests\Feature\ProductShots;
 
+use App\Jobs\GenerateProductShotItem;
 use App\Models\GeneratedImage;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ShotBatch;
 use App\Models\ShotBatchItem;
+use App\Services\ProductShots\ShotGenerationService;
 use App\Services\ProductShots\ProductShotFeature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -22,6 +27,7 @@ class ProductShotFlowTest extends TestCase
     {
         parent::setUp();
         Storage::fake('public');
+        Bus::fake();
         ProductShotFeature::resetSchemaCache();
     }
 
@@ -43,8 +49,15 @@ class ProductShotFlowTest extends TestCase
     private function runShot(array $batch, int $index, $user)
     {
         $itemId = $batch['items'][$index]['id'];
+        $result = app(ShotGenerationService::class)->runItem(ShotBatchItem::query()->findOrFail($itemId), $user);
+        $status = $result['ok'] ? 200 : ($result['error_code'] === ShotGenerationService::ERROR_INSUFFICIENT ? 402 : 422);
 
-        return $this->actingAs($user)->postJson($batch['run_urls'][$itemId]);
+        return TestResponse::fromBaseResponse(response()->json([
+            'ok' => $result['ok'],
+            'error_code' => $result['error_code'],
+            'message' => $result['message'],
+            'item' => $result['item']->toClientArray(),
+        ], $status));
     }
 
     public function test_flag_off_hides_everything(): void
@@ -97,6 +110,11 @@ class ProductShotFlowTest extends TestCase
         $product = $this->makeShotProduct(3);
 
         $batch = $this->startBatch($user, $product);
+        Bus::assertChained([
+            GenerateProductShotItem::class,
+            GenerateProductShotItem::class,
+            GenerateProductShotItem::class,
+        ]);
         $this->assertCount(3, $batch['items']);
         $this->assertSame(30, $batch['credits_quoted']);
 
@@ -109,7 +127,9 @@ class ProductShotFlowTest extends TestCase
         $this->assertSame(70, (int) $user->fresh()->tokens);
         $this->assertSame(3, Order::query()->where('source', 'product_shot')->where('status', 'completed')->count());
         $this->assertSame(3, GeneratedImage::query()->where('user_id', $user->id)->count());
-        $this->assertSame('completed', $this->getJson(route('app.product-shots.batches.show', $batch['uuid']))->json('batch.status'));
+        $show = $this->getJson(route('app.product-shots.batches.show', $batch['uuid']));
+        $this->assertSame('completed', $show->json('batch.status'));
+        $this->assertSame(70, $show->json('batch.balance'));
 
         // ورودی پس از اتمام کامل پک پاک می‌شود
         $sources = \App\Models\ShotBatch::query()->first()->source_paths;
@@ -147,21 +167,42 @@ class ProductShotFlowTest extends TestCase
         $this->assertSame('completed', \App\Models\ShotBatch::query()->first()->status);
     }
 
-    public function test_insufficient_credits_fails_without_charge_or_attempt(): void
+    public function test_failed_shot_retry_is_queued_in_the_background(): void
     {
         $this->enableShots('public', ['qc_enabled' => false]);
-        $this->mockRouter();
+        $this->mockRouter([new RuntimeException('provider timeout')]);
+        $this->mockVision();
+        $user = $this->makeUser(100);
+        $batch = $this->startBatch($user, $this->makeShotProduct(1));
+        $this->runShot($batch, 0, $user)->assertStatus(422);
+
+        Bus::fake();
+        $itemId = $batch['items'][0]['id'];
+        $this->actingAs($user)->postJson($batch['run_urls'][$itemId])
+            ->assertStatus(202)
+            ->assertJsonPath('item.status', 'pending');
+
+        Bus::assertDispatched(GenerateProductShotItem::class, fn (GenerateProductShotItem $job) => $job->itemId === $itemId);
+    }
+
+    public function test_insufficient_credits_blocks_the_pack_before_it_is_queued(): void
+    {
+        $this->enableShots('public', ['qc_enabled' => false]);
         $this->mockVision();
         $user = $this->makeUser(15);
         $product = $this->makeShotProduct(2);
-        $batch = $this->startBatch($user, $product);
+        $pre = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
+            'image' => UploadedFile::fake()->image('serum.jpg', 900, 1100),
+        ], ['Accept' => 'application/json'])->assertOk()->json();
 
-        $this->runShot($batch, 0, $user)->assertOk();
-        $res = $this->runShot($batch, 1, $user)->assertStatus(402)->json();
+        $this->actingAs($user)->postJson(route('app.product-shots.batches.store', $product->slug), [
+            'uploads' => [['id' => $pre['upload_id']]],
+            'shots' => $product->enabledProductShots()->map(fn ($ps) => $ps->shot->key)->all(),
+        ])->assertStatus(422)->assertJsonValidationErrors('shots');
 
-        $this->assertSame('INSUFFICIENT_CREDITS', $res['error_code']);
-        $this->assertSame(5, (int) $user->fresh()->tokens);
-        $this->assertSame(0, (int) ShotBatchItem::query()->find($batch['items'][1]['id'])->attempts);
+        $this->assertSame(15, (int) $user->fresh()->tokens);
+        $this->assertDatabaseCount('shot_batches', 0);
+        Bus::assertNothingDispatched();
     }
 
     public function test_qc_failure_triggers_one_free_retry(): void
@@ -246,7 +287,8 @@ class ProductShotFlowTest extends TestCase
         $batch = $this->startBatch($owner, $this->makeShotProduct(1));
 
         $this->actingAs($other)->getJson(route('app.product-shots.batches.show', $batch['uuid']))->assertNotFound();
-        $this->runShot($batch, 0, $other)->assertNotFound();
+        $itemId = $batch['items'][0]['id'];
+        $this->actingAs($other)->postJson($batch['run_urls'][$itemId])->assertNotFound();
         $this->assertSame(100, (int) $owner->fresh()->tokens);
     }
 
@@ -310,6 +352,30 @@ class ProductShotFlowTest extends TestCase
         // صفحه‌ی جزئیات محصول به صفحه‌ی ساخت پک می‌رود
         $this->actingAs($user)->get(route('app.product', $product->route_slug))
             ->assertRedirect(route('app.create', ['product' => $product->route_slug]));
+    }
+
+    public function test_profile_groups_completed_product_shots_as_one_manual_carousel_post(): void
+    {
+        $this->enableShots('public', ['qc_enabled' => false]);
+        $this->mockRouter();
+        $this->mockVision();
+        $user = $this->makeUser(100);
+        $product = $this->makeShotProduct(2);
+        $batch = $this->startBatch($user, $product);
+
+        $this->runShot($batch, 0, $user)->assertOk();
+        $this->runShot($batch, 1, $user)->assertOk();
+
+        $response = $this->actingAs($user)->get(route('app.profile'))->assertOk();
+        $response->assertSee('grid-cell-carousel-badge', false)
+            ->assertSee('data-profile-pack-slides', false)
+            ->assertSee('2 اسلاید', false);
+
+        $html = $response->getContent();
+        $this->assertSame(1, substr_count($html, 'data-media-kind="shot_pack"'));
+        $this->assertSame(1, substr_count($html, 'data-profile-pack-slides'));
+        $this->assertStringNotContainsString('data-profile-carousel-autoplay', $html);
+        $this->assertSame(2, ShotBatch::query()->firstOrFail()->completedItems()->count());
     }
 
     public function test_same_upload_can_build_a_second_pack_after_cleanup(): void

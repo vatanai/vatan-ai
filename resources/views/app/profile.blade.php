@@ -44,12 +44,17 @@
           <img id="gridPreviewImg" src="" alt="پیش‌نمایش عکس ساخته‌شده">
           <video id="gridPreviewVideo" controls playsinline preload="metadata" hidden></video>
           <button type="button" class="grid-preview-play" id="gridPreviewPlay" aria-label="پخش ویدیو" hidden><svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M8 5v14l11-7L8 5Z"></path></svg></button>
+          <button type="button" class="grid-preview-slide-arrow grid-preview-slide-prev" id="gridPreviewSlidePrev" aria-label="اسلاید قبلی" hidden><i class="fa-solid fa-chevron-right"></i></button>
+          <button type="button" class="grid-preview-slide-arrow grid-preview-slide-next" id="gridPreviewSlideNext" aria-label="اسلاید بعدی" hidden><i class="fa-solid fa-chevron-left"></i></button>
+          <span class="grid-preview-slide-count" id="gridPreviewSlideCount" hidden></span>
         </div>
         <span class="grid-preview-media-badge">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>
           آماده
         </span>
       </div>
+
+      <div class="grid-preview-slide-dots" id="gridPreviewSlideDots" hidden aria-label="اسلایدهای پک"></div>
 
       <div class="grid-preview-actions">
         <a id="gridPreviewDownload" href="" download class="grid-preview-btn grid-preview-btn--primary">

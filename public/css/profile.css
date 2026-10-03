@@ -673,6 +673,26 @@ html.light .custom-products-total { background:var(--vt-card); }
 .grid-cell--clickable:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
 .profile-media-card,
 .profile-file-card { position: relative; min-width: 0; }
+.grid-cell-carousel-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 10px;
+  box-shadow: 0 5px 16px rgba(0,0,0,.24);
+}
+.grid-cell-carousel-badge i { font-size: 11px; }
+.grid-cell-carousel-badge b { font-size: 10px; }
 .profile-media-delete-form {
   position: absolute;
   top: 7px;
@@ -1383,6 +1403,61 @@ html.light .icon-filter { filter: brightness(0) invert(0); }
 .grid-preview-img-wrap.is-video { min-height: 0; }
 
 .grid-preview-img-wrap video { background: #000; }
+
+.grid-preview-slide-arrow {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 7px 20px rgba(0,0,0,.24);
+}
+.grid-preview-slide-arrow[hidden] { display: none; }
+.grid-preview-slide-prev { right: 14px; }
+.grid-preview-slide-next { left: 14px; }
+.grid-preview-slide-arrow:hover { color: var(--green-ink, var(--green)); border-color: var(--green); }
+.grid-preview-slide-count {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 14px;
+  padding: 5px 9px;
+  border-radius: 99px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 800;
+  direction: ltr;
+}
+.grid-preview-slide-count[hidden] { display: none; }
+.grid-preview-slide-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 18px;
+  direction: ltr;
+}
+.grid-preview-slide-dots[hidden] { display: none; }
+.grid-preview-slide-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 99px;
+  background: var(--border-subtle);
+  cursor: pointer;
+}
+.grid-preview-slide-dots button.is-active { width: 19px; background: var(--green); }
 
 .grid-preview-media-badge {
   position: absolute;

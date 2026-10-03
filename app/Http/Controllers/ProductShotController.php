@@ -6,7 +6,7 @@ use App\Models\Product;
 use App\Models\ProductShotSetting;
 use App\Models\ShotBatch;
 use App\Models\ShotBatchItem;
-use App\Services\ProductShots\ShotGenerationService;
+use App\Services\ProductShots\ShotBatchDispatcher;
 use App\Services\ProductShots\ShotImageStore;
 use App\Services\ProductShots\ShotPackService;
 use App\Services\ProductShots\ShotVisionService;
@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * صفحه و API «استودیو محصول» برای کاربر: آپلود + فیلتر کیفیت، ساخت batch،
- * اجرای تک‌شات (هر شات یک درخواست) و دانلود.
+ * صف پس‌زمینه، پیگیری وضعیت، تلاش دوباره‌ی تک‌شات و دانلود.
  */
 class ProductShotController extends Controller
 {
@@ -28,7 +28,7 @@ class ProductShotController extends Controller
         private ShotPackService $packs,
         private ShotImageStore $images,
         private ShotVisionService $vision,
-        private ShotGenerationService $generator,
+        private ShotBatchDispatcher $dispatcher,
     ) {}
 
     /** داده‌ی صفحه‌ی «بساز» پک؛ از ProductGenerateController::create صدا زده می‌شود. */
@@ -150,14 +150,11 @@ class ProductShotController extends Controller
 
         $user = $request->user();
         $batch = $this->packs->createBatch($user, $product, $data['uploads'], $data['shots'], (string) ($data['aspect_ratio'] ?? ''));
-        if ((int) $user->tokens < $batch->credits_quoted) {
-            // ساخت متوقف نمی‌شود: هر شات هنگام اجرا جدا رزرو می‌شود؛ فقط هشدار می‌دهیم.
-            $warning = 'اعتبار شما برای همه‌ی شات‌های انتخابی کافی نیست؛ شات‌هایی که اعتبارشان نرسد ساخته نمی‌شوند و هزینه‌ای ندارند.';
-        }
+        $this->dispatcher->dispatchBatch($batch);
 
         return response()->json([
             'ok' => true,
-            'warning' => $warning ?? null,
+            'message' => 'ساخت در پس‌زمینه شروع شد؛ می‌توانید این صفحه را ببندید.',
             'batch' => $this->packs->batchPayload($batch),
         ], 201);
     }
@@ -176,19 +173,24 @@ class ProductShotController extends Controller
             $this->notFound();
         }
 
-        // اجرای یک شات ممکن است تا چند دقیقه طول بکشد؛ فقط همین درخواست.
-        @set_time_limit(300);
-        $result = $this->generator->runItem($item, $request->user());
-        $user = $request->user()->fresh();
+        if (! $item->canRun()) {
+            return response()->json([
+                'ok' => $item->status === 'completed',
+                'message' => $item->status === 'completed' ? null : 'این شات در حال ساخت است یا سقف تلاش آن تمام شده.',
+                'item' => $item->toClientArray(),
+                'batch_status' => $shotBatch->status,
+            ], $item->status === 'completed' ? 200 : 409);
+        }
+
+        $this->dispatcher->dispatchItem($item);
 
         return response()->json([
-            'ok' => $result['ok'],
-            'error_code' => $result['error_code'],
-            'message' => $result['message'],
-            'item' => $result['item']->toClientArray(),
+            'ok' => true,
+            'message' => 'ساخت دوباره در صف قرار گرفت.',
+            'item' => $item->fresh()->toClientArray(),
             'batch_status' => $shotBatch->fresh()->status,
-            'balance' => (int) ($user?->tokens ?? 0),
-        ], $result['ok'] ? 200 : ($result['error_code'] === ShotGenerationService::ERROR_INSUFFICIENT ? 402 : 422));
+            'balance' => (int) $request->user()->fresh()->tokens,
+        ], 202);
     }
 
     public function download(Request $request, ShotBatch $shotBatch): BinaryFileResponse

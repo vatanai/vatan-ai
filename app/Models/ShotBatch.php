@@ -53,6 +53,15 @@ class ShotBatch extends Model
         return $this->hasMany(ShotBatchItem::class)->orderBy('sort')->orderBy('id');
     }
 
+    public function completedItems(): HasMany
+    {
+        return $this->hasMany(ShotBatchItem::class)
+            ->where('status', 'completed')
+            ->whereNotNull('generated_image_id')
+            ->orderBy('sort')
+            ->orderBy('id');
+    }
+
     /** وضعیت کلی را از وضعیت آیتم‌ها محاسبه و ذخیره می‌کند. */
     public function refreshStatus(): void
     {

@@ -7,7 +7,7 @@ use App\Services\ComposioClient;
 use Illuminate\Support\Facades\Http;
 
 /** اتصال اینستاگرام از مسیر ابزارهای رسمی حساب متصل در Composio. */
-class ComposioInstagramGateway implements InstagramChannelGateway
+class ComposioInstagramGateway implements InstagramChannelGateway, RichInstagramGateway
 {
     public function __construct(private readonly ComposioClient $client)
     {
@@ -140,5 +140,108 @@ class ComposioInstagramGateway implements InstagramChannelGateway
         return $result['ok']
             ? GatewayResult::success($successMessage, $result['external_id'], $result['data'])
             : GatewayResult::failure($result['message'], $result['retryable'], ['status' => $result['status']]);
+    }
+
+    // ───── RichInstagramGateway («ثبت پست») ─────
+
+    private const MEDIA_FIELDS = 'id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,shortcode,timestamp,like_count,comments_count';
+
+    public function sendRichMessage(Channel $channel, array $recipient, array $message, ?string $fallbackText = null): GatewayResult
+    {
+        $result = $this->client->proxy(
+            '/'.$this->graphVersion().'/'.rawurlencode((string) $this->setting($channel, 'composio_instagram_user_id', config('services.composio.instagram_user_id', 'me'))).'/messages',
+            'POST',
+            ['recipient' => $recipient, 'message' => $message],
+            [],
+            $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
+        );
+        if ($result['ok'] || !$fallbackText) {
+            return $this->toGatewayResult($result, 'پیام ساختاریافته از مسیر `Composio` ارسال شد.');
+        }
+
+        $fallback = isset($recipient['comment_id'])
+            ? $this->sendPrivateReply($channel, (string) $recipient['comment_id'], $fallbackText)
+            : $this->sendDirectMessage($channel, (string) ($recipient['id'] ?? ''), $fallbackText);
+
+        return $fallback->ok
+            ? GatewayResult::success('قالب پیشرفته پذیرفته نشد؛ نسخه‌ی متنی ارسال شد.', $fallback->externalId, ['fallback' => true])
+            : GatewayResult::failure($result['message'], $result['retryable'], ['status' => $result['status']]);
+    }
+
+    public function followStatus(Channel $channel, string $igsid): ?bool
+    {
+        if ($igsid === '') {
+            return null;
+        }
+        $result = $this->graphGet($channel, '/'.rawurlencode($igsid).'?fields=is_user_follow_business');
+        $value = $result['ok'] ? data_get($result['data'], 'is_user_follow_business', data_get($result['data'], 'data.is_user_follow_business')) : null;
+
+        return is_bool($value) ? $value : null;
+    }
+
+    public function listMedia(Channel $channel, int $limit = 25): GatewayResult
+    {
+        $result = $this->execute($channel, 'INSTAGRAM_GET_IG_USER_MEDIA', [
+            'ig_user_id' => $this->setting($channel, 'composio_instagram_user_id', config('services.composio.instagram_user_id', 'me')),
+            'limit' => $limit,
+            'fields' => self::MEDIA_FIELDS,
+        ]);
+        if (!$result['ok']) {
+            return $this->toGatewayResult($result, '');
+        }
+
+        return GatewayResult::success('رسانه‌ها دریافت شد.', null, ['items' => $this->rows((array) $result['data'])]);
+    }
+
+    public function getMedia(Channel $channel, string $mediaId): GatewayResult
+    {
+        $result = $this->graphGet($channel, '/'.rawurlencode($mediaId).'?fields='.self::MEDIA_FIELDS);
+        if (!$result['ok']) {
+            return $this->toGatewayResult($result, '');
+        }
+        $item = (array) $result['data'];
+        if (isset($item['data']) && is_array($item['data']) && isset($item['data']['id'])) {
+            $item = $item['data'];
+        }
+
+        return GatewayResult::success('رسانه دریافت شد.', null, ['item' => $item]);
+    }
+
+    public function mediaInsights(Channel $channel, string $mediaId): GatewayResult
+    {
+        $result = $this->graphGet($channel, '/'.rawurlencode($mediaId).'/insights?metric=saved,shares,reach');
+        if (!$result['ok']) {
+            return $this->toGatewayResult($result, '');
+        }
+
+        return GatewayResult::success('آمار دریافت شد.', null, InsightsParser::parse($this->rows((array) $result['data'])));
+    }
+
+    private function graphGet(Channel $channel, string $path): array
+    {
+        return $this->client->proxy(
+            '/'.$this->graphVersion().$path,
+            'GET',
+            [],
+            [],
+            $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
+        );
+    }
+
+    private function graphVersion(): string
+    {
+        return trim((string) config('services.composio.graph_api_version', 'v24.0'), '/');
+    }
+
+    /** @return array<int,array> */
+    private function rows(array $data): array
+    {
+        foreach (['data', 'media', 'items'] as $key) {
+            if (isset($data[$key]) && is_array($data[$key])) {
+                return $this->rows($data[$key]) ?: array_values(array_filter($data[$key], 'is_array'));
+            }
+        }
+
+        return array_is_list($data) ? array_values(array_filter($data, 'is_array')) : [];
     }
 }

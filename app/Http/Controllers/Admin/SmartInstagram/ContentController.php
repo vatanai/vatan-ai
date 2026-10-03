@@ -66,6 +66,28 @@ class ContentController extends Controller
             return [];
         }
 
+        // پست‌های همگام‌شده‌ی «ثبت پست» اولویت دارند تا رندر صفحه به تماس زنده‌ی Composio وابسته نباشد.
+        $synced = \App\Models\SmartInstagram\Post::query()->where('workspace_id', $this->ws())->where('media_id', 'not like', 'link:%')
+            ->orderByDesc('published_at')->limit(25)->get();
+        if ($synced->isNotEmpty()) {
+            return $synced->map(fn ($p) => [
+                'id' => $p->media_id, 'caption' => $p->caption, 'media_type' => $p->media_type, 'permalink' => $p->permalink,
+                'timestamp' => $p->published_at?->toIso8601String(), 'username' => $channel->username,
+            ])->all();
+        }
+
+        try {
+            return $this->liveComposioMedia($composio, $channel);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
+    }
+
+    /** @return array<int,array<string,mixed>> */
+    private function liveComposioMedia(ComposioClient $composio, Channel $channel): array
+    {
         return Cache::remember('smart-instagram.composio-media.'.$channel->id, 60, function () use ($composio, $channel): array {
             $result = $composio->execute(
                 'INSTAGRAM_GET_IG_USER_MEDIA',

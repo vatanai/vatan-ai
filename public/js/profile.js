@@ -614,7 +614,14 @@
   var previewDate     = document.getElementById('gridPreviewDate');
   var previewClose    = document.getElementById('gridPreviewClose');
   var previewImgWrap  = previewVideo ? previewVideo.closest('.grid-preview-img-wrap') : null;
+  var previewSlidePrev = document.getElementById('gridPreviewSlidePrev');
+  var previewSlideNext = document.getElementById('gridPreviewSlideNext');
+  var previewSlideCount = document.getElementById('gridPreviewSlideCount');
+  var previewSlideDots = document.getElementById('gridPreviewSlideDots');
   var previewDownloadTrackUrl = '';
+  var previewSlides = [];
+  var previewSlideIndex = 0;
+  var previewTouchStartX = null;
 
   function updatePreviewPlayButton() {
     if (!previewPlay || !previewVideo) return;
@@ -638,6 +645,56 @@
     }
   }
 
+  function readPackSlides(cell) {
+    var card = cell.closest('.profile-media-card');
+    var data = card ? card.querySelector('[data-profile-pack-slides]') : null;
+    if (!data) return [];
+    try {
+      var parsed = JSON.parse(data.textContent || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function renderPreviewSlideControls() {
+    var multi = previewSlides.length > 1;
+    if (previewSlidePrev) previewSlidePrev.hidden = !multi;
+    if (previewSlideNext) previewSlideNext.hidden = !multi;
+    if (previewSlideCount) {
+      previewSlideCount.hidden = !multi;
+      previewSlideCount.textContent = multi ? (previewSlideIndex + 1) + ' / ' + previewSlides.length : '';
+    }
+    if (previewSlideDots) {
+      previewSlideDots.hidden = !multi;
+      previewSlideDots.innerHTML = '';
+      previewSlides.forEach(function (slide, index) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = index === previewSlideIndex ? 'is-active' : '';
+        dot.setAttribute('aria-label', 'نمایش اسلاید ' + (index + 1));
+        dot.addEventListener('click', function () { showPreviewSlide(index); });
+        previewSlideDots.appendChild(dot);
+      });
+    }
+  }
+
+  function showPreviewSlide(index) {
+    if (!previewSlides.length || !previewImg) return;
+    previewSlideIndex = (index + previewSlides.length) % previewSlides.length;
+    var slide = previewSlides[previewSlideIndex];
+    previewImg.src = slide.image_url || '';
+    previewImg.alt = slide.name || 'خروجی محصول';
+    if (previewDownload) previewDownload.href = slide.download_url || slide.image_url || '';
+    if (previewDeleteForm) {
+      if (slide.delete_url) previewDeleteForm.action = slide.delete_url;
+      else previewDeleteForm.removeAttribute('action');
+    }
+    if (previewDelete) previewDelete.hidden = !slide.delete_url;
+    if (previewDeleteConfirm) previewDeleteConfirm.hidden = true;
+    renderPreviewSlideControls();
+  }
+
   function openGridPreview(cell) {
     if (!previewModal) return;
 
@@ -652,6 +709,12 @@
     previewDownloadTrackUrl = cell.getAttribute('data-product-download-url') || '';
 
     var isVideo = mediaKind === 'video' && videoUrl;
+    var isShotPack = mediaKind === 'shot_pack';
+    previewSlides = isShotPack ? readPackSlides(cell) : [];
+    if (!isVideo && previewSlides.length === 0) {
+      previewSlides = [{ image_url: imgUrl, download_url: mediaUrl, delete_url: deleteUrl, name: 'خروجی ساخته‌شده' }];
+    }
+    previewSlideIndex = 0;
     previewImg.hidden = Boolean(isVideo);
     previewVideo.hidden = !isVideo;
     syncPreviewVideoFrame();
@@ -667,7 +730,7 @@
       previewVideo.load();
     }
     updatePreviewPlayButton();
-    previewDownload.href = mediaUrl;
+    if (isVideo) previewDownload.href = mediaUrl;
     previewDate.textContent = date;
 
     if (previewRecreate) {
@@ -682,8 +745,13 @@
       }
     }
 
-    if (previewDeleteForm) previewDeleteForm.action = deleteUrl;
-    if (previewDelete) previewDelete.hidden = !deleteUrl;
+    if (isVideo) {
+      if (previewDeleteForm) previewDeleteForm.action = deleteUrl;
+      if (previewDelete) previewDelete.hidden = !deleteUrl;
+      renderPreviewSlideControls();
+    } else {
+      showPreviewSlide(0);
+    }
     if (previewDeleteConfirm) previewDeleteConfirm.hidden = true;
 
     previewModal.style.display = 'flex';
@@ -704,6 +772,9 @@
     syncPreviewVideoFrame();
     if (previewPlay) previewPlay.hidden = true;
     if (previewImg) previewImg.hidden = false;
+    previewSlides = [];
+    previewSlideIndex = 0;
+    renderPreviewSlideControls();
     if (previewRecreate) {
       previewRecreate.href = '#';
       previewRecreate.classList.add('is-disabled');
@@ -727,6 +798,22 @@
   bindGridCells(document);
 
   if (previewClose) previewClose.addEventListener('click', closeGridPreview);
+
+  if (previewSlidePrev) previewSlidePrev.addEventListener('click', function (event) { event.stopPropagation(); showPreviewSlide(previewSlideIndex - 1); });
+  if (previewSlideNext) previewSlideNext.addEventListener('click', function (event) { event.stopPropagation(); showPreviewSlide(previewSlideIndex + 1); });
+  if (previewImgWrap) {
+    previewImgWrap.addEventListener('touchstart', function (event) {
+      previewTouchStartX = event.touches && event.touches[0] ? event.touches[0].clientX : null;
+    }, { passive: true });
+    previewImgWrap.addEventListener('touchend', function (event) {
+      if (previewTouchStartX === null || previewSlides.length < 2) return;
+      var endX = event.changedTouches && event.changedTouches[0] ? event.changedTouches[0].clientX : previewTouchStartX;
+      var delta = endX - previewTouchStartX;
+      previewTouchStartX = null;
+      if (Math.abs(delta) < 45) return;
+      showPreviewSlide(delta > 0 ? previewSlideIndex - 1 : previewSlideIndex + 1);
+    }, { passive: true });
+  }
 
   if (previewDelete) {
     previewDelete.addEventListener('click', function (event) {
@@ -775,6 +862,10 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && previewModal && previewModal.style.display === 'flex') {
       closeGridPreview();
+    } else if (previewModal && previewModal.style.display === 'flex' && previewSlides.length > 1 && e.key === 'ArrowRight') {
+      showPreviewSlide(previewSlideIndex - 1);
+    } else if (previewModal && previewModal.style.display === 'flex' && previewSlides.length > 1 && e.key === 'ArrowLeft') {
+      showPreviewSlide(previewSlideIndex + 1);
     }
   });
 

@@ -106,6 +106,7 @@ class InboxIngestService
                 'meta' => array_filter([
                     'comment_id' => $n['comment_id'],
                     'referral' => $n['referral'],
+                    'payload' => $n['payload'] ?? null,
                 ]),
                 'occurred_at' => $n['occurred_at'],
             ]);

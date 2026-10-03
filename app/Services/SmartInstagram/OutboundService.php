@@ -7,6 +7,7 @@ use App\Models\SmartInstagram\Conversation;
 use App\Models\SmartInstagram\Message;
 use App\Models\SmartInstagram\OutboundMessage;
 use App\Services\SmartInstagram\Gateways\GatewayManager;
+use App\Services\SmartInstagram\Gateways\RichInstagramGateway;
 use Illuminate\Support\Str;
 
 /** صف پیام خروجی و ارسال به اتصال‌دهنده با retry کنترل‌شده (پروپوزال ۸.۲). */
@@ -27,7 +28,7 @@ class OutboundService
         $body = trim($body);
         $targetRef = $options['target_ref'] ?? null;
         $allowHumanLock = (bool) ($options['allow_human_lock'] ?? false);
-        $decision = $this->policy->evaluate($conversation, $kind, $origin, $body, $targetRef, $allowHumanLock);
+        $decision = $this->policy->evaluate($conversation, $kind, $origin, $body, $targetRef, $allowHumanLock, (bool) ($options['user_initiated'] ?? false));
         $key = $options['idempotency_key'] ?? ($origin.':'.$conversation->id.':'.Str::uuid());
 
         $existing = OutboundMessage::query()->where('idempotency_key', $key)->first();
@@ -58,7 +59,11 @@ class OutboundService
         if (!$decision['allowed']) {
             $this->logger->log('outbound.blocked', (string) $decision['reason'], $outbound, ['origin' => $origin, 'kind' => $kind], 'warning', $options['admin_id'] ?? null);
         } elseif ($options['dispatch'] ?? true) {
-            SendOutboundMessage::dispatch($outbound->id)->onQueue(config('smart_instagram.queues.outbound', 'default'));
+            $pending = SendOutboundMessage::dispatch($outbound->id)->onQueue(config('smart_instagram.queues.outbound', 'default'));
+            if ((int) ($options['delay_seconds'] ?? 0) > 0) {
+                $pending->delay(now()->addSeconds(min(3600, (int) $options['delay_seconds'])));
+            }
+            unset($pending);
         }
 
         return $outbound;
@@ -88,7 +93,16 @@ class OutboundService
 
         $outbound->forceFill(['status' => 'sending', 'attempts' => $outbound->attempts + 1])->save();
         $gateway = $this->gateways->for($conversation->channel);
-        $result = match ($outbound->kind) {
+        $payload = is_array($outbound->message_payload) ? $outbound->message_payload : null;
+        $result = $payload !== null && isset($payload['message']) && $gateway instanceof RichInstagramGateway
+            // پیام ساختاریافته‌ی «ثبت پست» (متن + دکمه یا کارت چنددکمه‌ای)
+            ? $gateway->sendRichMessage(
+                $conversation->channel,
+                $outbound->kind === 'dm' ? ['id' => (string) $conversation->contact->external_id] : ['comment_id' => (string) $outbound->target_ref],
+                (array) $payload['message'],
+                isset($payload['fallback_text']) ? (string) $payload['fallback_text'] : null,
+            )
+            : match ($outbound->kind) {
             'private_reply' => is_array($outbound->message_payload)
                 ? $gateway->sendPrivateCard($conversation->channel, (string) $outbound->target_ref, $outbound->message_payload)
                 : $gateway->sendPrivateReply($conversation->channel, (string) $outbound->target_ref, $outbound->body),
@@ -103,12 +117,12 @@ class OutboundService
                 'external_id' => $result->externalId,
                 'direction' => 'out',
                 'source_type' => $outbound->kind === 'dm' ? 'dm' : 'comment',
-                'message_type' => is_array($outbound->message_payload) ? 'product_card' : 'text',
+                'message_type' => $payload !== null && isset($payload['message']) ? (isset($payload['message']['attachment']) ? 'product_card' : 'text') : (is_array($outbound->message_payload) ? 'product_card' : 'text'),
                 'body' => $outbound->body,
                 'sent_by' => $outbound->origin,
                 'admin_id' => $outbound->admin_id,
                 'delivery_status' => 'sent',
-                'meta' => array_filter(['outbound_id' => $outbound->id, 'kind' => $outbound->kind, 'comment_id' => $outbound->kind !== 'dm' ? $outbound->target_ref : null, 'card' => is_array($outbound->message_payload) ? $outbound->message_payload['attachment'] ?? null : null]),
+                'meta' => array_filter(['outbound_id' => $outbound->id, 'kind' => $outbound->kind, 'comment_id' => $outbound->kind !== 'dm' ? $outbound->target_ref : null, 'card' => is_array($outbound->message_payload) ? ($outbound->message_payload['attachment'] ?? data_get($outbound->message_payload, 'message.attachment')) : null, 'quick_replies' => data_get($outbound->message_payload, 'message.quick_replies')]),
                 'occurred_at' => now(),
             ]);
             $outbound->forceFill([

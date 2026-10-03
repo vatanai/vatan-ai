@@ -53,10 +53,14 @@ class AutomationController extends Controller
         return $this->form($rule);
     }
 
-    public function edit(AutomationRule $rule): View
+    public function edit(AutomationRule $rule): View|RedirectResponse
     {
         $this->authorizeAbility('manage_automation');
         $this->own($rule);
+        // قانون ساخته‌شده با «ثبت پست» فقط از ویزارد همان بخش ویرایش می‌شود تا تنظیمات کارت/فالو از دست نرود.
+        if ($campaignId = \App\Models\SmartInstagram\PostCampaign::query()->where('automation_rule_id', $rule->id)->value('id')) {
+            return redirect()->route('admin.smart-instagram.posts.edit', $campaignId);
+        }
 
         return $this->form($rule);
     }
@@ -71,7 +75,7 @@ class AutomationController extends Controller
             'runs' => $rule->runs()->with('contact:id,username,display_name')->latest('id')->paginate(25),
             'statuses' => self::STATUSES,
             'triggers' => AutomationEngine::TRIGGERS,
-            'actionsMap' => AutomationEngine::ACTIONS,
+            'actionsMap' => AutomationEngine::ACTIONS + AutomationEngine::INTERNAL_ACTIONS,
         ]);
     }
 
@@ -94,6 +98,9 @@ class AutomationController extends Controller
     {
         $this->authorizeAbility('manage_automation');
         $this->own($rule);
+        if ($campaignId = \App\Models\SmartInstagram\PostCampaign::query()->where('automation_rule_id', $rule->id)->value('id')) {
+            return redirect()->route('admin.smart-instagram.posts.edit', $campaignId)->with('warning', 'این قانون از «ثبت پست» مدیریت می‌شود.');
+        }
         $data = $this->validated($request);
         $behaviour = ['trigger', 'scope_ref', 'keywords', 'match_mode', 'conditions', 'actions', 'guards'];
         $changed = collect($behaviour)->contains(fn ($key) => json_encode($rule->{$key}) !== json_encode($data[$key] ?? null));

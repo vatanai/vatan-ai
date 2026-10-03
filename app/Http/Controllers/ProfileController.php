@@ -15,6 +15,7 @@ use App\Models\GeneratedImage;
 use App\Models\UserUpload;
 use App\Models\GeneratedVideo;
 use App\Models\SalesPartnerLead;
+use App\Models\ShotBatch;
 use App\Services\CustomerJourneyService;
 use App\Services\ProductSearchService;
 use App\Services\UserStorageService;
@@ -558,6 +559,7 @@ public function gallery()
     private function mediaPage(User $user, ?string $cursor, int $limit, string $productPreviewColumns): array
     {
         $cursorData = $this->decodeMediaCursor($cursor);
+        $kindRanks = ['video' => 3, 'shot_pack' => 2, 'image' => 1];
         $applyCursor = function ($query, string $mediaKind) use ($cursorData): void {
             if (! $cursorData) {
                 return;
@@ -570,9 +572,8 @@ public function gallery()
                             ->where(function ($sameId) use ($cursorData, $mediaKind): void {
                                 $sameId->where('id', '<', $cursorData['id']);
 
-                                // در برخورد نادرِ زمان و شناسهٔ یکسان بین دو جدول،
-                                // ویدیو قبل از تصویر مرتب می‌شود تا cursor چیزی را جا نیندازد.
-                                if ($cursorData['kind'] === 'video' && $mediaKind === 'image') {
+                                $ranks = ['video' => 3, 'shot_pack' => 2, 'image' => 1];
+                                if (($ranks[$mediaKind] ?? 0) < ($ranks[$cursorData['kind']] ?? 0)) {
                                     $sameId->orWhere('id', $cursorData['id']);
                                 }
                             });
@@ -580,9 +581,17 @@ public function gallery()
             });
         };
 
+        $hasShotPacks = Schema::hasTable('shot_batches') && Schema::hasTable('shot_batch_items');
         $images = $user->generatedImages()
             ->select(['id', 'user_id', 'product_id', 'image_path', 'size', 'created_at'])
             ->whereNotNull('image_path')
+            ->when($hasShotPacks, function ($query): void {
+                $query->whereNotIn('generated_images.id', function ($sub): void {
+                    $sub->select('generated_image_id')
+                        ->from('shot_batch_items')
+                        ->whereNotNull('generated_image_id');
+                });
+            })
             ->with("product:{$productPreviewColumns}")
             ->tap(fn ($query) => $applyCursor($query, 'image'))
             ->latest()
@@ -604,8 +613,22 @@ public function gallery()
                 ->values()
             : collect();
 
-        $media = $this->decorateMedia($images, $videos)
-            ->sort(function ($left, $right): int {
+        $shotPacks = $hasShotPacks
+            ? ShotBatch::query()
+                ->where('user_id', $user->id)
+                ->whereHas('completedItems.generatedImage')
+                ->with([
+                    "product:{$productPreviewColumns}",
+                    'completedItems.generatedImage:id,user_id,product_id,image_path,size,created_at',
+                ])
+                ->tap(fn ($query) => $applyCursor($query, 'shot_pack'))
+                ->latest()
+                ->limit($limit + 1)
+                ->get()
+            : collect();
+
+        $media = $this->decorateMedia($images, $videos, $shotPacks)
+            ->sort(function ($left, $right) use ($kindRanks): int {
                 $dateCompare = ($right->created_at?->getTimestamp() ?? 0) <=> ($left->created_at?->getTimestamp() ?? 0);
                 if ($dateCompare !== 0) {
                     return $dateCompare;
@@ -616,7 +639,7 @@ public function gallery()
                     return $idCompare;
                 }
 
-                return ((int) ($left->media_kind !== 'video')) <=> ((int) ($right->media_kind !== 'video'));
+                return ($kindRanks[$right->media_kind ?? 'image'] ?? 0) <=> ($kindRanks[$left->media_kind ?? 'image'] ?? 0);
             })
             ->values();
         $hasMore = $media->count() > $limit;
@@ -633,9 +656,9 @@ public function gallery()
         ];
     }
 
-    private function decorateMedia(Collection $images, Collection $videos): Collection
+    private function decorateMedia(Collection $images, Collection $videos, ?Collection $shotPacks = null): Collection
     {
-        return $images->map(function (GeneratedImage $image): GeneratedImage {
+        $regular = $images->map(function (GeneratedImage $image): GeneratedImage {
             $image->setAttribute('media_kind', 'image');
             $image->setAttribute('media_url', $image->imageUrl());
             return $image;
@@ -648,7 +671,39 @@ public function gallery()
                     : asset('storage/' . ltrim($video->poster_path, '/')))
                 : null);
             return $video;
-        }))->values();
+        }));
+
+        $packs = ($shotPacks ?? collect())->map(function (ShotBatch $batch): ShotBatch {
+            $slides = $batch->completedItems
+                ->map(function ($item): ?array {
+                    $image = $item->generatedImage;
+                    $url = $image?->imageUrl();
+                    if (! $image || ! $url) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => $image->id,
+                        'name' => $item->shot_name_fa ?: 'شات محصول',
+                        'image_url' => $url,
+                        'thumbnail_url' => route('profile.generated-images.thumbnail', $image),
+                        'download_url' => $url,
+                        'delete_url' => route('profile.generated-images.destroy', $image),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+            $batch->setAttribute('media_kind', 'shot_pack');
+            $batch->setAttribute('media_url', $slides[0]['image_url'] ?? null);
+            $batch->setAttribute('profile_slides', $slides);
+            $batch->setAttribute('jalali_created_at', \App\Support\Jalali::format($batch->created_at));
+
+            return $batch;
+        })->filter(fn (ShotBatch $batch) => filled($batch->media_url));
+
+        return $regular->concat($packs)->values();
     }
 
     private function encodeMediaCursor(object $media): string
@@ -673,7 +728,7 @@ public function gallery()
             return isset($decoded['created_at'], $decoded['id']) ? [
                 'created_at' => (string) $decoded['created_at'],
                 'id' => (int) $decoded['id'],
-                'kind' => in_array($decoded['kind'] ?? null, ['image', 'video'], true)
+                'kind' => in_array($decoded['kind'] ?? null, ['image', 'video', 'shot_pack'], true)
                     ? $decoded['kind']
                     : 'image',
             ] : null;

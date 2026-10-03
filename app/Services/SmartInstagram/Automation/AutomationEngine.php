@@ -47,7 +47,12 @@ class AutomationEngine
         'stop' => 'توقف سایر قوانین',
     ];
 
-    private const MESSAGING = ['public_reply', 'private_reply', 'product_card', 'send_dm'];
+    /** اقدام‌های داخلی که فقط «ثبت پست» می‌سازد (در فرم عمومی اتومیشن نمایش داده نمی‌شوند). */
+    public const INTERNAL_ACTIONS = [
+        'post_flow' => 'جریان دایرکت ثبت پست (فالو اجباری + کارت)',
+    ];
+
+    private const MESSAGING = ['public_reply', 'private_reply', 'product_card', 'send_dm', 'post_flow'];
 
     public function __construct(
         private readonly OutboundService $outbound,
@@ -63,6 +68,19 @@ class AutomationEngine
 
         $message->loadMissing('conversation.contact', 'conversation.channel');
         $conversation = $message->conversation;
+
+        // پاسخ/کلیک مشتری در جریان دایرکت «ثبت پست» (افزایشی؛ اگر جریانی فعال نباشد هیچ اثری ندارد).
+        if ($message->source_type !== 'comment') {
+            try {
+                if (app(\App\Services\SmartInstagram\Posts\PostFlowService::class)->handleReply($message)) {
+                    return 1;
+                }
+            } catch (\Throwable $e) {
+                // خطای جریان ثبت پست نباید دریافت دایرکت و قوانین فعلی را متوقف کند.
+                $this->logger->error('post_flow.reply_failed', 'پردازش پاسخ جریان ثبت پست ناموفق بود.', $message, ['error' => $e->getMessage()]);
+            }
+        }
+
         $triggers = $this->triggersFor($message, $conversation);
         if (!$triggers) {
             return 0;
@@ -169,13 +187,29 @@ class AutomationEngine
         if (!$keywords) {
             return !in_array($rule->trigger, ['comment_keyword', 'dm_keyword'], true);
         }
+        // «ثبت پست» برای هر کلمه نحوه‌ی تطبیق جدا دارد (conditions.keyword_modes)؛ قوانین قبلی همان match_mode عمومی را دارند.
+        $modes = (array) data_get($rule->conditions, 'keyword_modes', []);
         foreach ($keywords as $keyword) {
-            if (PersianText::containsKeyword($text, (string) $keyword, $rule->match_mode ?: 'contains')) {
+            $mode = $modes[PersianText::normalize((string) $keyword)] ?? ($rule->match_mode ?: 'contains');
+            if ($mode === 'pattern' ? $this->patternMatch($text, (string) $keyword) : PersianText::containsKeyword($text, (string) $keyword, $mode)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /** الگوی ساده با * (هر چیزی)؛ بدون regex خام برای جلوگیری از الگوی پرهزینه. */
+    private function patternMatch(string $text, string $pattern): bool
+    {
+        // اول روی * جدا می‌شود؛ normalize نشانه‌ها (از جمله _ و *) را حذف می‌کند.
+        $parts = array_values(array_filter(array_map(fn ($p) => PersianText::normalize($p), explode('*', $pattern)), fn ($p) => $p !== ''));
+        if ($parts === []) {
+            return false;
+        }
+        $regex = '/'.implode('.*', array_map(fn ($p) => preg_quote($p, '/'), $parts)).'/u';
+
+        return (bool) @preg_match($regex, PersianText::normalize($text));
     }
 
     /** @return bool آیا قوانین بعدی متوقف شوند */
@@ -213,6 +247,11 @@ class AutomationEngine
         }
         if ($contact->opted_out) {
             return $this->finish($rule, $run, 'skipped', [['action' => 'guard', 'result' => 'مخاطب در فهرست توقف است']]);
+        }
+        $dailyCap = (int) ($guards['max_runs_per_day'] ?? 0);
+        if ($dailyCap > 0 && AutomationRun::query()->where('rule_id', $rule->id)->where('id', '!=', $run->id)
+            ->whereIn('status', ['success', 'partial'])->where('created_at', '>=', now()->startOfDay())->count() >= $dailyCap) {
+            return $this->finish($rule, $run, 'skipped', [['action' => 'guard', 'result' => 'سقف ارسال روزانه‌ی این سناریو پر شده']]);
         }
 
         $sensitive = $conversation->needs_human && ($guards['stop_on_sensitive'] ?? true);
@@ -266,9 +305,10 @@ class AutomationEngine
                 if ($commentId === '') {
                     return ['ok' => false, 'result' => 'این پیام کامنت نیست'];
                 }
-                $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', $type, [
+                $out = $this->outbound->queue($conversation, $this->replyText($type, $action, $message, $contact), 'automation', $type, [
                     'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
                     'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
+                    'delay_seconds' => (int) ($action['delay_seconds'] ?? 0),
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'در صف ارسال', 'outbound_id' => $out->id];
@@ -291,6 +331,15 @@ class AutomationEngine
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'کارت محصول در صف ارسال قرار گرفت', 'outbound_id' => $out->id];
+
+            case 'post_flow':
+                $campaign = \App\Models\SmartInstagram\PostCampaign::query()->with('post')->where('workspace_id', $rule->workspace_id)->find((int) ($action['campaign_id'] ?? 0));
+                if (!$campaign || !$campaign->post) {
+                    return ['ok' => false, 'result' => 'سناریوی ثبت پست پیدا نشد'];
+                }
+
+                return app(\App\Services\SmartInstagram\Posts\PostFlowService::class)
+                    ->start($campaign, $message, $conversation, $run, $key, !($guards['stop_on_sensitive'] ?? true));
 
             case 'send_dm':
                 $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', 'dm', [
@@ -405,6 +454,21 @@ class AutomationEngine
         ];
     }
 
+    /** متن پاسخ کامنت: چند سبک چرخشی + پاسخ شخصی‌سازی‌شده با هوش مصنوعی (در صورت فعال‌بودن). */
+    private function replyText(string $type, array $action, Message $message, Contact $contact): string
+    {
+        $variants = array_values(array_filter((array) ($action['variants'] ?? [])));
+        if ($type === 'public_reply' && !empty($action['ai_personalize'])) {
+            $written = app(\App\Services\SmartInstagram\Posts\CommentReplyWriter::class)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')]);
+            if ($written) {
+                return $written;
+            }
+        }
+        $text = $variants ? $variants[array_rand($variants)] : (string) ($action['text'] ?? '');
+
+        return $this->render($text, $contact);
+    }
+
     private function finish(AutomationRule $rule, AutomationRun $run, string $status, array $decisions): bool
     {
         $run->forceFill(['status' => $status, 'decisions' => $decisions])->save();
@@ -417,9 +481,26 @@ class AutomationEngine
         ])->save();
         if ($status === 'failed') {
             $this->logger->error('automation.failed', 'اجرای قانون «'.$rule->name.'» ناموفق بود.', $rule, ['run_id' => $run->id]);
+            $this->pauseAfterFailures($rule);
         }
 
         return false;
+    }
+
+    /** توقف خودکار پس از چند اجرای ناموفق پیاپی (حفاظ «ثبت پست»). */
+    private function pauseAfterFailures(AutomationRule $rule): void
+    {
+        $limit = (int) data_get($rule->guards, 'pause_after_failures', 0);
+        if ($limit <= 0 || $rule->status !== 'active') {
+            return;
+        }
+        $recent = AutomationRun::query()->where('rule_id', $rule->id)->whereNotIn('status', ['skipped', 'running'])
+            ->latest('id')->limit($limit)->pluck('status');
+        if ($recent->count() >= $limit && $recent->every(fn ($s) => $s === 'failed')) {
+            $rule->forceFill(['status' => 'paused'])->save();
+            \App\Models\SmartInstagram\PostCampaign::query()->where('automation_rule_id', $rule->id)->update(['status' => 'paused']);
+            $this->logger->error('automation.auto_paused', 'قانون «'.$rule->name.'» پس از '.$limit.' خطای پیاپی خودکار متوقف شد.', $rule);
+        }
     }
 
     private function insideBusinessHours(Conversation $conversation): bool

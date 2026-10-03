@@ -52,8 +52,18 @@ class ShotPromptBuilder
             $parts[] = self::humanSafetyBlock();
         }
         $parts[] = "Output requirements: aspect ratio {$aspectRatio}; high resolution; sharp focus on the product; realistic materials, shadows and reflections. Do not add any text, captions, logos, watermarks or price tags that are not on the real product.";
+        if ($brandIdentity = $this->brandIdentityBlock($settings)) {
+            // طبق قرارداد فرم ادمین، دستور حفظ هویت برند عمداً آخرین بخش
+            // پرامپت است تا روی همه‌ی شات‌های همان پک اولویت یکسان داشته باشد.
+            $parts[] = $brandIdentity;
+        }
 
         return implode("\n\n", array_filter($parts, fn ($p) => trim($p) !== ''));
+    }
+
+    public static function defaultBrandIdentityPrompt(): string
+    {
+        return 'Keep one coherent brand identity across the complete image set. Preserve the same color language, lighting character, contrast, material treatment and premium art direction in every shot, while allowing each shot to keep its own composition and camera angle.';
     }
 
     /** بلوک ثابت حفظ محصول — مهم‌ترین اولویت کیفیت طبق تصمیم مالک. */
@@ -89,6 +99,20 @@ class ShotPromptBuilder
         }
 
         return $bits === [] ? '' : "\nBrand look: " . implode('; ', $bits) . '.';
+    }
+
+    private function brandIdentityBlock(array $settings): ?string
+    {
+        if (! filter_var($settings['brand_identity_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            return null;
+        }
+
+        $prompt = trim((string) ($settings['brand_identity_prompt'] ?? ''));
+        if ($prompt === '') {
+            $prompt = self::defaultBrandIdentityPrompt();
+        }
+
+        return "Brand identity continuity (apply to this shot and the whole pack):\n{$prompt}";
     }
 
     private function axisFallback(string $axis): string

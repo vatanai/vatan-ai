@@ -10,6 +10,8 @@
   $selectedCategories = collect(old('category_ids', $product?->categories->pluck('id')->all() ?? []))->map(fn ($id) => (int) $id)->all();
   $currentModel = $models->firstWhere('openrouter_model_id', $product?->primary_model);
   $fallbackIds = $models->whereIn('openrouter_model_id', (array) ($product?->fallback_models ?? []))->pluck('id')->all();
+  $brandIdentityEnabled = (bool) old('brand_identity_enabled', $product ? ($settings['brand_identity_enabled'] ?? false) : true);
+  $brandIdentityPrompt = old('brand_identity_prompt', $settings['brand_identity_prompt'] ?? \App\Services\ProductShots\ShotPromptBuilder::defaultBrandIdentityPrompt());
 @endphp
 <main class="mr-[294px] flex-1 min-h-screen flex flex-col min-w-0 max-[900px]:mr-0">
   @include('admin.partials.header')
@@ -36,10 +38,6 @@
       <a href="{{ route('admin.product-shots.index', ['tab' => 'products']) }}" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-right text-[11px]"></i> بازگشت به استودیو محصول</a>
     </div>
 
-    @unless($product)
-      @include('admin.product-shots.partials.mode-cards', ['current' => 'product'])
-    @endunless
-
     <form method="POST" enctype="multipart/form-data" id="shot-product-form"
           action="{{ $product ? route('admin.product-shots.products.update', $product->id) : route('admin.product-shots.products.store') }}">
       @csrf
@@ -59,7 +57,7 @@
               <select id="sp-niche" name="niche" class="input-pro">
                 @foreach($niches as $key => $label)<option value="{{ $key }}" @selected(old('niche', $settings['niche'] ?? 'beauty') === $key)>{{ $label }}</option>@endforeach
               </select>
-              <div class="ps-hint">فاز اول: آرایشی، عطر و زیبایی. شات‌های پایه برای همین صنف ساخته شده‌اند.</div>
+              <div class="ps-hint">معماری برای تمام صنف‌ها مشترک است؛ شات‌های پیشنهادی هر صنف از کتابخانه انتخاب می‌شوند.</div>
             </div>
             <div class="ps-field">
               <label for="sp-categories">دسته‌بندی‌ها</label>
@@ -107,6 +105,25 @@
               <div class="ps-hint">اگر خالی بماند، اولین نمونه‌ی شات ذخیره‌شده کاور می‌شود.</div>
             </div>
           </div>
+
+          <div class="ps-brand-identity mt-4" data-brand-identity>
+            <div class="ps-brand-identity-head">
+              <div>
+                <div class="ps-card-title"><i class="fa-solid fa-fingerprint"></i> حفظ هویت برند</div>
+                <div class="ps-card-desc">وقتی روشن باشد، این دستور دقیقاً به انتهای پرامپت تمام شات‌های همین پک اضافه می‌شود تا حس بصری خروجی‌ها یکدست بماند.</div>
+              </div>
+              <label class="ps-toggle" aria-label="فعال‌سازی حفظ هویت برند">
+                <input type="hidden" name="brand_identity_enabled" value="0">
+                <input type="checkbox" name="brand_identity_enabled" value="1" data-brand-identity-toggle @checked($brandIdentityEnabled)>
+                <span aria-hidden="true"></span>
+              </label>
+            </div>
+            <div class="ps-field mt-3" data-brand-identity-prompt-wrap @if(!$brandIdentityEnabled) hidden @endif>
+              <label for="sp-brand-identity-prompt">پرامپت ثابت حفظ هویت برند</label>
+              <textarea id="sp-brand-identity-prompt" name="brand_identity_prompt" class="input-pro" dir="ltr" rows="5" maxlength="2000" placeholder="Keep one coherent brand identity across the complete image set...">{{ $brandIdentityPrompt }}</textarea>
+              <div class="ps-hint">این دستور جای «حفظ خود محصول» را نمی‌گیرد؛ شکل، رنگ، لوگو و بسته‌بندی محصول همیشه با قانون مستقل وفاداری محصول محافظت می‌شوند.</div>
+            </div>
+          </div>
         </section>
 
         {{-- ۳. شات‌ها + پیش‌نمایش --}}
@@ -138,8 +155,9 @@
             @foreach($shots as $index => $shot)
               @php
                 $ps = $productShots->get($shot->id);
-                $enabled = (bool) old("shots.{$shot->id}.enabled", $ps ? $ps->enabled : ($product ? false : $index < 6));
-                $isDefault = (bool) old("shots.{$shot->id}.is_default", $ps ? $ps->is_default : ($product ? false : $index < 4));
+                $isGeneralDefault = in_array((int) $shot->id, array_map('intval', $generalShotIds ?? []), true);
+                $enabled = (bool) old("shots.{$shot->id}.enabled", $ps ? $ps->enabled : ($product ? false : $isGeneralDefault));
+                $isDefault = (bool) old("shots.{$shot->id}.is_default", $ps ? $ps->is_default : ($product ? false : ($isGeneralDefault && $index < 4)));
                 $sample = $ps?->sampleImageUrl() ?? $shot->sampleImageUrl();
               @endphp
               <div class="ps-shot-row {{ $enabled ? '' : 'is-off' }}" data-shot-row data-shot-id="{{ $shot->id }}" data-default-credits="{{ $shot->default_credits }}">
@@ -215,6 +233,14 @@
   });
   document.getElementById('sp-test-image').addEventListener('change', function () { sourcePath = null; });
 
+  var brandToggle = form.querySelector('[data-brand-identity-toggle]');
+  var brandPromptWrap = form.querySelector('[data-brand-identity-prompt-wrap]');
+  function syncBrandIdentity() {
+    if (brandPromptWrap) brandPromptWrap.hidden = !brandToggle.checked;
+  }
+  if (brandToggle) brandToggle.addEventListener('change', syncBrandIdentity);
+  syncBrandIdentity();
+
   form.querySelectorAll('[data-shot-preview]').forEach(function (button) {
     button.addEventListener('click', function () {
       var row = button.closest('[data-shot-row]');
@@ -226,6 +252,8 @@
       data.append('product_description', document.getElementById('sp-pdesc').value);
       data.append('brand_palette', document.getElementById('sp-palette').value);
       data.append('brand_style', document.getElementById('sp-style').value);
+      data.append('brand_identity_enabled', brandToggle && brandToggle.checked ? '1' : '0');
+      data.append('brand_identity_prompt', document.getElementById('sp-brand-identity-prompt').value);
       data.append('aspect_ratio', document.getElementById('sp-test-ratio').value);
       if (sourcePath) data.append('image_path', sourcePath); else data.append('image', file);
       var result = row.querySelector('[data-shot-result]');

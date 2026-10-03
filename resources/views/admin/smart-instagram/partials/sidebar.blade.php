@@ -13,6 +13,7 @@
   }
   $siLinks = [
     ['route' => 'admin.smart-instagram.dashboard', 'label' => 'داشبورد اینستاگرام', 'active' => request()->is('admin/smart-instagram')],
+    ['route' => 'admin.smart-instagram.posts.index', 'label' => 'ثبت پست', 'active' => request()->is('admin/smart-instagram/posts*')],
     ['route' => 'admin.smart-instagram.inbox', 'label' => 'صندوق گفتگو', 'active' => request()->is('admin/smart-instagram/inbox*'), 'badge' => $siUnanswered],
     ['route' => 'admin.smart-instagram.contacts.index', 'label' => 'مشتریان و لیدها', 'active' => request()->is('admin/smart-instagram/contacts*')],
     ['route' => 'admin.smart-instagram.pipeline', 'label' => 'قیف فروش و وظایف', 'active' => request()->is('admin/smart-instagram/pipeline*')],

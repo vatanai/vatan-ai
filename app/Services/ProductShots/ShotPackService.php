@@ -97,6 +97,25 @@ class ShotPackService
             throw ValidationException::withMessages(['shots' => "حداکثر {$max} شات در هر ساخت قابل انتخاب است."]);
         }
 
+        $creditsQuoted = (int) $selected->sum(fn (ProductShot $ps) => $ps->credits());
+        $availableCredits = max(0, (int) $user->tokens);
+        if ($creditsQuoted > $availableCredits) {
+            $remaining = $availableCredits;
+            $affordable = 0;
+            foreach ($selected->sortBy(fn (ProductShot $ps) => $ps->credits()) as $productShot) {
+                $cost = $productShot->credits();
+                if ($cost > $remaining) {
+                    break;
+                }
+                $remaining -= $cost;
+                $affordable++;
+            }
+            $message = $affordable > 0
+                ? "اعتبار شما برای ساخت {$affordable} عکس کافی است. تعداد شات‌ها را کم کنید یا اعتبار بیشتری بگیرید."
+                : 'اعتبار شما برای ساخت هیچ‌کدام از شات‌های انتخابی کافی نیست؛ ابتدا اعتبار بیشتری بگیرید.';
+            throw ValidationException::withMessages(['shots' => $message]);
+        }
+
         $sourcePaths = [];
         $preflight = [];
         foreach (array_values($uploads) as $index => $upload) {
@@ -137,7 +156,7 @@ class ShotPackService
             throw ValidationException::withMessages(['uploads' => 'عکس محصول پیدا نشد یا منقضی شده؛ دوباره بارگذاری کنید.']);
         }
 
-        return DB::transaction(function () use ($user, $product, $selected, $aspectRatio, $sourcePaths, $preflight) {
+        return DB::transaction(function () use ($user, $product, $selected, $aspectRatio, $sourcePaths, $preflight, $creditsQuoted) {
             $batch = ShotBatch::create([
                 'user_id' => $user->id,
                 'product_id' => $product->id,
@@ -146,7 +165,7 @@ class ShotPackService
                 'source_paths' => $sourcePaths,
                 'preflight' => $preflight,
                 'shots_total' => $selected->count(),
-                'credits_quoted' => $selected->sum(fn (ProductShot $ps) => $ps->credits()),
+                'credits_quoted' => $creditsQuoted,
                 'source' => 'app',
             ]);
 
@@ -178,12 +197,14 @@ class ShotPackService
             'credits_quoted' => $batch->credits_quoted,
             'credits_charged' => (int) $items->sum('credits_charged'),
             'credits_refunded' => (int) $items->sum('credits_refunded'),
+            'balance' => (int) ($batch->user?->tokens ?? 0),
             'source_url' => \App\Models\ShotLibrary::publicUrl($batch->source_paths[0] ?? null),
             'items' => $items->map(fn (ShotBatchItem $item) => $item->toClientArray())->values()->all(),
             'run_urls' => $items->mapWithKeys(fn (ShotBatchItem $item) => [
                 $item->id => route('app.product-shots.items.run', [$batch->uuid, $item->id]),
             ])->all(),
             'download_url' => route('app.product-shots.batches.download', $batch->uuid),
+            'show_url' => route('app.product-shots.batches.show', $batch->uuid),
         ];
     }
 

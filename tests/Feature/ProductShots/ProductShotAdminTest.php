@@ -62,14 +62,18 @@ class ProductShotAdminTest extends TestCase
         $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))->assertNotFound();
     }
 
-    public function test_legacy_create_page_shows_mode_cards_only_when_enabled(): void
+    public function test_legacy_create_page_shows_mode_dialog_only_when_enabled(): void
     {
         $off = $this->actingAs($this->admin, 'admin')->get(route('admin.products.create'));
-        $off->assertOk()->assertDontSee('ps-mode-cards', false)->assertDontSee('پروداکتی (جدید)');
+        $off->assertOk()->assertDontSee('ps-mode-dialog', false)->assertDontSee('ثبت محصول پروداکتی');
 
         $this->enableShots('admins');
         $this->actingAs($this->admin, 'admin')->get(route('admin.products.create'))
-            ->assertOk()->assertSee('ps-mode-cards', false)->assertSee('پروداکتی (جدید)');
+            ->assertOk()->assertSee('ps-mode-dialog', false)->assertSee('ثبت محصول پروداکتی')->assertSee('ثبت محصول چهره‌محور');
+
+        // انتخاب چهره‌محور همان فرم قدیمی را بدون نمایش دوباره‌ی انتخاب‌گر باز می‌کند.
+        $this->actingAs($this->admin, 'admin')->get(route('admin.products.create', ['mode' => 'portrait']))
+            ->assertOk()->assertDontSee('ps-mode-dialog', false)->assertSee('ثبت محصول عکس');
     }
 
     public function test_shot_library_crud(): void
@@ -107,11 +111,16 @@ class ProductShotAdminTest extends TestCase
         $model = $this->imageModel();
         $cat = $this->category();
 
-        $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))->assertOk()->assertSee($shots[0]->name_fa);
+        $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))
+            ->assertOk()
+            ->assertSee('استودیوی تمیز فروشگاهی')
+            ->assertSee($shots[0]->name_fa);
 
         $payload = [
             'name_fa' => 'پک سرم', 'name_en' => 'Serum Pack', 'niche' => 'beauty', 'status' => 'active',
             'ai_model_id' => $model->id, 'category_ids' => [$cat->id], 'product_description' => 'amber serum bottle',
+            'brand_identity_enabled' => '1',
+            'brand_identity_prompt' => 'Keep the brand palette warm and minimal.',
             'shots' => [
                 $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'sort' => 0],
                 $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'sort' => 1],
@@ -124,6 +133,8 @@ class ProductShotAdminTest extends TestCase
         $this->assertTrue($product->isShotProduct());
         $this->assertSame($model->openrouter_model_id, $product->primary_model);
         $this->assertSame('amber serum bottle', $product->shot_settings['product_description']);
+        $this->assertTrue($product->shot_settings['brand_identity_enabled']);
+        $this->assertSame('Keep the brand palette warm and minimal.', $product->shot_settings['brand_identity_prompt']);
         $this->assertSame(8, (int) $product->credit_cost);
         $this->assertSame((int) $this->admin->id, (int) $product->created_by);
         $this->assertSame(2, $product->enabledProductShots()->count());

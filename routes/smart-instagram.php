@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\SmartInstagram\HealthController;
 use App\Http\Controllers\Admin\SmartInstagram\InboxController;
 use App\Http\Controllers\Admin\SmartInstagram\KnowledgeController;
 use App\Http\Controllers\Admin\SmartInstagram\PipelineController;
+use App\Http\Controllers\Admin\SmartInstagram\PostController;
 use App\Http\Controllers\Admin\SmartInstagram\ReportController;
 use App\Http\Controllers\SmartInstagram\IngestWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,24 @@ Route::prefix('admin/smart-instagram')
     ->middleware('auth:admin')
     ->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        // ثبت پست (کامنت و دایرکت هوشمند هر پست)
+        Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
+        Route::get('/posts/create', [PostController::class, 'create'])->name('posts.create');
+        Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
+        Route::post('/posts/sync', [PostController::class, 'syncPosts'])->middleware('throttle:10,1')->name('posts.sync');
+        Route::post('/posts/manual', [PostController::class, 'manual'])->middleware('throttle:20,1')->name('posts.manual');
+        Route::post('/posts/import/{rule}', [PostController::class, 'import'])->name('posts.import');
+        Route::post('/posts/ai/generate', [PostController::class, 'aiGenerate'])->middleware('throttle:20,1')->name('posts.ai.generate');
+        Route::post('/posts/ai/settings', [PostController::class, 'aiSettings'])->name('posts.ai.settings');
+        Route::get('/posts/{campaign}', [PostController::class, 'show'])->whereNumber('campaign')->name('posts.show');
+        Route::get('/posts/{campaign}/edit', [PostController::class, 'edit'])->whereNumber('campaign')->name('posts.edit');
+        Route::put('/posts/{campaign}', [PostController::class, 'update'])->whereNumber('campaign')->name('posts.update');
+        Route::post('/posts/{campaign}/status', [PostController::class, 'status'])->whereNumber('campaign')->name('posts.status');
+        Route::post('/posts/{campaign}/simulate', [PostController::class, 'simulate'])->whereNumber('campaign')->name('posts.simulate');
+        Route::post('/posts/{campaign}/sync', [PostController::class, 'syncOne'])->whereNumber('campaign')->middleware('throttle:20,1')->name('posts.sync-one');
+        Route::post('/posts/{campaign}/versions/{version}/restore', [PostController::class, 'restore'])->whereNumber('campaign')->name('posts.restore');
+        Route::delete('/posts/{campaign}', [PostController::class, 'destroy'])->whereNumber('campaign')->name('posts.destroy');
 
         // صندوق گفتگو
         Route::get('/inbox', [InboxController::class, 'index'])->name('inbox');

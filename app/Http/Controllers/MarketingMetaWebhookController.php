@@ -64,7 +64,7 @@ class MarketingMetaWebhookController extends Controller
             // دایرکت‌های اینستاگرام در قالب entry[].messaging[] می‌آیند (نه changes) — افزوده برای «اینستاگرام هوشمند».
             foreach ((array) ($entry['messaging'] ?? []) as $messaging) {
                 $messaging = (array) $messaging;
-                $externalId = (string) data_get($messaging, 'message.mid', '');
+                $externalId = (string) (data_get($messaging, 'message.mid') ?: data_get($messaging, 'postback.mid', ''));
                 if ($externalId === '') continue; // read/reaction/postback فعلاً ثبت نمی‌شوند
                 if (MarketingEvent::query()->where('event_type', 'dm.received')->where('external_id', $externalId)->exists()) continue;
                 MarketingEvent::query()->create([

@@ -167,3 +167,8 @@ Schedule::command('smart-instagram:sync-composio --comments-only --limit=100')
 Schedule::command('smart-instagram:sync-composio --limit=100')
     ->everyFiveMinutes()
     ->withoutOverlapping(4);
+
+// ثبت پست — پست‌های تازه، کاور و آمار (فقط خواندن)
+Schedule::command('smart-instagram:sync-posts')
+    ->hourly()
+    ->withoutOverlapping(30);

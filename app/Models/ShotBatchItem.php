@@ -44,6 +44,11 @@ class ShotBatchItem extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function generatedImage(): BelongsTo
+    {
+        return $this->belongsTo(GeneratedImage::class);
+    }
+
     public function imageUrl(): ?string
     {
         return ShotLibrary::publicUrl($this->image_path);

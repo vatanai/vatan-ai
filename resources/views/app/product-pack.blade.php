@@ -73,7 +73,17 @@
         <div><h2 id="pp-results-title">پک تو</h2><p data-results-status aria-live="polite"></p></div>
         <a class="pp-btn pp-btn-ghost" hidden data-download href="#"><i class="fa-solid fa-download" aria-hidden="true"></i> دانلود همه</a>
       </header>
-      <div class="pp-tiles" data-tiles></div>
+      <div class="pp-slider" data-slider>
+        <button type="button" class="pp-slider-arrow pp-slider-prev" data-slider-prev aria-label="اسلاید قبلی" hidden><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="pp-slider-viewport" data-slider-viewport>
+          <div class="pp-tiles" data-tiles></div>
+        </div>
+        <button type="button" class="pp-slider-arrow pp-slider-next" data-slider-next aria-label="اسلاید بعدی" hidden><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="pp-slider-footer" data-slider-footer hidden>
+          <div class="pp-slider-dots" data-slider-dots aria-label="انتخاب اسلاید"></div>
+          <span class="pp-slider-counter" data-slider-counter></span>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -83,6 +93,19 @@
       <span data-bar-balance></span>
     </div>
     <button type="button" class="pp-btn pp-btn-brand" data-build disabled><i class="fa-solid fa-bolt" aria-hidden="true"></i> <span>بساز</span></button>
+  </div>
+
+  <div class="pp-alert" data-credit-alert hidden role="dialog" aria-modal="true" aria-labelledby="pp-credit-alert-title">
+    <div class="pp-alert-backdrop" data-credit-alert-close></div>
+    <div class="pp-alert-card">
+      <span class="pp-alert-icon"><i class="fa-solid fa-wallet"></i></span>
+      <h2 id="pp-credit-alert-title">اعتبار کافی نیست</h2>
+      <p data-credit-alert-message></p>
+      <div class="pp-alert-actions">
+        <button type="button" class="pp-btn pp-btn-ghost" data-credit-alert-close>کم‌کردن شات‌ها</button>
+        <a href="{{ $packConfig['pricing_url'] }}" class="pp-btn pp-btn-brand">افزایش اعتبار</a>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -56,6 +56,33 @@ class ShotPromptBuilderTest extends TestCase
         $this->assertStringContainsString('fictional generic adult model', $prompt);
     }
 
+    public function test_enabled_brand_identity_prompt_is_appended_at_the_end(): void
+    {
+        $custom = 'Use the same warm amber highlights and restrained luxury direction in every image.';
+        $product = new Product(['shot_settings' => [
+            'brand_identity_enabled' => true,
+            'brand_identity_prompt' => $custom,
+        ]]);
+
+        $prompt = app(ShotPromptBuilder::class)->build($product, $this->shot(['mood' => 'clean-luxury']));
+
+        $this->assertStringContainsString('Brand identity continuity', $prompt);
+        $this->assertStringEndsWith($custom, $prompt);
+    }
+
+    public function test_disabled_brand_identity_prompt_is_not_sent(): void
+    {
+        $product = new Product(['shot_settings' => [
+            'brand_identity_enabled' => false,
+            'brand_identity_prompt' => 'This must not be sent.',
+        ]]);
+
+        $prompt = app(ShotPromptBuilder::class)->build($product, $this->shot(['mood' => 'clean-luxury']));
+
+        $this->assertStringNotContainsString('This must not be sent.', $prompt);
+        $this->assertStringNotContainsString('Brand identity continuity', $prompt);
+    }
+
     public function test_custom_template_placeholders_and_single_fidelity_block(): void
     {
         $prompt = app(ShotPromptBuilder::class)->build(

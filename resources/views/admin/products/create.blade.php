@@ -108,12 +108,6 @@
         <div class="text-xs text-[var(--text3)]">محصول را در ۵ مرحله تنظیم کنید — هویت، رسانه، هوش مصنوعی، ورودی و خروجی</div>
       </div>
 
-      {{-- «استودیو محصول»: انتخاب نوع محصول. با فلگ خاموش هیچ خروجی‌ای ندارد. --}}
-      @if(!$product && !$duplicateFrom && !$isVideoProductPage && app(\App\Services\ProductShots\ProductShotFeature::class)->enabled())
-        @push('styles')<link rel="stylesheet" href="{{ asset('admin/css/product-shots.css') }}">@endpush
-        @include('admin.product-shots.partials.mode-cards', ['current' => 'portrait'])
-      @endif
-
       {{-- NEW: Validation Summary Panel — خلاصه خطاهای همان Step فعلی (سمت کلاینت، مکمل Validation واقعی سرور) --}}
       <div id="validation-summary" class="hidden bg-[var(--red)]/8 border border-[var(--red)]/30 rounded-xl p-3.5 mb-5 text-xs">
         <div class="text-[var(--red)] font-bold mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> برای ثبت نهایی محصول، این موارد را باید تکمیل کنید:</div>
@@ -267,6 +261,11 @@
 
   </main>
 </div>
+
+@if($showProductTypeChooser ?? false)
+  @push('styles')<link rel="stylesheet" href="{{ asset('admin/css/product-shots.css') }}">@endpush
+  @include('admin.product-shots.partials.mode-dialog')
+@endif
 @endsection
 
 @section('scripts')

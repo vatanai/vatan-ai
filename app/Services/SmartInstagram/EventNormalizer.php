@@ -76,6 +76,11 @@ class EventNormalizer
     private function fromMessaging(array $v, MarketingEvent $event): ?array
     {
         $message = (array) ($v['message'] ?? []);
+        // کلیک روی دکمه‌ی postback (کارت «ثبت پست») مثل یک پیام متنی مشتری ثبت می‌شود.
+        if ($message === [] && isset($v['postback'])) {
+            $message = ['mid' => (string) data_get($v, 'postback.mid', ''), 'text' => (string) data_get($v, 'postback.title', '')];
+        }
+        $actionPayload = data_get($v, 'postback.payload', data_get($message, 'quick_reply.payload'));
         $mid = (string) ($message['mid'] ?? $event->external_id ?? '');
         if ($mid === '' || !empty($message['is_deleted'])) {
             return null;
@@ -113,6 +118,7 @@ class EventNormalizer
             'parent_id' => data_get($message, 'reply_to.mid'),
             'attachments' => $attachments,
             'referral' => $v['referral'] ?? ($message['referral'] ?? null),
+            'payload' => is_string($actionPayload) ? mb_substr($actionPayload, 0, 190) : null,
             'occurred_at' => $timestamp > 0 ? Carbon::createFromTimestampMs($timestamp) : $event->occurred_at,
         ]);
     }
@@ -180,6 +186,7 @@ class EventNormalizer
             'account_id' => null,
             'attachments' => [],
             'referral' => null,
+            'payload' => null,
         ], $data, [
             'sender_id' => (string) $data['sender_id'],
             'occurred_at' => $data['occurred_at'] instanceof Carbon ? $data['occurred_at'] : Carbon::parse($data['occurred_at'] ?? now()),

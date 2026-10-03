@@ -148,11 +148,24 @@ class ProductShotAdminController extends Controller
 
         $productShots = $product ? $product->productShots->keyBy('shot_id') : collect();
         $shots = ShotLibrary::query()->ordered()->get()->filter(fn (ShotLibrary $s) => $s->is_active || $productShots->has($s->id))->values();
+        $generalShotIds = $shots
+            ->filter(fn (ShotLibrary $shot) => Str::startsWith($shot->key, 'product-'))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+        if (! $product && $generalShotIds->isNotEmpty()) {
+            $shots = $shots->sortBy(fn (ShotLibrary $shot) => [
+                $generalShotIds->contains($shot->id) ? 0 : 1,
+                $shot->sort,
+                $shot->id,
+            ])->values();
+        }
 
         return view('admin.product-shots.product-form', [
             'product' => $product,
             'shots' => $shots,
             'productShots' => $productShots,
+            'generalShotIds' => $generalShotIds->all(),
             'models' => $this->imageModels(),
             'categories' => Category::query()->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'name_fa', 'parent_id']),
             'niches' => self::NICHES,
@@ -208,6 +221,8 @@ class ProductShotAdminController extends Controller
             'product_description' => ['nullable', 'string', 'max:300'],
             'brand_palette' => ['nullable', 'string', 'max:120'],
             'brand_style' => ['nullable', 'string', 'max:200'],
+            'brand_identity_enabled' => ['nullable', 'boolean'],
+            'brand_identity_prompt' => ['nullable', 'string', 'max:2000'],
             'aspect_ratio' => ['nullable', Rule::in((array) config('product_shots.aspect_ratios'))],
         ]);
 
@@ -231,6 +246,8 @@ class ProductShotAdminController extends Controller
             'shot_settings' => [
                 'brand_palette' => $data['brand_palette'] ?? null,
                 'brand_style' => $data['brand_style'] ?? null,
+                'brand_identity_enabled' => $request->boolean('brand_identity_enabled'),
+                'brand_identity_prompt' => trim((string) ($data['brand_identity_prompt'] ?? '')) ?: null,
                 'product_description' => $data['product_description'] ?? null,
             ],
         ]);
@@ -351,6 +368,8 @@ class ProductShotAdminController extends Controller
             'product_description' => ['nullable', 'string', 'max:300'],
             'brand_palette' => ['nullable', 'string', 'max:120'],
             'brand_style' => ['nullable', 'string', 'max:200'],
+            'brand_identity_enabled' => ['nullable', 'boolean'],
+            'brand_identity_prompt' => ['nullable', 'string', 'max:2000'],
             'ai_model_id' => ['required', 'integer', Rule::exists('ai_models', 'id')],
             'fallback_model_ids' => ['nullable', 'array', 'max:3'],
             'fallback_model_ids.*' => ['integer', Rule::exists('ai_models', 'id')],
@@ -391,6 +410,8 @@ class ProductShotAdminController extends Controller
             'product_description' => trim((string) ($data['product_description'] ?? '')) ?: null,
             'brand_palette' => trim((string) ($data['brand_palette'] ?? '')) ?: null,
             'brand_style' => trim((string) ($data['brand_style'] ?? '')) ?: null,
+            'brand_identity_enabled' => $request->boolean('brand_identity_enabled'),
+            'brand_identity_prompt' => trim((string) ($data['brand_identity_prompt'] ?? '')) ?: null,
         ], fn ($v) => $v !== null);
 
         // ستون‌های اجباری/قدیمی با مقادیر امن؛ هیچ‌کدام در مسیر پک خوانده نمی‌شوند
