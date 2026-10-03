@@ -56,14 +56,14 @@
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">توضیح فارسی {!! $__help('description_fa', 'توضیح فارسی') !!}</label>
-        <span class="text-[10px] text-[var(--text3)]" id="desc-fa-count">{{ mb_strlen(old('description_fa', optional($duplicateFrom)->description_fa)) }} کاراکتر</span>
+        <span class="text-[10px] text-[var(--text3)]" id="desc-fa-count">{{ mb_strlen((string) old('description_fa', optional($duplicateFrom)->description_fa)) }} کاراکتر</span>
       </div>
       <textarea name="description_fa" rows="4" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] resize-y min-h-[100px] leading-relaxed" placeholder="توضیح کوتاهی از محصول برای کاربر..." oninput="document.getElementById('desc-fa-count').textContent = this.value.length + ' کاراکتر'">{{ old('description_fa', optional($duplicateFrom)->description_fa) }}</textarea>
     </div>
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center justify-between">
         <label class="text-xs font-semibold text-[var(--text2)] flex items-center gap-1">توضیح انگلیسی {!! $__help('description_en', 'توضیح انگلیسی') !!}</label>
-        <span class="text-[10px] text-[var(--text3)]" id="desc-en-count">{{ mb_strlen(old('description_en', optional($duplicateFrom)->description_en)) }} کاراکتر</span>
+        <span class="text-[10px] text-[var(--text3)]" id="desc-en-count">{{ mb_strlen((string) old('description_en', optional($duplicateFrom)->description_en)) }} کاراکتر</span>
       </div>
       <textarea name="description_en" rows="4" class="bg-[var(--s1)] border border-[var(--b1)] rounded-lg p-2.5 text-xs text-[var(--text)] outline-none transition-colors w-full focus:border-[var(--accent)] resize-y min-h-[100px] leading-relaxed ltr text-left" placeholder="Short product description for users..." oninput="document.getElementById('desc-en-count').textContent = this.value.length + ' کاراکتر'">{{ old('description_en', optional($duplicateFrom)->description_en) }}</textarea>
     </div>
