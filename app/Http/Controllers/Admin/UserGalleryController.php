@@ -368,7 +368,7 @@ class UserGalleryController extends Controller
                 $snapshots = collect($outputItemsByOrder->get((string) $order->id, collect()))
                     ->map(function (UserGalleryItem $item) use ($order): ?array {
                         $isVideo = $item->source_type === 'output_video';
-                        $url = $this->galleryItemMediaUrl($item, (int) $order->user_id, !$isVideo);
+                        $url = $this->galleryItemMediaUrl($item, (int) $order->user_id, !$isVideo, true);
                         if (!$url) {
                             return null;
                         }
@@ -400,7 +400,7 @@ class UserGalleryController extends Controller
                 $consumedImageIds = $consumedImageIds->merge($orderImages->pluck('id'));
                 $consumedVideoIds = $consumedVideoIds->merge($orderVideos->pluck('id'));
                 $before = collect($this->inputItemsForBuild($order, collect($inputItems->get($order->user_id, collect()))
-                    ->filter(fn (UserGalleryItem $item): bool => (int) data_get($item->metadata, 'order_id') === (int) $order->id)))
+                    ->filter(fn (UserGalleryItem $item): bool => (int) data_get($item->metadata, 'order_id') === (int) $order->id), true))
                     ->filter(fn (array $media): bool => in_array($media['type'], ['image', 'video'], true))->values();
 
                 return [
@@ -416,7 +416,7 @@ class UserGalleryController extends Controller
             $orphanOutputs = $userOutputItems->filter(fn (UserGalleryItem $item): bool => ! is_numeric(data_get($item->metadata, 'order_id')))
                 ->map(function (UserGalleryItem $item) use ($user): ?array {
                     $isVideo = $item->source_type === 'output_video';
-                    $url = $this->galleryItemMediaUrl($item, (int) $user->id, !$isVideo);
+                    $url = $this->galleryItemMediaUrl($item, (int) $user->id, !$isVideo, true);
                     if (!$url) {
                         return null;
                     }
@@ -831,14 +831,14 @@ class UserGalleryController extends Controller
         return [$builds->all(), $financeSummary];
     }
 
-    private function inputItemsForBuild(Order $order, $items): array
+    private function inputItemsForBuild(Order $order, $items, bool $sharpPreview = false): array
     {
-        $media = collect($items)->map(function (UserGalleryItem $item) use ($order): ?array {
+        $media = collect($items)->map(function (UserGalleryItem $item) use ($order, $sharpPreview): ?array {
             $mime = strtolower((string) $item->mime_type);
             $type = str_starts_with($mime, 'video/') ? 'video' : (str_starts_with($mime, 'text/') ? 'text' : 'image');
             $url = $type === 'text'
                 ? route('admin.orders.show', $order)
-                : $this->galleryItemMediaUrl($item, (int) $order->user_id, $type === 'image');
+                : $this->galleryItemMediaUrl($item, (int) $order->user_id, $type === 'image', $sharpPreview);
             if (!$url) {
                 return null;
             }
@@ -925,10 +925,12 @@ class UserGalleryController extends Controller
         return collect($media)->concat($faceMedia)->take(6)->values()->all();
     }
 
-    private function galleryItemMediaUrl(UserGalleryItem $item, int $userId, bool $preferThumbnail = false): ?string
+    private function galleryItemMediaUrl(UserGalleryItem $item, int $userId, bool $preferThumbnail = false, bool $sharpPreview = false): ?string
     {
         $disk = Storage::disk($item->disk ?: 'user_gallery');
-        if ($preferThumbnail && $item->thumbnail_path && $disk->exists($item->thumbnail_path)) {
+        // بندانگشتی ۱۶۰ پیکسلی فقط برای جدول‌های کوچک است؛ در کارت‌های قبل/بعد
+        // که تصویر در خانه‌ای بزرگ‌تر کشیده می‌شود، نسخهٔ preview (۹۶۰px) لازم است.
+        if ($preferThumbnail && ! $sharpPreview && $item->thumbnail_path && $disk->exists($item->thumbnail_path)) {
             return route('admin.users.gallery.thumbnail', [$userId, $item->id]);
         }
 
@@ -950,7 +952,9 @@ class UserGalleryController extends Controller
 
         // بندانگشتیِ آماده مستقیم به‌صورت فایل استاتیک سرو می‌شود تا ده‌ها عکس
         // کارت‌ها برای گرفتن worker محدود PHP صف نکشند و نیمه‌کاره نمانند.
-        return app(ProfileMediaThumbnailService::class)->cachedPublicUrl($image, 160)
+        // نسخهٔ ۷۲۰ پیکسلی (همان که برای پروفایل از قبل ساخته می‌شود)؛ ۱۶۰ پیکسل
+        // در کارت قبل/بعد کشیده و بی‌کیفیت دیده می‌شد.
+        return app(ProfileMediaThumbnailService::class)->cachedPublicUrl($image)
             ?: route('admin.users.gallery.generated-image-thumbnail', $image);
     }
 
@@ -995,7 +999,7 @@ class UserGalleryController extends Controller
 
     public function generatedImageThumbnail(GeneratedImage $generatedImage, ProfileMediaThumbnailService $thumbnails)
     {
-        return $thumbnails->serve($generatedImage, 160, true);
+        return $thumbnails->serve($generatedImage, fallbackToOriginal: true);
     }
 
     public function thumbnail(User $user, UserGalleryItem $item, UserGalleryService $gallery)

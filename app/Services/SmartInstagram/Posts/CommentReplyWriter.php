@@ -48,11 +48,20 @@ class CommentReplyWriter
             ."## عبارت‌های ممنوع\n".implode('، ', (array) $profile->forbidden_phrases ?: ['—'])."\n"
             ."## دستور همین بخش\n".$config['prompts']['personalize']."\n\n"
             ."نمونه‌های سبک (فقط برای درک لحن؛ کپی نکن):\n- ".implode("\n- ", array_slice($styles, 0, 3))
-            ."\n\nقرارداد خروجی: فقط JSON معتبر با یک کلید به نام reply برگردان؛ اگر پاسخ طبیعی ممکن نیست، reply را خالی برگردان.";
+            ."\n\n## قاعده‌ی ثابت پاسخ به کامنت (غیرقابل‌تغییر)\n"
+            ."- اگر کامنت فقط کلمه‌ی کلیدی یا درخواست کوتاه است (مثل «لینک»، «کلاژ»، «قیمت»)، مخاطب نظری نداده و فقط چیزی خواسته است؛ "
+            ."پس پاسخ باید درخواست او را تأیید کند و (اگر دایرکت فعال است) بگوید پیام را در دایرکت فرستادیم. "
+            ."در این حالت از واکنش به «نظر» یا «ایده» مثل «کاملاً موافقم»، «ایده‌ات جالبه»، «حق با توئه» یا تعریف از کامنت استفاده نکن.\n"
+            ."- اگر کامنت سؤال یا احساس دارد، اول همان را کوتاه جواب بده یا به رسمیت بشناس، بعد در صورت فعال بودن دایرکت به آن اشاره کن.\n"
+            ."- موضوع پاسخ باید همان موضوع پست باشد و از اول‌شخص جمع برند استفاده شود؛ پاسخ را خطاب به خود برند یا درباره‌ی محصول دیگری ننویس.\n"
+            ."\nقرارداد خروجی: فقط JSON معتبر با یک کلید به نام reply برگردان؛ اگر پاسخ طبیعی ممکن نیست، reply را خالی برگردان.";
         $user = collect([
             'نام کاربری' => $contact?->username ?: 'نامشخص',
             'نام نمایشی' => $contact?->display_name ?: 'نامشخص',
             'متن کامنت' => Str::limit((string) $comment->body, 500),
+            'نوع کامنت' => $this->isKeywordRequest((string) $comment->body, (array) ($rule?->keywords ?? []))
+                ? 'فقط کلمه‌ی کلیدی/درخواست کوتاه (نظر یا سؤالی ندارد)'
+                : 'کامنت دارای متن یا سؤال',
             'کپشن و موضوع پست' => Str::limit((string) ($post?->caption ?? ''), 1200) ?: 'در دسترس نیست',
             'کلمه‌های فعال سناریو' => implode('، ', (array) ($rule?->keywords ?? [])) ?: 'در دسترس نیست',
             'محصول مرتبط' => $product ? $product->name_fa.' — '.Str::limit(strip_tags((string) $product->description_fa), 500) : 'ندارد',
@@ -71,6 +80,20 @@ class CommentReplyWriter
         $this->log($comment, $reply !== '' ? 'success' : 'failed', $response, $reply === '' ? 'پاسخ خالی' : null, $started, $reply);
 
         return $reply !== '' && !str_contains($reply, '{') ? $reply : null;
+    }
+
+    /** کامنتی که جز کلمه‌ی کلیدی (و ایموجی/علامت) چیزی ندارد یا بسیار کوتاه است. */
+    private function isKeywordRequest(string $body, array $keywords): bool
+    {
+        $text = \App\Services\SmartInstagram\PersianText::normalize($body);
+        foreach ($keywords as $keyword) {
+            $keyword = \App\Services\SmartInstagram\PersianText::normalize((string) $keyword);
+            if ($keyword !== '' && $keyword !== '*') {
+                $text = trim(str_replace($keyword, ' ', $text));
+            }
+        }
+
+        return mb_strlen(preg_replace('/\s+/u', '', $text) ?? $text) <= 3;
     }
 
     private function campaignFor(?AutomationRule $rule): ?PostCampaign

@@ -161,6 +161,14 @@ class SmartInstagramFlowTest extends TestCase
 
         $conversation->forceFill(['last_inbound_at' => now(), 'needs_human' => true])->save();
         $this->assertSame('blocked', $service->queue($conversation->fresh(), 'پاسخ خودکار', 'ai')->status);
+
+        $conversation->forceFill(['needs_human' => true, 'ai_paused' => false])->save();
+        $this->assertNotSame('blocked', $service->queue($conversation->fresh(), 'پاسخ کمپین', 'automation', 'dm', ['allow_human_lock' => true])->status);
+
+        $conversation->forceFill(['ai_paused' => true])->save();
+        $paused = $service->queue($conversation->fresh(), 'پاسخ در توقف دستی', 'automation', 'dm', ['allow_human_lock' => true]);
+        $this->assertSame('blocked', $paused->status);
+        $this->assertStringContainsString('دستی متوقف', (string) $paused->policy_reason);
     }
 
     public function test_comment_replies_do_not_consume_the_direct_message_automation_cap(): void

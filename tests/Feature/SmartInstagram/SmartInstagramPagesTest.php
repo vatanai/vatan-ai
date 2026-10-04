@@ -107,6 +107,31 @@ class SmartInstagramPagesTest extends TestCase
         \Illuminate\Support\Facades\Cache::flush();
     }
 
+    public function test_inbox_separates_direct_messages_and_comments_and_labels_empty_messages(): void
+    {
+        $this->actingAs($this->leader(), 'admin');
+        $conversation = $this->seedData();
+        Message::query()->create([
+            'workspace_id' => $conversation->workspace_id,
+            'conversation_id' => $conversation->id,
+            'external_id' => 'dm_empty_1',
+            'direction' => 'out',
+            'source_type' => 'dm',
+            'message_type' => 'product_card',
+            'body' => '',
+            'sent_by' => 'automation',
+            'occurred_at' => now()->addSecond(),
+        ]);
+        $conversation->forceFill(['last_source' => 'dm'])->save();
+
+        $this->get(route('admin.smart-instagram.inbox.show', $conversation))
+            ->assertOk()
+            ->assertSee('data-si-timeline-default="dm"', false)
+            ->assertSee('data-si-message-source="dm"', false)
+            ->assertSee('data-si-message-source="comment"', false)
+            ->assertSee('پیام ساختاریافته از وطن ارسال شده است.');
+    }
+
     public function test_sidebar_has_new_menu_under_studio_and_keeps_old_item(): void
     {
         $this->actingAs($this->leader(), 'admin');

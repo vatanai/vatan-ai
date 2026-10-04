@@ -4,6 +4,7 @@ namespace App\Services\SmartInstagram\Posts;
 
 use App\Models\Product;
 use App\Models\SmartInstagram\AutomationRun;
+use App\Models\SmartInstagram\Channel;
 use App\Models\SmartInstagram\Contact;
 use App\Models\SmartInstagram\Conversation;
 use App\Models\SmartInstagram\Message;
@@ -17,17 +18,22 @@ use App\Services\SmartInstagram\ContactNameResolver;
 use App\Services\SmartInstagram\OperationLogger;
 use App\Services\SmartInstagram\OutboundService;
 use App\Services\SmartInstagram\PersianText;
+use App\Services\SmartInstagram\SensitiveMessageDetector;
 use Illuminate\Database\QueryException;
 
 /**
  * جریان دایرکت «ثبت پست»:
- *  کامنت با کلمه‌ی کلیدی ← پاسخ خصوصی (پیام آغاز + دکمه‌ی «ارسال لینک»)
+ *  کامنت با کلمه‌ی کلیدی ← پاسخ خصوصی (پیام آغاز + دکمه)
+ *    دکمه‌ها: وقتی وب‌هوک رسمی Meta فعال است «قالب دکمه‌ای» واقعی (postback)؛ در حالت همگام‌سازی
+ *    دوره‌ای، پاسخ سریع (quick reply) که کلیکش به‌صورت پیام متنی قابل دریافت است.
  *  کلیک/پاسخ مشتری ← بررسی فالو (is_user_follow_business)
  *     فالو کرده ← کارت چنددکمه‌ای (+ پیام قبل و بعد)
  *     فالو نکرده ← پیام «اول فالو کن» + دکمه‌ی «فالو کردم» (با سقف تکرار)
  *     نامشخص ← طبق تنظیم: ارسال کارت یا یک‌بار درخواست فالو
  *  بدون فالو اجباری و حالت «کارت مستقیم»: کارت در همان پاسخ خصوصی.
  * همه‌ی ارسال‌ها از OutboundService/SendPolicy عبور می‌کنند (پنجره‌ی متا، idempotency، قفل انسانی).
+ * قفل انسانیِ قدیمی گفتگو (مثلاً برچسب تحلیل هوش مصنوعی روی کامنت) ادامه‌ی همین جریان را متوقف نمی‌کند؛
+ * فقط اگر پیام فعلی مشتری حساس باشد یا گفتگو دستی متوقف شده باشد، ارسال خودکار انجام نمی‌شود.
  */
 class PostFlowService
 {
@@ -38,6 +44,7 @@ class PostFlowService
         private readonly GatewayManager $gateways,
         private readonly OperationLogger $logger,
         private readonly ContactNameResolver $names,
+        private readonly SensitiveMessageDetector $sensitiveMessages,
     ) {
     }
 
@@ -79,11 +86,11 @@ class PostFlowService
         }
 
         $text = $this->render((string) data_get($settings, 'dm.opening_text', ''), $contact);
-        $button = (string) data_get($settings, 'dm.opening_button', 'ارسال لینک');
+        $button = trim((string) data_get($settings, 'dm.opening_button', '')) ?: 'ارسال لینک';
         $out = $this->outbound->queue($conversation, $text, 'automation', 'private_reply', [
             'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
             'message_payload' => [
-                'message' => ['text' => $text, 'quick_replies' => [['content_type' => 'text', 'title' => $button, 'payload' => 'SIF:open:'.$campaign->id]]],
+                'message' => $this->buttonMessage($conversation->channel, $text, [['title' => $button, 'payload' => 'SIF:open:'.$campaign->id]]),
                 'fallback_text' => $text."\n\n(برای دریافت، کلمه‌ی «{$button}» را بفرستید)",
             ],
             'allow_human_lock' => $allowHumanLock, 'delay_seconds' => $delay,
@@ -122,6 +129,15 @@ class PostFlowService
 
         $campaign = $session->campaign;
         $contact = $conversation->contact;
+
+        // پیام حساس (شکایت، بازگشت وجه و…) جریان خودکار را متوقف و گفتگو را به انسان می‌سپارد.
+        if ($this->sensitiveMessages->detects((string) $message->body)) {
+            $conversation->forceFill(['needs_human' => true, 'priority' => 'high'])->save();
+            $this->logger->log('post_flow.sensitive', 'پیام مشتری حساس بود؛ جریان ثبت پست متوقف و به انسان سپرده شد.', $session, [], 'warning');
+
+            return true;
+        }
+
         if (!$campaign->follow_required) {
             $this->deliverCard($session, $campaign, $conversation, $message);
 
@@ -148,17 +164,22 @@ class PostFlowService
         $max = (int) data_get($campaign->settings, 'follow.max_checks', 3);
         if ($session->follow_checks <= $max) {
             $text = $this->render((string) data_get($campaign->settings, $session->stage === 'awaiting_follow' ? 'follow.retry_text' : 'follow.text', ''), $contact);
-            $button = (string) data_get($campaign->settings, 'follow.button', 'فالو کردم ✅');
-            $username = (string) ($conversation->channel?->username ?? '');
-            $profileLine = $username !== '' ? "\ninstagram.com/{$username}" : '';
+            $button = trim((string) data_get($campaign->settings, 'follow.button', '')) ?: 'فالو کردم ✅';
+            $username = ltrim((string) ($conversation->channel?->username ?? ''), '@');
+            $buttons = [];
+            if ($username !== '') {
+                $buttons[] = ['title' => 'مشاهده پیج', 'url' => 'https://www.instagram.com/'.rawurlencode($username)];
+            }
+            $buttons[] = ['title' => $button, 'payload' => 'SIF:followed:'.$session->id];
             $this->outbound->queue($conversation, $text, 'automation', 'dm', [
                 'idempotency_key' => 'postflow:'.$session->id.':follow:'.$session->follow_checks,
                 'automation_run_id' => $session->automation_run_id,
                 'message_payload' => [
-                    'message' => ['text' => $text.$profileLine, 'quick_replies' => [['content_type' => 'text', 'title' => $button, 'payload' => 'SIF:followed:'.$session->id]]],
-                    'fallback_text' => $text.$profileLine,
+                    'message' => $this->buttonMessage($conversation->channel, $text, $buttons),
+                    'fallback_text' => trim($text.($username !== '' ? "\ninstagram.com/{$username}" : '')),
                 ],
                 'user_initiated' => true,
+                'allow_human_lock' => true,
             ]);
         }
         $session->stage = 'awaiting_follow';
@@ -229,7 +250,7 @@ class PostFlowService
         $intro = $this->render((string) data_get($settings, 'card.intro_text', ''), $contact);
         $outbounds = [];
         if ($intro !== '') {
-            $outbounds[] = $this->outbound->queue($conversation, $intro, 'automation', 'dm', ['idempotency_key' => $base.':intro', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
+            $outbounds[] = $this->outbound->queue($conversation, $intro, 'automation', 'dm', ['idempotency_key' => $base.':intro', 'user_initiated' => true, 'allow_human_lock' => true, 'automation_run_id' => $session->automation_run_id]);
         }
         if ($card['ok']) {
             $outbounds[] = $this->outbound->queue($conversation, $card['title'], 'automation', 'dm', [
@@ -237,13 +258,14 @@ class PostFlowService
                 'automation_run_id' => $session->automation_run_id,
                 'message_payload' => ['message' => $card['message'], 'fallback_text' => $card['fallback']],
                 'user_initiated' => true,
+                'allow_human_lock' => true,
             ]);
         } else {
             $this->logger->error('post_flow.card_invalid', 'کارت سناریوی «'.$campaign->title.'» قابل ارسال نبود: '.$card['error'], $campaign);
         }
         $after = $this->render((string) data_get($settings, 'card.after_text', ''), $contact);
         if ($after !== '') {
-            $outbounds[] = $this->outbound->queue($conversation, $after, 'automation', 'dm', ['idempotency_key' => $base.':after', 'user_initiated' => true, 'automation_run_id' => $session->automation_run_id]);
+            $outbounds[] = $this->outbound->queue($conversation, $after, 'automation', 'dm', ['idempotency_key' => $base.':after', 'user_initiated' => true, 'allow_human_lock' => true, 'automation_run_id' => $session->automation_run_id]);
         }
 
         $blocked = !$card['ok'] || collect($outbounds)->contains(fn ($outbound) => in_array($outbound->status, ['blocked', 'failed'], true));
@@ -286,10 +308,41 @@ class PostFlowService
             $this->outbound->queue($conversation, $reply, 'automation', 'dm', [
                 'idempotency_key' => 'postflow:btn:'.$campaign->id.':'.$index.':'.$message->id,
                 'user_initiated' => true,
+                'allow_human_lock' => !$this->sensitiveMessages->detects((string) $message->body),
             ]);
         }
 
         return true;
+    }
+
+    /**
+     * متن + دکمه. با وب‌هوک فعال: قالب دکمه‌ای واقعی (دکمه داخل همان حباب پیام، کلیک = postback).
+     * بدون وب‌هوک: پاسخ سریع؛ چون کلیک postback در فهرست پیام‌های همگام‌سازی برنمی‌گردد اما کلیک
+     * پاسخ سریع به‌صورت پیام متنی مشتری ثبت می‌شود. دکمه‌های لینک در این حالت زیر متن نوشته می‌شوند.
+     *
+     * @param array<int,array{title:string,payload?:string,url?:string}> $buttons
+     */
+    public function buttonMessage(?Channel $channel, string $text, array $buttons): array
+    {
+        $buttons = array_slice(array_values(array_filter($buttons, fn ($b) => trim((string) ($b['title'] ?? '')) !== '' && (filled($b['payload'] ?? null) || filled($b['url'] ?? null)))), 0, 3);
+
+        if ($channel?->hasLiveWebhook()) {
+            return ['attachment' => ['type' => 'template', 'payload' => [
+                'template_type' => 'button',
+                'text' => mb_substr($text, 0, 640),
+                'buttons' => array_map(fn ($b) => filled($b['url'] ?? null)
+                    ? ['type' => 'web_url', 'url' => (string) $b['url'], 'title' => mb_substr((string) $b['title'], 0, 20)]
+                    : ['type' => 'postback', 'title' => mb_substr((string) $b['title'], 0, 20), 'payload' => (string) $b['payload']], $buttons),
+            ]]];
+        }
+
+        $links = collect($buttons)->filter(fn ($b) => filled($b['url'] ?? null))->pluck('url')->implode("\n");
+        $replies = collect($buttons)->filter(fn ($b) => !filled($b['url'] ?? null))
+            ->map(fn ($b) => ['content_type' => 'text', 'title' => mb_substr((string) $b['title'], 0, 20), 'payload' => (string) $b['payload']])
+            ->values()->all();
+        $body = trim($text.($links !== '' ? "\n".$links : ''));
+
+        return $replies !== [] ? ['text' => $body, 'quick_replies' => $replies] : ['text' => $body];
     }
 
     private function followStatus(Conversation $conversation): ?bool

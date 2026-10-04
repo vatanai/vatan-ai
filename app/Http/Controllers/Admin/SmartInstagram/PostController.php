@@ -144,14 +144,31 @@ class PostController extends Controller
         return back()->with('success', 'وضعیت سناریو: '.PostCampaignService::STATUSES[$data['status']]);
     }
 
-    public function recheck(PostCampaign $campaign, PostFlowService $flow): RedirectResponse
+    public function recheck(PostCampaign $campaign, PostFlowService $flow, AutomationEngine $automation): RedirectResponse
     {
         $this->authorizeAbility('manage_automation');
         $this->own($campaign);
-        $count = $flow->retryCampaign($campaign);
+        $replayed = 0;
+        if ($campaign->status === 'active' && $campaign->automation_rule_id && ($campaign->public_reply_enabled || $campaign->dm_enabled)) {
+            $missingRuns = AutomationRun::query()
+                ->where('rule_id', $campaign->automation_rule_id)
+                ->where('mode', 'live')
+                ->whereIn('status', ['success', 'partial', 'skipped'])
+                ->whereNotExists(fn ($query) => $query->selectRaw('1')
+                    ->from('instagram_outbound_messages as outbound')
+                    ->whereColumn('outbound.automation_run_id', 'instagram_automation_runs.id'))
+                ->oldest('id')->limit(100)->get();
+
+            foreach ($missingRuns as $run) {
+                $replayed += $automation->replay($run) ? 1 : 0;
+            }
+        }
+
+        $retried = $flow->retryCampaign($campaign);
+        $count = $replayed + $retried;
 
         return back()->with($count > 0 ? 'success' : 'warning', $count > 0
-            ? $count.' ارسال ناموفق/مسدود دوباره بررسی شد.'
+            ? $count.' اجرای ناقص یا ارسال ناموفق دوباره بررسی شد.'
             : 'ارسال ناموفق آماده‌ی بررسی مجددی برای این سناریو پیدا نشد.');
     }
 
@@ -282,6 +299,7 @@ class PostController extends Controller
         $data = $request->validate([
             'sections' => ['nullable', 'array'],
             'sections.*' => ['string', 'in:public_reply,opening,follow,card'],
+            'target_field' => ['nullable', 'string', 'max:40'],
             'post_id' => ['nullable', 'integer'],
             'product_id' => ['nullable', 'integer'],
             'link' => ['nullable', 'string', 'max:1000'],
@@ -292,9 +310,12 @@ class PostController extends Controller
         if (!config('smart_instagram.ai.enabled')) {
             return response()->json(['ok' => false, 'message' => 'هوش مصنوعی در تنظیمات سرور خاموش است.'], 422);
         }
+        if (($data['target_field'] ?? null) !== null && PostContentWriter::targetSection($data['target_field']) === null) {
+            return response()->json(['ok' => false, 'message' => 'فیلد هدف برای تولید نمونه معتبر نیست.'], 422);
+        }
         $post = !empty($data['post_id']) ? Post::query()->where('workspace_id', $this->ws())->find((int) $data['post_id']) : null;
 
-        return response()->json($writer->generate((array) ($data['sections'] ?? []), $post, $data));
+        return response()->json($writer->generate((array) ($data['sections'] ?? []), $post, $data, $data['target_field'] ?? null));
     }
 
     public function aiSettings(Request $request, PostAiSettings $settings): JsonResponse

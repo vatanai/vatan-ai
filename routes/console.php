@@ -154,21 +154,33 @@ Artisan::command('telegram:product-manager {action} {--telegram-id=} {--name=} {
 })->purpose('افزودن و مدیریت مدیران مجاز ثبت محصول در تلگرام');
 
 // اینستاگرام هوشمند — بازیابی رویدادها و ارسال‌های جامانده
+// دستورهای اینستاگرام هوشمند در پس‌زمینه اجرا می‌شوند تا چرخه‌ی ۱۰ ثانیه‌ای زیر را عقب نیندازند.
 Schedule::command('smart-instagram:maintenance')
     ->everyTenMinutes()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->runInBackground();
 
-// کامنت باید حداکثر با یک چرخه‌ی کوتاه وارد موتور اتومیشن شود؛ پیام‌ها جداگانه
-// هم‌گام می‌شوند تا دریافت تعداد زیاد دایرکت‌ها پاسخ کامنت را عقب نیندازد.
+// مسیر اصلی و استاندارد زمان پاسخ زیر ۱۰ ثانیه، وب‌هوک رسمی Meta است (/webhooks/meta).
+// تا وقتی وب‌هوک فعال نیست، این چرخه‌ی سبک فقط کامنت پست‌های دارای سناریو و دایرکت جریان‌های
+// منتظر کلیک را هر ۱۰ ثانیه می‌خواند؛ با فعال‌شدن وب‌هوک خودش بی‌اثر می‌شود.
+Schedule::command('smart-instagram:sync-composio --fast')
+    ->everyTenSeconds()
+    ->withoutOverlapping(1)
+    ->runInBackground();
+
+// تور ایمنی: کامنت‌ها هر دقیقه و دایرکت‌ها هر ۵ دقیقه (برای جاماندگی‌ها؛ تکراری‌ها خودکار حذف می‌شوند).
 Schedule::command('smart-instagram:sync-composio --comments-only --limit=100')
     ->everyMinute()
-    ->withoutOverlapping(4);
+    ->withoutOverlapping(4)
+    ->runInBackground();
 
 Schedule::command('smart-instagram:sync-composio --limit=100')
     ->everyFiveMinutes()
-    ->withoutOverlapping(4);
+    ->withoutOverlapping(4)
+    ->runInBackground();
 
 // ثبت پست — پست‌های تازه، کاور و آمار (فقط خواندن)
 Schedule::command('smart-instagram:sync-posts')
     ->hourly()
-    ->withoutOverlapping(30);
+    ->withoutOverlapping(30)
+    ->runInBackground();

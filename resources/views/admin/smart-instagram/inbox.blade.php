@@ -5,6 +5,17 @@
   $contact = $selected?->contact;
   $listParams = array_filter(['filter' => $filter !== 'open' ? $filter : null, 'q' => $search ?: null, 'source' => $source ?: null]);
   $lastMessageId = (int) ($timeline->last()?->id ?? 0);
+  $timelineCounts = [
+    'dm' => $timeline->where('source_type', '!=', 'comment')->count(),
+    'comment' => $timeline->where('source_type', 'comment')->count(),
+  ];
+  $timelineTab = request('timeline');
+  if (!in_array($timelineTab, ['all', 'dm', 'comment'], true)) {
+    $timelineTab = $selected?->last_source === 'comment' ? 'comment' : 'dm';
+  }
+  if (($timelineCounts[$timelineTab] ?? 1) === 0) {
+    $timelineTab = 'all';
+  }
 @endphp
 
 @section('si-head')<h1 class="si-head-title" style="margin-bottom:12px">صندوق گفتگو</h1>@endsection
@@ -120,19 +131,24 @@
       </header>
 
       <div class="si-composer-tabs si-timeline-tabs" data-si-timeline-tabs>
-        <button type="button" class="chip-filter active" data-si-timeline-tab="all">همه پیام‌ها</button>
-        <button type="button" class="chip-filter" data-si-timeline-tab="dm">دایرکت</button>
-        <button type="button" class="chip-filter" data-si-timeline-tab="comment">کامنت</button>
+        <button type="button" class="chip-filter {{ $timelineTab === 'all' ? 'active' : '' }}" data-si-timeline-tab="all">همه پیام‌ها <span class="chip-count">{{ Ui::n($timeline->count()) }}</span></button>
+        <button type="button" class="chip-filter {{ $timelineTab === 'dm' ? 'active' : '' }}" data-si-timeline-tab="dm">دایرکت <span class="chip-count">{{ Ui::n($timelineCounts['dm']) }}</span></button>
+        <button type="button" class="chip-filter {{ $timelineTab === 'comment' ? 'active' : '' }}" data-si-timeline-tab="comment">کامنت <span class="chip-count">{{ Ui::n($timelineCounts['comment']) }}</span></button>
       </div>
-      <div class="si-chat-body" id="si-chat-body">
+      <div class="si-chat-body" id="si-chat-body" data-si-timeline-default="{{ $timelineTab }}">
         @php($siLastDay = null)
         @forelse($timeline as $message)
           @php($siDay = Ui::date($message->occurred_at))
-          @if($siDay !== $siLastDay)<div class="si-day">{{ $siDay }}</div>@php($siLastDay = $siDay)@endif
+          @if($siDay !== $siLastDay)<div class="si-day" data-si-timeline-day>{{ $siDay }}</div>@php($siLastDay = $siDay)@endif
           @php($siDir = $message->is_internal_note ? 'note' : ($message->direction === 'in' ? 'in' : 'out'))
-          <div class="si-msg is-{{ $siDir }}" data-si-message-source="{{ $message->source_type }}">
+          @php($siSourceGroup = $message->source_type === 'comment' ? 'comment' : 'dm')
+          <div class="si-msg is-{{ $siDir }}" data-si-message-source="{{ $siSourceGroup }}">
             <div class="si-bubble">
-              @if($message->body || $message->attachments->isEmpty())<div class="si-text">{{ $message->body ?: '—' }}</div>@endif
+              @if(filled($message->body))
+                <div class="si-text">{{ $message->body }}</div>
+              @elseif($message->attachments->isEmpty())
+                <div class="si-empty-message"><i class="fa-regular fa-message"></i><span>{{ $siDir === 'out' ? 'پیام ساختاریافته از وطن ارسال شده است.' : 'پیام بدون متن از اینستاگرام دریافت شده است.' }}</span></div>
+              @endif
               @if($message->attachments->isNotEmpty())
 <div class="si-attach">@foreach($message->attachments as $attachment)
   @if($attachment->fetch_status === 'stored')

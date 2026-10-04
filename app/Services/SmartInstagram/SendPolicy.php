@@ -43,7 +43,10 @@ class SendPolicy
         if ($automated && $contact->opted_out) {
             return $this->deny('مخاطب در فهرست توقف است.');
         }
-        if ($automated && !$allowHumanLock && ($conversation->ai_paused || $conversation->needs_human)) {
+        if ($automated && $conversation->ai_paused) {
+            return $this->deny('گفتگو به‌صورت دستی متوقف شده است؛ ارسال خودکار مجاز نیست.');
+        }
+        if ($automated && !$allowHumanLock && $conversation->needs_human) {
             return $this->deny('گفتگو به انسان واگذار شده است؛ ارسال خودکار متوقف است.');
         }
 

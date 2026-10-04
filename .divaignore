@@ -5,6 +5,8 @@
 node_modules
 vendor
 npm-debug.log
+public/hot
+storage/framework/vite.hot
 _to_delete
 tmp
 tests

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\PlanCatalogService;
 use App\Models\User;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -22,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // در production هر فایل hot باقی‌مانده از توسعه باید نادیده گرفته شود؛
+        // وگرنه @vite به آدرس محلی Vite مثل [::1]:5173 اشاره می‌کند و CSS/فونت‌ها
+        // از جمله آیکون‌ها بارگذاری نمی‌شوند.
+        Vite::useHotFile($this->app->environment('local')
+            ? storage_path('framework/vite.hot')
+            : storage_path('framework/vite-production-disabled'));
+
         View::composer('site.home', function ($view) {
             $service = app(PlanCatalogService::class);
             $user = auth()->user();

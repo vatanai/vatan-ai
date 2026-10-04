@@ -4,9 +4,12 @@ namespace Tests\Feature\SmartInstagram;
 
 use App\Models\Admin;
 use App\Models\MarketingIntegration;
+use App\Models\Product;
 use App\Models\SmartInstagram\AutomationRule;
 use App\Models\SmartInstagram\AutomationRun;
+use App\Models\SmartInstagram\AiProfile;
 use App\Models\SmartInstagram\Channel;
+use App\Models\SmartInstagram\Conversation;
 use App\Models\SmartInstagram\OutboundMessage;
 use App\Models\SmartInstagram\Post;
 use App\Models\SmartInstagram\PostCampaign;
@@ -66,6 +69,14 @@ class SmartInstagramPostsTest extends TestCase
     {
         $settings = app(PostCampaignService::class)->defaults();
         $settings['reply']['ai_personalize'] = false;
+        $settings['card']['product_id'] = Product::query()->firstOrCreate(
+            ['slug' => 'smart-instagram-test-product'],
+            [
+                'name_fa' => 'محصول آزمایشی', 'name_en' => 'Test product',
+                'category' => 'TEST', 'status' => 'active', 'thumbnail' => 'products/test.jpg',
+                'primary_model' => 'test-model', 'prompt_template' => 'آزمایش',
+            ]
+        )->id;
         $settings['card']['title'] = 'کیف چرم {name}';
         $settings['card']['buttons'] = [
             ['preset' => 'product', 'type' => 'web_url', 'label' => 'مشاهده محصول', 'url' => 'https://aivatan.com/p/bag'],
@@ -206,6 +217,48 @@ class SmartInstagramPostsTest extends TestCase
         $this->assertSame(0, OutboundMessage::query()->whereIn('status', ['failed', 'blocked'])->count());
     }
 
+    public function test_post_campaign_ignores_stale_human_flag_but_respects_current_sensitive_comment(): void
+    {
+        config(['smart_instagram.outbound_enabled' => true]);
+        $this->actingAs($this->leader(), 'admin');
+        $channel = $this->sandbox(['sandbox_follow' => false]);
+        $post = $this->makePost($channel);
+        $this->post(route('admin.smart-instagram.posts.store'), $this->payload($post))->assertSessionHasNoErrors();
+
+        // یک پیام قدیمی می‌تواند گفتگو را به انسان واگذار کرده باشد؛ این پرچم نباید
+        // کامنت تازه و بی‌خطرِ کمپین مشخص را برای همیشه قفل کند.
+        $this->ingest(['type' => 'comment', 'id' => 'c_old', 'sender' => ['id' => 'u_lock', 'username' => 'locked_user'], 'text' => 'سلام', 'media_id' => 'reel_1'])->assertOk();
+        $conversation = Conversation::query()->firstOrFail();
+        $conversation->forceFill(['needs_human' => true])->save();
+
+        $this->ingest(['type' => 'comment', 'id' => 'c_safe', 'sender' => ['id' => 'u_lock', 'username' => 'locked_user'], 'text' => 'لینک لطفاً', 'media_id' => 'reel_1'])->assertOk();
+
+        $safeRun = AutomationRun::query()->latest('id')->firstOrFail();
+        $this->assertSame('success', $safeRun->status);
+        $this->assertSame(1, OutboundMessage::query()->where('kind', 'public_reply')->where('status', 'sent')->count());
+        $this->assertSame(1, OutboundMessage::query()->where('kind', 'private_reply')->where('status', 'sent')->count());
+
+        AiProfile::query()->where('workspace_id', $this->ws())->where('is_active', true)
+            ->update(['escalation_keywords' => ['شکایت']]);
+        $this->ingest(['type' => 'comment', 'id' => 'c_sensitive', 'sender' => ['id' => 'u_sensitive', 'username' => 'sensitive_user'], 'text' => 'لینک برای شکایت', 'media_id' => 'reel_1'])->assertOk();
+
+        $sensitiveRun = AutomationRun::query()->latest('id')->firstOrFail();
+        $this->assertSame('skipped', $sensitiveRun->status);
+        $this->assertStringContainsString('همین پیام حساس است', (string) data_get($sensitiveRun->decisions, '0.result'));
+        $this->assertSame(2, OutboundMessage::query()->count(), 'برای پیام حساس هیچ ارسال تازه‌ای ساخته نمی‌شود');
+
+        // شبیه‌سازی داده‌ی تولیدشده پیش از اصلاح: اجرا «موفق» بوده ولی هیچ خروجی
+        // و نشست دایرکتی ثبت نشده است. «بررسی مجدد» باید همان اجرا را ترمیم کند.
+        OutboundMessage::query()->where('automation_run_id', $safeRun->id)->delete();
+        PostFlowSession::query()->where('automation_run_id', $safeRun->id)->delete();
+        $this->post(route('admin.smart-instagram.posts.recheck', PostCampaign::query()->firstOrFail()))
+            ->assertRedirect()->assertSessionHas('success');
+
+        $this->assertSame('success', $safeRun->fresh()->status);
+        $this->assertSame(1, OutboundMessage::query()->where('automation_run_id', $safeRun->id)->where('kind', 'public_reply')->count());
+        $this->assertSame(1, OutboundMessage::query()->where('automation_run_id', $safeRun->id)->where('kind', 'private_reply')->count());
+    }
+
     public function test_live_comment_personalization_receives_campaign_post_and_customer_context(): void
     {
         config(['smart_instagram.ai.enabled' => true, 'smart_instagram.outbound_enabled' => true]);
@@ -287,6 +340,42 @@ class SmartInstagramPostsTest extends TestCase
         $this->assertNotNull($captured);
         $this->assertStringContainsString('قواعد مشترک و الزامی', $captured['messages'][0]['content']);
         $this->assertStringContainsString('کیف چرم دست‌دوز', $captured['messages'][1]['content']);
+    }
+
+    public function test_ai_writer_refreshes_only_the_requested_field(): void
+    {
+        config(['smart_instagram.ai.enabled' => true]);
+        $this->actingAs($this->leader(), 'admin');
+        $post = $this->makePost();
+        $captured = null;
+        Http::fake(['*/chat/completions' => function ($request) use (&$captured) {
+            $captured = $request->data();
+
+            return Http::response([
+                'model' => 'test/model',
+                'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 10],
+                'choices' => [['message' => ['content' => json_encode([
+                    'card_title' => 'تیتر تازه‌ی کارت',
+                    'card_subtitle' => 'نباید به این فیلد اعمال شود',
+                    'card_buttons' => ['نباید تولید شود'],
+                ])]]],
+            ]);
+        }]);
+
+        $this->postJson(route('admin.smart-instagram.posts.ai.generate'), [
+            'sections' => ['card'],
+            'target_field' => 'card_title',
+            'post_id' => $post->id,
+            'keywords' => ['لینک'],
+        ])->assertOk()
+            ->assertJsonPath('target_field', 'card_title')
+            ->assertJsonPath('target_value', 'تیتر تازه‌ی کارت')
+            ->assertJsonPath('fields.card_title', 'تیتر تازه‌ی کارت')
+            ->assertJsonMissingPath('fields.card_subtitle')
+            ->assertJsonMissingPath('fields.card_buttons');
+
+        $this->assertNotNull($captured);
+        $this->assertStringContainsString('فقط همین فیلد را تولید کن', $captured['messages'][0]['content']);
     }
 
     public function test_test_mode_and_manual_posts_never_send(): void

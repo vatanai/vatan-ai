@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Services\SmartInstagram\OperationLogger;
 use App\Services\SmartInstagram\OutboundService;
 use App\Services\SmartInstagram\PersianText;
+use App\Services\SmartInstagram\SensitiveMessageDetector;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 
@@ -57,6 +58,7 @@ class AutomationEngine
     public function __construct(
         private readonly OutboundService $outbound,
         private readonly OperationLogger $logger,
+        private readonly SensitiveMessageDetector $sensitiveMessages,
     ) {
     }
 
@@ -68,6 +70,11 @@ class AutomationEngine
 
         $message->loadMissing('conversation.contact', 'conversation.channel');
         $conversation = $message->conversation;
+
+        // حفاظ دوم: هیچ قانونی روی کامنت خود پیج اجرا نمی‌شود (جلوگیری از پاسخ به پاسخ خودمان).
+        if ($conversation->channel?->isOwnActor($conversation->contact?->external_id, $conversation->contact?->username)) {
+            return 0;
+        }
 
         // پاسخ/کلیک مشتری در جریان دایرکت «ثبت پست» (افزایشی؛ اگر جریانی فعال نباشد هیچ اثری ندارد).
         if ($message->source_type !== 'comment') {
@@ -107,6 +114,37 @@ class AutomationEngine
         }
 
         return $executed;
+    }
+
+    /**
+     * اجرای دوباره‌ی همان رکورد، برای ترمیم اجراهایی که پیش‌تر «موفق» ثبت شدند
+     * اما به‌دلیل قفل قدیمی گفتگو هیچ پیام خروجی نساختند. کلیدهای تکرارناپذیر
+     * اقدامات حفظ می‌شوند؛ بنابراین پیام ساخته‌شده‌ی قبلی دوباره ایجاد نمی‌شود.
+     */
+    public function replay(AutomationRun $run): bool
+    {
+        if ($run->mode !== 'live' || $run->status === 'running') {
+            return false;
+        }
+
+        $rule = AutomationRule::query()->find($run->rule_id);
+        $message = Message::query()->with('conversation.contact', 'conversation.channel')->find($run->message_id);
+        $conversation = $message?->conversation;
+        if (!$rule || !$message || !$conversation || !$message->isInbound()) {
+            return false;
+        }
+
+        $previousStatus = $run->status;
+        $rule->forceFill([
+            'runs_count' => max(0, $rule->runs_count - 1),
+            'success_count' => max(0, $rule->success_count - (in_array($previousStatus, ['success', 'simulated'], true) ? 1 : 0)),
+            'failure_count' => max(0, $rule->failure_count - ($previousStatus === 'failed' ? 1 : 0)),
+        ])->save();
+        $run->forceFill(['status' => 'running', 'decisions' => null, 'error' => null])->save();
+
+        $this->execute($rule, $message, $conversation, $run);
+
+        return in_array($run->fresh()->status, ['success', 'partial'], true);
     }
 
     /** بررسی بدون اجرا — برای «آزمون» در فرم قانون. */
@@ -213,24 +251,26 @@ class AutomationEngine
     }
 
     /** @return bool آیا قوانین بعدی متوقف شوند */
-    private function execute(AutomationRule $rule, Message $message, Conversation $conversation): bool
+    private function execute(AutomationRule $rule, Message $message, Conversation $conversation, ?AutomationRun $run = null): bool
     {
         $mode = $rule->status === 'test' ? 'test' : 'live';
         $contact = $conversation->contact;
         $guards = (array) $rule->guards;
 
-        try {
-            $run = AutomationRun::query()->create([
-                'workspace_id' => $rule->workspace_id,
-                'rule_id' => $rule->id,
-                'rule_version' => $rule->version,
-                'message_id' => $message->id,
-                'contact_id' => $contact->id,
-                'mode' => $mode,
-                'status' => 'running',
-            ]);
-        } catch (QueryException) {
-            return false; // این قانون قبلاً برای همین پیام اجرا شده (idempotent)
+        if (!$run) {
+            try {
+                $run = AutomationRun::query()->create([
+                    'workspace_id' => $rule->workspace_id,
+                    'rule_id' => $rule->id,
+                    'rule_version' => $rule->version,
+                    'message_id' => $message->id,
+                    'contact_id' => $contact->id,
+                    'mode' => $mode,
+                    'status' => 'running',
+                ]);
+            } catch (QueryException) {
+                return false; // این قانون قبلاً برای همین پیام اجرا شده (idempotent)
+            }
         }
 
         $cooldown = (int) ($guards['cooldown_minutes'] ?? 0);
@@ -254,7 +294,22 @@ class AutomationEngine
             return $this->finish($rule, $run, 'skipped', [['action' => 'guard', 'result' => 'سقف ارسال روزانه‌ی این سناریو پر شده']]);
         }
 
-        $sensitive = $conversation->needs_human && ($guards['stop_on_sensitive'] ?? true);
+        $isPostCampaign = filled(data_get($rule->conditions, 'post_campaign_id'));
+        $currentMessageSensitive = $isPostCampaign && $this->sensitiveMessages->detects((string) $message->body);
+        $sensitive = ($guards['stop_on_sensitive'] ?? true)
+            && ($isPostCampaign ? $currentMessageSensitive : $conversation->needs_human);
+        $allowHistoricalHumanLock = $isPostCampaign && !$currentMessageSensitive;
+
+        if ($sensitive && collect((array) $rule->actions)->contains(fn ($action) => in_array((string) ($action['type'] ?? ''), self::MESSAGING, true))) {
+            $this->finish($rule, $run, 'skipped', [[
+                'action' => 'guard',
+                'ok' => false,
+                'result' => 'متوقف — همین پیام حساس است و به انسان سپرده شد',
+            ]]);
+
+            return true;
+        }
+
         $decisions = [];
         $failures = 0;
         $stop = false;
@@ -266,17 +321,13 @@ class AutomationEngine
                 $decisions[] = ['action' => $type, 'result' => 'قوانین بعدی اجرا نمی‌شوند'];
                 break;
             }
-            if (in_array($type, self::MESSAGING, true) && $sensitive) {
-                $decisions[] = ['action' => $type, 'result' => 'متوقف — گفتگو حساس است و به انسان سپرده شد'];
-                continue;
-            }
             if ($mode === 'test') {
                 $decisions[] = ['action' => $type, 'result' => 'آزمایشی — اجرا نشد', 'text' => isset($action['text']) ? $this->render((string) $action['text'], $contact) : null];
                 continue;
             }
 
             try {
-                $result = $this->runAction($type, $action, $rule, $run, $message, $conversation, $index, $guards);
+                $result = $this->runAction($type, $action, $rule, $run, $message, $conversation, $index, $guards, $allowHistoricalHumanLock);
                 $decisions[] = ['action' => $type] + $result;
                 if (($result['ok'] ?? true) === false) {
                     $failures++;
@@ -293,7 +344,7 @@ class AutomationEngine
         return $stop;
     }
 
-    private function runAction(string $type, array $action, AutomationRule $rule, AutomationRun $run, Message $message, Conversation $conversation, int $index, array $guards): array
+    private function runAction(string $type, array $action, AutomationRule $rule, AutomationRun $run, Message $message, Conversation $conversation, int $index, array $guards, bool $allowHistoricalHumanLock): array
     {
         $contact = $conversation->contact;
         $key = "auto:{$rule->id}:{$rule->version}:{$message->id}:{$index}";
@@ -307,7 +358,7 @@ class AutomationEngine
                 }
                 $out = $this->outbound->queue($conversation, $this->replyText($type, $action, $message, $contact, $rule), 'automation', $type, [
                     'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
-                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
+                    'allow_human_lock' => $allowHistoricalHumanLock || !($guards['stop_on_sensitive'] ?? true),
                     'delay_seconds' => (int) ($action['delay_seconds'] ?? 0),
                 ]);
 
@@ -327,7 +378,7 @@ class AutomationEngine
                     'message_payload' => $card['payload'],
                     'automation_run_id' => $run->id,
                     'idempotency_key' => $key,
-                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
+                    'allow_human_lock' => $allowHistoricalHumanLock || !($guards['stop_on_sensitive'] ?? true),
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'کارت محصول در صف ارسال قرار گرفت', 'outbound_id' => $out->id];
@@ -339,12 +390,12 @@ class AutomationEngine
                 }
 
                 return app(\App\Services\SmartInstagram\Posts\PostFlowService::class)
-                    ->start($campaign, $message, $conversation, $run, $key, !($guards['stop_on_sensitive'] ?? true));
+                    ->start($campaign, $message, $conversation, $run, $key, $allowHistoricalHumanLock || !($guards['stop_on_sensitive'] ?? true));
 
             case 'send_dm':
                 $out = $this->outbound->queue($conversation, $this->render((string) ($action['text'] ?? ''), $contact), 'automation', 'dm', [
                     'automation_run_id' => $run->id, 'idempotency_key' => $key,
-                    'allow_human_lock' => !($guards['stop_on_sensitive'] ?? true),
+                    'allow_human_lock' => $allowHistoricalHumanLock || !($guards['stop_on_sensitive'] ?? true),
                 ]);
 
                 return ['ok' => $out->status !== 'blocked', 'result' => $out->status === 'blocked' ? 'مسدود: '.$out->policy_reason : 'در صف ارسال', 'outbound_id' => $out->id];

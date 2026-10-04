@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MarketingEvent;
+use App\Services\SmartInstagram\ChannelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -37,7 +38,9 @@ class MarketingMetaWebhookController extends Controller
 
         $payload = $request->json()->all();
         $stored = 0;
+        $accountId = null;
         foreach ((array) ($payload['entry'] ?? []) as $entry) {
+            $accountId ??= filled($entry['id'] ?? null) ? (string) $entry['id'] : null;
             foreach ((array) ($entry['changes'] ?? []) as $change) {
                 $value = (array) ($change['value'] ?? []);
                 $field = (string) ($change['field'] ?? '');
@@ -81,6 +84,35 @@ class MarketingMetaWebhookController extends Controller
             }
         }
 
+        $this->markSmartInstagramWebhook($accountId, ($payload['object'] ?? '') === 'instagram');
+
         return response()->json(['ok' => true, 'stored' => $stored]);
+    }
+
+    /**
+     * اینستاگرام هوشمند: پردازش هر رویداد بلافاصله با MarketingEvent::created (SmartInstagramServiceProvider)
+     * در صف instagram انجام می‌شود. این‌جا فقط زمان آخرین وب‌هوک و شناسه‌ی واقعی حساب روی کانال ثبت
+     * می‌شود تا دکمه‌ها قالب واقعی بگیرند، کامنت خود پیج شناخته شود و همگام‌سازی سریع خاموش شود.
+     */
+    private function markSmartInstagramWebhook(?string $accountId, bool $isInstagram): void
+    {
+        if (!$isInstagram || !Schema::hasTable('instagram_channels')) {
+            return;
+        }
+
+        try {
+            $channel = app(ChannelService::class)->resolve($accountId);
+            $settings = (array) $channel->settings;
+            $last = $settings['meta_webhook_at'] ?? null;
+            if (!$last || \Illuminate\Support\Carbon::parse($last)->lt(now()->subMinute()) || ($accountId && ($settings['instagram_account_id'] ?? null) !== $accountId)) {
+                $settings['meta_webhook_at'] = now()->toIso8601String();
+                if ($accountId) {
+                    $settings['instagram_account_id'] = $accountId;
+                }
+                $channel->forceFill(['settings' => $settings])->save();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

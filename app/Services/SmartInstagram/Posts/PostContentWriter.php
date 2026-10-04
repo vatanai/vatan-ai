@@ -16,6 +16,17 @@ use Illuminate\Support\Str;
  */
 class PostContentWriter
 {
+    private const TARGET_SCALARS = [
+        'opening_text' => ['section' => 'opening', 'label' => 'متن پیام آغاز دایرکت'],
+        'opening_button' => ['section' => 'opening', 'label' => 'متن دکمه‌ی آغاز دایرکت'],
+        'follow_text' => ['section' => 'follow', 'label' => 'پیام اول فالو'],
+        'follow_retry_text' => ['section' => 'follow', 'label' => 'پیام یادآوری فالو'],
+        'follow_button' => ['section' => 'follow', 'label' => 'متن دکمه‌ی فالو'],
+        'card_intro' => ['section' => 'card', 'label' => 'پیام قبل از کارت'],
+        'card_title' => ['section' => 'card', 'label' => 'تیتر کارت'],
+        'card_subtitle' => ['section' => 'card', 'label' => 'توضیح کارت'],
+    ];
+
     public function __construct(
         private readonly PostAiSettings $settings,
         private readonly AiProfileService $profiles,
@@ -23,27 +34,53 @@ class PostContentWriter
     ) {
     }
 
+    public static function targetSection(?string $targetField): ?string
+    {
+        if (!$targetField) return null;
+        if (isset(self::TARGET_SCALARS[$targetField])) return self::TARGET_SCALARS[$targetField]['section'];
+        if (preg_match('/^(public_replies|card_buttons)\.[0-2]$/', $targetField, $match)) {
+            return $match[1] === 'public_replies' ? 'public_reply' : 'card';
+        }
+
+        return null;
+    }
+
     /** @param array<int,string> $sections */
-    public function generate(array $sections, ?Post $post, array $context): array
+    public function generate(array $sections, ?Post $post, array $context, ?string $targetField = null): array
     {
         $config = $this->settings->get();
         $sections = array_values(array_intersect($sections, ['public_reply', 'opening', 'follow', 'card'])) ?: ['public_reply', 'opening', 'follow', 'card'];
+        $targetSection = self::targetSection($targetField);
+        if ($targetField && !$targetSection) {
+            return ['ok' => false, 'message' => 'فیلد هدف برای تولید نمونه معتبر نیست.'];
+        }
+        if ($targetSection) $sections = [$targetSection];
         $product = !empty($context['product_id']) ? Product::query()->whereKey((int) $context['product_id'])->first() : null;
 
-        $instructions = collect($sections)->map(fn ($key) => '### '.PostAiSettings::SECTIONS[$key]."\n".$config['prompts'][$key])->implode("\n\n");
+        $targetMeta = $targetField ? $this->targetMeta($targetField) : null;
+        $instructions = $targetMeta
+            ? '### '.$targetMeta['label']."\nفقط همین فیلد را تولید کن و هیچ فیلد دیگری نساز.\n".$config['prompts'][$targetMeta['section']]
+            : collect($sections)->map(fn ($key) => '### '.PostAiSettings::SECTIONS[$key]."\n".$config['prompts'][$key])->implode("\n\n");
         $schema = [
             'public_reply' => '"public_replies":["...","...","..."]',
             'opening' => '"opening_text":"...","opening_button":"..."',
             'follow' => '"follow_text":"...","follow_retry_text":"...","follow_button":"..."',
             'card' => '"card_intro":"...","card_title":"...","card_subtitle":"...","card_buttons":["..."]',
         ];
+        $targetSchema = [
+            'public_replies' => '"public_replies":["..."]',
+            'card_buttons' => '"card_buttons":["..."]',
+        ] + collect(self::TARGET_SCALARS)->mapWithKeys(fn ($meta, $key) => [$key => '"'.$key.'":"..."'])->all();
+        $schemaText = $targetMeta
+            ? $targetSchema[$targetMeta['key']]
+            : collect($sections)->map(fn ($k) => $schema[$k])->implode(',');
         $profile = $this->profiles->active();
         $system = $this->settings->sharedRules()."\n"
             ."## سبک گفتمان برند\n".Str::limit((string) $profile->persona_prompt, 1500)."\n"
             ."## عبارت‌های ممنوع\n".implode('، ', (array) $profile->forbidden_phrases ?: ['—'])."\n\n"
             ."## وظیفه‌ها\n{$instructions}\n\n"
             ."قواعد تکمیلی: متغیرهای {name} و {username} را برای جای‌گذاری بعدی سالم نگه دار. اگر دایرکت یا فالو در تنظیمات این سناریو فعال نیست، درباره‌ی آن وعده نده.\n"
-            .'خروجی فقط یک JSON با این کلیدها: {'.collect($sections)->map(fn ($k) => $schema[$k])->implode(',').'}';
+            .'خروجی فقط یک JSON با این کلیدها: {'.$schemaText.'}';
 
         $user = collect([
             'کپشن پست' => Str::limit((string) ($post?->caption ?? ''), 1200) ?: '—',
@@ -77,9 +114,40 @@ class PostContentWriter
             'card_subtitle' => isset($c['card_subtitle']) ? $clip($c['card_subtitle'], 80) : null,
             'card_buttons' => isset($c['card_buttons']) ? array_values(array_slice(array_map(fn ($v) => $clip($v, 20), array_filter((array) $c['card_buttons'])), 0, 3)) : null,
         ], fn ($v) => $v !== null && $v !== '' && $v !== []);
+        $targetValue = null;
+        if ($targetMeta) {
+            $targetValue = in_array($targetMeta['key'], ['public_replies', 'card_buttons'], true)
+                ? (($fields[$targetMeta['key']] ?? [])[0] ?? null)
+                : ($fields[$targetMeta['key']] ?? null);
+            $fields = $targetValue !== null && $targetValue !== ''
+                ? [$targetMeta['key'] => in_array($targetMeta['key'], ['public_replies', 'card_buttons'], true) ? [$targetValue] : $targetValue]
+                : [];
+        }
         $this->log('post_writer', 'success', $response, null, $started, $fields);
 
-        return ['ok' => true, 'fields' => $fields, 'model' => $response['model'] ?? $config['model']];
+        return [
+            'ok' => true,
+            'fields' => $fields,
+            'target_field' => $targetField,
+            'target_value' => $targetValue,
+            'model' => $response['model'] ?? $config['model'],
+        ];
+    }
+
+    private function targetMeta(string $targetField): ?array
+    {
+        if (isset(self::TARGET_SCALARS[$targetField])) {
+            return self::TARGET_SCALARS[$targetField] + ['key' => $targetField];
+        }
+        if (preg_match('/^(public_replies|card_buttons)\.[0-2]$/', $targetField, $match)) {
+            return [
+                'section' => $match[1] === 'public_replies' ? 'public_reply' : 'card',
+                'key' => $match[1],
+                'label' => $match[1] === 'public_replies' ? 'یک پاسخ عمومی کامنت' : 'متن یک دکمه‌ی کارت',
+            ];
+        }
+
+        return null;
     }
 
     private function log(string $purpose, string $status, ?array $response, ?string $error, float $started, ?array $output = null): void

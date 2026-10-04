@@ -14,12 +14,14 @@ return [
     // کلید اصلی ارسال؛ تا false است هیچ پیامی (انسانی/هوشمند/اتومیشن) به ارائه‌دهنده نمی‌رود.
     'outbound_enabled' => (bool) env('SMART_INSTAGRAM_OUTBOUND_ENABLED', false),
 
-    // ورکر فعلی سرور فقط صف default را می‌خواند؛ برای جداسازی بعدی قابل تغییر است.
+    // دریافت کامنت/دایرکت و ارسال پاسخ روی صف جدای «instagram» با ورکر اختصاصی (chabok-pre-start.sh)
+    // تا کارهای طولانی صف default (تولید تصویر/ویدیو تا ۱۵ دقیقه) پاسخ اینستاگرام را عقب نیندازند.
+    // ورکر اصلی هم این صف را با اولویت پایین‌تر می‌خواند تا در نبود ورکر اختصاصی چیزی نماند.
     'queues' => [
-        'ingest' => env('SMART_INSTAGRAM_QUEUE_INGEST', 'default'),
+        'ingest' => env('SMART_INSTAGRAM_QUEUE_INGEST', 'instagram'),
         'media' => env('SMART_INSTAGRAM_QUEUE_MEDIA', 'default'),
         'ai' => env('SMART_INSTAGRAM_QUEUE_AI', 'default'),
-        'outbound' => env('SMART_INSTAGRAM_QUEUE_OUTBOUND', 'default'),
+        'outbound' => env('SMART_INSTAGRAM_QUEUE_OUTBOUND', 'instagram'),
     ],
 
     // ورودی امضاشده برای n8n / Composio (هدر X-Vatan-Signature = sha256=HMAC(timestamp.body))

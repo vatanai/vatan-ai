@@ -55,7 +55,7 @@ fi
 (
     while true; do
         php artisan queue:work database \
-            --queue=default \
+            --queue=default,instagram \
             --sleep=3 \
             --tries=1 \
             --timeout="${QUEUE_WORKER_TIMEOUT:-900}" \
@@ -69,6 +69,29 @@ fi
 ) >> storage/logs/queue-worker.log 2>&1 &
 
 echo $! > storage/app/queue-worker.pid
+
+# Smart Instagram replies (comment → reply/DM) must not wait behind long image or
+# video jobs on the default queue. A small dedicated worker drains only the
+# "instagram" queue; the main worker above also reads it as a fallback.
+INSTAGRAM_WORKER_LOCK="storage/app/queue-worker-instagram.lock"
+exec 11>"$INSTAGRAM_WORKER_LOCK"
+if ! command -v flock >/dev/null 2>&1 || flock -n 11; then
+    (
+        while true; do
+            php artisan queue:work database \
+                --queue=instagram \
+                --sleep=1 \
+                --tries=1 \
+                --timeout=120 \
+                --memory="${QUEUE_WORKER_MEMORY:-256}" \
+                --max-time=3600
+
+            sleep 2
+        done
+    ) >> storage/logs/queue-worker-instagram.log 2>&1 &
+
+    echo $! > storage/app/queue-worker-instagram.pid
+fi
 
 # Laravel's scheduler is not a daemon by itself. Run it once per minute so
 # scheduled integrations (including Smart Instagram polling) are actually
@@ -85,9 +108,18 @@ elif ps -eo args 2>/dev/null | grep -F 'artisan schedule:run' | grep -v grep >/d
 fi
 
 (
+    # Run schedule:run once per calendar minute, starting within a second of the
+    # minute boundary. A fixed "sleep 60" drifts and, with sub-minute tasks
+    # (schedule:run stays busy until the minute ends), would skip every other
+    # minute.
+    LAST_MINUTE=""
     while true; do
-        php artisan schedule:run --no-interaction >> storage/logs/scheduler-worker.log 2>&1
-        sleep 60
+        MINUTE=$(date +%Y%m%d%H%M)
+        if [ "$MINUTE" != "$LAST_MINUTE" ]; then
+            LAST_MINUTE="$MINUTE"
+            php artisan schedule:run --no-interaction >> storage/logs/scheduler-worker.log 2>&1
+        fi
+        sleep 1
     done
 ) &
 

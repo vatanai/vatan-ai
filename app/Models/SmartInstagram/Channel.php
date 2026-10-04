@@ -40,4 +40,44 @@ class Channel extends Model
     {
         return $this->status === 'connected';
     }
+
+    /** شناسه‌های واقعی خود حساب (بدون مقدار نمادین «me»). */
+    public function ownAccountIds(): array
+    {
+        return array_values(array_unique(array_map('strval', array_filter([
+            $this->external_account_id,
+            data_get($this->settings, 'composio_instagram_user_id'),
+            data_get($this->settings, 'instagram_account_id'),
+        ], fn ($id) => filled($id) && $id !== 'me'))));
+    }
+
+    /** آیا فرستنده‌ی رویداد خود پیج است (پاسخ‌هایی که خود سامانه زیر کامنت‌ها می‌گذارد). */
+    public function isOwnActor(?string $id, ?string $username): bool
+    {
+        $id = trim((string) $id);
+        if ($id !== '' && in_array($id, $this->ownAccountIds(), true)) {
+            return true;
+        }
+        $username = mb_strtolower(ltrim(trim((string) $username), '@'));
+        $own = mb_strtolower(ltrim(trim((string) $this->username), '@'));
+
+        return $username !== '' && $own !== '' && $username === $own;
+    }
+
+    /**
+     * وب‌هوک رسمی Meta برای این حساب فعال است؟ (رویداد امضاشده در ۷ روز اخیر رسیده)
+     * در این حالت دکمه‌ها قالب واقعی دارند و همگام‌سازی سریع لازم نیست.
+     */
+    public function hasLiveWebhook(): bool
+    {
+        $at = data_get($this->settings, 'meta_webhook_at');
+        if (!$at) {
+            return false;
+        }
+        try {
+            return \Illuminate\Support\Carbon::parse($at)->greaterThan(now()->subDays(7));
+        } catch (\Throwable) {
+            return false;
+        }
+    }
 }

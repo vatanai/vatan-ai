@@ -80,7 +80,13 @@ class OutboundService
         $conversation = $outbound->conversation;
 
         // بررسی دوباره درست پیش از ارسال: ممکن است در فاصله‌ی صف، گفتگو به انسان واگذار شده باشد.
-        if (in_array($outbound->origin, ['ai', 'automation'], true) && !$outbound->allow_human_lock && ($conversation->ai_paused || $conversation->needs_human || $conversation->contact->opted_out)) {
+        $automated = in_array($outbound->origin, ['ai', 'automation'], true);
+        $blockedByHumanControl = $automated && (
+            $conversation->ai_paused
+            || $conversation->contact->opted_out
+            || (!$outbound->allow_human_lock && $conversation->needs_human)
+        );
+        if ($blockedByHumanControl) {
             $outbound->forceFill(['status' => 'blocked', 'policy_reason' => 'پیش از ارسال، گفتگو به انسان واگذار یا متوقف شد.'])->save();
 
             return $outbound;

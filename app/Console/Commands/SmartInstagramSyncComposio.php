@@ -5,19 +5,21 @@ namespace App\Console\Commands;
 use App\Jobs\SmartInstagram\ProcessInstagramEvent;
 use App\Models\MarketingEvent;
 use App\Models\SmartInstagram\AutomationRule;
+use App\Models\SmartInstagram\PostFlowSession;
 use App\Services\ComposioClient;
 use App\Services\SmartInstagram\ChannelService;
 use App\Services\SmartInstagram\ComposioMessageMapper;
 use App\Services\SmartInstagram\WorkspaceContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /** همگام‌سازی خواندنی دایرکت‌ها، رسانه‌ها و کامنت‌های حساب متصل Composio. */
 class SmartInstagramSyncComposio extends Command
 {
-    protected $signature = 'smart-instagram:sync-composio {--limit=25 : تعداد گفتگوها و رسانه‌های هر اجرا} {--comments : دریافت کامنت‌های رسانه‌ها هم انجام شود} {--comments-only : فقط کامنت‌ها دریافت شوند} {--full-history : همه‌ی صفحه‌های پیام هر گفتگو هم خوانده شوند}';
+    protected $signature = 'smart-instagram:sync-composio {--limit=25 : تعداد گفتگوها و رسانه‌های هر اجرا} {--comments : دریافت کامنت‌های رسانه‌ها هم انجام شود} {--comments-only : فقط کامنت‌ها دریافت شوند} {--full-history : همه‌ی صفحه‌های پیام هر گفتگو هم خوانده شوند} {--fast : چرخه‌ی سریع (هر ۱۰ ثانیه) فقط برای پست‌های فعال و جریان‌های منتظر کلیک؛ با وب‌هوک فعال کاری نمی‌کند}';
 
     protected $description = 'دریافت خواندنی داده‌های اینستاگرام از Composio و ورود آن به اینستاگرام هوشمند';
 
@@ -39,6 +41,10 @@ class SmartInstagramSyncComposio extends Command
             $this->error('تنظیمات کانال Composio کامل نیست.');
 
             return self::FAILURE;
+        }
+
+        if ($this->option('fast')) {
+            return $this->fast($client, $channel);
         }
 
         $limit = max(1, min((int) $this->option('limit'), 100));
@@ -97,36 +103,141 @@ class SmartInstagramSyncComposio extends Command
         }
 
         if ($this->option('comments') || $this->option('comments-only')) {
-            $mediaResult = $this->executeTool($client, 'INSTAGRAM_GET_IG_USER_MEDIA', [
-                'ig_user_id' => config('services.composio.instagram_user_id', 'me'),
-                'limit' => $limit,
-                'fields' => 'id,caption,media_type,permalink,timestamp,username',
-            ], $channel);
-            if ($mediaResult['ok']) {
-                $mediaRows = $this->rows($mediaResult['data'], ['media', 'data']);
-                $targetMediaIds = $this->targetMediaIds($channel, $mediaRows);
-                foreach ($mediaRows as $media) {
-                    $mediaId = (string) ($media['id'] ?? '');
-                    if ($mediaId === '') {
-                        continue;
-                    }
-                    if ($targetMediaIds !== [] && !in_array($mediaId, $targetMediaIds, true)) {
-                        continue;
-                    }
-                    $this->ingestMediaComments($client, $channel, $mediaId, $limit, $stored, $duplicates, $failed);
-                }
-                $knownMediaIds = array_values(array_filter(array_map(fn ($media) => (string) ($media['id'] ?? ''), $mediaRows)));
-                foreach (array_diff($targetMediaIds, $knownMediaIds) as $mediaId) {
-                    $this->ingestMediaComments($client, $channel, (string) $mediaId, $limit, $stored, $duplicates, $failed);
-                }
-            } else {
-                $failed++;
-            }
+            $this->syncComments($client, $channel, $limit, $stored, $duplicates, $failed);
         }
 
         $this->info("stored: {$stored} · duplicates: {$duplicates} · failed: {$failed}");
 
         return $failed > 0 && $stored === 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /** کامنت‌های رسانه‌های هدف؛ با قفل مشترک تا چرخه‌ی سریع و دقیقه‌ای هم‌زمان یک کامنت را دو بار وارد نکنند. */
+    private function syncComments(ComposioClient $client, $channel, int $limit, int &$stored, int &$duplicates, int &$failed): void
+    {
+        $lock = Cache::lock('smart-instagram:comment-sync', 120);
+        if (!$lock->get()) {
+            return;
+        }
+
+        try {
+            $mediaResult = $this->executeTool($client, 'INSTAGRAM_GET_IG_USER_MEDIA', [
+                'ig_user_id' => config('services.composio.instagram_user_id', 'me'),
+                'limit' => $limit,
+                'fields' => 'id,caption,media_type,permalink,timestamp,username',
+            ], $channel);
+            if (!$mediaResult['ok']) {
+                $failed++;
+
+                return;
+            }
+            $mediaRows = $this->rows($mediaResult['data'], ['media', 'data']);
+            $targetMediaIds = $this->targetMediaIds($channel, $mediaRows);
+            foreach ($mediaRows as $media) {
+                $mediaId = (string) ($media['id'] ?? '');
+                if ($mediaId === '') {
+                    continue;
+                }
+                if ($targetMediaIds !== [] && !in_array($mediaId, $targetMediaIds, true)) {
+                    continue;
+                }
+                $this->ingestMediaComments($client, $channel, $mediaId, $limit, $stored, $duplicates, $failed);
+            }
+            $knownMediaIds = array_values(array_filter(array_map(fn ($media) => (string) ($media['id'] ?? ''), $mediaRows)));
+            foreach (array_diff($targetMediaIds, $knownMediaIds) as $mediaId) {
+                $this->ingestMediaComments($client, $channel, (string) $mediaId, $limit, $stored, $duplicates, $failed);
+            }
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * چرخه‌ی سریع: جایگزین موقت وب‌هوک برای رسیدن به پاسخ زیر ۱۰ ثانیه.
+     * فقط کامنت‌های پست‌های دارای سناریوی فعال و (در صورت وجود جریان منتظر کلیک/فالو) چند گفتگوی اخیر
+     * خوانده می‌شود تا مصرف API پایین بماند. اگر وب‌هوک رسمی Meta فعال باشد، کاری انجام نمی‌شود.
+     */
+    private function fast(ComposioClient $client, $channel): int
+    {
+        if ($channel->hasLiveWebhook()) {
+            $this->line('وب‌هوک Meta فعال است؛ همگام‌سازی سریع لازم نیست.');
+
+            return self::SUCCESS;
+        }
+
+        $stored = 0;
+        $duplicates = 0;
+        $failed = 0;
+
+        $rules = AutomationRule::query()
+            ->where('workspace_id', $channel->workspace_id)
+            ->whereIn('status', ['active', 'test'])
+            ->where('trigger', 'comment_keyword')
+            ->get(['scope_ref', 'conditions']);
+        $mediaIds = $rules->pluck('scope_ref')->filter()->map(fn ($id) => (string) $id)->unique()->values()->all();
+        $needsListing = $rules->contains(fn ($rule) => !$rule->scope_ref);
+
+        $lock = Cache::lock('smart-instagram:comment-sync', 60);
+        if ($rules->isNotEmpty() && $lock->get()) {
+            try {
+                if ($needsListing) {
+                    $mediaResult = $this->executeTool($client, 'INSTAGRAM_GET_IG_USER_MEDIA', [
+                        'ig_user_id' => config('services.composio.instagram_user_id', 'me'),
+                        'limit' => 10,
+                        'fields' => 'id,permalink,timestamp',
+                    ], $channel);
+                    if ($mediaResult['ok']) {
+                        $rows = $this->rows($mediaResult['data'], ['media', 'data']);
+                        $targets = $this->targetMediaIds($channel, $rows);
+                        $mediaIds = array_values(array_unique(array_merge($mediaIds, $targets !== [] ? $targets : array_filter(array_map(fn ($m) => (string) ($m['id'] ?? ''), $rows)))));
+                    } else {
+                        $failed++;
+                    }
+                }
+                foreach (array_slice($mediaIds, 0, 10) as $mediaId) {
+                    $this->ingestMediaComments($client, $channel, (string) $mediaId, 50, $stored, $duplicates, $failed);
+                }
+            } finally {
+                $lock->release();
+            }
+        }
+
+        // کلیک دکمه‌ی پاسخ سریع در دایرکت به‌صورت پیام متنی می‌آید؛ فقط وقتی جریانی منتظر آن است خوانده می‌شود.
+        $awaiting = PostFlowSession::query()
+            ->where('workspace_id', $channel->workspace_id)
+            ->whereIn('stage', ['awaiting_click', 'awaiting_follow'])
+            ->where('updated_at', '>=', now()->subMinutes(30))
+            ->exists();
+        $dmLock = Cache::lock('smart-instagram:dm-fast-sync', 60);
+        if ($awaiting && $dmLock->get()) {
+            try {
+                $conversations = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_CONVERSATIONS', ['limit' => 5], $channel);
+                if ($conversations['ok']) {
+                    foreach ($this->rows($conversations['data'], ['conversations', 'data']) as $conversation) {
+                        $conversationId = (string) ($conversation['id'] ?? $conversation['conversation_id'] ?? '');
+                        if ($conversationId === '') {
+                            continue;
+                        }
+                        $messages = $this->executeTool($client, 'INSTAGRAM_LIST_ALL_MESSAGES', ['conversation_id' => $conversationId, 'limit' => 10], $channel);
+                        if (!$messages['ok']) {
+                            $failed++;
+                            continue;
+                        }
+                        foreach ($this->rows($messages['data'], ['messages', 'data']) as $message) {
+                            $event = $this->storeEvent(app(ComposioMessageMapper::class)->map($message, $conversationId, $channel));
+                            $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
+                        }
+                    }
+                } else {
+                    $failed++;
+                }
+            } finally {
+                $dmLock->release();
+            }
+        }
+
+        $this->info("fast · stored: {$stored} · duplicates: {$duplicates} · failed: {$failed}");
+
+        return self::SUCCESS;
     }
 
     private function ingestMediaComments(ComposioClient $client, $channel, string $mediaId, int $limit, int &$stored, int &$duplicates, int &$failed): void
@@ -141,6 +252,10 @@ class SmartInstagramSyncComposio extends Command
             return;
         }
         foreach ($this->rows($comments['data'], ['comments', 'data']) as $comment) {
+            // پاسخ‌هایی که خود پیج زیر کامنت‌ها گذاشته رویداد ورودی نیستند.
+            if ($channel->isOwnActor((string) data_get($comment, 'from.id', ''), (string) (data_get($comment, 'from.username') ?? $comment['username'] ?? ''))) {
+                continue;
+            }
             $event = $this->storeEvent($this->commentPayload($comment, $mediaId));
             $event === 'stored' ? $stored++ : ($event === 'duplicate' ? $duplicates++ : $failed++);
         }

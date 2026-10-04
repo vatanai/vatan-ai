@@ -5,7 +5,6 @@ namespace App\Services\SmartInstagram;
 use App\Jobs\SmartInstagram\AnalyzeConversation;
 use App\Jobs\SmartInstagram\FetchMessageAttachment;
 use App\Models\MarketingEvent;
-use App\Models\SmartInstagram\AiProfile;
 use App\Models\SmartInstagram\Contact;
 use App\Models\SmartInstagram\Conversation;
 use App\Models\SmartInstagram\Message;
@@ -25,6 +24,7 @@ class InboxIngestService
         private readonly EventNormalizer $normalizer,
         private readonly ChannelService $channels,
         private readonly AutomationEngine $automations,
+        private readonly SensitiveMessageDetector $sensitiveMessages,
         private readonly OperationLogger $logger,
     ) {
     }
@@ -38,6 +38,15 @@ class InboxIngestService
         try {
             $normalized = $this->normalizer->normalize($event);
             if (!$normalized) {
+                $this->mark($event, 'ignored');
+
+                return 'ignored';
+            }
+
+            // کامنت/پاسخی که خود پیج گذاشته (مثلاً پاسخ عمومی همین سامانه) نباید دوباره وارد موتور شود؛
+            // وگرنه سامانه به پاسخ خودش جواب می‌دهد (پاسخ دوم و بی‌ربط زیر همان کامنت).
+            if ($normalized['direction'] === 'in' && in_array($normalized['kind'], ['comment', 'mention'], true)
+                && $this->channels->resolve($normalized['account_id'])->isOwnActor($normalized['sender_id'], $normalized['sender_username'])) {
                 $this->mark($event, 'ignored');
 
                 return 'ignored';
@@ -151,7 +160,7 @@ class InboxIngestService
             if ($conversation->status === 'closed') {
                 $updates['closed_at'] = null;
             }
-            if ($this->isSensitive((string) $message->body)) {
+            if ($this->sensitiveMessages->detects((string) $message->body)) {
                 $updates['needs_human'] = true;
                 $updates['priority'] = 'high';
             }
@@ -189,22 +198,7 @@ class InboxIngestService
     /** کلمات حساس پروفایل فعال (پروپوزال سناریو ۵) — پاسخ خودکار متوقف و گفتگو اولویت‌دار می‌شود. */
     public function isSensitive(string $text): bool
     {
-        if (trim($text) === '') {
-            return false;
-        }
-
-        $keywords = (array) (AiProfile::query()->where('workspace_id', $this->context->id())->where('is_active', true)->value('escalation_keywords') ?? []);
-        if (is_string($keywords)) {
-            $keywords = (array) json_decode($keywords, true);
-        }
-
-        foreach ($keywords as $keyword) {
-            if (PersianText::containsKeyword($text, (string) $keyword)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->sensitiveMessages->detects($text);
     }
 
     private function messageType(array $n): string

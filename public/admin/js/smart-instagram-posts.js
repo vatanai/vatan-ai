@@ -566,11 +566,12 @@
       });
     });
     var run = $('[data-ai-run]', box); var status = $('[data-ai-status]', box);
-    var execute = function (sections, trigger) {
+    var execute = function (sections, trigger, targetField) {
       if (!sections.length) { status.textContent = 'حداقل یک بخش را انتخاب کنید.'; return; }
       var postEl = $('[data-post-input]:checked', self.form) || $('input[type=hidden][data-post-input]', self.form);
       var body = {
         sections: sections,
+        target_field: targetField || null,
         post_id: postEl ? +postEl.value : null,
         product_id: +(($('[data-card-product]', self.form) || {}).value || 0) || null,
         link: ($('[data-ai-link]', box) || {}).value || null,
@@ -581,10 +582,11 @@
       status.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> در حال نوشتن…';
       request(CFG.routes.generate, body).then(function (res) {
         if (!res.ok) { status.textContent = res.message || 'پاسخی دریافت نشد.'; return; }
-        var n = self.applyAi(res.fields || {});
+        var n = self.applyAi(res.fields || {}, res.target_field || targetField, res.target_value);
         var complete = $('[data-ai-applied-check]', box);
         if (complete && n > 0 && trigger === run) complete.hidden = false;
-        status.innerHTML = '<span style="color:var(--success)"><i class="fa-solid fa-circle-check"></i> ' + faDigits(n) + ' فیلد پر شد' + (res.model ? ' · ' + esc(res.model) : '') + ' — بازبینی و در صورت نیاز ویرایش کنید.</span>';
+        var message = targetField ? 'همین فیلد با یک نمونه‌ی تازه پر شد' : faDigits(n) + ' فیلد پر شد';
+        status.innerHTML = '<span style="color:var(--success)"><i class="fa-solid fa-circle-check"></i> ' + message + (res.model ? ' · ' + esc(res.model) : '') + ' — بازبینی و در صورت نیاز ویرایش کنید.</span>';
       }).catch(function (err) { status.textContent = err.message; }).then(function () { if (trigger) trigger.disabled = false; });
     };
     run.addEventListener('click', function () {
@@ -596,17 +598,32 @@
       if (key.indexOf('follow_') === 0) return 'follow';
       return 'card';
     };
-    $$('[data-ai-field], [data-btn-label]', self.form).forEach(function (field) {
+    var decorateField = function (field) {
       var label = field.parentElement && ($('label', field.parentElement) || $('.sip-style-tag', field.parentElement));
       if (!label || $('[data-ai-tools]', label)) return;
-      var key = field.getAttribute('data-ai-field') || 'card_buttons'; var tools = document.createElement('span');
+      var explicitKey = field.getAttribute('data-ai-field');
+      var keyForField = function () {
+        if (explicitKey) return explicitKey;
+        var row = field.closest('[data-btn-row]');
+        var index = row ? $$('[data-btn-row]', self.form).indexOf(row) : -1;
+        return index >= 0 ? 'card_buttons.' + index : 'card_buttons.0';
+      };
+      var tools = document.createElement('span');
       tools.className = 'sip-ai-field-tools'; tools.setAttribute('data-ai-tools', '');
       tools.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles" title="تولیدشده با هوش مصنوعی"></i><button type="button" data-ai-refresh-field title="تولید نمونه‌ی تازه"><i class="fa-solid fa-rotate"></i></button>';
       label.appendChild(tools);
       $('[data-ai-refresh-field]', tools).addEventListener('click', function () {
-        execute([fieldSection(key)], this);
+        var targetField = keyForField();
+        execute([fieldSection(targetField)], this, targetField);
       });
-    });
+    };
+    $$('[data-ai-field], [data-btn-label]', self.form).forEach(decorateField);
+    if (window.MutationObserver) {
+      var fieldObserver = new MutationObserver(function () {
+        $$('[data-ai-field], [data-btn-label]', self.form).forEach(decorateField);
+      });
+      fieldObserver.observe(self.form, { childList: true, subtree: true });
+    }
     var save = $('[data-ai-save]', box);
     if (save) save.addEventListener('click', function () {
       var out = $('[data-ai-save-status]', box);
@@ -619,7 +636,7 @@
         .then(function () { save.disabled = false; });
     });
   };
-  Wizard.prototype.applyAi = function (fields) {
+  Wizard.prototype.applyAi = function (fields, targetField, targetValue) {
     var self = this; var count = 0;
     var put = function (el, value) {
       if (!el || value == null || value === '') return;
@@ -630,6 +647,24 @@
       if (el.matches('[data-counter]')) self.updateCounter(el);
       count++;
     };
+    if (targetField) {
+      var target = $('[data-ai-field="' + targetField + '"]', self.form);
+      var buttonMatch = /^card_buttons\.(\d+)$/.exec(targetField);
+      if (!target && buttonMatch) {
+        var row = $$('[data-btn-row]', self.form)[+buttonMatch[1]];
+        target = row ? $('[data-btn-label]', row) : null;
+      }
+      var value = targetValue;
+      if (value == null) {
+        var replyMatch = /^public_replies\.(\d+)$/.exec(targetField);
+        if (replyMatch) value = (fields.public_replies || [])[0];
+        else if (buttonMatch) value = (fields.card_buttons || [])[0];
+        else value = fields[targetField];
+      }
+      put(target, value);
+      this.refresh();
+      return count;
+    }
     (fields.public_replies || []).forEach(function (v, i) { put($('[data-ai-field="public_replies.' + i + '"]', self.form), v); });
     ['opening_text', 'opening_button', 'follow_text', 'follow_retry_text', 'follow_button', 'card_intro', 'card_title', 'card_subtitle'].forEach(function (k) {
       put($('[data-ai-field="' + k + '"]', self.form), fields[k]);

@@ -90,15 +90,29 @@
       window.location.reload();
     });
   });
+  var applyTimelineFilter = function (value) {
+    $$('[data-si-timeline-tab]').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-si-timeline-tab') === value); });
+    $$('[data-si-message-source]').forEach(function (message) {
+      message.hidden = value !== 'all' && message.getAttribute('data-si-message-source') !== value;
+    });
+    $$('[data-si-timeline-day]').forEach(function (day) {
+      var next = day.nextElementSibling;
+      var hasVisibleMessage = false;
+      while (next && !next.hasAttribute('data-si-timeline-day')) {
+        if (next.hasAttribute('data-si-message-source') && !next.hidden) hasVisibleMessage = true;
+        next = next.nextElementSibling;
+      }
+      day.hidden = !hasVisibleMessage;
+    });
+  };
   $$('[data-si-timeline-tab]').forEach(function (tab) {
     tab.addEventListener('click', function () {
       var value = tab.getAttribute('data-si-timeline-tab');
-      $$('[data-si-timeline-tab]').forEach(function (t) { t.classList.toggle('active', t === tab); });
-      $$('[data-si-message-source]').forEach(function (message) {
-        message.hidden = value !== 'all' && message.getAttribute('data-si-message-source') !== value;
-      });
+      applyTimelineFilter(value);
     });
   });
+  var timelineBody = $('[data-si-timeline-default]');
+  if (timelineBody) applyTimelineFilter(timelineBody.getAttribute('data-si-timeline-default') || 'all');
 
   var inbox = $('.si-inbox[data-poll]');
   if (inbox) {

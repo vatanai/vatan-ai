@@ -65,7 +65,24 @@ final class ContactNameResolver
             $rendered = str_ireplace(['@'.$username, $username], '', $rendered);
         }
 
-        return trim(preg_replace('/[ \t]{2,}/u', ' ', $rendered) ?? $rendered);
+        return $this->tidy($rendered);
+    }
+
+    /**
+     * پاک‌سازی علائمی که بعد از حذف نام/نام کاربری تنها می‌مانند؛
+     * مثلاً «{name} عزیز، خوشحالم…» بدون نام نباید با «، خوشحالم…» شروع شود.
+     */
+    private function tidy(string $text): string
+    {
+        $text = preg_replace('/[ \t]{2,}/u', ' ', $text) ?? $text;
+        // فاصله‌ی قبل از علامت (« ،» ← «،»)
+        $text = preg_replace('/[ \t]+([،,؛;:!?؟.])/u', '$1', $text) ?? $text;
+        // علامت‌های جداکننده‌ی پشت‌سرهم («، ،» ← «،»)
+        $text = preg_replace('/([،,؛;:])(?:[ \t]*[،,؛;:])+/u', '$1', $text) ?? $text;
+        // جداکننده‌ی یتیم در ابتدای متن
+        $text = preg_replace('/^\s*[،,؛;:!.]+\s*/u', '', $text) ?? $text;
+
+        return trim($text);
     }
 
     private function clean(string $value): string
