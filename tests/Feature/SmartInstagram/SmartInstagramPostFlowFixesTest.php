@@ -248,6 +248,37 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->assertSame([], $calls, 'با وب‌هوک فعال چرخه‌ی سریع کاری نمی‌کند');
     }
 
+
+    public function test_cleanup_migration_removes_only_own_account_runs_and_sessions(): void
+    {
+        $channel = $this->channel();
+        $this->campaign($channel);
+        $this->ingest(['type' => 'comment', 'id' => 'c_user', 'sender' => ['id' => 'u_1', 'username' => 'shaygangp'], 'text' => 'کلاژ', 'media_id' => 'reel_1'])->assertOk();
+
+        // داده‌ی قدیمی: پیش از اصلاح، روی پاسخ خود پیج هم قانون اجرا شده بود.
+        $own = Contact::query()->create(['workspace_id' => $this->ws(), 'external_id' => 'own_1', 'username' => 'AI_Vatan']);
+        $conversation = Conversation::query()->create(['workspace_id' => $this->ws(), 'channel_id' => $channel->id, 'contact_id' => $own->id, 'status' => 'new']);
+        $userRun = AutomationRun::query()->firstOrFail();
+        $ownRun = AutomationRun::query()->create(['workspace_id' => $this->ws(), 'rule_id' => $userRun->rule_id, 'rule_version' => 1, 'message_id' => null, 'contact_id' => $own->id, 'mode' => 'live', 'status' => 'success']);
+        $outbound = OutboundMessage::query()->create([
+            'workspace_id' => $this->ws(), 'channel_id' => $channel->id, 'conversation_id' => $conversation->id, 'contact_id' => $own->id,
+            'kind' => 'public_reply', 'target_ref' => 'c_own', 'body' => 'x', 'origin' => 'automation', 'automation_run_id' => $ownRun->id,
+            'status' => 'sent', 'idempotency_key' => 'own-test',
+        ]);
+        PostFlowSession::query()->create(['workspace_id' => $this->ws(), 'campaign_id' => PostFlowSession::query()->value('campaign_id'), 'contact_id' => $own->id, 'conversation_id' => $conversation->id, 'comment_message_id' => 999, 'mode' => 'live', 'stage' => 'awaiting_click', 'expires_at' => now()->addDay()]);
+
+        $migration = require database_path('migrations/2026_10_05_120000_cleanup_smart_instagram_own_account_runs.php');
+        $migration->up();
+        $migration->up(); // تکرار بی‌اثر است
+
+        $this->assertNull(AutomationRun::query()->find($ownRun->id));
+        $this->assertNotNull(AutomationRun::query()->find($userRun->id), 'اجرای کاربر واقعی دست نمی‌خورد');
+        $this->assertSame(1, PostFlowSession::query()->count());
+        $this->assertNull($outbound->fresh()->automation_run_id, 'سابقه‌ی ارسال حفظ می‌شود');
+        $this->assertSame(1, (int) \App\Models\SmartInstagram\AutomationRule::query()->whereKey($userRun->rule_id)->value('runs_count'));
+        $this->assertNotNull(Contact::query()->find($own->id));
+    }
+
     public function test_name_placeholder_removal_leaves_no_orphan_punctuation(): void
     {
         $resolver = app(ContactNameResolver::class);
