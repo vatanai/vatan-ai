@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ProductShots\ShotVisionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
@@ -66,7 +67,7 @@ class ProductShotSetting extends Model
             'daily_cost_cap_usd' => 5,
             'preflight_enabled' => true,
             'preflight_prompt' => null,
-            'preflight_blocking_issues' => ['no_product', 'blur', 'different_product'],
+            'preflight_blocking_issues' => ShotVisionService::BLOCKING,
             'preflight_min_side' => 900,
             'qc_enabled' => true,
             'qc_auto_retry' => true,

@@ -262,10 +262,16 @@ const HomeBuilder = (function () {
               results.innerHTML = '<div style="padding:10px 12px;font-size:11.5px;color:var(--text-soft);">نتیجه‌ای یافت نشد</div>';
             } else {
               results.innerHTML = items.map((p) => `
-                <button type="button" onclick="HomeBuilder.pickProduct('${key}', ${p.id}, '${escapeHtml(p.name).replace(/'/g, '&#39;')}')"
-                        style="display:block;width:100%;text-align:right;padding:9px 12px;font-size:12px;background:transparent;border:0;border-bottom:1px solid var(--border);color:var(--text-main);cursor:pointer;">
-                  ${escapeHtml(p.name)}
+                <button type="button" data-hb-pick-result data-product-id="${Number(p.id)}" data-product-name="${escapeHtml(p.name)}"
+                        style="display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;text-align:right;padding:9px 12px;font-size:12px;background:transparent;border:0;border-bottom:1px solid var(--border);color:var(--text-main);cursor:pointer;">
+                  <span>${escapeHtml(p.name)}</span>
+                  ${p.status === 'draft' ? '<small style="flex:none;padding:2px 7px;border:1px solid var(--warning-m);border-radius:99px;background:var(--warning-l);color:var(--warning);font-size:9.5px;font-weight:800;">پیش‌نویس</small>' : ''}
                 </button>`).join('');
+              results.querySelectorAll('[data-hb-pick-result]').forEach((button) => {
+                button.addEventListener('click', function () {
+                  pickProduct(key, Number(button.dataset.productId), button.dataset.productName || '');
+                });
+              });
             }
             results.style.display = '';
           })

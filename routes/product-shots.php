@@ -40,6 +40,7 @@ Route::prefix('admin/product-shots')
 
         // ثبت محصول پروداکتی — فقط وقتی ماژول روشن است
         Route::middleware(EnsureProductShotsAvailable::class . ':admin')->group(function () {
+            Route::get('/products/preview/draft', [ProductShotAdminController::class, 'previewDraftProductPage'])->name('products.preview-draft');
             Route::get('/products/create/{product?}', [ProductShotAdminController::class, 'createProduct'])->name('products.create');
             Route::get('/products/{product}/preview-page', [ProductShotAdminController::class, 'previewProductPage'])->name('products.preview-page');
             Route::post('/products', [ProductShotAdminController::class, 'storeProduct'])->name('products.store');

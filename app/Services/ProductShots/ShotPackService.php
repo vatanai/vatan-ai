@@ -51,10 +51,13 @@ class ShotPackService
     /** چهار تصویر برای کولاژ کارت «پک» (نمونه‌ی شات‌ها، در نبود آن کاور محصول). */
     public function collage(Product $product, int $limit = 4): array
     {
-        $urls = $product->enabledProductShots()
+        // بعد از تبدیل مدل‌ها به URL باید Collection عمومی باشد؛ Collection الکوئنت
+        // در unique() انتظار مدل دارد و برای رشته‌ی URL خطا می‌دهد.
+        $urls = collect($product->enabledProductShots()
             ->map(fn (ProductShot $ps) => $ps->sampleImageUrl())
             ->filter()
-            ->values();
+            ->values()
+            ->all());
 
         foreach ((array) $product->sample_outputs as $path) {
             if ($urls->count() >= $limit) {

@@ -12,7 +12,8 @@ return [
     'vision_model' => env('PRODUCT_SHOTS_VISION_MODEL', 'google/gemini-2.5-flash-lite'),
 
     'max_upload_mb' => 12,
-    'max_extra_angles' => 3,
+    // یک تصویر اصلی + دو زاویه‌ی مکمل = حداکثر سه زاویه از یک محصول واحد.
+    'max_extra_angles' => 2,
     'quality_levels' => [
         'standard' => 'استاندارد',
         'professional' => 'حرفه‌ای',

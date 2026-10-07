@@ -199,6 +199,24 @@ class ProductShotAdminController extends Controller
         return $controller->page($product);
     }
 
+    /** اسکلت واقعی صفحه‌ی کاربر برای پیش‌نمایش زنده، پیش از اولین ذخیره. */
+    public function previewDraftProductPage(ProductShotController $controller): View
+    {
+        $product = new Product([
+            'name_fa' => 'محصول در حال ساخت',
+            'name_en' => 'Product preview',
+            'slug' => 'admin-product-shot-preview',
+            'description_fa' => 'اطلاعات این پیش‌نمایش با تغییرات فرم به‌صورت زنده به‌روزرسانی می‌شود.',
+            'status' => 'draft',
+            'thumbnail' => 'products/thumbnails/default_placeholder.jpg',
+            'cover' => 'products/thumbnails/default_placeholder.jpg',
+            'shot_settings' => [],
+        ]);
+        $product->product_mode = Product::MODE_PRODUCT;
+
+        return $controller->page($product);
+    }
+
     public function storeProduct(Request $request): RedirectResponse|JsonResponse
     {
         $data = $this->validateProduct($request);
@@ -243,7 +261,7 @@ class ProductShotAdminController extends Controller
         $data = $request->validate([
             'shot_id' => ['required', 'integer', 'exists:shot_library,id'],
             'image' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
-            'images' => ['nullable', 'array', 'max:4'],
+            'images' => ['nullable', 'array', 'max:3'],
             'images.*' => ['file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
             'image_path' => ['nullable', 'string', 'max:255'],
             'ai_model_id' => ['required', 'integer', 'exists:ai_models,id'],
@@ -446,6 +464,7 @@ class ProductShotAdminController extends Controller
             'shots.*.option_preview' => ['nullable', 'boolean'],
             'shots.*.sort' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.sample_path' => ['nullable', 'string', 'max:255'],
+            'shots.*.sample' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
             'watermark_enabled' => ['nullable', 'boolean'],
             'watermark_position' => ['nullable', Rule::in(['corner', 'center', 'none'])],
             'display_mode' => ['nullable', Rule::in(['card', 'slider'])],
@@ -526,7 +545,7 @@ class ProductShotAdminController extends Controller
         $product->subject_type = 'product';
         $product->identity_preservation = false;
         $product->min_reference_images = 1;
-        $product->max_reference_images = 4;
+        $product->max_reference_images = 3;
         $product->pricing_model = 'per_credit';
         $product->media_type = 'photo';
         $product->output_type = 'image';
@@ -612,7 +631,11 @@ class ProductShotAdminController extends Controller
                 'preview' => filter_var($row['option_preview'] ?? false, FILTER_VALIDATE_BOOLEAN),
             ];
             $productShot->sort = (int) ($row['sort'] ?? 0);
-            if (! empty($row['sample_path'])) {
+            $sampleFile = $request->file("shots.{$shotId}.sample");
+            if ($sampleFile) {
+                $stored = $this->images->storeUpload($sampleFile, self::SAMPLE_DIR);
+                $productShot->sample_image = $stored['path'];
+            } elseif (! empty($row['sample_path'])) {
                 $copied = $this->copySample((string) $row['sample_path']);
                 if ($copied) {
                     $productShot->sample_image = $copied;

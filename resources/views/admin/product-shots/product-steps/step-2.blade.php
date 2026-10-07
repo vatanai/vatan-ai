@@ -26,6 +26,15 @@
     </div>
   </section>
 
+  <section class="content-card p-5">
+    <div class="ps-card-title"><i class="fa-solid fa-pen-ruler"></i> پرامپت عکس</div>
+    <div class="ps-card-desc">دستور اختصاصی بررسی عکس ورودی این محصول؛ این متن به قرارداد استاندارد کنترل کیفیت افزوده می‌شود و پرامپت ساخت اسلایدها را تغییر نمی‌دهد.</div>
+    <div class="ps-field">
+      <textarea name="preflight_prompt" class="input-pro" dir="ltr" rows="5" maxlength="4000" placeholder="For example: reject images where the shoe sole or main logo is not clearly visible...">{{ old('preflight_prompt',$savedPreflight['prompt'] ?? '') }}</textarea>
+      <div class="ps-hint">برای تعریف حساسیت‌های ویژه‌ی عکس ورودی همین محصول استفاده کنید؛ پرامپت اختصاصی هر اسلاید در گام سوم قرار دارد.</div>
+    </div>
+  </section>
+
   <section class="content-card p-5 ps-brand-identity" data-brand-identity>
     <div class="flex items-start justify-between gap-4"><div><div class="ps-card-title"><i class="fa-solid fa-fingerprint"></i> حفظ هویت برند</div><div class="ps-card-desc">وقتی روشن باشد، این دستور در انتهای پرامپت تک‌تک شات‌ها قرار می‌گیرد تا نور، رنگ و حس بصری پک یکدست بماند.</div></div><label class="ps-toggle"><input type="hidden" name="brand_identity_enabled" value="0"><input type="checkbox" name="brand_identity_enabled" value="1" data-brand-identity-toggle @checked($brandIdentityEnabled)><span></span></label></div>
     <div class="ps-field mt-4" data-brand-identity-prompt-wrap @if(!$brandIdentityEnabled) hidden @endif><label>پرامپت ثابت حفظ هویت برند</label><textarea name="brand_identity_prompt" class="input-pro" dir="ltr" rows="5" maxlength="2000">{{ $brandIdentityPrompt }}</textarea></div>

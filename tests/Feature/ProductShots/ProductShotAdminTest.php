@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductShot;
 use App\Models\ShotLibrary;
 use App\Services\ProductShots\ProductShotFeature;
+use App\Services\ProductShots\ShotVisionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -115,11 +116,25 @@ class ProductShotAdminTest extends TestCase
         $cat = $this->category();
         $occupation = Occupation::query()->firstOrFail();
 
-        $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))
+        $formResponse = $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))
             ->assertOk()
             ->assertSee('data-step-panel="5"', false)
             ->assertSee('حفظ هویت برند')
+            ->assertSee('پرامپت عکس')
+            ->assertSee('سه زاویه از همان محصول')
+            ->assertSee('صفحه واقعی محصول')
             ->assertSee($shots[0]->name_fa);
+        foreach (ShotVisionService::BLOCKING as $issue) {
+            $this->assertMatchesRegularExpression(
+                '/name="preflight_blocking_issues\[\]" value="' . preg_quote($issue, '/') . '" checked/',
+                $formResponse->getContent()
+            );
+        }
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.product-shots.products.preview-draft'))
+            ->assertOk()
+            ->assertSee('دو زاویه‌ی مکمل')
+            ->assertSee('اسلایدهای خروجی');
 
         $payload = [
             'name_fa' => 'پک سرم', 'name_en' => 'Serum Pack', 'status' => 'active',
@@ -129,12 +144,14 @@ class ProductShotAdminTest extends TestCase
                 'professional' => ['primary_id' => $model->id],
                 'best' => ['primary_id' => $model->id],
             ],
-            'preflight_enabled' => '1', 'preflight_min_side' => 900, 'product_sheet_enabled' => '1', 'product_sheet_size' => 2048,
+            'preflight_enabled' => '1', 'preflight_prompt' => 'Reject hidden product labels.',
+            'preflight_blocking_issues' => ShotVisionService::BLOCKING,
+            'preflight_min_side' => 900, 'product_sheet_enabled' => '1', 'product_sheet_size' => 2048,
             'brand_identity_enabled' => '1',
             'brand_identity_prompt' => 'Keep the brand palette warm and minimal.',
             'explore_tiles' => ['1x1', '1x2'],
             'shots' => [
-                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5','1:1'], 'aspect_ratio_default' => '4:5', 'sort' => 0],
+                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'prompt_override' => 'Slide-specific hero prompt.', 'sample' => UploadedFile::fake()->image('slide-hero.jpg', 800, 1000), 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5','1:1'], 'aspect_ratio_default' => '4:5', 'sort' => 0],
                 $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'quality_credits' => ['standard'=>8,'professional'=>12,'best'=>18], 'allowed_aspect_ratios' => ['4:5','9:16'], 'aspect_ratio_default' => '4:5', 'aspect_ratio_user_selectable' => '1', 'sort' => 1],
                 $shots[2]->id => ['enabled' => '0', 'is_default' => '0', 'credits' => '', 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5'], 'aspect_ratio_default' => '4:5', 'sort' => 2],
             ],
@@ -145,20 +162,28 @@ class ProductShotAdminTest extends TestCase
         $this->assertTrue($product->isShotProduct());
         $this->assertSame($model->openrouter_model_id, $product->primary_model);
         $this->assertSame('amber serum bottle', $product->shot_settings['product_description']);
+        $this->assertSame('Reject hidden product labels.', $product->shot_settings['preflight']['prompt']);
+        $this->assertSame(ShotVisionService::BLOCKING, $product->shot_settings['preflight']['blocking_issues']);
         $this->assertTrue($product->shot_settings['brand_identity_enabled']);
         $this->assertSame('Keep the brand palette warm and minimal.', $product->shot_settings['brand_identity_prompt']);
         $this->assertSame(8, (int) $product->credit_cost);
         $this->assertSame((int) $this->admin->id, (int) $product->created_by);
+        $this->assertSame(3, $product->max_reference_images);
         $this->assertSame(2, $product->enabledProductShots()->count());
         $this->assertSame([$cat->id], $product->categories()->pluck('categories.id')->all());
         $this->assertSame([$occupation->id], $product->occupations()->pluck('occupations.id')->all());
-        $this->assertSame(15, $product->productShots()->where('shot_id', $shots[0]->id)->firstOrFail()->credits('professional'));
+        $firstSlide = $product->productShots()->where('shot_id', $shots[0]->id)->firstOrFail();
+        $this->assertSame(15, $firstSlide->credits('professional'));
+        $this->assertSame('Slide-specific hero prompt.', $firstSlide->prompt_override);
+        $this->assertStringStartsWith('products/shot-samples/', $firstSlide->sample_image);
+        Storage::disk('public')->assertExists($firstSlide->sample_image);
 
         // ویرایش از فرم قدیمی به فرم جدید هدایت می‌شود
         $this->actingAs($this->admin, 'admin')->get(route('admin.products.create', $product))
             ->assertRedirect(route('admin.product-shots.products.create', $product->id));
 
         $payload['shots'][$shots[1]->id]['enabled'] = '0';
+        unset($payload['shots'][$shots[0]->id]['sample']);
         $payload['name_fa'] = 'پک سرم ۲';
         $this->actingAs($this->admin, 'admin')->put(route('admin.product-shots.products.update', $product), $payload)->assertRedirect();
         $this->assertSame('پک سرم ۲', $product->fresh()->name_fa);
@@ -205,6 +230,23 @@ class ProductShotAdminTest extends TestCase
         $sample = ProductShot::query()->where('product_id', $product->id)->where('shot_id', $shot->id)->value('sample_image');
         $this->assertStringStartsWith('products/shot-samples/', $sample);
         Storage::disk('public')->assertExists($sample);
+    }
+
+    public function test_admin_preview_rejects_more_than_three_angles(): void
+    {
+        $this->enableShots('admins');
+        $shot = ShotLibrary::query()->firstOrFail();
+
+        $this->actingAs($this->admin, 'admin')->post(route('admin.product-shots.preview'), [
+            'shot_id' => $shot->id,
+            'ai_model_id' => $this->imageModel()->id,
+            'images' => [
+                UploadedFile::fake()->image('one.jpg'),
+                UploadedFile::fake()->image('two.jpg'),
+                UploadedFile::fake()->image('three.jpg'),
+                UploadedFile::fake()->image('four.jpg'),
+            ],
+        ], ['Accept' => 'application/json'])->assertStatus(422)->assertJsonValidationErrors('images');
     }
 
     public function test_sample_copy_rejects_path_traversal(): void

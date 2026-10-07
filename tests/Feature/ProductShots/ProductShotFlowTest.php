@@ -141,7 +141,7 @@ class ProductShotFlowTest extends TestCase
         $this->assertSame(70, (int) $user->fresh()->tokens);
     }
 
-    public function test_four_reference_images_product_sheet_quality_pricing_and_per_shot_ratio(): void
+    public function test_three_angles_of_one_product_build_sheet_with_quality_pricing_and_per_slide_ratio(): void
     {
         $this->enableShots('public', ['qc_enabled' => false]);
         $this->mockVision();
@@ -150,7 +150,7 @@ class ProductShotFlowTest extends TestCase
         $shot = $product->enabledProductShots()->firstOrFail();
         $uploads = [];
 
-        foreach (range(1, 4) as $index) {
+        foreach (range(1, 3) as $index) {
             $preflight = $this->actingAs($user)->post(route('app.product-shots.preflight', $product->slug), [
                 'image' => $this->productImage("angle-{$index}.jpg", 1000 + $index, 1200 + $index),
                 'role' => $index === 1 ? 'main' : 'angle',
@@ -173,7 +173,7 @@ class ProductShotFlowTest extends TestCase
 
         $batch = ShotBatch::query()->firstOrFail();
         $item = $batch->items()->firstOrFail();
-        $this->assertCount(4, $batch->source_paths);
+        $this->assertCount(3, $batch->source_paths);
         $this->assertNotNull($batch->product_sheet_path);
         Storage::disk('public')->assertExists($batch->product_sheet_path);
         $this->assertSame('best', $batch->quality_level);
@@ -395,7 +395,7 @@ class ProductShotFlowTest extends TestCase
         $this->assertCount(3, $config['shots']);
         $this->assertSame(55, $config['balance']);
         $this->assertSame(['standard', 'professional', 'best'], array_keys($config['quality_levels']));
-        $this->assertSame(3, $config['max_extra_angles']);
+        $this->assertSame(2, $config['max_extra_angles']);
         $this->assertSame(['4:5', '1:1', '9:16'], $config['shots'][0]['allowed_aspect_ratios']);
 
         // صفحه‌ی جزئیات محصول به صفحه‌ی ساخت پک می‌رود

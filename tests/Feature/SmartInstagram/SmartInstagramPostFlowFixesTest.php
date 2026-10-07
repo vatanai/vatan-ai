@@ -114,11 +114,13 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->campaign($channel);
         $this->ingest(['type' => 'comment', 'id' => 'c_1', 'sender' => ['id' => 'u_1', 'username' => 'shaygangp'], 'text' => 'کلاژ', 'media_id' => 'reel_1'])->assertOk();
 
-        // پیام اول: بدون نام، نباید با «،» شروع شود؛ دکمه به‌صورت پاسخ سریع (حالت همگام‌سازی).
+        // پیام اول: بدون نام، نباید با «،» شروع شود؛ دکمه‌ی واقعی زیر متن (قالب دکمه‌ای) حتی بدون وب‌هوک.
         $opening = OutboundMessage::query()->where('kind', 'private_reply')->firstOrFail();
         $this->assertSame('sent', $opening->status, (string) $opening->policy_reason);
         $this->assertSame('خوشحالم که به این پست علاقه‌مندی!', $opening->body);
-        $this->assertSame('مشاهده اطلاعات', data_get($opening->message_payload, 'message.quick_replies.0.title'));
+        $this->assertSame('button', data_get($opening->message_payload, 'message.attachment.payload.template_type'));
+        $this->assertSame('خوشحالم که به این پست علاقه‌مندی!', data_get($opening->message_payload, 'message.attachment.payload.text'));
+        $this->assertSame(['type' => 'postback', 'title' => 'مشاهده اطلاعات', 'payload' => 'SIF:open:'.PostFlowSession::query()->value('campaign_id')], data_get($opening->message_payload, 'message.attachment.payload.buttons.0'));
 
         // تحلیل هوش مصنوعی گفتگو را «نیازمند انسان» علامت زده است.
         Conversation::query()->update(['needs_human' => true]);
@@ -129,8 +131,8 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->assertSame('awaiting_follow', $session->stage);
         $follow = OutboundMessage::query()->where('kind', 'dm')->latest('id')->firstOrFail();
         $this->assertSame('sent', $follow->status, (string) $follow->policy_reason);
-        $this->assertSame('فالو کردم ✅', data_get($follow->message_payload, 'message.quick_replies.0.title'));
-        $this->assertStringContainsString('https://www.instagram.com/ai_vatan', (string) data_get($follow->message_payload, 'message.text'));
+        $this->assertSame('https://www.instagram.com/ai_vatan', data_get($follow->message_payload, 'message.attachment.payload.buttons.0.url'));
+        $this->assertSame('فالو کردم ✅', data_get($follow->message_payload, 'message.attachment.payload.buttons.1.title'));
 
         // فالو کرد ← کارت، باز هم بدون مسدود شدن
         $channel->forceFill(['settings' => ['sandbox_follow' => true]])->save();
@@ -277,6 +279,104 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->assertNull($outbound->fresh()->automation_run_id, 'سابقه‌ی ارسال حفظ می‌شود');
         $this->assertSame(1, (int) \App\Models\SmartInstagram\AutomationRule::query()->whereKey($userRun->rule_id)->value('runs_count'));
         $this->assertNotNull(Contact::query()->find($own->id));
+    }
+
+
+    public function test_keyword_only_comments_use_rotating_human_variants_without_ai(): void
+    {
+        config(['smart_instagram.ai.enabled' => true]);
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['choices' => [['message' => ['content' => '{"reply":"کاملاً موافقم! حتماً امتحانش کن!"}']]]], 200)]);
+        $channel = $this->channel();
+        $this->campaign($channel);
+        $campaign = \App\Models\SmartInstagram\PostCampaign::query()->firstOrFail();
+        $settings = (array) $campaign->settings;
+        $settings['reply']['ai_personalize'] = true;
+        $settings['reply']['styles'] = ['{name} جان، برات دایرکت کردیم 💌', 'فرستادیمش، دایرکتت رو ببین ✨', 'لینک توی دایرکتته 🎀'];
+        app(PostCampaignService::class)->save($campaign->post, [
+            'title' => $campaign->title, 'status' => 'active', 'follow_required' => '1', 'public_reply_enabled' => '1', 'dm_enabled' => '1',
+            'keywords' => [['keyword' => 'کلاژ', 'match_mode' => 'contains', 'is_active' => '1']], 'settings' => $settings,
+        ], $campaign);
+
+        foreach (['u_1' => 'کلاژ', 'u_2' => 'کلاژ لطفا', 'u_3' => 'سلام کلاژ رو میخوام'] as $id => $text) {
+            $this->ingest(['type' => 'comment', 'id' => 'c_'.$id, 'sender' => ['id' => $id, 'username' => 'user'.$id], 'text' => $text, 'media_id' => 'reel_1'])->assertOk();
+        }
+
+        $replies = OutboundMessage::query()->where('kind', 'public_reply')->orderBy('id')->pluck('body')->all();
+        $this->assertSame(['برات دایرکت کردیم 💌', 'فرستادیمش، دایرکتت رو ببین ✨', 'لینک توی دایرکتته 🎀'], $replies, 'چرخشی، بدون تکرار و بدون «دوست عزیز»');
+        $this->assertSame(0, \App\Models\SmartInstagram\AiRun::query()->where('purpose', 'comment_reply')->count(), 'برای کامنت کلمه‌ی کلیدی هوش مصنوعی صدا زده نمی‌شود');
+    }
+
+    public function test_ai_reply_is_humanized(): void
+    {
+        $writer = \App\Services\SmartInstagram\Posts\CommentReplyWriter::class;
+        $this->assertSame('کاملاً موافقم! امتحانش کن 😍', $writer::humanize('کاملاً موافقم! حتماً امتحانش کن!! 😍✨🎀'));
+        $this->assertTrue($writer::isKeywordRequest('لینک لطفاً 🙏', ['لینک']));
+        $this->assertFalse($writer::isKeywordRequest('قیمتش چنده؟', ['قیمت']));
+    }
+
+    public function test_card_uses_square_jpeg_built_from_post_cover(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public', ['url' => 'https://aivatan.test/storage']);
+        $img = imagecreatetruecolor(540, 960);
+        imagefill($img, 0, 0, imagecolorallocate($img, 200, 30, 30));
+        ob_start(); imagewebp($img); $webp = ob_get_clean();
+        \Illuminate\Support\Facades\Storage::disk('public')->put('smart-instagram/posts/1/cover.webp', $webp);
+
+        $channel = $this->channel();
+        $this->campaign($channel);
+        Post::query()->update(['cover_path' => 'smart-instagram/posts/1/cover.webp', 'cover_source_url' => 'https://scontent.cdninstagram.com/x.jpg']);
+        $campaign = \App\Models\SmartInstagram\PostCampaign::query()->with('post')->firstOrFail();
+
+        $card = app(\App\Services\SmartInstagram\Posts\PostFlowService::class)->cardMessage($campaign);
+        $url = data_get($card, 'message.attachment.payload.elements.0.image_url');
+        $this->assertStringEndsWith('.jpg', $url);
+        $this->assertStringContainsString('smart-instagram/cards/post-', $url);
+        $files = \Illuminate\Support\Facades\Storage::disk('public')->files('smart-instagram/cards');
+        $this->assertCount(1, $files);
+        [$w, $h, $type] = getimagesizefromstring(\Illuminate\Support\Facades\Storage::disk('public')->get($files[0]));
+        $this->assertSame([1080, 1080, IMAGETYPE_JPEG], [$w, $h, $type]);
+
+        // بار دوم دوباره ساخته نمی‌شود
+        app(\App\Services\SmartInstagram\Posts\PostFlowService::class)->cardMessage($campaign);
+        $this->assertCount(1, \Illuminate\Support\Facades\Storage::disk('public')->files('smart-instagram/cards'));
+    }
+
+    public function test_collage_text_migration_only_replaces_untouched_texts_and_adds_version(): void
+    {
+        $channel = $this->channel();
+        $this->campaign($channel);
+        $campaign = \App\Models\SmartInstagram\PostCampaign::query()->firstOrFail();
+        $settings = (array) $campaign->settings;
+        $settings['card']['intro_text'] = 'کلاژ سه‌تایی رو با ما بساز!';
+        $settings['card']['title'] = 'ساخت کلاژ سه‌تایی';
+        $settings['card']['subtitle'] = 'متن دلخواه مدیر';
+        $campaign->forceFill(['settings' => $settings])->save();
+        $version = (int) $campaign->version;
+
+        $migration = require database_path('migrations/2026_10_06_100000_improve_smart_instagram_collage_card_texts.php');
+        $migration->up();
+        $migration->up();
+
+        $fresh = $campaign->fresh();
+        $this->assertSame('{name} جان، اینم لینکی که خواستی 👇', data_get($fresh->settings, 'card.intro_text'));
+        $this->assertSame('کلاژ سه‌تایی با عکس خودت', data_get($fresh->settings, 'card.title'));
+        $this->assertSame('متن دلخواه مدیر', data_get($fresh->settings, 'card.subtitle'), 'متن ویرایش‌شده‌ی مدیر دست نمی‌خورد');
+        $this->assertSame($version + 1, (int) $fresh->version);
+        $this->assertTrue(\App\Models\SmartInstagram\PostCampaignVersion::query()->where('campaign_id', $campaign->id)->where('version', $version + 1)->exists());
+    }
+
+
+    public function test_button_template_falls_back_to_quick_replies_with_same_text(): void
+    {
+        $message = app(\App\Services\SmartInstagram\Posts\PostFlowService::class)->buttonMessage(null, 'برای دریافت روی دکمه بزن', [
+            ['title' => 'مشاهده پیج', 'url' => 'https://www.instagram.com/ai_vatan'],
+            ['title' => 'فالو کردم ✅', 'payload' => 'SIF:followed:1'],
+        ]);
+        $quick = \App\Services\SmartInstagram\Gateways\RichMessageFallback::quickReplies($message);
+
+        $this->assertSame("برای دریافت روی دکمه بزن\nhttps://www.instagram.com/ai_vatan", $quick['text']);
+        $this->assertSame([['content_type' => 'text', 'title' => 'فالو کردم ✅', 'payload' => 'SIF:followed:1']], $quick['quick_replies']);
+        $this->assertNull(\App\Services\SmartInstagram\Gateways\RichMessageFallback::quickReplies(['text' => 'x']));
     }
 
     public function test_name_placeholder_removal_leaves_no_orphan_punctuation(): void

@@ -11,7 +11,15 @@
   <section class="content-card p-5">
     <div class="ps-card-title"><i class="fa-solid fa-folder-tree"></i> دسته‌بندی و اصناف</div><div class="ps-card-desc">دسته‌بندی محل نمایش محصول است؛ صنف‌ها نوع کسب‌وکار مناسب این پک را مشخص می‌کنند و چندانتخابی‌اند.</div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-4">
-      <div class="ps-field"><label for="sp-categories">دسته‌بندی‌ها</label><select id="sp-categories" name="category_ids[]" class="input-pro" multiple size="12" style="height:310px;padding:8px;">@foreach($categories as $category)<option value="{{ $category->id }}" @selected(in_array($category->id,$selectedCategories,true))>{{ $category->parent_id ? '— ' : '' }}{{ $category->name_fa ?: $category->name }}</option>@endforeach</select><div class="ps-hint">برای انتشار حداقل یک دسته لازم است؛ اولین مورد، دسته‌ی اصلی می‌شود.</div></div>
+      <div class="ps-field">
+        <label for="sp-category-search">دسته‌بندی‌ها</label>
+        <div class="ps-category-picker" data-category-picker>
+          <div class="ps-category-tags" data-category-tags><input id="sp-category-search" type="search" placeholder="جستجو یا انتخاب دسته‌بندی..." autocomplete="off" data-category-search></div>
+          <div class="ps-category-results" data-category-results hidden></div>
+        </div>
+        <div data-category-inputs></div>
+        <div class="ps-hint">می‌توانید چند دسته انتخاب کنید؛ اولین انتخاب، دسته‌ی اصلی محصول می‌شود.</div>
+      </div>
       <div>
         <div class="flex items-center justify-between gap-2 mb-2"><label class="text-xs font-bold text-[var(--text-main)]">اصناف مناسب <span class="text-[var(--danger)]">*</span></label><a href="{{ route('admin.categories.index',['tab'=>'occupations']) }}" target="_blank" class="text-[10px] text-[var(--primary)] no-underline">مدیریت اصناف</a></div>
         <input type="search" class="input-pro mb-2" placeholder="جستجوی صنف..." data-occupation-search>

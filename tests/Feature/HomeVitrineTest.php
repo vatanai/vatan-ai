@@ -205,4 +205,33 @@ class HomeVitrineTest extends TestCase
             }
         }
     }
+
+    public function test_admin_manual_picker_finds_drafts_but_public_home_still_hides_them(): void
+    {
+        $this->clearHome();
+        $active = $this->product('searchable-active', null, ['name_fa' => 'محصول جستجوی تست', 'status' => 'active']);
+        $draft = $this->product('searchable-draft', null, ['name_fa' => 'محصول جستجوی تست پیش‌نویس', 'status' => 'draft']);
+        $inactive = $this->product('searchable-inactive', null, ['name_fa' => 'محصول جستجوی تست غیرفعال', 'status' => 'inactive']);
+        $admin = Admin::query()->create(['name' => 'مدیر جستجو', 'email' => 'search@test.local', 'password' => 'password', 'role' => 'leader', 'is_active' => true]);
+
+        $products = $this->actingAs($admin, 'admin')
+            ->getJson(route('admin.home-builder.products.search', ['q' => 'جستجوی تست']))
+            ->assertOk()
+            ->json('products');
+
+        $this->assertEqualsCanonicalizing([$active->id, $draft->id], collect($products)->pluck('id')->all());
+        $this->assertSame('draft', collect($products)->firstWhere('id', $draft->id)['status']);
+        $this->assertNotContains($inactive->id, collect($products)->pluck('id')->all());
+
+        $section = $this->section('vt_row', [
+            'source' => 'manual',
+            'product_ids' => [
+                ['id' => $active->id, 'name' => $active->name_fa],
+                ['id' => $draft->id, 'name' => $draft->name_fa],
+            ],
+            'limit' => 8,
+        ]);
+        $prepared = app(\App\Services\HomeBuilder\HomeSectionRenderService::class)->prepare($section);
+        $this->assertSame([$active->id], $prepared['products']->pluck('id')->all());
+    }
 }

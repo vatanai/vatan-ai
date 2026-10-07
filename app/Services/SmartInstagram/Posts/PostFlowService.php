@@ -197,12 +197,15 @@ class PostFlowService
         $product = !empty($card['product_id']) ? Product::query()->whereKey((int) $card['product_id'])->first() : null;
         $productUrl = $product ? route('app.product', $product->route_slug) : null;
 
-        $image = match ($card['image_source'] ?? 'post') {
-            'product' => $product?->displayImageUrl(),
-            'url' => trim((string) ($card['image_url'] ?? '')),
-            'none' => null,
-            default => $post?->coverUrl(),
+        $images = app(CardImageService::class);
+        $candidates = match ($card['image_source'] ?? 'post') {
+            'product' => array_merge($images->forProduct($product), $images->forPost($post)),
+            'url' => [trim((string) ($card['image_url'] ?? ''))],
+            'none' => [],
+            default => array_merge($images->forPost($post), $images->forProduct($product)),
         };
+        // اولین آدرس عمومی معتبر (اینستاگرام فقط آدرس کامل https را می‌خواند).
+        $image = collect($candidates)->first(fn ($url) => is_string($url) && filter_var($url, FILTER_VALIDATE_URL) && str_starts_with($url, 'https://'));
         $title = $this->render(trim((string) ($card['title'] ?? '')) ?: ($product?->name_fa ?: ($post?->shortCaption(60) ?? 'لینک درخواستی شما')), $contact);
         $subtitle = $this->render(trim((string) ($card['subtitle'] ?? '')), $contact);
 
@@ -316,33 +319,27 @@ class PostFlowService
     }
 
     /**
-     * متن + دکمه. با وب‌هوک فعال: قالب دکمه‌ای واقعی (دکمه داخل همان حباب پیام، کلیک = postback).
-     * بدون وب‌هوک: پاسخ سریع؛ چون کلیک postback در فهرست پیام‌های همگام‌سازی برنمی‌گردد اما کلیک
-     * پاسخ سریع به‌صورت پیام متنی مشتری ثبت می‌شود. دکمه‌های لینک در این حالت زیر متن نوشته می‌شوند.
+     * متن + دکمه‌ی واقعی (قالب دکمه‌ای اینستاگرام؛ دکمه داخل همان حباب پیام).
+     * کلیک دکمه‌ی postback هم با وب‌هوک Meta (postback.payload) و هم در همگام‌سازی دوره‌ای به‌صورت پیام متنی
+     * مشتری با متن همان دکمه برمی‌گردد (آزمایش‌شده روی اینستاگرام واقعی، ۱۴ مهر) و پنجره‌ی ۲۴ ساعته را هم باز می‌کند.
+     * اگر اینستاگرام قالب را نپذیرد، درگاه به نسخه‌ی پاسخ سریع و سپس متن ساده برمی‌گردد (RichMessageFallback).
      *
      * @param array<int,array{title:string,payload?:string,url?:string}> $buttons
      */
     public function buttonMessage(?Channel $channel, string $text, array $buttons): array
     {
         $buttons = array_slice(array_values(array_filter($buttons, fn ($b) => trim((string) ($b['title'] ?? '')) !== '' && (filled($b['payload'] ?? null) || filled($b['url'] ?? null)))), 0, 3);
-
-        if ($channel?->hasLiveWebhook()) {
-            return ['attachment' => ['type' => 'template', 'payload' => [
-                'template_type' => 'button',
-                'text' => mb_substr($text, 0, 640),
-                'buttons' => array_map(fn ($b) => filled($b['url'] ?? null)
-                    ? ['type' => 'web_url', 'url' => (string) $b['url'], 'title' => mb_substr((string) $b['title'], 0, 20)]
-                    : ['type' => 'postback', 'title' => mb_substr((string) $b['title'], 0, 20), 'payload' => (string) $b['payload']], $buttons),
-            ]]];
+        if ($buttons === []) {
+            return ['text' => mb_substr($text, 0, 1000)];
         }
 
-        $links = collect($buttons)->filter(fn ($b) => filled($b['url'] ?? null))->pluck('url')->implode("\n");
-        $replies = collect($buttons)->filter(fn ($b) => !filled($b['url'] ?? null))
-            ->map(fn ($b) => ['content_type' => 'text', 'title' => mb_substr((string) $b['title'], 0, 20), 'payload' => (string) $b['payload']])
-            ->values()->all();
-        $body = trim($text.($links !== '' ? "\n".$links : ''));
-
-        return $replies !== [] ? ['text' => $body, 'quick_replies' => $replies] : ['text' => $body];
+        return ['attachment' => ['type' => 'template', 'payload' => [
+            'template_type' => 'button',
+            'text' => mb_substr($text, 0, 640),
+            'buttons' => array_map(fn ($b) => filled($b['url'] ?? null)
+                ? ['type' => 'web_url', 'url' => (string) $b['url'], 'title' => mb_substr((string) $b['title'], 0, 20)]
+                : ['type' => 'postback', 'title' => mb_substr((string) $b['title'], 0, 20), 'payload' => (string) $b['payload']], $buttons),
+        ]]];
     }
 
     private function followStatus(Conversation $conversation): ?bool

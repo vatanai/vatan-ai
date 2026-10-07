@@ -31,8 +31,16 @@ class ShotVisionService
         'different_product' => 'تصاویر متعلق به یک محصول واحد نیستند',
     ];
 
-    /** مشکلاتی که بدون عکس جدید قابل استفاده نیست. */
-    public const BLOCKING = ['no_product', 'blur', 'different_product'];
+    /** مشکلاتی که به‌صورت پیش‌فرض اجازه‌ی شروع ساخت را نمی‌دهند. */
+    public const BLOCKING = [
+        'no_product',
+        'blur',
+        'different_product',
+        'busy_bg',
+        'multiple_products',
+        'has_person',
+        'label_unreadable',
+    ];
 
     public function __construct(private ShotImageStore $images) {}
 
@@ -118,7 +126,7 @@ class ShotVisionService
     public function preflightSet(array $paths, ?ProductShotSetting $settings = null, array $configuration = []): array
     {
         $settings ??= ProductShotSetting::current();
-        $paths = array_values(array_slice(array_filter($paths), 0, 4));
+        $paths = array_values(array_slice(array_filter($paths), 0, 3));
         if ($paths === []) {
             return ['verdict' => 'red', 'usable' => false, 'issues' => ['no_product'], 'issue_labels' => [self::ISSUES['no_product']], 'suggestion_fa' => 'حداقل یک عکس واضح از محصول بارگذاری کنید.', 'coverage' => [], 'product_description' => null, 'checked_by' => 'local', 'model' => null];
         }
@@ -218,7 +226,7 @@ class ShotVisionService
 
     public function setInstruction(string $customPrompt = ''): string
     {
-        $base = 'You inspect 1 to 4 reference photos intended to form a single high-quality product sheet for AI product photography. '
+        $base = 'You inspect 1 to 3 reference photos of the same physical product, intended to form a single high-quality product sheet for AI product photography. '
             . 'Verify that every image shows the exact same physical product and variant. Check useful angle coverage, duplicated angles, sharpness, glare, label readability, cropping and perspective. '
             . 'Return ONLY JSON: {"same_product":true,"issues":[],"angle_coverage":["front","side","back","detail"],"product_description":"","suggestion_fa":""}. '
             . 'issues may contain only: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product, glare, label_unreadable, perspective_distortion, tiny_product, duplicate_angle, different_product. '

@@ -25,7 +25,7 @@
   <div class="pp-layout">
     {{-- ── گام ۱: عکس محصول ── --}}
     <section class="pp-step" aria-labelledby="pp-step1-title">
-      <header class="pp-step-head"><span class="pp-step-num">۱</span><div><h2 id="pp-step1-title">عکس‌های محصولت</h2><p>یک عکس واضح از روبه‌رو الزامی است؛ تا سه زاویه‌ی مکمل هم می‌توانی اضافه کنی.</p></div></header>
+      <header class="pp-step-head"><span class="pp-step-num">۱</span><div><h2 id="pp-step1-title">عکس‌های محصولت</h2><p>یک عکس واضح از روبه‌رو الزامی است؛ دو زاویه‌ی مکمل هم می‌توانی اضافه کنی.</p></div></header>
 
       <div class="pp-uploads">
         <label class="pp-drop pp-drop-main" data-slot="0">
@@ -62,9 +62,9 @@
 
     {{-- ── گام ۲: بسته‌ی شات ── --}}
     <section class="pp-step" aria-labelledby="pp-step2-title">
-      <header class="pp-step-head"><span class="pp-step-num">۲</span><div><h2 id="pp-step2-title">بسته‌ی شات</h2><p>بسته‌ی آماده از قبل انتخاب شده؛ اگر بخواهی شات‌ها را کم و زیاد کن.</p></div></header>
-      <div class="pp-shots" data-shots role="group" aria-label="شات‌ها"></div>
-      <button type="button" class="pp-more" data-more aria-expanded="false" hidden><i class="fa-solid fa-sliders" aria-hidden="true"></i> شات‌ها را شخصی‌سازی کن</button>
+      <header class="pp-step-head"><span class="pp-step-num">۲</span><div><h2 id="pp-step2-title">اسلایدهای خروجی</h2><p>اسلایدهای پیشنهادی از قبل انتخاب شده‌اند؛ هرکدام را که می‌خواهی نگه دار.</p></div></header>
+      <div class="pp-shots" data-shots role="group" aria-label="اسلایدها"></div>
+      <button type="button" class="pp-more" data-more aria-expanded="false" hidden><i class="fa-solid fa-sliders" aria-hidden="true"></i> اسلایدها را شخصی‌سازی کن</button>
     </section>
 
     {{-- ── گام ۳: کیفیت ── --}}

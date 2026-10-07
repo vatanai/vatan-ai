@@ -505,19 +505,40 @@ class AutomationEngine
         ];
     }
 
-    /** متن پاسخ کامنت: چند سبک چرخشی + پاسخ شخصی‌سازی‌شده با هوش مصنوعی (در صورت فعال‌بودن). */
+    /**
+     * متن پاسخ کامنت.
+     * - کامنتی که فقط کلمه‌ی کلیدی/درخواست کوتاه است (اکثر کامنت‌ها): یکی از سبک‌های کوتاهِ نوشته‌ی مدیر،
+     *   به‌صورت چرخشی تا دو کامنت پشت‌سرهم پاسخ یکسان نگیرند (طبیعی‌تر و کم‌ریسک‌تر از نظر اسپم اینستاگرام).
+     * - کامنت دارای متن یا سؤال: پاسخ شخصی‌سازی‌شده با هوش مصنوعی (در صورت روشن بودن)، و در نبودش همان سبک‌ها.
+     */
     private function replyText(string $type, array $action, Message $message, Contact $contact, ?AutomationRule $rule = null): string
     {
-        $variants = array_values(array_filter((array) ($action['variants'] ?? [])));
-        if ($type === 'public_reply' && !empty($action['ai_personalize'])) {
-            $written = app(\App\Services\SmartInstagram\Posts\CommentReplyWriter::class)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')], $rule);
+        $variants = array_values(array_filter(array_map('strval', (array) ($action['variants'] ?? [])), fn ($v) => trim($v) !== ''));
+        $writer = \App\Services\SmartInstagram\Posts\CommentReplyWriter::class;
+        $keywordOnly = $writer::isKeywordRequest((string) $message->body, (array) ($rule?->keywords ?? []));
+        if ($type === 'public_reply' && !empty($action['ai_personalize']) && (!$keywordOnly || $variants === [])) {
+            $written = app($writer)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')], $rule);
             if ($written) {
                 return $written;
             }
         }
-        $text = $variants ? $variants[array_rand($variants)] : (string) ($action['text'] ?? '');
+        $text = $variants !== [] ? $this->rotatingVariant($variants, $type, $rule) : (string) ($action['text'] ?? '');
 
-        return $this->render($text, $contact);
+        return app(\App\Services\SmartInstagram\ContactNameResolver::class)->render($text, $contact);
+    }
+
+    /** انتخاب چرخشی سبک بر اساس تعداد پاسخ‌های قبلی همین قانون (بدون تکرار پشت‌سرهم). */
+    private function rotatingVariant(array $variants, string $kind, ?AutomationRule $rule): string
+    {
+        if (count($variants) === 1 || !$rule) {
+            return $variants[0];
+        }
+        $sent = \App\Models\SmartInstagram\OutboundMessage::query()
+            ->where('kind', $kind)
+            ->whereIn('automation_run_id', AutomationRun::query()->where('rule_id', $rule->id)->select('id'))
+            ->count();
+
+        return $variants[$sent % count($variants)];
     }
 
     private function finish(AutomationRule $rule, AutomationRun $run, string $status, array $decisions): bool

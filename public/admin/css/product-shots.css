@@ -105,6 +105,16 @@
 .ps-occupation-group label{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid var(--border);border-radius:99px;background:var(--card-bg);color:var(--text-main);font-size:10.5px;cursor:pointer}
 .ps-occupation-group label:has(input:checked){border-color:var(--primary);background:var(--primary-l);color:var(--primary);font-weight:800}
 .ps-occupation-group input{accent-color:var(--primary)}
+.ps-category-picker{position:relative}
+.ps-category-tags{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:42px;padding:6px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);transition:border-color .16s}
+.ps-category-tags:focus-within{border-color:var(--primary)}
+.ps-category-tags>input{flex:1;min-width:150px;border:0;outline:0;background:transparent;color:var(--text-main);font-family:inherit;font-size:11px;text-align:right}
+.ps-category-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--primary-m);border-radius:8px;background:var(--primary-l);color:var(--primary);font-size:10.5px;font-weight:800}
+.ps-category-chip button{display:grid;place-items:center;border:0;background:transparent;color:inherit;cursor:pointer;font-size:10px}
+.ps-category-results{position:absolute;z-index:35;top:calc(100% + 5px);right:0;left:0;max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);box-shadow:var(--shadow-card)}
+.ps-category-result{display:block;width:100%;padding:9px 11px;border:0;border-bottom:1px solid var(--divider);background:transparent;color:var(--text-main);font-family:inherit;font-size:11px;text-align:right;cursor:pointer}
+.ps-category-result:hover,.ps-category-result:focus-visible{background:var(--primary-l);color:var(--primary);outline:0}
+.ps-category-empty{padding:12px;color:var(--text-soft);font-size:10.5px;text-align:center}
 .ps-quality-card{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--input-bg)}
 .ps-quality-card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;color:var(--text-h);font-size:12px;font-weight:900}
 .ps-quality-card-title small{color:var(--text-soft);font-size:9px;font-weight:500}
@@ -116,6 +126,14 @@
 .ps-shot-editor.is-off{opacity:.58}
 .ps-shot-summary{display:grid;grid-template-columns:88px minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px}
 .ps-shot-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.ps-slide-sample{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+.ps-slide-sample>input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ps-slide-sample>small{color:var(--primary);font-size:9.5px;font-weight:800}
+.ps-slide-sample:focus-within .ps-thumb,.ps-slide-sample:hover .ps-thumb{border-color:var(--primary)}
+.ps-slide-order{display:block;margin-bottom:3px;color:var(--primary);font-size:9.5px;font-weight:800}
+.ps-slide-prompt{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px;padding:0 14px 14px}
+.ps-slide-prompt .ps-field{min-width:0}
+.ps-slide-prompt textarea{min-height:68px!important}
 .ps-shot-detail{padding:14px;border-top:1px solid var(--divider);background:var(--input-bg)}
 .ps-option-switches{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;color:var(--text-soft);font-size:10px}
 .ps-option-switches>span{font-weight:800;color:var(--text-main)}
@@ -131,10 +149,12 @@
 .ps-frame-option input{accent-color:var(--primary)}
 .ps-summary-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg)}
 .ps-summary-row span{color:var(--text-soft);font-size:10.5px}.ps-summary-row strong{max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-h);font-size:11px}
+.ps-product-code{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--border);border-radius:11px;background:var(--input-bg)}
+.ps-product-code strong{color:var(--primary);font-family:monospace;font-size:18px;font-weight:900;letter-spacing:.12em}.ps-product-code span{color:var(--text-soft);font-size:10.5px}
 .ps-explore-preview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:end}
-.ps-explore-preview figure{margin:0;transition:opacity .16s}.ps-explore-preview figure.is-disabled{opacity:.28}
+.ps-explore-preview>[data-preview-frame]{margin:0;transition:opacity .16s}.ps-explore-preview>[data-preview-frame].is-disabled{opacity:.38}
 .ps-explore-preview figcaption{margin-top:6px;text-align:center;color:var(--text-soft);font-size:10px}
 .ps-preview-collage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}
 .ps-preview-collage img{width:100%;height:100%;min-height:0;object-fit:cover}.ps-preview-collage>span{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:15px;text-align:center;color:var(--text-soft)}.ps-preview-collage>span i{font-size:24px}.ps-preview-collage>span small{font-size:9px;line-height:1.8}
-@media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1}.ps-shot-summary .ps-thumb{width:70px}}
+@media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1}.ps-shot-summary .ps-thumb{width:70px}.ps-slide-prompt{grid-template-columns:1fr}.ps-slide-prompt .btn-pro{justify-self:start}}
 @media(max-width:560px){.ps-check-grid{grid-template-columns:1fr}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-occupation-picker{height:210px}}

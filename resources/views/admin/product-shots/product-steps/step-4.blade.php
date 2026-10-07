@@ -1,11 +1,7 @@
-@php
-  $exploreTiles = (array)old('explore_tiles',$product?->explore_tiles ?? ['1x1']);
-  $frameDefs = ['1x1'=>['مربع','1/1'],'2x2'=>['مربع بزرگ','1/1'],'1x2'=>['عمودی','1/2'],'2x1'=>['افقی','2/1']];
-@endphp
 <div class="space-y-4">
   <section class="content-card p-5">
-    <div class="ps-card-title"><i class="fa-solid fa-bolt"></i> مصرف اعتبار سه‌سطحی</div><div class="ps-card-desc">اعتبار نهایی هر خروجی در خود شات تعیین شده است. جمع کاربر برابر مجموع شات‌های انتخابی در سطح کیفیت انتخاب‌شده خواهد بود.</div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">@foreach($qualityLevels as $qualityKey=>$qualityLabel)<div class="ps-quality-total" data-quality-total="{{ $qualityKey }}"><small>{{ $qualityLabel }}</small><strong>۰ اعتبار</strong><span>مجموع شات‌های بسته آماده</span></div>@endforeach</div>
+    <div class="ps-card-title"><i class="fa-solid fa-bolt"></i> مصرف اعتبار سه‌سطحی</div><div class="ps-card-desc">اعتبار نهایی هر خروجی در خود اسلاید تعیین شده است. جمع کاربر برابر مجموع اسلایدهای انتخابی در سطح کیفیت انتخاب‌شده خواهد بود.</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">@foreach($qualityLevels as $qualityKey=>$qualityLabel)<div class="ps-quality-total" data-quality-total="{{ $qualityKey }}"><small>{{ $qualityLabel }}</small><strong>۰ اعتبار</strong><span>مجموع اسلایدهای منتخب اولیه</span></div>@endforeach</div>
   </section>
 
   <section class="content-card p-5">
@@ -23,11 +19,6 @@
         <div class="ps-field"><label>متن نشان</label><input name="card_label" class="input-pro" value="{{ old('card_label',$product?->card_label ?? 'پک') }}"></div>
       </div>
     </div>
-  </section>
-
-  <section class="content-card p-5">
-    <div class="ps-card-title"><i class="fa-solid fa-table-cells"></i> قاب‌های مجاز در اکسپلور</div><div class="ps-card-desc">کولاژ چهار شات باید در هر قاب فعال، بدون برش نامناسب محصول و با تمرکز بصری درست نمایش داده شود.</div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">@foreach($frameDefs as $key=>[$label,$ratio])<label class="ps-frame-option"><span class="ps-frame-demo" style="aspect-ratio:{{ $ratio }}"><i class="fa-solid fa-images"></i></span><span>{{ $label }}</span><input type="checkbox" name="explore_tiles[]" value="{{ $key }}" @checked(in_array($key,$exploreTiles,true))></label>@endforeach</div>
   </section>
 
   <section class="content-card p-5"><div class="ps-card-title"><i class="fa-solid fa-rocket"></i> وضعیت انتشار</div><div class="ps-card-desc">دکمه «ذخیره پیش‌نویس» محصول را مخفی نگه می‌دارد؛ «ثبت نهایی محصول» آن را منتشر می‌کند.</div><div class="mt-4 flex items-center gap-2 text-xs text-[var(--text-main)]"><span class="w-2 h-2 rounded-full bg-[var(--warning)]"></span><span data-publish-status>{{ old('status',$product?->status ?? 'draft') === 'active' ? 'محصول منتشر می‌شود' : 'محصول به‌صورت پیش‌نویس ذخیره می‌شود' }}</span></div></section>

@@ -126,16 +126,20 @@
     h += '<div class="ig-scroll"><div class="ig-chat">';
     var msgIn = function (t) { return t && String(t).trim() ? '<div class="ig-msg is-in">' + esc(personalize(t)) + '</div>' : ''; };
     var msgOut = function (t) { return '<div class="ig-msg is-out">' + esc(t) + '</div>'; };
-    var quick = function (t) { return '<div class="ig-quick"><span>' + esc(t) + '</span></div>'; };
+    // قالب دکمه‌ای اینستاگرام: متن و دکمه‌ها داخل یک حباب؛ کلیک دکمه به‌صورت پیام کاربر نمایش داده می‌شود.
+    var btnMsg = function (t, btns) {
+      return '<div class="ig-card ig-btnmsg"><div class="ig-card-body"><span>' + esc(personalize(t)) + '</span></div>' +
+        btns.map(function (b) { return '<div class="ig-card-btn">' + esc(b) + '</div>'; }).join('') + '</div>';
+    };
     if (!st.dmOn) {
       h += '<div class="ig-note">دایرکت برای این پست خاموش است</div>';
     } else {
       h += '<div class="ig-note">در پاسخ به کامنت شما: «' + esc(st.keyword || '…') + '»</div>';
       var direct = st.mode === 'direct_card' && !st.followOn;
       if (!direct) {
-        h += msgIn(st.openingText || 'پیام آغاز') + quick(st.openingButton || 'ارسال لینک') + msgOut(st.openingButton || 'ارسال لینک');
+        h += btnMsg(st.openingText || 'پیام آغاز', [st.openingButton || 'ارسال لینک']) + msgOut(st.openingButton || 'ارسال لینک');
         if (st.followOn && this.notFollow) {
-          h += msgIn(st.followText || 'لطفاً پیج را فالو کنید') + '<div class="ig-note">' + esc('instagram.com/' + user) + '</div>' + quick(st.followButton || 'فالو کردم') + msgOut(st.followButton || 'فالو کردم');
+          h += btnMsg(st.followText || 'لطفاً پیج را فالو کنید', ['مشاهده پیج', st.followButton || 'فالو کردم']) + msgOut(st.followButton || 'فالو کردم');
           h += '<div class="ig-note">فالو تأیید شد ✓</div>';
         } else if (st.followOn) {
           h += '<div class="ig-note">فالو بررسی شد ✓</div>';

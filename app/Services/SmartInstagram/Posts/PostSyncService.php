@@ -175,7 +175,12 @@ class PostSyncService
             }
             $extension = ['image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? 'jpg';
             $path = sprintf('smart-instagram/posts/%d/%s.%s', $post->workspace_id, preg_replace('/\W/', '', $post->media_id), $extension);
-            Storage::disk('public')->put($path, $response->body());
+            // نشانی CDN اینستاگرام در هر همگام‌سازی امضای تازه می‌گیرد؛ فایل فقط وقتی محتوا واقعاً عوض شده
+            // بازنویسی می‌شود تا تصویر کارت‌ها وسط ارسال جابه‌جا/ناقص نشود.
+            $disk = Storage::disk('public');
+            if (!$disk->exists($path) || md5((string) $disk->get($path)) !== md5($response->body())) {
+                $disk->put($path, $response->body());
+            }
             $post->forceFill(['cover_path' => $path])->save();
         } catch (\Throwable) {
             // کاور اختیاری است؛ نبودش جلوی همگام‌سازی را نمی‌گیرد.

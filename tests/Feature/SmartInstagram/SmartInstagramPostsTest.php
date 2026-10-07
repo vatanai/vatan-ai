@@ -210,7 +210,7 @@ class SmartInstagramPostsTest extends TestCase
         $channel->forceFill(['settings' => ['sandbox_follow' => true]])->save();
         $this->ingest(['type' => 'dm', 'id' => 'm_2', 'sender' => ['id' => 'u_1'], 'text' => 'فالو کردم'])->assertOk();
         $this->assertSame('completed', $session->fresh()->stage);
-        $card = OutboundMessage::query()->get()->first(fn ($o) => data_get($o->message_payload, 'message.attachment'));
+        $card = OutboundMessage::query()->get()->first(fn ($o) => data_get($o->message_payload, 'message.attachment.payload.template_type') === 'generic');
         $this->assertNotNull($card, 'کارت ارسال شد');
         $buttons = data_get($card->message_payload, 'message.attachment.payload.elements.0.buttons');
         $this->assertCount(3, (array) $buttons);

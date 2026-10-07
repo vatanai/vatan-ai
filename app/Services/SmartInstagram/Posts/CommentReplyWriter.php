@@ -55,12 +55,14 @@ class CommentReplyWriter
             ."- اگر کامنت سؤال یا احساس دارد، اول همان را کوتاه جواب بده یا به رسمیت بشناس، بعد در صورت فعال بودن دایرکت به آن اشاره کن.\n"
             ."- اگر نمونه‌های سبک با این قاعده‌ها تناقض دارند، فقط لحن آن‌ها را بگیر و محتوا را طبق این قاعده‌ها بنویس.\n"
             ."- موضوع پاسخ باید همان موضوع پست باشد و از اول‌شخص جمع برند استفاده شود؛ پاسخ را خطاب به خود برند یا درباره‌ی محصول دیگری ننویس.\n"
+            ."- مثل ادمین واقعی پیج بنویس، نه مثل هوش مصنوعی: یک جمله‌ی کوتاه محاوره‌ای (حداکثر ۱۵ کلمه)، حداکثر یک علامت تعجب و یک ایموجی؛ "
+            ."بدون «حتماً»، «قطعاً»، «فوق‌العاده»، «اثر هنری»، بدون تکرار نام محصول در هر جمله و بدون دو جمله‌ی پشت‌سرهم با علامت تعجب.\n"
             ."\nقرارداد خروجی: فقط JSON معتبر با یک کلید به نام reply برگردان؛ اگر پاسخ طبیعی ممکن نیست، reply را خالی برگردان.";
         $user = collect([
             'نام کاربری' => $contact?->username ?: 'نامشخص',
             'نام نمایشی' => $contact?->display_name ?: 'نامشخص',
             'متن کامنت' => Str::limit((string) $comment->body, 500),
-            'نوع کامنت' => $this->isKeywordRequest((string) $comment->body, (array) ($rule?->keywords ?? []))
+            'نوع کامنت' => self::isKeywordRequest((string) $comment->body, (array) ($rule?->keywords ?? []))
                 ? 'فقط کلمه‌ی کلیدی/درخواست کوتاه (نظر یا سؤالی ندارد)'
                 : 'کامنت دارای متن یا سؤال',
             'کپشن و موضوع پست' => Str::limit((string) ($post?->caption ?? ''), 1200) ?: 'در دسترس نیست',
@@ -77,16 +79,23 @@ class CommentReplyWriter
 
             return null;
         }
-        $reply = Str::limit($this->names->render(trim((string) data_get($response, 'content.reply', '')), $contact), 300, '');
+        $reply = self::humanize($this->names->render(trim((string) data_get($response, 'content.reply', '')), $contact));
         $this->log($comment, $reply !== '' ? 'success' : 'failed', $response, $reply === '' ? 'پاسخ خالی' : null, $started, $reply);
 
         return $reply !== '' && !str_contains($reply, '{') ? $reply : null;
     }
 
-    /** کامنتی که جز کلمه‌ی کلیدی (و ایموجی/علامت) چیزی ندارد یا بسیار کوتاه است. */
-    private function isKeywordRequest(string $body, array $keywords): bool
+    /**
+     * کامنتی که جز کلمه‌ی کلیدی (و ایموجی، علامت یا تعارف‌های کوتاهی مثل «لطفاً»، «سلام») چیزی ندارد.
+     * برای این کامنت‌ها پاسخ از سبک‌های کوتاهِ نوشته‌ی مدیر انتخاب می‌شود، نه هوش مصنوعی.
+     */
+    public static function isKeywordRequest(string $body, array $keywords): bool
     {
-        $text = \App\Services\SmartInstagram\PersianText::normalize($body);
+        $text = ' '.\App\Services\SmartInstagram\PersianText::normalize($body).' ';
+        foreach (['سلام', 'لطفا', 'لطفاً', 'مرسی', 'ممنون', 'ممنونم', 'پلیز', 'please', 'pls', 'میخوام', 'می خوام', 'میخواستم', 'بفرست', 'بفرستید', 'بفرستین', 'رو', 'را', 'هم', 'منم', 'من', 'برام', 'برای من', 'میشه', 'می شه'] as $filler) {
+            $text = str_replace(' '.$filler.' ', ' ', $text);
+        }
+        $text = trim($text);
         foreach ($keywords as $keyword) {
             $keyword = \App\Services\SmartInstagram\PersianText::normalize((string) $keyword);
             if ($keyword !== '' && $keyword !== '*') {
@@ -95,6 +104,44 @@ class CommentReplyWriter
         }
 
         return mb_strlen(preg_replace('/\s+/u', '', $text) ?? $text) <= 3;
+    }
+
+    /**
+     * پاک‌سازی ظاهر «ماشینی» خروجی: حداکثر یک علامت تعجب، حداکثر یک ایموجی، حذف قیدهای اغراق‌آمیز
+     * و کوتاه‌سازی در مرز جمله (حداکثر ۱۴۰ نویسه).
+     */
+    public static function humanize(string $text): string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        $text = preg_replace('/\s*(حتماً|حتما|قطعاً|قطعا)\s+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/!{2,}/u', '!', $text) ?? $text;
+        // فقط اولین علامت تعجب می‌ماند؛ بقیه به نقطه تبدیل می‌شوند (آخر متن حذف).
+        $seen = false;
+        $text = preg_replace_callback('/!/u', function () use (&$seen) {
+            if (!$seen) {
+                $seen = true;
+
+                return '!';
+            }
+
+            return '.';
+        }, $text) ?? $text;
+        // فقط اولین ایموجی نگه داشته می‌شود.
+        $emoji = '/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B50}\x{2764}](?:\x{FE0F})?(?:\x{200D}[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2764}](?:\x{FE0F})?)*/u';
+        $count = 0;
+        $text = preg_replace_callback($emoji, function ($m) use (&$count) {
+            return ++$count === 1 ? $m[0] : '';
+        }, $text) ?? $text;
+        $text = trim(preg_replace('/\s{2,}/u', ' ', $text) ?? $text);
+        $text = preg_replace('/\.(\s*[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2764}\x{FE0F}]*)$/u', '$1', $text) ?? $text;
+        if (mb_strlen($text) > 140) {
+            $cut = mb_substr($text, 0, 140);
+            $pos = max((int) mb_strrpos($cut, '.'), (int) mb_strrpos($cut, '!'), (int) mb_strrpos($cut, '؟'), (int) mb_strrpos($cut, '،'));
+            $text = trim($pos > 40 ? mb_substr($cut, 0, $pos + 1) : $cut);
+            $text = rtrim($text, '،, ');
+        }
+
+        return trim($text);
     }
 
     private function campaignFor(?AutomationRule $rule): ?PostCampaign

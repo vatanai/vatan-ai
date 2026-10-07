@@ -8,6 +8,16 @@
 
 @php
   $selectedCategories = collect(old('category_ids', $product?->categories->pluck('id')->all() ?? []))->map(fn($id)=>(int)$id)->all();
+  $categoryMap = $categories->keyBy('id');
+  $categoryOptions = $categories->map(function ($category) use ($categoryMap) {
+    $depth = 0;
+    $parentId = $category->parent_id;
+    while ($parentId && $depth < 10 && $categoryMap->has($parentId)) {
+      $depth++;
+      $parentId = $categoryMap->get($parentId)?->parent_id;
+    }
+    return ['id'=>(int)$category->id,'name'=>$category->name_fa ?: $category->name,'depth'=>$depth];
+  })->values()->all();
   $selectedOccupations = collect(old('occupation_ids', $product?->occupations->pluck('id')->all() ?? ($settings['occupation_ids'] ?? [])))->map(fn($id)=>(int)$id)->all();
   $savedQualityModels = (array)($settings['quality_models'] ?? []);
   $savedPreflight = (array)($settings['preflight'] ?? []);
@@ -71,6 +81,6 @@
 @endsection
 
 @section('scripts')
-<script>window.PRODUCT_SHOT_FORM_CONFIG={previewUrl:@json(route('admin.product-shots.preview')),qualityLevels:@json($qualityLevels),productId:@json($product?->id)};</script>
+<script>window.PRODUCT_SHOT_FORM_CONFIG={previewUrl:@json(route('admin.product-shots.preview')),qualityLevels:@json($qualityLevels),productId:@json($product?->id),productCode:@json($product?->product_code),categories:@json($categoryOptions),selectedCategoryIds:@json($selectedCategories)};</script>
 <script src="{{ asset('admin/js/product-shots-form.js') }}?v={{ filemtime(public_path('admin/js/product-shots-form.js')) }}"></script>
 @endsection

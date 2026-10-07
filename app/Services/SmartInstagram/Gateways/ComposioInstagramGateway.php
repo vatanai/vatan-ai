@@ -155,8 +155,26 @@ class ComposioInstagramGateway implements InstagramChannelGateway, RichInstagram
             [],
             $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
         );
-        if ($result['ok'] || !$fallbackText) {
+        if ($result['ok']) {
             return $this->toGatewayResult($result, 'پیام ساختاریافته از مسیر `Composio` ارسال شد.');
+        }
+
+        // قالب دکمه‌ای پذیرفته نشد ← همان پیام با پاسخ سریع (کلیکش باز هم به‌صورت پیام متنی برمی‌گردد).
+        $quick = RichMessageFallback::quickReplies($message);
+        if ($quick !== null && !in_array((int) ($result['status'] ?? 0), [401, 403], true)) {
+            $retry = $this->client->proxy(
+                '/'.$this->graphVersion().'/'.rawurlencode((string) $this->setting($channel, 'composio_instagram_user_id', config('services.composio.instagram_user_id', 'me'))).'/messages',
+                'POST',
+                ['recipient' => $recipient, 'message' => $quick],
+                [],
+                $this->setting($channel, 'composio_connected_account_id', config('services.composio.connected_account_id')),
+            );
+            if ($retry['ok']) {
+                return GatewayResult::success('قالب دکمه‌ای پذیرفته نشد؛ همان پیام با پاسخ سریع ارسال شد.', $retry['external_id'], ['fallback' => 'quick_replies']);
+            }
+        }
+        if (!$fallbackText) {
+            return $this->toGatewayResult($result, '');
         }
 
         $fallback = isset($recipient['comment_id'])

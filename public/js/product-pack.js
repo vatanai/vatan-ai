@@ -83,8 +83,8 @@
     more.hidden = !hasHidden;
     more.setAttribute('aria-expanded', state.showAll ? 'true' : 'false');
     more.innerHTML = state.showAll
-      ? '<i class="fa-solid fa-compress" aria-hidden="true"></i> فقط شات‌های انتخاب‌شده'
-      : '<i class="fa-solid fa-sliders" aria-hidden="true"></i> شات‌ها را شخصی‌سازی کن (+' + fa(shots.filter(function (s) { return !s.is_default; }).length) + ')';
+      ? '<i class="fa-solid fa-compress" aria-hidden="true"></i> فقط اسلایدهای انتخاب‌شده'
+      : '<i class="fa-solid fa-sliders" aria-hidden="true"></i> اسلایدها را شخصی‌سازی کن (+' + fa(shots.filter(function (s) { return !s.is_default; }).length) + ')';
   }
   $('[data-more]').addEventListener('click', function () { state.showAll = !state.showAll; renderShots(); });
 

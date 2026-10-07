@@ -50,7 +50,7 @@ class ProductShotController extends Controller
                 'quality_levels' => (array) config('product_shots.quality_levels'),
                 'default_quality' => (string) config('product_shots.default_quality', 'standard'),
                 'max_shots' => (int) $settings->max_shots_per_run,
-                'max_extra_angles' => (int) config('product_shots.max_extra_angles', 3),
+                'max_extra_angles' => (int) config('product_shots.max_extra_angles', 2),
                 'max_upload_mb' => (int) config('product_shots.max_upload_mb', 12),
                 'concurrency' => max(1, min(3, (int) $settings->client_concurrency)),
                 'balance' => $user ? (int) $user->tokens : 0,
@@ -138,7 +138,7 @@ class ProductShotController extends Controller
     {
         $this->ensureShotProduct($product);
         $data = $request->validate([
-            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 3))],
+            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 2))],
             'uploads.*.id' => ['required', 'string', 'max:64'],
             'uploads.*.use_fixed' => ['nullable', 'boolean'],
         ]);
@@ -174,7 +174,7 @@ class ProductShotController extends Controller
     {
         $this->ensureShotProduct($product);
         $data = $request->validate([
-            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 3))],
+            'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 2))],
             'uploads.*.id' => ['required', 'string', 'max:64'],
             'uploads.*.use_fixed' => ['nullable', 'boolean'],
             'shots' => ['required', 'array', 'min:1', 'max:20'],

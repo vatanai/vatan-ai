@@ -26,27 +26,33 @@ class HomeBuilderController extends Controller
     }
 
     /**
-     * جستجوی محصولات فعال برای فیلد «انتخاب دستی محصولات» در Drawer تنظیمات.
-     * خروجی سبک (id + نام) برای ساخت چیپ‌های انتخاب‌شده در فرم ادمین.
+     * جستجوی محصولات قابل انتخاب در پنل: منتشرشده و پیش‌نویس.
+     * نمایش عمومی همچنان در سرویس رندر هوم فقط به محصولات فعال محدود می‌ماند.
      */
     public function searchProducts(\Illuminate\Http\Request $request)
     {
         $term = trim((string) $request->query('q', ''));
 
         $products = Product::query()
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'draft'])
             ->when($term !== '', function ($q) use ($term) {
                 $q->where(function ($qq) use ($term) {
                     $qq->where('name_fa', 'like', "%{$term}%")
-                       ->orWhere('name', 'like', "%{$term}%");
+                       ->orWhere('name_en', 'like', "%{$term}%")
+                       ->orWhere('name', 'like', "%{$term}%")
+                       ->orWhere('product_code', 'like', "%{$term}%");
                 });
             })
             ->latest()
             ->limit(10)
-            ->get(['id', 'name_fa']);
+            ->get(['id', 'name_fa', 'name_en', 'status']);
 
         return response()->json([
-            'products' => $products->map(fn (Product $p) => ['id' => $p->id, 'name' => $p->name_fa])->values(),
+            'products' => $products->map(fn (Product $p) => [
+                'id' => $p->id,
+                'name' => $p->name_fa ?: $p->name_en,
+                'status' => $p->status,
+            ])->values(),
         ]);
     }
 
