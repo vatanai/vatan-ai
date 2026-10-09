@@ -9,7 +9,7 @@
   var one = function (selector, context) { return (context || document).querySelector(selector); };
   var all = function (selector, context) { return Array.from((context || document).querySelectorAll(selector)); };
 
-  function showStep(next) {
+  function showStep(next, keepErrors) {
     step = Math.max(1, Math.min(5, Number(next) || 1));
     all('[data-step-panel]', root).forEach(function (panel) { panel.hidden = Number(panel.dataset.stepPanel) !== step; });
     all('[data-step-tab]', root).forEach(function (tab) {
@@ -25,14 +25,41 @@
     one('[data-save-active]', root).hidden = step !== 5;
     one('[data-wizard-progress]', root).style.width = (step * 20) + '%';
     one('[data-wizard-progress-label]', root).textContent = 'گام ' + fa(step) + ' از ۵';
-    one('#psw-validation', root).classList.add('hidden');
+    if (!keepErrors) { one('#psw-validation', root).classList.add('hidden'); all('[data-step-tab]', root).forEach(function (tab) { tab.classList.remove('has-error'); }); }
     if (step === 5) refreshSummary();
     root.querySelector('.admin-content').scrollTo({top: 0, behavior: 'smooth'});
   }
 
   function error(message) {
+    return showErrors([{message: message, step: step}]);
+  }
+
+  /* نمایش فهرست خطاها با دکمه‌ی «رفتن به گام» و علامت‌گذاری گام‌های دارای خطا */
+  function showErrors(items) {
     var box = one('#psw-validation', root);
-    box.textContent = message;
+    box.innerHTML = '';
+    all('[data-step-tab]', root).forEach(function (tab) { tab.classList.remove('has-error'); });
+    if (!items || !items.length) { box.classList.add('hidden'); return true; }
+    var wrap = document.createElement('div'); wrap.className = 'psw-errors';
+    var head = document.createElement('div'); head.className = 'psw-errors-head';
+    head.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+    head.appendChild(document.createTextNode(items.length > 1 ? 'برای ثبت محصول، موارد زیر را اصلاح کنید:' : 'برای ادامه، این مورد را اصلاح کنید:'));
+    var list = document.createElement('ul');
+    items.forEach(function (item) {
+      var li = document.createElement('li');
+      var text = document.createElement('span'); text.textContent = item.message;
+      li.appendChild(text);
+      if (item.step && item.step !== step) {
+        var go = document.createElement('button'); go.type = 'button';
+        go.textContent = 'رفتن به گام ' + fa(item.step);
+        go.addEventListener('click', function () { showStep(item.step, true); });
+        li.appendChild(go);
+      }
+      list.appendChild(li);
+      var tab = one('[data-step-tab="' + item.step + '"]', root);
+      if (tab) tab.classList.add('has-error');
+    });
+    wrap.appendChild(head); wrap.appendChild(list); box.appendChild(wrap);
     box.classList.remove('hidden');
     box.scrollIntoView({behavior: 'smooth', block: 'center'});
     return false;
@@ -61,24 +88,206 @@
     return true;
   }
 
-  function validateAll() {
-    for (var i = 1; i <= 4; i++) {
-      showStep(i);
-      if (!validateStep(i, true)) return false;
+  function validateAll(finalSubmit, upTo) {
+    var last = upTo || 4;
+    for (var i = 1; i <= last; i++) {
+      var current = step;
+      step = i;
+      var ok = validateStep(i, finalSubmit);
+      step = current;
+      if (!ok) { showStep(i, true); return false; }
     }
-    showStep(5);
     return true;
   }
 
   all('[data-step-tab]', root).forEach(function (tab) { tab.addEventListener('click', function () { showStep(tab.dataset.stepTab); }); });
   one('[data-wizard-prev]', root).addEventListener('click', function () { showStep(step - 1); });
   one('[data-wizard-next]', root).addEventListener('click', function () { if (validateStep(step, false)) showStep(step + 1); });
-  one('[data-save-draft]', root).addEventListener('click', function () {
-    if (!validateStep(1, false) || !validateStep(2, false) || !validateStep(3, false)) return;
-    one('#psw-status', form).value = 'draft';
-    form.submit();
+  /* ══════════ ثبت محصول — ارسال AJAX با نوار پیشرفت و نمایش دقیق خطا ══════════ */
+  var submitting = false;
+  var dirty = false;
+  var FIELD_STEPS = [
+    [/^(name_fa|name_en|description_fa|occupation_ids|category_ids|main_images|cover|remove_main_images)/, 1],
+    [/^(quality_models|product_description|brand_palette|brand_style|brand_identity|preflight_prompt)/, 2],
+    [/^(preflight_|product_sheet_|shots)/, 3],
+    [/^(watermark_|display_mode|card_|gallery_layout)/, 4],
+    [/^(explore_tiles|status)/, 5]
+  ];
+  function stepForField(field) {
+    for (var i = 0; i < FIELD_STEPS.length; i++) if (FIELD_STEPS[i][0].test(field)) return FIELD_STEPS[i][1];
+    return 1;
+  }
+
+  var overlay = one('[data-submit-overlay]', root);
+  function setOverlay(state, percent, title, text) {
+    if (!overlay) return;
+    overlay.hidden = state === 'hidden';
+    if (state === 'hidden') return;
+    var card = one('[data-submit-card]', overlay);
+    var bar = one('[data-submit-bar]', overlay);
+    var icon = one('[data-submit-icon]', overlay);
+    card.classList.toggle('is-done', state === 'done');
+    bar.classList.toggle('is-indeterminate', state === 'processing' || state === 'preparing');
+    icon.className = state === 'done' ? 'fa-solid fa-check' : state === 'processing' ? 'fa-solid fa-gears' : 'fa-solid fa-cloud-arrow-up';
+    one('[data-submit-progress]', overlay).style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+    one('[data-submit-percent]', overlay).textContent = state === 'uploading' ? fa(Math.round(percent || 0)) + '٪ ارسال شد' : state === 'done' ? 'در حال انتقال…' : 'لطفاً صبر کنید';
+    if (title) one('[data-submit-title]', overlay).textContent = title;
+    if (text) one('[data-submit-text]', overlay).textContent = text;
+  }
+
+  function setButtonsBusy(busy) {
+    all('[data-save-draft], [data-save-active], [data-save-changes], [data-wizard-next], [data-wizard-prev]', root).forEach(function (button) {
+      button.disabled = busy;
+      button.classList.toggle('is-loading', busy);
+    });
+  }
+
+  async function compressIfLarge(file) {
+    if (!file || typeof window.optimizeOneImage !== 'function' && typeof optimizeOneImage !== 'function') return file;
+    if (file.size <= 1.5 * 1024 * 1024) return file;
+    try { return await optimizeOneImage(file); } catch (e) { return file; }
+  }
+
+  async function buildPayload() {
+    var group = one('.image-optimizer-group[data-input="main-images-file"]', form);
+    var mainInput = one('#main-images-file', form);
+    var removeFlag = one('[data-remove-main-images]', form);
+    if (group && mainInput && removeFlag) {
+      var hadExisting = group.dataset.initialExisting === '1';
+      removeFlag.value = hadExisting && group.dataset.existing === '[]' && !mainInput.files.length ? '1' : '0';
+    }
+    var body = new FormData(form);
+    var samples = all('[data-shot-sample-file]', form);
+    for (var i = 0; i < samples.length; i++) {
+      var file = samples[i].files && samples[i].files[0];
+      if (!file) continue;
+      var small = await compressIfLarge(file);
+      if (small !== file) body.set(samples[i].name, small, small.name);
+    }
+    return body;
+  }
+
+  function errorItemsFromResponse(status, json) {
+    if (status === 422 && json && json.errors) {
+      var seen = {};
+      var items = [];
+      Object.keys(json.errors).forEach(function (field) {
+        (json.errors[field] || []).forEach(function (message) {
+          if (seen[message]) return; seen[message] = true;
+          items.push({message: message, step: stepForField(field)});
+        });
+      });
+      return items.sort(function (a, b) { return a.step - b.step; });
+    }
+    var message = (json && json.message && status < 500) ? json.message : '';
+    if (status === 413) message = 'حجم مجموع فایل‌ها بیشتر از سقف مجاز سرور است. تعداد یا حجم عکس‌ها را کمتر کنید و دوباره ثبت کنید.';
+    else if (status === 419) message = 'نشست شما منقضی شده است. صفحه را تازه کنید و دوباره وارد شوید.';
+    else if (status === 401 || status === 403) message = 'اجازه‌ی ثبت این محصول را ندارید یا از حساب خارج شده‌اید.';
+    else if (status === 0) message = 'ارتباط با سرور برقرار نشد. اینترنت را بررسی کنید و دوباره تلاش کنید.';
+    else if (!message) message = 'ثبت محصول با خطای سرور (' + fa(status) + ') متوقف شد. چند لحظه بعد دوباره تلاش کنید.';
+    return [{message: message, step: step}];
+  }
+
+  async function submitProduct(status) {
+    if (submitting) return;
+    // اعتبارسنجی سمت مرورگر
+    if (status === 'active') { if (!validateAll(true, 4)) return; }
+    else if (!validateAll(false, 3)) return;
+
+    if (typeof imageOptimizerPendingState === 'function') {
+      var pending = imageOptimizerPendingState(form);
+      if (pending && pending.state === 'processing') {
+        showStep(1, true);
+        return showErrors([{message: 'بهینه‌سازی عکس‌های محصول هنوز تمام نشده است؛ چند لحظه صبر کنید و دوباره ثبت کنید.', step: 1}]);
+      }
+    }
+
+    submitting = true;
+    setButtonsBusy(true);
+    showErrors([]);
+    one('#psw-status', form).value = status;
+    setOverlay('preparing', 0, status === 'active' ? 'در حال ثبت نهایی محصول…' : 'در حال ذخیره محصول…', 'در حال آماده‌سازی تصاویر برای ارسال…');
+
+    var body;
+    try { body = await buildPayload(); }
+    catch (caught) { body = new FormData(form); }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', form.getAttribute('action'), true);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    var token = one('[name="_token"]', form);
+    if (token) xhr.setRequestHeader('X-CSRF-TOKEN', token.value);
+    xhr.upload.addEventListener('progress', function (event) {
+      if (!event.lengthComputable) return;
+      var percent = (event.loaded / event.total) * 100;
+      if (percent >= 99.5) setOverlay('processing', 100, null, 'فایل‌ها رسید؛ در حال پردازش تصاویر و ذخیره‌ی محصول…');
+      else setOverlay('uploading', percent, null, 'تصاویر و تنظیمات در حال ارسال هستند؛ لطفاً صفحه را نبندید.');
+    });
+    xhr.onload = function () {
+      var json = null;
+      try { json = JSON.parse(xhr.responseText); } catch (e) {}
+      if (xhr.status >= 200 && xhr.status < 300 && json && json.ok) {
+        dirty = false;
+        setOverlay('done', 100, status === 'active' ? 'محصول با موفقیت ثبت شد' : 'محصول ذخیره شد', json.message || '');
+        window.location.assign(json.redirect || window.location.href);
+        return;
+      }
+      fail(xhr.status, json);
+    };
+    xhr.onerror = function () { fail(0, null); };
+    xhr.ontimeout = function () { fail(0, null); };
+    xhr.send(body);
+
+    function fail(code, json) {
+      submitting = false;
+      setButtonsBusy(false);
+      setOverlay('hidden');
+      var items = errorItemsFromResponse(code, json);
+      showStep(items[0] && items[0].step ? items[0].step : step, true);
+      showErrors(items);
+    }
+  }
+
+  var draftButton = one('[data-save-draft]', root);
+  if (draftButton) draftButton.addEventListener('click', function () { submitProduct('draft'); });
+  var changesButton = one('[data-save-changes]', root);
+  if (changesButton) changesButton.addEventListener('click', function () { submitProduct(config.currentStatus === 'active' ? 'active' : 'draft'); });
+  one('[data-save-active]', root).addEventListener('click', function () { submitProduct('active'); });
+
+  form.addEventListener('submit', function (event) { event.preventDefault(); });
+  form.addEventListener('input', function () { dirty = true; });
+  form.addEventListener('change', function () { dirty = true; });
+  window.addEventListener('beforeunload', function (event) {
+    if (!dirty || submitting) return;
+    event.preventDefault(); event.returnValue = '';
   });
-  one('[data-save-active]', root).addEventListener('click', function () { if (!validateAll()) return; one('#psw-status', form).value = 'active'; form.submit(); });
+
+  /* کشیدن و رها کردن عکس روی کادر «آپلود عکس محصول» */
+  var mainGroup = one('.image-optimizer-group[data-input="main-images-file"]', form);
+  if (mainGroup) {
+    mainGroup.dataset.initialExisting = JSON.parse(mainGroup.dataset.existing || '[]').length ? '1' : '0';
+    var zone = one('.upload-zone', mainGroup);
+    var mainInput = one('#main-images-file', form);
+    if (zone && mainInput) {
+      ['dragenter', 'dragover'].forEach(function (name) { zone.addEventListener(name, function (event) { event.preventDefault(); zone.classList.add('is-dragover'); }); });
+      ['dragleave', 'drop'].forEach(function (name) { zone.addEventListener(name, function (event) { event.preventDefault(); zone.classList.remove('is-dragover'); }); });
+      zone.addEventListener('drop', function (event) {
+        var files = Array.from(event.dataTransfer && event.dataTransfer.files || []).filter(function (file) { return /^image\/(jpeg|png|webp)$/.test(file.type); });
+        if (!files.length) return error('فقط تصاویر JPG، PNG یا WebP قابل بارگذاری هستند.');
+        var transfer = new DataTransfer();
+        files.forEach(function (file) { transfer.items.add(file); });
+        mainInput.files = transfer.files;
+        mainInput.dispatchEvent(new Event('change', {bubbles: true}));
+      });
+      mainInput.addEventListener('change', function () {
+        window.setTimeout(function () {
+          var count = (mainInput.files || []).length;
+          if (count > 12) error('حداکثر ۱۲ عکس محصول قابل بارگذاری است؛ عکس‌های اضافه را حذف کنید.');
+        }, 0);
+      });
+    }
+  }
 
   var occupationSearch = one('[data-occupation-search]', form);
   if (occupationSearch) occupationSearch.addEventListener('input', function () {
@@ -214,7 +423,7 @@
     var row = button.closest('[data-shot-row]');
     var body = new FormData();
     body.append('shot_id', button.dataset.shotPreview);
-    Array.from(testImages.files).slice(0, 3).forEach(function (file) { body.append('images[]', file); });
+    var testFiles = Array.from(testImages.files).slice(0, 3);
     var override = one('[name*="[model_overrides][standard][primary_id]"]', row);
     var global = one('[name="quality_models[standard][primary_id]"]', form);
     body.append('ai_model_id', override && override.value ? override.value : global.value);
@@ -226,8 +435,18 @@
     body.append('aspect_ratio', one('#sp-test-ratio', form).value);
     var result = one('[data-shot-result]', row);
     button.disabled = true; result.textContent = 'در حال ساخت پیش‌نمایش واقعی…';
-    fetch(config.previewUrl, {method: 'POST', headers: {'X-CSRF-TOKEN': one('[name="_token"]', form).value, 'Accept': 'application/json'}, body: body, credentials: 'same-origin'})
-      .then(function (response) { return response.json().then(function (json) { return {ok: response.ok, body: json}; }); })
+    Promise.all(testFiles.map(compressIfLarge))
+      .then(function (files) {
+        files.forEach(function (file) { body.append('images[]', file, file.name); });
+        return fetch(config.previewUrl, {method: 'POST', headers: {'X-CSRF-TOKEN': one('[name="_token"]', form).value, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}, body: body, credentials: 'same-origin'});
+      })
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (json) {
+          if (!response.ok && !json.message) json.message = response.status === 419 ? 'نشست منقضی شده؛ صفحه را تازه کنید.' : response.status === 413 ? 'حجم تصاویر تست زیاد است.' : 'پیش‌نمایش ساخته نشد (' + fa(response.status) + ').';
+          if (response.status === 422 && json.errors) json.message = Object.values(json.errors)[0][0] || json.message;
+          return {ok: response.ok, body: json};
+        });
+      })
       .then(function (response) {
         if (!response.ok || !response.body.ok) throw new Error(response.body.message || 'پیش‌نمایش ساخته نشد.');
         var thumb = one('[data-shot-thumb]', row); thumb.innerHTML = '<img src="' + response.body.image_url + '" alt="">';

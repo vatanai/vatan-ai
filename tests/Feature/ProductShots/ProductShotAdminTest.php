@@ -191,6 +191,50 @@ class ProductShotAdminTest extends TestCase
         $this->assertSame('serum-pack', $product->fresh()->slug);
     }
 
+    public function test_product_images_upload_via_ajax_sets_cover_and_gallery(): void
+    {
+        $this->enableShots('admins');
+        $shot = ShotLibrary::query()->firstOrFail();
+        $model = $this->imageModel();
+        $payload = [
+            'name_fa' => 'پک عکس', 'name_en' => 'Photo Pack', 'status' => 'draft',
+            'occupation_ids' => [Occupation::query()->firstOrFail()->id],
+            'quality_models' => [
+                'standard' => ['primary_id' => $model->id],
+                'professional' => ['primary_id' => $model->id],
+                'best' => ['primary_id' => $model->id],
+            ],
+            'preflight_min_side' => 900, 'product_sheet_size' => 2048,
+            'main_images' => [UploadedFile::fake()->image('cover.jpg', 900, 900), UploadedFile::fake()->image('gallery.png', 800, 1000)],
+            'shots' => [$shot->id => ['enabled' => '1', 'is_default' => '1', 'quality_credits' => ['standard' => 10, 'professional' => '', 'best' => 20], 'allowed_aspect_ratios' => ['4:5'], 'aspect_ratio_default' => '4:5']],
+        ];
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('admin.product-shots.products.store'), $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $product = Product::query()->where('slug', 'photo-pack')->firstOrFail();
+        $this->assertStringStartsWith('products/main/', $product->cover);
+        $this->assertSame($product->cover, $product->thumbnail);
+        $this->assertCount(1, (array) $product->sample_outputs);
+        Storage::disk('public')->assertExists($product->cover);
+
+        // حذف همه‌ی عکس‌ها از ویرایش
+        $payload['main_images'] = [];
+        $payload['remove_main_images'] = '1';
+        $this->actingAs($this->admin, 'admin')
+            ->putJson(route('admin.product-shots.products.update', $product), $payload)
+            ->assertOk();
+        $this->assertSame([], (array) $product->fresh()->sample_outputs);
+
+        // خطای اعتبارسنجی به‌صورت JSON برمی‌گردد تا فرم پیام دقیق نشان دهد
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('admin.product-shots.products.store'), ['name_fa' => ''] + $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name_fa']);
+    }
+
     public function test_publishing_requires_category(): void
     {
         $this->enableShots('admins');

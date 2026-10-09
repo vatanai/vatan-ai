@@ -48,7 +48,14 @@ class PostFlowService
     ) {
     }
 
-    /** از موتور اتومیشن (اقدام post_flow) پس از تطبیق کامنت صدا زده می‌شود. */
+    /**
+     * از موتور اتومیشن (اقدام post_flow) پس از تطبیق کامنت صدا زده می‌شود. جریان دومرحله‌ای:
+     *  ۱) فالو دارد (یا فالو اجباری خاموش است) ← همان پاسخ خصوصی اول، کارت مخصوص همین پست است.
+     *  ۲) فالو ندارد یا وضعیتش هنوز معلوم نیست ← پاسخ خصوصی = درخواست فالو با دکمه‌ی «فالو کردم»؛
+     *     با زدن دکمه وضعیت دوباره بررسی و کارت فرستاده می‌شود.
+     * نکته‌ی اینستاگرام: برای کاربری که هنوز هیچ پیامی به پیج نداده، API وضعیت فالو را برنمی‌گرداند
+     * («User consent is required»)؛ پس این کاربران مسیر ۲ را می‌روند و فالوورهایشان با یک کلیک کارت می‌گیرند.
+     */
     public function start(PostCampaign $campaign, Message $comment, Conversation $conversation, AutomationRun $run, string $key, bool $allowHumanLock): array
     {
         $commentId = (string) data_get($comment->meta, 'comment_id', '');
@@ -58,45 +65,70 @@ class PostFlowService
         $settings = (array) $campaign->settings;
         $contact = $conversation->contact;
         $delay = (int) data_get($settings, 'limits.dm_delay_seconds', 0);
-        $direct = !$campaign->follow_required && data_get($settings, 'dm.mode') === 'direct_card';
+        $status = $campaign->follow_required ? $this->followStatus($conversation) : true;
 
-        if ($direct) {
+        if ($status === true) {
             $card = $this->cardMessage($campaign, $contact);
             if (!$card['ok']) {
                 return ['ok' => false, 'result' => $card['error']];
             }
+            try {
+                $session = $this->openSession($campaign, $comment, $conversation, 'completed', $run->id);
+                if ($campaign->follow_required) {
+                    $session->forceFill(['follow_status' => 'following', 'follow_checks' => 1])->save();
+                    $this->tag($contact, 'فالوور پیج');
+                }
+            } catch (QueryException) {
+                return ['ok' => true, 'result' => 'جریان دایرکت این کامنت قبلاً شروع شده است'];
+            }
+            // پاسخ خصوصی فقط یک پیام است؛ پس کارت بدون پیام مقدمه می‌رود.
             $out = $this->outbound->queue($conversation, $card['title'], 'automation', 'private_reply', [
                 'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
                 'message_payload' => ['message' => $card['message'], 'fallback_text' => $card['fallback']],
                 'allow_human_lock' => $allowHumanLock, 'delay_seconds' => $delay,
             ]);
-            try {
-                $this->openSession($campaign, $comment, $conversation, 'completed', $run->id);
-            } catch (QueryException) {
-                // همان کامنت قبلاً ثبت شده؛ idempotency ارسال را هم outbound تضمین می‌کند.
-            }
 
-            return $this->result($out, 'کارت دایرکت در پاسخ خصوصی در صف ارسال قرار گرفت');
+            return $this->result($out, $campaign->follow_required ? 'کاربر فالوور بود؛ کارت مستقیم در پاسخ خصوصی در صف ارسال قرار گرفت' : 'کارت دایرکت در پاسخ خصوصی در صف ارسال قرار گرفت');
         }
 
         try {
-            $this->openSession($campaign, $comment, $conversation, 'awaiting_click', $run->id);
+            $session = $this->openSession($campaign, $comment, $conversation, 'awaiting_follow', $run->id);
         } catch (QueryException) {
             return ['ok' => true, 'result' => 'جریان دایرکت این کامنت قبلاً شروع شده است'];
         }
+        $session->forceFill(['follow_status' => $status === false ? 'not_following' : 'unknown'])->save();
 
-        $text = $this->render((string) data_get($settings, 'dm.opening_text', ''), $contact);
-        $button = trim((string) data_get($settings, 'dm.opening_button', '')) ?: 'ارسال لینک';
-        $out = $this->outbound->queue($conversation, $text, 'automation', 'private_reply', [
+        $prompt = $this->followPrompt($session, $campaign, $conversation, 'follow.text');
+        $out = $this->outbound->queue($conversation, $prompt['text'], 'automation', 'private_reply', [
             'target_ref' => $commentId, 'automation_run_id' => $run->id, 'idempotency_key' => $key,
-            'message_payload' => [
-                'message' => $this->buttonMessage($conversation->channel, $text, [['title' => $button, 'payload' => 'SIF:open:'.$campaign->id]]),
-                'fallback_text' => $text."\n\n(برای دریافت، کلمه‌ی «{$button}» را بفرستید)",
-            ],
+            'message_payload' => ['message' => $prompt['message'], 'fallback_text' => $prompt['fallback']],
             'allow_human_lock' => $allowHumanLock, 'delay_seconds' => $delay,
         ]);
 
-        return $this->result($out, 'پیام آغاز دایرکت با دکمه‌ی «'.$button.'» در صف ارسال قرار گرفت');
+        return $this->result($out, ($status === false ? 'کاربر فالو نداشت' : 'وضعیت فالو هنوز از اینستاگرام قابل دریافت نبود').'؛ درخواست فالو با دکمه‌ی «'.$prompt['button'].'» در صف ارسال قرار گرفت');
+    }
+
+    /** پیام درخواست فالو: متن + دکمه‌های «مشاهده پیج» و «فالو کردم». */
+    private function followPrompt(PostFlowSession $session, PostCampaign $campaign, Conversation $conversation, string $textKey): array
+    {
+        $text = $this->render((string) data_get($campaign->settings, $textKey, ''), $conversation->contact);
+        $button = trim((string) data_get($campaign->settings, 'follow.button', '')) ?: 'فالو کردم ✅';
+        if ($text === '') {
+            $text = 'برای دریافت لینک، اگه هنوز پیج رو فالو نکردی اول فالو کن و بعد روی «'.$button.'» بزن 👇';
+        }
+        $username = ltrim((string) ($conversation->channel?->username ?? ''), '@');
+        $buttons = [];
+        if ($username !== '') {
+            $buttons[] = ['title' => 'مشاهده پیج', 'url' => 'https://www.instagram.com/'.rawurlencode($username)];
+        }
+        $buttons[] = ['title' => $button, 'payload' => 'SIF:followed:'.$session->id];
+
+        return [
+            'text' => $text,
+            'button' => $button,
+            'message' => $this->buttonMessage($conversation->channel, $text, $buttons),
+            'fallback' => trim($text.($username !== '' ? "\ninstagram.com/{$username}" : '')."\n\n(بعد از فالو، کلمه‌ی «{$button}» را بفرستید)"),
+        ];
     }
 
     /**
@@ -147,8 +179,9 @@ class PostFlowService
         $status = $this->followStatus($conversation);
         $session->follow_checks++;
         $session->follow_status = $status === null ? 'unknown' : ($status ? 'following' : 'not_following');
+        $unknownSends = $status === null && data_get($campaign->settings, 'follow.unknown_policy', 'send') !== 'ask';
 
-        if ($status === true || ($status === null && (data_get($campaign->settings, 'follow.unknown_policy') === 'send' || $session->stage === 'awaiting_follow'))) {
+        if ($status === true || $unknownSends) {
             if ($status === null) {
                 $this->logger->log('post_flow.follow_unknown', 'وضعیت فالو از API دریافت نشد؛ کارت طبق تنظیم ارسال شد.', $session, [], 'warning');
             }
@@ -163,21 +196,12 @@ class PostFlowService
 
         $max = (int) data_get($campaign->settings, 'follow.max_checks', 3);
         if ($session->follow_checks <= $max) {
-            $text = $this->render((string) data_get($campaign->settings, $session->stage === 'awaiting_follow' ? 'follow.retry_text' : 'follow.text', ''), $contact);
-            $button = trim((string) data_get($campaign->settings, 'follow.button', '')) ?: 'فالو کردم ✅';
-            $username = ltrim((string) ($conversation->channel?->username ?? ''), '@');
-            $buttons = [];
-            if ($username !== '') {
-                $buttons[] = ['title' => 'مشاهده پیج', 'url' => 'https://www.instagram.com/'.rawurlencode($username)];
-            }
-            $buttons[] = ['title' => $button, 'payload' => 'SIF:followed:'.$session->id];
-            $this->outbound->queue($conversation, $text, 'automation', 'dm', [
+            // جلسه‌های قدیمی «منتظر کلیک» اولین بار پیام اصلی فالو را می‌گیرند؛ بقیه پیام یادآوری.
+            $prompt = $this->followPrompt($session, $campaign, $conversation, $session->stage === 'awaiting_follow' ? 'follow.retry_text' : 'follow.text');
+            $this->outbound->queue($conversation, $prompt['text'], 'automation', 'dm', [
                 'idempotency_key' => 'postflow:'.$session->id.':follow:'.$session->follow_checks,
                 'automation_run_id' => $session->automation_run_id,
-                'message_payload' => [
-                    'message' => $this->buttonMessage($conversation->channel, $text, $buttons),
-                    'fallback_text' => trim($text.($username !== '' ? "\ninstagram.com/{$username}" : '')),
-                ],
+                'message_payload' => ['message' => $prompt['message'], 'fallback_text' => $prompt['fallback']],
                 'user_initiated' => true,
                 'allow_human_lock' => true,
             ]);

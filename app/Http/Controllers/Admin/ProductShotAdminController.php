@@ -442,18 +442,21 @@ class ProductShotAdminController extends Controller
             'category_ids.*' => ['integer', Rule::exists('categories', 'id')],
             'status' => ['required', Rule::in(['draft', 'active', 'inactive'])],
             'cover' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
+            'main_images' => ['nullable', 'array', 'max:12'],
+            'main_images.*' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
+            'remove_main_images' => ['nullable', 'boolean'],
             'shots' => ['required', 'array', 'min:1'],
             'shots.*.enabled' => ['nullable', 'boolean'],
             'shots.*.is_default' => ['nullable', 'boolean'],
             'shots.*.credits' => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'shots.*.quality_credits' => ['required', 'array'],
-            'shots.*.quality_credits.*' => ['required', 'integer', 'min:0', 'max:1000'],
+            'shots.*.quality_credits' => ['nullable', 'array'],
+            'shots.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.prompt_override' => ['nullable', 'string', 'max:5000'],
             'shots.*.model_overrides' => ['nullable', 'array'],
             'shots.*.model_overrides.*.primary_id' => ['nullable', 'integer', Rule::exists('ai_models', 'id')],
             'shots.*.model_overrides.*.fallback_ids' => ['nullable', 'array', 'max:3'],
             'shots.*.model_overrides.*.fallback_ids.*' => ['integer', Rule::exists('ai_models', 'id')],
-            'shots.*.allowed_aspect_ratios' => ['required', 'array', 'min:1'],
+            'shots.*.allowed_aspect_ratios' => ['nullable', 'array'],
             'shots.*.allowed_aspect_ratios.*' => [Rule::in((array) config('product_shots.aspect_ratios'))],
             'shots.*.aspect_ratio_default' => [Rule::in((array) config('product_shots.aspect_ratios'))],
             'shots.*.aspect_ratio_user_selectable' => ['nullable', 'boolean'],
@@ -481,6 +484,18 @@ class ProductShotAdminController extends Controller
             'quality_models.*.primary_id.required' => 'مدل اصلی هر سه سطح کیفیت را انتخاب کنید.',
             'category_ids.required' => 'برای انتشار، حداقل یک دسته انتخاب کنید.',
             'shots.required' => 'حداقل یک شات انتخاب کنید.',
+            'main_images.max' => 'حداکثر ۱۲ عکس محصول قابل بارگذاری است.',
+            'main_images.*.image' => 'فایل انتخاب‌شده برای عکس محصول، تصویر معتبر نیست.',
+            'main_images.*.mimes' => 'عکس محصول باید JPG، PNG یا WebP باشد.',
+            'main_images.*.max' => 'حجم هر عکس محصول حداکثر ۱۲ مگابایت است.',
+            'main_images.*.uploaded' => 'بارگذاری یکی از عکس‌های محصول ناموفق بود؛ حجم فایل را کمتر کنید.',
+            'cover.uploaded' => 'بارگذاری عکس محصول ناموفق بود؛ حجم فایل را کمتر کنید.',
+            'shots.*.sample.image' => 'تصویر نمونه‌ی اسلاید معتبر نیست.',
+            'shots.*.sample.mimes' => 'تصویر نمونه‌ی اسلاید باید JPG، PNG یا WebP باشد.',
+            'shots.*.sample.max' => 'حجم تصویر نمونه‌ی اسلاید حداکثر ۱۲ مگابایت است.',
+            'shots.*.sample.uploaded' => 'بارگذاری تصویر نمونه‌ی یک اسلاید ناموفق بود؛ حجم فایل را کمتر کنید.',
+            'preflight_min_side.*' => 'حداقل ضلع تصویر باید بین ۵۰۰ تا ۳۰۰۰ پیکسل باشد.',
+            'product_sheet_size.*' => 'اندازه پروداکت‌شیت معتبر نیست.',
         ]);
 
         $qualityKeys = array_keys((array) config('product_shots.quality_levels'));
@@ -493,6 +508,9 @@ class ProductShotAdminController extends Controller
         $enabled = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN));
         if ($enabled->isEmpty()) {
             throw ValidationException::withMessages(['shots' => 'حداقل یک شات را فعال کنید.']);
+        }
+        if ($enabled->contains(fn ($row) => empty($row['allowed_aspect_ratios']))) {
+            throw ValidationException::withMessages(['shots' => 'برای هر اسلاید فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.']);
         }
         if (! $enabled->contains(fn ($row) => filter_var($row['is_default'] ?? false, FILTER_VALIDATE_BOOLEAN))) {
             throw ValidationException::withMessages(['shots' => 'حداقل یک شات فعال را در بسته‌ی آماده قرار دهید.']);
@@ -575,11 +593,29 @@ class ProductShotAdminController extends Controller
             $product->category = $product->category ?: 'کسب‌وکار';
         }
 
-        if ($request->hasFile('cover')) {
-            $stored = $this->images->storeUpload($request->file('cover'), 'products/main');
-            $product->cover = $stored['path'];
-            $product->thumbnail = $stored['path'];
+        // «آپلود عکس محصول»: اولین عکس کاور کارت است و بقیه گالری محصول.
+        $mainImages = array_values(array_filter((array) $request->file('main_images', [])));
+        if (! $mainImages && $request->hasFile('cover')) {
+            $mainImages = [$request->file('cover')];
+        }
+        if ($mainImages) {
+            $paths = [];
+            foreach ($mainImages as $file) {
+                try {
+                    $paths[] = $this->images->storeUpload($file, 'products/main')['path'];
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages(['main_images' => 'فایل «' . $file->getClientOriginalName() . '» قابل خواندن نیست؛ عکس دیگری انتخاب کنید.']);
+                }
+            }
+            $product->cover = $paths[0];
+            $product->thumbnail = $paths[0];
+            $product->sample_outputs = array_slice($paths, 1);
             $product->images_optimized_at = now();
+        } elseif ($request->boolean('remove_main_images')) {
+            // مدیر همه‌ی عکس‌ها را حذف کرده است؛ کاور از نمونه‌ی اسلایدها ساخته می‌شود.
+            $product->cover = null;
+            $product->thumbnail = 'products/thumbnails/default_placeholder.jpg';
+            $product->sample_outputs = [];
         }
         $product->thumbnail = $product->thumbnail ?: ($product->cover ?: 'products/thumbnails/default_placeholder.jpg');
     }
@@ -615,7 +651,7 @@ class ProductShotAdminController extends Controller
             $productShot->credits_override = isset($row['credits']) && $row['credits'] !== '' ? max(0, (int) $row['credits']) : null;
             $productShot->prompt_override = trim((string) ($row['prompt_override'] ?? '')) ?: null;
             $productShot->model_configuration = [
-                'quality_credits' => array_map('intval', (array) ($row['quality_credits'] ?? [])),
+                'quality_credits' => array_map('intval', array_filter((array) ($row['quality_credits'] ?? []), fn ($value) => $value !== null && $value !== '')),
                 'quality_models' => $this->resolveQualityModels((array) ($row['model_overrides'] ?? []), false),
             ];
             $allowedRatios = array_values(array_intersect((array) config('product_shots.aspect_ratios'), (array) ($row['allowed_aspect_ratios'] ?? [])));
@@ -654,7 +690,9 @@ class ProductShotAdminController extends Controller
 
     private function ensureCover(Product $product): void
     {
-        if ($product->cover && Storage::disk('public')->exists($product->cover)) {
+        if ($product->cover
+            && ! Str::startsWith((string) $product->cover, 'products/thumbnails/default_placeholder')
+            && Storage::disk('public')->exists($product->cover)) {
             return;
         }
         $sample = ProductShot::query()->where('product_id', $product->id)->whereNotNull('sample_image')->orderBy('sort')->value('sample_image');
@@ -666,6 +704,9 @@ class ProductShotAdminController extends Controller
     private function afterSave(Request $request, Product $product, string $message): RedirectResponse|JsonResponse
     {
         if ($request->expectsJson()) {
+            // پیام موفقیت بعد از ریدایرکت سمت مرورگر هم دیده شود.
+            session()->flash('success', $message);
+
             return response()->json([
                 'ok' => true,
                 'message' => $message,

@@ -33,8 +33,27 @@
     </div>
   </section>
 
-  <section class="content-card p-5">
-    <div class="ps-card-title"><i class="fa-regular fa-image"></i> تصویر اصلی کارت</div><div class="ps-card-desc">اگر تصویر جدا بارگذاری نشود، کولاژ چهار شات پیش‌فرض به‌صورت خودکار مبنای کارت پک خواهد بود.</div>
-    <div class="ps-field mt-4"><input type="file" name="cover" id="sp-cover" accept="image/jpeg,image/png,image/webp" class="input-pro">@if($product?->cover)<img src="{{ $product->displayImageUrl() }}" alt="" class="mt-3 w-32 h-32 object-cover rounded-xl border border-[var(--border)]">@endif</div>
+  @php
+    $__psDisk = \Illuminate\Support\Facades\Storage::disk('public');
+    $__psImagePaths = collect(array_merge([$product?->cover], (array) ($product?->sample_outputs ?? [])))
+      ->filter(fn ($path) => is_string($path) && $path !== ''
+        && ! \Illuminate\Support\Str::startsWith($path, ['http://', 'https://', 'data:', 'products/thumbnails/default_placeholder', 'products/shot-samples/'])
+        && $__psDisk->exists($path))
+      ->unique()->values()->all();
+  @endphp
+  <section class="content-card p-5" id="ps-product-images">
+    <div class="ps-card-title"><i class="fa-solid fa-cloud-arrow-up"></i> آپلود عکس محصول</div>
+    <div class="ps-card-desc">عکس‌های معرفی محصول را انتخاب کنید؛ اولین عکس کاور کارت محصول است و بقیه در گالری نمایش داده می‌شوند. ترتیب و کاور را با کشیدن تصاویر کوچک تغییر دهید. اگر عکسی بارگذاری نشود، کولاژ نمونه‌ی اسلایدها مبنای کارت خواهد بود.</div>
+    <div class="mt-4">
+      @include('admin.partials.image-optimizer-group', [
+        'inputId' => 'main-images-file',
+        'inputName' => 'main_images[]',
+        'title' => 'عکس‌های محصول',
+        'hint' => 'JPG، PNG یا WebP — تا ۱۲ عکس؛ تصاویر به‌صورت خودکار و بدون برش بهینه می‌شوند.',
+        'paths' => $__psImagePaths,
+        'required' => false,
+      ])
+      <input type="hidden" name="remove_main_images" value="0" data-remove-main-images>
+    </div>
   </section>
 </div>

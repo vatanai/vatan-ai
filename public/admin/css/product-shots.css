@@ -158,3 +158,34 @@
 .ps-preview-collage img{width:100%;height:100%;min-height:0;object-fit:cover}.ps-preview-collage>span{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:15px;text-align:center;color:var(--text-soft)}.ps-preview-collage>span i{font-size:24px}.ps-preview-collage>span small{font-size:9px;line-height:1.8}
 @media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1}.ps-shot-summary .ps-thumb{width:70px}.ps-slide-prompt{grid-template-columns:1fr}.ps-slide-prompt .btn-pro{justify-self:start}}
 @media(max-width:560px){.ps-check-grid{grid-template-columns:1fr}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-occupation-picker{height:210px}}
+
+/* ── آپلود عکس محصول (همان آپلودر ثبت محصول چهره) ─────────────── */
+#ps-product-images .image-optimizer-group{margin-bottom:0}
+#ps-product-images .upload-zone{border-color:var(--border);background:var(--input-bg);border-radius:14px;padding:26px 18px;transition:border-color .16s,background .16s}
+#ps-product-images .upload-zone:hover,#ps-product-images .upload-zone.is-dragover{border-color:var(--primary);background:var(--primary-l)}
+#ps-product-images .upload-zone>i{color:var(--primary);font-size:24px}
+#ps-product-images .image-file-label{color:var(--text-h);font-weight:800}
+
+/* ── خطاهای ثبت و وضعیت ارسال ───────────────────────────────── */
+.psw-errors{display:flex;flex-direction:column;gap:8px}
+.psw-errors-head{display:flex;align-items:center;gap:8px;color:var(--danger);font-size:12px;font-weight:900}
+.psw-errors ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.psw-errors li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--danger-m);border-radius:10px;background:var(--danger-l);color:var(--text-main);font-size:11px;line-height:1.8}
+.psw-errors li button{flex:0 0 auto;padding:4px 10px;border:1px solid var(--danger-m);border-radius:8px;background:var(--card-bg);color:var(--danger);font-family:inherit;font-size:10px;font-weight:800;cursor:pointer}
+.psw-errors li button:hover{border-color:var(--danger)}
+.psw-step.has-error .step-circle{border-color:var(--danger);background:var(--danger-l);color:var(--danger)}
+.psw-step.has-error [data-step-icon]{color:var(--danger)}
+.psw-submit-overlay{position:fixed;inset:0;z-index:400;display:grid;place-items:center;padding:20px;background:color-mix(in srgb,var(--page-bg) 70%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.psw-submit-overlay[hidden]{display:none}
+.psw-submit-card{width:min(420px,100%);padding:26px 22px;border:1px solid var(--border);border-radius:22px;background:var(--card-bg);box-shadow:var(--shadow-card);text-align:center}
+.psw-submit-icon{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 14px;border-radius:18px;background:var(--primary);color:var(--accent);font-size:22px}
+.psw-submit-card.is-done .psw-submit-icon{background:var(--success);color:var(--card-bg)}
+.psw-submit-card strong{display:block;color:var(--text-h);font-size:14px;font-weight:900}
+.psw-submit-card p{margin:6px 0 16px;color:var(--text-soft);font-size:11px;line-height:1.9}
+.psw-submit-bar{height:7px;border-radius:99px;background:var(--input-bg);overflow:hidden}
+.psw-submit-bar span{display:block;height:100%;width:0;border-radius:inherit;background:var(--primary);transition:width .2s}
+.psw-submit-bar.is-indeterminate span{width:35%!important;animation:psw-indeterminate 1.1s ease-in-out infinite}
+@keyframes psw-indeterminate{0%{transform:translateX(120%)}100%{transform:translateX(-300%)}}
+.psw-submit-percent{display:block;margin-top:8px;color:var(--text-soft);font-size:10px}
+.btn-pro.is-loading{pointer-events:none;opacity:.75}
+@media (prefers-reduced-motion: reduce){.psw-submit-bar.is-indeterminate span{animation-duration:3s}}

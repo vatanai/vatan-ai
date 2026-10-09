@@ -73,7 +73,7 @@
 
           <div class="sip-ai-pane" data-ai-pane="run">
             <div class="sip-ai-checks">
-              @foreach(['public_reply' => 'سه سبک پاسخ کامنت', 'opening' => 'پیام آغاز دایرکت', 'follow' => 'پیام فالو', 'card' => 'تیتر، توضیح و دکمه‌های کارت'] as $key => $label)
+              @foreach(['public_reply' => 'سه سبک پاسخ کامنت', 'follow' => 'پیام فالو', 'card' => 'تیتر، توضیح و دکمه‌های کارت'] as $key => $label)
                 <label><input type="checkbox" value="{{ $key }}" data-ai-section checked> {{ $label }}</label>
               @endforeach
             </div>
@@ -264,23 +264,14 @@
               <div class="sip-flow" style="margin-top:14px" aria-label="مسیر مشتری">
                 <div class="sip-flow-step"><i class="fa-regular fa-comment"></i>کامنت با کلمه‌ی کلیدی</div>
                 <div class="sip-flow-arrow"><i class="fa-solid fa-angle-left"></i></div>
-                <div class="sip-flow-step" data-flow-opening><i class="fa-regular fa-paper-plane"></i>پیام آغاز + دکمه</div>
+                <div class="sip-flow-step" data-flow-follow><i class="fa-solid fa-user-plus"></i>فالو ندارد؟ درخواست فالو + «فالو کردم»</div>
                 <div class="sip-flow-arrow" data-flow-follow><i class="fa-solid fa-angle-left"></i></div>
-                <div class="sip-flow-step" data-flow-follow><i class="fa-solid fa-user-plus"></i>فالو نکرده؟ درخواست فالو + «فالو کردم»</div>
-                <div class="sip-flow-arrow"><i class="fa-solid fa-angle-left"></i></div>
-                <div class="sip-flow-step"><i class="fa-solid fa-id-card"></i>کارت لینک</div>
+                <div class="sip-flow-step"><i class="fa-solid fa-id-card"></i>کارت مخصوص همین پست</div>
               </div>
+              <p class="si-help" data-flow-follow><i class="fa-solid fa-circle-info"></i> فالوورها همان اول کارت را می‌گیرند. کاربری که تا حالا هیچ پیامی به پیج نداده، از نظر اینستاگرام وضعیت فالوی نامشخص دارد؛ برای او درخواست فالو می‌رود و اگر فالوور باشد با زدن «فالو کردم» بلافاصله کارت را می‌گیرد.</p>
               @if(!$followSupported)
                 <p class="si-help"><i class="fa-solid fa-circle-info"></i> بررسی واقعی فالو به اتصال Meta یا Composio نیاز دارد؛ روی کانال آزمایشی وضعیت از تنظیمات همان کانال خوانده می‌شود.</p>
               @endif
-            </div>
-
-            <div class="sip-block" data-mode-block>
-              <div class="sip-block-title"><i class="fa-solid fa-route"></i> شروع گفتگو</div>
-              <div class="sip-radio-cards">
-                <label class="sip-radio-card"><input type="radio" name="settings[dm][mode]" value="opening_then_card" @checked(data_get($s, 'dm.mode') !== 'direct_card')><b>پیام آغاز، بعد کارت</b>اول پیام کوتاه با دکمه؛ بعد از زدن دکمه کارت می‌آید. (پیشنهادی — پنجره‌ی ۲۴ ساعته باز می‌شود)</label>
-                <label class="sip-radio-card" data-direct-card><input type="radio" name="settings[dm][mode]" value="direct_card" @checked(data_get($s, 'dm.mode') === 'direct_card')><b>کارت مستقیم</b>همان پاسخ خصوصی اول، کارت لینک است. فقط وقتی فالو اجباری خاموش است.</label>
-              </div>
             </div>
 
             <div class="sip-block">
@@ -292,23 +283,15 @@
               <span class="si-help">این گزینه فقط ترتیب صف ارسال را تعیین می‌کند؛ متن‌ها، شرط فالو و قوانین ایمنی تغییری نمی‌کنند.</span>
             </div>
 
-            <div class="sip-block" data-opening-fields>
-              <div class="sip-block-title"><i class="fa-regular fa-paper-plane"></i> پیام آغاز دایرکت</div>
-              <div class="si-form">
-                <div class="si-field is-full"><label for="dm-open">متن پیام</label><textarea id="dm-open" class="input-pro" rows="3" name="settings[dm][opening_text]" maxlength="900" data-counter="900" data-ai-field="opening_text">{{ data_get($s, 'dm.opening_text') }}</textarea><div class="sip-counter" data-counter-out></div></div>
-                <div class="si-field"><label for="dm-btn">متن دکمه</label><input id="dm-btn" class="input-pro" name="settings[dm][opening_button]" maxlength="20" data-counter="20" data-ai-field="opening_button" value="{{ data_get($s, 'dm.opening_button') }}"><div class="sip-counter" data-counter-out></div></div>
-              </div>
-            </div>
-
             <div class="sip-block" data-follow-fields>
               <div class="sip-block-title"><i class="fa-solid fa-user-plus"></i> پیام درخواست فالو</div>
               <div class="si-form">
-                <div class="si-field is-full"><label for="f-text">پیام اول</label><textarea id="f-text" class="input-pro" rows="2" name="settings[follow][text]" maxlength="900" data-counter="900" data-ai-field="follow_text">{{ data_get($s, 'follow.text') }}</textarea><div class="sip-counter" data-counter-out></div></div>
+                <div class="si-field is-full"><label for="f-text">پیام درخواست فالو (پاسخ خصوصی به کامنت)</label><textarea id="f-text" class="input-pro" rows="2" name="settings[follow][text]" maxlength="900" data-counter="900" data-ai-field="follow_text">{{ data_get($s, 'follow.text') }}</textarea><div class="sip-counter" data-counter-out></div></div>
                 <div class="si-field is-full"><label for="f-retry">اگر دوباره زد و هنوز فالو نکرده بود</label><textarea id="f-retry" class="input-pro" rows="2" name="settings[follow][retry_text]" maxlength="900" data-counter="900" data-ai-field="follow_retry_text">{{ data_get($s, 'follow.retry_text') }}</textarea><div class="sip-counter" data-counter-out></div></div>
                 <div class="si-field"><label for="f-btn">متن دکمه</label><input id="f-btn" class="input-pro" name="settings[follow][button]" maxlength="20" data-counter="20" data-ai-field="follow_button" value="{{ data_get($s, 'follow.button') }}"><div class="sip-counter" data-counter-out></div></div>
                 <div class="si-field"><label for="f-max">حداکثر دفعات بررسی</label><select id="f-max" class="input-pro" name="settings[follow][max_checks]">@foreach([1, 2, 3, 4, 5] as $n)<option value="{{ $n }}" @selected((int) data_get($s, 'follow.max_checks', 3) === $n)>{{ Ui::n($n) }} بار</option>@endforeach</select></div>
               </div>
-              <div class="si-label" style="margin:14px 0 8px">اگر وضعیت فالو از اینستاگرام دریافت نشد</div>
+              <div class="si-label" style="margin:14px 0 8px">اگر بعد از زدن «فالو کردم» هم وضعیت فالو از اینستاگرام دریافت نشد</div>
               <div class="sip-radio-cards">
                 <label class="sip-radio-card"><input type="radio" name="settings[follow][unknown_policy]" value="send" @checked(data_get($s, 'follow.unknown_policy') !== 'ask')><b>کارت ارسال شود</b>مشتری منتظر نمی‌ماند. (پیشنهادی)</label>
                 <label class="sip-radio-card"><input type="radio" name="settings[follow][unknown_policy]" value="ask" @checked(data_get($s, 'follow.unknown_policy') === 'ask')><b>درخواست فالو</b>تا تأیید فالو کارت ارسال نشود.</label>

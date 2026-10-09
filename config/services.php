@@ -116,6 +116,17 @@ return [
         'ai_model' => env('TELEGRAM_PRODUCT_AI_MODEL', 'openai/gpt-4o-mini'),
     ],
 
+    // بات تلگرام «ثبت پست» اینستاگرام هوشمند (@vatan_instagram_dashbord_bot) — فقط توکن در .env لازم است.
+    'telegram_instagram' => [
+        'bot_token' => env('TELEGRAM_INSTAGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_INSTAGRAM_BOT_USERNAME', 'vatan_instagram_dashbord_bot'),
+        // اگر خالی باشد از روی توکن ساخته می‌شود (نیازی به تنظیم دستی نیست).
+        'webhook_secret' => env('TELEGRAM_INSTAGRAM_WEBHOOK_SECRET'),
+        'notify_new_posts' => (bool) env('TELEGRAM_INSTAGRAM_NOTIFY_NEW_POSTS', true),
+        // پست‌هایی که قدیمی‌تر از این باشند اعلان نمی‌گیرند (ساعت).
+        'notify_max_age_hours' => (int) env('TELEGRAM_INSTAGRAM_NOTIFY_MAX_AGE_HOURS', 48),
+    ],
+
     'meta' => [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),

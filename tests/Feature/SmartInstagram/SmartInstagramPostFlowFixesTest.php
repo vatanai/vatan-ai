@@ -52,7 +52,7 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         ]);
     }
 
-    private function campaign(Channel $channel, string $openingText = '{name} عزیز، خوشحالم که به این پست علاقه‌مندی!'): void
+    private function campaign(Channel $channel, string $openingText = '{name} عزیز، خوشحالم که به این پست علاقه‌مندی! اول پیج رو فالو کن.'): void
     {
         $this->actingAs(Admin::query()->create(['name' => 'ادمین', 'email' => 'fix@example.test', 'password' => 'password', 'role' => 'leader', 'is_active' => true]), 'admin');
         $post = Post::query()->create([
@@ -62,8 +62,9 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         ]);
         $settings = app(PostCampaignService::class)->defaults();
         $settings['reply']['ai_personalize'] = false;
-        $settings['dm']['opening_text'] = $openingText;
-        $settings['dm']['opening_button'] = 'مشاهده اطلاعات';
+        $settings['follow']['text'] = $openingText;
+        $settings['follow']['retry_text'] = 'هنوز فالو تأیید نشده؛ دوباره بزن.';
+        $settings['follow']['button'] = 'فالو کردم ✅';
         $settings['card']['product_id'] = Product::query()->firstOrCreate(['slug' => 'si-fix-product'], [
             'name_fa' => 'محصول', 'name_en' => 'Product', 'category' => 'TEST', 'status' => 'active',
             'thumbnail' => 'products/test.jpg', 'primary_model' => 'test-model', 'prompt_template' => 'آزمایش',
@@ -114,31 +115,51 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->campaign($channel);
         $this->ingest(['type' => 'comment', 'id' => 'c_1', 'sender' => ['id' => 'u_1', 'username' => 'shaygangp'], 'text' => 'کلاژ', 'media_id' => 'reel_1'])->assertOk();
 
-        // پیام اول: بدون نام، نباید با «،» شروع شود؛ دکمه‌ی واقعی زیر متن (قالب دکمه‌ای) حتی بدون وب‌هوک.
+        // دومرحله‌ای: کاربر تازه (وضعیت فالو نامشخص/بدون فالو) ← پاسخ خصوصی همان درخواست فالو با دکمه‌ی واقعی.
+        // بدون نام، متن نباید با «،» شروع شود.
         $opening = OutboundMessage::query()->where('kind', 'private_reply')->firstOrFail();
+        $session = PostFlowSession::query()->firstOrFail();
         $this->assertSame('sent', $opening->status, (string) $opening->policy_reason);
-        $this->assertSame('خوشحالم که به این پست علاقه‌مندی!', $opening->body);
+        $this->assertSame('awaiting_follow', $session->stage);
+        $this->assertSame('خوشحالم که به این پست علاقه‌مندی! اول پیج رو فالو کن.', $opening->body);
         $this->assertSame('button', data_get($opening->message_payload, 'message.attachment.payload.template_type'));
-        $this->assertSame('خوشحالم که به این پست علاقه‌مندی!', data_get($opening->message_payload, 'message.attachment.payload.text'));
-        $this->assertSame(['type' => 'postback', 'title' => 'مشاهده اطلاعات', 'payload' => 'SIF:open:'.PostFlowSession::query()->value('campaign_id')], data_get($opening->message_payload, 'message.attachment.payload.buttons.0'));
+        $this->assertSame('https://www.instagram.com/ai_vatan', data_get($opening->message_payload, 'message.attachment.payload.buttons.0.url'));
+        $this->assertSame(['type' => 'postback', 'title' => 'فالو کردم ✅', 'payload' => 'SIF:followed:'.$session->id], data_get($opening->message_payload, 'message.attachment.payload.buttons.1'));
+        $this->assertSame(0, OutboundMessage::query()->where('kind', 'dm')->count(), 'پیام آغاز جداگانه دیگر وجود ندارد');
 
         // تحلیل هوش مصنوعی گفتگو را «نیازمند انسان» علامت زده است.
         Conversation::query()->update(['needs_human' => true]);
 
-        $this->ingest(['type' => 'dm', 'id' => 'm_1', 'sender' => ['id' => 'u_1'], 'text' => 'مشاهده اطلاعات'])->assertOk();
-
-        $session = PostFlowSession::query()->firstOrFail();
-        $this->assertSame('awaiting_follow', $session->stage);
-        $follow = OutboundMessage::query()->where('kind', 'dm')->latest('id')->firstOrFail();
-        $this->assertSame('sent', $follow->status, (string) $follow->policy_reason);
-        $this->assertSame('https://www.instagram.com/ai_vatan', data_get($follow->message_payload, 'message.attachment.payload.buttons.0.url'));
-        $this->assertSame('فالو کردم ✅', data_get($follow->message_payload, 'message.attachment.payload.buttons.1.title'));
+        // هنوز فالو نکرده و دکمه را زد ← یادآوری با همان دو دکمه
+        $this->ingest(['type' => 'dm', 'id' => 'm_1', 'sender' => ['id' => 'u_1'], 'text' => 'فالو کردم ✅'])->assertOk();
+        $this->assertSame('awaiting_follow', $session->fresh()->stage);
+        $retry = OutboundMessage::query()->where('kind', 'dm')->latest('id')->firstOrFail();
+        $this->assertSame('sent', $retry->status, (string) $retry->policy_reason);
+        $this->assertSame('هنوز فالو تأیید نشده؛ دوباره بزن.', $retry->body);
+        $this->assertSame('فالو کردم ✅', data_get($retry->message_payload, 'message.attachment.payload.buttons.1.title'));
 
         // فالو کرد ← کارت، باز هم بدون مسدود شدن
         $channel->forceFill(['settings' => ['sandbox_follow' => true]])->save();
         $this->ingest(['type' => 'dm', 'id' => 'm_2', 'sender' => ['id' => 'u_1'], 'text' => 'فالو کردم ✅'])->assertOk();
         $this->assertSame('completed', $session->fresh()->stage);
+        $this->assertTrue(OutboundMessage::query()->get()->contains(fn ($o) => data_get($o->message_payload, 'message.attachment.payload.template_type') === 'generic'));
         $this->assertSame(0, OutboundMessage::query()->whereIn('status', ['blocked', 'failed'])->count());
+    }
+
+    public function test_known_follower_gets_the_card_directly_in_the_first_private_reply(): void
+    {
+        $channel = $this->channel(['sandbox_follow' => true]);
+        $this->campaign($channel);
+        $this->ingest(['type' => 'comment', 'id' => 'c_1', 'sender' => ['id' => 'u_1', 'username' => 'shaygangp'], 'text' => 'کلاژ', 'media_id' => 'reel_1'])->assertOk();
+
+        $private = OutboundMessage::query()->where('kind', 'private_reply')->get();
+        $this->assertCount(1, $private);
+        $this->assertSame('sent', $private[0]->status, (string) $private[0]->policy_reason);
+        $this->assertSame('generic', data_get($private[0]->message_payload, 'message.attachment.payload.template_type'), 'پاسخ خصوصی اول خود کارت است');
+        $session = PostFlowSession::query()->firstOrFail();
+        $this->assertSame('completed', $session->stage);
+        $this->assertSame('following', $session->follow_status);
+        $this->assertSame(0, OutboundMessage::query()->where('kind', 'dm')->count());
     }
 
     public function test_paused_conversation_and_sensitive_reply_still_stop_the_flow(): void
@@ -149,15 +170,15 @@ class SmartInstagramPostFlowFixesTest extends TestCase
 
         \App\Models\SmartInstagram\AiProfile::query()->where('workspace_id', $this->ws())->where('is_active', true)->update(['escalation_keywords' => ['شکایت']]);
         $this->ingest(['type' => 'dm', 'id' => 'm_1', 'sender' => ['id' => 'u_1'], 'text' => 'شکایت دارم'])->assertOk();
-        $this->assertSame('awaiting_click', PostFlowSession::query()->value('stage'));
+        $this->assertSame('awaiting_follow', PostFlowSession::query()->value('stage'));
         $this->assertSame(0, OutboundMessage::query()->where('kind', 'dm')->count());
 
         Conversation::query()->update(['needs_human' => false, 'ai_paused' => true]);
-        $this->ingest(['type' => 'dm', 'id' => 'm_2', 'sender' => ['id' => 'u_1'], 'text' => 'مشاهده اطلاعات'])->assertOk();
+        $this->ingest(['type' => 'dm', 'id' => 'm_2', 'sender' => ['id' => 'u_1'], 'text' => 'فالو کردم ✅'])->assertOk();
         $this->assertSame(0, OutboundMessage::query()->where('kind', 'dm')->where('status', 'sent')->count(), 'توقف دستی همیشه محترم است');
     }
 
-    public function test_live_meta_webhook_switches_to_real_button_template(): void
+    public function test_follow_postback_from_meta_webhook_delivers_card(): void
     {
         $channel = $this->channel(['meta_webhook_at' => now()->toIso8601String()]);
         $this->campaign($channel);
@@ -167,24 +188,21 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         $this->assertSame('sent', $opening->status, (string) $opening->policy_reason);
         $payload = data_get($opening->message_payload, 'message.attachment.payload');
         $this->assertSame('button', $payload['template_type']);
-        $this->assertSame('خوشحالم که به این پست علاقه‌مندی!', $payload['text']);
-        $this->assertSame(['type' => 'postback', 'title' => 'مشاهده اطلاعات', 'payload' => 'SIF:open:'.PostFlowSession::query()->value('campaign_id')], $payload['buttons'][0]);
+        $this->assertSame('postback', $payload['buttons'][1]['type']);
 
-        // postback از وب‌هوک ← درخواست فالو با دو دکمه‌ی واقعی (مشاهده پیج + فالو کردم)
+        // کاربر فالو کرد و postback «فالو کردم» از وب‌هوک رسید ← کارت
+        $channel->forceFill(['settings' => array_merge((array) $channel->fresh()->settings, ['sandbox_follow' => true])])->save();
         $raw = json_encode(['object' => 'instagram', 'entry' => [['id' => 'acct_1', 'messaging' => [[
             'sender' => ['id' => 'u_1'], 'recipient' => ['id' => 'acct_1'], 'timestamp' => now()->getTimestampMs(),
-            'postback' => ['mid' => 'pb_1', 'title' => 'مشاهده اطلاعات', 'payload' => $payload['buttons'][0]['payload']],
+            'postback' => ['mid' => 'pb_1', 'title' => 'فالو کردم ✅', 'payload' => $payload['buttons'][1]['payload']],
         ]]]]]);
         $this->call('POST', '/webhooks/meta', [], [], [], [
             'CONTENT_TYPE' => 'application/json',
             'HTTP_X_HUB_SIGNATURE_256' => 'sha256='.hash_hmac('sha256', $raw, 'meta-test-secret'),
         ], $raw)->assertOk();
 
-        $follow = OutboundMessage::query()->where('kind', 'dm')->latest('id')->firstOrFail();
-        $buttons = data_get($follow->message_payload, 'message.attachment.payload.buttons');
-        $this->assertSame('web_url', $buttons[0]['type']);
-        $this->assertSame('https://www.instagram.com/ai_vatan', $buttons[0]['url']);
-        $this->assertSame('postback', $buttons[1]['type']);
+        $this->assertSame('completed', PostFlowSession::query()->value('stage'));
+        $this->assertTrue(OutboundMessage::query()->where('kind', 'dm')->get()->contains(fn ($o) => data_get($o->message_payload, 'message.attachment.payload.template_type') === 'generic'));
         $this->assertSame('acct_1', data_get($channel->fresh()->settings, 'instagram_account_id'));
     }
 
@@ -238,9 +256,9 @@ class SmartInstagramPostFlowFixesTest extends TestCase
         \App\Models\SmartInstagram\AutomationRule::query()->update(['scope_ref' => 'reel_1']);
 
         $this->artisan('smart-instagram:sync-composio --fast')->assertSuccessful();
-        // فقط کامنت‌های پست سناریو خوانده می‌شود؛ چون همین کامنت جریانی «منتظر کلیک» ساخت، چند گفتگوی اخیر هم خوانده می‌شود.
+        // فقط کامنت‌های پست سناریو خوانده می‌شود؛ چون همین کامنت جریانی «منتظر فالو» ساخت، چند گفتگوی اخیر هم خوانده می‌شود.
         $this->assertSame(['INSTAGRAM_GET_IG_MEDIA_COMMENTS', 'INSTAGRAM_LIST_ALL_CONVERSATIONS'], $calls);
-        $this->assertSame('awaiting_click', PostFlowSession::query()->value('stage'));
+        $this->assertSame('awaiting_follow', PostFlowSession::query()->value('stage'));
         $this->assertTrue(MarketingEvent::query()->where('external_id', 'comment:c_fast')->exists());
         $this->assertFalse(MarketingEvent::query()->where('external_id', 'comment:c_self')->exists());
 

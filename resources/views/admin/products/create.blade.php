@@ -302,5 +302,6 @@ window.PRODUCT_CREATE_CONFIG = {
   wantedSubcategory: @json(old('subcategory', optional($duplicateFrom)->subcategory)),
 };
 </script>
+<script src="{{ asset('admin/js/image-optimizer.js') }}?v={{ filemtime(public_path('admin/js/image-optimizer.js')) }}"></script>
 <script src="{{ asset('admin/js/products-create.js') }}?v={{ filemtime(public_path('admin/js/products-create.js')) }}"></script>
 @endsection

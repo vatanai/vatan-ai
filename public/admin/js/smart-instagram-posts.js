@@ -135,17 +135,16 @@
       h += '<div class="ig-note">دایرکت برای این پست خاموش است</div>';
     } else {
       h += '<div class="ig-note">در پاسخ به کامنت شما: «' + esc(st.keyword || '…') + '»</div>';
-      var direct = st.mode === 'direct_card' && !st.followOn;
-      if (!direct) {
-        h += btnMsg(st.openingText || 'پیام آغاز', [st.openingButton || 'ارسال لینک']) + msgOut(st.openingButton || 'ارسال لینک');
-        if (st.followOn && this.notFollow) {
-          h += btnMsg(st.followText || 'لطفاً پیج را فالو کنید', ['مشاهده پیج', st.followButton || 'فالو کردم']) + msgOut(st.followButton || 'فالو کردم');
-          h += '<div class="ig-note">فالو تأیید شد ✓</div>';
-        } else if (st.followOn) {
-          h += '<div class="ig-note">فالو بررسی شد ✓</div>';
-        }
+      // جریان دومرحله‌ای: فالوور ← کارت مستقیم (پاسخ خصوصی تک‌پیامی، بدون مقدمه)؛
+      // بدون فالو ← درخواست فالو با دکمه، و بعد از «فالو کردم» مقدمه + کارت.
+      if (st.followOn && this.notFollow) {
+        h += btnMsg(st.followText || 'لطفاً پیج را فالو کنید', ['مشاهده پیج', st.followButton || 'فالو کردم']) + msgOut(st.followButton || 'فالو کردم');
+        h += '<div class="ig-note">فالو تأیید شد ✓</div>';
+        h += msgIn(st.intro) + this.card(st) + msgIn(st.after);
+      } else {
+        if (st.followOn) h += '<div class="ig-note">فالوور است ✓ کارت مستقیم</div>';
+        h += this.card(st);
       }
-      h += msgIn(st.intro) + this.card(st) + msgIn(st.after);
     }
     h += '</div></div><div class="ig-composer"><i class="fa-regular fa-face-smile"></i> پیام…</div>';
     return h;
@@ -468,15 +467,6 @@
     $('[data-card-off-note]', f).hidden = dm;
     $('[data-follow-fields]', f).hidden = !follow;
     $$('[data-flow-follow]', f).forEach(function (el) { el.hidden = !follow; });
-    var direct = $('[data-direct-card] input', f);
-    if (direct) {
-      direct.disabled = follow;
-      $('[data-direct-card]', f).style.opacity = follow ? '.5' : '';
-      if (follow && direct.checked) { $('input[name="settings[dm][mode]"][value=opening_then_card]', f).checked = true; }
-    }
-    var isDirect = this.radio('settings[dm][mode]') === 'direct_card' && !follow;
-    $('[data-opening-fields]', f).hidden = isDirect;
-    $$('[data-flow-opening]', f).forEach(function (el) { el.hidden = isDirect; });
   };
 
   /* ── قدم ۵: دکمه‌ها ── */

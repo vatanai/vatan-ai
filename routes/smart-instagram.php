@@ -110,6 +110,10 @@ Route::prefix('admin/smart-instagram')
         Route::post('/connections/settings', [ConnectionController::class, 'settings'])->name('connections.settings');
         Route::post('/connections/team', [ConnectionController::class, 'storeMember'])->name('connections.team.store');
         Route::delete('/connections/team/{member}', [ConnectionController::class, 'destroyMember'])->name('connections.team.destroy');
+        Route::post('/connections/telegram', [ConnectionController::class, 'telegramLink'])->middleware('throttle:10,1')->name('connections.telegram');
+        Route::post('/connections/telegram/members', [ConnectionController::class, 'telegramStore'])->name('connections.telegram.store');
+        Route::patch('/connections/telegram/{account}', [ConnectionController::class, 'telegramUpdate'])->whereNumber('account')->name('connections.telegram.update');
+        Route::delete('/connections/telegram/{account}', [ConnectionController::class, 'telegramUnlink'])->whereNumber('account')->name('connections.telegram.destroy');
         Route::post('/connections/{channel}/test', [ConnectionController::class, 'test'])->name('connections.test');
         Route::patch('/connections/{channel}', [ConnectionController::class, 'update'])->name('connections.update');
         Route::get('/health', [HealthController::class, 'index'])->name('health');
@@ -132,3 +136,23 @@ Route::post('/api/instagram/webhook', [\App\Http\Controllers\InstagramWebhookCon
 Route::post('/api/telegram/webhook', [\App\Http\Controllers\TelegramWebhookController_Phase0::class, 'handle'])
     ->middleware('throttle:120,1')
     ->name('webhooks.telegram.handle');
+
+// ─── بات تلگرام «ثبت پست» (@vatan_instagram_dashbord_bot) + مینی‌اپ ────────────────────────
+// احراز هویت مینی‌اپ با initData تلگرام در هر درخواست (بدون کوکی)؛ CSRF در bootstrap/app.php مستثنی است.
+Route::post('/webhooks/telegram/instagram', \App\Http\Controllers\SmartInstagram\TelegramBotWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.telegram.instagram');
+
+Route::get('/tg/instagram', [\App\Http\Controllers\SmartInstagram\TelegramAppController::class, 'show'])
+    ->name('telegram.instagram.app');
+
+Route::prefix('api/tg/instagram')->name('telegram.instagram.api.')->middleware('throttle:90,1')
+    ->controller(\App\Http\Controllers\SmartInstagram\TelegramAppController::class)->group(function () {
+        Route::get('/bootstrap', 'bootstrap')->name('bootstrap');
+        Route::get('/posts', 'list')->name('posts');
+        Route::post('/sync', 'sync')->middleware('throttle:6,1')->name('sync');
+        Route::post('/ai', 'ai')->middleware('throttle:20,1')->name('ai');
+        Route::get('/posts/{post}', 'showPost')->whereNumber('post')->name('posts.show');
+        Route::post('/posts/{post}', 'save')->whereNumber('post')->name('posts.save');
+        Route::post('/posts/{post}/status', 'status')->whereNumber('post')->name('posts.status');
+    });

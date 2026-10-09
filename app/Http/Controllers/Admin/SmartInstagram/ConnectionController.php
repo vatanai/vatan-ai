@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin\SmartInstagram;
 use App\Models\Admin;
 use App\Models\MarketingIntegration;
 use App\Models\SmartInstagram\Channel;
+use App\Models\SmartInstagram\TelegramAdmin;
+use App\Services\SmartInstagram\Telegram\InstagramTelegramBot;
 use App\Models\SmartInstagram\WorkspaceMember;
 use App\Services\SmartInstagram\ChannelService;
 use App\Services\SmartInstagram\Gateways\GatewayManager;
@@ -46,9 +48,69 @@ class ConnectionController extends Controller
                 'meta_webhook' => Route::has('webhooks.meta.verify') ? route('webhooks.meta.verify') : url('/webhooks/meta'),
                 'ingest' => route('webhooks.smart-instagram.ingest'),
             ],
+            'telegramBot' => ['configured' => app(InstagramTelegramBot::class)->configured(), 'username' => app(InstagramTelegramBot::class)->username()],
+            'telegramAccounts' => Schema::hasTable('instagram_telegram_admins')
+                ? TelegramAdmin::query()->where('workspace_id', $this->ws())
+                    ->when(!$this->context->can($this->admin(), 'manage_settings'), fn ($q) => $q->where('admin_id', $this->admin()?->id))
+                    ->with('admin:id,name,is_active')->orderBy('id')->get()
+                : collect(),
+            'telegramRoles' => TelegramAdmin::ROLES,
             'canManage' => $this->context->can($this->admin(), 'manage_settings'),
             'myRole' => $this->context->role($this->admin()),
         ]);
+    }
+
+    /** لینک یک‌بارمصرف اتصال حساب تلگرام ادمین فعلی به بات «ثبت پست». */
+    public function telegramLink(InstagramTelegramBot $bot): RedirectResponse
+    {
+        $this->authorizeAbility('manage_automation');
+        abort_unless($bot->configured(), 422, 'توکن بات تلگرام تنظیم نشده است.');
+
+        return redirect()->away($bot->linkUrl($this->admin()));
+    }
+
+    public function telegramUnlink(TelegramAdmin $account): RedirectResponse
+    {
+        abort_unless((int) $account->workspace_id === $this->ws(), 404);
+        abort_unless($this->context->can($this->admin(), 'manage_settings') || (int) $account->admin_id === (int) $this->admin()?->id, 403);
+        $account->delete();
+
+        return back()->with('success', 'دسترسی این حساب تلگرام به بات حذف شد.');
+    }
+
+    /** افزودن کارمند به فهرست مجاز بات با شناسه‌ی عددی تلگرام. */
+    public function telegramStore(Request $request): RedirectResponse
+    {
+        $this->authorizeAbility('manage_settings');
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'telegram_id' => ['required', 'string', 'regex:/^\s*[0-9۰-۹]{5,15}\s*$/u'],
+            'role' => ['required', 'in:'.implode(',', array_keys(TelegramAdmin::ROLES))],
+        ], ['telegram_id.regex' => 'شناسه‌ی تلگرام باید فقط عدد باشد (مثلاً 101754869).'], ['telegram_id' => 'شناسه‌ی تلگرام', 'name' => 'نام']);
+        $telegramId = (int) strtr(trim($data['telegram_id']), ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9']);
+        $existing = TelegramAdmin::query()->where('telegram_id', $telegramId)->first();
+        if ($existing && (int) $existing->workspace_id !== $this->ws()) {
+            return back()->withErrors(['telegram_id' => 'این شناسه قبلاً ثبت شده است.']);
+        }
+        TelegramAdmin::query()->updateOrCreate(['telegram_id' => $telegramId], [
+            'workspace_id' => $this->ws(), 'name' => trim($data['name']), 'role' => $data['role'],
+            'is_active' => true, 'added_by' => $this->admin()?->id,
+        ]);
+
+        return back()->with('success', '«'.trim($data['name']).'» به کارمندان بات اضافه شد؛ کافی است یک بار بات را Start کند.');
+    }
+
+    public function telegramUpdate(Request $request, TelegramAdmin $account): RedirectResponse
+    {
+        $this->authorizeAbility('manage_settings');
+        abort_unless((int) $account->workspace_id === $this->ws(), 404);
+        $data = $request->validate([
+            'role' => ['nullable', 'in:'.implode(',', array_keys(TelegramAdmin::ROLES))],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        $account->forceFill(array_filter($data, fn ($v) => $v !== null))->save();
+
+        return back()->with('success', 'دسترسی «'.$account->displayName().'» به‌روز شد.');
     }
 
     public function sync(ChannelService $channels): RedirectResponse

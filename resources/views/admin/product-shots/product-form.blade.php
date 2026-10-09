@@ -75,12 +75,31 @@
   <div class="sticky bottom-0 bg-[var(--card-bg)] border-t border-[var(--border)] p-3 md:p-4 flex items-center justify-between gap-2 flex-wrap z-40">
     <button type="button" class="btn-pro btn-pro-ghost" data-wizard-prev hidden><i class="fa-solid fa-arrow-right"></i> مرحله قبل</button>
     <div class="flex-1 min-w-[220px] max-w-xl"><div class="flex items-center justify-between text-[10px] text-[var(--text-soft)] mb-1"><span>پیشرفت ثبت محصول</span><strong data-wizard-progress-label>گام ۱ از ۵</strong></div><div class="h-1.5 rounded-full bg-[var(--input-bg)] overflow-hidden"><span class="block h-full bg-[var(--primary)] transition-all" data-wizard-progress style="width:20%"></span></div></div>
-    <div class="flex gap-2"><button type="button" class="btn-pro btn-pro-primary" data-wizard-next>مرحله بعد <i class="fa-solid fa-arrow-left"></i></button><button type="button" class="btn-pro btn-pro-ghost" data-save-draft><i class="fa-solid fa-floppy-disk"></i> ذخیره پیش‌نویس</button><button type="button" class="btn-pro btn-pro-primary" data-save-active hidden><i class="fa-solid fa-rocket"></i> ثبت نهایی محصول</button></div>
+    <div class="flex gap-2 flex-wrap">
+      @if(($product?->status) === 'active')
+        <button type="button" class="btn-pro btn-pro-ghost" data-save-changes><i class="fa-solid fa-floppy-disk"></i> <span>ذخیره تغییرات</span></button>
+      @else
+        <button type="button" class="btn-pro btn-pro-ghost" data-save-draft><i class="fa-solid fa-floppy-disk"></i> <span>ذخیره پیش‌نویس</span></button>
+      @endif
+      <button type="button" class="btn-pro btn-pro-primary" data-wizard-next>مرحله بعد <i class="fa-solid fa-arrow-left"></i></button>
+      <button type="button" class="btn-pro btn-pro-primary" data-save-active hidden><i class="fa-solid fa-rocket"></i> <span>{{ ($product?->status) === 'active' ? 'ذخیره و انتشار' : 'ثبت نهایی محصول' }}</span></button>
+    </div>
+  </div>
+
+  <div class="psw-submit-overlay" data-submit-overlay hidden role="status" aria-live="polite">
+    <div class="psw-submit-card" data-submit-card>
+      <span class="psw-submit-icon"><i class="fa-solid fa-cloud-arrow-up" data-submit-icon></i></span>
+      <strong data-submit-title>در حال ثبت محصول…</strong>
+      <p data-submit-text>تصاویر و تنظیمات در حال ارسال هستند؛ لطفاً صفحه را نبندید.</p>
+      <div class="psw-submit-bar" data-submit-bar><span data-submit-progress></span></div>
+      <small class="psw-submit-percent" data-submit-percent>۰٪</small>
+    </div>
   </div>
 </main>
 @endsection
 
 @section('scripts')
-<script>window.PRODUCT_SHOT_FORM_CONFIG={previewUrl:@json(route('admin.product-shots.preview')),qualityLevels:@json($qualityLevels),productId:@json($product?->id),productCode:@json($product?->product_code),categories:@json($categoryOptions),selectedCategoryIds:@json($selectedCategories)};</script>
+<script>window.PRODUCT_SHOT_FORM_CONFIG={previewUrl:@json(route('admin.product-shots.preview')),qualityLevels:@json($qualityLevels),productId:@json($product?->id),productCode:@json($product?->product_code),currentStatus:@json($product?->status ?? 'draft'),categories:@json($categoryOptions),selectedCategoryIds:@json($selectedCategories)};</script>
+<script src="{{ asset('admin/js/image-optimizer.js') }}?v={{ filemtime(public_path('admin/js/image-optimizer.js')) }}"></script>
 <script src="{{ asset('admin/js/product-shots-form.js') }}?v={{ filemtime(public_path('admin/js/product-shots-form.js')) }}"></script>
 @endsection

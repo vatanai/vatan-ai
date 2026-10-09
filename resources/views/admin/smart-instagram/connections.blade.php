@@ -117,6 +117,48 @@
         @endif
       </section>
 
+      <section class="content-card si-panel" id="telegram-bot">
+        <div class="si-panel-head"><div><div class="si-panel-title"><i class="fa-brands fa-telegram"></i> کارمندان بات تلگرام</div><div class="si-panel-sub">فقط شناسه‌های این فهرست از بات <span class="si-ltr">{{ '@'.$telegramBot['username'] }}</span> استفاده می‌کنند؛ پست تازه برایشان اعلام می‌شود و تنظیمش را داخل تلگرام انجام می‌دهند.</div></div></div>
+        @unless($telegramBot['configured'])
+          <div class="si-error" style="margin-bottom:10px">توکن بات هنوز روی سرور تنظیم نشده (<span class="si-ltr">TELEGRAM_INSTAGRAM_BOT_TOKEN</span>).</div>
+        @endunless
+        @forelse($telegramAccounts as $account)
+          <div class="si-row" style="{{ $account->is_active ? '' : 'opacity:.55' }}">
+            <span class="si-avatar is-sm">{{ mb_substr($account->displayName(), 0, 1) }}</span>
+            <div class="si-row-main">
+              <div class="si-row-title">{{ $account->displayName() }}@if($account->admin_id) <span class="badge-pro badge-info">ادمین پنل</span>@endif</div>
+              <div class="si-row-sub"><span class="si-ltr">{{ $account->telegram_id }}</span>{{ $account->username ? ' · @'.$account->username : '' }} · {{ $account->last_seen_at ? 'آخرین استفاده '.$account->last_seen_at->diffForHumans() : 'هنوز بات را باز نکرده' }}{{ $account->notify_new_posts ? '' : ' · 🔕' }}</div>
+            </div>
+            @if($canManage)
+              @unless($account->admin_id)
+                <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram.update', $account) }}">@csrf @method('PATCH')
+                  <select name="role" class="input-pro" style="height:32px;font-size:12px" onchange="this.form.submit()" aria-label="سطح دسترسی">@foreach($telegramRoles as $k => $l)<option value="{{ $k }}" @selected($account->role === $k)>{{ $l }}</option>@endforeach</select>
+                </form>
+              @endunless
+              <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram.update', $account) }}">@csrf @method('PATCH')<input type="hidden" name="is_active" value="{{ $account->is_active ? 0 : 1 }}"><button class="icon-action-btn" aria-label="{{ $account->is_active ? 'غیرفعال' : 'فعال' }}" title="{{ $account->is_active ? 'غیرفعال کردن موقت' : 'فعال کردن' }}"><i class="fa-solid {{ $account->is_active ? 'fa-pause' : 'fa-play' }}"></i></button></form>
+            @endif
+            @if($canManage || (int) $account->admin_id === (int) auth('admin')->id())<form method="POST" action="{{ route('admin.smart-instagram.connections.telegram.destroy', $account) }}" data-confirm="دسترسی «{{ $account->displayName() }}» به بات حذف شود؟">@csrf @method('DELETE')<button class="icon-action-btn danger" aria-label="حذف"><i class="fa-solid fa-xmark"></i></button></form>@endif
+          </div>
+        @empty
+          <div class="si-muted" style="margin-bottom:8px">هنوز کسی اضافه نشده است.</div>
+        @endforelse
+        @if($canManage)
+          <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram.store') }}" class="si-form" style="margin-top:12px">@csrf
+            <div class="si-field"><label for="tg-name">نام کارمند</label><input id="tg-name" name="name" class="input-pro" maxlength="120" required value="{{ old('name') }}" placeholder="مثلاً: ساغر محمدی"></div>
+            <div class="si-field"><label for="tg-id">شناسه‌ی عددی تلگرام</label><input id="tg-id" name="telegram_id" class="input-pro si-ltr" inputmode="numeric" maxlength="20" required value="{{ old('telegram_id') }}" placeholder="101754869"></div>
+            <div class="si-field"><label for="tg-role">دسترسی</label><select id="tg-role" name="role" class="input-pro">@foreach($telegramRoles as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach</select></div>
+            <div class="si-form-actions"><button class="btn-pro btn-pro-primary" style="height:34px"><i class="fa-solid fa-plus text-[11px]"></i> افزودن</button></div>
+          </form>
+          <div class="si-help" style="margin-top:6px">شناسه را خود کارمند با زدن Start در بات می‌بیند (یا از ‎@userinfobot‎).</div>
+        @endif
+        @if($telegramBot['configured'])
+          <div class="si-form-actions" style="margin-top:10px">
+            <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram') }}" target="_blank">@csrf<button class="btn-pro btn-pro-ghost" style="height:34px"><i class="fa-brands fa-telegram text-[12px]"></i> اتصال تلگرام خودم</button></form>
+            <a class="btn-pro btn-pro-ghost si-ltr" style="height:34px" href="https://t.me/{{ $telegramBot['username'] }}" target="_blank" rel="noopener">{{ '@'.$telegramBot['username'] }}</a>
+          </div>
+        @endif
+      </section>
+
       <section class="content-card si-panel">
         <div class="si-panel-head"><div class="si-panel-title"><i class="fa-solid fa-business-time"></i> ساعت کاری</div></div>
         @if($canManage)

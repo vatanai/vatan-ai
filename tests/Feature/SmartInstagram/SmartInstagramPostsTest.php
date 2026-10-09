@@ -194,17 +194,14 @@ class SmartInstagramPostsTest extends TestCase
         $opening = OutboundMessage::query()->where('kind', 'private_reply')->firstOrFail();
         $this->assertSame('sent', $opening->status, (string) $opening->policy_reason);
         $session = PostFlowSession::query()->firstOrFail();
-        $this->assertSame('awaiting_click', $session->stage);
+        // فالو ندارد ← همان پاسخ خصوصی اول، درخواست فالو است (جریان دومرحله‌ای)
+        $this->assertSame('awaiting_follow', $session->stage);
+        $this->assertSame('not_following', $session->follow_status);
+        $this->assertStringContainsString('فالو', $opening->body);
 
         // همان کامنت دوباره: جریان تکراری نمی‌سازد
         $this->ingest(['type' => 'comment', 'id' => 'c_1', 'sender' => ['id' => 'u_1'], 'text' => 'لینک', 'media_id' => 'reel_1'])->assertOk();
         $this->assertSame(1, PostFlowSession::query()->count());
-
-        // زدن دکمه، فالو نکرده → درخواست فالو
-        $this->ingest(['type' => 'dm', 'id' => 'm_1', 'sender' => ['id' => 'u_1'], 'text' => 'ارسال لینک'])->assertOk();
-        $this->assertSame('awaiting_follow', $session->fresh()->stage);
-        $this->assertSame('not_following', $session->fresh()->follow_status);
-        $this->assertTrue(OutboundMessage::query()->where('body', 'like', '%فالو%')->exists());
 
         // فالو کرد → کارت با سه دکمه
         $channel->forceFill(['settings' => ['sandbox_follow' => true]])->save();

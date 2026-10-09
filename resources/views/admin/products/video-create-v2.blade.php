@@ -204,5 +204,6 @@
 
 @section('scripts')
 <script>window.VIDEO_PRODUCT_ADMIN_V2 = @json($adminClientConfig);</script>
+<script src="{{ asset('admin/js/image-optimizer.js') }}?v={{ filemtime(public_path('admin/js/image-optimizer.js')) }}"></script>
 <script src="{{ asset('admin/js/video-products-create-v2.js') }}?v={{ filemtime(public_path('admin/js/video-products-create-v2.js')) }}"></script>
 @endsection

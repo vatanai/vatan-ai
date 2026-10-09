@@ -9,9 +9,10 @@ use Illuminate\Validation\ValidationException;
 /** اعتبارسنجی server-side داده‌ی initData که تلگرام به Mini App می‌دهد. */
 class TelegramInitDataValidator
 {
-    public function validate(string $initData): array
+    /** @param string|null $botToken برای بات‌های دیگر (مثلاً بات ثبت پست اینستاگرام)؛ پیش‌فرض بات اصلی. */
+    public function validate(string $initData, ?string $botToken = null): array
     {
-        $token = trim((string) config('services.telegram.bot_token'));
+        $token = trim((string) ($botToken ?? config('services.telegram.bot_token')));
         if ($token === '') {
             throw ValidationException::withMessages(['init_data' => 'توکن بات تلگرام هنوز تنظیم نشده است.']);
         }
@@ -49,6 +50,7 @@ class TelegramInitDataValidator
             'auth_date' => $authDate,
             'query_id' => $data['query_id'] ?? null,
             'user' => Arr::only($user, ['id', 'is_bot', 'first_name', 'last_name', 'username', 'language_code', 'is_premium']),
+            'start_param' => $data['start_param'] ?? null,
             'raw' => $data,
         ];
     }

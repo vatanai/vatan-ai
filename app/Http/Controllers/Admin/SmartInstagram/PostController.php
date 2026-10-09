@@ -214,12 +214,11 @@ class PostController extends Controller
             ]] : [];
             $dmSteps = [];
             if ($campaign->dm_enabled) {
-                $direct = !$campaign->follow_required && data_get($s, 'dm.mode') === 'direct_card';
-                if (!$direct) {
-                    $dmSteps[] = ['where' => 'دایرکت', 'title' => 'پیام آغاز + دکمه «'.data_get($s, 'dm.opening_button').'»', 'text' => data_get($s, 'dm.opening_text')];
-                    if ($campaign->follow_required && ($data['follows'] ?? 'yes') !== 'yes') {
-                        $dmSteps[] = ['where' => 'دایرکت', 'title' => ($data['follows'] ?? '') === 'unknown' ? 'وضعیت فالو نامشخص — '.(data_get($s, 'follow.unknown_policy') === 'send' ? 'ارسال کارت' : 'درخواست فالو') : 'درخواست فالو + دکمه «'.data_get($s, 'follow.button').'»', 'text' => data_get($s, 'follow.text')];
-                    }
+                // جریان دومرحله‌ای: فالوور ← کارت مستقیم؛ بدون فالو یا کاربر تازه (وضعیت نامشخص) ← درخواست فالو، بعد کارت.
+                $follows = $data['follows'] ?? 'yes';
+                if ($campaign->follow_required && $follows !== 'yes') {
+                    $dmSteps[] = ['where' => 'دایرکت', 'title' => 'درخواست فالو + دکمه‌های «مشاهده پیج» و «'.data_get($s, 'follow.button').'»'.($follows === 'unknown' ? ' (وضعیت فالو نامشخص)' : ''), 'text' => data_get($s, 'follow.text')];
+                    $dmSteps[] = ['where' => 'دایرکت', 'title' => 'بعد از زدن «'.data_get($s, 'follow.button').'»', 'text' => 'وضعیت فالو دوباره بررسی می‌شود؛ اگر فالو کرده بود کارت، وگرنه پیام یادآوری.'];
                 }
                 $card = $flow->cardMessage($campaign);
                 $dmSteps[] = ['where' => 'دایرکت', 'title' => 'کارت', 'text' => $card['ok'] ? $card['title'].' — '.collect(data_get($card, 'message.attachment.payload.elements.0.buttons', []))->pluck('title')->implode(' / ') : $card['error'], 'ok' => $card['ok']];
@@ -383,39 +382,7 @@ class PostController extends Controller
 
     private function validated(Request $request, Post $post, PostCampaignService $campaigns): array
     {
-        $request->validate([
-            'title' => ['nullable', 'string', 'max:190'],
-            'intent' => ['nullable', 'in:draft,test,active'],
-            'keywords' => ['nullable', 'array', 'max:30'],
-            'keywords.*.keyword' => ['nullable', 'string', 'max:120'],
-            'keywords.*.match_mode' => ['nullable', 'in:'.implode(',', array_keys(PostCampaignService::MATCH_MODES))],
-            'settings' => ['required', 'array'],
-            'settings.reply.styles' => ['nullable', 'array', 'max:3'],
-            'settings.reply.styles.*' => ['nullable', 'string', 'max:300'],
-            'settings.flow.order' => ['nullable', 'in:comment_first,dm_first'],
-            'settings.dm.opening_text' => ['nullable', 'string', 'max:900'],
-            'settings.dm.opening_button' => ['nullable', 'string', 'max:20'],
-            'settings.follow.text' => ['nullable', 'string', 'max:900'],
-            'settings.follow.retry_text' => ['nullable', 'string', 'max:900'],
-            'settings.follow.button' => ['nullable', 'string', 'max:20'],
-            'settings.card.title' => ['nullable', 'string', 'max:80'],
-            'settings.card.subtitle' => ['nullable', 'string', 'max:80'],
-            'settings.card.intro_text' => ['nullable', 'string', 'max:900'],
-            'settings.card.after_text' => ['nullable', 'string', 'max:900'],
-            'settings.card.image_url' => ['nullable', 'url', 'max:1000'],
-            'settings.card.product_id' => ['nullable', 'integer', 'exists:products,id'],
-            'settings.card.buttons' => ['nullable', 'array', 'max:3'],
-            'settings.card.buttons.*.label' => ['nullable', 'string', 'max:20'],
-            'settings.card.buttons.*.url' => ['nullable', 'url', 'max:1000'],
-            'settings.card.buttons.*.reply_text' => ['nullable', 'string', 'max:900'],
-            'settings.limits.daily_cap' => ['nullable', 'integer', 'between:0,10000'],
-            'settings.limits.reply_delay_seconds' => ['nullable', 'integer', 'between:0,3600'],
-            'settings.limits.dm_delay_seconds' => ['nullable', 'integer', 'between:0,3600'],
-        ], [], [
-            'keywords' => 'کلمات کلیدی',
-            'settings.card.buttons.*.url' => 'لینک دکمه',
-            'settings.card.image_url' => 'لینک تصویر کارت',
-        ]);
+        $request->validate(PostCampaignService::rules(), [], PostCampaignService::ATTRIBUTE_NAMES);
 
         $keywords = collect((array) $request->input('keywords'))->filter(fn ($k) => PersianText::normalize((string) ($k['keyword'] ?? '')) !== '');
         if ($keywords->isEmpty()) {

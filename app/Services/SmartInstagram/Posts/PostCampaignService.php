@@ -36,6 +36,61 @@ class PostCampaignService
     /** دکمه‌هایی که API اینستاگرام ارسالشان را پشتیبانی نمی‌کند — در پنل غیرفعال نمایش داده می‌شوند. */
     public const UNAVAILABLE_BUTTONS = ['call' => 'تماس تلفنی', 'share' => 'اشتراک‌گذاری', 'payment' => 'پرداخت درون‌برنامه'];
 
+    public const ATTRIBUTE_NAMES = [
+        'keywords' => 'کلمات کلیدی',
+        'settings.card.buttons.*.url' => 'لینک دکمه',
+        'settings.card.image_url' => 'لینک تصویر کارت',
+    ];
+
+    /** قواعد اعتبارسنجی فرم سناریو؛ مشترک بین ویزارد پنل و مینی‌اپ تلگرام. */
+    public static function rules(): array
+    {
+        return [
+            'title' => ['nullable', 'string', 'max:190'],
+            'intent' => ['nullable', 'in:draft,test,active'],
+            'keywords' => ['nullable', 'array', 'max:30'],
+            'keywords.*.keyword' => ['nullable', 'string', 'max:120'],
+            'keywords.*.match_mode' => ['nullable', 'in:'.implode(',', array_keys(self::MATCH_MODES))],
+            'settings' => ['required', 'array'],
+            'settings.reply.styles' => ['nullable', 'array', 'max:3'],
+            'settings.reply.styles.*' => ['nullable', 'string', 'max:300'],
+            'settings.flow.order' => ['nullable', 'in:comment_first,dm_first'],
+            'settings.dm.opening_text' => ['nullable', 'string', 'max:900'],
+            'settings.dm.opening_button' => ['nullable', 'string', 'max:20'],
+            'settings.follow.text' => ['nullable', 'string', 'max:900'],
+            'settings.follow.retry_text' => ['nullable', 'string', 'max:900'],
+            'settings.follow.button' => ['nullable', 'string', 'max:20'],
+            'settings.card.title' => ['nullable', 'string', 'max:80'],
+            'settings.card.subtitle' => ['nullable', 'string', 'max:80'],
+            'settings.card.intro_text' => ['nullable', 'string', 'max:900'],
+            'settings.card.after_text' => ['nullable', 'string', 'max:900'],
+            'settings.card.image_url' => ['nullable', 'url', 'max:1000'],
+            'settings.card.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'settings.card.buttons' => ['nullable', 'array', 'max:3'],
+            'settings.card.buttons.*.label' => ['nullable', 'string', 'max:20'],
+            'settings.card.buttons.*.url' => ['nullable', 'url', 'max:1000'],
+            'settings.card.buttons.*.reply_text' => ['nullable', 'string', 'max:900'],
+            'settings.limits.daily_cap' => ['nullable', 'integer', 'between:0,10000'],
+            'settings.limits.reply_delay_seconds' => ['nullable', 'integer', 'between:0,3600'],
+            'settings.limits.dm_delay_seconds' => ['nullable', 'integer', 'between:0,3600'],
+        ];
+    }
+
+    /** خطای منطقی فرم (بعد از قواعد پایه)؛ null یعنی مشکلی نیست. @return array{0:string,1:string}|null */
+    public static function logicalError(array $settings, bool $dmEnabled): ?array
+    {
+        if (!$dmEnabled) {
+            return null;
+        }
+        if (!filled(data_get($settings, 'card.product_id'))) {
+            return ['settings.card.product_id', 'برای ارسال دایرکت، انتخاب محصول هدف الزامی است.'];
+        }
+        $buttons = collect((array) data_get($settings, 'card.buttons', []))->filter(fn ($b) => is_array($b) && trim((string) ($b['label'] ?? '')) !== '');
+        $hasLink = $buttons->contains(fn ($b) => ($b['type'] ?? 'web_url') === 'web_url' && (filled($b['url'] ?? null) || filled(data_get($settings, 'card.product_id'))));
+
+        return $hasLink ? null : ['settings.card.buttons', 'کارت دایرکت حداقل یک دکمه‌ی لینک‌دار لازم دارد (یا یک محصول انتخاب کنید).'];
+    }
+
     public function __construct(
         private readonly WorkspaceContext $context,
         private readonly OperationLogger $logger,
@@ -62,7 +117,9 @@ class PostCampaignService
                 'order' => 'comment_first',
             ],
             'follow' => [
-                'text' => '{name} جان، برای اینکه لینک رو برات بفرستیم اول پیج رو دنبال کن 🙏 بعد روی «فالو کردم» بزن.',
+                // این پیام هم به کاربرِ بدون فالو می‌رود و هم به کاربر تازه‌ای که اینستاگرام هنوز وضعیت فالوی او را نمی‌دهد؛
+                // پس برای هر دو درست است. فالوورهای شناخته‌شده همان اول کارت می‌گیرند.
+                'text' => '{name} جان، لینک آماده‌ست 🎁 اگه هنوز پیج رو فالو نکردی اول فالو کن، بعد روی «فالو کردم» بزن.',
                 'retry_text' => '{name} جان، هنوز فالو تأیید نشده؛ اگر انجامش دادی دوباره روی «فالو کردم» بزن.',
                 'button' => 'فالو کردم ✅',
                 'unknown_policy' => 'send',
