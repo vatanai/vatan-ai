@@ -150,7 +150,11 @@
     return '<span class="tga-pill s-' + st + (onCard ? ' on-card' : '') + '">' + esc(label) + '</span>';
   }
   function filtered() {
-    return S.posts.filter(function (p) {
+    return S.posts.slice().sort(function (a, b) {
+      var aTime = a.published_at ? new Date(a.published_at).getTime() : 0;
+      var bTime = b.published_at ? new Date(b.published_at).getTime() : 0;
+      return bTime - aTime || Number(b.id || 0) - Number(a.id || 0);
+    }).filter(function (p) {
       var st = postState(p);
       if (S.filter === 'new') return st === 'new';
       if (S.filter === 'active') return st === 'active' || st === 'test';
@@ -263,8 +267,8 @@
       + field('تیتر کارت', 'settings.card.title', { max: 80, ph: 'خالی = نام محصول' })
       + field('توضیح کوتاه', 'settings.card.subtitle', { max: 80, ph: 'یک جمله درباره‌ی مزیت' })
       + '<div class="tga-field"><span class="tga-label">تصویر کارت</span>' + seg('settings.card.image_source', [['post', 'عکس پست'], ['product', 'عکس محصول'], ['none', 'بدون عکس']].concat(s.card.image_source === 'url' ? [['url', 'لینک']] : []), s.card.image_source) + '</div>'
-      + '<div class="tga-field"><span class="tga-label">دکمه‌ها <span class="cnt">تا ۳ دکمه</span></span><div class="tga-btns" data-btns></div></div>'
-      + '<div class="tga-preview" data-preview></div>');
+      + '<div class="tga-preview" data-preview></div>'
+      + '<div class="tga-field"><span class="tga-label">دکمه‌ها <span class="cnt">تا ۳ دکمه</span></span><div class="tga-btns" data-btns></div></div>');
 
     // ۴. انتشار
     var statusOpts = [['draft', 'پیش‌نویس'], ['test', 'آزمایشی'], ['active', 'فعال']];
