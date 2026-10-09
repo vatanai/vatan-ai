@@ -516,6 +516,12 @@ class AutomationEngine
         $variants = array_values(array_filter(array_map('strval', (array) ($action['variants'] ?? [])), fn ($v) => trim($v) !== ''));
         $writer = \App\Services\SmartInstagram\Posts\CommentReplyWriter::class;
         $keywordOnly = $writer::isKeywordRequest((string) $message->body, (array) ($rule?->keywords ?? []));
+        if ($type === 'public_reply' && $keywordOnly) {
+            $directReply = app($writer)->keywordReply($message, $contact, $rule);
+            if ($directReply) {
+                return $directReply;
+            }
+        }
         if ($type === 'public_reply' && !empty($action['ai_personalize']) && (!$keywordOnly || $variants === [])) {
             $written = app($writer)->write($message, $contact, $variants ?: [(string) ($action['text'] ?? '')], $rule);
             if ($written) {

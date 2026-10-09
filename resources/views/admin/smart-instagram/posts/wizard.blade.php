@@ -324,6 +324,17 @@
               </div>
             </div>
             <div class="sip-block">
+              <div class="sip-block-title" style="justify-content:space-between"><span><i class="fa-solid fa-hand-pointer"></i> دکمه‌ها <span class="si-muted" data-btn-count></span></span>
+                <button type="button" class="btn-pro btn-pro-secondary" data-btn-add style="height:32px"><i class="fa-solid fa-plus text-[11px]"></i> دکمه‌ی تازه</button></div>
+              <div class="sip-buttons" data-btn-list>
+                @foreach(array_values((array) data_get($s, 'card.buttons', [])) as $i => $b)
+                  @include('admin.smart-instagram.posts.partials.button-row', ['i' => $i, 'b' => $b])
+                @endforeach
+              </div>
+              <template data-btn-template>@include('admin.smart-instagram.posts.partials.button-row', ['i' => '__i__', 'b' => ['preset' => 'link', 'type' => 'web_url', 'label' => 'مشاهده لینک', 'url' => '', 'reply_text' => '']])</template>
+              <p class="si-help" style="margin-top:8px">اینستاگرام حداکثر ۳ دکمه در کارت می‌پذیرد. «لینک»: صفحه‌ی وب باز می‌شود · «پاسخ سریع»: متن تعیین‌شده در دایرکت ارسال می‌شود. دکمه‌های {{ implode('، ', $unavailableButtons) }} را اینستاگرام پشتیبانی نمی‌کند.</p>
+            </div>
+            <div class="sip-block">
               <div class="si-form">
                 <div class="si-field is-full"><label for="c-product">محصول هدف</label>
                   <div class="sip-product-search"><i class="fa-solid fa-magnifying-glass"></i><input id="c-product-search" class="input-pro" type="search" data-product-search placeholder="نام، توضیح یا کد محصول را جست‌وجو کنید…" autocomplete="off"></div>
@@ -343,17 +354,6 @@
                 <div class="si-field"><label for="c-title">تیتر کارت</label><input id="c-title" class="input-pro" name="settings[card][title]" maxlength="80" data-counter="80" data-ai-field="card_title" value="{{ data_get($s, 'card.title') }}" placeholder="خالی = نام محصول یا کپشن پست"><div class="sip-counter" data-counter-out></div></div>
                 <div class="si-field"><label for="c-sub">توضیح کوتاه</label><input id="c-sub" class="input-pro" name="settings[card][subtitle]" maxlength="80" data-counter="80" data-ai-field="card_subtitle" value="{{ data_get($s, 'card.subtitle') }}"><div class="sip-counter" data-counter-out></div></div>
               </div>
-            </div>
-            <div class="sip-block">
-              <div class="sip-block-title" style="justify-content:space-between"><span><i class="fa-solid fa-hand-pointer"></i> دکمه‌ها <span class="si-muted" data-btn-count></span></span>
-                <button type="button" class="btn-pro btn-pro-secondary" data-btn-add style="height:32px"><i class="fa-solid fa-plus text-[11px]"></i> دکمه‌ی تازه</button></div>
-              <div class="sip-buttons" data-btn-list>
-                @foreach(array_values((array) data_get($s, 'card.buttons', [])) as $i => $b)
-                  @include('admin.smart-instagram.posts.partials.button-row', ['i' => $i, 'b' => $b])
-                @endforeach
-              </div>
-              <template data-btn-template>@include('admin.smart-instagram.posts.partials.button-row', ['i' => '__i__', 'b' => ['preset' => 'link', 'type' => 'web_url', 'label' => 'مشاهده لینک', 'url' => '', 'reply_text' => '']])</template>
-              <p class="si-help" style="margin-top:8px">اینستاگرام حداکثر ۳ دکمه در کارت می‌پذیرد. «لینک»: صفحه‌ی وب باز می‌شود · «پاسخ سریع»: متن تعیین‌شده در دایرکت ارسال می‌شود. دکمه‌های {{ implode('، ', $unavailableButtons) }} را اینستاگرام پشتیبانی نمی‌کند.</p>
             </div>
             <div class="sip-block">
               <div class="si-field"><label for="c-after">پیام بعد از کارت (اختیاری)</label><textarea id="c-after" class="input-pro" rows="2" name="settings[card][after_text]" maxlength="900" data-counter="900">{{ data_get($s, 'card.after_text') }}</textarea><div class="sip-counter" data-counter-out></div></div>

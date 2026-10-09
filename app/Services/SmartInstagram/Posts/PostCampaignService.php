@@ -102,9 +102,9 @@ class PostCampaignService
         return [
             'reply' => [
                 'styles' => [
-                    '{name} جان، جزئیات رو توی دایرکت برات فرستادیم 🌿',
-                    'ممنون از کامنتت {name}! پیامت رو توی دایرکت ببین ✉️',
-                    '{name} عزیز، لینک و اطلاعات کامل توی دایرکت منتظرته 🙌',
+                    '{name} جان، لینک ساخت رو توی دایرکت برات فرستادیم؛ چک کن.',
+                    'لینک ساخت رو توی دایرکت برات فرستادیم؛ هر وقت دیدی خبر بده.',
+                    '{name} جان، لینک و اطلاعات همین پست رو توی دایرکت فرستادیم.',
                 ],
                 'ai_personalize' => true,
             ],
@@ -369,7 +369,7 @@ class PostCampaignService
             $styles = array_values(array_filter((array) data_get($settings, 'reply.styles', [])));
             $publicAction = array_filter([
                 'type' => 'public_reply',
-                'text' => $styles[0] ?? '{name} جان، توی دایرکت برات فرستادیم 🌿',
+                'text' => $styles[0] ?? '{name} جان، لینک ساخت رو توی دایرکت برات فرستادیم؛ چک کن.',
                 'variants' => $styles,
                 'ai_personalize' => (bool) data_get($settings, 'reply.ai_personalize', false),
                 'delay_seconds' => (int) ($limits['reply_delay_seconds'] ?? 0),

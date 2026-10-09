@@ -36,6 +36,11 @@ class PostController extends Controller
 
         $all = PostCampaign::query()->where('workspace_id', $this->ws())->with(['post', 'keywords', 'rule'])->latest('updated_at')->get();
         $list = $status !== '' ? $all->where('status', $status)->values() : $all;
+        // ترتیب نمایش باید مثل اینستاگرام از تازه‌ترین پست شروع شود؛ اولین کارت در شبکه‌ی چپ‌به‌راست سمت چپ می‌نشیند.
+        $list = $list->sortByDesc(fn (PostCampaign $campaign): array => [
+            $campaign->post?->published_at?->getTimestamp() ?? 0,
+            (int) $campaign->post_id,
+        ])->values();
 
         $linkedPostIds = $all->pluck('post_id');
         $unlinked = Post::query()->where('workspace_id', $this->ws())->whereNotIn('id', $linkedPostIds)

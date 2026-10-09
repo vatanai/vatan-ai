@@ -526,7 +526,20 @@
     var key = src || '';
     if (box.getAttribute('data-src') !== key) {
       box.setAttribute('data-src', key);
+      box.classList.remove('has-image');
+      box.style.removeProperty('aspect-ratio');
       box.innerHTML = src ? '<img src="' + esc(src) + '" alt="">' : '<i class="fa-solid fa-image"></i>';
+      if (src) {
+        var image = $('img', box);
+        var setNaturalRatio = function () {
+          if (image.naturalWidth && image.naturalHeight) {
+            box.style.aspectRatio = image.naturalWidth + ' / ' + image.naturalHeight;
+            box.classList.add('has-image');
+          }
+        };
+        image.addEventListener('load', setNaturalRatio, { once: true });
+        if (image.complete) setNaturalRatio();
+      }
     }
     var urlField = $('[data-img-url-field]', this.form);
     if (urlField) urlField.hidden = this.radio('settings[card][image_source]') !== 'url';
