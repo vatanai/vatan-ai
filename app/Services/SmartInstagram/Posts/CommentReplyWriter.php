@@ -113,7 +113,7 @@ class CommentReplyWriter
     public static function isKeywordRequest(string $body, array $keywords): bool
     {
         $text = ' '.\App\Services\SmartInstagram\PersianText::normalize($body).' ';
-        foreach (['سلام', 'لطفا', 'لطفاً', 'مرسی', 'ممنون', 'ممنونم', 'پلیز', 'please', 'pls', 'میخوام', 'می خوام', 'میخواستم', 'بفرست', 'بفرستید', 'بفرستین', 'رو', 'را', 'هم', 'منم', 'من', 'برام', 'برای من', 'میشه', 'می شه'] as $filler) {
+        foreach (['سلام', 'لطفا', 'لطفاً', 'مرسی', 'ممنون', 'ممنونم', 'پلیز', 'please', 'pls', 'میخوام', 'می خوام', 'میخواستم', 'بفرست', 'بفرستید', 'بفرستین', 'بساز', 'بسازم', 'بسازش', 'ساخت', 'ساختش', 'ساختن', 'محصول', 'رو', 'را', 'هم', 'منم', 'من', 'برام', 'برای من', 'میشه', 'می شه'] as $filler) {
             $text = str_replace(' '.$filler.' ', ' ', $text);
         }
         $text = trim($text);
