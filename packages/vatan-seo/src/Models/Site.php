@@ -52,12 +52,13 @@ class Site extends SeoModel
     {
         $today = now(config('seo-engine.host.timezone', 'Asia/Tehran'))->toDateString();
         $days = (array) $this->setting('seen_days', []);
-        if (! in_array($today, $days, true)) {
+        $firstViewToday = ! in_array($today, $days, true);
+        if ($firstViewToday) {
             $days[] = $today;
             $this->putSetting('seen_days', array_slice($days, -30));
             $this->save();
         }
-        {
+        if ($firstViewToday) {
             \Vatan\Seo\Models\Task::where('site_id', $this->id)->where('playbook_key', 'day.brief')->where('due_on', $today)
                 ->whereNotIn('status', ['done', 'skipped'])->update(['status' => 'done', 'completed_at' => now(), 'completed_by' => 'admin', 'last_message' => 'خلاصه‌ی امروز مرور شد.']);
         }

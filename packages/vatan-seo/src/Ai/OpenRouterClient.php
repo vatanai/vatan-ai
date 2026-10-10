@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Log;
  */
 class OpenRouterClient
 {
+    private const MODELS_CACHE_KEY = 'seo-engine:openrouter-models';
+    private const KEY_INFO_CACHE_KEY = 'seo-engine:openrouter-key-info';
+
     public function apiKey(): string
     {
         return (string) (config('seo-engine.ai.dedicated_key') ?: config('seo-engine.ai.api_key') ?: config('services.openrouter.api_key', ''));
@@ -33,6 +36,13 @@ class OpenRouterClient
             }
         }
         return null;
+    }
+
+    /** فقط مقدار ذخیره‌شده را می‌خواند و برای رندر صفحه هیچ تماس شبکه‌ای ندارد. */
+    public function cachedKeyInfo(): ?array
+    {
+        $value = Cache::get(self::KEY_INFO_CACHE_KEY);
+        return is_array($value) ? $value : null;
     }
 
     public function configured(): bool
@@ -141,7 +151,7 @@ class OpenRouterClient
      */
     public function models(bool $fresh = false): array
     {
-        $key = 'seo-engine:openrouter-models';
+        $key = self::MODELS_CACHE_KEY;
         if ($fresh) {
             Cache::forget($key);
         }
@@ -169,5 +179,12 @@ class OpenRouterClient
             }
             return [];
         });
+    }
+
+    /** فهرست مدل‌های کش‌شده؛ هرگز برای صفحهٔ داشبورد شبکه را صدا نمی‌زند. */
+    public function cachedModels(): array
+    {
+        $value = Cache::get(self::MODELS_CACHE_KEY);
+        return is_array($value) ? $value : [];
     }
 }

@@ -1,6 +1,7 @@
 @php
-  $seoReview = \Vatan\Seo\Models\ContentItem::where('site_id', $site->id)->where('status', 'review')->count();
-  $seoAction = \Vatan\Seo\Models\Task::where('site_id', $site->id)->where('status', 'needs_action')->where('automation', '!=', 'auto')->count();
+  $seoStats = app(\Vatan\Seo\Services\NavStats::class)->for($site);
+  $seoReview = $seoStats['review'];
+  $seoAction = $seoStats['action'];
   $seoNav = [
     ['seo.overview', 'fa-chart-line', 'نمای کلی', request()->routeIs('seo.overview'), null],
     ['seo.keywords.index', 'fa-key', 'کلمات کلیدی', request()->routeIs('seo.keywords.*'), null],

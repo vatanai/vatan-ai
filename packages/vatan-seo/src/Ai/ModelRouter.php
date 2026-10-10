@@ -15,7 +15,7 @@ class ModelRouter
     public function __construct(private OpenRouterClient $client) {}
 
     /** @return string[] فهرست مرتب کاندیدها (برای Failover در زمان اجرا) */
-    public function candidates(Site $site, string $role): array
+    public function candidates(Site $site, string $role, bool $checkLive = true): array
     {
         $manual = $site->setting("models.{$role}");
         $group = array_key_exists($role, (array) data_get($site->profile(), 'models', []))
@@ -32,7 +32,7 @@ class ModelRouter
         }
         $list = array_values(array_unique(array_filter($list)));
 
-        $live = $this->client->models();
+        $live = $checkLive ? $this->client->models() : $this->client->cachedModels();
         if ($live) {
             $available = array_values(array_filter($list, fn ($id) => isset($live[$id]) || str_starts_with($id, '~')));
             if ($available) {
@@ -42,9 +42,9 @@ class ModelRouter
         return $list;
     }
 
-    public function resolve(Site $site, string $role): ?string
+    public function resolve(Site $site, string $role, bool $checkLive = true): ?string
     {
-        return $this->candidates($site, $role)[0] ?? null;
+        return $this->candidates($site, $role, $checkLive)[0] ?? null;
     }
 
     /** قیمت هر میلیون توکن برای برآورد قبل از تماس */

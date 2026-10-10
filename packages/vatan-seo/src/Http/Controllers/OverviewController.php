@@ -23,7 +23,7 @@ class OverviewController extends BaseController
         $range = (int) request('range', 28);
         $range = in_array($range, [7, 28, 90], true) ? $range : 28;
 
-        $metrics = DailyMetric::where('site_id', $site->id)->where('date', '>=', now()->subDays($range * 2 + 3)->toDateString())->orderBy('date')->get();
+        $metrics = DailyMetric::where('site_id', $site->id)->where('date', '>=', now()->subDays($range * 2 + 3)->toDateString())->orderBy('date')->get(['id', 'date', 'clicks', 'impressions', 'ctr', 'position']);
         $cut = now()->subDays($range + 2)->toDateString();
         $cur = $metrics->filter(fn ($m) => $m->date->toDateString() > $cut);
         $prev = $metrics->filter(fn ($m) => $m->date->toDateString() <= $cut);
@@ -38,7 +38,7 @@ class OverviewController extends BaseController
         };
         $kpi = ['cur' => $sum($cur), 'prev' => $sum($prev)];
 
-        $targets = Keyword::where('site_id', $site->id)->targets()->get();
+        $targets = Keyword::where('site_id', $site->id)->targets()->get(['id', 'keyword', 'current_position', 'previous_position', 'target_url']);
         $buckets = ['top3' => 0, 'top10' => 0, 'top20' => 0, 'rest' => 0, 'none' => 0];
         foreach ($targets as $k) {
             $buckets[$k->bucket()]++;
@@ -46,9 +46,9 @@ class OverviewController extends BaseController
 
         // روند رتبه‌ی ۸ کلمه‌ی هدف برتر
         $topTargets = $targets->sortBy(fn ($k) => $k->current_position ?? 999)->take(8);
-        $ranks = KeywordRank::whereIn('keyword_id', $topTargets->pluck('id'))->where('date', '>=', now()->subDays(60)->toDateString())->orderBy('date')->get()->groupBy('keyword_id');
+        $ranks = KeywordRank::whereIn('keyword_id', $topTargets->pluck('id'))->where('date', '>=', now()->subDays(60)->toDateString())->orderBy('date')->get(['id', 'keyword_id', 'date', 'position'])->groupBy('keyword_id');
 
-        $tasks = Task::where('site_id', $site->id)->get();
+        $tasks = Task::where('site_id', $site->id)->get(['id', 'pillar', 'kind', 'status']);
         $main = $tasks->whereNotIn('kind', ['recurring', 'daily', 'weekly'])->where('status', '!=', 'skipped');
         $pillar = fn ($p) => [
             'total' => $main->where('pillar', $p)->count(),

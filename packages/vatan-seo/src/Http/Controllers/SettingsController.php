@@ -23,17 +23,18 @@ class SettingsController extends BaseController
         $site = $this->site();
         $roles = [];
         foreach (['fast' => 'کارهای سریع و تکراری', 'strategist' => 'استراتژیست و تحلیل', 'writer' => 'نویسنده‌ی مقاله', 'research' => 'پژوهش زنده‌ی وب'] as $role => $label) {
-            $roles[$role] = ['label' => $label, 'model' => $router->resolve($site, $role), 'candidates' => $router->candidates($site, $role)];
+            // رندر عادی نباید منتظر شبکه بماند؛ تست اتصال مسیر زنده و صریح خودش را دارد.
+            $roles[$role] = ['label' => $label, 'model' => $router->resolve($site, $role, false), 'candidates' => $router->candidates($site, $role, false)];
         }
         return $this->view('settings', [
             'tiers' => Budget::tiers(),
             'profile' => $site->profile(),
             'roles' => $roles,
             'aiReady' => $client->configured(),
-            'keyInfo' => \Illuminate\Support\Facades\Cache::remember('seo-engine:openrouter-key-info', 600, fn () => $client->keyInfo()),
+            'keyInfo' => $client->cachedKeyInfo(),
             'dedicated' => filled(config('seo-engine.ai.dedicated_key')),
             'viaGateway' => filled(config('seo-engine.ai.gateway_secret')),
-            'liveModels' => count($client->models()),
+            'liveModels' => count($client->cachedModels()),
             'sa' => ['configured' => ServiceAccount::configured(), 'email' => ServiceAccount::email()],
             'bot' => ['configured' => $bot->configured(), 'username' => config('seo-engine.telegram.bot_username'), 'admins' => TelegramAdmin::latest()->get(), 'code' => session('seo_tg_code')],
             'dataforseo' => DataForSeoRankProvider::configured(),
@@ -128,6 +129,8 @@ class SettingsController extends BaseController
                 'openrouter' => (function () use ($ai, $client, $site) {
                     \Illuminate\Support\Facades\Cache::forget('seo-engine:openrouter-key-info');
                     $models = count($client->models(true));
+                    $keyInfo = $client->keyInfo();
+                    \Illuminate\Support\Facades\Cache::put('seo-engine:openrouter-key-info', $keyInfo, now()->addMinutes(10));
                     $reply = $ai->text($site, 'fast', 'connection-test', 'Reply with exactly: OK', 'ping', ['max_tokens' => 5, 'critical' => true]);
                     return 'OpenRouter پاسخ داد ('.trim($reply).'). مدل‌های زنده: '.$models;
                 })(),

@@ -39,7 +39,7 @@ class PlanController extends BaseController
         $tasks = $q->orderByRaw("CASE status WHEN 'needs_action' THEN 0 WHEN 'waiting_approval' THEN 1 WHEN 'in_progress' THEN 2 ELSE 3 END")
             ->orderBy('due_on')->orderByDesc('priority')->limit(300)->get();
 
-        $all = Task::where('site_id', $site->id)->get();
+        $all = Task::where('site_id', $site->id)->get(['id', 'pillar', 'kind', 'category', 'status']);
         $progress = [];
         foreach (['infrastructure', 'goals'] as $p) {
             // پیشرفت ستون‌ها فقط تسک‌های اصلی (نه روزانه/هفتگی تکراری) را می‌شمارد
@@ -59,7 +59,7 @@ class PlanController extends BaseController
             'groups' => $this->groupByPeriod($tasks, $view),
             'progress' => $progress,
             'categories' => $categories,
-            'scenarios' => Scenario::where('site_id', $site->id)->where('is_enabled', true)->orderBy('next_run_at')->get(),
+            'scenarios' => Scenario::where('site_id', $site->id)->where('is_enabled', true)->orderBy('next_run_at')->get(['id', 'title', 'last_status', 'next_run_at']),
             'counts' => [
                 'roadmap' => (clone $base)->whereNotNull('due_on')->where('kind', '!=', 'daily')->count(),
                 'today' => (clone $base)->open()->where(fn ($w) => $w->where('due_on', '<=', now()->toDateString())->orWhere('status', 'needs_action'))->count(),
