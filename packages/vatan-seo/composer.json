@@ -1,0 +1,22 @@
+{
+    "name": "vatan/seo-engine",
+    "description": "Vatan SEO Engine — موتور سئوی هوشمند و خودکار (تکنیکال + کلمات کلیدی + تولید محتوا) برای داشبوردهای لاراولی",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vatan\\Seo\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Vatan\\Seo\\SeoEngineServiceProvider"
+            ]
+        }
+    }
+}

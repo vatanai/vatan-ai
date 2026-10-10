@@ -44,7 +44,7 @@
     @if(session('success'))<div class="mb-4 p-3 rounded-xl border border-[var(--success)] bg-[var(--card-bg)] text-xs text-[var(--text-main)]"><i class="fa-solid fa-circle-check text-[var(--success)] ml-1"></i>{{ session('success') }}</div>@endif
     @if($errors->any())<div class="mb-5 p-4 rounded-xl border border-[var(--danger)] bg-[var(--card-bg)] text-xs text-[var(--text-main)]"><strong class="block mb-2 text-[var(--danger)]">موارد زیر را اصلاح کنید:</strong><ul class="list-disc pr-5 space-y-1">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
-    <div class="mb-6"><h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">{{ $product ? 'ویرایش «'.$product->name_fa.'»' : 'ثبت محصول پروداکتی' }}</h1><p class="text-xs text-[var(--text-soft)]">محصول را در ۵ مرحله تنظیم کنید — ساختار این مسیر با ثبت محصول پرتره‌ای یکسان و منطق آن کاملاً مستقل است.</p></div>
+    <div class="mb-6"><h1 class="text-xl font-extrabold text-[var(--text-h)] mb-1">{{ $product ? 'ویرایش «'.$product->name_fa.'»' : 'ثبت محصول پروداکتی' }}</h1><p class="text-xs text-[var(--text-soft)]">محصول را در ۵ گام تنظیم کنید؛ در هر مرحله می‌توانید پیش‌نویس را ذخیره کنید و در گام آخر، محصول را بازبینی و منتشر کنید.</p></div>
 
     <div class="mb-7 bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-2 md:p-1.5">
       <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">

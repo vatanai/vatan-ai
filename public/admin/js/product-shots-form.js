@@ -84,7 +84,7 @@
       });
       if (invalidRatio) return error('برای هر شات فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.');
     }
-    if (number === 4 && finalSubmit && !all('[name="explore_tiles[]"]:checked', form).length) return error('حداقل یک قاب نمایش در اکسپلور انتخاب کنید.');
+    if (number === 5 && finalSubmit && !all('[name="explore_tiles[]"]:checked', form).length) return error('حداقل یک قاب نمایش در هوم و اکسپلور انتخاب کنید.');
     return true;
   }
 
@@ -191,7 +191,7 @@
   async function submitProduct(status) {
     if (submitting) return;
     // اعتبارسنجی سمت مرورگر
-    if (status === 'active') { if (!validateAll(true, 4)) return; }
+    if (status === 'active') { if (!validateAll(true, 5)) return; }
     else if (!validateAll(false, 3)) return;
 
     if (typeof imageOptimizerPendingState === 'function') {
@@ -402,8 +402,21 @@
 
   var testImages = one('#sp-test-images', form);
   if (testImages) testImages.addEventListener('change', function () {
-    if (testImages.files.length > 3) { testImages.value = ''; return error('حداکثر سه تصویر تست انتخاب کنید.'); }
+    var tooMany = testImages.files.length > 3;
+    if (tooMany) testImages.value = '';
     one('[data-test-image-count]', form).textContent = testImages.files.length ? fa(testImages.files.length) + ' تصویر آماده‌ی پیش‌نمایش است.' : 'حداکثر ۳ تصویر از زوایای مکمل همان محصول.';
+    var thumbs = one('[data-test-thumbs]', form);
+    if (thumbs) {
+      thumbs.innerHTML = '';
+      Array.from(testImages.files).forEach(function (file) {
+        var image = document.createElement('img');
+        image.alt = '';
+        image.src = URL.createObjectURL(file);
+        image.onload = function () { URL.revokeObjectURL(image.src); };
+        thumbs.appendChild(image);
+      });
+    }
+    if (tooMany) error('حداکثر سه تصویر تست انتخاب کنید.');
   });
 
   all('[data-shot-sample-file]', form).forEach(function (input) {

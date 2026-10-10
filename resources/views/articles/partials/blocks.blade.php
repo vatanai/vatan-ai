@@ -12,7 +12,8 @@
       <h{{ $level }} id="{{ $headingId }}">{{ $headingText }}</h{{ $level }}>
       @break
     @case('paragraph')
-      <p>{!! nl2br(e($block['content'] ?? '')) !!}</p>
+      {{-- لینک‌های داخلی [انکر](url) از موتور سئو؛ متن اول escape و بعد فقط لینک‌های http(s) یا نسبی تبدیل می‌شوند --}}
+      <p>{!! preg_replace('/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s"<>]+)\)/u', '<a href="$2">$1</a>', nl2br(e($block['content'] ?? ''))) !!}</p>
       @break
     @case('note')
       <aside class="article-note"><i class="fa-regular fa-lightbulb"></i><div>@if(!empty($block['title']))<strong>{{ $block['title'] }}</strong>@endif<p>{!! nl2br(e($block['content'] ?? '')) !!}</p></div></aside>

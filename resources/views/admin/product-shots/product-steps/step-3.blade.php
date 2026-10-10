@@ -23,7 +23,7 @@
 
   <section class="content-card p-5">
     <div class="ps-card-title"><i class="fa-solid fa-vial-circle-check"></i> تصاویر تست و پیش‌نمایش اسلایدها</div><div class="ps-card-desc">یک تا سه زاویه از یک محصول واحد انتخاب کنید. پیش‌نمایش واقعی هزینه‌ی سرویس هوش مصنوعی دارد، اما سفارش و کسر اعتبار کاربر ایجاد نمی‌کند.</div>
-    <div class="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3 mt-4"><div class="ps-field"><label>تصاویر تست محصول</label><input id="sp-test-images" type="file" accept="image/jpeg,image/png,image/webp" multiple class="input-pro"><div class="ps-hint" data-test-image-count>حداکثر ۳ تصویر از زوایای مکمل همان محصول.</div></div><div class="ps-field"><label>نسبت پیش‌نمایش</label><select id="sp-test-ratio" class="input-pro">@foreach($aspectRatios as $ratio)<option value="{{ $ratio }}">{{ $ratio }}</option>@endforeach</select></div></div>
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3 mt-4"><div class="ps-field"><label for="sp-test-images">تصاویر تست محصول</label><label class="ps-test-upload" data-test-upload><input id="sp-test-images" type="file" accept="image/jpeg,image/png,image/webp" multiple><span class="ps-test-upload-icon"><i class="fa-solid fa-images"></i></span><span class="ps-test-upload-copy"><strong>انتخاب تصاویر تست</strong><small data-test-image-count>حداکثر ۳ تصویر از زوایای مکمل همان محصول.</small></span><span class="ps-test-upload-thumbs" data-test-thumbs></span></label></div><div class="ps-field"><label>نسبت پیش‌نمایش</label><select id="sp-test-ratio" class="input-pro">@foreach($aspectRatios as $ratio)<option value="{{ $ratio }}">{{ $ratio }}</option>@endforeach</select></div></div>
     <div id="sp-preview-status" class="ps-hint mt-2" aria-live="polite"></div>
   </section>
 

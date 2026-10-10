@@ -111,3 +111,12 @@ find . -type f -perm 600 -not -path "./vendor/*" -not -path "./node_modules/*" -
 ## چرخش به کسب‌وکار (جهت فعلی پروژه — ۸ مهر ۱۴۰۵)
 
 وطن از «پرتره و چهره» به «عکس/ویدیوی محصول برای کسب‌وکارها» می‌چرخد. **هر چت یا سشنی که روی این چرخش کار می‌کند باید اول `doc/business-pivot-plan.md` را بخواند** — چرایی، شواهد، تصمیم‌ها، ۸۷ تسک با شناسه (مثل `0.3`) و قوانین اجرا آنجاست. بدون تأیید صریح کاربر: دیپلوی، push، پیام عمومی و تیک‌زدن تسک نه.
+
+---
+
+## موتور سئوی هوشمند (packages/vatan-seo) — از ۱۸ مهر ۱۴۰۵
+
+سیستم سئوی تکنیکال + کلمات کلیدی خودکار با هوش مصنوعی، به‌صورت **پکیج مستقل** در `packages/vatan-seo` (پنل: `/admin/seo`، منو: «سئوی هوشمند»).
+**هر چت یا سشنی که روی سئو کار می‌کند باید اول `packages/vatan-seo/CLAUDE.md` را بخواند** — قوانین معماری، نسخه‌گذاری (`packages/vatan-seo/VERSION` + `CHANGELOG.md`) و نقشه‌ی فایل‌ها آنجاست.
+- نقاط اتصال در این پروژه فقط: `bootstrap/providers.php`، یک خط `@includeIf('seo::partials.sidebar')` در `sidebar-menu.blade.php`، متغیرهای `SEO_*` در `.env`، و رندر لینک‌های `[انکر](url)` در `articles/partials/blocks.blade.php`.
+- بعد از دیپلوی: `php artisan migrate --force`، سپس یک بار `php artisan seo:install --budget=20` و `php artisan seo:telegram setup`. زمان‌بند لاراول (`schedule:run`) باید روی سرور فعال باشد.

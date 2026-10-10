@@ -32,6 +32,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "app/",
+            "Vatan\\Seo\\": "packages/vatan-seo/src/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

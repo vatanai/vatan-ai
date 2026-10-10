@@ -1,0 +1,304 @@
+/* ══════════════════════════════════════════════════════════════
+   Vatan SEO Engine — استایل پنل
+   قانون: فقط متغیرهای سیستم طراحی میزبان (var(--...)) — هیچ رنگ ثابت.
+   همه‌ی کلاس‌ها با پیشوند seo- تا با بقیه‌ی پنل تداخل نداشته باشند.
+   برای داشبوردی که این توکن‌ها را ندارد: tokens-fallback.css را هم لود کنید.
+════════════════════════════════════════════════════════════════ */
+
+.seo { color: var(--text-main); font-size: 13px; }
+.seo *, .seo *::before, .seo *::after { box-sizing: border-box; }
+.seo a { color: inherit; text-decoration: none; }
+.seo-num { font-variant-numeric: tabular-nums; }
+.seo-muted { color: var(--text-soft); }
+.seo-ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+.seo-stack { display: flex; flex-direction: column; gap: 16px; }
+.seo-row-gap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.seo-sep { height: 1px; background: var(--divider); margin: 14px 0; border: 0; }
+
+/* ── سربرگ صفحه ─────────────────────────────────────────────── */
+.seo-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.seo-head-title { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; color: var(--text-h); line-height: 1.3; }
+.seo-head-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--primary); color: var(--accent); font-size: 16px; flex-shrink: 0; }
+.seo-head-sub { font-size: 12.5px; color: var(--text-soft); margin-top: 6px; line-height: 1.9; max-width: 720px; }
+.seo-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── ناوبری بخش‌ها ──────────────────────────────────────────── */
+.seo-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; margin-bottom: 18px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--border); }
+@media (max-width: 1400px) { .seo-tab { padding: 8px 10px; font-size: 12px; } .seo-tab i { display: none; } }
+@media (max-width: 700px) { .seo-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .seo-tab { justify-content: center; } .seo-tab-version { grid-column: 1 / -1; text-align: center; margin: 0; } }
+.seo-tab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 10px; font-size: 12.5px; font-weight: 700; color: var(--text-soft); white-space: nowrap; transition: background .15s, color .15s; }
+.seo-tab i { font-size: 12px; opacity: .85; }
+.seo-tab:hover { background: var(--nav-hover); color: var(--text-h); }
+.seo-tab.is-active { background: var(--primary); color: var(--accent); }
+.seo-tab-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center; font-size: 10px; background: var(--warning-l); color: var(--warning); border: 1px solid var(--warning-m); }
+.seo-tab-version { margin-inline-start: auto; align-self: center; padding: 0 8px; font-size: 10.5px; color: var(--text-soft); white-space: nowrap; }
+
+/* ── گرید ───────────────────────────────────────────────────── */
+.seo-grid { display: grid; gap: 16px; }
+.seo-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.seo-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seo-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seo-grid-main { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.seo-span-2 { grid-column: span 2; }
+@media (max-width: 1200px) { .seo-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .seo-grid-main { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .seo-grid-3, .seo-grid-2 { grid-template-columns: minmax(0, 1fr); } .seo-span-2 { grid-column: auto; } }
+@media (max-width: 560px) { .seo-grid-4 { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── کارت ───────────────────────────────────────────────────── */
+.seo-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px; min-width: 0; }
+.seo-card.is-flush { padding: 0; overflow: hidden; }
+.seo-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.seo-card.is-flush .seo-card-head { padding: 16px 18px 0; }
+.seo-card-title { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; color: var(--text-h); }
+.seo-card-title > i { color: var(--primary); font-size: 13px; }
+body:not(.light) .seo-card-title > i { color: var(--accent); }
+.seo-card-sub { font-size: 11.5px; color: var(--text-soft); margin-top: 3px; }
+.seo-link { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+body:not(.light) .seo-link { color: var(--accent); }
+.seo-link:hover { text-decoration: underline; }
+
+/* ── راهنمای کلیکی ─────────────────────────────────────────── */
+.seo-help { position: relative; display: inline-flex; vertical-align: middle; }
+.seo-help-btn { width: 17px; height: 17px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; background: transparent; color: var(--text-soft); cursor: pointer; font-size: 12px; opacity: .7; transition: opacity .15s, color .15s; }
+.seo-help-btn:hover, .seo-help.is-open .seo-help-btn { opacity: 1; color: var(--primary); }
+body:not(.light) .seo-help-btn:hover, body:not(.light) .seo-help.is-open .seo-help-btn { color: var(--accent); }
+.seo-pop { position: fixed; top: 0; left: 0; z-index: 1000; display: none; width: 300px; max-width: calc(100vw - 24px); padding: 14px 15px 14px 30px; border-radius: 13px; background: var(--card-bg); border: 1px solid var(--border); box-shadow: var(--shadow-card); font-size: 12px; font-weight: 400; line-height: 1.95; color: var(--text-main); text-align: right; white-space: normal; }
+.seo-help.is-open .seo-pop { display: block; animation: seo-pop-in .14s ease-out; }
+@keyframes seo-pop-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.seo-pop-title { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 800; color: var(--text-h); margin-bottom: 4px; }
+.seo-pop-title i { color: var(--primary); }
+body:not(.light) .seo-pop-title i { color: var(--accent); }
+.seo-pop ul { margin: 6px 0 0; padding: 0 16px 0 0; }
+.seo-pop li { margin: 2px 0; }
+.seo-pop-close { position: absolute; top: 8px; left: 8px; border: 0; background: transparent; color: var(--text-soft); cursor: pointer; font-size: 12px; }
+
+/* ── کارت KPI ──────────────────────────────────────────────── */
+.seo-kpi { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px 12px; overflow: visible; }
+.seo-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.seo-kpi-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-soft); }
+.seo-kpi-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 13px; }
+.seo-kpi-value { font-size: 26px; font-weight: 800; color: var(--text-h); line-height: 1.15; }
+.seo-kpi-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-soft); }
+.seo-spark { display: block; width: 100%; height: 38px; margin-top: 2px; }
+.seo-spark path.line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.seo-spark path.area { fill: currentColor; opacity: .09; stroke: none; }
+.tone-primary { color: var(--primary); } body:not(.light) .tone-primary { color: var(--accent); }
+.tone-info { color: var(--info); } .tone-success { color: var(--success); } .tone-warning { color: var(--warning); } .tone-danger { color: var(--danger); }
+.bg-primary { background: var(--primary-l); } .bg-info { background: var(--info-l); } .bg-success { background: var(--success-l); } .bg-warning { background: var(--warning-l); } .bg-danger { background: var(--danger-l); }
+
+.seo-delta { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 7px; font-size: 11px; font-weight: 800; white-space: nowrap; border: 1px solid transparent; }
+.seo-delta i { font-size: 8px; }
+.seo-delta.is-up { color: var(--success); background: var(--success-l); border-color: var(--success-m); }
+.seo-delta.is-down { color: var(--danger); background: var(--danger-l); border-color: var(--danger-m); }
+.seo-delta.is-flat { color: var(--text-soft); background: var(--input-bg); border-color: var(--border); }
+
+/* ── رتبه (پیل) ─────────────────────────────────────────────── */
+.seo-pos { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 26px; padding: 0 8px; border-radius: 8px; font-weight: 800; font-size: 12.5px; border: 1px solid; }
+.seo-pos.b-top3 { color: var(--success); background: var(--success-l); border-color: var(--success-m); }
+.seo-pos.b-top10 { color: var(--info); background: var(--info-l); border-color: var(--info-m); }
+.seo-pos.b-top20 { color: var(--warning); background: var(--warning-l); border-color: var(--warning-m); }
+.seo-pos.b-rest, .seo-pos.b-none { color: var(--text-soft); background: var(--input-bg); border-color: var(--border); }
+
+/* ── توزیع رتبه (نوار انباشته) ─────────────────────────────── */
+.seo-buckets { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--input-bg); gap: 2px; }
+.seo-buckets span { display: block; height: 100%; transition: width .4s; }
+.seo-buckets .b-top3 { background: var(--success); } .seo-buckets .b-top10 { background: var(--info); } .seo-buckets .b-top20 { background: var(--warning); } .seo-buckets .b-rest { background: var(--text-soft); opacity: .45; } .seo-buckets .b-none { background: var(--border); }
+.seo-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 11.5px; color: var(--text-soft); }
+.seo-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.seo-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.seo-legend b { color: var(--text-h); font-weight: 800; }
+
+/* ── حلقه‌ی پیشرفت ─────────────────────────────────────────── */
+.seo-ring { --p: 0; --c: var(--primary); width: 74px; height: 74px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--input-bg) 0); }
+body:not(.light) .seo-ring { --c: var(--accent); }
+.seo-ring > span { width: 58px; height: 58px; border-radius: 50%; background: var(--card-bg); display: grid; place-items: center; font-size: 15px; font-weight: 800; color: var(--text-h); }
+.seo-pillar { display: flex; align-items: center; gap: 14px; }
+.seo-pillar-title { font-weight: 800; color: var(--text-h); font-size: 13px; }
+.seo-pillar-sub { font-size: 11.5px; color: var(--text-soft); margin-top: 4px; line-height: 1.8; }
+
+/* ── نوار مصرف ──────────────────────────────────────────────── */
+.seo-meter { height: 8px; border-radius: 5px; background: var(--input-bg); overflow: hidden; }
+.seo-meter > span { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--primary), var(--success)); }
+.seo-meter.is-warn > span { background: var(--warning); }
+.seo-meter.is-danger > span { background: var(--danger); }
+
+/* ── ردیف‌های فهرست ─────────────────────────────────────────── */
+.seo-rows { display: flex; flex-direction: column; }
+.seo-item { display: flex; align-items: center; gap: 11px; padding: 11px 2px; border-bottom: 1px solid var(--divider); min-width: 0; }
+.seo-item:last-child { border-bottom: 0; }
+.seo-item-main { flex: 1; min-width: 0; }
+.seo-item-title { font-size: 12.5px; font-weight: 700; color: var(--text-h); line-height: 1.7; overflow: hidden; text-overflow: ellipsis; }
+.seo-item-sub { font-size: 11px; color: var(--text-soft); margin-top: 2px; line-height: 1.7; }
+.seo-item-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 11px; color: var(--text-soft); }
+.seo-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-soft); }
+.seo-dot.is-success { background: var(--success); } .seo-dot.is-warning { background: var(--warning); } .seo-dot.is-danger { background: var(--danger); } .seo-dot.is-info { background: var(--info); }
+.seo-agent { width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; background: var(--input-bg); color: var(--text-soft); border: 1px solid var(--border); }
+
+/* ── تسک ────────────────────────────────────────────────────── */
+.seo-group-title { display: flex; align-items: center; gap: 8px; margin: 18px 2px 8px; font-size: 12px; font-weight: 800; color: var(--text-soft); }
+.seo-group-title:first-child { margin-top: 0; }
+.seo-group-title .count { padding: 1px 7px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border); font-size: 10.5px; }
+.seo-task { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 13px 15px; border: 1px solid var(--border); border-radius: 13px; background: var(--card-bg); margin-bottom: 8px; transition: border-color .15s; }
+.seo-task:hover { border-color: var(--primary-m); }
+.seo-task.is-done { opacity: .7; }
+.seo-task.is-done .seo-task-title { text-decoration: line-through; text-decoration-color: var(--text-soft); }
+.seo-task-check { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border); display: grid; place-items: center; background: var(--input-bg); color: transparent; cursor: pointer; font-size: 10px; margin-top: 1px; padding: 0; }
+.seo-task-check:hover { border-color: var(--success); color: var(--success); }
+.seo-task.is-done .seo-task-check { background: var(--success); border-color: var(--success); color: var(--card-bg); }
+.seo-task-title { font-size: 13px; font-weight: 700; color: var(--text-h); line-height: 1.75; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.seo-task-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.seo-task-msg { margin-top: 8px; padding: 8px 11px; border-radius: 9px; font-size: 11.5px; line-height: 1.85; background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border); }
+.seo-task-msg.is-danger { background: var(--danger-l); border-color: var(--danger-m); }
+.seo-task-msg.is-success { background: var(--success-l); border-color: var(--success-m); }
+.seo-task-actions { display: flex; gap: 4px; align-items: center; }
+.seo-tag { display: inline-flex; align-items: center; gap: 4px; height: 21px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 700; background: var(--input-bg); color: var(--text-soft); border: 1px solid var(--border); white-space: nowrap; }
+.seo-tag i { font-size: 9px; }
+.seo-tag.is-primary { background: var(--primary-l); color: var(--primary); border-color: var(--primary-m); }
+body:not(.light) .seo-tag.is-primary { color: var(--accent); }
+.seo-tag.is-success { background: var(--success-l); color: var(--success); border-color: var(--success-m); }
+.seo-tag.is-warning { background: var(--warning-l); color: var(--warning); border-color: var(--warning-m); }
+.seo-tag.is-danger { background: var(--danger-l); color: var(--danger); border-color: var(--danger-m); }
+.seo-tag.is-info { background: var(--info-l); color: var(--info); border-color: var(--info-m); }
+
+/* ── دکمه‌ها (تکمیلی btn-pro میزبان) ───────────────────────── */
+.seo-icon-btn { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-soft); display: inline-grid; place-items: center; cursor: pointer; font-size: 12px; transition: all .15s; padding: 0; }
+.seo-icon-btn:hover { color: var(--primary); border-color: var(--primary); }
+body:not(.light) .seo-icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+.seo-btn-sm { height: 30px !important; padding: 0 11px !important; font-size: 11.5px !important; }
+.btn-pro.is-loading { pointer-events: none; opacity: .75; }
+.btn-pro.is-loading i { animation: seo-spin .9s linear infinite; }
+@keyframes seo-spin { to { transform: rotate(360deg); } }
+
+/* ── چیپ فیلتر ──────────────────────────────────────────────── */
+.seo-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.seo-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 12px; font-weight: 700; color: var(--text-soft); background: var(--card-bg); border: 1px solid var(--border); white-space: nowrap; }
+.seo-chip:hover { color: var(--text-h); border-color: var(--primary-m); }
+.seo-chip.is-active { color: var(--primary); background: var(--primary-l); border-color: var(--primary-m); }
+body:not(.light) .seo-chip.is-active { color: var(--accent); }
+.seo-chip .n { font-size: 10.5px; opacity: .8; }
+
+/* ── جدول ───────────────────────────────────────────────────── */
+.seo-table-wrap { overflow-x: auto; }
+.seo-table { width: 100%; border-collapse: collapse; }
+.seo-table th { text-align: right; font-size: 11px; font-weight: 700; color: var(--text-soft); padding: 11px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--card-bg); }
+.seo-table td { padding: 11px 12px; border-bottom: 1px solid var(--divider); font-size: 12.5px; vertical-align: middle; }
+.seo-table tbody tr:last-child td { border-bottom: 0; }
+.seo-table tbody tr:hover { background: var(--nav-hover); }
+.seo-table .kw { font-weight: 700; color: var(--text-h); }
+.seo-table .kw small { display: block; font-weight: 400; font-size: 11px; color: var(--text-soft); margin-top: 2px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seo-table input[type=checkbox] { accent-color: var(--primary); width: 15px; height: 15px; }
+.seo-cell-spark { width: 110px; }
+.seo-cell-spark .seo-spark { height: 26px; }
+.seo-bulk { position: sticky; bottom: 16px; z-index: 20; display: none; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 14px; border-radius: 13px; background: var(--card-bg); border: 1px solid var(--primary-m); box-shadow: var(--shadow-card); }
+.seo-bulk.is-visible { display: flex; }
+
+/* ── فرم ────────────────────────────────────────────────────── */
+.seo-field { display: flex; flex-direction: column; gap: 6px; }
+.seo-field > label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-h); }
+.seo-field .hint { font-size: 11px; color: var(--text-soft); line-height: 1.8; }
+.seo-input, .seo-select, .seo-textarea { width: 100%; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main); font: inherit; font-size: 12.5px; outline: none; transition: border-color .15s, background .15s; }
+.seo-textarea { height: auto; min-height: 96px; padding: 10px 12px; line-height: 1.9; resize: vertical; }
+.seo-input:focus, .seo-select:focus, .seo-textarea:focus { border-color: var(--primary); background: var(--card-bg); }
+.seo-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.seo-form-grid .full { grid-column: 1 / -1; }
+@media (max-width: 700px) { .seo-form-grid { grid-template-columns: minmax(0, 1fr); } }
+.seo-switch { position: relative; width: 38px; height: 22px; border-radius: 11px; border: 0; background: var(--border); cursor: pointer; flex-shrink: 0; transition: background .2s; padding: 0; }
+.seo-switch::after { content: ''; position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--card-bg); transition: transform .2s; }
+.seo-switch.is-on { background: var(--success); }
+.seo-switch.is-on::after { transform: translateX(-16px); }
+
+/* ── اعلان و حالت خالی ──────────────────────────────────────── */
+.seo-flash { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; margin-bottom: 16px; border-radius: 12px; font-size: 12.5px; line-height: 1.9; border: 1px solid; }
+.seo-flash.is-success { background: var(--success-l); border-color: var(--success-m); }
+.seo-flash.is-warning { background: var(--warning-l); border-color: var(--warning-m); }
+.seo-flash.is-danger { background: var(--danger-l); border-color: var(--danger-m); }
+.seo-flash > i { margin-top: 5px; }
+.seo-flash.is-success > i { color: var(--success); } .seo-flash.is-warning > i { color: var(--warning); } .seo-flash.is-danger > i { color: var(--danger); }
+.seo-flash button { margin-inline-start: auto; border: 0; background: transparent; color: var(--text-soft); cursor: pointer; }
+.seo-empty { text-align: center; padding: 34px 16px; color: var(--text-soft); font-size: 12.5px; line-height: 2; }
+.seo-empty > i { font-size: 26px; display: block; margin-bottom: 10px; color: var(--text-soft); opacity: .55; }
+.seo-empty b { display: block; color: var(--text-h); font-size: 13.5px; }
+.seo-callout { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 13px; background: var(--primary-l); border: 1px dashed var(--primary-m); font-size: 12.5px; line-height: 1.95; }
+.seo-callout > i { color: var(--primary); margin-top: 5px; }
+body:not(.light) .seo-callout > i { color: var(--accent); }
+.seo-callout b { color: var(--text-h); }
+
+/* ── نمودار ─────────────────────────────────────────────────── */
+.seo-chart { position: relative; width: 100%; height: 280px; }
+.seo-chart.is-sm { height: 200px; }
+.seo-chart-toggle { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--input-bg); border: 1px solid var(--border); }
+.seo-chart-toggle a, .seo-chart-toggle button { padding: 4px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 700; color: var(--text-soft); border: 0; background: transparent; cursor: pointer; font-family: inherit; }
+.seo-chart-toggle .is-active { background: var(--card-bg); color: var(--text-h); box-shadow: var(--shadow-card); }
+
+/* ── مقاله (پیش‌نمایش) ──────────────────────────────────────── */
+.seo-article { font-size: 14px; line-height: 2.1; color: var(--text-main); }
+.seo-article h2 { font-size: 17px; font-weight: 800; color: var(--text-h); margin: 26px 0 8px; }
+.seo-article h3 { font-size: 15px; font-weight: 800; color: var(--text-h); margin: 18px 0 6px; }
+.seo-article p { margin: 0 0 12px; }
+.seo-article ul { margin: 0 0 12px; padding-right: 22px; }
+.seo-article blockquote { margin: 12px 0; padding: 10px 14px; border-right: 3px solid var(--primary); background: var(--input-bg); border-radius: 8px; }
+.seo-article a { color: var(--info); text-decoration: underline; }
+.seo-serp { padding: 14px 16px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--border); }
+.seo-serp .u { font-size: 11.5px; color: var(--text-soft); direction: ltr; text-align: right; }
+.seo-serp .t { font-size: 16px; color: var(--info); margin: 4px 0; font-weight: 600; }
+.seo-serp .d { font-size: 12.5px; color: var(--text-main); line-height: 1.8; }
+.seo-check { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; }
+.seo-check i { width: 18px; text-align: center; }
+.seo-check.ok i { color: var(--success); } .seo-check.no i { color: var(--danger); }
+
+.seo-kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; direction: ltr; display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border); font-size: 12px; }
+.seo-pre { direction: ltr; text-align: left; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; line-height: 1.8; padding: 12px; border-radius: 10px; background: var(--input-bg); border: 1px solid var(--border); max-height: 320px; overflow: auto; }
+.seo-pagination { display: flex; justify-content: center; gap: 6px; padding: 14px; }
+.seo-pagination a, .seo-pagination span { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 9px; display: inline-grid; place-items: center; font-size: 12px; border: 1px solid var(--border); background: var(--card-bg); }
+.seo-pagination .is-active { background: var(--primary); color: var(--accent); border-color: var(--primary); }
+
+/* ── جلوگیری از اسکرول افقی ─────────────────────────────────── */
+.seo { overflow-x: clip; }
+.seo-task-msg, .seo-item-sub, .seo-item-title, .seo-mini-title, .seo-pillar-sub { overflow-wrap: anywhere; }
+.seo-ltr { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.seo-table-wrap { overflow-x: auto; scrollbar-width: none; }
+.seo-table-wrap::-webkit-scrollbar { display: none; }
+.seo-pre { max-height: none; overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 1500px) { .seo-table .hide-lg { display: none; } }
+@media (max-width: 1100px) { .seo-table .hide-md { display: none; } }
+@media (max-width: 700px) { .seo-table .hide-sm { display: none; } .seo-table th, .seo-table td { padding: 10px 8px; } .seo-table .kw small { max-width: 180px; } }
+
+/* ── تقویم ۹۰ روزه ──────────────────────────────────────────── */
+.seo-roadmap { display: flex; flex-direction: column; gap: 10px; }
+.seo-week { background: var(--card-bg); border: 1px solid var(--border); border-radius: 15px; overflow: hidden; }
+.seo-week > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 13px 16px; }
+.seo-week > summary::-webkit-details-marker { display: none; }
+.seo-week.is-current { border-color: var(--primary); box-shadow: var(--shadow-card); }
+.seo-week.is-past { opacity: .8; }
+.seo-week-num { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; align-content: center; background: var(--input-bg); border: 1px solid var(--border); font-weight: 800; font-size: 16px; color: var(--text-h); line-height: 1.1; }
+.seo-week-num small { font-size: 9px; font-weight: 700; color: var(--text-soft); }
+.seo-week.is-current .seo-week-num { background: var(--primary); color: var(--accent); border-color: var(--primary); }
+.seo-week.is-current .seo-week-num small { color: var(--accent); opacity: .8; }
+.seo-week-head { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.seo-week-theme { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 800; font-size: 13.5px; color: var(--text-h); }
+.seo-week-sub { font-size: 11.5px; color: var(--text-soft); overflow-wrap: anywhere; }
+.seo-week-prog { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; font-size: 12px; font-weight: 800; color: var(--text-h); }
+.seo-week-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; padding: 0 14px 14px; }
+.seo-day { background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; padding: 9px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.seo-day.is-today { border-color: var(--primary); }
+.seo-day-head { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 800; color: var(--text-h); padding: 0 3px 2px; }
+.seo-day-head span { font-weight: 600; color: var(--text-soft); }
+.seo-mini { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 8px; border-radius: 9px; background: var(--card-bg); border: 1px solid var(--border); }
+.seo-mini.is-done .seo-mini-title { text-decoration: line-through; color: var(--text-soft); }
+.seo-mini.is-skipped { opacity: .5; }
+.seo-mini-check { width: 18px; height: 18px; margin-top: 2px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--input-bg); color: transparent; cursor: pointer; display: grid; place-items: center; font-size: 8px; padding: 0; }
+.seo-mini-check.is-danger { border-color: var(--danger); }
+.seo-mini-check.is-warning { border-color: var(--warning); }
+.seo-mini-check:hover { border-color: var(--success); color: var(--success); }
+.seo-mini.is-done .seo-mini-check { background: var(--success); border-color: var(--success); color: var(--card-bg); }
+.seo-mini-title { font-size: 11.5px; font-weight: 700; color: var(--text-h); line-height: 1.7; }
+.seo-mini-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-soft); margin-top: 2px; }
+.seo-mini-msg { margin-top: 4px; font-size: 10.5px; line-height: 1.7; color: var(--text-main); background: var(--danger-l); border-radius: 6px; padding: 4px 6px; }
+@media (max-width: 700px) { .seo-week > summary { grid-template-columns: auto minmax(0, 1fr); } .seo-week-prog { grid-column: 1 / -1; flex-direction: row; align-items: center; } }
+
+/* ── کارت هفته (نمای کلی) ───────────────────────────────────── */
+.seo-weekcard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.seo-weekcard .seo-week-num { width: 54px; height: 54px; font-size: 19px; background: var(--primary); color: var(--accent); border-color: var(--primary); }
+.seo-weekcard .seo-week-num small { color: var(--accent); }
+.seo-actions-list { margin: 10px 0 0; padding: 0 18px 0 0; font-size: 12px; line-height: 2; }
+@media (max-width: 700px) { .seo-weekcard { grid-template-columns: auto minmax(0, 1fr); } }

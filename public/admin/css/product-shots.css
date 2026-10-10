@@ -159,6 +159,37 @@
 @media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1}.ps-shot-summary .ps-thumb{width:70px}.ps-slide-prompt{grid-template-columns:1fr}.ps-slide-prompt .btn-pro{justify-self:start}}
 @media(max-width:560px){.ps-check-grid{grid-template-columns:1fr}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-occupation-picker{height:210px}}
 
+/* ── نگاشت توکن‌های قدیمی آپلودر مشترک به پالت رسمی پنل ──────────
+   آپلودر «عکس محصول» از توکن‌های قدیمی (s1/s2/b1/text2/accent/green...) استفاده می‌کند.
+   بدون این نگاشت، این توکن‌ها مقدار سراسری قدیمی (سبز/بنفش) می‌گرفتند و رنگ متن‌ها
+   در گام اول به‌هم می‌ریخت. دقیقاً همان نگاشت صفحه‌ی ثبت محصول چهره است. */
+#product-shot-wizard {
+  /* سطوح و بوردر — از پالت رسمی، تم‌محور */
+  --bg:     var(--input-bg);   /* سطح اینست/گاتر (هم‌سطح ورودی — در حالت روز روی کارت سفید محو نشود) */
+  --s1:     var(--input-bg);   /* سطح ورودی/داخل کارت */
+  --s2:     var(--card-bg);    /* سطح کارت */
+  --b1:     var(--border);
+  /* --b2 کمی روشن‌تر/محسوس‌تر از بوردر معمول است (مثل نسخه اصلی که b2>b1 بود):
+     هم برای بوردرهای شاخص‌تر و هم برای رنگ «خاموش» دکمه‌های تاگل (بند ۴۶) استفاده می‌شود. */
+  --b2:     color-mix(in srgb, var(--text-soft) 42%, transparent);
+
+  /* متن — از پالت رسمی */
+  --text:   var(--text-h);
+  --text2:  var(--text-main);
+  --text3:  var(--text-soft);
+  --text4:  var(--text-soft);
+
+  /* رنگ‌های برند/معنایی — دقیقاً پالت رسمی داشبورد (بدون هیچ بنفشی) */
+  --accent:       var(--primary);
+  --accent-hover: color-mix(in srgb, var(--primary) 82%, #ffffff);
+  --accent-soft:  var(--text-h);
+  --green:        var(--success);
+  --green-hover:  color-mix(in srgb, var(--success) 85%, #000000);
+  --red:          var(--danger);
+  --red-soft:     var(--danger);
+  --orange:       var(--warning);
+}
+
 /* ── آپلود عکس محصول (همان آپلودر ثبت محصول چهره) ─────────────── */
 #ps-product-images .image-optimizer-group{margin-bottom:0}
 #ps-product-images .upload-zone{border-color:var(--border);background:var(--input-bg);border-radius:14px;padding:26px 18px;transition:border-color .16s,background .16s}
@@ -189,3 +220,17 @@
 .psw-submit-percent{display:block;margin-top:8px;color:var(--text-soft);font-size:10px}
 .btn-pro.is-loading{pointer-events:none;opacity:.75}
 @media (prefers-reduced-motion: reduce){.psw-submit-bar.is-indeterminate span{animation-duration:3s}}
+
+/* ── رفع تداخل دو نسخه‌ی .ps-toggle: نسخه‌ی span در فرم ثبت محصول اندازه‌ی خودش را بگیرد ── */
+.ps-toggle:has(> span){width:auto;height:auto}
+
+/* ── انتخاب تصاویر تست (گام سوم) ─────────────────────────────── */
+.ps-field .ps-test-upload{position:relative;display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 12px;border:1.5px dashed var(--border);border-radius:12px;background:var(--input-bg);cursor:pointer;transition:border-color .16s,background .16s}
+.ps-field .ps-test-upload:hover,.ps-field .ps-test-upload:focus-within{border-color:var(--primary);background:var(--primary-l)}
+.ps-test-upload>input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ps-test-upload-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:11px;background:var(--card-bg);border:1px solid var(--border);color:var(--primary)}
+.ps-test-upload-copy{flex:1;min-width:0}
+.ps-test-upload-copy strong{display:block;color:var(--text-h);font-size:11.5px;font-weight:800}
+.ps-test-upload-copy small{display:block;margin-top:2px;color:var(--text-soft);font-size:10px}
+.ps-test-upload-thumbs{display:flex;gap:6px}
+.ps-test-upload-thumbs img{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}

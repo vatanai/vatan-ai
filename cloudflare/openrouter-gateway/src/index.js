@@ -1,7 +1,10 @@
 const OPENROUTER_ORIGIN = 'https://openrouter.ai';
-const ALLOWED_PATHS = new Set([
-  '/api/v1/images',
-  '/api/v1/chat/completions',
+// POST: تولید تصویر و چت · GET: فهرست مدل‌ها و اعتبار کلید (برای موتور سئو)
+const ALLOWED = new Map([
+  ['/api/v1/images', 'POST'],
+  ['/api/v1/chat/completions', 'POST'],
+  ['/api/v1/models', 'GET'],
+  ['/api/v1/key', 'GET'],
 ]);
 
 export default {
@@ -12,7 +15,7 @@ export default {
       return Response.json({ ok: true, service: 'vatan-openrouter-gateway' });
     }
 
-    if (request.method !== 'POST' || !ALLOWED_PATHS.has(url.pathname)) {
+    if (ALLOWED.get(url.pathname) !== request.method) {
       return Response.json({ success: false, error: 'Not found' }, { status: 404 });
     }
 
@@ -25,18 +28,23 @@ export default {
       return Response.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // کلید اختصاصی کلاینت (مثلاً کلید سئو با سقف خرج جدا) — فقط بعد از تأیید Secret مشترک پذیرفته می‌شود
+    const clientKey = request.headers.get('X-Vatan-Client-Key');
+    const apiKey = clientKey && /^sk-or-[A-Za-z0-9_-]{20,}$/.test(clientKey) ? clientKey : env.OPENROUTER_API_KEY;
+
     const upstreamUrl = new URL(url.pathname + url.search, OPENROUTER_ORIGIN);
     const headers = new Headers(request.headers);
     headers.delete('X-Vatan-Gateway-Key');
-    headers.set('Authorization', `Bearer ${env.OPENROUTER_API_KEY}`);
+    headers.delete('X-Vatan-Client-Key');
+    headers.set('Authorization', `Bearer ${apiKey}`);
     headers.set('HTTP-Referer', 'https://aivatan.com');
-    headers.set('X-Title', 'Vatan AI');
-    headers.set('Content-Type', 'application/json');
+    headers.set('X-Title', request.headers.get('X-Title') || 'Vatan AI');
+    if (request.method === 'POST') headers.set('Content-Type', 'application/json');
 
     return fetch(upstreamUrl, {
-      method: 'POST',
+      method: request.method,
       headers,
-      body: request.body,
+      body: request.method === 'POST' ? request.body : undefined,
       redirect: 'manual',
     });
   },

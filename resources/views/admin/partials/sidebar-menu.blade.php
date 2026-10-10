@@ -115,6 +115,9 @@
   </div></div>
 </div>
 
+{{-- سئوی هوشمند — پارشیال مستقل پکیج packages/vatan-seo --}}
+@includeIf('seo::partials.sidebar')
+
 {{-- حسابداری وطن --}}
 <div class="nav-item">
   <div class="nav-link {{ request()->is('admin/finance*') ? 'active' : '' }}" onclick="toggleSub('finance-submenu-new', this)"><div class="nav-icon"><i class="fa-solid fa-chart-pie"></i></div><div class="nav-label">حسابداری وطن</div><i class="fa-solid fa-chevron-down nav-chev {{ request()->is('admin/finance*') ? 'open' : '' }}"></i></div>
