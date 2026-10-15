@@ -11,7 +11,7 @@
 .sb-btn-primary {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 0 14px; height: 36px; border: none; border-radius: 10px;
-  background: var(--accent); color: #fff;
+  background: var(--accent); color:var(--on-accent);
   font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
   transition: background .2s;
 }

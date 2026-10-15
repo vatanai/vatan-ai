@@ -12,7 +12,7 @@
             <i class="fa-solid fa-arrow-right text-[10px]"></i> بازگشت
           </button>
           <button onclick="pcSaveDraft()" style="height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">ذخیره پیش‌نویس</button>
-          <button onclick="pcPublish()" style="height:32px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-check text-[10px]"></i> انتشار</button>
+          <button onclick="pcPublish()" style="height:32px;padding:0 14px;border-radius:8px;border:none;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-check text-[10px]"></i> انتشار</button>
         </div>
       </div>
 
@@ -105,13 +105,13 @@
           <div id="pc-step-3" style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:20px 24px;margin-bottom:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
               <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-sliders" style="color:var(--accent);"></i> تعریف ورودی‌ها</div>
-              <button onclick="pcAddField()" style="height:30px;padding:0 12px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-plus text-[9px]"></i> فیلد جدید</button>
+              <button onclick="pcAddField()" style="height:30px;padding:0 12px;border-radius:7px;border:1px dashed var(--accent);background:color-mix(in srgb, var(--accent) 7%, transparent);color:var(--accent);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;"><i class="fa-solid fa-plus text-[9px]"></i> فیلد جدید</button>
             </div>
             <div id="pc-fields-list">
               @php $fields=[['key'=>'gender','label'=>'جنسیت','type'=>'select','req'=>true],['key'=>'hair_color','label'=>'رنگ مو','type'=>'select','req'=>false],['key'=>'outfit','label'=>'لباس','type'=>'text','req'=>false]]; @endphp
               @foreach($fields as $fi=>$f)
               <div class="pc-field-row" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;">
-                <div style="width:22px;height:22px;border-radius:5px;background:var(--accent);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ $fi+1 }}</div>
+                <div style="width:22px;height:22px;border-radius:5px;background:var(--accent);color:var(--on-accent);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ $fi+1 }}</div>
                 <input value="{{ $f['key'] }}" placeholder="key" style="width:110px;height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:11px;font-family:monospace;color:var(--text);outline:none;" dir="ltr"/>
                 <input value="{{ $f['label'] }}" placeholder="برچسب فارسی" style="flex:1;height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:12px;color:var(--text);outline:none;font-family:inherit;"/>
                 <select style="height:32px;background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:11px;color:var(--text2);font-family:inherit;outline:none;">

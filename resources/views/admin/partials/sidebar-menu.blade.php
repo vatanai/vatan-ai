@@ -23,7 +23,8 @@
   $isWebsiteMenu = $isWebsiteSiteMenu || $isWebsiteAppMenu || request()->is('admin/content*') || request()->is('admin/sms*');
   $isInstagramMenu = request()->is('admin/instagram*');
   $isSmartInstagramMenu = request()->is('admin/smart-instagram*');
-  $isStudioMenu = $isVideoStudio2 || $isInstagramMenu || $isSmartInstagramMenu;
+  $isContentFactoryMenu = request()->is('admin/content-factory*');
+  $isStudioMenu = $isVideoStudio2 || $isInstagramMenu || $isSmartInstagramMenu || $isContentFactoryMenu;
   $isTelegramSettingsMenu = request()->is('admin/settings/telegram*') || request()->is('admin/telegram*');
   $isMarketingTechnologyMenu = request()->is('admin/marketing-technology*');
 @endphp
@@ -74,6 +75,7 @@
   <div class="nav-link {{ $isStudioMenu ? 'active' : '' }}" onclick="toggleSub('studio-submenu-new', this)"><div class="nav-icon"><i class="fa-solid fa-photo-film"></i></div><div class="nav-label">استودیو تولید</div><i class="fa-solid fa-chevron-down nav-chev {{ $isStudioMenu ? 'open' : '' }}"></i></div>
   <div class="submenu {{ $isStudioMenu || request()->is('admin/instagram*') ? 'open' : '' }}" id="studio-submenu-new"><div class="sub-track">
     <a href="{{ route('admin.video-studio.experimental') }}" class="sub-item {{ $isVideoStudio2 ? 'active' : '' }}"><div class="sub-dot"></div><div class="sub-label">{{ config('video_studio.admin_label', 'تولید محتوای خودکار') }}</div></a>
+    @includeIf('cf::partials.sidebar')
     @include('admin.smart-instagram.partials.sidebar')
   </div></div>
 </div>

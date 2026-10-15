@@ -17,9 +17,11 @@ class EnsureProductShotsAvailable
 
     public function handle(Request $request, Closure $next, string $mode = 'user'): Response
     {
+        // در محیط لوکال، مثل خود صفحه‌های /app/pro و /app/crepro (ProductShotPageController::guard)،
+        // APIهای کاربر هم باز است تا صفحه و API با هم ناهماهنگ نباشند.
         $allowed = $mode === 'admin'
             ? $this->feature->enabled()
-            : $this->feature->availableFor($request->user());
+            : (app()->environment('local') || $this->feature->availableFor($request->user()));
 
         if (! $allowed) {
             if ($request->expectsJson()) {

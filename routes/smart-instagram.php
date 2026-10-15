@@ -111,6 +111,7 @@ Route::prefix('admin/smart-instagram')
         Route::post('/connections/team', [ConnectionController::class, 'storeMember'])->name('connections.team.store');
         Route::delete('/connections/team/{member}', [ConnectionController::class, 'destroyMember'])->name('connections.team.destroy');
         Route::post('/connections/telegram', [ConnectionController::class, 'telegramLink'])->middleware('throttle:10,1')->name('connections.telegram');
+        Route::post('/connections/telegram/schedule', [ConnectionController::class, 'telegramSchedule'])->name('connections.telegram.schedule');
         Route::post('/connections/telegram/members', [ConnectionController::class, 'telegramStore'])->name('connections.telegram.store');
         Route::patch('/connections/telegram/{account}', [ConnectionController::class, 'telegramUpdate'])->whereNumber('account')->name('connections.telegram.update');
         Route::delete('/connections/telegram/{account}', [ConnectionController::class, 'telegramUnlink'])->whereNumber('account')->name('connections.telegram.destroy');

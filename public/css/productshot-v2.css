@@ -1,0 +1,200 @@
+/*
+ * بازطراحی صفحات پروداکتی — نسخه‌ی ۲ (پیش‌نمایش)
+ * صفحه‌ی محصول: /app/ps-v2/pro/...   صفحه‌ی ساخت: /app/ps-v2/crepro/...
+ * فقط توکن‌های theme-tokens.css؛ تم روز خودکار از html.light می‌آید.
+ */
+.ps2 { color: var(--vt-text); max-width: 1240px; margin: 0 auto; padding: 18px clamp(16px, 3vw, 32px) 64px; display: grid; gap: 36px; }
+.ps2 *, .ps2 *::before, .ps2 *::after { box-sizing: border-box; }
+.ps2 h1, .ps2 h2, .ps2 p, .ps2 dl, .ps2 dd { margin: 0; }
+.ps2 img { display: block; max-width: 100%; }
+.ps2 button { font-family: inherit; }
+.ps2 a:focus-visible, .ps2 button:focus-visible { outline: 2px solid var(--vt-brand); outline-offset: 2px; }
+
+.ps2-kicker { display: inline-flex; align-items: center; gap: 6px; width: fit-content; font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 99px; color: var(--vt-brand-ink); background: var(--vt-brand-soft); border: 1px solid var(--vt-brand-line); }
+.ps2-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 22px; border-radius: 15px; border: 0; font-weight: 800; font-size: 15.5px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.ps2-btn-brand { background: var(--vt-brand); color: var(--vt-on-brand); }
+.ps2-btn-brand:hover { background: var(--vt-brand-hover); }
+.ps2-icon-btn { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 15px; border: 1px solid var(--vt-border); background: var(--vt-glass); color: var(--vt-text); font-size: 17px; cursor: pointer; transition: border-color .15s, color .15s; }
+.ps2-icon-btn:hover { border-color: var(--vt-border-strong); }
+.ps2-icon-btn.is-on { color: var(--vt-danger); border-color: var(--vt-danger-soft); }
+.ps2-icon-btn[data-save].is-on { color: var(--vt-brand-ink); border-color: var(--vt-brand-line); }
+.ps2-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ps2-sec-head h2 { font-size: 19px; font-weight: 800; }
+.ps2-sec-head p { margin-top: 4px; font-size: 13px; color: var(--vt-text-2); line-height: 1.8; }
+
+/* ════════ صفحه‌ی محصول ════════ */
+.ps2-crumb { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--vt-text-3); margin-bottom: -18px; }
+.ps2-crumb a { color: var(--vt-text-2); text-decoration: none; }
+.ps2-crumb a:hover { color: var(--vt-text); }
+.ps2-crumb i { font-size: 9px; }
+
+.ps2-top { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 36px; align-items: start; }
+.ps2-gal { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 12px; }
+.ps2-stage { position: relative; grid-column: 2; grid-row: 1; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; background: var(--vt-surface); border: 1px solid var(--vt-border); }
+.ps2-stage img { width: 100%; height: 100%; object-fit: cover; }
+.ps2-stage-tag, .ps2-stage-count { position: absolute; z-index: 2; font-size: 12px; padding: 5px 11px; border-radius: 99px; background: rgba(0, 0, 0, .58); color: #fff; backdrop-filter: blur(6px); }
+.ps2-stage-tag { inset-inline-start: 14px; bottom: 14px; font-weight: 700; }
+.ps2-stage-tag:empty { display: none; }
+.ps2-stage-count { inset-inline-end: 14px; top: 14px; font-size: 11.5px; }
+.ps2-stage-nav { position: absolute; z-index: 2; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .5); color: #fff; cursor: pointer; opacity: 0; transition: opacity .2s; backdrop-filter: blur(6px); }
+.ps2-stage-nav.is-prev { right: 12px; }
+.ps2-stage-nav.is-next { left: 12px; }
+.ps2-stage:hover .ps2-stage-nav, .ps2-stage-nav:focus-visible { opacity: 1; }
+.ps2-thumbs { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 10px; max-height: 100%; overflow-y: auto; scrollbar-width: none; }
+.ps2-thumbs::-webkit-scrollbar { display: none; }
+.ps2-thumbs button { flex: none; padding: 0; aspect-ratio: 1; border-radius: 13px; overflow: hidden; border: 2px solid transparent; background: var(--vt-surface); cursor: pointer; opacity: .7; transition: opacity .15s, border-color .15s; }
+.ps2-thumbs button:hover { opacity: 1; }
+.ps2-thumbs button[aria-selected="true"] { border-color: var(--vt-brand); opacity: 1; }
+.ps2-thumbs img { width: 100%; height: 100%; object-fit: cover; }
+
+.ps2-info { position: sticky; top: 92px; display: grid; gap: 20px; }
+.ps2-info h1 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.4; font-weight: 900; text-wrap: balance; }
+.ps2-desc { color: var(--vt-text-2); font-size: 14.5px; line-height: 2; max-width: 62ch; }
+.ps2-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--vt-border); border-radius: 16px; background: var(--vt-surface); overflow: hidden; }
+.ps2-facts div { padding: 12px 14px; display: grid; gap: 3px; min-width: 0; }
+.ps2-facts div + div { border-inline-start: 1px solid var(--vt-border); }
+.ps2-facts span { font-size: 11.5px; color: var(--vt-text-3); }
+.ps2-facts b { font-size: 15.5px; font-weight: 800; }
+.ps2-cta { display: flex; gap: 10px; }
+.ps2-cta .ps2-btn { flex: 1; }
+.ps2-how { list-style: none; margin: 0; padding: 16px; display: grid; gap: 12px; border-radius: 16px; background: var(--vt-glass); border: 1px solid var(--vt-border-soft); }
+.ps2-how li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; font-size: 13px; color: var(--vt-text-2); line-height: 1.75; }
+.ps2-how i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--vt-surface-2); color: var(--vt-text); font-weight: 800; font-size: 13px; }
+.ps2-how b { display: block; color: var(--vt-text); font-size: 14px; }
+
+.ps2-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.ps2-shot { border-radius: 16px; overflow: hidden; background: var(--vt-card); border: 1px solid var(--vt-border); }
+.ps2-shot-media { position: relative; aspect-ratio: 4 / 5; background: var(--vt-surface-2); display: grid; place-items: center; color: var(--vt-text-3); font-size: 24px; }
+.ps2-shot-media img { width: 100%; height: 100%; object-fit: cover; }
+.ps2-badge { position: absolute; top: 10px; inset-inline-start: 10px; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--vt-brand); color: var(--vt-on-brand); }
+.ps2-shot-body { padding: 10px 12px 12px; display: grid; gap: 3px; }
+.ps2-shot-body b { font-size: 14px; font-weight: 800; }
+.ps2-shot-body span { font-size: 12px; color: var(--vt-text-3); }
+
+.ps2-similar { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.ps2-sim { position: relative; flex: 0 0 184px; aspect-ratio: 3 / 4; border-radius: 16px; overflow: hidden; background: var(--vt-surface); scroll-snap-align: start; text-decoration: none; }
+.ps2-sim img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.ps2-sim:hover img { transform: scale(1.04); }
+.ps2-sim span { position: absolute; inset: auto 0 0 0; padding: 30px 12px 11px; background: linear-gradient(transparent, rgba(0, 0, 0, .78)); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.6; }
+
+.ps2-toast { position: fixed; z-index: 130; left: 50%; transform: translateX(-50%); bottom: calc(28px + env(safe-area-inset-bottom, 0px)); padding: 10px 16px; border-radius: 12px; background: var(--vt-text); color: var(--vt-page); font-size: 13px; font-weight: 700; box-shadow: var(--vt-shadow-pop); }
+
+/* ════════ صفحه‌ی ساخت ════════ */
+.ps2.pp { max-width: 1240px; padding-bottom: 64px; }
+.ps2-cre { gap: 22px; }
+.ps2-cre-head { display: flex; align-items: center; gap: 12px; }
+.ps2-cre-head > img { width: 52px; height: 52px; border-radius: 13px; object-fit: cover; flex: none; background: var(--vt-surface); }
+.ps2-back { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--vt-border); background: var(--vt-glass); color: var(--vt-text); text-decoration: none; }
+.ps2-cre-title { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ps2-cre-title h1 { font-size: 20px; font-weight: 900; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps2-cre-title a { font-size: 12.5px; color: var(--vt-text-2); text-decoration: none; width: fit-content; }
+.ps2-cre-title a:hover { color: var(--vt-brand-ink); }
+
+.ps2-cre-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
+.ps2-cre-main { display: grid; gap: 16px; min-width: 0; }
+.ps2 .pp-step { border-radius: 20px; padding: 22px; }
+.ps2 .pp-step-num { border-radius: 50%; }
+
+/* آپلود: اصلی بزرگ + زاویه‌ها */
+.ps2 .ps2-uploads { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.ps2 .ps2-uploads-0 { grid-template-columns: 1fr; }
+.ps2 .ps2-uploads-0 .pp-drop-main { grid-row: auto; }
+.ps2 .pp-drop-main { min-height: 260px; }
+.ps2 .pp-drop-angle { min-height: 124px; }
+.ps2 .pp-drop img { object-fit: cover; }
+.ps2-more-check { margin-top: 14px; border-top: 1px solid var(--vt-border); padding-top: 12px; }
+.ps2-more-check summary { cursor: pointer; font-size: 12.5px; color: var(--vt-text-2); list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+.ps2-more-check summary::-webkit-details-marker { display: none; }
+.ps2-more-check summary::after { content: "▾"; font-size: 11px; }
+.ps2-more-check[open] summary::after { content: "▴"; }
+
+/* شات‌ها: کارت مربعی با تیک */
+.ps2 .pp-shots { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+.ps2 .pp-shot:not(.is-selected) .pp-shot-media img { opacity: .55; filter: grayscale(.35); transition: opacity .15s, filter .15s; }
+.ps2 .pp-shot:not(.is-selected):hover .pp-shot-media img { opacity: .85; filter: none; }
+.ps2 .pp-shot-media { aspect-ratio: 1; }
+.ps2 .pp-shot-tick { border-radius: 8px; }
+.ps2 .pp-more { width: 100%; }
+
+/* کیفیت: سه ستون مساوی */
+.ps2 .ps2-qualities { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.ps2 .ps2-qualities .pp-ratio { position: relative; }
+.ps2 .ps2-qualities .pp-ratio > span:last-child { display: grid; gap: 1px; }
+.ps2 .ps2-qualities small { font-size: 11.5px; }
+
+/* خلاصه‌ی سفارش */
+.ps2-sum { position: sticky; top: 92px; display: grid; gap: 14px; padding: 20px; border-radius: 20px; background: var(--vt-surface); border: 1px solid var(--vt-border); }
+.ps2-sum h2 { font-size: 15px; font-weight: 800; }
+.ps2-sum-thumbs { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; }
+.ps2-sum-thumbs img, .ps2-sum-thumbs span { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--vt-surface-2); display: grid; place-items: center; color: var(--vt-text-3); }
+.ps2-sum-thumbs em { font-style: normal; font-size: 12px; color: var(--vt-text-3); align-self: center; }
+.ps2-sum-rows { display: grid; gap: 8px; font-size: 13px; }
+.ps2-sum-rows div { display: flex; justify-content: space-between; gap: 10px; color: var(--vt-text-2); }
+.ps2-sum-rows dd { color: var(--vt-text); font-weight: 700; }
+.ps2-sum-total { display: grid; gap: 4px; padding-top: 14px; border-top: 1px dashed var(--vt-border-strong); }
+.ps2-eq { font-size: 22px; font-weight: 900; letter-spacing: -.2px; }
+.ps2-sum-total span, .ps2-dock-info span { font-size: 12px; color: var(--vt-text-2); }
+.ps2-sum-total a, .ps2-dock-info a { color: var(--vt-brand-ink); font-weight: 700; }
+.ps2-build { width: 100%; height: 54px; font-size: 16px; }
+.ps2-note { font-size: 11.5px; color: var(--vt-text-3); line-height: 1.8; }
+
+/* ════════ نوار ثابت پایین (هر دو صفحه) ════════ */
+.ps2-dock { display: none; }
+
+@media (max-width: 1024px) {
+  .ps2-cre-grid { grid-template-columns: 1fr; }
+  .ps2-sum { display: none; }
+  .ps2-dock-cre { display: flex; }
+}
+@media (max-width: 900px) {
+  .ps2-top { grid-template-columns: 1fr; gap: 20px; }
+  .ps2-info { position: static; }
+  .ps2-gal { grid-template-columns: 1fr; margin-inline: calc(-1 * clamp(16px, 3vw, 32px)); }
+  .ps2-stage { grid-column: 1; grid-row: 1; border-radius: 0; border: 0; aspect-ratio: 1; }
+  .ps2-stage-nav { display: none; }
+  .ps2-thumbs { grid-column: 1; grid-row: 2; flex-direction: row; overflow-x: auto; padding-inline: clamp(16px, 3vw, 32px); }
+  .ps2-thumbs button { width: 60px; }
+  .ps2-crumb { display: none; }
+  .ps2-pro .ps2-dock { display: flex; }
+  .ps2-pro .ps2-cta .ps2-btn { display: none; }
+  .ps2-pro, .ps2-cre { padding-bottom: 200px; }
+  .ps2.pp { padding-bottom: 200px; }
+}
+.ps2-dock { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: min(760px, calc(100% - 24px)); align-items: center; gap: 12px; padding: 10px 16px 10px 10px; border-radius: 18px; background: var(--vt-surface); border: 1px solid var(--vt-border-strong); box-shadow: var(--vt-shadow-pop); }
+.ps2-dock-info { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ps2-dock-info b { font-size: 15px; font-weight: 900; }
+.ps2-dock .ps2-btn, .ps2-dock .pp-btn { min-height: 48px; height: 48px; flex: none; }
+@media (max-width: 900px) {
+  /* اپ موبایل نوار ناوبری پایین دارد؛ نوار بالای آن می‌نشیند (مثل صفحه‌ی ساخت فعلی). */
+  .ps2-dock { bottom: calc(98px + env(safe-area-inset-bottom, 0px)); }
+  .ps2-toast { bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  .ps2 { gap: 26px; }
+  .ps2-info { gap: 16px; }
+  .ps2-info h1 { font-size: 23px; }
+  .ps2-facts div { padding: 10px; }
+  .ps2-facts b { font-size: 14px; }
+  .ps2-icon-btn { width: auto; flex: 1; height: 46px; }
+  .ps2-shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ps2-sim { flex-basis: 148px; }
+  .ps2 .pp-step { padding: 16px 14px; border-radius: 18px; }
+  .ps2-cre-head > img { width: 44px; height: 44px; }
+  .ps2-cre-title h1 { font-size: 17px; }
+  .ps2-hide-m { display: none !important; }
+  .ps2 .ps2-uploads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ps2 .pp-drop-main { grid-column: 1 / -1; grid-row: auto; min-height: 0; aspect-ratio: 4 / 3; }
+  .ps2 .pp-drop-angle { min-height: 0; aspect-ratio: 1; }
+  .ps2 .pp-shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ps2 .ps2-qualities { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .ps2-sim img, .ps2 .pp-shot-media img { transition: none; } }
+
+/* فهرست پیش‌نمایش (/app/ps-v2) */
+.ps2-list { display: grid; gap: 10px; }
+.ps2-list-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 16px; background: var(--vt-surface); border: 1px solid var(--vt-border); }
+.ps2-list-row > div { flex: 1; min-width: 200px; display: grid; gap: 2px; }
+.ps2-list-row span { font-size: 12px; color: var(--vt-text-3); direction: ltr; text-align: right; }
+.ps2-list-btn { min-height: 40px; font-size: 13px; padding: 0 14px; border-radius: 12px; background: var(--vt-glass); color: var(--vt-text); border: 1px solid var(--vt-border); }
+.ps2-list-btn.ps2-btn-brand { background: var(--vt-brand); color: var(--vt-on-brand); border-color: var(--vt-brand); }
+.ps2-flash { padding: 12px 14px; border-radius: 12px; background: var(--vt-success-soft); border: 1px solid var(--vt-success); font-size: 13px; }

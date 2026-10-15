@@ -1,0 +1,26 @@
+/*
+ * اجزای مشترک صفحه‌های پروداکتی (صفحه‌ی محصول /app/pro و صفحه‌ی ساخت /app/crepro).
+ * فقط توکن‌های theme-tokens.css؛ تم روز/شب از همان توکن‌ها می‌آید.
+ */
+
+/* ── فلش برگشت یکسان: گوشه‌ی بالا-راست، ۴۰×۴۰ ── */
+.psb-back {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid var(--vt-border);
+  background: var(--vt-surface);
+  color: var(--vt-text);
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .14s ease;
+}
+.psb-back:hover { border-color: var(--vt-brand-line); background: var(--vt-brand-tint); }
+.psb-back:active { transform: scale(.96); }
+.psb-back:focus-visible { outline: 2px solid var(--vt-brand-ink); outline-offset: 2px; }
+/* روی تصویر (صفحه‌ی محصول، موبایل): کمی شیشه‌ای تا روی هر عکسی خوانا باشد */
+.psb-back.psb-on-media { background: var(--vt-overlay); border-color: var(--vt-border-strong); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }

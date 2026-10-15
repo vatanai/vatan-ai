@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#ffffff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#ffffff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,14 +14,14 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
 .snav-item:hover{background:var(--s2);}
-.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
 .snav-item.active .snav-label{color:var(--text);}
 .snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
 .snav-sub-item:hover{background:var(--s2);}
-.snav-sub-item.active{background:rgba(160,122,245,.1);}
+.snav-sub-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
 .snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
 .snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
@@ -31,8 +31,8 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .breadcrumb a:hover{color:var(--text);}
 .breadcrumb .current{color:var(--text);font-weight:600;}
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;text-decoration:none;}
-.hdr-btn-primary{background:var(--accent);color:#fff;}
-.hdr-btn-primary:hover{background:#8f68e0;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);}
+.hdr-btn-primary:hover{background:var(--accent-hover);}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
 
@@ -73,7 +73,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .credit-val{font-size:16px;font-weight:800;color:var(--text);}
 .credit-label{font-size:10px;color:var(--text3);}
 .inline-input{background:var(--s1);border:1px solid var(--b1);border-radius:7px;padding:6px 10px;font-size:13px;font-weight:700;color:var(--text);font-family:'IRANSansXFaNum',sans-serif;outline:none;width:72px;text-align:center;transition:border-color .15s;}
@@ -110,7 +110,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .tiers-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .tier-card{border-radius:12px;padding:20px;border:1px solid var(--b1);position:relative;overflow:hidden;}
 .tier-card.basic{background:linear-gradient(135deg,rgba(78,78,108,.15),var(--s2));}
-.tier-card.standard{background:linear-gradient(135deg,rgba(160,122,245,.12),var(--s2));border-color:rgba(160,122,245,.25);}
+.tier-card.standard{background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 12%, transparent),var(--s2));border-color:color-mix(in srgb, var(--accent) 25%, transparent);}
 .tier-card.premium{background:linear-gradient(135deg,rgba(234,179,8,.1),var(--s2));border-color:rgba(234,179,8,.2);}
 .tier-name{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
 .tier-card.basic .tier-name{color:var(--text3);}
@@ -135,8 +135,8 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;}
 .modal-close:hover{color:var(--text);}
 .btn-full{width:100%;padding:10px;border-radius:9px;border:none;font-family:'IRANSansXFaNum',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:4px;}
-.btn-primary{background:var(--accent);color:#fff;}
-.btn-primary:hover{background:#8f68e0;}
+.btn-primary{background:var(--accent);color:var(--on-accent);}
+.btn-primary:hover{background:var(--accent-hover);}
 </style>
 @endpush
 
@@ -150,8 +150,8 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
       <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
@@ -257,7 +257,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
             </thead>
             <tbody>
               <tr>
-                <td><div class="product-cell"><div class="product-icon" style="background:rgba(160,122,245,.12);color:#a07af5;"><i class="fa-solid fa-user-tie"></i></div><div><div class="product-name">عکس حرفه‌ای لینکدین</div><div class="product-cat">PEOPLE</div></div></div></td>
+                <td><div class="product-cell"><div class="product-icon" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-user-tie"></i></div><div><div class="product-name">عکس حرفه‌ای لینکدین</div><div class="product-cat">PEOPLE</div></div></div></td>
                 <td><span class="badge badge-purple">per_credit</span></td>
                 <td><input class="inline-input" type="number" value="5" min="1"></td>
                 <td><span class="badge badge-gray">standard</span></td>
@@ -269,7 +269,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
                 <td><div class="product-cell"><div class="product-icon" style="background:rgba(59,130,246,.12);color:#3b82f6;"><i class="fa-solid fa-briefcase"></i></div><div><div class="product-name">طراحی بنر کسب‌وکار</div><div class="product-cat">BUSINESS</div></div></div></td>
                 <td><span class="badge badge-purple">per_credit</span></td>
                 <td><input class="inline-input" type="number" value="8" min="1"></td>
-                <td><span class="badge" style="background:rgba(160,122,245,.08);color:var(--accent);border:1px solid rgba(160,122,245,.2);">premium</span></td>
+                <td><span class="badge" style="background:color-mix(in srgb, var(--accent) 8%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);">premium</span></td>
                 <td><span class="badge badge-orange">۱۵٪</span></td>
                 <td><span class="badge badge-green">فعال</span></td>
                 <td><div class="action-btns"><button class="action-btn save-btn"><i class="fa-solid fa-check"></i></button></div></td>
@@ -302,7 +302,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
                 <td><div class="action-btns"><button class="action-btn save-btn"><i class="fa-solid fa-check"></i></button></div></td>
               </tr>
               <tr>
-                <td><div class="product-cell"><div class="product-icon" style="background:rgba(160,122,245,.12);color:#a07af5;"><i class="fa-solid fa-seedling"></i></div><div><div class="product-name">کارت مبارکباد نوروز</div><div class="product-cat">EVENTS</div></div></div></td>
+                <td><div class="product-cell"><div class="product-icon" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-seedling"></i></div><div><div class="product-name">کارت مبارکباد نوروز</div><div class="product-cat">EVENTS</div></div></div></td>
                 <td><span class="badge badge-green">free</span></td>
                 <td><span style="color:var(--text3);font-size:12px;">رایگان</span></td>
                 <td><span class="badge badge-gray">basic</span></td>

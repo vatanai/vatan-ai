@@ -185,7 +185,7 @@ class ProductLabCostService
     private function orderGradeKey(mixed $order): ?string
     {
         $quality = data_get($order->input_payload, 'main_quality');
-        if (array_key_exists($quality, self::GRADES)) return $quality;
+        if (is_string($quality) && array_key_exists($quality, self::GRADES)) return $quality;
 
         return match ((string) $order->model_tier_key) {
             'free', 'economy' => 'standard',

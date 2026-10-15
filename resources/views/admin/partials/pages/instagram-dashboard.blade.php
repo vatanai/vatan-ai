@@ -3,7 +3,7 @@
 <div class="space-y-6">
 
   {{-- Header --}}
-  <div class="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-xl p-8 text-white shadow-lg">
+  <div class="rounded-xl p-8 shadow-lg" style="background:var(--primary);color:var(--on-primary)">
     <h1 class="text-3xl font-bold mb-2">📸 اینستاگرام — کامنت هوشمند</h1>
     <p class="text-white/90">مدیریت جامع پست‌ها، کامنت‌ها، و دایرکت‌ها با تکنولوژی هوشمند</p>
   </div>
@@ -31,7 +31,7 @@
 
     {{-- Template Selector --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <button type="button" class="template-card p-4 border-2 border-purple-300 rounded-lg hover:shadow-lg transition" onclick="selectTemplate('product')">
+      <button type="button" class="template-card p-4 border-2 rounded-lg hover:shadow-lg transition" style="border-color:var(--border)" onclick="selectTemplate('product')">
         <div class="text-3xl mb-2">📦</div>
         <div class="font-medium text-sm">محصول جدید</div>
       </button>

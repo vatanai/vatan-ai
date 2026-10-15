@@ -516,7 +516,9 @@ class AutomationEngine
         $variants = array_values(array_filter(array_map('strval', (array) ($action['variants'] ?? [])), fn ($v) => trim($v) !== ''));
         $writer = \App\Services\SmartInstagram\Posts\CommentReplyWriter::class;
         $keywordOnly = $writer::isKeywordRequest((string) $message->body, (array) ($rule?->keywords ?? []));
-        if ($type === 'public_reply' && $keywordOnly) {
+        // کامنتِ فقط کلمه‌ی کلیدی: همیشه متن‌های خود مدیر (با ایموجی و لحن خودش)، چرخشی؛
+        // متن پیش‌فرض ثابت فقط وقتی است که مدیر هیچ سبکی ننوشته باشد.
+        if ($type === 'public_reply' && $keywordOnly && $variants === []) {
             $directReply = app($writer)->keywordReply($message, $contact, $rule);
             if ($directReply) {
                 return $directReply;

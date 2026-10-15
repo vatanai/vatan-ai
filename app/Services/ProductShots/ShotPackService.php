@@ -20,6 +20,13 @@ class ShotPackService
 {
     public const UPLOAD_CACHE_PREFIX = 'product-shots:upload:';
     public const UPLOAD_TTL_SECONDS = 21600; // ۶ ساعت
+    public const SMART_CACHE_PREFIX = 'product-shots:smart:';
+
+    /** کلید کش نتیجه‌ی «بررسی هوشمند» یک مجموعه عکس؛ تا موقع ساخت دوباره هزینه نشود. */
+    public static function smartCacheKey(int $productId, array $paths): string
+    {
+        return self::SMART_CACHE_PREFIX . $productId . ':' . sha1(implode('|', array_values($paths)));
+    }
 
     public function __construct(
         private ShotPromptBuilder $prompts,
@@ -34,7 +41,7 @@ class ShotPackService
 
         return $product->enabledProductShots()->map(fn (ProductShot $ps) => [
             'key' => $ps->shot->key,
-            'name' => $ps->shot->name_fa,
+            'name' => $ps->displayName(),
             'description' => $ps->shot->description_fa,
             'category' => $ps->shot->category,
             'credits' => $ps->credits(),
@@ -148,6 +155,7 @@ class ShotPackService
         }
         $maxSources = 1 + (int) config('product_shots.max_extra_angles', 2);
         $sourcePaths = array_slice($sourcePaths, 0, $maxSources);
+        $smartKey = self::smartCacheKey((int) $product->id, $sourcePaths);
 
         // هر batch نسخه‌ی خودش را از عکس‌ها دارد تا پاک‌سازی پس از اتمام یک پک،
         // ساخت دوباره با همان آپلود را خراب نکند.
@@ -167,7 +175,10 @@ class ShotPackService
         }
 
         $productConfiguration = (array) data_get($product->shot_settings, 'preflight', []);
-        $setReport = $this->vision->preflightSet($sourcePaths, $settings, $productConfiguration);
+        // بررسی مجموعه با «یک» درخواست به مدل بینا (به‌جای یک درخواست برای هر عکس)؛
+        // اگر کاربر همین عکس‌ها را در صفحه با «بررسی هوشمند» چک کرده، همان نتیجه استفاده می‌شود.
+        $cached = Cache::get($smartKey);
+        $setReport = is_array($cached) ? $cached : $this->vision->smartCheck($sourcePaths, $settings, $productConfiguration);
         if (($setReport['verdict'] ?? 'green') === 'red') {
             throw ValidationException::withMessages(['uploads' => $setReport['suggestion_fa'] ?: 'مجموعه تصاویر برای ساخت مناسب نیست.']);
         }
@@ -210,7 +221,7 @@ class ShotPackService
                     'shot_batch_id' => $batch->id,
                     'shot_id' => $ps->shot_id,
                     'shot_key' => $ps->shot->key,
-                    'shot_name_fa' => $ps->shot->name_fa,
+                    'shot_name_fa' => $ps->displayName(),
                     'status' => 'pending',
                     'credits' => $ps->credits($qualityLevel),
                     'quality_level' => $qualityLevel,

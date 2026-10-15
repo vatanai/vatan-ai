@@ -58,9 +58,15 @@ class ProductGenerateController extends Controller
             // «استودیو محصول» (پک شات): فقط محصولات product_mode=product وارد این شاخه می‌شوند؛
             // مسیر همه‌ی محصولات قبلی (portrait) بدون تغییر ادامه پیدا می‌کند.
             if ($product->isShotProduct()) {
-                abort_unless(app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor($request->user()), 404);
+                abort_unless(
+                    app()->environment('local')
+                        || app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor($request->user()),
+                    404,
+                );
 
-                return app(\App\Http\Controllers\ProductShotController::class)->page($product);
+                abort_unless($product->short_code, 404);
+
+                return redirect()->route('app.crepro', ['product' => $product->short_code], 301);
             }
             if ($product->isVideoProduct()) {
                 return app(VideoProductController::class)->show(
@@ -533,9 +539,14 @@ class ProductGenerateController extends Controller
     {
         // محصول پروداکتی صفحه‌ی جزئیات جدا ندارد؛ مستقیم به صفحه‌ی ساخت پک می‌رود.
         if ($product->isShotProduct()) {
-            abort_unless(app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor(auth()->user()), 404);
+            abort_unless(
+                app()->environment('local')
+                    || app(\App\Services\ProductShots\ProductShotFeature::class)->availableFor(auth()->user()),
+                404,
+            );
+            abort_unless($product->short_code, 404);
 
-            return redirect()->route('app.create', ['product' => $product->route_slug]);
+            return redirect()->route('app.pro', ['product' => $product->short_code], 301);
         }
 
         $metricPayload = [

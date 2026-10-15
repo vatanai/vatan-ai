@@ -6,12 +6,12 @@
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 /* smart list cards */
 .smart-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
 .smart-card{background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
 .smart-card:hover{border-color:var(--b2);transform:translateY(-1px);}
-.smart-card.active{border-color:var(--accent);background:rgba(160,122,245,.06);}
+.smart-card.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 6%, transparent);}
 .smart-card::before{content:'';position:absolute;top:0;right:0;width:3px;height:100%;border-radius:0 14px 14px 0;}
 .smart-card.color-green::before{background:var(--green);}
 .smart-card.color-accent::before{background:var(--accent);}
@@ -222,7 +222,7 @@ function renderRows(users) {
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${(u.name||'ک').charAt(0)}</div>
+          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">${(u.name||'ک').charAt(0)}</div>
           <div><div style="font-size:12.5px;font-weight:700;color:var(--text);">${u.name||'—'}</div><div style="font-size:10px;color:var(--text3);">ID: ${u.id}</div></div>
         </div>
       </td>

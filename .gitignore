@@ -48,3 +48,8 @@ database/data-import/*.bak.discard
 /_standardize_backup/
 *.bak-*
 .fuse_hidden*
+
+# کارخانه‌ی محتوای وطن — فایل‌های حجیم
+content-lab/**/*.mp4
+content-lab/_system/cache/
+content-lab/_system/tmp/

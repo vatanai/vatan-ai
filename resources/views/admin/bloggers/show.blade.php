@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,13 +14,13 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .admin-content{padding:24px;flex:1;}
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item:hover{background:var(--s2);}.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
 .snav-item.active .snav-label{color:var(--text);}
 .snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;text-decoration:none;transition:background .15s;}
-.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:rgba(160,122,245,.1);}
+.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
 .snav-sub-item.active .snav-dot{background:var(--accent);}
 .snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
@@ -30,20 +30,20 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .breadcrumb .current{color:var(--text);font-weight:600;}
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--b1);background:var(--s2);color:var(--text2);font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;border-color:transparent;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);border-color:transparent;}
 .hdr-btn-primary:hover{opacity:.9;color:#fff;}
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:99px;font-size:10.5px;font-weight:700;}
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
 /* profile header */
 .profile-card{background:var(--s2);border:1px solid var(--b1);border-radius:16px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;}
-.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;}
 .profile-info{flex:1;}
 .profile-name{font-size:18px;font-weight:800;margin-bottom:4px;}
 .profile-handle{font-size:12px;color:var(--accent);margin-bottom:8px;}
 .ref-link{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:var(--text2);}
-.copy-btn{padding:4px 10px;border-radius:6px;background:rgba(160,122,245,.1);border:1px solid rgba(160,122,245,.25);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:'Vazirmatn',sans-serif;transition:all .15s;flex-shrink:0;}
-.copy-btn:hover{background:var(--accent);color:#fff;}
+.copy-btn{padding:4px 10px;border-radius:6px;background:color-mix(in srgb, var(--accent) 10%, transparent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:'Vazirmatn',sans-serif;transition:all .15s;flex-shrink:0;}
+.copy-btn:hover{background:var(--accent);color:var(--on-accent);}
 /* kpi */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .kpi-card{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:16px 18px;}
@@ -90,8 +90,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
       <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
@@ -246,7 +246,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <label class="form-label">یادداشت</label>
       <input type="text" class="form-input" id="editNote" placeholder="یادداشت داخلی...">
     </div>
-    <button onclick="saveEdit()" style="width:100%;padding:10px;border-radius:8px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Vazirmatn',sans-serif;">ذخیره تغییرات</button>
+    <button onclick="saveEdit()" style="width:100%;padding:10px;border-radius:8px;background:var(--accent);color:var(--on-accent);border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:'Vazirmatn',sans-serif;">ذخیره تغییرات</button>
   </div>
 </div>
 
@@ -304,7 +304,7 @@ function loadCharts() {
     type:'bar',
     data:{
       labels:['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور'],
-      datasets:[{label:'درآمد (تومان)', data:[1800000,2200000,1600000,2900000,3800000,4500000], backgroundColor:'rgba(160,122,245,.3)', borderColor:'#a07af5', borderWidth:2, borderRadius:6}]
+      datasets:[{label:'درآمد (تومان)', data:[1800000,2200000,1600000,2900000,3800000,4500000], backgroundColor:'rgba(11,191,83,0.3)', borderColor:'#0BBF53', borderWidth:2, borderRadius:6}]
     },
     options:{responsive:true,maintainAspectRatio:false, plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#4d7a56',font:{size:10,family:'Vazirmatn'}},grid:{color:'rgba(255,255,255,.03)'}},y:{ticks:{color:'#4d7a56',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}}}}
@@ -316,7 +316,7 @@ function loadCharts() {
     data:{
       labels:days,
       datasets:[
-        {label:'کلیک', data:days.map(()=>Math.floor(20+Math.random()*60)), borderColor:'#a07af5', backgroundColor:'rgba(160,122,245,.06)', borderWidth:2, tension:.4, pointRadius:0, fill:true},
+        {label:'کلیک', data:days.map(()=>Math.floor(20+Math.random()*60)), borderColor:'#0BBF53', backgroundColor:'rgba(11,191,83,0.06)', borderWidth:2, tension:.4, pointRadius:0, fill:true},
         {label:'ثبت‌نام', data:days.map(()=>Math.floor(2+Math.random()*10)), borderColor:'#0BBF53', backgroundColor:'rgba(11,191,83,.06)', borderWidth:2, tension:.4, pointRadius:0, fill:true},
       ]
     },

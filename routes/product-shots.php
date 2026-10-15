@@ -17,6 +17,8 @@ Route::prefix('app/product-shots')
     ->group(function () {
         Route::post('/{product:slug}/preflight', [ProductShotController::class, 'preflight'])
             ->middleware('throttle:20,1')->name('preflight');
+        Route::post('/{product:slug}/link-images', [ProductShotController::class, 'linkImages'])
+            ->middleware('throttle:10,1')->name('link-images');
         Route::post('/{product:slug}/preflight-set', [ProductShotController::class, 'preflightSet'])
             ->middleware('throttle:12,1')->name('preflight-set');
         Route::post('/{product:slug}/batches', [ProductShotController::class, 'storeBatch'])

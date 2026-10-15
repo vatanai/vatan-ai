@@ -241,10 +241,14 @@ class ExploreFeedService
         $randomness = max(0, min(100, (int) $setting->randomness_level));
         $count = $products->count();
 
-        $ranked = $products->values()->map(function ($product, $index) use ($count, $boostMap, $randomness) {
+        $ranked = $products->values()->map(function ($product, $index) use ($count, $boostMap, $randomness, $setting, $query) {
             $baseScore = $count - $index; // هرچی جلوتر در Query، امتیاز پایه بالاتر
             $boost = $boostMap[$product->id] ?? 0;
-            $jitter = $randomness > 0 ? random_int(0, $randomness) : 0;
+            // تصادفی‌بودن نمایشی باید بین رفرش‌ها پایدار بماند؛ random_int
+            // باعث می‌شد جایگاه همهٔ کارت‌ها در هر درخواست جابه‌جا شود.
+            $jitter = $randomness > 0
+                ? hexdec(substr(md5($product->id . ':' . $setting->id . ':' . $query), 0, 8)) % ($randomness + 1)
+                : 0;
             return [
                 'product' => $product,
                 'sort_key' => $baseScore + ($boost * 2) + $jitter,
@@ -252,6 +256,9 @@ class ExploreFeedService
         })->sortByDesc('sort_key')->values();
 
         $ranked = $this->mixNewProducts($ranked, $newProductRatio);
+        // تمرکز فعلی محصول: حدود ۸۰٪ جایگاه‌های فید از محصولات پروداکتی
+        // پر می‌شود؛ اگر یک نوع کمتر باشد، باقی محصولات حذف نمی‌شوند.
+        $ranked = $this->mixProductModes($ranked, 80);
 
         return $ranked->map(function ($row) {
             $data = $this->resolveDisplayData('product', $row['product']);
@@ -353,6 +360,42 @@ class ExploreFeedService
         }
 
         return $mixed;
+    }
+
+    /** ترتیب محصول‌ها را با نسبت هدف و بدون تصادفی‌بودن ناپایدار تنظیم می‌کند. */
+    protected function mixProductModes(Collection $ranked, int $productRatio): Collection
+    {
+        if ($ranked->isEmpty()) {
+            return $ranked->values();
+        }
+
+        $productRatio = max(0, min(100, $productRatio));
+        $productItems = $ranked->filter(fn (array $row) => (string) $row['product']->product_mode === 'product')->values();
+        $portraitItems = $ranked->reject(fn (array $row) => (string) $row['product']->product_mode === 'product')->values();
+
+        if ($productItems->isEmpty() || $portraitItems->isEmpty() || $productRatio <= 0 || $productRatio >= 100) {
+            return $ranked->values();
+        }
+
+        $mixed = collect();
+        $productIndex = 0;
+        $portraitIndex = 0;
+        $usedProducts = 0;
+
+        while ($productIndex < $productItems->count() || $portraitIndex < $portraitItems->count()) {
+            $targetProducts = (int) ceil(($mixed->count() + 1) * ($productRatio / 100));
+            $takeProduct = $productIndex < $productItems->count()
+                && ($portraitIndex >= $portraitItems->count() || $usedProducts < $targetProducts);
+
+            if ($takeProduct) {
+                $mixed->push($productItems[$productIndex++]);
+                $usedProducts++;
+            } else {
+                $mixed->push($portraitItems[$portraitIndex++]);
+            }
+        }
+
+        return $mixed->values();
     }
 
     protected function normaliseSearchTerm(string $term): string

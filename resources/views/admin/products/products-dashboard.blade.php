@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,13 +14,13 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .admin-content{padding:24px;flex:1;}
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item:hover{background:var(--s2);}.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
 .snav-item.active .snav-label{color:var(--text);}
 .snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
-.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:rgba(160,122,245,.1);}
+.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
 .snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
 .snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
@@ -29,7 +29,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;border:none;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);border:none;}
 .hdr-btn-primary:hover{opacity:.9;}
 
 /* Range toggle */
@@ -100,7 +100,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 .badge-teal{background:rgba(20,184,166,.1);color:#14b8a6;border:1px solid rgba(20,184,166,.2);}
 
@@ -144,8 +144,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
       <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
@@ -194,7 +194,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div class="kpi-delta up"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i> ۲ محصول جدید</div>
         </div>
         <div class="kpi-card accent">
-          <div class="kpi-icon" style="background:rgba(160,122,245,.1);color:var(--accent);"><i class="fa-solid fa-cart-shopping"></i></div>
+          <div class="kpi-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);"><i class="fa-solid fa-cart-shopping"></i></div>
           <div class="kpi-val">۲,۴۸۱</div>
           <div class="kpi-label">سفارشات ۳۰ روز</div>
           <div class="kpi-delta up"><i class="fa-solid fa-arrow-up" style="font-size:8px;"></i> ۲۳٪ رشد</div>
@@ -251,7 +251,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div>
             <div class="top-prod-row">
               <div class="rank-badge" style="background:rgba(234,179,8,.15);color:#eab308;">۱</div>
-              <div class="prod-icon" style="background:rgba(160,122,245,.12);color:var(--accent);">💼</div>
+              <div class="prod-icon" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);">💼</div>
               <div class="prod-info">
                 <div class="prod-name">عکس لینکدین</div>
                 <div class="prod-cat">افراد</div>
@@ -341,7 +341,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             <tr>
               <td>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div style="width:28px;height:28px;border-radius:7px;background:rgba(160,122,245,.12);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;">💼</div>
+                  <div style="width:28px;height:28px;border-radius:7px;background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;">💼</div>
                   <div><div style="font-size:12.5px;font-weight:700;color:var(--text);">عکس لینکدین</div><div style="font-size:10px;color:var(--text3);">افراد</div></div>
                 </div>
               </td>
@@ -534,7 +534,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           </div>
           <div>
             <div class="cat-row">
-              <div class="cat-icon" style="background:rgba(160,122,245,.1);color:var(--accent);">👤</div>
+              <div class="cat-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);">👤</div>
               <div class="cat-name">افراد / پرتره</div>
               <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:100%;background:var(--accent);"></div></div>
               <div class="cat-count">۷</div>
@@ -647,7 +647,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
               <div class="action-label">محصول جدید</div>
             </a>
             <a href="/admin/products" class="action-card">
-              <div class="action-icon" style="background:rgba(160,122,245,.1);color:var(--accent);"><i class="fa-solid fa-list"></i></div>
+              <div class="action-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);"><i class="fa-solid fa-list"></i></div>
               <div class="action-label">همه محصولات</div>
             </a>
             <a href="/admin/products/categories" class="action-card">
@@ -667,7 +667,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
               <div class="action-label">آنالیتیکس</div>
             </a>
             <a href="/admin/jobs" class="action-card">
-              <div class="action-icon" style="background:rgba(160,122,245,.08);color:var(--accent);"><i class="fa-solid fa-microchip"></i></div>
+              <div class="action-icon" style="background:color-mix(in srgb, var(--accent) 8%, transparent);color:var(--accent);"><i class="fa-solid fa-microchip"></i></div>
               <div class="action-label">Job Queue</div>
             </a>
             <a href="/admin/products" class="action-card">
@@ -725,12 +725,12 @@ function buildChart(range) {
         {
           label: 'سفارشات',
           data: d.orders,
-          borderColor: '#a07af5',
-          backgroundColor: 'rgba(160,122,245,0.06)',
+          borderColor: '#0BBF53',
+          backgroundColor: 'rgba(11,191,83,0.06)',
           borderWidth: 2,
           pointRadius: d.labels.length > 20 ? 0 : 3,
           pointHoverRadius: 5,
-          pointBackgroundColor: '#a07af5',
+          pointBackgroundColor: '#0BBF53',
           tension: 0.4,
           fill: true,
           yAxisID: 'y',

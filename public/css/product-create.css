@@ -1,0 +1,440 @@
+/*
+ * صفحه‌ی «ساخت» استودیو محصول (/app/crepro/{کد}) — نسخه‌ی بازطراحی‌شده.
+ * همه‌ی کلاس‌ها با پیشوند pc- و زیر .pc هستند تا با صفحه‌های دیگر تداخل نداشته باشند.
+ * فقط توکن‌های theme-tokens.css؛ حالت روز و شب از همان توکن‌ها می‌آید (doc/app-site-theme.md).
+ * فلش برگشت مشترک در css/productshot-common.css است.
+ */
+
+.pc { --pc-paper: #fff; /* سفید ثابت (کاغذ عکس، تیک روی رنگ موفق) در هر دو تم */ --pc-radius: 20px; --pc-radius-sm: 14px; max-width: 1200px; margin: 0 auto; padding: 8px clamp(14px, 3vw, 28px) 56px; color: var(--vt-text); display: grid; gap: 18px; }
+.pc *, .pc *::before, .pc *::after { box-sizing: border-box; }
+.pc h1, .pc h2, .pc p, .pc dl, .pc dd, .pc ul { margin: 0; }
+.pc ul { padding: 0; list-style: none; }
+.pc button { font-family: inherit; }
+.pc img { display: block; max-width: 100%; }
+.pc a:focus-visible, .pc button:focus-visible, .pc label:focus-visible { outline: 2px solid var(--vt-brand-ink); outline-offset: 2px; }
+.pc [hidden] { display: none !important; }
+.pc-sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ───── سربرگ ───── */
+.pc-top { display: flex; align-items: center; gap: 12px; }
+.pc-top-thumb { flex: none; width: 48px; height: 48px; border-radius: 14px; object-fit: cover; background: var(--vt-surface); border: 1px solid var(--vt-border); }
+.pc-top-title { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pc-eyebrow { font-size: 11.5px; font-weight: 700; color: var(--vt-brand-ink); letter-spacing: .2px; }
+.pc-top-title h1 { font-size: 19px; font-weight: 900; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-top-link { flex: none; font-size: 13px; font-weight: 700; color: var(--vt-text-2); text-decoration: none; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--vt-border); }
+.pc-top-link:hover { color: var(--vt-text); border-color: var(--vt-border-strong); }
+
+/* ───── نوار گام‌ها (داخل ستون اصلی؛ هم‌عرض آن) ───── */
+.pc-steps ol { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pc-steps li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--vt-surface); border: 1px solid var(--vt-border); font-size: 13px; font-weight: 700; color: var(--vt-text-2); min-width: 0; }
+.pc-steps li > span { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 900; background: var(--vt-surface-2); color: var(--vt-text-2); }
+.pc-steps li.is-active { color: var(--vt-text); border-color: var(--vt-brand-line); background: var(--vt-brand-tint); }
+.pc-steps li.is-active > span { background: var(--vt-brand); color: var(--vt-on-brand); }
+.pc-steps li { transition: border-color .25s, background .25s, color .25s; }
+/* گام کامل‌شده: قاب و تیک با همان سبز برند وطن (--vt-brand) */
+.pc-steps li.is-done { color: var(--vt-text); border-color: var(--vt-brand); background: var(--vt-brand-soft); box-shadow: inset 0 0 0 1px var(--vt-brand); }
+.pc-steps li.is-done > span { background: var(--vt-brand); color: var(--vt-on-brand); border: 0; animation: pc-step-pop .35s ease; }
+@keyframes pc-step-pop { 0% { transform: scale(.6); } 70% { transform: scale(1.12); } 100% { transform: none; } }
+
+/* ───── بدنه: خلاصه‌ی سفارش (راست) + ستون اصلی (چپ) ─────
+ * در RTL ستون اول گرید سمت راست است؛ ترتیب DOM (اول محتوا) برای صفحه‌خوان حفظ می‌شود. */
+.pc-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+.pc-side { grid-column: 1; grid-row: 1; }
+.pc-main { grid-column: 2; grid-row: 1; display: grid; gap: 14px; min-width: 0; }
+.pc-card { background: var(--vt-surface); border: 1px solid var(--vt-border); border-radius: var(--pc-radius); padding: 22px; scroll-margin-top: 90px; }
+.pc-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.pc-card-head > div { flex: 1; min-width: 220px; }
+.pc-card-head h2 { font-size: 17px; font-weight: 900; line-height: 1.5; }
+.pc-card-head p { margin-top: 4px; font-size: 13px; color: var(--vt-text-2); line-height: 1.85; }
+.pc-counter { font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 99px; background: var(--vt-surface-2); color: var(--vt-text-2); white-space: nowrap; }
+.pc-br-m { display: none; }
+.pc-counter.is-on { background: var(--vt-brand-soft); color: var(--vt-brand-ink); }
+
+/* ───── گام ۱: باکس آپلود واحد ───── */
+.pc-up { position: relative; border-radius: 18px; border: 1.5px dashed var(--vt-border-strong); background: var(--vt-surface-2); transition: border-color .15s, background .15s; }
+.pc-up.is-dragover { border-color: var(--vt-brand-ink); background: var(--vt-brand-tint); }
+.pc-up.has-files { border-style: solid; border-color: var(--vt-border); }
+#pc-up-input:focus-visible + .pc-up { outline: 2px solid var(--vt-brand-ink); outline-offset: 2px; }
+
+.pc-up-empty { display: grid; justify-items: center; gap: 14px; padding: 18px 16px 20px; cursor: pointer; text-align: center; }
+.pc-up-empty:hover .pc-up-btn { background: var(--vt-brand-hover); }
+.pc-up-cta { display: grid; justify-items: center; gap: 8px; }
+.pc-up-btn { pointer-events: none; }
+.pc-up-cta small { font-size: 11.5px; color: var(--vt-text-2); line-height: 1.8; }
+
+/* موشن آموزشی با عکس واقعی محصول روی پس‌زمینه‌ی سفید — چرخه‌ی ۱۲ ثانیه‌ای
+ * صحنه‌ی ۱ (اشتباه): یک عکس کج، تاریک، بریده و روی پس‌زمینه‌ی شلوغ.
+ * صحنه‌ی ۲ (درست): پس‌زمینه‌ی سفید؛ روبه‌رو، سه‌رخ چپ و سه‌رخ راست یکی‌یکی عکس گرفته می‌شوند. */
+.pc-demo { --pc-demo-t: 12s; width: 100%; max-width: 616px; display: grid; justify-items: center; gap: 12px; padding: 16px 14px 14px; border-radius: 20px; border: 1px solid var(--vt-border); background: radial-gradient(120% 90% at 50% 0%, var(--vt-brand-tint), transparent 70%), var(--vt-surface); box-shadow: var(--vt-shadow-card); }
+
+/* برچسب بالای موشن: اشتباه / درست */
+.pc-demo-tag { display: grid; justify-items: center; }
+.pc-demo-tag b { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 14px; border-radius: 99px; font-size: 12.5px; font-weight: 900; }
+.pc-demo-tag i { font-size: 11px; }
+.pc-demo-tag .t-bad { color: var(--vt-danger); background: var(--vt-danger-soft); border: 1px solid var(--vt-danger); animation: pc-demo-a var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-tag .t-ok { color: var(--vt-success); background: var(--vt-success-soft); border: 1px solid var(--vt-success); opacity: 0; animation: pc-demo-b var(--pc-demo-t) ease-in-out infinite; }
+
+.pc-demo-stage { position: relative; width: 100%; height: 352px; }
+.pc-demo-a, .pc-demo-b { position: absolute; inset: 0; display: grid; justify-items: center; align-content: start; gap: 14px; }
+.pc-demo-a { animation: pc-demo-a var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-b { opacity: 0; animation: pc-demo-b var(--pc-demo-t) ease-in-out infinite; }
+
+/* قاب دوربین (۴:۵) */
+.pc-demo-vf { position: relative; width: 208px; height: 260px; border-radius: 18px; overflow: hidden; background: var(--pc-paper); border: 1px solid var(--vt-border-strong); box-shadow: 0 0 0 5px var(--vt-surface), var(--vt-shadow-card); }
+.pc-demo-vf-ok { width: 184px; height: 230px; }
+.pc-demo-corners { position: absolute; inset: 10px; z-index: 3; pointer-events: none; opacity: .95; background:
+  linear-gradient(var(--vt-brand), var(--vt-brand)) top left / 18px 2.5px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) top left / 2.5px 18px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) top right / 18px 2.5px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) top right / 2.5px 18px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) bottom left / 18px 2.5px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) bottom left / 2.5px 18px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) bottom right / 18px 2.5px no-repeat,
+  linear-gradient(var(--vt-brand), var(--vt-brand)) bottom right / 2.5px 18px no-repeat; }
+
+/* صحنه‌ی ۱ */
+.pc-demo-vf-bad { background: var(--vt-surface-2); }
+.pc-demo-vf-bad .pc-demo-corners { background: none; border: 2px dashed var(--vt-danger); border-radius: 12px; }
+.pc-demo-wrong { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: pc-demo-shake var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-stamp { position: absolute; top: 2px; left: calc(50% + 80px); z-index: 4; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--vt-danger); color: var(--pc-paper); font-size: 19px; box-shadow: var(--vt-shadow-pop); border: 3px solid var(--vt-surface); opacity: 0; animation: pc-demo-stamp var(--pc-demo-t) ease-out infinite; }
+.pc-demo-flags { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.pc-demo-flags em { font-style: normal; font-size: 12px; font-weight: 800; padding: 3px 11px; border-radius: 99px; color: var(--vt-danger); background: var(--vt-danger-soft); border: 1px solid var(--vt-danger); opacity: 0; }
+.pc-demo-flags .f1 { animation: pc-demo-f1 var(--pc-demo-t) ease-out infinite; }
+.pc-demo-flags .f2 { animation: pc-demo-f2 var(--pc-demo-t) ease-out infinite; }
+.pc-demo-flags .f3 { animation: pc-demo-f3 var(--pc-demo-t) ease-out infinite; }
+
+/* صحنه‌ی ۲: سه زاویه روی پس‌زمینه‌ی سفید */
+.pc-demo-view { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.pc-demo-view.v1 { animation: pc-demo-v1 var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-view.v2 { animation: pc-demo-v2 var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-view.v3 { animation: pc-demo-v3 var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-flash { position: absolute; inset: 0; z-index: 5; background: var(--pc-paper); opacity: 0; animation: pc-demo-flash var(--pc-demo-t) linear infinite; }
+.pc-demo-angle { position: absolute; inset-inline: 0; bottom: 10px; z-index: 4; display: grid; justify-items: center; }
+.pc-demo-angle b { grid-area: 1 / 1; font-size: 11.5px; font-weight: 900; padding: 3px 12px; border-radius: 99px; background: var(--vt-brand); color: var(--vt-on-brand); box-shadow: var(--vt-shadow-card); opacity: 0; }
+.pc-demo-angle .a1 { animation: pc-demo-l1 var(--pc-demo-t) ease infinite; }
+.pc-demo-angle .a2 { animation: pc-demo-l2 var(--pc-demo-t) ease infinite; }
+.pc-demo-angle .a3 { animation: pc-demo-l3 var(--pc-demo-t) ease infinite; }
+.pc-demo-slots { display: flex; gap: 12px; }
+.pc-demo-slot { position: relative; display: grid; justify-items: center; gap: 5px; }
+.pc-demo-shot { position: relative; display: block; width: 66px; height: 82px; border-radius: 12px; overflow: hidden; border: 1.5px dashed var(--vt-border-strong); background: var(--vt-surface-2); }
+.pc-demo-shot img { width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+.pc-demo-slot > i { position: absolute; top: -7px; inset-inline-end: -7px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; background: var(--vt-success); color: var(--pc-paper); border: 2px solid var(--vt-surface); opacity: 0; transform: scale(.4); }
+.pc-demo-slot small { font-size: 11.5px; font-weight: 800; color: var(--vt-text-2); white-space: nowrap; }
+.pc-demo-slot.s1 img, .pc-demo-slot.s1 > i { animation: pc-demo-s1 var(--pc-demo-t) ease-out infinite; }
+.pc-demo-slot.s2 img, .pc-demo-slot.s2 > i { animation: pc-demo-s2 var(--pc-demo-t) ease-out infinite; }
+.pc-demo-slot.s3 img, .pc-demo-slot.s3 > i { animation: pc-demo-s3 var(--pc-demo-t) ease-out infinite; }
+
+/* متن زیر موشن: عنوان + توضیح */
+.pc-demo-captions { display: grid; width: 100%; }
+.pc-demo-captions > span { grid-area: 1 / 1; display: grid; justify-items: center; gap: 2px; text-align: center; padding-inline: 8px; }
+.pc-demo-captions strong { font-size: 15px; font-weight: 900; line-height: 1.7; }
+.pc-demo-captions small { font-size: 12.5px; color: var(--vt-text-2); line-height: 1.8; }
+.pc-demo-c1 strong { color: var(--vt-danger); }
+.pc-demo-c1 { animation: pc-demo-a var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-c2 strong { color: var(--vt-text); }
+.pc-demo-c2 { opacity: 0; animation: pc-demo-b var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-dots { display: inline-flex; gap: 6px; }
+.pc-demo-dots > span { width: 20px; height: 4px; border-radius: 99px; background: var(--vt-border-strong); }
+.pc-demo-d1 { animation: pc-demo-dot1 var(--pc-demo-t) ease-in-out infinite; }
+.pc-demo-d2 { animation: pc-demo-dot2 var(--pc-demo-t) ease-in-out infinite; }
+
+@keyframes pc-demo-a { 0% { opacity: 0; } 3%, 37% { opacity: 1; } 41%, 100% { opacity: 0; } }
+@keyframes pc-demo-b { 0%, 41% { opacity: 0; } 45%, 95% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pc-demo-shake { 0%, 6% { translate: 0 0; } 8% { translate: -4px 2px; } 10% { translate: 4px -2px; } 12% { translate: -2px 1px; } 14%, 100% { translate: 0 0; } }
+@keyframes pc-demo-stamp { 0%, 13% { opacity: 0; transform: scale(1.8) rotate(-20deg); } 16% { opacity: 1; transform: scale(.9) rotate(0); } 18%, 37% { opacity: 1; transform: scale(1); } 41%, 100% { opacity: 0; transform: scale(1); } }
+@keyframes pc-demo-f1 { 0%, 18% { opacity: 0; transform: translateY(6px); } 21%, 37% { opacity: 1; transform: none; } 41%, 100% { opacity: 0; } }
+@keyframes pc-demo-f2 { 0%, 22% { opacity: 0; transform: translateY(6px); } 25%, 37% { opacity: 1; transform: none; } 41%, 100% { opacity: 0; } }
+@keyframes pc-demo-f3 { 0%, 26% { opacity: 0; transform: translateY(6px); } 29%, 37% { opacity: 1; transform: none; } 41%, 100% { opacity: 0; } }
+@keyframes pc-demo-v1 { 0%, 43% { opacity: 0; transform: scale(1.04); } 46%, 57% { opacity: 1; transform: none; } 60%, 100% { opacity: 0; } }
+@keyframes pc-demo-v2 { 0%, 57% { opacity: 0; transform: translateX(-6%); } 60%, 72% { opacity: 1; transform: none; } 75%, 100% { opacity: 0; } }
+@keyframes pc-demo-v3 { 0%, 72% { opacity: 0; transform: translateX(6%); } 75%, 94% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+@keyframes pc-demo-flash { 0%, 50% { opacity: 0; } 51% { opacity: .9; } 54%, 65% { opacity: 0; } 66% { opacity: .9; } 69%, 80% { opacity: 0; } 81% { opacity: .9; } 84%, 100% { opacity: 0; } }
+@keyframes pc-demo-l1 { 0%, 46% { opacity: 0; } 48%, 57% { opacity: 1; } 59%, 100% { opacity: 0; } }
+@keyframes pc-demo-l2 { 0%, 60% { opacity: 0; } 62%, 72% { opacity: 1; } 74%, 100% { opacity: 0; } }
+@keyframes pc-demo-l3 { 0%, 75% { opacity: 0; } 77%, 93% { opacity: 1; } 95%, 100% { opacity: 0; } }
+@keyframes pc-demo-s1 { 0%, 52% { opacity: 0; transform: scale(.4); } 55%, 95% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes pc-demo-s2 { 0%, 67% { opacity: 0; transform: scale(.4); } 70%, 95% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes pc-demo-s3 { 0%, 82% { opacity: 0; transform: scale(.4); } 85%, 95% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes pc-demo-dot1 { 0%, 41% { background: var(--vt-danger); } 45%, 100% { background: var(--vt-border-strong); } }
+@keyframes pc-demo-dot2 { 0%, 41% { background: var(--vt-border-strong); } 45%, 100% { background: var(--vt-success); } }
+
+/* حالت پر: عکس‌ها داخل همان باکس */
+.pc-up-filled { padding: 12px; display: grid; gap: 12px; }
+.pc-up-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pc-up-item, .pc-up-add { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; }
+.pc-up-item { background: var(--vt-surface); border: 1px solid var(--vt-border); animation: pc-fade .35s ease; }
+.pc-up-item.is-main { border: 2px solid var(--vt-brand); }
+.pc-up-item img { width: 100%; height: 100%; object-fit: contain; background: var(--vt-surface); }
+.pc-up-item.is-pending img { opacity: .55; }
+.pc-up-tag { position: absolute; inset-inline: 6px; bottom: 6px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 8px; border-radius: 10px; background: var(--vt-overlay); color: var(--vt-text); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-size: 11.5px; font-weight: 800; min-width: 0; }
+.pc-up-tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-up-main-btn, .pc-up-main-pill { flex: none; display: inline-flex; align-items: center; gap: 4px; border: 0; padding: 2px 8px; border-radius: 8px; font-style: normal; font-size: 10.5px; font-weight: 800; line-height: 1.6; }
+.pc-up-main-btn { background: var(--vt-surface); color: var(--vt-text); cursor: pointer; }
+.pc-up-main-pill { background: var(--vt-brand); color: var(--vt-on-brand); }
+.pc-up-main-btn b, .pc-up-main-pill b { font-weight: 800; }
+.pc-up-main-btn i, .pc-up-main-pill i { font-size: 9.5px; }
+.pc-up-main-btn:hover { background: var(--vt-brand-soft); color: var(--vt-brand-ink); }
+.pc-up-remove { position: absolute; top: 6px; inset-inline-end: 6px; z-index: 3; width: 28px; height: 28px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--vt-overlay); color: var(--vt-text); cursor: pointer; font-size: 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.pc-up-remove:hover { color: var(--vt-danger); }
+.pc-up-item .pc-badge { top: 6px; inset-inline-start: 6px; font-size: 10.5px; padding: 3px 8px; }
+.pc-up-add { display: grid; place-items: center; align-content: center; gap: 6px; border: 1.5px dashed var(--vt-border-strong); background: var(--vt-surface); color: var(--vt-text-2); cursor: pointer; text-align: center; padding: 8px; transition: border-color .15s, background .15s; }
+.pc-up-add:hover { border-color: var(--vt-brand-ink); background: var(--vt-brand-tint); }
+.pc-up-add i { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--vt-brand-soft); color: var(--vt-brand-ink); font-size: 15px; }
+.pc-up-add strong { font-size: 12.5px; font-weight: 800; color: var(--vt-text); }
+.pc-up-add small { font-size: 11px; }
+.pc-up-angles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--vt-text-2); }
+.pc-up-angles > b { font-weight: 700; margin-inline-end: 2px; }
+.pc-up-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--vt-border); background: var(--vt-surface); font-weight: 700; }
+.pc-up-chip i { font-size: 10px; color: var(--vt-text-3); }
+.pc-up-chip.is-on { border-color: var(--vt-brand-line); background: var(--vt-brand-tint); color: var(--vt-text); }
+.pc-up-chip.is-on i { color: var(--vt-success); }
+
+.pc-badge { position: absolute; top: 10px; inset-inline-start: 10px; z-index: 2; font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 99px; background: var(--vt-overlay); color: var(--vt-text); backdrop-filter: blur(6px); }
+.pc-badge.is-green { background: var(--vt-success); color: var(--vt-on-brand); }
+.pc-badge.is-yellow { background: var(--vt-warning); color: var(--vt-on-brand); }
+.pc-badge.is-red { background: var(--vt-danger); color: var(--vt-on-brand); }
+
+/* عکس از لینک محصول */
+.pc-link { margin-top: 12px; padding: 14px; border-radius: var(--pc-radius-sm); border: 1px solid var(--vt-border); background: var(--vt-surface-2); display: grid; gap: 10px; }
+.pc-link-head { display: grid; gap: 3px; }
+.pc-link-head strong { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 900; }
+.pc-link-head strong i { color: var(--vt-brand-ink); }
+.pc-link-head span { font-size: 12px; color: var(--vt-text-2); line-height: 1.8; }
+.pc-link-form { display: flex; gap: 8px; }
+.pc-link-input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--vt-border-strong); background: var(--vt-surface); color: var(--vt-text); font: inherit; font-size: 13px; text-align: left; }
+.pc-link-input:focus { outline: 2px solid var(--vt-brand-line); outline-offset: 0; border-color: var(--vt-brand-ink); }
+.pc-link-input::placeholder { color: var(--vt-text-3); }
+.pc-link-go { flex: none; }
+.pc-link-go:disabled { opacity: .6; cursor: wait; }
+.pc-link-msg { font-size: 12.5px; line-height: 1.8; padding: 8px 12px; border-radius: 10px; background: var(--vt-danger-soft); color: var(--vt-text); border: 1px solid var(--vt-danger); }
+.pc-link-msg.is-info { background: var(--vt-surface); border-color: var(--vt-border); color: var(--vt-text-2); }
+.pc-link-result { display: grid; gap: 10px; animation: pc-fade .3s ease; }
+.pc-link-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; color: var(--vt-text-2); }
+.pc-link-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--vt-text); }
+.pc-link-count { flex: none; font-weight: 800; }
+.pc-link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; max-height: 320px; overflow-y: auto; padding: 2px; }
+.pc-link-pick { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid var(--vt-border); background: var(--pc-paper, var(--vt-surface)); padding: 0; cursor: pointer; transition: border-color .15s, transform .15s; }
+.pc-link-pick img { width: 100%; height: 100%; object-fit: contain; background: var(--vt-surface); }
+.pc-link-pick:hover { border-color: var(--vt-border-strong); }
+.pc-link-pick.is-on { border-color: var(--vt-brand); }
+.pc-link-pick.is-off { opacity: .4; cursor: not-allowed; }
+.pc-link-pick > i { position: absolute; top: 6px; inset-inline-end: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; background: var(--vt-overlay); color: var(--vt-text); border: 1.5px solid var(--vt-border-strong); }
+.pc-link-pick.is-on > i { background: var(--vt-brand); color: var(--vt-on-brand); border-color: var(--vt-brand); }
+.pc-link-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pc-link-actions .pc-btn-brand:disabled { opacity: .45; cursor: not-allowed; }
+
+/* بررسی هوشمند تصویر ورودی */
+.pc-smart { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 14px; border-radius: var(--pc-radius-sm); border: 1px solid var(--vt-brand-line); background: var(--vt-brand-tint); flex-wrap: wrap; }
+.pc-smart-copy { display: grid; gap: 3px; min-width: 0; flex: 1 1 240px; }
+.pc-smart-copy strong { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 900; }
+.pc-smart-copy strong i { color: var(--vt-brand-ink); }
+.pc-smart-copy span { font-size: 12px; color: var(--vt-text-2); line-height: 1.8; }
+.pc-smart-btn { flex: none; }
+.pc-smart-btn:disabled { opacity: .5; cursor: not-allowed; }
+.pc-smart-btn:not(:disabled) { border-color: var(--vt-brand-line); }
+
+.pc-check { margin-top: 12px; padding: 12px 14px; border-radius: var(--pc-radius-sm); font-size: 13px; line-height: 1.9; border: 1px solid var(--vt-border); background: var(--vt-surface-2); animation: pc-fade .3s ease; }
+.pc-check strong { display: block; }
+.pc-check ul { margin: 4px 0 0; padding-inline-start: 18px; list-style: disc; color: var(--vt-text-2); }
+.pc-check.is-green { border-color: var(--vt-success); background: var(--vt-success-soft); }
+.pc-check.is-yellow { border-color: var(--vt-warning); background: var(--vt-warning-soft); }
+.pc-check.is-red { border-color: var(--vt-danger); background: var(--vt-danger-soft); }
+.pc-check-head { display: flex; align-items: center; gap: 8px; }
+.pc-check-head i { flex: none; }
+.pc-check.is-green .pc-check-head i { color: var(--vt-success); }
+.pc-check.is-yellow .pc-check-head i { color: var(--vt-warning); }
+.pc-check.is-red .pc-check-head i { color: var(--vt-danger); }
+.pc-check .pc-check-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; color: var(--vt-text); }
+.pc-check-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border-radius: 12px; background: var(--vt-surface); border: 1px solid var(--vt-border); line-height: 1.8; }
+.pc-check-row > b { flex: none; font-size: 12px; font-weight: 900; padding: 1px 9px; border-radius: 99px; background: var(--vt-surface-2); }
+.pc-check-row > span:not(.pc-check-actions) { flex: 1 1 180px; min-width: 0; font-size: 12.5px; color: var(--vt-text-2); }
+.pc-check-actions { display: inline-flex; gap: 6px; flex: none; margin-inline-start: auto; }
+.pc-mini-btn { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px; border-radius: 9px; border: 1px solid var(--vt-brand-line); background: var(--vt-brand); color: var(--vt-on-brand); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.pc-mini-btn.is-ghost { background: var(--vt-surface-2); color: var(--vt-text); border-color: var(--vt-border); }
+.pc-mini-btn:hover { filter: brightness(1.08); }
+.pc-check-tip { margin-top: 4px; color: var(--vt-text); }
+.pc-check-meta { margin-top: 6px; font-size: 11.5px; color: var(--vt-text-3); }
+.pc-fix { display: grid; grid-template-columns: repeat(2, minmax(0, 150px)); gap: 10px; margin-top: 10px; }
+.pc-fix figure { margin: 0; text-align: center; font-size: 11.5px; color: var(--vt-text-2); }
+.pc-fix img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 12px; background: var(--vt-surface); border: 1px solid var(--vt-border); }
+.pc-switch { display: inline-flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer; font-weight: 700; }
+.pc-switch input { accent-color: var(--vt-brand-ink); width: 18px; height: 18px; }
+
+.pc-honest { margin-top: 12px; font-size: 12px; color: var(--vt-text-3); line-height: 1.9; }
+
+/* ───── گام ۲: صحنه‌ها ───── */
+.pc-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 12px; }
+.pc-shot { position: relative; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; cursor: pointer; background: var(--vt-card); border: 2px solid var(--vt-border); transition: border-color .15s, transform .15s; }
+.pc-shot:hover { border-color: var(--vt-border-strong); transform: translateY(-2px); }
+.pc-shot.is-selected { border-color: var(--vt-brand); }
+.pc-shot.is-disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.pc-shot input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.pc-shot-media { position: relative; aspect-ratio: 4 / 5; background: var(--vt-surface-2); display: grid; place-items: center; color: var(--vt-text-3); font-size: 22px; overflow: hidden; }
+.pc-shot-media img { width: 100%; height: 100%; object-fit: cover; }
+.pc-shot:not(.is-selected) .pc-shot-media img { opacity: .6; filter: grayscale(.3); transition: opacity .15s, filter .15s; }
+.pc-shot:not(.is-selected):hover .pc-shot-media img { opacity: .9; filter: none; }
+.pc-shot-tick { position: absolute; top: 9px; inset-inline-end: 9px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--vt-overlay); color: var(--vt-text); border: 1.5px solid var(--vt-border-strong); font-size: 11px; }
+.pc-shot.is-selected .pc-shot-tick { background: var(--vt-brand); color: var(--vt-on-brand); border-color: var(--vt-brand); }
+.pc-shot .pc-tick-on { display: none; }
+.pc-shot.is-selected .pc-tick-on { display: inline-block; }
+.pc-shot.is-selected .pc-tick-off { display: none; }
+.pc-shot-body { padding: 10px 12px 11px; display: grid; gap: 6px; }
+.pc-shot-name { font-size: 13px; font-weight: 800; line-height: 1.6; }
+.pc-shot-meta { font-size: 11.5px; color: var(--vt-text-2); }
+.pc-shot-ratio { width: 100%; margin-top: 6px; padding: 6px 8px; border: 1px solid var(--vt-border); border-radius: 9px; background: var(--vt-surface); color: var(--vt-text); font: inherit; font-size: 11.5px; direction: ltr; }
+.pc-shot-ratio-static { justify-self: start; margin-top: 4px; padding: 3px 8px; border-radius: 7px; background: var(--vt-glass); color: var(--vt-text-2); font-size: 10.5px; direction: ltr; }
+.pc-more-btn { margin-top: 14px; width: 100%; height: 44px; border: 1px dashed var(--vt-border-strong); background: transparent; color: var(--vt-text); border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.pc-more-btn:hover { border-color: var(--vt-brand-ink); }
+
+/* ───── گام ۳: کیفیت ───── */
+.pc-qualities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pc-quality { position: relative; display: grid; gap: 10px; padding: 14px; border-radius: 16px; border: 1.5px solid var(--vt-border); background: var(--vt-surface-2); cursor: pointer; transition: border-color .15s, background .15s; }
+.pc-quality:hover { border-color: var(--vt-border-strong); }
+.pc-quality input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.pc-quality.is-selected { border-color: var(--vt-brand); background: var(--vt-brand-tint); }
+.pc-quality-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pc-quality-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--vt-glass); color: var(--vt-brand-ink); font-size: 14px; }
+.pc-quality.is-selected .pc-quality-icon { background: var(--vt-brand); color: var(--vt-on-brand); }
+.pc-quality-cost { font-size: 12px; font-weight: 800; color: var(--vt-text-2); white-space: nowrap; }
+.pc-quality strong { font-size: 14px; font-weight: 900; }
+.pc-quality small { display: block; margin-top: 3px; font-size: 12px; color: var(--vt-text-2); line-height: 1.7; }
+
+/* ───── گام ۴: نتیجه ───── */
+.pc-results-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.pc-results-head h2 { font-size: 17px; font-weight: 900; }
+.pc-results-head p { margin-top: 4px; font-size: 13px; color: var(--vt-text-2); line-height: 1.8; }
+.pc-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.pc-tile { display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: var(--vt-card); border: 1px solid var(--vt-border); }
+.pc-tile-media { position: relative; background: var(--vt-surface-2); display: grid; place-items: center; overflow: hidden; }
+.pc-tile-media img { width: 100%; height: 100%; object-fit: cover; animation: pc-fade .45s ease; }
+.pc-tile.is-waiting .pc-tile-media, .pc-tile.is-running .pc-tile-media { background: linear-gradient(110deg, var(--vt-surface-2) 8%, var(--vt-glass-2) 18%, var(--vt-surface-2) 33%); background-size: 200% 100%; animation: pc-shimmer 1.4s linear infinite; }
+.pc-tile-state { position: absolute; inset-inline: 10px; bottom: 12px; text-align: center; font-size: 12px; color: var(--vt-text-2); }
+.pc-tile.is-failed .pc-tile-media { background: var(--vt-danger-soft); }
+.pc-tile-error { padding: 14px; text-align: center; font-size: 12px; line-height: 1.9; }
+.pc-tile-error button { margin-top: 8px; }
+.pc-tile-body { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pc-tile-name { font-size: 12.5px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-tile-actions { display: flex; gap: 6px; flex: none; }
+.pc-icon-btn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 10px; border: 1px solid var(--vt-border); background: var(--vt-surface-2); color: var(--vt-text); text-decoration: none; font-size: 13px; cursor: pointer; }
+.pc-icon-btn:hover { border-color: var(--vt-brand-ink); }
+.pc-soon { font-size: 10.5px; padding: 1px 7px; border-radius: 99px; background: var(--vt-glass-2); color: var(--vt-text-2); }
+
+/* ───── دکمه‌ها ───── */
+.pc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 14px; font-weight: 800; font-size: 14px; border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.pc-btn-brand { background: var(--vt-brand); color: var(--vt-on-brand); }
+.pc-btn-brand:hover { background: var(--vt-brand-hover); }
+.pc-btn-brand:disabled { opacity: .45; cursor: not-allowed; }
+.pc-btn-ghost { background: var(--vt-surface-2); border-color: var(--vt-border); color: var(--vt-text); }
+.pc-btn-ghost:hover { border-color: var(--vt-brand-ink); }
+.pc-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: pc-rot .8s linear infinite; display: inline-block; }
+
+/* ───── خلاصه‌ی سفارش (دسکتاپ، ستون راست) ───── */
+.pc-side { position: sticky; top: 90px; }
+.pc-side-card { display: grid; gap: 14px; padding: 18px; border-radius: var(--pc-radius); background: var(--vt-surface); border: 1px solid var(--vt-border); box-shadow: var(--vt-shadow-card); }
+.pc-side h2 { font-size: 15px; font-weight: 900; }
+/* اسلایدر تک‌عکسی بزرگ؛ هر ۵ ثانیه با دیزالو */
+.pc-side-slider { position: relative; width: 100%; aspect-ratio: 4 / 5; max-height: 44vh; border-radius: 16px; overflow: hidden; background: var(--vt-surface-2); border: 1px solid var(--vt-border); }
+.pc-side-slides { position: absolute; inset: 0; }
+.pc-side-slides > img, .pc-side-slides > span { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; }
+.pc-side-slides > span { display: grid; place-items: center; color: var(--vt-text-3); font-size: 28px; }
+.pc-side-slides > .is-active { opacity: 1; }
+.pc-side-count { position: absolute; top: 10px; inset-inline-start: 10px; z-index: 2; padding: 3px 9px; border-radius: 99px; background: var(--vt-overlay); color: var(--vt-text); font-size: 11.5px; font-weight: 800; letter-spacing: .5px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.pc-side-count:empty, .pc-side-cap:empty { display: none; }
+.pc-side-cap { position: absolute; inset-inline: 10px; bottom: 10px; z-index: 2; padding: 6px 10px; border-radius: 10px; background: var(--vt-overlay); color: var(--vt-text); font-size: 12.5px; font-weight: 800; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.pc-side-rows { display: grid; gap: 9px; font-size: 13px; }
+.pc-side-rows div { display: flex; justify-content: space-between; gap: 10px; color: var(--vt-text-2); }
+.pc-side-rows dd { color: var(--vt-text); font-weight: 800; text-align: left; }
+.pc-total { display: grid; gap: 4px; padding-top: 14px; border-top: 1px dashed var(--vt-border-strong); }
+.pc-total > div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pc-total span { font-size: 12px; color: var(--vt-text-2); }
+.pc-total strong { font-size: 19px; font-weight: 900; }
+.pc-total small { font-size: 12px; color: var(--vt-text-2); line-height: 1.7; }
+.pc-total small a { color: var(--vt-brand-ink); font-weight: 800; }
+.pc-build { width: 100%; height: 52px; font-size: 16px; }
+.pc-note { font-size: 11.5px; color: var(--vt-text-3); line-height: 1.8; }
+
+/* ───── باکس «بساز» موبایل (هم‌شکل باکس صفحه‌ی محصول) ───── */
+.pc-dock-wrap { display: none; }
+
+/* ───── هشدار اعتبار ───── */
+.pc-alert { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 18px; }
+.pc-alert-backdrop { position: absolute; inset: 0; background: var(--vt-overlay); backdrop-filter: blur(8px); }
+.pc-alert-card { position: relative; width: min(420px, 100%); padding: 24px; border: 1px solid var(--vt-border-strong); border-radius: 20px; background: var(--vt-surface); box-shadow: var(--vt-shadow-pop); text-align: center; }
+.pc-alert-icon { width: 52px; height: 52px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 16px; background: var(--vt-warning-soft); color: var(--vt-warning); font-size: 20px; }
+.pc-alert-card h2 { font-size: 18px; font-weight: 900; }
+.pc-alert-card p { margin-top: 7px; color: var(--vt-text-2); font-size: 13px; line-height: 1.9; }
+.pc-alert-actions { display: flex; justify-content: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+
+/* ───── واکنش‌گرا ───── */
+@media (max-width: 1100px) {
+  .pc-grid { grid-template-columns: 290px minmax(0, 1fr); gap: 16px; }
+}
+@media (max-width: 900px) {
+  .pc-grid { grid-template-columns: 1fr; }
+  .pc-main { grid-column: 1; }
+  .pc-side { display: none; }
+  .pc-top-link { display: none; }
+  .pc { padding-bottom: 130px; }
+
+  /* دقیقاً مثل .ps-dock صفحه‌ی محصول: ابتدا فریز بالای نوار ناوبری اپ، بعد در جای طبیعی‌اش (زیر کیفیت) */
+  .pc-dock-wrap { display: block; }
+  .pc-dock { display: flex; flex-direction: row; align-items: center; gap: 10px; position: static; width: 100%; padding: 8px; border-radius: 12px; background: var(--vt-surface); border: 1px solid var(--vt-border-strong); box-shadow: var(--vt-shadow-pop); }
+  .pc-dock.is-floating { position: fixed; bottom: calc(108px + env(safe-area-inset-bottom, 0px)); z-index: 60; }
+  .pc-dock-info { flex: 1; min-width: 0; height: 48px; display: flex; flex-direction: column; justify-content: center; gap: 1px; text-align: right; }
+  .pc-dock-info b { font-size: 12.5px; font-weight: 900; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-dock-info span { font-size: 11px; color: var(--vt-text-2); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pc-dock-info a { color: var(--vt-brand-ink); font-weight: 800; }
+  .pc-dock-cta { flex: none; width: auto; min-width: 150px; max-width: 100%; height: 48px; padding: 0 18px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; background: var(--vt-brand); color: var(--vt-on-brand); font-size: 16px; font-weight: 800; cursor: pointer; transition: font-size .2s ease, background .18s ease, transform .14s ease; }
+  .pc-dock-cta i { font-size: 13px; }
+  .pc-dock-cta:hover:not(:disabled) { font-size: 17.6px; background: var(--vt-brand); }
+  .pc-dock-cta:active:not(:disabled) { transform: scale(.99); }
+  .pc-dock-cta:disabled { opacity: .45; cursor: not-allowed; }
+}
+@media (max-width: 720px) {
+  .pc-steps ol { gap: 6px; }
+  .pc-steps li { flex-direction: column; text-align: center; gap: 4px; padding: 7px 4px; font-size: 11.5px; line-height: 1.5; }
+  .pc-steps li > span { width: 24px; height: 24px; }
+  .pc-br-m { display: inline; }
+  .pc-qualities { grid-template-columns: 1fr; }
+  .pc-quality { grid-template-columns: auto 1fr; align-items: center; }
+  .pc-quality-top { grid-column: 1; grid-row: 1 / 3; flex-direction: column; justify-content: center; }
+}
+@media (max-width: 560px) {
+  .pc { gap: 14px; padding-inline: 14px; }
+  .pc-card { padding: 16px 14px; border-radius: 18px; }
+  .pc-top-title h1 { font-size: 16px; }
+  .pc-up-empty { padding: 12px 10px 16px; gap: 12px; }
+  .pc-demo { padding: 14px 8px 12px; }
+  .pc-demo-captions strong { font-size: 14px; }
+  .pc-demo-captions small { font-size: 12px; }
+  .pc-up-filled { padding: 10px; }
+  .pc-up-list { gap: 8px; }
+  .pc-up-tag { padding: 3px 6px; font-size: 10.5px; }
+  .pc-up-main-btn, .pc-up-main-pill { padding: 3px 6px; }
+  .pc-up-main-btn b, .pc-up-main-pill b { display: none; }
+  .pc-up-add small { display: none; }
+  /* وضعیت هر عکس در موبایل: فقط یک نقطه‌ی رنگی تا با دکمه‌ی حذف تداخل نکند */
+  .pc-up-item .pc-badge { font-size: 0; width: 14px; height: 14px; padding: 0; top: 10px; inset-inline-start: 10px; border: 2px solid var(--vt-surface); }
+  .pc-up-item .pc-badge .pc-spin { width: 10px !important; height: 10px !important; }
+  .pc-smart-btn { width: 100%; }
+  .pc-link-form { flex-direction: column; }
+  .pc-link-input { flex: none; width: 100%; }
+  .pc-link-go { width: 100%; }
+  .pc-link-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pc-shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pc-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pc-dock-cta { min-width: 130px; padding: 0 16px; }
+}
+
+@keyframes pc-shimmer { to { background-position-x: -200%; } }
+@keyframes pc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pc-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .pc-tile-media img, .pc-tile.is-waiting .pc-tile-media, .pc-tile.is-running .pc-tile-media, .pc-spin, .pc-up-item, .pc-check { animation: none; }
+  .pc-shot, .pc-shot-media img, .pc-side-slides > img, .pc-side-slides > span { transition: none; }
+  /* موشن آموزشی: فقط حالت درست، ثابت */
+  .pc-demo *, .pc-demo-a, .pc-demo-b { animation: none !important; }
+  .pc-demo-a, .pc-demo-c1, .pc-demo-tag .t-bad { opacity: 0; }
+  .pc-demo-b, .pc-demo-c2, .pc-demo-tag .t-ok, .pc-demo-view.v1, .pc-demo-shot img, .pc-demo-slot > i, .pc-demo-angle .a1 { opacity: 1; transform: none; }
+  .pc-demo-d2 { background: var(--vt-success); }
+}

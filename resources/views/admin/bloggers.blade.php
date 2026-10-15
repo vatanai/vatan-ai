@@ -40,7 +40,7 @@
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 .badge-blue{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);}
 .action-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;transition:all .15s;margin-left:3px;}
@@ -139,7 +139,7 @@
             </thead>
             <tbody>
               <tr>
-                <td><div class="blogger-cell"><div class="blogger-avatar" style="background:rgba(160,122,245,.15);color:var(--accent);">ع</div><div><div class="blogger-name">علی محمدی</div><div class="blogger-handle">@tech_ali</div></div></div></td>
+                <td><div class="blogger-cell"><div class="blogger-avatar" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);">ع</div><div><div class="blogger-name">علی محمدی</div><div class="blogger-handle">@tech_ali</div></div></div></td>
                 <td><span class="link-code" onclick="copyLink('vatan.ai/r/tech-ali')"><i class="fa-solid fa-link" style="font-size:9px;"></i> vatan.ai/r/tech-ali</span></td>
                 <td><span style="font-weight:700;color:var(--text);">۲۱۴</span> <div class="mini-bar" style="margin-right:6px;"><div class="mini-fill" style="width:100%;"></div></div></td>
                 <td style="color:var(--green);font-weight:600;">۱۰۷M</td>
@@ -206,7 +206,7 @@
       <!-- Tab: Requests -->
       <div class="tab-content" id="tab-requests">
         <div class="request-card">
-          <div class="blogger-avatar" style="background:rgba(160,122,245,.15);color:var(--accent);width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">آ</div>
+          <div class="blogger-avatar" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">آ</div>
           <div class="req-info">
             <div class="req-name">آرش کمالی — <span style="color:var(--accent);">@arash_ai</span></div>
             <div class="req-meta">اینستاگرام · ۴۸K فالوور · حوزه: تکنولوژی و AI · درخواست کارمزد: ۱۵٪</div>
@@ -258,7 +258,7 @@
                 <td><button class="hdr-btn hdr-btn-primary" style="height:28px;font-size:11px;padding:0 10px;">پرداخت</button></td>
               </tr>
               <tr>
-                <td><div class="blogger-cell"><div class="blogger-avatar" style="background:rgba(160,122,245,.15);color:var(--accent);width:28px;height:28px;font-size:11px;">ع</div><span style="font-weight:600;color:var(--text);">@tech_ali</span></div></td>
+                <td><div class="blogger-cell"><div class="blogger-avatar" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);width:28px;height:28px;font-size:11px;">ع</div><span style="font-weight:600;color:var(--text);">@tech_ali</span></div></td>
                 <td style="font-size:11.5px;">خرداد ۱۴۰۵</td>
                 <td>۲۱۴</td>
                 <td style="color:var(--green);font-weight:600;">۱۰۷M</td>

@@ -61,6 +61,7 @@ class ProductShotController extends Controller
                 'urls' => [
                     'preflight' => route('app.product-shots.preflight', $product->slug),
                     'preflight_set' => route('app.product-shots.preflight-set', $product->slug),
+                    'link_images' => route('app.product-shots.link-images', $product->slug),
                     'batches' => route('app.product-shots.batches.store', $product->slug),
                 ],
             ],
@@ -72,30 +73,58 @@ class ProductShotController extends Controller
         $this->ensureShotProduct($product);
         $maxKb = (int) config('product_shots.max_upload_mb', 12) * 1024;
         $request->validate([
-            'image' => ['required', 'file', 'image', 'mimes:jpeg,jpg,png,webp', "max:{$maxKb}"],
+            'image' => ['required_without:image_url', 'nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', "max:{$maxKb}"],
+            'image_url' => ['required_without:image', 'nullable', 'string', 'max:2048'],
             'role' => ['nullable', Rule::in(['main', 'angle'])],
         ], [
-            'image.required' => 'یک عکس از محصول انتخاب کنید.',
+            'image.required_without' => 'یک عکس از محصول انتخاب کنید.',
+            'image_url.required_without' => 'یک عکس از محصول انتخاب کنید.',
             'image.image' => 'فایل انتخاب‌شده تصویر نیست.',
             'image.mimes' => 'فقط عکس JPG، PNG یا WEBP قابل قبول است.',
             'image.max' => 'حجم عکس بیشتر از حد مجاز است.',
         ]);
 
+        // «عکس از لینک محصول»: عکس انتخاب‌شده از روی لینک دانلود و مثل یک فایل آپلودی بررسی می‌شود.
+        $file = $request->file('image');
+        if (! $file && $request->filled('image_url')) {
+            try {
+                $downloaded = app(\App\Services\ProductShots\ProductLinkImages::class)->download((string) $request->input('image_url'), $maxKb * 1024);
+            } catch (\RuntimeException $e) {
+                return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+            }
+            $file = new \Illuminate\Http\UploadedFile($downloaded['path'], 'link-image', $downloaded['mime'], null, true);
+        }
+
         $user = $request->user();
-        $storage = app(UserStorageService::class)->check($user, (int) $request->file('image')->getSize(), 0);
+        $storage = app(UserStorageService::class)->check($user, (int) $file->getSize(), 0);
         if (! $storage['allowed']) {
             return response()->json(['ok' => false, 'message' => app(UserStorageService::class)->blockMessage($storage)], 422);
         }
 
         $dir = trim((string) config('product_shots.upload_dir', 'uploads/product-shots'), '/') . '/' . now()->format('Y/m/d');
         try {
-            $stored = $this->images->storeUpload($request->file('image'), $dir);
+            $stored = $this->images->storeUpload($file, $dir);
         } catch (\Throwable) {
             return response()->json(['ok' => false, 'message' => 'این فایل قابل خواندن نیست؛ عکس دیگری انتخاب کنید.'], 422);
+        } finally {
+            if (isset($downloaded['path'])) {
+                @unlink($downloaded['path']);
+            }
         }
 
         $isMain = $request->input('role', 'main') === 'main';
         $preflightConfig = (array) data_get($product->shot_settings, 'preflight', []);
+        // صفحه‌ی ساخت جدید فقط بررسی رایگان محلی می‌خواهد (ai=0)؛ بررسی هوشمند با دکمه‌ی جدا انجام می‌شود.
+        if ($request->has('ai') && ! $request->boolean('ai')) {
+            $preflightConfig['enabled'] = false;
+            // تشخیص «تاری» محلی روی عکس‌های ساده (پس‌زمینه‌ی صاف) خطای کاذب زیاد دارد؛
+            // بدون تأیید هوش مصنوعی فقط هشدار است، نه مانع. موقع ساخت، بررسی کامل سرور دوباره انجام می‌شود.
+            $blocking = array_values(array_filter(array_map('strval', (array) ($preflightConfig['blocking_issues']
+                ?? \App\Models\ProductShotSetting::current()->preflight_blocking_issues
+                ?? ShotVisionService::BLOCKING))));
+            $blocking = array_values(array_diff($blocking ?: ShotVisionService::BLOCKING, ['blur']));
+            $preflightConfig['blocking_issues'] = $blocking ?: ['__none__'];
+        }
         $report = $this->vision->preflight($stored['path'], null, $preflightConfig);
 
         $fixed = null;
@@ -134,6 +163,23 @@ class ProductShotController extends Controller
         ]);
     }
 
+    /** «عکس از لینک محصول»: پیدا کردن عکس‌های یک صفحه‌ی محصول (سایت خود کاربر یا هر سایت دیگر). */
+    public function linkImages(Request $request, Product $product): JsonResponse
+    {
+        $this->ensureShotProduct($product);
+        $data = $request->validate(['url' => ['required', 'string', 'max:2048']], ['url.required' => 'لینک صفحه‌ی محصول را بگذار.']);
+        try {
+            $result = app(\App\Services\ProductShots\ProductLinkImages::class)->images($data['url']);
+        } catch (\RuntimeException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
+        if ($result['images'] === []) {
+            return response()->json(['ok' => false, 'message' => 'در این صفحه عکس محصولی پیدا نشد؛ عکس‌ها را دستی بارگذاری کن.'], 422);
+        }
+
+        return response()->json(['ok' => true, 'title' => $result['title'], 'images' => $result['images']]);
+    }
+
     public function preflightSet(Request $request, Product $product): JsonResponse
     {
         $this->ensureShotProduct($product);
@@ -141,6 +187,7 @@ class ProductShotController extends Controller
             'uploads' => ['required', 'array', 'min:1', 'max:' . (1 + (int) config('product_shots.max_extra_angles', 2))],
             'uploads.*.id' => ['required', 'string', 'max:64'],
             'uploads.*.use_fixed' => ['nullable', 'boolean'],
+            'smart' => ['nullable', 'boolean'],
         ]);
         $paths = [];
         foreach ($data['uploads'] as $upload) {
@@ -151,6 +198,27 @@ class ProductShotController extends Controller
             $paths[] = ! empty($upload['use_fixed']) && ! empty($meta['fixed_path']) ? $meta['fixed_path'] : $meta['path'];
         }
         $configuration = (array) data_get($product->shot_settings, 'preflight', []);
+
+        // «بررسی هوشمند تصویر ورودی»: فقط یک درخواست ارزان برای همه‌ی عکس‌ها، بدون ساخت پروداکت‌شیت.
+        if (! empty($data['smart'])) {
+            $report = $this->vision->smartCheck($paths, null, $configuration);
+            if ($report['checked_by'] === 'vision') {
+                \Illuminate\Support\Facades\Cache::put(ShotPackService::smartCacheKey((int) $product->id, $paths), $report, now()->addHours(3));
+            }
+
+            return response()->json([
+                'ok' => true,
+                'verdict' => $report['verdict'],
+                'usable' => $report['usable'],
+                'issues' => $report['issue_labels'],
+                'summary' => $report['summary_fa'],
+                'suggestion' => $report['suggestion_fa'],
+                'coverage' => $report['coverage'],
+                'photos' => $report['photos'],
+                'checked_by' => $report['checked_by'],
+            ]);
+        }
+
         $report = $this->vision->preflightSet($paths, null, $configuration);
         $sheet = $this->images->createProductSheet(
             $paths,

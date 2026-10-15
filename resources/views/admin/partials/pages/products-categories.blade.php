@@ -7,7 +7,7 @@
           <h1 class="text-xl font-extrabold tracking-[-0.4px]" style="color:var(--text);">دسته‌بندی‌ها</h1>
           <div class="text-xs mt-[2px]" style="color:var(--text3);">مدیریت دسته‌بندی محصولات AI</div>
         </div>
-        <button onclick="pcatOpenModal()" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;"><i class="fa-solid fa-plus text-[10px]"></i> دسته جدید</button>
+        <button onclick="pcatOpenModal()" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;border:none;background:var(--accent);color:var(--on-accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;"><i class="fa-solid fa-plus text-[10px]"></i> دسته جدید</button>
       </div>
 
       <!-- Stats -->
@@ -77,16 +77,16 @@
             <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">Slug</label><input id="pcat-slug" placeholder="art-creativity" style="width:100%;height:40px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:0 12px;font-size:12px;font-family:monospace;color:var(--text);outline:none;box-sizing:border-box;" dir="ltr" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--b1)'"/></div>
             <div><label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:5px;">رنگ نمایشی</label>
               <div style="display:flex;gap:6px;">
-                @foreach(['#a07af5','#0BBF53','#ec4899','#3b82f6','#f5923a','#f05c5c','#14b8a6'] as $clr)
+                @foreach(['var(--accent)','#0BBF53','#ec4899','#3b82f6','#f5923a','#f05c5c','#14b8a6'] as $clr)
                 <div onclick="document.querySelectorAll('.pcat-clr').forEach(d=>d.style.transform='scale(1)');this.style.transform='scale(1.3)';document.getElementById('pcat-color-val').value='{{ $clr }}';" class="pcat-clr" style="width:24px;height:24px;border-radius:50%;background:{{ $clr }};cursor:pointer;transition:transform .15s;border:2px solid transparent;"></div>
                 @endforeach
               </div>
-              <input id="pcat-color-val" type="hidden" value="#a07af5"/>
+              <input id="pcat-color-val" type="hidden" value="var(--accent)"/>
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-top:20px;">
             <button onclick="pcatCloseModal()" style="flex:1;height:38px;border-radius:8px;border:1px solid var(--b1);background:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">انصراف</button>
-            <button onclick="pcatSave()" style="flex:2;height:38px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">ذخیره دسته‌بندی</button>
+            <button onclick="pcatSave()" style="flex:2;height:38px;border-radius:8px;border:none;background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">ذخیره دسته‌بندی</button>
           </div>
           <button onclick="pcatCloseModal()" style="position:absolute;top:14px;left:16px;width:26px;height:26px;border-radius:6px;border:1px solid var(--b1);background:none;color:var(--text3);cursor:pointer;font-size:12px;"><i class="fa-solid fa-xmark"></i></button>
         </div>

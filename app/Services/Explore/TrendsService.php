@@ -13,30 +13,45 @@ use Illuminate\Support\Facades\Cache;
 
 class TrendsService
 {
-    public function buildPage(int $limit = 24, int $cacheTtl = 300, int $pageVersion = 1): array
+    public function buildPage(int $limit = 24, int $cacheTtl = 300, int $pageVersion = 1, int $page = 1): array
     {
         $limit = max(6, min(100, $limit));
         $cacheTtl = max(0, min(3600, $cacheTtl));
+        $page = max(1, min(1000, $page));
 
         if ($cacheTtl === 0) {
-            return $this->hydratePage($this->buildUncachedPage($limit));
+            return $this->hydratePage($this->buildUncachedPage($pageVersion), $limit, $page);
         }
 
         $payload = Cache::remember(
-            "app:trends:page:v4:{$pageVersion}:{$limit}",
+            "app:trends:feed:v5:{$pageVersion}",
             now()->addSeconds($cacheTtl),
-            fn (): array => $this->buildUncachedPage($limit),
+            fn (): array => $this->buildUncachedPage($pageVersion),
         );
 
-        return $this->hydratePage($payload);
+        return $this->hydratePage($payload, $limit, $page);
     }
 
-    protected function buildUncachedPage(int $limit): array
+    protected function buildUncachedPage(int $pageVersion): array
     {
+        $products = $this->productQuery()->get()->values();
+        $productItems = $products
+            ->filter(fn (Product $product) => (string) $product->product_mode === 'product')
+            ->sortBy(fn (Product $product) => md5('product:' . $pageVersion . ':' . $product->id))
+            ->values();
+        $portraitItems = $products
+            ->reject(fn (Product $product) => (string) $product->product_mode === 'product')
+            ->sortBy(fn (Product $product) => md5('portrait:' . $pageVersion . ':' . $product->id))
+            ->values();
+
         return [
-            'trendProducts' => $this->popularProducts(function (Builder $query) {
-                $query->where('is_trending', true);
-            }, $limit)->map(fn (Product $product) => $this->card($product))->values()->all(),
+            // همهٔ محصولات فعال در فید هستند؛ ترتیب داخل هر گروه تصادفی اما
+            // با نسخهٔ صفحه و شناسهٔ محصول پایدار است و نسبت هدف ۸۰/۲۰ دارد.
+            'trendProducts' => $this->mixProductModes($productItems, $portraitItems, 80)
+                ->map(fn (Product $product) => $this->card($product))
+                ->filter()
+                ->values()
+                ->all(),
             'trendBanners' => TrendBanner::query()
                 ->select(['id', 'title', 'image_desktop', 'image_mobile', 'display_target', 'row_number', 'sort_order'])
                 ->where('is_active', true)
@@ -58,12 +73,48 @@ class TrendsService
         ];
     }
 
-    protected function hydratePage(array $payload): array
+    protected function hydratePage(array $payload, int $limit, int $page): array
     {
+        $allProducts = collect($payload['trendProducts'] ?? []);
+        $offset = ($page - 1) * $limit;
+
         return [
-            'trendProducts' => collect($payload['trendProducts'] ?? []),
+            'trendProducts' => $allProducts->slice($offset, $limit)->values(),
             'trendBanners' => collect($payload['trendBanners'] ?? []),
+            'trendsPage' => $page,
+            'trendsPageSize' => $limit,
+            'trendsHasMore' => $offset + $limit < $allProducts->count(),
+            'trendsTotal' => $allProducts->count(),
         ];
+    }
+
+    /** محصول پروداکتی را در حدود ۸۰٪ جایگاه‌ها قرار می‌دهد و همهٔ آیتم‌ها را نگه می‌دارد. */
+    protected function mixProductModes(Collection $productItems, Collection $portraitItems, int $productRatio): Collection
+    {
+        if ($productItems->isEmpty() || $portraitItems->isEmpty()) {
+            return $productItems->concat($portraitItems)->values();
+        }
+
+        $productRatio = max(0, min(100, $productRatio));
+        $mixed = collect();
+        $productIndex = 0;
+        $portraitIndex = 0;
+        $usedProducts = 0;
+
+        while ($productIndex < $productItems->count() || $portraitIndex < $portraitItems->count()) {
+            $targetProducts = (int) ceil(($mixed->count() + 1) * ($productRatio / 100));
+            $takeProduct = $productIndex < $productItems->count()
+                && ($portraitIndex >= $portraitItems->count() || $usedProducts < $targetProducts);
+
+            if ($takeProduct) {
+                $mixed->push($productItems[$productIndex++]);
+                $usedProducts++;
+            } else {
+                $mixed->push($portraitItems[$portraitIndex++]);
+            }
+        }
+
+        return $mixed->values();
     }
 
     protected function topProductForPeriod(int $days, array $excludeIds = []): ?Product
@@ -234,6 +285,7 @@ class TrendsService
                 'cover',
                 'sample_outputs',
                 'media_type',
+                'product_mode',
                 'preview_video_url',
                 'created_at',
             ])
@@ -261,6 +313,7 @@ class TrendsService
             'video' => $isVideo,
             'link' => route('app.product', $product->route_slug) . '?source=trends',
             'downloads' => (int) ($product->downloads_count ?? 0),
+            'product_mode' => (string) $product->product_mode,
         ];
     }
 

@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-content{padding:24px;flex:1;}
@@ -13,7 +13,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);}
 .hdr-btn-primary:hover{opacity:.9;}
 
 /* time toggle */
@@ -75,7 +75,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 
 /* model usage */
 .model-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1);}
@@ -121,7 +121,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div class="kpi-trend up"><i class="fa-solid fa-arrow-up" style="font-size:9px;"></i> ۱۸٪ نسبت به ماه قبل</div>
         </div>
         <div class="kpi-card c-accent">
-          <div class="kpi-icon" style="background:rgba(160,122,245,.1);color:var(--accent);"><i class="fa-solid fa-bolt"></i></div>
+          <div class="kpi-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);"><i class="fa-solid fa-bolt"></i></div>
           <div class="kpi-label">سفارشات</div>
           <div class="kpi-val" style="color:var(--accent);">۲,۴۸۱</div>
           <div class="kpi-trend up"><i class="fa-solid fa-arrow-up" style="font-size:9px;"></i> ۱۲٪ رشد</div>
@@ -171,7 +171,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
               <canvas id="modelChart"></canvas>
             </div>
             <div class="doughnut-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#a07af5;"></div><div class="legend-label" style="font-size:10.5px;font-family:monospace;">flux-1.1-pro</div><div class="legend-val">۶۷٪</div></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent);"></div><div class="legend-label" style="font-size:10.5px;font-family:monospace;">flux-1.1-pro</div><div class="legend-val">۶۷٪</div></div>
               <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;"></div><div class="legend-label" style="font-size:10.5px;font-family:monospace;">flux-kontext</div><div class="legend-val">۱۸٪</div></div>
               <div class="legend-item"><div class="legend-dot" style="background:#0BBF53;"></div><div class="legend-label" style="font-size:10.5px;font-family:monospace;">sd-3.5 (fbk)</div><div class="legend-val">۱۰٪</div></div>
               <div class="legend-item"><div class="legend-dot" style="background:#f5923a;"></div><div class="legend-label" style="font-size:10.5px;font-family:monospace;">ideogram-v3</div><div class="legend-val">۵٪</div></div>
@@ -231,7 +231,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             <tbody>
               <tr>
                 <td><div class="rank-num r-1">۱</div></td>
-                <td><div style="display:flex;align-items:center;gap:7px;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(160,122,245,.12);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);flex-shrink:0;"><i class="fa-solid fa-user-tie"></i></div><span style="font-size:12.5px;font-weight:600;color:var(--text);">عکس لینکدین</span></div></td>
+                <td><div style="display:flex;align-items:center;gap:7px;"><div style="width:24px;height:24px;border-radius:6px;background:color-mix(in srgb, var(--accent) 12%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);flex-shrink:0;"><i class="fa-solid fa-user-tie"></i></div><span style="font-size:12.5px;font-weight:600;color:var(--text);">عکس لینکدین</span></div></td>
                 <td><div style="font-size:12.5px;font-weight:700;color:var(--text);">۶۲۴</div><div class="mini-bar" style="margin-top:3px;"><div class="mini-bar-fill" style="width:100%;background:var(--accent);"></div></div></td>
                 <td style="font-size:12px;color:var(--green);font-weight:600;">۳۱۲M</td>
                 <td><span class="badge badge-green">۹۸٪</span></td>
@@ -266,7 +266,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
               </tr>
               <tr>
                 <td><div class="rank-num r-n">۶</div></td>
-                <td><div style="display:flex;align-items:center;gap:7px;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(160,122,245,.1);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);flex-shrink:0;"><i class="fa-solid fa-seedling"></i></div><span style="font-size:12.5px;font-weight:600;color:var(--text);">کارت نوروز</span></div></td>
+                <td><div style="display:flex;align-items:center;gap:7px;"><div style="width:24px;height:24px;border-radius:6px;background:color-mix(in srgb, var(--accent) 10%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);flex-shrink:0;"><i class="fa-solid fa-seedling"></i></div><span style="font-size:12.5px;font-weight:600;color:var(--text);">کارت نوروز</span></div></td>
                 <td><div style="font-size:12.5px;font-weight:700;color:var(--text);">۱۷۲</div><div class="mini-bar" style="margin-top:3px;"><div class="mini-bar-fill" style="width:27%;"></div></div></td>
                 <td style="font-size:12px;color:var(--text3);font-weight:600;">رایگان</td>
                 <td><span class="badge badge-green">۹۹٪</span></td>
@@ -297,7 +297,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             <tbody>
               <tr>
                 <td><div class="rank-num r-1">۱</div></td>
-                <td><div style="display:flex;align-items:center;gap:7px;"><div class="blogger-avatar" style="background:rgba(160,122,245,.15);color:var(--accent);">ع</div><div><div style="font-size:12px;font-weight:700;color:var(--text);">@tech_ali</div><div style="font-size:10px;color:var(--text3);">علی محمدی</div></div></div></td>
+                <td><div style="display:flex;align-items:center;gap:7px;"><div class="blogger-avatar" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);">ع</div><div><div style="font-size:12px;font-weight:700;color:var(--text);">@tech_ali</div><div style="font-size:10px;color:var(--text3);">علی محمدی</div></div></div></td>
                 <td><div style="font-size:12.5px;font-weight:700;color:var(--text);">۲۱۴</div><div class="mini-bar" style="margin-top:3px;"><div class="mini-bar-fill" style="width:100%;background:var(--accent);"></div></div></td>
                 <td style="font-size:12px;color:var(--green);font-weight:600;">۱۰۷M</td>
                 <td><span class="badge badge-green">فعال</span></td>
@@ -378,8 +378,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div style="display:flex;align-items:flex-end;gap:6px;height:80px;">
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;">۱۲۸</div>
-              <div style="width:100%;background:rgba(160,122,245,.25);border-radius:4px 4px 0 0;" style="height:30%;"></div>
-              <div style="width:100%;border-radius:4px 4px 0 0;background:rgba(160,122,245,.3);height:30px;"></div>
+              <div style="width:100%;background:color-mix(in srgb, var(--accent) 25%, transparent);border-radius:4px 4px 0 0;" style="height:30%;"></div>
+              <div style="width:100%;border-radius:4px 4px 0 0;background:color-mix(in srgb, var(--accent) 30%, transparent);height:30px;"></div>
               <div style="font-size:9px;color:var(--text3);">&lt;5s</div>
             </div>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
@@ -389,7 +389,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             </div>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
               <div style="font-size:9px;color:var(--text3);font-weight:600;">۴۸۶</div>
-              <div style="width:100%;border-radius:4px 4px 0 0;background:rgba(160,122,245,.6);height:50px;"></div>
+              <div style="width:100%;border-radius:4px 4px 0 0;background:color-mix(in srgb, var(--accent) 60%, transparent);height:50px;"></div>
               <div style="font-size:9px;color:var(--text3);">20-30s</div>
             </div>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
@@ -454,7 +454,7 @@ new Chart(mainCtx,{
   data:{
     labels:days,
     datasets:[
-      {label:'سفارشات',data:orders,borderColor:'#a07af5',backgroundColor:'rgba(160,122,245,.08)',fill:true,tension:.4,pointRadius:0,pointHoverRadius:4,borderWidth:2},
+      {label:'سفارشات',data:orders,borderColor:'#0BBF53',backgroundColor:'rgba(11,191,83,0.08)',fill:true,tension:.4,pointRadius:0,pointHoverRadius:4,borderWidth:2},
       {label:'درآمد (M)',data:revenue,borderColor:'#0BBF53',backgroundColor:'rgba(11,191,83,.06)',fill:true,tension:.4,pointRadius:0,pointHoverRadius:4,borderWidth:2}
     ]
   },
@@ -474,7 +474,7 @@ new Chart(modelCtx,{
   type:'doughnut',
   data:{
     labels:['flux-1.1-pro','flux-kontext','sd-3.5','ideogram'],
-    datasets:[{data:[67,18,10,5],backgroundColor:['#a07af5','#3b82f6','#0BBF53','#f5923a'],borderWidth:0,hoverBorderWidth:2,hoverBorderColor:'#fff'}]
+    datasets:[{data:[67,18,10,5],backgroundColor:['var(--accent)','#3b82f6','#0BBF53','#f5923a'],borderWidth:0,hoverBorderWidth:2,hoverBorderColor:'#fff'}]
   },
   options:{
     responsive:true,maintainAspectRatio:false,cutout:'72%',

@@ -5,16 +5,19 @@
 --}}
 @php
   $required = $required ?? false;
+  $multiple = $multiple ?? true;
+  $variant = $variant ?? 'default';
+  $uploadLabel = $uploadLabel ?? ($multiple ? 'انتخاب تصاویر' : 'انتخاب تصویر');
   $paths = array_values(array_filter((array) ($paths ?? [])));
 @endphp
-<div class="image-optimizer-group flex flex-col gap-2 mb-4" data-input="{{ $inputId }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
+<div class="image-optimizer-group flex flex-col gap-2 mb-4 {{ $variant === 'product-shot' ? 'image-optimizer-group--product-shot' : '' }}" data-input="{{ $inputId }}" data-optimizer-variant="{{ $variant }}" data-empty-label="{{ $uploadLabel }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
   <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }} @if($required)<span class="text-[var(--red)] mr-0.5">*</span>@endif</label>
   <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-5 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors" onclick="document.getElementById('{{ $inputId }}').click()">
     <i class="fa-solid fa-images text-xl text-[var(--text3)] mb-1 block"></i>
-    <div class="text-xs text-[var(--text2)] image-file-label">انتخاب تصاویر</div>
+    <div class="text-xs text-[var(--text2)] image-file-label">{{ $uploadLabel }}</div>
     <div class="text-[10px] text-[var(--text3)] mt-1">{{ $hint }}</div>
     <div class="flex flex-wrap gap-2 justify-center mt-3 image-preview-strip"></div>
-    <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" multiple accept="image/jpeg,image/png,image/webp" class="hidden" @if($required && empty($paths)) required @endif>
+    <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" @if($multiple) multiple @endif accept="image/jpeg,image/png,image/webp" class="hidden" @if($variant === 'product-shot') data-shot-sample-file @endif @if($required && empty($paths)) required @endif>
   </div>
 
   <div class="image-compare-workspace hidden border border-[var(--b1)] rounded-2xl overflow-hidden bg-[var(--s1)]">

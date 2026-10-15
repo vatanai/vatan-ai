@@ -55,6 +55,7 @@ class ConnectionController extends Controller
                     ->with('admin:id,name,is_active')->orderBy('id')->get()
                 : collect(),
             'telegramRoles' => TelegramAdmin::ROLES,
+            'telegramWindow' => app(InstagramTelegramBot::class)->notifyWindow(),
             'canManage' => $this->context->can($this->admin(), 'manage_settings'),
             'myRole' => $this->context->role($this->admin()),
         ]);
@@ -74,8 +75,22 @@ class ConnectionController extends Controller
         abort_unless((int) $account->workspace_id === $this->ws(), 404);
         abort_unless($this->context->can($this->admin(), 'manage_settings') || (int) $account->admin_id === (int) $this->admin()?->id, 403);
         $account->delete();
+        app(InstagramTelegramBot::class)->forgetMembersCache();
 
         return back()->with('success', 'دسترسی این حساب تلگرام به بات حذف شد.');
+    }
+
+    /** «ساعت انتشار پست»: داخل این بازه پست تازه هر ۵ دقیقه، بیرونش ساعتی یک بار بررسی می‌شود. */
+    public function telegramSchedule(Request $request, InstagramTelegramBot $bot): RedirectResponse
+    {
+        $this->authorizeAbility('manage_settings');
+        $data = $request->validate([
+            'notify_start' => ['required', 'date_format:H:i'],
+            'notify_end' => ['required', 'date_format:H:i'],
+        ], [], ['notify_start' => 'شروع', 'notify_end' => 'پایان']);
+        $bot->saveNotifyWindow($data['notify_start'], $data['notify_end']);
+
+        return back()->with('success', 'ساعت انتشار پست ذخیره شد؛ داخل این بازه هر ۵ دقیقه و بیرون از آن ساعتی یک بار بررسی می‌شود.');
     }
 
     /** افزودن کارمند به فهرست مجاز بات با شناسه‌ی عددی تلگرام. */
@@ -96,6 +111,7 @@ class ConnectionController extends Controller
             'workspace_id' => $this->ws(), 'name' => trim($data['name']), 'role' => $data['role'],
             'is_active' => true, 'added_by' => $this->admin()?->id,
         ]);
+        app(InstagramTelegramBot::class)->forgetMembersCache();
 
         return back()->with('success', '«'.trim($data['name']).'» به کارمندان بات اضافه شد؛ کافی است یک بار بات را Start کند.');
     }
@@ -109,6 +125,7 @@ class ConnectionController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
         $account->forceFill(array_filter($data, fn ($v) => $v !== null))->save();
+        app(InstagramTelegramBot::class)->forgetMembersCache();
 
         return back()->with('success', 'دسترسی «'.$account->displayName().'» به‌روز شد.');
     }

@@ -89,6 +89,12 @@
   .trends-other-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .trends-feed-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-inline: -16px; }
   .trends-feed-grid .trends-card { width: 100%; aspect-ratio: 3 / 4; }
+  .trends-feed-sentinel { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; color: rgba(255,255,255,.5); font-size: 11px; }
+  .trends-feed-sentinel[hidden] { display: none; }
+  .trends-feed-loader { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #cffe00; border-radius: 50%; animation: trends-feed-spin .7s linear infinite; }
+  @keyframes trends-feed-spin { to { transform: rotate(360deg); } }
+  html.light .trends-feed-sentinel { color: rgba(12,12,16,.52); }
+  html.light .trends-feed-loader { border-color: rgba(0,0,0,.14); border-top-color: #0a8f3f; }
   .trends-banner { display: block; grid-column: 1 / -1; overflow: hidden; aspect-ratio: 3.6 / 1; border-radius: 13px; background: rgba(255,255,255,.06); }
   .trends-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .trends-banner-desktop { display: none; }

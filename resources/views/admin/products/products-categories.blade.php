@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#ffffff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#ffffff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,14 +14,14 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
 .snav-item:hover{background:var(--s2);}
-.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
 .snav-item.active .snav-label{color:var(--text);}
 .snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
 .snav-sub-item:hover{background:var(--s2);}
-.snav-sub-item.active{background:rgba(160,122,245,.1);}
+.snav-sub-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;transition:background .15s;}
 .snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
 .snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
@@ -31,8 +31,8 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .breadcrumb a:hover{color:var(--text);}
 .breadcrumb .current{color:var(--text);font-weight:600;}
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;text-decoration:none;}
-.hdr-btn-primary{background:var(--accent);color:#fff;}
-.hdr-btn-primary:hover{background:#8f68e0;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);}
+.hdr-btn-primary:hover{background:var(--accent-hover);}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
 /* layout grid */
@@ -53,15 +53,15 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 .icon-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
 .icon-opt{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid var(--b1);background:var(--s1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text3);transition:all .15s;}
 .icon-opt:hover{border-color:var(--b2);color:var(--text2);}
-.icon-opt.selected{border-color:var(--accent);background:rgba(160,122,245,.12);color:var(--accent);}
+.icon-opt.selected{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);}
 /* color row */
 .color-row{display:flex;gap:6px;flex-wrap:wrap;}
 .color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;}
 .color-dot:hover,.color-dot.active{border-color:#fff;transform:scale(1.15);}
 /* submit btn */
 .btn-full{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 20px;height:40px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'IRANSansXFaNum',sans-serif;transition:all .15s;margin-top:6px;}
-.btn-primary{background:var(--accent);color:#fff;}
-.btn-primary:hover{background:#8f68e0;}
+.btn-primary{background:var(--accent);color:var(--on-accent);}
+.btn-primary:hover{background:var(--accent-hover);}
 /* table */
 .cat-table-wrap{background:var(--s2);border:1px solid var(--b1);border-radius:14px;overflow:hidden;}
 .cat-table{width:100%;border-collapse:collapse;}
@@ -112,8 +112,8 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
       <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
@@ -225,7 +225,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
             <div class="form-group">
               <label class="form-label">رنگ accent</label>
               <div class="color-row" id="color-row">
-                <div class="color-dot active" style="background:#a07af5;" data-color="#a07af5" onclick="pickColor(this)"></div>
+                <div class="color-dot active" style="background:var(--accent);" data-color="var(--accent)" onclick="pickColor(this)"></div>
                 <div class="color-dot" style="background:#0BBF53;" data-color="#0BBF53" onclick="pickColor(this)"></div>
                 <div class="color-dot" style="background:#f05c5c;" data-color="#f05c5c" onclick="pickColor(this)"></div>
                 <div class="color-dot" style="background:#f5923a;" data-color="#f5923a" onclick="pickColor(this)"></div>
@@ -268,7 +268,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 
                 <!-- PEOPLE -->
                 <tr>
-                  <td><div class="cat-icon-cell" style="background:rgba(160,122,245,.12);color:#a07af5;"><i class="fa-solid fa-user"></i></div></td>
+                  <td><div class="cat-icon-cell" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-user"></i></div></td>
                   <td><div class="cat-name">PEOPLE</div><div class="cat-slug">شخصی / پرتره</div></td>
                   <td>
                     <div style="display:flex;flex-wrap:wrap;gap:4px;">
@@ -412,7 +412,7 @@ body{font-family:'IRANSansXFaNum',sans-serif;background:var(--bg);color:var(--te
 
                 <!-- AVATARS -->
                 <tr>
-                  <td><div class="cat-icon-cell" style="background:rgba(160,122,245,.12);color:#a07af5;"><i class="fa-solid fa-robot"></i></div></td>
+                  <td><div class="cat-icon-cell" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-robot"></i></div></td>
                   <td><div class="cat-name">AVATARS</div><div class="cat-slug">آواتار</div></td>
                   <td>
                     <div style="display:flex;flex-wrap:wrap;gap:4px;">
@@ -514,7 +514,7 @@ function addCategory(){
   const en=document.getElementById('new-name-en').value.trim();
   if(!fa||!en){alert('نام فارسی و انگلیسی اجباری است');return;}
   const icon=document.querySelector('.icon-opt.selected')?.dataset.icon||'fa-folder';
-  const color=document.querySelector('.color-dot.active')?.dataset.color||'#a07af5';
+  const color=document.querySelector('.color-dot.active')?.dataset.color||'var(--accent)';
   const status=document.getElementById('new-status').value;
   const tbody=document.getElementById('cat-tbody');
   const tr=document.createElement('tr');

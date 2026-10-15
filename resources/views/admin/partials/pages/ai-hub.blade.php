@@ -104,7 +104,7 @@
       <div>
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <div class="w-[7px] h-[7px] rounded-full bg-accent" style="box-shadow:0 0 6px rgba(160,122,245,0.6)"></div>
+            <div class="w-[7px] h-[7px] rounded-full bg-accent" style="box-shadow:0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)"></div>
             <span class="text-[12px] font-bold text-watan-text">Replicate</span>
             <span class="text-[9px] font-bold py-px px-[5px] rounded bg-accent/[0.08] text-accent border border-accent/[0.2]">Fallback</span>
           </div>

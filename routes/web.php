@@ -120,6 +120,10 @@ Route::post('/webhooks/telegram/product', [TelegramProductWebhookController::cla
     ->name('telegram.product.webhook');
 Route::get('/webhooks/telegram/product/{draft}/status', [TelegramProductWebhookController::class, 'status'])
     ->name('telegram.product.status');
+// اتصال مستقیم بات ثبت محصول به تلگرام (بدون n8n)؛ فقط بعد از telegram:product-bot-webhook direct ترافیک می‌گیرد.
+Route::post('/webhooks/telegram/product-direct', \App\Http\Controllers\TelegramProductDirectWebhookController::class)
+    ->middleware('throttle:240,1')
+    ->name('telegram.product.direct');
 Route::get('/telegram/mini-app', [TelegramMiniAppController::class, 'show'])
     ->name('telegram.mini-app');
 Route::post('/api/telegram/mini-app/session', [TelegramMiniAppController::class, 'session'])
@@ -210,6 +214,7 @@ Route::prefix('app')->middleware('site.page')->group(function () {
     Route::get('/home/search', [HomeController::class, 'search'])->name('app.home.search');
     Route::get('/explore',      [\App\Http\Controllers\Explore\ExploreController::class, 'index'])->name('app.explore');
     Route::get('/trends',       [\App\Http\Controllers\Explore\ExploreController::class, 'trending'])->name('app.trends');
+    Route::get('/trends/feed', [\App\Http\Controllers\Explore\ExploreController::class, 'trendingFeed'])->name('app.trends.feed');
     Route::get('/products',     [ProductCatalogController::class, 'index'])->name('products.index');
     // صفحه عمومی ساخت بدون محصول، و صفحه ساخت اختصاصی محصول از یک مسیر کنترل‌شده
     // عبور می‌کنند تا تنظیمات خروجی ذخیره‌شده‌ی همان محصول به کاربر برسد.
@@ -338,6 +343,9 @@ Route::prefix('app')->middleware('site.page')->group(function () {
             ? redirect()->route('app.product', $p->route_slug)
             : redirect()->route('app.home');
     })->name('app.product-details');
+    // صفحات اصلی پک شات محصول پروداکتی (لینک کوتاه ۴ کاراکتری)
+    Route::get('/pro/{product:short_code}', [\App\Http\Controllers\ProductShotPageController::class, 'product'])->name('app.pro');
+    Route::get('/crepro/{product:short_code}', [\App\Http\Controllers\ProductShotPageController::class, 'create'])->name('app.crepro');
     Route::get('/product/{product:route_slug}', [ProductGenerateController::class, 'show'])->name('app.product');
     Route::post('/product/{product:slug}/generate', [ProductGenerateController::class, 'generate'])
         ->middleware(['auth', \App\Http\Middleware\MarkTelegramBuildCompleted::class])

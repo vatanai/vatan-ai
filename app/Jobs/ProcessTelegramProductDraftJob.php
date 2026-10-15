@@ -26,6 +26,24 @@ class ProcessTelegramProductDraftJob implements ShouldQueue
         $draft = TelegramProductDraft::query()->find($this->draftId);
         if ($draft) {
             $service->process($draft);
+            $this->pushResult($service, $draft);
+        }
+    }
+
+    /**
+     * اتصال مستقیم (بدون n8n): نتیجه خودش برای مدیر ارسال می‌شود و پولینگ لازم نیست.
+     * در مسیر n8n هیچ کاری نمی‌کند.
+     */
+    private function pushResult(TelegramProductDraftService $service, TelegramProductDraft $draft): void
+    {
+        if (data_get($draft->fresh()?->input_payload, 'transport') !== 'direct') {
+            return;
+        }
+        try {
+            $response = $service->resultResponse($draft->fresh());
+            app(\App\Services\TelegramProduct\TelegramProductBotRenderer::class)->deliver($response, ['chat_id' => (string) $draft->chat_id]);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('telegram product result push failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
         }
     }
 
@@ -41,5 +59,8 @@ class ProcessTelegramProductDraftJob implements ShouldQueue
             'state' => 'failed',
             'error_message' => \Illuminate\Support\Str::limit($exception->getMessage(), 1000, ''),
         ])->save();
+        if ($draft) {
+            $this->pushResult(app(TelegramProductDraftService::class), $draft);
+        }
     }
 }

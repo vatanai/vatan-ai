@@ -65,10 +65,10 @@ function initChart() {
       },{
         label: 'هزینه AI ($)',
         data: [14, 12, 18, 15, 22, 19, 18],
-        borderColor: '#a07af5',
-        backgroundColor: 'rgba(160,122,245,0.04)',
+        borderColor: '#16594f',
+        backgroundColor: 'rgba(22,89,79,0.04)',
         borderWidth: 2,
-        pointBackgroundColor: '#a07af5',
+        pointBackgroundColor: '#16594f',
         pointBorderColor: isDark ? '#111116' : '#fff',
         pointBorderWidth: 2,
         pointRadius: 4,
@@ -224,13 +224,13 @@ const DARK_VARS = {
   '--bg':'#0c0c10','--s1':'#111116','--s2':'#16161c',
   '--b1':'#222230','--b2':'#2e2e3e',
   '--text':'#ffffff','--text2':'#a8c4a8','--text3':'#4d7a56',
-  '--green':'#0BBF53','--accent':'#a07af5','--red':'#f05c5c','--orange':'#f5923a'
+  '--green':'#0BBF53','--accent':'#C2FD75','--red':'#f05c5c','--orange':'#f5923a'
 };
 const LIGHT_VARS = {
   '--bg':'#f0f0f8','--s1':'#ffffff','--s2':'#f3f3f9',
   '--b1':'#e2e2ee','--b2':'#c8c8da',
   '--text':'#12121e','--text2':'#3d5c42','--text3':'#7a9e7f',
-  '--green':'#0BBF53','--accent':'#7c5de0','--red':'#d94545','--orange':'#d97a2a'
+  '--green':'#0BBF53','--accent':'#16594f','--red':'#d94545','--orange':'#d97a2a'
 };
 
 function applyThemeVars(vars) {
@@ -306,11 +306,11 @@ function initProductsDashChart() {
         {
           label: 'سفارشات',
           data: d.orders,
-          borderColor: '#a07af5',
-          backgroundColor: 'rgba(160,122,245,.08)',
+          borderColor: '#16594f',
+          backgroundColor: 'rgba(22,89,79,.08)',
           borderWidth: 2,
           pointRadius: 3,
-          pointBackgroundColor: '#a07af5',
+          pointBackgroundColor: '#16594f',
           tension: .38,
           fill: true,
           yAxisID: 'y',
@@ -355,7 +355,7 @@ function initProductsDashChart() {
         y: {
           position: 'right',
           grid: { color: gridColor },
-          ticks: { color: '#a07af5', font: { family: 'Vazirmatn', size: 10 } },
+          ticks: { color: '#16594f', font: { family: 'Vazirmatn', size: 10 } },
         },
         y1: {
           position: 'left',

@@ -127,7 +127,7 @@
 .user-gallery-report-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;max-width:520px}
 .user-gallery-report-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--input-bg);color:var(--text-main);font:inherit;font-size:10px;font-weight:800;text-decoration:none;cursor:pointer}
 .user-gallery-report-button:hover{border-color:var(--primary);color:var(--primary)}
-.user-gallery-report-button.primary{border-color:var(--primary);background:var(--primary);color:var(--accent)}
+.user-gallery-report-button.primary{border-color:var(--primary);background:var(--primary);color:var(--on-primary)}
 .user-gallery-report-card{margin-bottom:14px}
 .user-gallery-report-table-wrap{overflow-x:auto}
 .user-gallery-report-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;color:var(--text-main);font-size:10px}

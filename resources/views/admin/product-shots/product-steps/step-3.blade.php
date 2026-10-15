@@ -28,7 +28,11 @@
   </section>
 
   <section class="content-card p-5">
-    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">برای هر اسلاید، تصویر نمونه و پرامپت مخصوص همان خروجی را وارد کنید. کاربر اسلایدهای دلخواه را انتخاب می‌کند و ساخت به همین ترتیب انجام می‌شود.</div></div><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div>
+    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">نام هر اسلاید را برای همین محصول تغییر دهید و با دستگیره، ترتیب نمایش و ساخت را مشخص کنید. حذف اسلاید فقط روی همین محصول اثر دارد.</div></div><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div>
+    <div class="ps-slide-manager-bar mt-4">
+      <div><i class="fa-solid fa-grip-vertical"></i><span>برای جابه‌جایی، اسلاید را از دستگیره بگیرید و بالا یا پایین ببرید.</span></div>
+      <span class="ps-slide-count" data-shot-count aria-live="polite"></span>
+    </div>
     <div class="ps-shot-list mt-4" id="sp-shot-list">
       @foreach($shots as $index => $shot)
         @php
@@ -42,16 +46,48 @@
           $defaultRatio = old("shots.{$shot->id}.aspect_ratio_default",$ps?->defaultRatio() ?? $shot->aspect_ratio_default);
           $options = (array)($ps?->options_enabled ?? []);
           $sample = $ps?->sampleImageUrl() ?? $shot->sampleImageUrl();
+          $samplePath = $ps?->sample_image ?: $shot->sample_image;
+          $removed = (bool)old("shots.{$shot->id}.removed",$product && !$ps);
+          $slideName = old("shots.{$shot->id}.name_override",$ps?->displayName() ?? $shot->name_fa);
         @endphp
-        <article class="ps-shot-editor {{ $enabled ? '' : 'is-off' }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $shot->name_fa }}">
+        <article class="ps-shot-editor {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}">
+          <input type="hidden" name="shots[{{ $shot->id }}][removed]" value="{{ $removed ? 1 : 0 }}" data-shot-removed>
+          <div class="ps-shot-removed-state">
+            <span class="ps-shot-removed-icon"><i class="fa-solid fa-box-archive"></i></span>
+            <span><strong>{{ $slideName }}</strong><small>این اسلاید در این محصول استفاده نمی‌شود.</small></span>
+            <button type="button" class="btn-pro btn-pro-ghost" data-shot-restore><i class="fa-solid fa-rotate-left"></i> افزودن دوباره</button>
+          </div>
+          <div class="ps-shot-card-main">
           <div class="ps-shot-summary">
-            <label class="ps-slide-sample" title="انتخاب تصویر نمونه برای این اسلاید">
-              <input type="file" name="shots[{{ $shot->id }}][sample]" accept="image/jpeg,image/png,image/webp" data-shot-sample-file>
+            <div class="ps-slide-sample" title="تصویر مرجع فعلی این اسلاید">
               <span class="ps-thumb" data-shot-thumb>@if($sample)<img src="{{ $sample }}" alt="نمونه {{ $shot->name_fa }}">@else<i class="fa-solid fa-plus"></i>@endif</span>
               <small><i class="fa-solid fa-camera"></i> تصویر نمونه</small>
-            </label>
-            <div class="min-w-0 flex-1"><span class="ps-slide-order">اسلاید {{ $index + 1 }}</span><strong class="ps-shot-name">{{ $shot->name_fa }}</strong><p class="ps-shot-desc">{{ $shot->description_fa }}</p><div class="ps-tags">@foreach(array_slice($shot->tokenLabels(),0,4) as $tag)<span class="ps-tag">{{ $tag }}</span>@endforeach</div><div class="ps-hint" data-shot-result></div></div>
-            <div class="ps-shot-head-actions"><label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label><label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][is_default]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][is_default]" value="1" data-shot-default @checked($isDefault)> انتخاب پیش‌فرض</label></div>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="ps-slide-title-row">
+                <button type="button" class="ps-slide-drag" data-shot-drag-handle aria-label="جابه‌جایی اسلاید" title="برای جابه‌جایی بکشید"><i class="fa-solid fa-grip-vertical"></i></button>
+                <span class="ps-slide-order">اسلاید {{ $index + 1 }}</span>
+                <label class="ps-slide-name-field"><span>نام نمایشی اسلاید</span><input type="text" name="shots[{{ $shot->id }}][name_override]" value="{{ $slideName }}" maxlength="120" class="input-pro" data-shot-name-input></label>
+              </div>
+              <p class="ps-shot-desc">{{ $shot->description_fa }}</p><div class="ps-tags">@foreach(array_slice($shot->tokenLabels(),0,4) as $tag)<span class="ps-tag">{{ $tag }}</span>@endforeach</div><div class="ps-hint" data-shot-result></div>
+            </div>
+            <div class="ps-shot-head-actions">
+              <div class="ps-slide-order-actions" aria-label="کنترل ترتیب اسلاید"><button type="button" data-shot-move="up" title="انتقال به بالا" aria-label="انتقال اسلاید به بالا"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-shot-move="down" title="انتقال به پایین" aria-label="انتقال اسلاید به پایین"><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="is-danger" data-shot-remove title="حذف از این محصول" aria-label="حذف اسلاید از این محصول"><i class="fa-solid fa-trash-can"></i></button></div>
+              <label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label><label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][is_default]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][is_default]" value="1" data-shot-default @checked($isDefault)> انتخاب پیش‌فرض</label>
+            </div>
+          </div>
+          <div class="ps-slide-image-optimizer">
+            @include('admin.partials.image-optimizer-group', [
+              'inputId' => 'shot-sample-' . $shot->id,
+              'inputName' => "shots[{$shot->id}][sample]",
+              'title' => 'مدیریت تصویر مرجع اسلاید',
+              'hint' => 'یک تصویر از همین محصول انتخاب کنید؛ نسخه‌ی بهینه‌شده‌ی WebP با حفظ نسبت تصویر جایگزین فایل ورودی می‌شود.',
+              'paths' => $samplePath ? [$samplePath] : [],
+              'required' => false,
+              'multiple' => false,
+              'variant' => 'product-shot',
+              'uploadLabel' => 'انتخاب تصویر اسلاید',
+            ])
           </div>
           <div class="ps-slide-prompt"><div class="ps-field"><label>پرامپت مخصوص این اسلاید</label><textarea name="shots[{{ $shot->id }}][prompt_override]" class="input-pro" dir="ltr" rows="3" placeholder="خالی = ساخت خودکار از تنظیمات کتابخانه">{{ old("shots.{$shot->id}.prompt_override",$ps?->prompt_override) }}</textarea></div><button type="button" class="btn-pro btn-pro-ghost" data-shot-toggle><i class="fa-solid fa-sliders"></i> تنظیمات پیشرفته</button></div>
           <div class="ps-shot-detail" data-shot-detail hidden>
@@ -66,8 +102,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3"><div><div class="text-xs font-bold text-[var(--text-main)] mb-2">نسبت‌های مجاز</div><div class="flex flex-wrap gap-2">@foreach($aspectRatios as $ratio)<label class="ps-check"><input type="checkbox" name="shots[{{ $shot->id }}][allowed_aspect_ratios][]" value="{{ $ratio }}" @checked(in_array($ratio,$allowed,true))> {{ $ratio }}</label>@endforeach</div><label class="ps-check mt-3"><input type="hidden" name="shots[{{ $shot->id }}][aspect_ratio_user_selectable]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][aspect_ratio_user_selectable]" value="1" @checked((bool)old("shots.{$shot->id}.aspect_ratio_user_selectable",$ps?->aspect_ratio_user_selectable ?? true))> کاربر اجازه تغییر نسبت را دارد</label></div><div class="ps-field"><label>نسبت پیش‌فرض</label><select name="shots[{{ $shot->id }}][aspect_ratio_default]" class="input-pro">@foreach($aspectRatios as $ratio)<option value="{{ $ratio }}" @selected($defaultRatio===$ratio)>{{ $ratio }}</option>@endforeach</select></div></div>
             <div class="mt-4 flex justify-end"><button type="button" class="btn-pro btn-pro-primary" data-shot-preview="{{ $shot->id }}"><i class="fa-solid fa-wand-magic-sparkles"></i> ساخت پیش‌نمایش واقعی</button></div>
           </div>
+          </div>
         </article>
       @endforeach
     </div>
+    <div class="ps-hint mt-3" data-shot-order-status aria-live="polite"></div>
   </section>
 </div>

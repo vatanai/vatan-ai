@@ -1,0 +1,418 @@
+/*
+ * صفحه‌ی محصول پک شات (/app/pro/{کد})
+ * ساختار و ابعاد مثل صفحه‌ی محصول پورتره: راست = اطلاعات، چپ = تصویر بزرگ.
+ * فقط توکن‌های theme-tokens.css؛ تم روز/شب از html.light می‌آید.
+ * همه‌ی قواعد زیر .ps-pro هستند تا صفحه‌ی ساخت (ps2-cre) تحت تأثیر نگیرد.
+ */
+.ps-pro {
+  position: relative;
+  --ps-r: 12px;
+  --ps-r-sm: 8px;
+  --ps-m: clamp(16px, 5vw, 96px);
+  color: var(--vt-text);
+  background: var(--vt-page);
+}
+.ps-pro *, .ps-pro *::before, .ps-pro *::after { box-sizing: border-box; }
+.ps-pro h1, .ps-pro h2, .ps-pro p, .ps-pro figure { margin: 0; padding: 0; }
+.ps-pro ol { list-style: none; }
+.ps-pro img { display: block; max-width: 100%; }
+.ps-pro button { font-family: inherit; }
+.ps-pro a:focus-visible, .ps-pro button:focus-visible { outline: 2px solid var(--vt-brand); outline-offset: 2px; }
+
+/* ── شل دو ستونه (دسکتاپ: ارتفاع یک صفحه) ── */
+.ps-shell { display: flex; flex-direction: row; width: 100%; }
+@media (min-width: 768px) {
+  .ps-shell { height: calc(100vh - 64px); overflow: hidden; }
+}
+
+/* ── ستون راست: اطلاعات ── */
+.ps-info {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--vt-surface);
+  border-inline-start: 1px solid var(--vt-border);
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 768px) { .ps-info { min-width: 340px; } }
+@media (min-width: 1280px) { .ps-info { min-width: 380px; } }
+.ps-info-scroll {
+  flex: 1 1 auto;
+  padding: 28px 26px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.ps-info-scroll::-webkit-scrollbar { display: none; }
+
+.ps-kicker {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--ps-r-sm);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--vt-brand-ink);
+  background: var(--vt-brand-soft);
+  border: 1px solid var(--vt-brand-line);
+}
+.ps-title { font-size: 23px; font-weight: 800; line-height: 1.35; }
+.ps-desc { font-size: 13.5px; line-height: 2; color: var(--vt-text-2); max-height: 170px; overflow-y: auto; scrollbar-width: none; }
+.ps-desc::-webkit-scrollbar { display: none; }
+
+.ps-desc-box {
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  border-radius: var(--ps-r);
+  padding: 18px 18px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ps-desc-title { font-size: 15px; font-weight: 800; margin: 0; }
+.ps-desc-box .ps-desc { max-height: none; overflow: visible; }
+.ps-desc-box .ps-facts { background: transparent; border: 0; border-top: 1px solid var(--vt-border); border-radius: 0; overflow: visible; padding-top: 12px; }
+.ps-desc-box .ps-facts > div { padding: 3px 10px; gap: 2px; text-align: center; justify-items: center; }
+.ps-desc-box .ps-facts span { white-space: nowrap; font-size: 11px; }
+.ps-desc-box .ps-facts b { white-space: nowrap; }
+/* هشتگ‌ها (مثل پورتره: متن ساده) */
+.ps-tags { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: -8px; }
+.ps-tag { font-size: 11.5px; font-weight: 600; color: var(--vt-text-2); }
+/* آمار: سه باکس، همان فرم کارت‌های پورتره */
+.ps-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  border-radius: var(--ps-r);
+  overflow: hidden;
+}
+.ps-facts > div { padding: 12px 14px; display: grid; gap: 3px; min-width: 0; }
+.ps-facts > div + div { border-inline-start: 1px solid var(--vt-border); }
+.ps-facts span { font-size: 11px; color: var(--vt-text-3); }
+.ps-facts b { font-size: 14.5px; font-weight: 800; }
+
+/* ردیف اکشن: کردیت + ذخیره + انتشار + لایک (مثل پورتره) */
+.ps-actions { display: flex; gap: 10px; align-items: stretch; }
+.ps-credit-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+.ps-credit {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vt-text);
+  cursor: pointer;
+  transition: border-color .2s ease;
+}
+.ps-credit:hover { border-color: var(--vt-brand-line); }
+.ps-credit-text { white-space: nowrap; letter-spacing: 0; word-spacing: 0; }
+.ps-credit-text .ps-num { margin-inline: .3em; font-weight: 800; }
+.ps-credit i { color: var(--vt-brand-ink); font-size: 13px; }
+.ps-credit b { color: var(--vt-brand-ink); font-weight: 800; }
+.ps-credit-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline: 0;
+  padding: 12px 14px;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  box-shadow: var(--vt-shadow-pop);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.9;
+  color: var(--vt-text-2);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: all .2s ease;
+  z-index: 30;
+}
+.ps-credit-pop.is-open { opacity: 1; visibility: visible; transform: none; }
+@media (hover: hover) {
+  .ps-credit-wrap:hover .ps-credit-pop { opacity: 1; visibility: visible; transform: none; }
+}
+
+.ps-iconbtn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  display: grid;
+  place-items: center;
+  color: var(--vt-text);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.ps-iconbtn:hover { border-color: var(--vt-border-strong); }
+.ps-iconbtn.is-on[data-save] { color: var(--vt-brand-ink); border-color: var(--vt-brand-line); }
+.ps-iconbtn.is-on[data-like] { color: var(--vt-danger); border-color: var(--vt-danger-soft); }
+.ps-iconbtn.ps-likebtn { flex-direction: column; gap: 3px; padding: 3px 0 2px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.ps-likebtn i { font-size: 14px; }
+.ps-like-count { font-size: 9.5px; font-weight: 700; direction: ltr; color: var(--vt-text-2); }
+
+/* دکمه‌ی اصلی ساخت (مثل پورتره) */
+.ps-cta {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--ps-r);
+  background: var(--vt-brand);
+  color: var(--vt-on-brand);
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .18s ease, transform .14s ease;
+}
+.ps-cta:hover { background: var(--vt-brand-hover); }
+.ps-cta:active { transform: scale(.99); }
+/* دکمه‌ی بساز (دسکتاپ): ۱۰٪ بزرگ‌تر از پایه؛ هاور: ۱۰٪ بزرگ‌تر از همان */
+/* دکمه‌ی بساز دسکتاپ/تبلت: ابعاد و ظاهر مثل دکمه‌ی پورتره؛ بدون هاله. هاور: فقط متن ۱۵٪ بزرگ‌تر */
+.ps-cta-desk { width: 100%; height: 48px; min-height: 48px; max-height: 48px; margin: 0; padding: 0 16px; border: 0; border-radius: 11px; display: flex; align-items: center; justify-content: center; direction: ltr; gap: 8px; box-shadow: none; filter: none; outline: none; font-size: 15.6px; font-weight: 800; line-height: 1; color: var(--vt-on-brand); background: var(--vt-brand); }
+.ps-cta-desk:hover { background: var(--vt-brand); box-shadow: none; filter: none; outline: none; }
+.ps-cta-text { display: inline-block; direction: rtl; line-height: 1; transform-origin: center; transition: transform .2s ease; }
+.ps-cta-desk:hover .ps-cta-text { transform: scale(1.15); }
+.ps-cta-desk > i { font-size: 12px; }
+.ps-cta i { font-size: 13px; }
+
+/* مراحل کار */
+.ps-how {
+  display: grid;
+  gap: 4px;
+  padding: 15px 16px 12px;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+}
+.ps-how li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; font-size: 12.5px; color: var(--vt-text-2); line-height: 1.5; }
+.ps-how i { font-style: normal; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--vt-surface-2); color: var(--vt-text); font-weight: 800; font-size: 13px; }
+.ps-how b { display: block; color: var(--vt-text); font-size: 13.5px; line-height: 1.5; }
+
+/* گالری کوچک (مثل pd-gal پورتره: ۴ ستون) */
+.ps-block-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+.ps-thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ps-thumbs button {
+  padding: 0;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--ps-r);
+  overflow: hidden;
+  border: 1px solid var(--vt-border);
+  background: var(--vt-card);
+  cursor: pointer;
+  transition: border-color .2s ease, transform .2s ease;
+}
+.ps-thumbs button:hover { border-color: var(--vt-brand-line); transform: translateY(-2px); }
+.ps-thumbs button.is-viewing { border: 2px solid var(--vt-brand); }
+.ps-thumbs img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── ستون چپ: تصویر بزرگ ── */
+.ps-stage {
+  flex: 0 1 1200px;
+  min-width: 0;
+  position: relative;
+  background: var(--vt-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.ps-main { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+.ps-main img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+}
+.ps-main img { transition: opacity .6s ease; }
+.ps-main img.ps-ghost { position: absolute; margin: 0; pointer-events: none; z-index: 1; max-width: none; max-height: none; }
+.ps-counter {
+  position: absolute;
+  top: 20px;
+  inset-inline-start: 24px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--vt-text-2);
+  letter-spacing: 1px;
+  z-index: 3;
+}
+/* فلش برگشت: پارشیال مشترک (css/productshot-common.css)؛ دسکتاپ کنار عنوان، موبایل روی تصویر — هر دو گوشه‌ی بالا-راست */
+.ps-toprow { display: flex; align-items: center; gap: 10px; }
+.ps-back-mob { display: none; }
+/* نشان «چند شات» روی تصویر: بالا-چپ */
+.ps-pack-badge {
+  position: absolute;
+  z-index: 3;
+  bottom: 24px;
+  inset-inline-start: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--ps-r-sm);
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  backdrop-filter: blur(6px);
+}
+.ps-pack-badge i { color: var(--vt-brand); font-size: 12px; }
+.ps-pack-badge:empty { display: none; }
+.ps-stage-nav {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(0, 0, 0, .5);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.ps-stage:hover .ps-stage-nav, .ps-stage-nav:focus-visible { opacity: 1; }
+.ps-stage-nav.is-prev { inset-inline-start: 14px; }
+.ps-stage-nav.is-next { inset-inline-end: 14px; }
+.ps-strip { display: none; }
+.ps-strip button { aspect-ratio: 4 / 5; padding: 0; border-radius: var(--ps-r-sm); overflow: hidden; border: 2px solid transparent; background: var(--vt-card); cursor: pointer; opacity: .7; transition: opacity .15s, border-color .15s; }
+.ps-strip button:hover { opacity: 1; }
+.ps-strip button.is-viewing { border-color: var(--vt-brand); opacity: 1; }
+.ps-strip img { width: 100%; height: 100%; object-fit: cover; }
+.ps-dock-slot { display: none; }
+.ps-dots { display: none; }
+
+/* ── بخش‌های پایین ── */
+.ps-wrap { max-width: calc(1400px + 2 * var(--ps-m)); margin-inline: auto; padding-inline: var(--ps-m); }
+.ps-section { padding-top: 48px; }
+.ps-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.ps-section-head h2 { font-size: 22px; font-weight: 800; }
+.ps-section-head p { margin-top: 6px; font-size: 13px; color: var(--vt-text-2); line-height: 1.8; }
+
+.ps-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.ps-shot { border-radius: var(--ps-r); overflow: hidden; background: var(--vt-card); border: 1px solid var(--vt-border); transition: border-color .2s ease, transform .2s ease; }
+.ps-shot:hover { border-color: var(--vt-brand-line); transform: translateY(-2px); }
+.ps-shot-media { position: relative; aspect-ratio: 4 / 5; background: var(--vt-surface-2); display: grid; place-items: center; color: var(--vt-text-3); font-size: 24px; }
+.ps-shot-media img { width: 100%; height: 100%; object-fit: cover; }
+.ps-badge { position: absolute; top: 10px; inset-inline-start: 10px; font-size: 11px; font-weight: 800; height: 22px; padding: 0 9px; display: inline-flex; align-items: center; border-radius: var(--ps-r-sm); background: var(--vt-brand); color: var(--vt-on-brand); }
+.ps-shot-body { padding: 12px 14px 14px; display: grid; gap: 4px; }
+.ps-shot-body b { font-size: 14px; font-weight: 800; }
+.ps-shot-body span { font-size: 12px; color: var(--vt-text-3); }
+
+/* ── محصولات مشابه: اسلایدر (جای «شات‌های این پک») ── */
+
+.ps-similar { padding: 41px 0 32px; border-top: 1px solid var(--vt-border); background: var(--vt-page); }
+.ps-similar-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 19px; }
+.ps-similar-head h2 { font-size: 22px; font-weight: 800; }
+.ps-similar-nav { display: flex; gap: 8px; }
+.ps-similar-nav button { width: 40px; height: 40px; border-radius: var(--ps-r); background: var(--vt-card); border: 1px solid var(--vt-border); color: var(--vt-text); display: grid; place-items: center; cursor: pointer; transition: all .2s ease; }
+.ps-similar-nav button:hover { border-color: var(--vt-brand-line); }
+.ps-track { display: flex; gap: 16px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; padding-bottom: 6px; }
+.ps-track::-webkit-scrollbar { display: none; }
+.ps-scard { flex: 0 0 236px; background: var(--vt-card); border: 1px solid var(--vt-border); border-radius: var(--ps-r); overflow: hidden; display: flex; flex-direction: column; text-decoration: none; color: var(--vt-text); transition: all .25s ease; }
+.ps-scard:hover { transform: translateY(-4px); border-color: var(--vt-brand-line); }
+.ps-scard img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.ps-scard-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ps-scard-cat { align-self: flex-start; height: 22px; padding: 0 9px; display: inline-flex; align-items: center; border-radius: 8px; background: var(--vt-surface); border: 1px solid var(--vt-border); font-size: 10.5px; font-weight: 700; color: var(--vt-text-2); }
+.ps-scard-title { font-size: 14px; font-weight: 800; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.ps-scard-desc { font-size: 11.5px; line-height: 1.7; color: var(--vt-text-2); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* گالری کوچک موبایل: در دسکتاپ پنهان */
+.ps-mob-gal { display: none; }
+
+/* نوار ثابت پایین (فقط موبایل) */
+.ps-dock { display: none; }
+.ps-toast { position: fixed; z-index: 130; left: 50%; transform: translateX(-50%); bottom: calc(28px + env(safe-area-inset-bottom, 0px)); padding: 10px 16px; border-radius: var(--ps-r); background: var(--vt-text); color: var(--vt-page); font-size: 13px; font-weight: 700; box-shadow: var(--vt-shadow-pop); }
+
+/* ── موبایل: تصویر بالا، کارت اطلاعات زیرش ── */
+@media (max-width: 767px) {
+  .ps-shell { flex-direction: column; }
+  .ps-stage { order: -2; flex: none; width: 100%; height: auto; min-height: 52vh; padding: 16px; flex-direction: column; align-items: center; justify-content: center; background: var(--vt-page); }
+  .ps-main { width: 100%; height: 50vh; min-height: 0; }
+  .ps-main img { width: 100%; height: 100%; max-width: 100%; max-height: none; object-fit: contain; border-radius: var(--ps-r); background: transparent; }
+  .ps-mob-gal { display: block; order: -1; padding: 0 10px; }
+  .ps-info-gal { display: none; }
+  .ps-similar { padding-bottom: 10px; }
+  .ps-stage-nav { display: none; }
+  .ps-pack-badge { bottom: 28px; inset-inline-start: 28px; }
+  .ps-back-desk { display: none; }
+  .ps-back-mob { display: grid; position: absolute; top: 12px; inset-inline-start: 12px; z-index: 4; }
+  .ps-counter { inset-inline-start: auto; inset-inline-end: 16px; top: 20px; }
+  .ps-info {
+    flex: 0 0 auto;
+    width: calc(100% - 20px);
+    margin: 8px 10px 14px;
+    border: 1px solid var(--vt-border);
+    border-radius: var(--ps-r);
+    overflow: visible;
+    display: block;
+    border-inline-start: 1px solid var(--vt-border);
+  }
+  .ps-info-scroll { overflow: visible; padding: 22px 18px 40px; }
+  .ps-title { font-size: 20px; }
+  .ps-cta-desk { display: none; }
+  .ps-section { padding-top: 36px; }
+  .ps-pro { padding-bottom: 60px; }
+  /* حالت فریز: بالای دکمه‌های شناور اپ؛ جای آن در کارت نگه داشته می‌شود */
+  .ps-dock.is-floating {
+    position: fixed;
+    bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+  }
+  .ps-dock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    position: static;
+    width: 100%;
+    padding: 8px;
+    border-radius: var(--ps-r);
+    background: var(--vt-surface);
+    border: 1px solid var(--vt-border-strong);
+    box-shadow: var(--vt-shadow-pop);
+  }
+  /* متن‌ها سمت راست دکمه (در RTL اولین فرزند = راست) */
+  .ps-dock-info { flex: 1; min-width: 0; height: 48px; display: flex; flex-direction: column; justify-content: center; gap: 1px; text-align: right; }
+  .ps-dock-info b { font-size: 12.5px; font-weight: 900; line-height: 1.4; white-space: nowrap; }
+  .ps-dock-info span { font-size: 11px; color: var(--vt-text-2); line-height: 1.4; white-space: nowrap; }
+  .ps-dock .ps-cta { width: auto; min-width: 150px; max-width: 100%; height: 48px; padding: 0 18px; flex: none; font-size: 16px; transition: font-size .2s ease, background .18s ease; }
+  /* هاور مثل دسکتاپ: رنگ سبز ثابت، فونت بزرگ‌تر و یک درخشش لحظه‌ای */
+  .ps-dock .ps-cta:hover { font-size: 17.6px; background: var(--vt-brand); }
+  .ps-toast { bottom: calc(176px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  .ps-facts > div { padding: 10px; }
+  .ps-desc-box .ps-facts > div { padding: 3px 4px; }
+  .ps-desc-box .ps-facts span { font-size: 10.5px; }
+  .ps-facts b { font-size: 13.5px; }
+  .ps-shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .ps-section-head h2 { font-size: 19px; }
+}

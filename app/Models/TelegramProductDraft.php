@@ -21,6 +21,11 @@ class TelegramProductDraft extends Model
         'awaiting_save_choice',
         'awaiting_explore_tiles',
         'awaiting_setting_prompt',
+        // درفت شکست‌خورده هم «فعال» است تا مدیر بتواند تلاش مجدد کند یا متن تازه بفرستد.
+        'failed',
+        // مسیر پروداکتی (پک شات) در اتصال مستقیم
+        'ps_images', 'ps_group', 'ps_occupations', 'ps_brief', 'ps_review', 'ps_edit',
+        'ps_shots', 'ps_categories', 'ps_confirm', 'ps_tiles',
     ];
 
     protected $keyType = 'string';
@@ -32,6 +37,7 @@ class TelegramProductDraft extends Model
         'telegram_id',
         'chat_id',
         'state',
+        'product_mode',
         'pending_edit_field',
         'description',
         'image_paths',
@@ -69,6 +75,15 @@ class TelegramProductDraft extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public const MODE_PORTRAIT = 'portrait';
+    public const MODE_PRODUCT = 'product';
+
+    /** درفت مسیر پروداکتی (پک شات)؛ نبود ستون یا مقدار خالی یعنی پرتره. */
+    public function isProductMode(): bool
+    {
+        return ($this->attributes['product_mode'] ?? self::MODE_PORTRAIT) === self::MODE_PRODUCT;
     }
 
     public function isActive(): bool

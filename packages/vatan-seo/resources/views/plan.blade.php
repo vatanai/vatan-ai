@@ -100,7 +100,7 @@
       <div class="seo-card-head"><div class="seo-card-title"><i class="fa-solid fa-robot"></i> اجرای خودکار بعدی @include('seo::partials.help', ['k' => 'plan.scenarios'])</div><a href="{{ route('seo.scenarios.index') }}" class="seo-link">مدیریت <i class="fa-solid fa-angle-left"></i></a></div>
       <div class="seo-rows">
         @foreach($scenarios->take(7) as $s)
-          <div class="seo-item"><span class="seo-dot is-{{ ['success' => 'success', 'warning' => 'warning', 'failed' => 'danger', 'skipped' => 'warning'][$s->last_status] ?? 'info' }}"></span><div class="seo-item-main"><div class="seo-item-title" style="font-size:12px">{{ $s->title }}</div><div class="seo-item-sub">{{ Fa::until($s->next_run_at) }}</div></div></div>
+          <div class="seo-item"><span class="seo-dot is-{{ ['success' => 'success', 'warning' => 'warning', 'failed' => 'danger', 'skipped' => 'warning'][$s->last_status ?? ''] ?? 'info' }}"></span><div class="seo-item-main"><div class="seo-item-title" style="font-size:12px">{{ $s->title }}</div><div class="seo-item-sub">{{ Fa::until($s->next_run_at) }}</div></div></div>
         @endforeach
       </div>
     </section>

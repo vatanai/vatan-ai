@@ -10,9 +10,9 @@
         font-weight:800;
         padding:4px 10px;
         border-radius:6px;
-        background:rgba(160,122,245,0.12);
+        background:color-mix(in srgb, var(--accent) 12%, transparent);
         color:var(--accent);
-        border:1px solid rgba(160,122,245,0.25);
+        border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);
         letter-spacing:0.5px;
         user-select:none;
         margin-right:8px;

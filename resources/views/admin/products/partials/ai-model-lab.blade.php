@@ -365,7 +365,7 @@
   #ai-model-lab .ai-model-lab-input-item.is-selected { border-color:var(--accent); box-shadow:0 0 0 2px var(--primary-l); }
   #ai-model-lab .ai-model-lab-input-item img { display:block; width:100%; height:100%; object-fit:cover; }
   #ai-model-lab .ai-model-lab-input-item .ai-model-lab-input-check { position:absolute; right:5px; bottom:5px; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid var(--b1); border-radius:5px; color:transparent; background:var(--s2); font-size:9px; }
-  #ai-model-lab .ai-model-lab-input-item.is-selected .ai-model-lab-input-check { border-color:var(--primary); color:var(--accent); background:var(--primary); }
+  #ai-model-lab .ai-model-lab-input-item.is-selected .ai-model-lab-input-check { border-color:var(--primary); color:var(--on-primary); background:var(--primary); }
   #ai-model-lab .ai-model-lab-input-remove { position:absolute; top:4px; left:4px; display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border:1px solid var(--b1); border-radius:5px; color:var(--text2); background:var(--s2); font-size:8px; cursor:pointer; }
   #ai-model-lab .ai-model-lab-input-remove:hover { color:var(--danger); border-color:var(--danger); }
   #ai-model-lab .ai-model-lab-input-name { position:absolute; right:3px; bottom:3px; left:3px; overflow:hidden; padding:2px 3px; border-radius:4px; color:var(--text); background:var(--s2); font-size:7px; text-overflow:ellipsis; white-space:nowrap; text-align:center; }

@@ -8,9 +8,9 @@
           <div class="text-xs mt-[2px]" style="color:var(--text3);">مدیریت و نظارت بر محصولات AI</div>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="setPLView('grid')" id="pl-grid-btn" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fa-solid fa-grip"></i></button>
+          <button onclick="setPLView('grid')" id="pl-grid-btn" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fa-solid fa-grip"></i></button>
           <button onclick="setPLView('table')" id="pl-table-btn" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;"><i class="fa-solid fa-list"></i></button>
-          <button onclick="setActiveSub(null,'محصولات','ثبت محصول جدید','products-create-page')" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;font-size:12px;font-weight:700;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:inherit;">
+          <button onclick="setActiveSub(null,'محصولات','ثبت محصول جدید','products-create-page')" style="display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:32px;border-radius:8px;font-size:12px;font-weight:700;background:var(--accent);color:var(--on-accent);border:none;cursor:pointer;font-family:inherit;">
             <i class="fa-solid fa-plus text-[10px]"></i> محصول جدید
           </button>
         </div>
@@ -23,7 +23,7 @@
           <div><div style="font-size:10px;color:var(--text3);">فعال</div><div style="font-size:18px;font-weight:900;color:var(--green);">۱۸</div></div>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-          <div style="width:36px;height:36px;border-radius:9px;background:rgba(160,122,245,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-box" style="color:var(--accent);font-size:14px;"></i></div>
+          <div style="width:36px;height:36px;border-radius:9px;background:color-mix(in srgb, var(--accent) 12%, transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-box" style="color:var(--accent);font-size:14px;"></i></div>
           <div><div style="font-size:10px;color:var(--text3);">کل محصولات</div><div style="font-size:18px;font-weight:900;color:var(--text);">۲۴</div></div>
         </div>
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
@@ -88,7 +88,7 @@
         <div style="font-size:12px;color:var(--text3);" id="pl-count-label">نمایش ۱–۱۲ از ۲۴ محصول</div>
         <div style="display:flex;gap:4px;">
           <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;"><i class="fa-solid fa-chevron-right"></i></button>
-          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-size:11px;font-weight:700;">۱</button>
+          <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer;font-size:11px;font-weight:700;">۱</button>
           <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;">۲</button>
           <button style="width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s2);color:var(--text2);cursor:pointer;font-size:11px;"><i class="fa-solid fa-chevron-left"></i></button>
         </div>

@@ -38,10 +38,10 @@
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 .badge-blue{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);}
-.credit-pill{display:inline-flex;align-items:center;gap:3px;background:rgba(160,122,245,.08);color:var(--accent);border:1px solid rgba(160,122,245,.15);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;}
+.credit-pill{display:inline-flex;align-items:center;gap:3px;background:color-mix(in srgb, var(--accent) 8%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 15%, transparent);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;}
 .referral-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(11,191,83,.06);color:var(--green);border:1px solid rgba(11,191,83,.15);border-radius:7px;padding:2px 7px;font-size:10px;font-weight:600;}
 .time-val{font-size:11px;color:var(--text2);}
 .time-ms{font-size:10px;color:var(--text3);}
@@ -55,7 +55,7 @@
 .page-btns{display:flex;gap:4px;}
 .page-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;}
 .page-btn:hover{border-color:var(--b2);color:var(--text);}
-.page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 
 /* detail modal */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto;}
@@ -68,7 +68,7 @@
 .detail-row:last-child{border-bottom:none;}
 .detail-key{font-size:12px;color:var(--text3);}
 .detail-val{font-size:13px;font-weight:600;color:var(--text);}
-.output-thumb{width:80px;height:80px;border-radius:10px;background:linear-gradient(135deg,rgba(160,122,245,.2),rgba(160,122,245,.05));display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--accent);flex-shrink:0;}
+.output-thumb{width:80px;height:80px;border-radius:10px;background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 20%, transparent),color-mix(in srgb, var(--accent) 5%, transparent));display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--accent);flex-shrink:0;}
 .json-block{background:var(--bg);border:1px solid var(--b1);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:var(--text2);overflow-x:auto;line-height:1.6;white-space:pre;}
 </style>
 @endpush
@@ -167,8 +167,8 @@
 
             <tr>
               <td><div class="order-id">#ORD-۲۴۸۱</div></td>
-              <td><div class="user-cell"><div class="user-avatar" style="background:rgba(160,122,245,.15);color:var(--accent);">س</div><div><div class="user-name">سارا احمدی</div><div class="user-email">sara@email.com</div></div></div></td>
-              <td><div class="product-cell"><div class="product-icon-sm" style="background:rgba(160,122,245,.12);color:var(--accent);"><i class="fa-solid fa-user-tie"></i></div><span>عکس لینکدین</span></div></td>
+              <td><div class="user-cell"><div class="user-avatar" style="background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);">س</div><div><div class="user-name">سارا احمدی</div><div class="user-email">sara@email.com</div></div></div></td>
+              <td><div class="product-cell"><div class="product-icon-sm" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-user-tie"></i></div><span>عکس لینکدین</span></div></td>
               <td><span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:5px;"></i>&nbsp;موفق</span></td>
               <td><span style="font-size:10.5px;color:var(--text2);font-family:monospace;">flux-1.1-pro</span></td>
               <td><div class="time-val">۱۸ ثانیه</div><div class="time-ms">۱۸,۲۴۰ms</div></td>
@@ -215,8 +215,8 @@
 
             <tr>
               <td><div class="order-id">#ORD-۲۴۷۷</div></td>
-              <td><div class="user-cell"><div class="user-avatar" style="background:rgba(160,122,245,.12);color:var(--accent);">ز</div><div><div class="user-name">زهرا حسینی</div><div class="user-email">zahra.h@email.com</div></div></div></td>
-              <td><div class="product-cell"><div class="product-icon-sm" style="background:rgba(160,122,245,.12);color:var(--accent);"><i class="fa-solid fa-user-tie"></i></div><span>عکس لینکدین</span></div></td>
+              <td><div class="user-cell"><div class="user-avatar" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);">ز</div><div><div class="user-name">زهرا حسینی</div><div class="user-email">zahra.h@email.com</div></div></div></td>
+              <td><div class="product-cell"><div class="product-icon-sm" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-user-tie"></i></div><span>عکس لینکدین</span></div></td>
               <td><span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:5px;"></i>&nbsp;موفق</span></td>
               <td><span style="font-size:10.5px;color:var(--text2);font-family:monospace;">flux-1.1-pro</span></td>
               <td><div class="time-val">۲۲ ثانیه</div><div class="time-ms">۲۲,۸۱۰ms</div></td>
@@ -240,7 +240,7 @@
             <tr>
               <td><div class="order-id">#ORD-۲۴۷۵</div></td>
               <td><div class="user-cell"><div class="user-avatar" style="background:rgba(236,72,153,.12);color:#ec4899;">ف</div><div><div class="user-name">فاطمه نوری</div><div class="user-email">f.nouri@mail.ir</div></div></div></td>
-              <td><div class="product-cell"><div class="product-icon-sm" style="background:rgba(160,122,245,.12);color:var(--accent);"><i class="fa-solid fa-seedling"></i></div><span>کارت نوروز</span></div></td>
+              <td><div class="product-cell"><div class="product-icon-sm" style="background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);"><i class="fa-solid fa-seedling"></i></div><span>کارت نوروز</span></div></td>
               <td><span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:5px;"></i>&nbsp;موفق</span></td>
               <td><span style="font-size:10.5px;color:var(--text2);font-family:monospace;">flux-1.1-pro</span></td>
               <td><div class="time-val">۹ ثانیه</div><div class="time-ms">۹,۳۴۰ms</div></td>

@@ -13,7 +13,7 @@
   .admin-jalali-week span{text-align:center;color:var(--text-soft);font-size:10px;padding:4px 0}
   .admin-jalali-day{height:32px;border:0;border-radius:9px;background:transparent;color:var(--text-main);font-family:inherit;font-size:11px;cursor:pointer}
   .admin-jalali-day:hover{background:var(--nav-hover)}.admin-jalali-day.is-today{border:1px solid var(--success);color:var(--success)}
-  .admin-jalali-day.is-selected{background:var(--primary);color:var(--accent);font-weight:800}
+  .admin-jalali-day.is-selected{background:var(--primary);color:var(--on-primary);font-weight:800}
   .admin-jalali-action{border:0;background:transparent;color:var(--text-soft);font-family:inherit;font-size:11px;cursor:pointer;padding:5px 7px}
   .admin-jalali-visible{direction:ltr;text-align:left;cursor:pointer}
 </style>

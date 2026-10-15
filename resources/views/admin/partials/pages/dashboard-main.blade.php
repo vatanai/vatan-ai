@@ -146,15 +146,15 @@
       <!-- ══ بخش محصولات ══ -->
       <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:11px;font-weight:700;color:var(--watan-text3,#4d7a56);letter-spacing:2px;text-transform:uppercase;">محصولات AI</div>
-        <a href="/admin/analytics" style="font-size:11px;color:var(--accent,#a07af5);text-decoration:none;opacity:.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">آنالیتیکس کامل ←</a>
+        <a href="/admin/analytics" style="font-size:11px;color:var(--accent,var(--accent));text-decoration:none;opacity:.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.8">آنالیتیکس کامل ←</a>
       </div>
-      <div class="grid grid-cols-4 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-2" style="background:rgba(160,122,245,.04);border:1px solid rgba(160,122,245,.1);border-radius:14px;padding:14px;">
+      <div class="grid grid-cols-4 gap-[12px] mb-5 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-2" style="background:color-mix(in srgb, var(--accent) 4%, transparent);border:1px solid color-mix(in srgb, var(--accent) 10%, transparent);border-radius:14px;padding:14px;">
         <a href="/admin/products" style="text-decoration:none;" class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-pointer transition-colors duration-200 hover:border-b2 block">
           <div class="flex items-center justify-between mb-2">
             <div class="text-[10.5px] font-semibold" style="color:var(--watan-text3,#4d7a56);">محصولات فعال</div>
-            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(160,122,245,.1);color:var(--accent,#a07af5);"><i class="fa-solid fa-box-open"></i></div>
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent,var(--accent));"><i class="fa-solid fa-box-open"></i></div>
           </div>
-          <div class="text-[22px] font-extrabold" style="color:var(--accent,#a07af5);">۱۸</div>
+          <div class="text-[22px] font-extrabold" style="color:var(--accent,var(--accent));">۱۸</div>
           <div class="text-[10px] mt-1" style="color:var(--watan-text3,#4d7a56);">از ۲۰ محصول کل</div>
         </a>
         <a href="/admin/orders" style="text-decoration:none;" class="relative overflow-hidden bg-s1 border border-b1 rounded-[10px] py-[15px] px-4 cursor-pointer transition-colors duration-200 hover:border-b2 block">
@@ -184,7 +184,7 @@
       </div>
       <!-- quick product links -->
       <div class="flex items-center gap-[8px] mb-5 flex-wrap">
-        <a href="/admin/products" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(160,122,245,.08);color:var(--accent,#a07af5);border:1px solid rgba(160,122,245,.15);text-decoration:none;" onmouseover="this.style.background='rgba(160,122,245,.14)'" onmouseout="this.style.background='rgba(160,122,245,.08)'"><i class="fa-solid fa-box-open" style="font-size:10px;"></i> لیست محصولات</a>
+        <a href="/admin/products" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:color-mix(in srgb, var(--accent) 8%, transparent);color:var(--accent,var(--accent));border:1px solid color-mix(in srgb, var(--accent) 15%, transparent);text-decoration:none;" onmouseover="this.style.background='color-mix(in srgb, var(--accent) 14%, transparent)'" onmouseout="this.style.background='color-mix(in srgb, var(--accent) 8%, transparent)'"><i class="fa-solid fa-box-open" style="font-size:10px;"></i> لیست محصولات</a>
         <a href="/admin/products/create" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(11,191,83,.06);color:var(--green,#0BBF53);border:1px solid rgba(11,191,83,.15);text-decoration:none;" onmouseover="this.style.background='rgba(11,191,83,.12)'" onmouseout="this.style.background='rgba(11,191,83,.06)'"><i class="fa-solid fa-plus" style="font-size:10px;"></i> ثبت محصول</a>
         <a href="/admin/orders" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(59,130,246,.06);color:#3b82f6;border:1px solid rgba(59,130,246,.15);text-decoration:none;" onmouseover="this.style.background='rgba(59,130,246,.12)'" onmouseout="this.style.background='rgba(59,130,246,.06)'"><i class="fa-solid fa-cart-shopping" style="font-size:10px;"></i> سفارشات</a>
         <a href="/admin/analytics" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:600;background:rgba(245,146,58,.06);color:var(--orange,#f5923a);border:1px solid rgba(245,146,58,.15);text-decoration:none;" onmouseover="this.style.background='rgba(245,146,58,.12)'" onmouseout="this.style.background='rgba(245,146,58,.06)'"><i class="fa-solid fa-chart-line" style="font-size:10px;"></i> آنالیتیکس</a>

@@ -29,7 +29,7 @@
             <form method="POST" action="{{ route('seo.scenarios.update', $s) }}">@csrf @method('PATCH')<input type="hidden" name="toggle" value="1"><button class="seo-switch {{ $s->is_enabled ? 'is-on' : '' }}" title="{{ $s->is_enabled ? 'خاموش کردن' : 'روشن کردن' }}" aria-label="روشن/خاموش"></button></form>
           </div>
           <div class="seo-row-gap" style="font-size:11.5px;margin-bottom:10px">
-            <span class="seo-tag is-{{ $statusTone[$s->last_status] ?? '' }}">{{ $s->last_status ? $statusLabel[$s->last_status] ?? $s->last_status : 'هنوز اجرا نشده' }}</span>
+            <span class="seo-tag is-{{ $statusTone[$s->last_status ?? ''] ?? '' }}">{{ $s->last_status ? $statusLabel[$s->last_status] ?? $s->last_status : 'هنوز اجرا نشده' }}</span>
             <span class="seo-tag"><i class="fa-regular fa-clock"></i>آخرین: {{ Fa::ago($s->last_run_at) }}</span>
             <span class="seo-tag"><i class="fa-solid fa-forward"></i>بعدی: {{ $s->is_enabled ? Fa::until($s->next_run_at) : 'خاموش' }}</span>
             <span class="seo-tag">{{ Fa::n($s->run_count) }} اجرا</span>

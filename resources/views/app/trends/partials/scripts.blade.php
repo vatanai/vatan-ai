@@ -1,7 +1,5 @@
 <script>
   (function () {
-    var lazyMedia = document.querySelectorAll('.trends-card-media[data-src]:not(video)');
-
     function revealMedia(media) {
       var source = media.getAttribute('data-src');
       if (!source) return;
@@ -9,18 +7,22 @@
       media.removeAttribute('data-src');
     }
 
-    if ('IntersectionObserver' in window) {
-      var imageObserver = new IntersectionObserver(function (entries, observer) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          revealMedia(entry.target);
-          observer.unobserve(entry.target);
-        });
-      }, { rootMargin: '80px 0px' });
+    var imageObserver = 'IntersectionObserver' in window
+      ? new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            revealMedia(entry.target);
+            observer.unobserve(entry.target);
+          });
+        }, { rootMargin: '240px 0px' })
+      : null;
 
-      lazyMedia.forEach(function (media) { imageObserver.observe(media); });
-    } else {
-      lazyMedia.forEach(revealMedia);
+    function observeMedia(root) {
+      var lazyMedia = (root || document).querySelectorAll('.trends-card-media[data-src]:not(video)');
+      lazyMedia.forEach(function (media) {
+        if (imageObserver) imageObserver.observe(media);
+        else revealMedia(media);
+      });
     }
 
     function loadAndPlayVideo(card) {
@@ -50,14 +52,57 @@
       if (video && !video.paused) video.pause();
     }
 
-    document.querySelectorAll('[data-trends-video-card]').forEach(function (card) {
-      card.addEventListener('pointerenter', function (event) {
-        if (event.pointerType !== 'touch') loadAndPlayVideo(card);
+    function bindVideoCards(root) {
+      (root || document).querySelectorAll('[data-trends-video-card]').forEach(function (card) {
+        if (card.dataset.trendsVideoBound === '1') return;
+        card.dataset.trendsVideoBound = '1';
+        card.addEventListener('pointerenter', function (event) {
+          if (event.pointerType !== 'touch') loadAndPlayVideo(card);
+        });
+        card.addEventListener('pointerleave', function () { pauseVideo(card); });
+        card.addEventListener('focusin', function () { loadAndPlayVideo(card); });
+        card.addEventListener('focusout', function () { pauseVideo(card); });
       });
-      card.addEventListener('pointerleave', function () { pauseVideo(card); });
-      card.addEventListener('focusin', function () { loadAndPlayVideo(card); });
-      card.addEventListener('focusout', function () { pauseVideo(card); });
-    });
+    }
+
+    observeMedia(document);
+    bindVideoCards(document);
+
+    var feed = document.querySelector('[data-trends-feed]');
+    var sentinel = document.querySelector('[data-trends-feed-sentinel]');
+    if (feed && sentinel && 'IntersectionObserver' in window && !sentinel.hidden) {
+      var loading = false;
+      var feedObserver = new IntersectionObserver(function (entries) {
+        if (!entries.some(function (entry) { return entry.isIntersecting; }) || loading || sentinel.hidden) return;
+
+        loading = true;
+        var nextPage = (parseInt(feed.dataset.trendsPage || '1', 10) || 1) + 1;
+        var endpoint = feed.dataset.trendsEndpoint;
+        fetch(endpoint + '?page=' + encodeURIComponent(nextPage), {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+        }).then(function (response) {
+          if (!response.ok) throw new Error('trends_feed_failed');
+          return response.json();
+        }).then(function (data) {
+          if (data.html) {
+            var fragment = document.createRange().createContextualFragment(data.html);
+            feed.appendChild(fragment);
+            observeMedia(feed);
+            bindVideoCards(feed);
+          }
+          feed.dataset.trendsPage = String(data.page || nextPage);
+          sentinel.hidden = !data.has_more;
+          if (!data.has_more) feedObserver.disconnect();
+        }).catch(function () {
+          sentinel.hidden = false;
+        }).finally(function () {
+          loading = false;
+        });
+      }, { rootMargin: '520px 0px' });
+
+      feedObserver.observe(sentinel);
+    }
 
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) return;

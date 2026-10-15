@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-content{padding:24px;flex:1;}
@@ -36,7 +36,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 
 .action-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--b1);background:var(--s1);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;transition:all .15s;margin-left:3px;}
@@ -203,7 +203,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
               <td><span style="color:var(--accent);font-weight:700;font-size:12px;"><i class="fa-solid fa-bolt" style="font-size:9px;"></i> ۵۰</span></td>
               <td>
                 <div class="pay-method">
-                  <div class="pay-icon" style="background:rgba(160,122,245,.1);color:var(--accent);">N</div>
+                  <div class="pay-icon" style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);">N</div>
                   نکست‌پی
                 </div>
               </td>
@@ -236,7 +236,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
         <div style="font-size:12px;color:var(--text3);">نمایش ۱–۶ از ۲,۲۶۴</div>
         <div style="display:flex;gap:4px;">
           <button class="action-btn" style="width:32px;"><i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></button>
-          <button class="action-btn" style="width:32px;background:var(--accent);color:#fff;border-color:var(--accent);">۱</button>
+          <button class="action-btn" style="width:32px;background:var(--accent);color:var(--on-accent);border-color:var(--accent);">۱</button>
           <button class="action-btn" style="width:32px;">۲</button>
           <button class="action-btn" style="width:32px;">۳</button>
           <span style="display:flex;align-items:center;padding:0 4px;font-size:12px;color:var(--text3);">...</span>

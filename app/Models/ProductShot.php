@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProductShot extends Model
 {
     protected $fillable = [
-        'product_id', 'shot_id', 'enabled', 'is_default', 'credits_override', 'sample_image', 'sort',
+        'product_id', 'shot_id', 'name_override', 'enabled', 'is_default', 'credits_override', 'sample_image', 'sort',
         'prompt_override', 'model_configuration', 'allowed_aspect_ratios', 'aspect_ratio_default',
         'aspect_ratio_user_selectable', 'options_enabled',
     ];
@@ -33,6 +33,11 @@ class ProductShot extends Model
     public function shot(): BelongsTo
     {
         return $this->belongsTo(ShotLibrary::class, 'shot_id');
+    }
+
+    public function displayName(): string
+    {
+        return trim((string) $this->name_override) ?: (string) ($this->shot?->name_fa ?: 'اسلاید محصول');
     }
 
     public function credits(string $quality = 'standard'): int

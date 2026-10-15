@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,13 +14,13 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .admin-content{padding:24px;flex:1;}
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item:hover{background:var(--s2);}.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
 .snav-item.active .snav-label{color:var(--text);}
 .snav-sub-item{display:flex;align-items:center;gap:8px;padding:6px 10px;margin:1px 6px 1px 30px;border-radius:6px;cursor:pointer;transition:background .15s;text-decoration:none;}
-.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:rgba(160,122,245,.1);}
+.snav-sub-item:hover{background:var(--s2);}.snav-sub-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent);}
 .snav-dot{width:4px;height:4px;border-radius:50%;background:var(--b2);flex-shrink:0;}
 .snav-sub-item.active .snav-dot,.snav-sub-item:hover .snav-dot{background:var(--accent);}
 .snav-sub-label{flex:1;font-size:11.5px;font-weight:500;color:var(--text2);}
@@ -31,7 +31,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);}
 .hdr-btn-primary:hover{opacity:.9;}
 .hdr-btn-danger{background:rgba(240,92,92,.08);color:var(--red);border:1px solid rgba(240,92,92,.2);}
 .hdr-btn-danger:hover{background:rgba(240,92,92,.15);}
@@ -43,12 +43,12 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .card-title i{color:var(--accent);}
 
 /* hero */
-.product-hero{background:linear-gradient(135deg,rgba(160,122,245,.12),rgba(11,191,83,.05));border:1px solid rgba(160,122,245,.2);border-radius:14px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;}
-.product-thumb{width:90px;height:90px;border-radius:14px;background:linear-gradient(135deg,rgba(160,122,245,.3),rgba(160,122,245,.1));display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--accent);flex-shrink:0;}
+.product-hero{background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 12%, transparent),rgba(11,191,83,.05));border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:14px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;}
+.product-thumb{width:90px;height:90px;border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 30%, transparent),color-mix(in srgb, var(--accent) 10%, transparent));display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--accent);flex-shrink:0;}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:99px;font-size:10.5px;font-weight:700;}
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
 .badge-blue{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
@@ -61,13 +61,13 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 
 /* input schema */
 .schema-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;}
-.schema-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(160,122,245,.1);color:var(--accent);font-family:monospace;}
+.schema-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);font-family:monospace;}
 .schema-name{flex:1;font-size:12px;font-weight:600;color:var(--text);}
 .schema-req{font-size:10px;font-weight:700;color:var(--red);}
 
 /* prompt box */
 .prompt-box{background:var(--bg);border:1px solid var(--b1);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.8;font-family:monospace;}
-.prompt-var{display:inline-block;background:rgba(160,122,245,.15);color:var(--accent);border:1px solid rgba(160,122,245,.3);border-radius:5px;padding:1px 6px;font-size:10.5px;margin:1px;}
+.prompt-var{display:inline-block;background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:5px;padding:1px 6px;font-size:10.5px;margin:1px;}
 
 /* stats sidebar */
 .stat-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--b1);}
@@ -91,7 +91,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .fallback-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
 .fallback-item{display:flex;align-items:center;gap:5px;}
 .model-tag{background:var(--bg);border:1px solid var(--b1);border-radius:6px;padding:4px 9px;font-size:10.5px;font-family:monospace;color:var(--text2);}
-.model-tag.primary{border-color:rgba(160,122,245,.3);color:var(--accent);}
+.model-tag.primary{border-color:color-mix(in srgb, var(--accent) 30%, transparent);color:var(--accent);}
 .chain-arrow{color:var(--text3);font-size:10px;}
 
 /* color swatches */
@@ -99,7 +99,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 
 /* sample grid */
 .sample-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.sample-cell{aspect-ratio:1;background:linear-gradient(135deg,rgba(160,122,245,.15),rgba(160,122,245,.05));border:1px solid var(--b1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent);}
+.sample-cell{aspect-ratio:1;background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 15%, transparent),color-mix(in srgb, var(--accent) 5%, transparent));border:1px solid var(--b1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent);}
 </style>
 @endpush
 
@@ -115,8 +115,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div style="flex:1;"><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
       <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
@@ -262,8 +262,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
             <div class="detail-row">
               <div class="detail-key">رنگ‌های تم</div>
               <div class="detail-val">
-                <span class="color-swatch" style="background:#a07af5;"></span>
-                <span class="color-swatch" style="background:#6a4dcc;"></span>
+                <span class="color-swatch" style="background:var(--accent);"></span>
+                <span class="color-swatch" style="background:var(--accent-hover);"></span>
                 <span class="color-swatch" style="background:#111116;"></span>
                 <span style="font-size:11px;color:var(--text3);margin-right:6px;">۳ رنگ</span>
               </div>
@@ -367,10 +367,10 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
           <div class="card">
             <div class="card-title"><i class="fa-solid fa-tags"></i> تگ‌ها و دسته</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              <span style="background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);border-radius:6px;padding:3px 10px;font-size:11px;">لینکدین</span>
-              <span style="background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);border-radius:6px;padding:3px 10px;font-size:11px;">پروفایل</span>
-              <span style="background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);border-radius:6px;padding:3px 10px;font-size:11px;">حرفه‌ای</span>
-              <span style="background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);border-radius:6px;padding:3px 10px;font-size:11px;">کسب‌وکار</span>
+              <span style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:6px;padding:3px 10px;font-size:11px;">لینکدین</span>
+              <span style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:6px;padding:3px 10px;font-size:11px;">پروفایل</span>
+              <span style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:6px;padding:3px 10px;font-size:11px;">حرفه‌ای</span>
+              <span style="background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:6px;padding:3px 10px;font-size:11px;">کسب‌وکار</span>
             </div>
             <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--b1);">
               <div style="font-size:11.5px;color:var(--text3);margin-bottom:6px;">پلتفرم نمایش</div>

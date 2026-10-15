@@ -157,6 +157,7 @@ class Product extends Model
     protected $casts = [
         'sample_outputs'    => 'array',
         'before_images'     => 'array',
+        'meta_keywords'    => 'array',
         'fallback_models'   => 'array',
         'fallback_model_providers' => 'array',
         'lab_grade_config' => 'array',
@@ -338,11 +339,68 @@ class Product extends Model
     }
 
     /**
+     * کد کوتاه ۴ کاراکتری برای لینک‌های پروداکتی (/app/pro/XXXX و /app/crepro/XXXX).
+     * از کد ۶ رقمی یکتای محصول (product_code) ساخته می‌شود و نگاشتی یک‌به‌یک است:
+     * بدون ذخیره‌سازی اضافه، بدون تکرار، و همیشه برگشت‌پذیر. تغییر این ثابت‌ها
+     * همه‌ی لینک‌های کوتاه را عوض می‌کند، پس دست به آن‌ها نزن.
+     */
+    private const SHORT_MULTIPLIER = 1000003;
+    private const SHORT_OFFSET = 271828;
+    private const SHORT_INVERSE = 23659;   // معکوس ضریب به پیمانه‌ی 36^4
+    private const SHORT_MODULUS = 1679616; // 36^4
+    private const SHORT_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    public static function encodeShortCode(int $productCode): string
+    {
+        $x = ($productCode * self::SHORT_MULTIPLIER + self::SHORT_OFFSET) % self::SHORT_MODULUS;
+        $out = '';
+        for ($i = 0; $i < 4; $i++) {
+            $out = self::SHORT_ALPHABET[$x % 36] . $out;
+            $x = intdiv($x, 36);
+        }
+
+        return $out;
+    }
+
+    public static function decodeShortCode(string $code): ?int
+    {
+        $code = strtoupper(trim($code));
+        if (! preg_match('/^[0-9A-Z]{4}$/', $code)) {
+            return null;
+        }
+        $x = 0;
+        for ($i = 0; $i < 4; $i++) {
+            $x = $x * 36 + strpos(self::SHORT_ALPHABET, $code[$i]);
+        }
+        $n = ((($x - self::SHORT_OFFSET) % self::SHORT_MODULUS) + self::SHORT_MODULUS) % self::SHORT_MODULUS;
+        $n = ($n * self::SHORT_INVERSE) % self::SHORT_MODULUS;
+
+        return $n <= 999999 ? $n : null;
+    }
+
+    /** کد کوتاه محصول؛ اگر کد ۶ رقمی نداشته باشد null است. */
+    public function getShortCodeAttribute(): ?string
+    {
+        $code = (string) $this->product_code;
+
+        return preg_match('/^\d{6}$/', $code) ? self::encodeShortCode((int) $code) : null;
+    }
+
+    /**
      * بایندینگ سفارشی مسیر برای پارامتر route_slug — کد ۶ رقمی ابتدای مقدار را جدا می‌کند
      * و محصول را بر اساس اسلاگ واقعی پیدا می‌کند (برای سازگاری با لینک‌های قدیمی بدون کد هم کار می‌کند).
      */
     public function resolveRouteBinding($value, $field = null)
     {
+        if ($field === 'short_code') {
+            $productCode = self::decodeShortCode((string) $value);
+            if ($productCode === null) {
+                return null;
+            }
+
+            return $this->where('product_code', str_pad((string) $productCode, 6, '0', STR_PAD_LEFT))->first();
+        }
+
         if ($field === 'route_slug') {
             if (preg_match('/^\d{6}-(.+)$/', (string) $value, $matches)) {
                 $value = $matches[1];
@@ -733,6 +791,12 @@ class Product extends Model
      */
     public function scopeHideUnavailableProductModes($query)
     {
+        // داده‌های نمایشی پروداکتی در محیط لوکال باید مثل محصولات عادی در همه‌ی
+        // فهرست‌های اپ دیده شوند؛ گارد انتشار محیط‌های دیگر حفظ می‌شود.
+        if (app()->environment('local')) {
+            return $query;
+        }
+
         if (! \App\Services\ProductShots\ProductShotFeature::hasSchema()) {
             return $query;
         }

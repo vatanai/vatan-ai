@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\HomeSection;
 use App\Models\Product;
 use App\Services\HomeBuilder\HomeSectionRenderService;
@@ -9,6 +10,7 @@ use App\Services\ProductSearchService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -32,7 +34,26 @@ class HomeController extends Controller
 
         $renderedSections = $this->renderService->prepareMany($sections);
 
-        return view('app.home', compact('renderedSections'));
+        // دسته‌بندی‌های فعال که حداقل یک محصول فعال دارند (هم‌ارز منطق شمارش کاتالوگ:
+        // هم محصولات با category_id مستقیم و هم محصولات متصل از جدول pivot). برای نوار میانبرهای زیر باکس.
+        $activeProducts = fn () => Product::query()
+            ->where('status', 'active')
+            ->hideUnavailableProductModes();
+
+        $searchCategories = Category::query()
+            ->active()
+            ->where(function (Builder $query) use ($activeProducts) {
+                $query->whereIn('categories.id', $activeProducts()->whereNotNull('category_id')->select('category_id'))
+                    ->orWhereIn('categories.id', DB::table('category_product')
+                        ->whereIn('product_id', $activeProducts()->select('id'))
+                        ->select('category_id'));
+            })
+            ->orderByDesc('is_featured')
+            ->orderBy('sort_order')
+            ->limit(12)
+            ->get(['categories.id', 'categories.name', 'categories.name_fa', 'categories.slug', 'categories.path']);
+
+        return view('app.home', compact('renderedSections', 'searchCategories'));
     }
 
     /**

@@ -193,6 +193,7 @@ class HomeSectionRenderService
                 break;
         }
 
+        $stableRandom = false;
         switch ((string) $section->setting('sort', 'latest')) {
             case 'popular':
                 $query->withCount('generatedImages')->orderByDesc('generated_images_count');
@@ -204,13 +205,23 @@ class HomeSectionRenderService
                 $query->orderBy('credit_cost');
                 break;
             case 'random':
-                $query->inRandomOrder();
+                // ترتیب تصادفی برای هر سکشن و نسخهٔ فعلی پایدار می‌ماند تا
+                // رفرش صفحه باعث پرش کارت‌ها نشود.
+                $stableRandom = true;
                 break;
             default:
                 $query->latest();
         }
 
-        return $query->limit($limit)->get();
+        $products = $stableRandom ? $query->get() : $query->limit($limit)->get();
+        if ($stableRandom) {
+            $products = $products
+                ->sortBy(fn (Product $product) => md5('home:' . $section->id . ':' . $product->id))
+                ->take($limit)
+                ->values();
+        }
+
+        return $this->mixProductModes($products, 80);
     }
 
     /**
@@ -285,6 +296,42 @@ class HomeSectionRenderService
         }
 
         return collect($filled);
+    }
+
+    /** نسبت نمایشی محصول‌های پروداکتی به پرتره‌ای برای سکشن‌های خودکار هوم. */
+    protected function mixProductModes(Collection $products, int $productRatio): Collection
+    {
+        if ($products->isEmpty()) {
+            return $products->values();
+        }
+
+        $productRatio = max(0, min(100, $productRatio));
+        $productItems = $products->filter(fn (Product $product) => (string) $product->product_mode === 'product')->values();
+        $portraitItems = $products->reject(fn (Product $product) => (string) $product->product_mode === 'product')->values();
+
+        if ($productItems->isEmpty() || $portraitItems->isEmpty() || $productRatio <= 0 || $productRatio >= 100) {
+            return $products->values();
+        }
+
+        $mixed = collect();
+        $productIndex = 0;
+        $portraitIndex = 0;
+        $usedProducts = 0;
+
+        while ($productIndex < $productItems->count() || $portraitIndex < $portraitItems->count()) {
+            $targetProducts = (int) ceil(($mixed->count() + 1) * ($productRatio / 100));
+            $takeProduct = $productIndex < $productItems->count()
+                && ($portraitIndex >= $portraitItems->count() || $usedProducts < $targetProducts);
+
+            if ($takeProduct) {
+                $mixed->push($productItems[$productIndex++]);
+                $usedProducts++;
+            } else {
+                $mixed->push($portraitItems[$portraitIndex++]);
+            }
+        }
+
+        return $mixed->values();
     }
 
     /**
@@ -370,6 +417,7 @@ class HomeSectionRenderService
                 ->latest()
                 ->limit(30)
                 ->get();
+            $candidates = $this->mixProductModes($candidates, 80);
         }
 
         $items = $candidates
@@ -490,10 +538,10 @@ class HomeSectionRenderService
         $byCategory = collect();
         foreach ($categories as $category) {
             $groupIds = $groups->get($category->id);
-            $byCategory[$category->id] = $products->filter(
+            $byCategory[$category->id] = $this->mixProductModes($products->filter(
                 fn (Product $product) => $groupIds->contains((int) $product->category_id)
                     || $product->categories->contains(fn (Category $related) => $groupIds->contains((int) $related->id))
-            )->values();
+            )->values(), 80);
         }
 
         return [$categories, $byCategory];

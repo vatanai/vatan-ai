@@ -90,7 +90,7 @@ function openShamsiPicker(inputEl) {
           return `<div onclick="this.closest('.shamsi-picker')._pick(${y},${m},${day})"
             style="text-align:center;padding:5px 2px;border-radius:50%;cursor:pointer;
             font-size:12px;
-            ${isSel?'background:var(--accent);color:#fff;font-weight:700;':''}
+            ${isSel?'background:var(--accent);color:var(--on-accent);font-weight:700;':''}
             ${isToday&&!isSel?'border:1.5px solid var(--green);color:var(--green);':''}
             ${!isSel&&!isToday?'color:var(--text2);':''}
             " onmouseover="if(!this.style.background.includes('accent'))

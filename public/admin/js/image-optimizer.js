@@ -474,10 +474,26 @@ async function commitImageOrder(group, fromIndex, toIndex) {
   document.dispatchEvent(new CustomEvent('product-images-changed'));
 }
 
+function syncProductShotSummary(group, file) {
+  if (group?.dataset.optimizerVariant !== 'product-shot') return;
+  const row = group.closest('[data-shot-row]');
+  const thumb = row?.querySelector('[data-shot-thumb]');
+  if (!thumb) return;
+  if (!file) {
+    thumb.innerHTML = '<i class="fa-solid fa-plus"></i>';
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  thumb.innerHTML = '<img src="' + url + '" alt="پیش‌نمایش تصویر نمونه">';
+  const image = thumb.querySelector('img');
+  if (image) image.onload = function () { URL.revokeObjectURL(url); };
+}
+
 function renderImageGroupPreviews(group, files) {
   const strip = group.querySelector('.image-preview-strip');
   const label = group.querySelector('.image-file-label');
-  if (label) label.textContent = files.length ? imageOptToFa(files.length) + ' تصویر انتخاب شد' : 'انتخاب تصاویر';
+  if (label) label.textContent = files.length ? imageOptToFa(files.length) + ' تصویر انتخاب شد' : (group.dataset.emptyLabel || 'انتخاب تصاویر');
+  syncProductShotSummary(group, files[(selectedImageIndexes.get(group) || 0)] || files[0] || null);
   if (!strip) return;
   strip.innerHTML = '';
   files.slice(0, 12).forEach(function (file, index) {

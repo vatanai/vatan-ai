@@ -131,11 +131,11 @@
   /* ── سرچ + فیلتر ── */
   .xp-search-row {
     position: relative;
-    display: flex; align-items: stretch; gap: 8px;
+    display: flex; align-items: stretch; gap: 8px; width: 100%;
     margin-top: 14px;
   }
   .xp-search-box {
-    flex: 1; max-width: 560px; min-width: 0;
+    flex: 1; width: 100%; max-width: none; min-width: 0;
     display: flex; align-items: center; gap: 10px;
     background: rgba(255,255,255,0.07);
     border: 1px solid rgba(255,255,255,0.1);
@@ -271,7 +271,7 @@
   }
 
   /* ── دسته‌بندی‌ها و هشتگ‌های داینامیک ── */
-  .xp-cats-section { padding: 14px 16px 0 16px; }
+  .xp-cats-section { padding: 28px 16px 0 16px; }
   .xp-marquee-list { display: flex; flex-direction: column; gap: 7px; }
   .xp-marquee {
     width: 100%; overflow: hidden; scrollbar-width: none;
@@ -310,7 +310,7 @@
   }
 
   /* ── گرید محتوا: بدون فضای خالی (dense) ── */
-  .xp-grid-section { margin-top: 14px; }
+  .xp-grid-section { margin-top: 30px; }
   .xp-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -389,12 +389,12 @@
     .xp-filter-btn span { display: inline; }
     .xp-filter-panel { padding: 18px; }
 
-    .xp-cats-section { padding: 18px 28px 0 28px; }
+    .xp-cats-section { padding: 28px 28px 0 28px; }
     .xp-marquee-list { gap: 8px; }
     .xp-marquee-group { gap: 8px; padding-left: 8px; }
     .xp-cat-box { padding: 8px 14px; border-radius: 10px; font-size: 12.5px; }
 
-    .xp-grid-section { margin-top: 20px; }
+    .xp-grid-section { margin-top: 30px; }
     .xp-grid { grid-template-columns: repeat(3, 1fr); grid-auto-rows: var(--xp-unit, 237px); gap: 5px; }
     .xp-tile-name { font-size: 12.5px; }
     .xp-tile-tag  { font-size: 10.5px; }
@@ -407,7 +407,7 @@
     .explore-page { max-width: 900px; }
 
     .xp-header { padding: 32px 36px 20px 36px; }
-    .xp-cats-section { padding: 18px 36px 0 36px; }
+    .xp-cats-section { padding: 30px 36px 0 36px; }
 
     .xp-grid-section { padding: 0 36px; }
     .xp-grid { grid-template-columns: repeat(4, 1fr); grid-auto-rows: var(--xp-unit, 203px); gap: 6px; }
@@ -424,7 +424,7 @@
     .xp-title { font-size: clamp(24px, 2vw, 28px); }
     .xp-subtitle { font-size: 13.5px; }
 
-    .xp-cats-section { padding: 20px 0 0; }
+    .xp-cats-section { padding: 32px 0 0; }
     .xp-marquee {
       -webkit-mask-image: linear-gradient(to right, transparent 0, #000 76px, #000 calc(100% - 76px), transparent 100%);
       mask-image: linear-gradient(to right, transparent 0, #000 76px, #000 calc(100% - 76px), transparent 100%);
@@ -443,7 +443,7 @@
     .explore-page { max-width: none; padding-right: var(--home-desktop-grid-gutter); padding-left: var(--home-desktop-grid-gutter); }
 
     .xp-header { padding: 44px 0 24px; }
-    .xp-cats-section { padding: 22px 0 0; }
+    .xp-cats-section { padding: 34px 0 0; }
 
     .xp-grid-section { padding: 0; }
     .xp-grid { grid-template-columns: repeat(6, 1fr); grid-auto-rows: var(--xp-unit, 188px); gap: 8px; }
@@ -484,17 +484,6 @@
     tile.dataset.tileSize = size;
   }
 
-  function patternSizePriority(size) {
-    var priorities = {
-      excel_11:  { 'size-wide': 1, 'size-tall': 2, 'size-big': 3, 'size-1x1': 4 },
-      balanced:  { 'size-big': 1, 'size-tall': 2, 'size-wide': 2, 'size-1x1': 4 },
-      vertical:  { 'size-tall': 1, 'size-big': 2, 'size-wide': 3, 'size-1x1': 4 },
-      banner:    { 'size-wide': 1, 'size-big': 2, 'size-tall': 3, 'size-1x1': 4 }
-    };
-    var selected = priorities[selectedPattern] || priorities.excel_11;
-    return selected[size] || 4;
-  }
-
   function applyPatternLayout(colCount) {
     if (!xpGrid) return;
     xpGrid.querySelectorAll('[data-repeat-fill]').forEach(function (tile) { tile.remove(); });
@@ -511,9 +500,10 @@
       tile.style.removeProperty('grid-column');
       tile.style.removeProperty('grid-row');
       var originalSize = tile.dataset.originalTileSize || 'size-1x1';
-      /* محصولات اول فید (به‌خصوص محصولات جدید) بالای صفحه می‌مانند. بعد از
-         آن قاب‌های بزرگ‌تر زودتر چیده می‌شوند و ۱×۱ها حفره‌های باقی‌مانده را پر می‌کنند. */
-      tile.style.order = index < colCount ? String(index) : String((patternSizePriority(originalSize) * 1000) + index);
+      /* ترتیب فید حفظ می‌شود. مرتب‌سازی ثانویه بر اساس اندازه باعث می‌شد
+         بعد از چند ردیف، قاب‌های عمودی/بزرگ دسته‌دسته دیده شوند و الگوی
+         انتخاب‌شده از داشبورد از نظر بصری به‌هم بخورد. */
+      tile.style.order = String(index);
       setTileSize(tile, originalSize);
     });
   }

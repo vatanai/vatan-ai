@@ -61,7 +61,7 @@
               <div class="text-[12px] font-bold text-white">restaurant-system</div>
               <div class="text-[10px] text-[#4d7a56] mt-[2px] font-mono truncate max-w-[200px]">You are a professional food photographer...</div>
             </td>
-            <td class="py-[11px] px-4"><span class="text-[10px] font-bold py-px px-2 rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2]">System</span></td>
+            <td class="py-[11px] px-4"><span class="text-[10px] font-bold py-px px-2 rounded-md bg-[var(--accent)]/[0.08] text-[var(--accent)] border border-[var(--accent)]/[0.2]">System</span></td>
             <td class="py-[11px] px-4 text-[12px] text-[#a8c4a8] max-[768px]:hidden">عکس رستوران</td>
             <td class="py-[11px] px-4 text-[12px] font-bold text-white max-[900px]:hidden">۴۸۲</td>
             <td class="py-[11px] px-4 text-[11px] text-[#4d7a56] max-[900px]:hidden">۱۴۰۵/۰۴/۰۲</td>
@@ -69,7 +69,7 @@
             <td class="py-[11px] px-4">
               <div class="flex items-center gap-[6px]">
                 <button onclick="editAiPrompt(this, 'restaurant-system','You are a professional food photographer for restaurants. Create high-quality, appetizing images...')" class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
-                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#a07af5]/[0.4] hover:text-[#a07af5] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
+                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[var(--accent)]/[0.4] hover:text-[var(--accent)] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="تاریخچه نسخه"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-red-500/[0.5] hover:bg-red-500/[0.08] hover:border-red-500/[0.3] hover:text-red-500 transition-all duration-150" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -89,7 +89,7 @@
             <td class="py-[11px] px-4">
               <div class="flex items-center gap-[6px]">
                 <button onclick="editAiPrompt(this, 'restaurant-negative','blurry, low quality, dark, unappealing food, dirty plates...')" class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
-                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#a07af5]/[0.4] hover:text-[#a07af5] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
+                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[var(--accent)]/[0.4] hover:text-[var(--accent)] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="تاریخچه نسخه"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-red-500/[0.5] hover:bg-red-500/[0.08] hover:border-red-500/[0.3] hover:text-red-500 transition-all duration-150" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -109,7 +109,7 @@
             <td class="py-[11px] px-4">
               <div class="flex items-center gap-[6px]">
                 <button onclick="editAiPrompt(this, 'background-enhancer','Replace background with elegant dining environment, warm lighting...')" class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
-                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#a07af5]/[0.4] hover:text-[#a07af5] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
+                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[var(--accent)]/[0.4] hover:text-[var(--accent)] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="تاریخچه نسخه"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-red-500/[0.5] hover:bg-red-500/[0.08] hover:border-red-500/[0.3] hover:text-red-500 transition-all duration-150" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -129,7 +129,7 @@
             <td class="py-[11px] px-4">
               <div class="flex items-center gap-[6px]">
                 <button onclick="editAiPrompt(this, 'cafe-window-display','A cozy cafe window display with artisanal products, natural light...')" class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
-                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#a07af5]/[0.4] hover:text-[#a07af5] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
+                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[var(--accent)]/[0.4] hover:text-[var(--accent)] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="تاریخچه نسخه"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-red-500/[0.5] hover:bg-red-500/[0.08] hover:border-red-500/[0.3] hover:text-red-500 transition-all duration-150" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -149,7 +149,7 @@
             <td class="py-[11px] px-4">
               <div class="flex items-center gap-[6px]">
                 <button onclick="editAiPrompt(this, 'menu-digital-draft','Professional digital menu layout with Persian typography and RTL support...')" class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="ویرایش"><i class="fa-solid fa-pen"></i></button>
-                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#a07af5]/[0.4] hover:text-[#a07af5] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
+                <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[var(--accent)]/[0.4] hover:text-[var(--accent)] transition-all duration-150" title="تست"><i class="fa-solid fa-play"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-[#4d7a56] hover:border-[#2e2e3e] hover:text-white transition-all duration-150" title="تاریخچه نسخه"><i class="fa-solid fa-clock-rotate-left"></i></button>
                 <button class="w-[28px] h-[28px] rounded-lg bg-[#16161c] border border-[#222230] flex items-center justify-center text-[11px] text-red-500/[0.5] hover:bg-red-500/[0.08] hover:border-red-500/[0.3] hover:text-red-500 transition-all duration-150" title="حذف"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -212,10 +212,10 @@
     <div>
       <label class="text-[11px] font-bold text-[#4d7a56] block mb-[6px]">متغیرهای پویا</label>
       <div class="bg-[#16161c] border border-[#222230] rounded-lg p-3 flex flex-wrap gap-2" dir="ltr">
-        <span onclick="insertPromptVar('@{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{product_name}}</span>
-        <span onclick="insertPromptVar('@{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{cuisine_type}}</span>
-        <span onclick="insertPromptVar('@{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{style}}</span>
-        <span onclick="insertPromptVar('@{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[#a07af5]/[0.08] text-[#a07af5] border border-[#a07af5]/[0.2] cursor-pointer hover:bg-[#a07af5]/[0.15] transition-colors duration-150">@{{aspect_ratio}}</span>
+        <span onclick="insertPromptVar('@{{product_name}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[var(--accent)]/[0.08] text-[var(--accent)] border border-[var(--accent)]/[0.2] cursor-pointer hover:bg-[var(--accent)]/[0.15] transition-colors duration-150">@{{product_name}}</span>
+        <span onclick="insertPromptVar('@{{cuisine_type}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[var(--accent)]/[0.08] text-[var(--accent)] border border-[var(--accent)]/[0.2] cursor-pointer hover:bg-[var(--accent)]/[0.15] transition-colors duration-150">@{{cuisine_type}}</span>
+        <span onclick="insertPromptVar('@{{style}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[var(--accent)]/[0.08] text-[var(--accent)] border border-[var(--accent)]/[0.2] cursor-pointer hover:bg-[var(--accent)]/[0.15] transition-colors duration-150">@{{style}}</span>
+        <span onclick="insertPromptVar('@{{aspect_ratio}}')" class="text-[10px] font-mono font-bold py-[4px] px-[8px] rounded-md bg-[var(--accent)]/[0.08] text-[var(--accent)] border border-[var(--accent)]/[0.2] cursor-pointer hover:bg-[var(--accent)]/[0.15] transition-colors duration-150">@{{aspect_ratio}}</span>
       </div>
     </div>
     <div>

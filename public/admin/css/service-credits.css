@@ -5,7 +5,7 @@
 .credit-subnav a:hover{border-color:var(--primary);transform:translateY(-1px)}
 .credit-subnav a.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
 .credit-subnav a>i{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;border-radius:10px;background:var(--input-bg);font-size:13px}
-.credit-subnav a.active>i{background:var(--primary);color:var(--accent)}
+.credit-subnav a.active>i{background:var(--primary);color:var(--on-primary)}
 .credit-subnav a span{display:flex;flex-direction:column;gap:3px;min-width:0}
 .credit-subnav strong{font-size:11px;color:var(--text-h)}
 .credit-subnav small{font-size:9px;color:var(--text-soft)}
@@ -16,7 +16,7 @@
 .credit-head-actions,.credit-actions{gap:8px;flex-wrap:wrap}
 .credit-btn{height:38px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-main);padding:0 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none}
 .credit-btn:hover{border-color:var(--primary);color:var(--primary)}
-.credit-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--accent)}
+.credit-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .credit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
 .credit-summary,.credit-card,.credit-panel{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-card)}
 .credit-summary{padding:17px}

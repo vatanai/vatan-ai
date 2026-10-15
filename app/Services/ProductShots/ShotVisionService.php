@@ -126,7 +126,7 @@ class ShotVisionService
     public function preflightSet(array $paths, ?ProductShotSetting $settings = null, array $configuration = []): array
     {
         $settings ??= ProductShotSetting::current();
-        $paths = array_values(array_slice(array_filter($paths), 0, 3));
+        $paths = array_values(array_slice(array_filter($paths), 0, 1 + (int) config('product_shots.max_extra_angles', 2)));
         if ($paths === []) {
             return ['verdict' => 'red', 'usable' => false, 'issues' => ['no_product'], 'issue_labels' => [self::ISSUES['no_product']], 'suggestion_fa' => 'حداقل یک عکس واضح از محصول بارگذاری کنید.', 'coverage' => [], 'product_description' => null, 'checked_by' => 'local', 'model' => null];
         }
@@ -168,6 +168,131 @@ class ShotVisionService
             'suggestion_fa' => $suggestion, 'coverage' => $coverage, 'product_description' => $description,
             'checked_by' => $checkedBy, 'model' => $model, 'images' => $individual,
         ];
+    }
+
+    /**
+     * «بررسی هوشمند تصویر ورودی» صفحه‌ی ساخت: بررسی‌های رایگان محلی هر عکس + فقط «یک» درخواست
+     * به مدل بینای ارزان برای همه‌ی ۱ تا ۳ عکس. پاسخ کوتاه فارسی برمی‌گرداند.
+     * خطای مدل هرگز کار را متوقف نمی‌کند؛ فقط نتیجه‌ی محلی برمی‌گردد.
+     *
+     * @return array{verdict:string, usable:bool, issues:array, issue_labels:array, summary_fa:string, suggestion_fa:string, coverage:array, product_description:?string, checked_by:string, model:?string, usage:array}
+     */
+    public function smartCheck(array $paths, ?ProductShotSetting $settings = null, array $configuration = []): array
+    {
+        $settings ??= ProductShotSetting::current();
+        $paths = array_values(array_slice(array_filter($paths), 0, 1 + (int) config('product_shots.max_extra_angles', 2)));
+        if ($paths === []) {
+            return ['verdict' => 'red', 'usable' => false, 'issues' => ['no_product'], 'issue_labels' => [self::ISSUES['no_product']], 'summary_fa' => 'هنوز عکسی بارگذاری نشده است.', 'suggestion_fa' => 'حداقل یک عکس واضح از محصول بارگذاری کنید.', 'coverage' => [], 'photos' => [], 'product_description' => null, 'checked_by' => 'local', 'model' => null, 'usage' => []];
+        }
+
+        $local = array_map(fn (string $path) => $this->preflight($path, $settings, array_merge($configuration, ['enabled' => false])), $paths);
+        $localIssues = [];
+        foreach ($local as $report) {
+            $localIssues = array_merge($localIssues, (array) ($report['issues'] ?? []));
+        }
+        $issues = $localIssues;
+        $photos = [];
+
+        $summary = '';
+        $suggestion = '';
+        $coverage = [];
+        $description = null;
+        $checkedBy = 'local';
+        $model = null;
+        $usage = [];
+        $enabled = array_key_exists('enabled', $configuration) ? (bool) $configuration['enabled'] : (bool) $settings->preflight_enabled;
+        if ($enabled) {
+            try {
+                $model = trim((string) ($configuration['model'] ?? '')) ?: ($settings->preflight_model ?: (string) config('product_shots.vision_model'));
+                $refs = array_values(array_filter(array_map(fn ($path) => $this->images->visionReference($path, 900), $paths)));
+                $result = app(OpenRouterService::class)->analyzeImagesJson($model, $this->smartInstruction(trim((string) ($configuration['prompt'] ?? $settings->preflight_prompt ?? ''))), $refs, 45);
+                $data = (array) $result['content'];
+                $aiIssues = [];
+                foreach ((array) ($data['issues'] ?? []) as $issue) {
+                    if (isset(self::ISSUES[(string) $issue])) {
+                        $aiIssues[] = (string) $issue;
+                    }
+                }
+                // تشخیص محلی «تاری» روی پس‌زمینه‌ی صاف خطای کاذب دارد؛ وقتی مدل بینا عکس را دیده، نظر مدل ملاک است.
+                $issues = array_merge(array_values(array_diff($localIssues, ['blur'])), $aiIssues);
+                $angleFa = ['front' => 'روبه‌رو', 'three_quarter_left' => 'سه‌رخ چپ', 'three_quarter_right' => 'سه‌رخ راست', 'side' => 'بغل', 'back' => 'پشت', 'top' => 'بالا', 'detail' => 'جزئیات'];
+                foreach (array_slice((array) ($data['photos'] ?? []), 0, count($paths)) as $i => $photo) {
+                    $photo = (array) $photo;
+                    $index = max(1, min(count($paths), (int) ($photo['index'] ?? ($i + 1))));
+                    $photos[] = [
+                        'index' => $index,
+                        'angle' => $angleFa[(string) ($photo['angle'] ?? '')] ?? null,
+                        'ok' => (bool) ($photo['ok'] ?? true),
+                        'note' => mb_substr(trim((string) ($photo['note_fa'] ?? '')), 0, 140),
+                    ];
+                }
+                if (count($paths) > 1 && ($data['same_product'] ?? true) === false) {
+                    $issues[] = 'different_product';
+                }
+                if (array_key_exists('usable', $data) && $data['usable'] === false && ! array_intersect($issues, self::BLOCKING)) {
+                    $issues[] = 'no_product';
+                }
+                $allowedAngles = ['front', 'three_quarter_left', 'three_quarter_right', 'side', 'back', 'top', 'detail'];
+                $coverage = array_values(array_unique(array_intersect(array_map('strval', (array) ($data['angle_coverage'] ?? [])), $allowedAngles)));
+                $summary = trim((string) ($data['summary_fa'] ?? ''));
+                $suggestion = trim((string) ($data['suggestion_fa'] ?? ''));
+                $description = trim((string) ($data['product_description'] ?? '')) ?: null;
+                $checkedBy = 'vision';
+                $usage = (array) ($result['usage'] ?? []);
+                Log::info('ProductShots smart check', ['model' => $model, 'images' => count($refs), 'usage' => $usage]);
+            } catch (\Throwable $e) {
+                Log::warning('ProductShots smart check vision failed', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $issues = array_values(array_unique($issues));
+        $blockingIssues = array_values(array_filter(array_map('strval', (array) ($configuration['blocking_issues'] ?? $settings->preflight_blocking_issues ?? self::BLOCKING))));
+        $blockingIssues = $blockingIssues ?: self::BLOCKING;
+        if ($checkedBy !== 'vision') {
+            // بدون تأیید مدل بینا، «تاری» محلی روی پس‌زمینه‌ی ساده خطای کاذب دارد؛ فقط هشدار است.
+            $blockingIssues = array_values(array_diff($blockingIssues, ['blur'])) ?: ['__none__'];
+        }
+        $verdict = array_intersect($issues, $blockingIssues) ? 'red' : ($issues ? 'yellow' : 'green');
+        if ($suggestion === '' && $verdict !== 'green') {
+            $suggestion = $this->defaultSuggestion($issues, $verdict);
+        }
+        if ($summary === '') {
+            $summary = match ($verdict) {
+                'green' => 'عکس‌ها برای ساخت مناسب‌اند.',
+                'yellow' => 'عکس‌ها قابل استفاده‌اند، ولی بهتر هم می‌شوند.',
+                default => 'این عکس‌ها برای ساخت مناسب نیستند.',
+            };
+        }
+
+        return [
+            'verdict' => $verdict, 'usable' => $verdict !== 'red', 'issues' => $issues,
+            'issue_labels' => array_values(array_map(fn ($i) => self::ISSUES[$i], $issues)),
+            'summary_fa' => mb_substr($summary, 0, 160), 'suggestion_fa' => mb_substr($suggestion, 0, 220),
+            'coverage' => $coverage, 'photos' => $photos, 'product_description' => $description,
+            'checked_by' => $checkedBy, 'model' => $model, 'usage' => $usage,
+        ];
+    }
+
+    public function smartInstruction(string $customPrompt = ''): string
+    {
+        $base = 'You are an expert e-commerce product photographer reviewing 1 to 6 reference photos of ONE physical product, uploaded by a shop owner. '
+            . 'An AI will use these photos to create advertising images, so the product\'s exact shape, proportions, colors, material, logo and label text must be clearly visible. '
+            . 'Photos are numbered in upload order; photo 1 is the main photo and should ideally show the front. '
+            . 'For EACH photo check: focus/sharpness of the product edges and label; exposure (too dark, blown-out highlights, harsh glare or reflections on glossy surfaces); the whole product inside the frame with a small margin (nothing cut off); product size (it should fill roughly half or more of the frame); background (plain and uncluttered is best); exactly one product; no hands or people; readable logo/label; strong perspective distortion from shooting too close with a wide lens; strong color cast. '
+            . 'ACROSS photos check: the exact same product and the same color/variant in every photo; useful distinct angles (ideal set: front, three-quarter left, three-quarter right; also side, back, top, detail); duplicated angles. A plain white or light seamless background is ideal. '
+            . 'Be fair and practical: a normal phone photo on a plain table or wall is fine. Do not invent problems. Report blur only if the edges or the label are visibly soft. A single good front photo is usable; missing angles are a suggestion, never a reason to reject. If fewer than 3 angles are provided, suggest adding the missing three-quarter view(s). If the background is cluttered or colored, suggest a plain white background. '
+            . 'Return ONLY a JSON object with exactly this shape: '
+            . '{"usable":true,"same_product":true,"issues":[],"angle_coverage":[],"photos":[{"index":1,"angle":"front","ok":true,"note_fa":""}],"product_description":"","summary_fa":"","suggestion_fa":""}. '
+            . 'issues may contain only: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product, glare, label_unreadable, perspective_distortion, tiny_product, duplicate_angle, different_product. '
+            . 'angle_coverage and photos[].angle may contain only: front, three_quarter_left, three_quarter_right, side, back, top, detail. '
+            . 'photos: one entry per photo in the same order; ok=false only if that photo has a real problem; note_fa = one short Persian sentence (max 12 words) naming that photo\'s main problem and exactly how to fix it, or "" if the photo is good. '
+            . 'usable=false only if there is no clear single physical product or the photos cannot be used at all. '
+            . 'summary_fa: ONE short, friendly Persian sentence (max 14 words) with the overall verdict. '
+            . 'suggestion_fa: ONE short Persian sentence with the single most important next step (for example which missing angle to add), or "" if everything is good. '
+            . 'Write all Persian text in simple, everyday, polite-informal Persian addressed to the user as "تو", without English words. '
+            . 'product_description: a short English description of the product (type, shape, main colors, material, visible brand name), max 25 words.';
+
+        return $customPrompt !== '' ? $base . "\n\nProduct-specific inspection requirements:\n" . $customPrompt : $base;
     }
 
     /**
@@ -226,7 +351,7 @@ class ShotVisionService
 
     public function setInstruction(string $customPrompt = ''): string
     {
-        $base = 'You inspect 1 to 3 reference photos of the same physical product, intended to form a single high-quality product sheet for AI product photography. '
+        $base = 'You inspect 1 to 6 reference photos of the same physical product, intended to form a single high-quality product sheet for AI product photography. '
             . 'Verify that every image shows the exact same physical product and variant. Check useful angle coverage, duplicated angles, sharpness, glare, label readability, cropping and perspective. '
             . 'Return ONLY JSON: {"same_product":true,"issues":[],"angle_coverage":["front","side","back","detail"],"product_description":"","suggestion_fa":""}. '
             . 'issues may contain only: blur, dark, cropped, busy_bg, multiple_products, has_person, low_res, no_product, glare, label_unreadable, perspective_distortion, tiny_product, duplicate_angle, different_product. '

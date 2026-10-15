@@ -94,8 +94,8 @@
 }
 /* حالت فعال OpenRouter */
 #lbl-api-openrouter.active-provider {
-  background: rgba(160, 122, 245, 0.12);
-  border-color: rgba(160, 122, 245, 0.45);
-  color: #a07af5;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
 }
 </style>

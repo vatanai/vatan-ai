@@ -151,6 +151,17 @@
           </form>
           <div class="si-help" style="margin-top:6px">شناسه را خود کارمند با زدن Start در بات می‌بیند (یا از ‎@userinfobot‎).</div>
         @endif
+        <div class="si-label" style="margin:14px 0 6px"><i class="fa-regular fa-clock"></i> ساعت انتشار پست (بررسی پست تازه)</div>
+        @if($canManage)
+          <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram.schedule') }}" class="si-form">@csrf
+            <div class="si-field"><label for="tg-ns">از</label><input id="tg-ns" type="time" name="notify_start" class="input-pro" value="{{ $telegramWindow['start'] }}" required></div>
+            <div class="si-field"><label for="tg-ne">تا</label><input id="tg-ne" type="time" name="notify_end" class="input-pro" value="{{ $telegramWindow['end'] }}" required></div>
+            <div class="si-form-actions"><button class="btn-pro btn-pro-ghost" style="height:34px">ذخیره</button></div>
+          </form>
+        @else
+          <div class="si-muted">{{ Ui::n($telegramWindow['start']) }} تا {{ Ui::n($telegramWindow['end']) }}</div>
+        @endif
+        <div class="si-help" style="margin-top:6px">به وقت تهران. داخل این بازه هر ۵ دقیقه و بیرون از آن ساعتی یک بار؛ بدون مصرف هوش مصنوعی. عبور از نیمه‌شب مجاز است (مثلاً ۱۱:۰۰ تا ۰۱:۰۰).</div>
         @if($telegramBot['configured'])
           <div class="si-form-actions" style="margin-top:10px">
             <form method="POST" action="{{ route('admin.smart-instagram.connections.telegram') }}" target="_blank">@csrf<button class="btn-pro btn-pro-ghost" style="height:34px"><i class="fa-brands fa-telegram text-[12px]"></i> اتصال تلگرام خودم</button></form>

@@ -33,6 +33,7 @@
         "psr-4": {
             "App\\": "app/",
             "Vatan\\Seo\\": "packages/vatan-seo/src/",
+            "Vatan\\Content\\": "packages/vatan-content/src/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

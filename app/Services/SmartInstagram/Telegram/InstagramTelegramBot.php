@@ -135,6 +135,68 @@ class InstagramTelegramBot
         return $account;
     }
 
+    /** بازه‌ی ساعت انتشار پست (به وقت تهران)؛ داخلش هر ۵ دقیقه بررسی، بیرونش ساعتی یک بار. */
+    public const DEFAULT_WINDOW = ['start' => '11:00', 'end' => '01:00'];
+
+    private const WINDOW_CACHE = 'smart-ig-tg-notify-window';
+
+    /** @return array{start:string,end:string} */
+    public function notifyWindow(): array
+    {
+        return Cache::remember(self::WINDOW_CACHE, 600, function (): array {
+            $saved = (array) data_get($this->context->workspace()->settings, 'telegram_notify', []);
+            $valid = fn ($v) => is_string($v) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $v);
+
+            return [
+                'start' => $valid($saved['start'] ?? null) ? $saved['start'] : self::DEFAULT_WINDOW['start'],
+                'end' => $valid($saved['end'] ?? null) ? $saved['end'] : self::DEFAULT_WINDOW['end'],
+            ];
+        });
+    }
+
+    public function saveNotifyWindow(string $start, string $end): void
+    {
+        $workspace = $this->context->workspace();
+        $settings = (array) $workspace->settings;
+        $settings['telegram_notify'] = ['start' => $start, 'end' => $end];
+        $workspace->forceFill(['settings' => $settings])->save();
+        Cache::forget(self::WINDOW_CACHE);
+    }
+
+    public function inNotifyWindow(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        $now ??= now('Asia/Tehran');
+        $window = $this->notifyWindow();
+        $minute = fn (string $hm) => ((int) substr($hm, 0, 2)) * 60 + (int) substr($hm, 3, 2);
+        [$start, $end, $current] = [$minute($window['start']), $minute($window['end']), $now->hour * 60 + $now->minute];
+        if ($start === $end) {
+            return true; // شروع = پایان یعنی تمام روز
+        }
+
+        return $start < $end ? ($current >= $start && $current < $end) : ($current >= $start || $current < $end);
+    }
+
+    /**
+     * آیا زمان‌بند همین الان دستور اعلان را اجرا کند؟ داخل بازه هر ۵ دقیقه، بیرون از آن فقط اجرای اول هر ساعت
+     * (تور ایمنی برای پست خارج از برنامه). بدون عضو فعال یا توکن، اصلاً پردازشی ساخته نمی‌شود.
+     */
+    public function shouldCheckNow(?\Illuminate\Support\Carbon $now = null): bool
+    {
+        if (!$this->configured() || !config('services.telegram_instagram.notify_new_posts', true)) {
+            return false;
+        }
+        $now ??= now('Asia/Tehran');
+        $hasMembers = Cache::remember('smart-ig-tg-has-members', 600, fn () => \Illuminate\Support\Facades\Schema::hasTable('instagram_telegram_admins')
+            && TelegramAdmin::query()->where('is_active', true)->where('notify_new_posts', true)->exists());
+
+        return $hasMembers && ($this->inNotifyWindow($now) || $now->minute < 5);
+    }
+
+    public function forgetMembersCache(): void
+    {
+        Cache::forget('smart-ig-tg-has-members');
+    }
+
     /** اعلان پست‌های تازه‌ی بدون سناریو به همه‌ی ادمین‌های وصل‌شده. خروجی: تعداد پست اعلان‌شده. */
     public function notifyNewPosts(): int
     {
@@ -230,6 +292,7 @@ class InstagramTelegramBot
             'linked_at' => now(),
             'last_seen_at' => now(),
         ]);
+        $this->forgetMembersCache();
         $this->send($chatId, '✅ <b>'.e($admin->name)."</b> عزیز، تلگرام شما به پنل وطن وصل شد.\n\nاز این به بعد هر پست تازه‌ی اینستاگرام اینجا اعلام می‌شود تا با یک لمس تنظیمش کنید.", $this->openKeyboard());
     }
 

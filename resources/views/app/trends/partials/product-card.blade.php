@@ -5,7 +5,7 @@
     $highPriorityMedia = $cardIndex < 2;
     $mediaUrl = $card['video'] ? $card['poster'] : $card['src'];
   @endphp
-  <a href="{{ $card['link'] }}" class="trends-card{{ $cardIndex >= 4 ? ' trends-card--deferred' : '' }}" aria-label="{{ $card['name'] }}" @if($card['video']) data-trends-video-card @endif>
+  <a href="{{ $card['link'] }}" class="trends-card{{ $cardIndex >= 4 ? ' trends-card--deferred' : '' }}" aria-label="{{ $card['name'] }}" data-product-mode="{{ $card['product_mode'] ?? 'portrait' }}" @if($card['video']) data-trends-video-card @endif>
     @if($card['video'])
       <img
         class="trends-card-media trends-card-poster"

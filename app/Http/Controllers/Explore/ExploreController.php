@@ -49,4 +49,27 @@ class ExploreController extends Controller
 
         return view('app.trends.index', $data);
     }
+
+    /** ادامهٔ فید ترندز برای اسکرول تدریجی؛ همان ترتیب کش‌شدهٔ صفحهٔ اصلی را حفظ می‌کند. */
+    public function trendingFeed(Request $request, TrendsService $trends, SitePageService $pages)
+    {
+        $page = max(1, min(1000, (int) $request->integer('page', 1)));
+        $sitePage = $pages->byKey('trends');
+        $data = $trends->buildPage(
+            (int) ($sitePage?->content('items_per_page', 24) ?? 24),
+            (int) ($sitePage?->content('cache_ttl', 300) ?? 300),
+            (int) ($sitePage?->version ?? 1),
+            $page,
+        );
+
+        return response()->json([
+            'html' => view('app.trends.partials.feed-items', [
+                'trendProducts' => $data['trendProducts'],
+                'cardOffset' => ($data['trendsPage'] - 1) * $data['trendsPageSize'],
+            ])->render(),
+            'page' => $data['trendsPage'],
+            'has_more' => $data['trendsHasMore'],
+            'total' => $data['trendsTotal'],
+        ]);
+    }
 }

@@ -102,9 +102,15 @@ class ShotGenerationService
             'prompt_override' => $productShot?->prompt_override,
             'product_sheet' => (bool) $batch->product_sheet_path,
         ]);
+        // با بیش از ۳ عکس، همه در پروداکت‌شیت هستند؛ فقط ۳ عکس اول جداگانه هم فرستاده می‌شوند
+        // تا تعداد تصاویر ورودی مدل تصویر از حد معمول بیشتر نشود (تا ۳ عکس: مثل قبل).
+        $sources = (array) $batch->source_paths;
+        if ($batch->product_sheet_path && count($sources) > 3) {
+            $sources = array_slice($sources, 0, 3);
+        }
         $referencePaths = array_values(array_filter(array_merge(
             $batch->product_sheet_path ? [$batch->product_sheet_path] : [],
-            (array) $batch->source_paths,
+            $sources,
         )));
         $references = array_values(array_filter(array_map(
             fn ($path) => $this->images->reference((string) $path),

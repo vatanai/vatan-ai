@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\Article;
 use App\Models\ArticleAuthor;
 use App\Models\ArticleCategory;
+use App\Models\Admin;
 use App\Models\Product;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -90,18 +90,27 @@ class SeoEngineTest extends TestCase
         });
     }
 
-    protected function admin(): User
+    protected function admin(): Admin
     {
-        return User::factory()->create();
+        return Admin::create([
+            'name' => 'مدیر تست',
+            'email' => 'seo-test@example.test',
+            'password' => 'password',
+            'role' => 'leader',
+            'is_active' => true,
+        ]);
     }
 
     public function test_full_flow(): void
     {
         $this->fakeWorld();
-        Product::create(['name_fa' => 'عکس محصول حرفه‌ای', 'description_fa' => 'ساخت عکس صنعتی', 'category' => 'عکس', 'meta_keywords' => ['عکس محصول'], 'slug' => 'p1', 'status' => 'active']);
-        Product::create(['name_fa' => 'ویدیو تبلیغاتی', 'description_fa' => 'ویدیو', 'category' => 'ویدیو', 'slug' => 'p2', 'status' => 'active']);
-        ArticleCategory::create(['name' => 'آموزش']);
-        ArticleAuthor::create(['name' => 'تیم وطن']);
+        config(['seo-engine.host.url' => 'https://aivatan.com']);
+        config(['seo-engine.telegram.webhook_secret' => '']);
+        config(['seo-engine.google.service_account_path' => 'seo-engine/seo-engine-test-missing.json']);
+        Product::create(['name_fa' => 'عکس محصول حرفه‌ای', 'name_en' => 'Professional Product Photo', 'description_fa' => 'ساخت عکس صنعتی', 'category' => 'عکس', 'meta_keywords' => ['عکس محصول'], 'slug' => 'p1', 'thumbnail' => 'test/p1.jpg', 'primary_model' => 'test-model', 'prompt_template' => 'test prompt', 'status' => 'active']);
+        Product::create(['name_fa' => 'ویدیو تبلیغاتی', 'name_en' => 'Promotional Video', 'description_fa' => 'ویدیو', 'category' => 'ویدیو', 'slug' => 'p2', 'thumbnail' => 'test/p2.jpg', 'primary_model' => 'test-model', 'prompt_template' => 'test prompt', 'status' => 'active']);
+        ArticleCategory::create(['name' => 'آموزش', 'slug' => 'amoozesh']);
+        ArticleAuthor::create(['name' => 'تیم وطن', 'slug' => 'vatan-team']);
 
         // نصب
         $this->artisan('seo:install', ['--budget' => 20])->assertSuccessful();
@@ -162,9 +171,9 @@ class SeoEngineTest extends TestCase
         $this->postJson(route('seo.telegram.webhook'), ['callback_query' => ['id' => 'cb1', 'data' => 'seo:approve:'.$item->id, 'message' => ['chat' => ['id' => 555]]]])->assertOk();
         $item->refresh();
         $this->assertSame('published', $item->status);
-        $article = Article::first();
+        $article = Article::find($item->published_ref);
         $this->assertNotNull($article);
-        $this->assertSame('ai-product-photo-guide', $article->slug);
+        $this->assertSame($item->slug, $article->slug);
         $this->assertSame('published', $article->status);
         $this->assertTrue(Task::where('keyword_id', $kw->id)->where('playbook_key', 'kw.article')->where('status', 'done')->exists());
 

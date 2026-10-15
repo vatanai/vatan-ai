@@ -36,7 +36,7 @@
   white-space: nowrap;
 }
 
-.finance-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--accent); }
+.finance-btn.primary { background: var(--primary); border-color: var(--primary); color:var(--on-primary); }
 .finance-btn.primary:hover { opacity: .9; }
 .finance-btn.secondary { background: var(--card-bg); color: var(--text-soft); }
 .finance-btn.secondary:hover { border-color: var(--primary); color: var(--primary); }

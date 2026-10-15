@@ -114,6 +114,8 @@ return [
         'bot_username' => env('TELEGRAM_PRODUCT_BOT_USERNAME'),
         'max_images' => (int) env('TELEGRAM_PRODUCT_MAX_IMAGES', 5),
         'ai_model' => env('TELEGRAM_PRODUCT_AI_MODEL', 'openai/gpt-4o-mini'),
+        // اتصال مستقیم (بدون n8n): secret_token وبهوک تلگرام. فقط A-Z a-z 0-9 _ - و خالی = webhook_secret
+        'direct_webhook_secret' => env('TELEGRAM_PRODUCT_DIRECT_SECRET'),
     ],
 
     // بات تلگرام «ثبت پست» اینستاگرام هوشمند (@vatan_instagram_dashbord_bot) — فقط توکن در .env لازم است.

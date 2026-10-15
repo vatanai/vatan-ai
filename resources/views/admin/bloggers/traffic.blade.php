@@ -118,7 +118,7 @@ const demoBloggers = [
   {name:'سارا آموزش', handle:'@sara_edu', clicks:60, signups:9, purchases:3, conv:'15.0٪', revenue:300000},
 ];
 
-const COLORS = ['#a07af5','#0BBF53','#f5923a','#f05c5c','#3b82f6'];
+const COLORS = ['var(--accent)','#0BBF53','#f5923a','#f05c5c','#3b82f6'];
 
 function setRange(days, btn) {
   currentRange = days;
@@ -155,7 +155,7 @@ function renderTrendChart(d) {
     data:{
       labels: d.labels,
       datasets:[
-        {label:'کلیک', data:d.clicks_data, borderColor:'#a07af5', backgroundColor:'rgba(160,122,245,.08)', borderWidth:2, tension:.4, pointRadius:3, fill:true},
+        {label:'کلیک', data:d.clicks_data, borderColor:'#0BBF53', backgroundColor:'rgba(11,191,83,0.08)', borderWidth:2, tension:.4, pointRadius:3, fill:true},
         {label:'ثبت‌نام', data:d.signup_data, borderColor:'#0BBF53', backgroundColor:'rgba(11,191,83,.08)', borderWidth:2, tension:.4, pointRadius:3, fill:true},
       ]
     },

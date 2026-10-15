@@ -13,6 +13,7 @@ use App\Models\ProductShotSetting;
 use App\Models\ShotBatchItem;
 use App\Models\ShotLibrary;
 use App\Services\ExchangeRateService;
+use App\Services\ProductImageOptimizer;
 use App\Services\ProductShots\ProductShotFeature;
 use App\Services\ProductShots\ShotGenerationService;
 use App\Services\ProductShots\ShotGrammar;
@@ -46,9 +47,13 @@ class ProductShotAdminController extends Controller
     private const PREVIEW_DIR = 'uploads/product-shots/admin-previews';
     private const SAMPLE_DIR = 'products/shot-samples';
 
+    /** فایل‌های قبلی فقط بعد از موفق‌شدن تراکنش ذخیره حذف می‌شوند. */
+    private array $pendingStorageDeletes = [];
+
     public function __construct(
         private ProductShotFeature $feature,
         private ShotImageStore $images,
+        private ProductImageOptimizer $imageOptimizer,
     ) {}
 
     public function index(): View
@@ -86,7 +91,7 @@ class ProductShotAdminController extends Controller
             'client_concurrency' => ['required', 'integer', 'min:1', 'max:3'],
             'daily_cost_cap_usd' => ['required', 'numeric', 'min:0', 'max:10000'],
             'preflight_model' => ['nullable', 'string', 'max:120'],
-            'preflight_prompt' => ['nullable', 'string', 'max:4000'],
+            'preflight_prompt' => ['nullable', 'string'],
             'preflight_blocking_issues' => ['nullable', 'array'],
             'preflight_blocking_issues.*' => [Rule::in(array_keys(\App\Services\ProductShots\ShotVisionService::ISSUES))],
             'preflight_min_side' => ['required', 'integer', 'min:500', 'max:3000'],
@@ -172,6 +177,13 @@ class ProductShotAdminController extends Controller
                 $shot->sort,
                 $shot->id,
             ])->values();
+        } elseif ($product) {
+            // اسلایدهای متصل با ترتیب اختصاصی محصول می‌آیند؛ گزینه‌های کتابخانه بعد از آن‌ها می‌مانند.
+            $shots = $shots->sortBy(fn (ShotLibrary $shot) => [
+                $productShots->has($shot->id) ? 0 : 1,
+                $productShots->get($shot->id)?->sort ?? $shot->sort,
+                $shot->id,
+            ])->values();
         }
 
         return view('admin.product-shots.product-form', [
@@ -234,6 +246,7 @@ class ProductShotAdminController extends Controller
             $this->syncShots($product, $request);
             $this->ensureCover($product);
         });
+        $this->flushPendingStorageDeletes();
 
         return $this->afterSave($request, $product, 'محصول پروداکتی «' . $product->name_fa . '» ثبت شد.');
     }
@@ -251,6 +264,7 @@ class ProductShotAdminController extends Controller
             $this->syncShots($product, $request);
             $this->ensureCover($product);
         });
+        $this->flushPendingStorageDeletes();
 
         return $this->afterSave($request, $product, 'تغییرات محصول «' . $product->name_fa . '» ذخیره شد.');
     }
@@ -269,7 +283,7 @@ class ProductShotAdminController extends Controller
             'brand_palette' => ['nullable', 'string', 'max:120'],
             'brand_style' => ['nullable', 'string', 'max:200'],
             'brand_identity_enabled' => ['nullable', 'boolean'],
-            'brand_identity_prompt' => ['nullable', 'string', 'max:2000'],
+            'brand_identity_prompt' => ['nullable', 'string'],
             'aspect_ratio' => ['nullable', Rule::in((array) config('product_shots.aspect_ratios'))],
         ]);
 
@@ -350,7 +364,12 @@ class ProductShotAdminController extends Controller
             ['product_id' => $product->id, 'shot_id' => $shot->id],
             ['enabled' => true, 'is_default' => false, 'sort' => 999]
         );
+        $oldSamplePath = $productShot->sample_image;
         $productShot->update(['sample_image' => $path]);
+        if ($oldSamplePath && $oldSamplePath !== $path) {
+            $this->queueStorageDeletes([$oldSamplePath]);
+        }
+        $this->flushPendingStorageDeletes();
         $this->ensureCover($product->fresh());
 
         return response()->json(['ok' => true, 'sample_url' => asset('storage/' . $path)]);
@@ -368,7 +387,7 @@ class ProductShotAdminController extends Controller
             'description_fa' => ['nullable', 'string', 'max:600'],
             'category' => ['required', Rule::in(array_keys(ShotGrammar::CATEGORIES))],
             'niche_tags' => ['nullable', 'string', 'max:300'],
-            'prompt_template' => ['nullable', 'string', 'max:4000'],
+            'prompt_template' => ['nullable', 'string'],
             'default_credits' => ['required', 'integer', 'min:0', 'max:1000'],
             'aspect_ratio_default' => ['required', Rule::in((array) config('product_shots.aspect_ratios'))],
             'sort' => ['nullable', 'integer', 'min:0', 'max:100000'],
@@ -407,8 +426,7 @@ class ProductShotAdminController extends Controller
         $shot->sort = (int) ($data['sort'] ?? $shot->sort ?? 0);
         $shot->is_active = $shot->exists ? $shot->is_active : true;
         if ($request->hasFile('sample')) {
-            $stored = $this->images->storeUpload($request->file('sample'), 'shot-library');
-            $shot->sample_image = $stored['path'];
+            $shot->sample_image = $this->imageOptimizer->store($request->file('sample'), 'shot-library');
         }
     }
 
@@ -426,14 +444,14 @@ class ProductShotAdminController extends Controller
             'brand_palette' => ['nullable', 'string', 'max:120'],
             'brand_style' => ['nullable', 'string', 'max:200'],
             'brand_identity_enabled' => ['nullable', 'boolean'],
-            'brand_identity_prompt' => ['nullable', 'string', 'max:2000'],
+            'brand_identity_prompt' => ['nullable', 'string'],
             'quality_models' => ['required', 'array'],
             'quality_models.*.primary_id' => ['required', 'integer', Rule::exists('ai_models', 'id')],
             'quality_models.*.fallback_ids' => ['nullable', 'array', 'max:3'],
             'quality_models.*.fallback_ids.*' => ['integer', Rule::exists('ai_models', 'id')],
             'preflight_enabled' => ['nullable', 'boolean'],
             'preflight_model' => ['nullable', 'string', 'max:160'],
-            'preflight_prompt' => ['nullable', 'string', 'max:4000'],
+            'preflight_prompt' => ['nullable', 'string'],
             'preflight_blocking_issues' => ['nullable', 'array'],
             'preflight_blocking_issues.*' => [Rule::in(array_keys(\App\Services\ProductShots\ShotVisionService::ISSUES))],
             'preflight_min_side' => ['required', 'integer', 'min:500', 'max:3000'],
@@ -446,12 +464,14 @@ class ProductShotAdminController extends Controller
             'main_images.*' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
             'remove_main_images' => ['nullable', 'boolean'],
             'shots' => ['required', 'array', 'min:1'],
+            'shots.*.removed' => ['nullable', 'boolean'],
+            'shots.*.name_override' => ['nullable', 'string', 'max:120'],
             'shots.*.enabled' => ['nullable', 'boolean'],
             'shots.*.is_default' => ['nullable', 'boolean'],
             'shots.*.credits' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.quality_credits' => ['nullable', 'array'],
             'shots.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'shots.*.prompt_override' => ['nullable', 'string', 'max:5000'],
+            'shots.*.prompt_override' => ['nullable', 'string'],
             'shots.*.model_overrides' => ['nullable', 'array'],
             'shots.*.model_overrides.*.primary_id' => ['nullable', 'integer', Rule::exists('ai_models', 'id')],
             'shots.*.model_overrides.*.fallback_ids' => ['nullable', 'array', 'max:3'],
@@ -599,10 +619,14 @@ class ProductShotAdminController extends Controller
             $mainImages = [$request->file('cover')];
         }
         if ($mainImages) {
+            $oldMainPaths = array_values(array_filter(
+                array_merge([$product->cover], (array) $product->sample_outputs),
+                fn ($path) => is_string($path) && Str::startsWith($path, 'products/main/')
+            ));
             $paths = [];
             foreach ($mainImages as $file) {
                 try {
-                    $paths[] = $this->images->storeUpload($file, 'products/main')['path'];
+                    $paths[] = $this->imageOptimizer->store($file, 'products/main');
                 } catch (\Throwable $e) {
                     throw ValidationException::withMessages(['main_images' => 'فایل «' . $file->getClientOriginalName() . '» قابل خواندن نیست؛ عکس دیگری انتخاب کنید.']);
                 }
@@ -611,11 +635,17 @@ class ProductShotAdminController extends Controller
             $product->thumbnail = $paths[0];
             $product->sample_outputs = array_slice($paths, 1);
             $product->images_optimized_at = now();
+            $this->queueStorageDeletes($oldMainPaths);
         } elseif ($request->boolean('remove_main_images')) {
             // مدیر همه‌ی عکس‌ها را حذف کرده است؛ کاور از نمونه‌ی اسلایدها ساخته می‌شود.
+            $oldMainPaths = array_values(array_filter(
+                array_merge([$product->cover], (array) $product->sample_outputs),
+                fn ($path) => is_string($path) && Str::startsWith($path, 'products/main/')
+            ));
             $product->cover = null;
             $product->thumbnail = 'products/thumbnails/default_placeholder.jpg';
             $product->sample_outputs = [];
+            $this->queueStorageDeletes($oldMainPaths);
         }
         $product->thumbnail = $product->thumbnail ?: ($product->cover ?: 'products/thumbnails/default_placeholder.jpg');
     }
@@ -635,17 +665,26 @@ class ProductShotAdminController extends Controller
     {
         $rows = (array) $request->input('shots', []);
         $existing = ProductShot::query()->where('product_id', $product->id)->get()->keyBy('shot_id');
-        $libraryIds = ShotLibrary::query()->whereIn('id', array_map('intval', array_keys($rows)))->pluck('id')->all();
+        $libraryShots = ShotLibrary::query()->whereIn('id', array_map('intval', array_keys($rows)))->get()->keyBy('id');
         $minCredits = null;
 
-        foreach ($libraryIds as $shotId) {
+        foreach ($libraryShots as $shotId => $libraryShot) {
             $row = (array) ($rows[$shotId] ?? []);
-            $enabled = filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $productShot = $existing->get($shotId);
+            if (filter_var($row['removed'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                if ($productShot?->sample_image) {
+                    $this->queueStorageDeletes([$productShot->sample_image]);
+                }
+                $productShot?->delete();
+                continue;
+            }
+            $enabled = filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
             if (! $enabled && ! $productShot) {
                 continue;
             }
             $productShot ??= new ProductShot(['product_id' => $product->id, 'shot_id' => $shotId]);
+            $nameOverride = trim((string) ($row['name_override'] ?? ''));
+            $productShot->name_override = $nameOverride !== '' && $nameOverride !== $libraryShot->name_fa ? $nameOverride : null;
             $productShot->enabled = $enabled;
             $productShot->is_default = $enabled && filter_var($row['is_default'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $productShot->credits_override = isset($row['credits']) && $row['credits'] !== '' ? max(0, (int) $row['credits']) : null;
@@ -668,9 +707,13 @@ class ProductShotAdminController extends Controller
             ];
             $productShot->sort = (int) ($row['sort'] ?? 0);
             $sampleFile = $request->file("shots.{$shotId}.sample");
+            $oldSamplePath = $productShot->sample_image;
             if ($sampleFile) {
-                $stored = $this->images->storeUpload($sampleFile, self::SAMPLE_DIR);
-                $productShot->sample_image = $stored['path'];
+                try {
+                    $productShot->sample_image = $this->imageOptimizer->store($sampleFile, self::SAMPLE_DIR);
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages(["shots.{$shotId}.sample" => 'تصویر نمونه‌ی اسلاید قابل بهینه‌سازی نیست؛ تصویر دیگری انتخاب کنید.']);
+                }
             } elseif (! empty($row['sample_path'])) {
                 $copied = $this->copySample((string) $row['sample_path']);
                 if ($copied) {
@@ -678,6 +721,9 @@ class ProductShotAdminController extends Controller
                 }
             }
             $productShot->save();
+            if ($oldSamplePath && $oldSamplePath !== $productShot->sample_image) {
+                $this->queueStorageDeletes([$oldSamplePath]);
+            }
             if ($enabled) {
                 $credits = $productShot->fresh('shot')->credits('standard');
                 $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
@@ -724,9 +770,38 @@ class ProductShotAdminController extends Controller
             return null;
         }
         $target = self::SAMPLE_DIR . '/' . Str::uuid() . '.' . (pathinfo($path, PATHINFO_EXTENSION) ?: 'png');
-        Storage::disk('public')->copy($path, $target);
+        try {
+            Storage::disk('public')->copy($path, $target);
+            $optimized = $this->imageOptimizer->optimizeStored($target, self::SAMPLE_DIR);
+            Storage::disk('public')->delete($target);
 
-        return $target;
+            return $optimized;
+        } catch (\Throwable) {
+            Storage::disk('public')->delete($target);
+
+            return null;
+        }
+    }
+
+    private function queueStorageDeletes(array $paths): void
+    {
+        foreach ($paths as $path) {
+            if (! is_string($path) || $path === '') {
+                continue;
+            }
+            if (Str::startsWith($path, [self::SAMPLE_DIR . '/', 'products/main/'])) {
+                $this->pendingStorageDeletes[] = $path;
+            }
+        }
+    }
+
+    private function flushPendingStorageDeletes(): void
+    {
+        $paths = array_values(array_unique($this->pendingStorageDeletes));
+        $this->pendingStorageDeletes = [];
+        if ($paths !== []) {
+            Storage::disk('public')->delete($paths);
+        }
     }
 
     /** فقط فایل‌های خروجی/پیش‌نمایش همین ماژول قابل کپی هستند (جلوگیری از path traversal). */

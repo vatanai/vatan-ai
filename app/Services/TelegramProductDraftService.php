@@ -11,6 +11,7 @@ use App\Models\TelegramProductEvent;
 use App\Models\TelegramProductManager;
 use App\Models\TelegramProductRegistration;
 use App\Models\TelegramProductSetting;
+use App\Services\TelegramProduct\ProductShotBotFlow;
 use App\Support\ProviderStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,7 @@ class TelegramProductDraftService
     public function __construct(
         private readonly ProductImageOptimizer $images,
         private readonly OpenRouterService $openRouter,
+        private readonly ProductShotBotFlow $shotFlow,
     ) {
     }
 
@@ -67,7 +69,18 @@ class TelegramProductDraftService
         if ($draft && $eventType === 'callback') {
             $this->rememberMessage($draft, $input['message_id'] ?? null);
         }
-        $response = match ($eventType) {
+        $response = null;
+        $callbackData = (string) ($input['callback_data'] ?? '');
+        if ($eventType === 'callback' && $callbackData === 'ps:type:portrait') {
+            // انتخاب «پرتره» در منوی نوع محصول: دقیقاً همان شروع همیشگی.
+            $response = $this->startDraft($manager, $chatId, $input);
+        } elseif ($this->shotFlow->owns($draft, $eventType, $input)) {
+            if ($eventType === 'photo' && ! $image && filled($input['file_id'] ?? null)) {
+                $image = $this->downloadTelegramImage((string) $input['file_id']);
+            }
+            $response = $this->shotFlow->handle($manager, $draft, $chatId, $input, $eventType, $image);
+        }
+        $response ??= match ($eventType) {
             'start' => $this->start($manager, $chatId, $input),
             'photo' => $this->photo($manager, $draft, $chatId, $input, $image),
             'callback' => $this->callback($manager, $draft, $chatId, $input),
@@ -104,9 +117,7 @@ class TelegramProductDraftService
         // بات تلگرام هیچ پیامی نداشت که به کاربر نشون بده و کاربر بدون هیچ توضیحی گیر می‌کرد.
         if ($draft->state === 'failed' && ! $draft->reviewed_at) {
             $draft->forceFill(['reviewed_at' => now()])->save();
-            return $this->response($draft->chat_id, 'آماده‌سازی اطلاعات با خطا روبه‌رو شد؛ لطفاً توضیح محصول را دوباره ارسال کنید.', [
-                ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-            ], ['status' => 'failed', 'draft_id' => $draft->id]);
+            return $this->failedResponse($draft, (string) $draft->chat_id);
         }
 
         return [
@@ -121,6 +132,10 @@ class TelegramProductDraftService
     public function process(TelegramProductDraft $draft): void
     {
         $draft->refresh();
+        if ($draft->isProductMode()) {
+            $this->shotFlow->process($draft);
+            return;
+        }
         if ($draft->state !== 'processing') {
             return;
         }
@@ -138,6 +153,7 @@ class TelegramProductDraftService
             if ($duplicate) {
                 $ai['duplicate_product_id'] = $duplicate->id;
                 $ai['duplicate_product_name'] = $duplicate->name_fa ?: $duplicate->name_en;
+                $ai['duplicate_product_code'] = $duplicate->product_code;
             }
 
             $draft->forceFill([
@@ -150,6 +166,31 @@ class TelegramProductDraftService
                 'state' => 'failed',
                 'error_message' => Str::limit($exception->getMessage(), 1000, ''),
             ])->save();
+        }
+    }
+
+    /**
+     * پیام نتیجه‌ی پردازش برای ارسال خودکار در اتصال مستقیم (بدون پولینگ n8n).
+     */
+    public function resultResponse(TelegramProductDraft $draft): array
+    {
+        $draft->refresh();
+        if ($draft->isProductMode()) {
+            return $this->shotFlow->resultResponse($draft);
+        }
+        if (in_array($draft->state, ['review', 'duplicate'], true)) {
+            $draft->forceFill(['reviewed_at' => now()])->save();
+        }
+
+        return $this->statusResponse($draft, (string) $draft->chat_id);
+    }
+
+    /** پیام‌های ارسالی بات (اتصال مستقیم) هم مثل n8n در پاک‌سازی نهایی حذف شوند. */
+    public function rememberBotMessage(string $draftId, mixed $messageId): void
+    {
+        $draft = TelegramProductDraft::query()->find($draftId);
+        if ($draft) {
+            $this->rememberMessage($draft, $messageId);
         }
     }
 
@@ -167,6 +208,20 @@ class TelegramProductDraftService
             ]);
         }
 
+        if (! $manager->can('create_product')) {
+            return $this->response($chatId, 'دسترسی ثبت محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
+        }
+        // اتصال مستقیم (بدون n8n): اول نوع محصول پرسیده می‌شود. مسیر n8n بدون تغییر می‌ماند.
+        if ($this->shotFlow->available($input)) {
+            return $this->shotFlow->typeChoice($chatId);
+        }
+
+        return $this->startDraft($manager, $chatId, $input);
+    }
+
+    /** شروع درفت پرتره؛ همان رفتار همیشگی بات. */
+    private function startDraft(TelegramProductManager $manager, string $chatId, array $input): array
+    {
         if (! $manager->can('create_product')) {
             return $this->response($chatId, 'دسترسی ثبت محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
         }
@@ -319,6 +374,7 @@ class TelegramProductDraftService
             'prompt_confirm' => $this->confirmPrompt($draft, $chatId),
             'prompt_continue' => $this->requestPromptContinuation($draft, $chatId),
             'status' => $this->statusResponse($draft, $chatId),
+            'retry' => $this->retryProcessing($draft, $chatId),
             'cancel' => $this->cancel($draft, $chatId),
             'cancel_edit' => $this->cancelEdit($draft, $chatId),
             'edit' => $this->editPrompt($draft, $chatId, $action[2] ?? ''),
@@ -393,6 +449,18 @@ class TelegramProductDraftService
         if ($draft->state === 'awaiting_explore_tiles') {
             return $this->exploreTilesResponse($draft, $chatId);
         }
+        // درفت شکست‌خورده بن‌بست نیست: «تلاش مجدد» همان متن قبلی را دوباره پردازش می‌کند
+        // و هر متن کامل جدید، جایگزین توضیح قبلی می‌شود (عکس‌ها حفظ می‌شوند).
+        if ($draft->state === 'failed') {
+            if ($text === 'تلاش مجدد') {
+                return $this->retryProcessing($draft, $chatId);
+            }
+            if (mb_strlen($text) >= 10) {
+                $this->rememberMessage($draft, $input['message_id'] ?? null);
+                return $this->storePromptPart($draft, $chatId, $text);
+            }
+            return $this->failedResponse($draft, $chatId);
+        }
 
         return $this->response($chatId, 'لطفاً یکی از دکمه‌های پیام قبلی را انتخاب کنید.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);
     }
@@ -464,6 +532,48 @@ class TelegramProductDraftService
             'delete_message_ids' => $this->messageIds($draft),
             'poll_after_seconds' => 3,
             'reply_markup' => $this->mainMenuMarkup(),
+        ]);
+    }
+
+    /** پیام خطای آماده‌سازی؛ با دکمه‌ی «تلاش مجدد» تا درفت و عکس‌هایش از دست نروند. */
+    private function failedResponse(TelegramProductDraft $draft, string $chatId): array
+    {
+        $buttons = [];
+        if (trim((string) $draft->description) !== '') {
+            $buttons[] = ['text' => 'تلاش مجدد', 'callback_data' => 'product:retry'];
+        }
+        $buttons[] = ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'];
+
+        return $this->response($chatId, "⚠️ آماده‌سازی اطلاعات با خطا روبه‌رو شد.\nعکس‌ها و متن شما حفظ شده‌اند؛ «تلاش مجدد» را بزنید یا توضیح محصول را دوباره ارسال کنید.", $buttons, [
+            'status' => 'failed',
+            'draft_id' => $draft->id,
+        ]);
+    }
+
+    /** دوباره‌سازی متادیتا از همان متن قبلی درفت شکست‌خورده. */
+    private function retryProcessing(TelegramProductDraft $draft, string $chatId): array
+    {
+        if ($draft->state !== 'failed') {
+            return $this->statusResponse($draft, $chatId);
+        }
+        if (trim((string) $draft->description) === '') {
+            return $this->failedResponse($draft, $chatId);
+        }
+        $draft->forceFill([
+            'state' => 'processing',
+            'error_message' => null,
+            'processing_started_at' => now(),
+            'reviewed_at' => null,
+        ])->save();
+        ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
+
+        return $this->response($chatId, 'دوباره در حال آماده‌سازی اطلاعات هستم؛ چند لحظه صبر کنید.', [
+            ['text' => 'دریافت نتیجه', 'callback_data' => 'product:status'],
+            ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+        ], [
+            'status' => 'processing',
+            'draft_id' => $draft->id,
+            'poll_after_seconds' => 3,
         ]);
     }
 
@@ -842,8 +952,15 @@ class TelegramProductDraftService
             . "\n\nچهره‌محور بودن پرامپت:\n" . (! empty($ai['is_face_oriented']) ? 'بله' : 'خیر')
             . "\n\nپرامپت نهایی:\n" . trim((string) ($ai['product_prompt'] ?? ''))
             . "\n\nتوضیحات تکمیلی:\n" . (trim((string) ($ai['other_details'] ?? '')) ?: '—');
+        if (empty($ai['category_id'])) {
+            $text .= "\n\n⚠️ دسته‌بندی پیشنهادی با دسته‌های سایت تطبیق نشد؛ بعد از ثبت، دسته را از داشبورد بررسی کنید.";
+        }
         if ($duplicate) {
-            $text .= "\n\n⚠️ محصولی با عنوان مشابه قبلاً ثبت شده است؛ قبل از ثبت آن را اصلاح کنید.";
+            $existing = trim((string) ($ai['duplicate_product_name'] ?? ''));
+            $code = trim((string) ($ai['duplicate_product_code'] ?? ''));
+            $text .= "\n\n⚠️ محصولی با عنوان مشابه قبلاً ثبت شده است"
+                . ($existing !== '' ? "\nمحصول مشابه: {$existing}" . ($code !== '' ? " (کد {$code})" : '') : '')
+                . "\nاگر محصول جدید است «تأیید» را بزنید؛ وگرنه با «کپی برای ویرایش» نام را اصلاح کنید.";
         }
         return $this->response($draft->chat_id, $text, [
             ['text' => 'تأیید', 'callback_data' => 'product:confirm'],
@@ -874,9 +991,7 @@ class TelegramProductDraftService
         }
 
         if ($draft->state === 'failed') {
-            return $this->response($chatId, 'آماده‌سازی اطلاعات با خطا روبه‌رو شد؛ لطفاً توضیح محصول را دوباره ارسال کنید.', [
-                ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
-            ], ['status' => 'failed', 'draft_id' => $draft->id]);
+            return $this->failedResponse($draft, $chatId);
         }
 
         return $this->response($chatId, 'این فرآیند دیگر در وضعیت بررسی نیست.', [], ['status' => $draft->state, 'draft_id' => $draft->id]);

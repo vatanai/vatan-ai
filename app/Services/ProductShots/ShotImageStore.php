@@ -244,8 +244,10 @@ class ShotImageStore
      */
     public function createProductSheet(array $paths, string $directory, int $size = 2048): ?array
     {
-        $paths = array_values(array_slice(array_filter($paths), 0, 4));
+        $paths = array_values(array_slice(array_filter($paths), 0, 6));
         if ($paths === []) return null;
+        // تا ۴ عکس: شبکه‌ی ۲×۲ (مثل قبل)؛ ۵ و ۶ عکس: شبکه‌ی ۳×۲
+        $columns = count($paths) > 4 ? 3 : 2;
         $size = max(1024, min(3072, $size));
         $canvas = imagecreatetruecolor($size, $size);
         if (! $canvas) return null;
@@ -255,7 +257,8 @@ class ShotImageStore
 
         $gap = max(12, (int) round($size * 0.012));
         $padding = max(24, (int) round($size * 0.025));
-        $cell = (int) floor(($size - ($padding * 2) - $gap) / 2);
+        $cell = (int) floor(($size - ($padding * 2) - $gap * ($columns - 1)) / $columns);
+        $offsetY = $columns === 3 ? (int) floor(($size - ($padding * 2) - ($cell * 2 + $gap)) / 2) : 0;
         $disk = Storage::disk('public');
         foreach ($paths as $index => $path) {
             if (! $disk->exists($path)) continue;
@@ -265,9 +268,9 @@ class ShotImageStore
             $scale = min(($cell - $gap * 2) / max(1, $sw), ($cell - $gap * 2) / max(1, $sh));
             $dw = max(1, (int) round($sw * $scale));
             $dh = max(1, (int) round($sh * $scale));
-            $column = $index % 2; $row = intdiv($index, 2);
+            $column = $index % $columns; $row = intdiv($index, $columns);
             $cx = $padding + ($column * ($cell + $gap));
-            $cy = $padding + ($row * ($cell + $gap));
+            $cy = $padding + $offsetY + ($row * ($cell + $gap));
             imagefilledrectangle($canvas, $cx, $cy, $cx + $cell, $cy + $cell, $background);
             imagerectangle($canvas, $cx, $cy, $cx + $cell, $cy + $cell, $divider);
             $dx = $cx + (int) floor(($cell - $dw) / 2);

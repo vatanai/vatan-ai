@@ -18,7 +18,13 @@
       'description' => 'همه محصولاتی که در مدیریت ترند فعال شده‌اند، یکپارچه و پشت‌سرهم نمایش داده می‌شوند.',
     ])
 
-    <div class="trends-feed-grid">
+    <div
+      class="trends-feed-grid"
+      data-trends-feed
+      data-trends-page="{{ $trendsPage ?? 1 }}"
+      data-trends-page-size="{{ $trendsPageSize ?? $trendProducts->count() }}"
+      data-trends-endpoint="{{ route('app.trends.feed') }}"
+    >
       @forelse($trendProducts as $index => $card)
         @include('app.trends.partials.product-card', ['card' => $card, 'cardIndex' => $index])
 
@@ -33,6 +39,10 @@
       @empty
         <p class="trends-empty">فعلاً محصولی برای نمایش در صفحه ترند فعال نشده است.</p>
       @endforelse
+    </div>
+    <div class="trends-feed-sentinel" data-trends-feed-sentinel @if(empty($trendsHasMore)) hidden @endif>
+      <span class="trends-feed-loader" aria-hidden="true"></span>
+      <span>در حال آماده‌سازی ادامهٔ محصولات…</span>
     </div>
   </section>
 </div>

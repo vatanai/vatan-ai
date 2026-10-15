@@ -100,12 +100,12 @@
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-percent" style="color:var(--accent);"></i> کدهای تخفیف</div>
-            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> کد جدید</button>
+            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:color-mix(in srgb, var(--accent) 7%, transparent);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> کد جدید</button>
           </div>
           @php $discounts=[['code'=>'VATAN20','pct'=>20,'used'=>142,'max'=>500,'exp'=>'۱۴۰۴/۰۵/۰۱','active'=>true],['code'=>'SUMMER30','pct'=>30,'used'=>89,'max'=>200,'exp'=>'۱۴۰۴/۰۴/۳۱','active'=>true],['code'=>'NEWUSER10','pct'=>10,'used'=>500,'max'=>500,'exp'=>'—','active'=>false]]; @endphp
           @foreach($discounts as $d)
           <div style="padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:10px;{{ !$d['active'] ? 'opacity:.5;' : '' }}">
-            <div style="flex:none;font-size:11px;font-family:monospace;font-weight:800;color:var(--accent);background:rgba(160,122,245,.1);padding:4px 8px;border-radius:6px;letter-spacing:1px;">{{ $d['code'] }}</div>
+            <div style="flex:none;font-size:11px;font-family:monospace;font-weight:800;color:var(--accent);background:color-mix(in srgb, var(--accent) 10%, transparent);padding:4px 8px;border-radius:6px;letter-spacing:1px;">{{ $d['code'] }}</div>
             <div style="flex:1;min-width:0;">
               <div style="font-size:11px;color:var(--text2);">{{ $d['pct'] }}٪ تخفیف · {{ $d['used'] }}/{{ $d['max'] }} استفاده</div>
               <div style="font-size:10px;color:var(--text3);">انقضا: {{ $d['exp'] }}</div>
@@ -119,7 +119,7 @@
         <div style="background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 20px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-coins" style="color:var(--accent);"></i> پکیج‌های کردیت</div>
-            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:rgba(160,122,245,.07);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> پکیج جدید</button>
+            <button style="height:28px;padding:0 10px;border-radius:7px;border:1px dashed var(--accent);background:color-mix(in srgb, var(--accent) 7%, transparent);color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;"><i class="fa-solid fa-plus text-[9px]"></i> پکیج جدید</button>
           </div>
           @php $pkgs=[['credits'=>50,'price'=>'۱۵۰,۰۰۰','per'=>'۳,۰۰۰','badge'=>null,'popular'=>false],['credits'=>120,'price'=>'۳۰۰,۰۰۰','per'=>'۲,۵۰۰','badge'=>'پرفروش','popular'=>true],['credits'=>300,'price'=>'۶۵۰,۰۰۰','per'=>'۲,۱۶۶','badge'=>'صرفه‌جو','popular'=>false]]; @endphp
           <div style="display:flex;flex-direction:column;gap:8px;">

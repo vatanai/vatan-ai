@@ -159,6 +159,7 @@
     var body = new FormData(form);
     var samples = all('[data-shot-sample-file]', form);
     for (var i = 0; i < samples.length; i++) {
+      if (samples[i].closest('[data-shot-row]').classList.contains('is-removed')) continue;
       var file = samples[i].files && samples[i].files[0];
       if (!file) continue;
       var small = await compressIfLarge(file);
@@ -374,6 +375,155 @@
   var brandToggle = one('[data-brand-identity-toggle]', form);
   if (brandToggle) brandToggle.addEventListener('change', function () { one('[data-brand-identity-prompt-wrap]', form).hidden = !brandToggle.checked; });
 
+  var shotList = one('#sp-shot-list', form);
+  var draggingShot = null;
+
+  function managedShotRows() {
+    return all('[data-shot-row]', shotList).filter(function (row) { return !row.classList.contains('is-removed'); });
+  }
+
+  function announceShotOrder(message) {
+    var status = one('[data-shot-order-status]', form);
+    if (status) status.textContent = message || '';
+  }
+
+  function updateShotOrder() {
+    var rows = managedShotRows();
+    rows.forEach(function (row, index) {
+      var sort = one('[name$="[sort]"]', row);
+      var label = one('.ps-slide-order', row);
+      if (sort) sort.value = String(index);
+      if (label) label.textContent = 'اسلاید ' + fa(index + 1);
+      var up = one('[data-shot-move="up"]', row);
+      var down = one('[data-shot-move="down"]', row);
+      if (up) up.disabled = index === 0;
+      if (down) down.disabled = index === rows.length - 1;
+    });
+    var count = one('[data-shot-count]', form);
+    if (count) count.textContent = fa(rows.length) + ' اسلاید در محصول';
+    refreshSummary();
+  }
+
+  function disableRemovedShotControls(row, disabled) {
+    all('input, select, textarea, button', row).forEach(function (control) {
+      if (control.matches('[data-shot-removed], [data-shot-restore]')) return;
+      control.disabled = disabled;
+    });
+    if (!disabled) {
+      var enabled = one('[data-shot-enabled]', row);
+      var defaultBox = one('[data-shot-default]', row);
+      if (defaultBox) defaultBox.disabled = !enabled.checked;
+    }
+  }
+
+  function setShotRemoved(row, removed, initializing) {
+    var removedInput = one('[data-shot-removed]', row);
+    var enabled = one('[data-shot-enabled]', row);
+    var defaultBox = one('[data-shot-default]', row);
+    if (removed && !initializing) {
+      row.dataset.wasEnabled = enabled.checked ? '1' : '0';
+      row.dataset.wasDefault = defaultBox.checked ? '1' : '0';
+    }
+    if (removed && initializing) {
+      row.dataset.wasEnabled = '1';
+      row.dataset.wasDefault = defaultBox.checked ? '1' : '0';
+    }
+    row.classList.toggle('is-removed', removed);
+    row.classList.toggle('is-off', !removed && !enabled.checked);
+    removedInput.value = removed ? '1' : '0';
+    if (removed) {
+      enabled.checked = false;
+      defaultBox.checked = false;
+      row.draggable = false;
+      disableRemovedShotControls(row, true);
+      shotList.appendChild(row);
+    } else {
+      disableRemovedShotControls(row, false);
+      enabled.checked = row.dataset.wasEnabled !== '0';
+      defaultBox.checked = enabled.checked && row.dataset.wasDefault === '1';
+      defaultBox.disabled = !enabled.checked;
+      row.classList.toggle('is-off', !enabled.checked);
+      var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
+      if (firstRemoved) shotList.insertBefore(row, firstRemoved);
+    }
+    updateShotOrder();
+  }
+
+  function moveShot(row, direction) {
+    var rows = managedShotRows();
+    var index = rows.indexOf(row);
+    if (direction === 'up' && index > 0) shotList.insertBefore(row, rows[index - 1]);
+    if (direction === 'down' && index > -1 && index < rows.length - 1) shotList.insertBefore(rows[index + 1], row);
+    updateShotOrder();
+    announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' به جایگاه ' + fa(managedShotRows().indexOf(row) + 1) + ' منتقل شد.');
+  }
+
+  if (shotList) {
+    all('[data-shot-row]', shotList).forEach(function (row) {
+      var enabled = one('[data-shot-enabled]', row);
+      var defaultBox = one('[data-shot-default]', row);
+      defaultBox.disabled = !enabled.checked;
+      if (row.classList.contains('is-removed')) setShotRemoved(row, true, true);
+
+      one('[data-shot-name-input]', row).addEventListener('input', function (event) {
+        var value = event.target.value.trim();
+        row.dataset.shotName = value || row.dataset.shotOriginalName;
+        var removedName = one('.ps-shot-removed-state strong', row);
+        if (removedName) removedName.textContent = row.dataset.shotName;
+      });
+      one('[data-shot-name-input]', row).addEventListener('blur', function (event) {
+        if (event.target.value.trim()) return;
+        event.target.value = row.dataset.shotOriginalName;
+        row.dataset.shotName = row.dataset.shotOriginalName;
+      });
+      one('[data-shot-remove]', row).addEventListener('click', function () {
+        var name = one('[data-shot-name-input]', row).value.trim() || row.dataset.shotOriginalName;
+        setShotRemoved(row, true, false);
+        announceShotOrder(name + ' از این محصول کنار گذاشته شد؛ تا پیش از ذخیره می‌توانید آن را بازگردانید.');
+      });
+      one('[data-shot-restore]', row).addEventListener('click', function () {
+        setShotRemoved(row, false, false);
+        announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' دوباره به محصول افزوده شد.');
+      });
+      all('[data-shot-move]', row).forEach(function (button) {
+        button.addEventListener('click', function () { moveShot(row, button.dataset.shotMove); });
+      });
+
+      var handle = one('[data-shot-drag-handle]', row);
+      handle.addEventListener('pointerdown', function () { if (!row.classList.contains('is-removed')) row.draggable = true; });
+      handle.addEventListener('pointerup', function () { if (!draggingShot) row.draggable = false; });
+      row.addEventListener('dragstart', function (event) {
+        if (!row.draggable || row.classList.contains('is-removed')) { event.preventDefault(); return; }
+        draggingShot = row;
+        row.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', row.dataset.shotId);
+      });
+      row.addEventListener('dragend', function () {
+        row.classList.remove('is-dragging');
+        all('.is-drag-target', shotList).forEach(function (target) { target.classList.remove('is-drag-target'); });
+        row.draggable = false;
+        draggingShot = null;
+        updateShotOrder();
+        announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' به جایگاه ' + fa(managedShotRows().indexOf(row) + 1) + ' منتقل شد.');
+      });
+    });
+
+    shotList.addEventListener('dragover', function (event) {
+      if (!draggingShot) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      var target = event.target.closest('[data-shot-row]');
+      if (!target || target === draggingShot || target.classList.contains('is-removed')) return;
+      all('.is-drag-target', shotList).forEach(function (candidate) { candidate.classList.remove('is-drag-target'); });
+      target.classList.add('is-drag-target');
+      var box = target.getBoundingClientRect();
+      shotList.insertBefore(draggingShot, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+    });
+    shotList.addEventListener('drop', function (event) { if (draggingShot) event.preventDefault(); });
+    updateShotOrder();
+  }
+
   all('[data-shot-toggle]', form).forEach(function (button) { button.addEventListener('click', function () { var detail = one('[data-shot-detail]', button.closest('[data-shot-row]')); detail.hidden = !detail.hidden; }); });
   all('[data-shot-enabled]', form).forEach(function (checkbox) {
     checkbox.addEventListener('change', function () {
@@ -499,7 +649,7 @@
       var image = one('[data-shot-thumb] img', row);
       var credit = one('[name$="[quality_credits][standard]"]', row);
       return {
-        name: row.dataset.shotName || 'اسلاید محصول',
+        name: (one('[data-shot-name-input]', row).value || row.dataset.shotName || 'اسلاید محصول').trim(),
         image: image ? image.src : '',
         credits: Number(credit && credit.value || 0),
         selected: !!one('[data-shot-default]', row).checked

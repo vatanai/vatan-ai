@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--accent:#a07af5;--red:#f05c5c;--orange:#f5923a;}
+:root{--bg:#0c0c10;--s1:#111116;--s2:#16161c;--b1:#222230;--b2:#2e2e3e;--text:#fff;--text2:#a8c4a8;--text3:#4d7a56;--green:#0BBF53;--red:#f05c5c;--orange:#f5923a;}
 *{box-sizing:border-box;}
 body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);direction:rtl;}
 .admin-wrap{display:flex;min-height:100vh;}
@@ -14,7 +14,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .admin-content{padding:24px;flex:1;}
 .snav-section{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text3);padding:12px 16px 4px;}
 .snav-item{display:flex;align-items:center;gap:10px;padding:0 8px;margin:1px 6px;border-radius:8px;cursor:pointer;transition:background .15s;height:38px;text-decoration:none;}
-.snav-item:hover{background:var(--s2);}.snav-item.active{background:rgba(160,122,245,.12);}
+.snav-item:hover{background:var(--s2);}.snav-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);}
 .snav-icon{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text2);flex-shrink:0;}
 .snav-item.active .snav-icon{color:var(--accent);}
 .snav-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);}
@@ -27,7 +27,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .hdr-btn{display:inline-flex;align-items:center;gap:6px;padding:0 14px;height:34px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Vazirmatn',sans-serif;transition:all .15s;text-decoration:none;}
 .hdr-btn-outline{background:var(--s2);color:var(--text2);border:1px solid var(--b1);}
 .hdr-btn-outline:hover{border-color:var(--b2);color:var(--text);}
-.hdr-btn-primary{background:var(--accent);color:#fff;border:none;}
+.hdr-btn-primary{background:var(--accent);color:var(--on-accent);border:none;}
 
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
 .stat-card{background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:14px 16px;}
@@ -58,7 +58,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 .badge-green{background:rgba(11,191,83,.1);color:var(--green);border:1px solid rgba(11,191,83,.2);}
 .badge-orange{background:rgba(245,146,58,.1);color:var(--orange);border:1px solid rgba(245,146,58,.2);}
 .badge-red{background:rgba(240,92,92,.1);color:var(--red);border:1px solid rgba(240,92,92,.2);}
-.badge-purple{background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.2);}
+.badge-purple{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);}
 .badge-gray{background:var(--b1);color:var(--text2);border:1px solid var(--b2);}
 .badge-blue{background:rgba(59,130,246,.1);color:#3b82f6;border:1px solid rgba(59,130,246,.2);}
 
@@ -104,8 +104,8 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
       <div><div style="font-size:14px;font-weight:800;">وطن استودیو</div><div style="font-size:9px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;">Admin Panel</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--b1);">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#6a4dcc);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
-      <div><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(160,122,245,.1);color:var(--accent);border:1px solid rgba(160,122,245,.25);display:inline-block;margin-top:2px;">مدیر کل</div></div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-hover));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">م</div>
+      <div><div style="font-size:12px;font-weight:700;">محسن رضایی</div><div style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);display:inline-block;margin-top:2px;">مدیر کل</div></div>
     </div>
     <nav style="flex:1;padding:8px 0;">
       <a href="/admin/dashboard" class="snav-item"><div class="snav-icon"><i class="fa-solid fa-bolt-lightning"></i></div><div class="snav-label">مرکز فرماندهی</div></a>
@@ -213,7 +213,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
         <div style="font-size:12px;color:var(--text3);" id="pagination-info">نمایش ۱–۱۰ از ۱۲,۴۸۱</div>
         <div style="display:flex;gap:4px;">
           <button class="action-btn" style="width:32px;"><i class="fa-solid fa-chevron-right" style="font-size:10px;"></i></button>
-          <button class="action-btn" style="width:32px;background:var(--accent);color:#fff;border-color:var(--accent);">۱</button>
+          <button class="action-btn" style="width:32px;background:var(--accent);color:var(--on-accent);border-color:var(--accent);">۱</button>
           <button class="action-btn" style="width:32px;">۲</button>
           <button class="action-btn" style="width:32px;">۳</button>
           <span style="display:flex;align-items:center;padding:0 4px;font-size:12px;color:var(--text3);">...</span>
@@ -254,7 +254,7 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
   <div class="drawer-section" style="border-bottom:none;">
     <div class="drawer-section-title">عملیات</div>
     <div style="display:flex;flex-direction:column;gap:8px;">
-      <button onclick="openCreditModal()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(160,122,245,.08);border:1px solid rgba(160,122,245,.2);border-radius:8px;cursor:pointer;color:var(--accent);font-size:12px;font-weight:600;font-family:'Vazirmatn',sans-serif;"><i class="fa-solid fa-coins"></i> مدیریت کردیت</button>
+      <button onclick="openCreditModal()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:color-mix(in srgb, var(--accent) 8%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:8px;cursor:pointer;color:var(--accent);font-size:12px;font-weight:600;font-family:'Vazirmatn',sans-serif;"><i class="fa-solid fa-coins"></i> مدیریت کردیت</button>
       <button style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(245,146,58,.06);border:1px solid rgba(245,146,58,.2);border-radius:8px;cursor:pointer;color:var(--orange);font-size:12px;font-weight:600;font-family:'Vazirmatn',sans-serif;"><i class="fa-solid fa-ban"></i> مسدودسازی</button>
       <button style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;cursor:pointer;color:var(--text2);font-size:12px;font-weight:600;font-family:'Vazirmatn',sans-serif;"><i class="fa-solid fa-clock-rotate-left"></i> تاریخچه سفارشات</button>
     </div>
@@ -296,11 +296,11 @@ body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);d
 <script>
 const USERS = [
   {id:1,name:'سارا احمدی',phone:'09121234567',status:'فعال',plan:'پرمیوم',credits:42,orders:87,revenue:'۴۳۵K',ref:'@tech_ali',joined:'۱۴۰۴/۰۸/۱۲',last:'دیروز',success:84,spend:'۴.۲M',color:'#ec4899',letter:'س'},
-  {id:2,name:'علی رضایی',phone:'09351112233',status:'فعال',plan:'رایگان',credits:8,orders:23,revenue:'۱۱۵K',ref:'ارگانیک',joined:'۱۴۰۴/۱۰/۰۵',last:'امروز',success:22,spend:'۱.۱M',color:'#a07af5',letter:'ع'},
+  {id:2,name:'علی رضایی',phone:'09351112233',status:'فعال',plan:'رایگان',credits:8,orders:23,revenue:'۱۱۵K',ref:'ارگانیک',joined:'۱۴۰۴/۱۰/۰۵',last:'امروز',success:22,spend:'۱.۱M',color:'var(--accent)',letter:'ع'},
   {id:3,name:'مینا کریمی',phone:'09211009988',status:'فعال',plan:'پرمیوم',credits:120,orders:142,revenue:'۷۱۰K',ref:'@design_mina',joined:'۱۴۰۴/۰۲/۱۸',last:'۲ روز پیش',success:138,spend:'۷.۱M',color:'#3b82f6',letter:'م'},
   {id:4,name:'رضا موسوی',phone:'09301234567',status:'غیرفعال',plan:'رایگان',credits:2,orders:5,revenue:'۲۵K',ref:'ارگانیک',joined:'۱۴۰۴/۱۱/۰۱',last:'۱۵ روز پیش',success:4,spend:'۲۵K',color:'#0BBF53',letter:'ر'},
   {id:5,name:'زهرا حسینی',phone:'09125551234',status:'فعال',plan:'پرمیوم',credits:75,orders:210,revenue:'۱.۰۵M',ref:'@art_roya',joined:'۱۴۰۳/۱۲/۰۵',last:'امروز',success:202,spend:'۱۰.۵M',color:'#f5923a',letter:'ز'},
-  {id:6,name:'نیلوفر کریمی',phone:'09178889900',status:'فعال',plan:'رایگان',credits:15,orders:31,revenue:'۱۵۵K',ref:'ارگانیک',joined:'۱۴۰۴/۰۶/۲۰',last:'۵ روز پیش',success:29,spend:'۱.۵M',color:'#a07af5',letter:'ن'},
+  {id:6,name:'نیلوفر کریمی',phone:'09178889900',status:'فعال',plan:'رایگان',credits:15,orders:31,revenue:'۱۵۵K',ref:'ارگانیک',joined:'۱۴۰۴/۰۶/۲۰',last:'۵ روز پیش',success:29,spend:'۱.۵M',color:'var(--accent)',letter:'ن'},
   {id:7,name:'فرید طاهری',phone:'09033334455',status:'مسدود',plan:'رایگان',credits:0,orders:2,revenue:'۱۰K',ref:'ارگانیک',joined:'۱۴۰۴/۱۱/۱۵',last:'۳۰ روز پیش',success:1,spend:'۱۰K',color:'#f05c5c',letter:'ف'},
   {id:8,name:'آرزو شریفی',phone:'09366665544',status:'فعال',plan:'پرمیوم',credits:200,orders:314,revenue:'۱.۵۷M',ref:'@startup_sara',joined:'۱۴۰۳/۰۹/۱۰',last:'امروز',success:308,spend:'۱۵.۷M',color:'#ec4899',letter:'آ'},
 ];

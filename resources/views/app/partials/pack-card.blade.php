@@ -1,6 +1,6 @@
 {{-- کارت «پک» محصول پروداکتی: کولاژ تا ۴ شات نمونه. --}}
 @php $urls = array_slice((array) ($pack['urls'] ?? []), 0, 4); @endphp
-<a class="product-card pack-card" href="{{ route('app.create', ['product' => $product->route_slug]) }}">
+<a class="product-card pack-card" href="{{ route('app.pro', ['product' => $product->short_code]) }}">
   <div class="product-image pack-{{ max(1, count($urls)) }}">
     @foreach($urls as $url)<img src="{{ $url }}" alt="{{ $loop->first ? $product->name_fa : '' }}" loading="lazy" decoding="async">@endforeach
     <span class="product-type">پک {{ \App\Support\Jalali::toPersianDigits((string) ($pack['shots'] ?? count($urls))) }} شات</span>

@@ -19,7 +19,7 @@
 .growth-page .g-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .growth-page .g-btn { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); color: var(--text-main); background: var(--card-bg); cursor: pointer; font-size: 12px; font-weight: 800; transition: .18s ease; }
 .growth-page .g-btn:hover { color: var(--primary); border-color: var(--primary); transform: translateY(-1px); }
-.growth-page .g-btn-primary { background: var(--primary); border-color: var(--primary); color: var(--accent); }
+.growth-page .g-btn-primary { background: var(--primary); border-color: var(--primary); color:var(--on-primary); }
 .growth-page .g-btn-primary:hover { color: var(--accent); box-shadow: var(--shadow-card); }
 .growth-page .g-btn-soft { background: var(--primary-l); border-color: var(--primary-m); color: var(--primary); }
 .growth-page .g-btn-danger { background: var(--danger-l); border-color: var(--danger-m); color: var(--danger); }

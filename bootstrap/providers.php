@@ -4,6 +4,8 @@ use App\Providers\AppServiceProvider;
 
 // موتور سئوی هوشمند — بارگذار مستقل (تا قبل از composer dump-autoload هم کار کند)
 require_once __DIR__.'/../packages/vatan-seo/bootstrap.php';
+// کارخانه‌ی محتوای وطن — بارگذار مستقل
+require_once __DIR__.'/../packages/vatan-content/bootstrap.php';
 
 return [
     AppServiceProvider::class,
@@ -12,4 +14,5 @@ return [
     App\Providers\HomeBuilderServiceProvider::class, // Home Builder — مستقل از بقیه
     App\Providers\SmartInstagramServiceProvider::class, // اینستاگرام هوشمند — مستقل از بقیه
     Vatan\Seo\SeoEngineServiceProvider::class, // موتور سئوی هوشمند — packages/vatan-seo (مستقل از بقیه)
+    Vatan\Content\ContentFactoryServiceProvider::class, // کارخانه‌ی محتوای وطن — packages/vatan-content (مستقل از بقیه)
 ];

@@ -179,9 +179,12 @@ Schedule::command('smart-instagram:sync-composio --limit=100')
     ->withoutOverlapping(4)
     ->runInBackground();
 
-// بات تلگرام «ثبت پست» — پست تازه را هر ۵ دقیقه پیدا و با دکمه‌ی «تنظیم» به ادمین‌های وصل‌شده اعلام می‌کند.
+// بات تلگرام «ثبت پست» — پست تازه را پیدا و با دکمه‌ی «تنظیم» به کارمندان اعلام می‌کند.
+// داخل «ساعت انتشار پست» (پنل › اتصال‌ها و تیم) هر ۵ دقیقه، بیرون از آن ساعتی یک بار؛ شرط در خود زمان‌بند
+// بررسی می‌شود تا بیرون از بازه حتی پروسه‌ای ساخته نشود. هر بررسی فقط یک درخواست سبک به اینستاگرام است (بدون هوش مصنوعی).
 Schedule::command('smart-instagram:telegram-bot notify')
     ->everyFiveMinutes()
+    ->when(fn () => app(\App\Services\SmartInstagram\Telegram\InstagramTelegramBot::class)->shouldCheckNow())
     ->withoutOverlapping(10)
     ->runInBackground();
 

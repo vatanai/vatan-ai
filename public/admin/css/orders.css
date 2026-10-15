@@ -5,7 +5,7 @@
 .orders-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .order-btn{height:36px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-main);font-family:inherit;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;cursor:pointer;transition:.18s}
 .order-btn:hover{border-color:var(--primary);color:var(--primary)}
-.order-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--accent)}
+.order-btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
 .order-btn.danger{color:var(--danger);border-color:var(--danger-m);background:var(--danger-l)}
 .order-btn.success{color:var(--success);border-color:var(--success-m);background:var(--success-l)}
 .orders-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}

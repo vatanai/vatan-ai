@@ -47,6 +47,8 @@ class ShotGrammar
                 'flatlay-topdown' => ['fa' => 'فلت‌لی از بالا', 'prompt' => 'a styled flat-lay composition seen directly from above'],
                 'three-quarter' => ['fa' => 'سه‌رخ', 'prompt' => 'a three-quarter view that shows the product\'s front and one side'],
                 'off-center-editorial' => ['fa' => 'ادیتوریال خارج از مرکز', 'prompt' => 'an editorial off-center composition following the rule of thirds'],
+                'ghost-mannequin' => ['fa' => 'مانکن نامرئی', 'prompt' => 'a ghost-mannequin presentation where the garment holds its natural worn 3D shape with no visible mannequin or person'],
+                'wide-environment' => ['fa' => 'نمای باز محیطی', 'prompt' => 'a wider environmental composition that places the product naturally within a styled real-world setting'],
             ],
             'camera' => [
                 'eye-level' => ['fa' => 'هم‌سطح چشم', 'prompt' => 'shot at eye level'],
@@ -68,6 +70,9 @@ class ShotGrammar
                 'rim-light' => ['fa' => 'نور لبه', 'prompt' => 'a glowing rim light that outlines the product silhouette'],
                 'golden-hour' => ['fa' => 'ساعت طلایی', 'prompt' => 'warm golden-hour light'],
                 'caustics' => ['fa' => 'انعکاس نور آب', 'prompt' => 'shimmering water caustics dancing across the scene'],
+                'dramatic-spot' => ['fa' => 'نور موضعی دراماتیک', 'prompt' => 'low-key dramatic spotlighting with deep controlled shadows'],
+                'neon-accent' => ['fa' => 'نور رنگی نئون', 'prompt' => 'subtle colored neon accent lights with a modern tech glow'],
+                'natural-daylight' => ['fa' => 'نور روز طبیعی', 'prompt' => 'bright natural outdoor daylight'],
             ],
             'surface' => [
                 'travertine-plinth' => ['fa' => 'پایه سنگ تراورتن', 'prompt' => 'standing on a travertine stone plinth'],
@@ -77,6 +82,15 @@ class ShotGrammar
                 'pastel-seamless' => ['fa' => 'زمینه پاستلی یکدست', 'prompt' => 'against a seamless pastel backdrop that complements the product colors'],
                 'water-surface' => ['fa' => 'سطح آب', 'prompt' => 'resting on a calm water surface with gentle ripples'],
                 'sand-dune' => ['fa' => 'تپه شنی', 'prompt' => 'on sculpted fine sand'],
+                'wooden-table' => ['fa' => 'میز چوبی', 'prompt' => 'on a warm natural oak wood tabletop'],
+                'linen-fabric' => ['fa' => 'پارچه کتان', 'prompt' => 'on textured natural linen fabric'],
+                'concrete-urban' => ['fa' => 'بتن شهری', 'prompt' => 'on a raw architectural concrete block in a minimal urban setting'],
+                'velvet-display' => ['fa' => 'پایه مخمل جواهر', 'prompt' => 'on a dark velvet jewelry display'],
+                'kitchen-counter' => ['fa' => 'کانتر آشپزخانه', 'prompt' => 'on a clean modern kitchen counter with soft out-of-focus background'],
+                'modern-interior' => ['fa' => 'دکور داخلی مدرن', 'prompt' => 'inside a tastefully styled modern home interior'],
+                'dark-gradient' => ['fa' => 'زمینه گرادیان تیره', 'prompt' => 'against a sleek dark gradient backdrop'],
+                'outdoor-nature' => ['fa' => 'طبیعت بیرونی', 'prompt' => 'in a fresh natural outdoor setting'],
+                'city-street' => ['fa' => 'خیابان شهر', 'prompt' => 'on a stylish city street with soft urban bokeh'],
             ],
             'props' => [
                 'none' => ['fa' => 'بدون پراپ', 'prompt' => 'with no additional props'],
@@ -87,6 +101,11 @@ class ShotGrammar
                 'petals' => ['fa' => 'گلبرگ', 'prompt' => 'delicate flower petals'],
                 'smoke-mist' => ['fa' => 'مه و بخار', 'prompt' => 'soft wisps of mist'],
                 'bubbles' => ['fa' => 'حباب', 'prompt' => 'floating translucent bubbles'],
+                'steam' => ['fa' => 'بخار تازه', 'prompt' => 'gentle rising steam that suggests freshness and warmth'],
+                'fresh-garnish' => ['fa' => 'تزئین تازه', 'prompt' => 'fresh complementary garnish and ingredients'],
+                'sparkle' => ['fa' => 'درخشش', 'prompt' => 'tasteful natural sparkle highlights on reflective details'],
+                'leaves-branches' => ['fa' => 'برگ و شاخه', 'prompt' => 'fresh green leaves and small branches'],
+                'gift-box' => ['fa' => 'جعبه هدیه', 'prompt' => 'an elegant open gift box beside the product'],
             ],
             'human' => [
                 'none' => ['fa' => 'بدون انسان', 'prompt' => 'no people in the frame'],
@@ -94,6 +113,10 @@ class ShotGrammar
                 'model-closeup' => ['fa' => 'کلوزآپ مدل', 'prompt' => 'a close-up of a generic adult model applying or touching the product'],
                 'model-profile' => ['fa' => 'پروفایل مدل', 'prompt' => 'a generic adult model in profile with the product resting on her open palm'],
                 'model-portrait-with-prop' => ['fa' => 'پرتره مدل با محصول', 'prompt' => 'a beauty portrait of a generic adult model holding the product next to her face'],
+                'model-full-body' => ['fa' => 'مدل تمام‌قد', 'prompt' => 'a generic adult model wearing, carrying or using the product in a natural full-body editorial pose'],
+                'model-wearing-closeup' => ['fa' => 'کلوزآپ روی بدن مدل', 'prompt' => 'a close-up of a generic adult model wearing the product, framed tightly on the product area (wrist, neck, ear, hand or shoulder)'],
+                'feet-wearing' => ['fa' => 'روی پا', 'prompt' => 'the shoes being worn, only legs and feet visible, natural stride'],
+                'hands-using' => ['fa' => 'دست در حال استفاده', 'prompt' => 'hands naturally using or interacting with the product, only the hands visible'],
             ],
             'mood' => [
                 'clean-luxury' => ['fa' => 'لوکس و تمیز', 'prompt' => 'clean luxurious premium mood'],
@@ -101,6 +124,10 @@ class ShotGrammar
                 'warm-natural' => ['fa' => 'گرم و طبیعی', 'prompt' => 'warm natural organic mood'],
                 'editorial' => ['fa' => 'ادیتوریال مجله', 'prompt' => 'high-fashion magazine editorial mood'],
                 'fresh-cool' => ['fa' => 'خنک و تازه', 'prompt' => 'fresh cool hydrating mood'],
+                'urban-street' => ['fa' => 'شهری و استریت', 'prompt' => 'confident urban streetwear mood'],
+                'cozy-home' => ['fa' => 'گرم و خانگی', 'prompt' => 'cozy inviting homely mood'],
+                'bold-tech' => ['fa' => 'تکنولوژی و جسور', 'prompt' => 'bold sleek high-tech mood'],
+                'appetizing' => ['fa' => 'اشتهاآور', 'prompt' => 'irresistibly appetizing mood'],
             ],
         ];
     }

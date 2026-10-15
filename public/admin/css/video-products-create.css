@@ -21,7 +21,7 @@
 .vpc-step small { font-size:9px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .vpc-step>i { display:none; color:var(--success); margin-right:auto; }
 .vpc-step.is-active { border-color:var(--primary); background:var(--primary-l); }
-.vpc-step.is-active>span { background:var(--primary); border-color:var(--primary); color:var(--accent); }
+.vpc-step.is-active>span { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
 .vpc-step.is-active b { color:var(--nav-active-t); }
 .vpc-step.is-done>i { display:block; }
 
@@ -78,7 +78,7 @@
 .vpc-family-grid .vpc-choice>span>i:first-child { font-size:16px; }
 .vpc-prompt-mode { margin-top:2px; }
 .vpc-input-contract-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
-.vpc-choice input:checked+span>em { color:var(--accent); background:var(--primary); border-color:var(--primary); }
+.vpc-choice input:checked+span>em { color:var(--on-primary); background:var(--primary); border-color:var(--primary); }
 .vpc-inline-note { margin-top:14px; border:1px solid var(--info-m); background:var(--info-l); color:var(--text-main); padding:10px 12px; border-radius:10px; font-size:10px; line-height:1.8; }
 .vpc-inline-note i { color:var(--info); margin-left:6px; }
 

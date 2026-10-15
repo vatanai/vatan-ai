@@ -511,7 +511,7 @@ function crmRenderProjectDetail(pid) {
       <button class="crm-btn crm-btn-primary" onclick="crmOpenModal('task')">+ افزودن تسک</button>
     </div>
     <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-      ${taskFilters.map(([f,label])=>`<button class="crm-btn" style="${crmState.projectTaskFilter===f?'background:var(--accent);color:#fff;border-color:var(--accent)':''}" onclick="crmSetProjectTaskFilter('${f}')">${label}</button>`).join('')}
+      ${taskFilters.map(([f,label])=>`<button class="crm-btn" style="${crmState.projectTaskFilter===f?'background:var(--accent);color:var(--on-accent);border-color:var(--accent)':''}" onclick="crmSetProjectTaskFilter('${f}')">${label}</button>`).join('')}
     </div>
     ${filteredTasks.length?filteredTasks.map(t=>{
       const assignee=t.assigneeId?crmState.personnel.find(p=>p.id===t.assigneeId):null;
@@ -784,7 +784,7 @@ function crmRenderReport() {
       <div id="crm-health-ring"></div>
     </div>
 
-    <div style="background:linear-gradient(135deg,rgba(160,122,245,0.1),rgba(11,191,83,0.05));border:1px solid var(--b1);border-radius:14px;padding:20px;margin-bottom:20px">
+    <div style="background:linear-gradient(135deg,color-mix(in srgb, var(--accent) 10%, transparent),rgba(11,191,83,0.05));border:1px solid var(--b1);border-radius:14px;padding:20px;margin-bottom:20px">
       <div class="crm-section-title">🚀 خلاصه امروز</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0">
         <div class="crm-stat-card" style="padding:12px"><div class="crm-stat-label" style="font-size:11px">پروژه‌های فعال</div><div class="crm-stat-val" style="font-size:20px;color:var(--accent)">${activeProjects.length}</div></div>

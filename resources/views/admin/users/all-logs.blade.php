@@ -52,7 +52,7 @@
                         {{-- اطلاعات هویت کاربر و فرستنده درخواست --}}
                         <div class="flex items-center justify-between border-b border-white/[0.03] pb-3">
                             <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
+                                <div class="w-8 h-8 rounded-xl  flex items-center justify-center text-xs font-bold text-white shadow-md" style="background:var(--primary);color:var(--on-primary)">
                                     {{ mb_substr($log->user->name ?? 'م', 0, 1, 'utf-8') }}
                                 </div>
                                 <div>

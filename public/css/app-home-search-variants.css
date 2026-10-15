@@ -1,0 +1,233 @@
+/* ═══════════ باکس جست‌وجوی صفحه‌ی خانه (طرح ۵) ═══════════
+   فقط توکن‌های theme-tokens.css؛ روز و شب هر دو از همان توکن‌ها می‌آیند. */
+
+.hsv-wrap {
+  width: 100%;
+  max-width: 842px;
+  margin: 28px auto 0;
+  direction: rtl;
+  position: relative;
+  z-index: 90;
+}
+.hsv-wrap *, .hsv-wrap *::before, .hsv-wrap *::after { box-sizing: border-box; }
+.hsv svg { display: block; width: 18px; height: 18px; flex: none; }
+
+/* ۳۰٪ عریض‌تر از باکس قبلی (۸۴۲ → ۱۰۹۵px) وقتی جا باشد؛ در عرض کوچک‌تر خودش را جمع می‌کند */
+.hsv-v5 { width: 100%; position: relative; }
+
+.hsv-card {
+  position: relative;
+  background: var(--vt-card);
+  border: 1px solid var(--vt-border);
+  border-radius: 18px;
+  padding: 22px 18px 18px;
+  box-shadow: var(--vt-shadow-card);
+}
+.hsv-hero-line {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--vt-text);
+}
+.hsv-typed { color: var(--vt-brand-ink); }
+.hsv-typed::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-right: 3px;
+  vertical-align: -.15em;
+  background: var(--vt-brand);
+  animation: hsv-caret 1s steps(1) infinite;
+}
+@keyframes hsv-caret { 50% { opacity: 0; } }
+
+.hsv-form { position: relative; }
+.hsv-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.hsv-bar:focus-within {
+  border-color: var(--vt-brand);
+  box-shadow: 0 0 0 1px var(--vt-brand), 0 0 26px var(--vt-brand-soft);
+}
+.hsv-lead { color: var(--vt-brand-ink); display: flex; flex: none; }
+.hsv-input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--vt-text);
+  font: inherit;
+  font-size: 15px;
+  text-align: right;
+  direction: rtl;
+}
+.hsv-input::placeholder { color: var(--vt-text-2); }
+
+/* دکمه ثابت می‌ماند؛ هاور روی باکس فقط متن را ۲۰٪ بزرگ می‌کند */
+.hsv-btn {
+  flex: none;
+  width: 112px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--vt-brand);
+  color: var(--vt-on-brand);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hsv-btn-txt {
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: font-size .2s ease;
+}
+.hsv-bar:hover .hsv-btn-txt { font-size: 15.6px; }
+
+/* نتایج زنده‌ی جست‌وجو (همان API صفحه‌ی خانه) */
+.hsv-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 60;
+  padding: 7px;
+  border-radius: 14px;
+  border: 1px solid var(--vt-border);
+  background: var(--vt-card);
+  box-shadow: var(--vt-shadow-pop);
+}
+.hsv-results[hidden] { display: none !important; }
+.hsv-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--vt-text);
+  text-decoration: none;
+}
+.hsv-result:hover, .hsv-result:focus-visible { background: var(--vt-surface); outline: 0; }
+.hsv-result img { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; flex: none; }
+.hsv-result b { display: block; font-size: 12px; }
+.hsv-result small { display: block; margin-top: 2px; color: var(--vt-text-2); font-size: 10px; }
+.hsv-all {
+  display: flex;
+  justify-content: center;
+  padding: 9px;
+  border-top: 1px solid var(--vt-border);
+  color: var(--vt-brand-ink);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.hsv-empty { padding: 12px; text-align: center; color: var(--vt-text-2); font-size: 11px; }
+
+/* ── نوار میانبرها: همیشه در حال حرکت، از چپ به راست، بدون توقف و بدون تکان در هاور ── */
+.hsv-marquee {
+  margin-top: 18px;
+  overflow: hidden;
+  direction: ltr;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+.hsv-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: hsv-marquee 70s linear infinite;
+}
+/* هاور روی نوار: توقف؛ خروج از هاور: ادامه‌ی حرکت از همان نقطه */
+.hsv-marquee:hover .hsv-marquee-track { animation-play-state: paused; }
+.hsv-marquee-group {
+  display: flex;
+  gap: 10px;
+  padding-inline-end: 10px;
+  flex: none;
+}
+@keyframes hsv-marquee {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+.hsv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 15px;
+  border-radius: 999px;
+  background: var(--vt-surface);
+  border: 1px solid var(--vt-border);
+  color: var(--vt-text);
+  direction: rtl;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.hsv-chip svg { width: 16px; height: 16px; color: var(--vt-brand-ink); }
+.hsv-chip:hover,
+.hsv-chip:focus-visible {
+  background: var(--vt-brand);
+  border-color: var(--vt-brand);
+  color: var(--vt-on-brand);
+  outline: 0;
+}
+.hsv-chip:hover svg,
+.hsv-chip:focus-visible svg { color: var(--vt-on-brand); }
+
+/* میانبرهای ویژه (کیفیت و کارکتر شیت): ظاهر متفاوت با حاشیه‌ی درخشان و متن تاکیدی */
+.hsv-chip.is-featured {
+  background: var(--vt-brand-soft);
+  border: 1px solid var(--vt-brand);
+  color: var(--vt-brand-ink);
+  font-weight: 800;
+  box-shadow: 0 0 0 3px var(--vt-brand-tint), 0 0 18px var(--vt-brand-soft);
+}
+.hsv-chip.is-featured svg { color: var(--vt-brand-ink); }
+.hsv-chip.is-featured:hover,
+.hsv-chip.is-featured:focus-visible {
+  background: var(--vt-brand);
+  border-color: var(--vt-brand);
+  color: var(--vt-on-brand);
+}
+.hsv-chip.is-featured:hover svg,
+.hsv-chip.is-featured:focus-visible svg { color: var(--vt-on-brand); }
+
+/* ── واکنش‌گرا: موبایل همان عرض صفحه ── */
+@media (max-width: 639px) {
+  .hsv-wrap { margin-top: 20px; }
+  .hsv-card { padding: 16px 12px 12px; }
+  .hsv-bar { min-height: 48px; padding: 0 4px 0 10px; }
+  .hsv-input { font-size: 14px; }
+  .hsv-btn { width: 92px; height: 36px; }
+  .hsv-btn-txt { font-size: 12px; }
+  .hsv-bar:hover .hsv-btn-txt { font-size: 14.4px; }
+  .hsv-hero-line { font-size: 17px; }
+  .hsv-chip { height: 32px; padding: 0 11px; font-size: 11px; }
+  .hsv-chip svg { width: 14px; height: 14px; }
+  .hsv-marquee-group { gap: 8px; padding-inline-end: 8px; }
+  .hsv-marquee-track { animation-duration: 55s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hsv-marquee-track, .hsv-typed::after { animation: none; }
+  .hsv-marquee { overflow-x: auto; }
+}

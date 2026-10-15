@@ -17,7 +17,7 @@
           <a href="/admin/products" style="display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;border-radius:8px;font-size:12px;font-weight:600;background:var(--s1);border:1px solid var(--b1);color:var(--text2);text-decoration:none;">
             <i class="fa-solid fa-list text-[10px]"></i> لیست محصولات
           </a>
-          <a href="/admin/products/create" style="display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;border-radius:8px;font-size:12px;font-weight:600;background:var(--accent);color:#fff;text-decoration:none;border:none;">
+          <a href="/admin/products/create" style="display:inline-flex;align-items:center;gap:6px;padding:0 12px;height:32px;border-radius:8px;font-size:12px;font-weight:600;background:var(--accent);color:var(--on-accent);text-decoration:none;border:none;">
             <i class="fa-solid fa-plus text-[10px]"></i> محصول جدید
           </a>
         </div>
@@ -92,7 +92,7 @@
           @foreach($topProds as $p)
           <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }}">
             <div style="width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:{{ $p['rankColor'] }}22;color:{{ $p['rankColor'] }};flex-shrink:0;">{{ $p['rank'] }}</div>
-            <div style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(160,122,245,.08);">{{ $p['emoji'] }}</div>
+            <div style="width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:color-mix(in srgb, var(--accent) 8%, transparent);">{{ $p['emoji'] }}</div>
             <div style="flex:1;min-width:0;">
               <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $p['name'] }}</div>
               <div style="font-size:9.5px;color:var(--text3);">{{ $p['cat'] }}</div>
@@ -144,7 +144,7 @@
               <tr style="border-bottom:1px solid var(--b1);{{ $loop->last ? 'border-bottom:none;' : '' }} {{ ($pr['status']??'')==='غیرفعال' ? 'opacity:.5;' : '' }}" onmouseover="this.style.background='rgba(255,255,255,.012)'" onmouseout="this.style.background=''">
                 <td style="padding:10px 12px;">
                   <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:26px;height:26px;border-radius:7px;background:rgba(160,122,245,.1);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ $pr['emoji'] }}</div>
+                    <div style="width:26px;height:26px;border-radius:7px;background:color-mix(in srgb, var(--accent) 10%, transparent);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ $pr['emoji'] }}</div>
                     <div>
                       <div style="font-size:12.5px;font-weight:700;color:var(--text);">{{ $pr['name'] }}</div>
                       <div style="font-size:9.5px;color:var(--text3);">{{ $pr['cat'] }}</div>

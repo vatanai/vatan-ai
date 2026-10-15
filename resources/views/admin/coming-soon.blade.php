@@ -14,7 +14,7 @@
       <div style="font-size:13px;color:var(--text-soft);max-width:420px;line-height:1.9;">
         این قسمت از پنل مدیریت در حال توسعه است و به‌زودی فعال می‌شود. فایل بک‌اند این بخش هنوز پیاده‌سازی نشده.
       </div>
-      <a href="{{ route('admin.dashboard') }}" style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:12.5px;font-weight:700;background:var(--primary);color:var(--accent);text-decoration:none;">
+      <a href="{{ route('admin.dashboard') }}" style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:12.5px;font-weight:700;background:var(--primary);color:var(--on-primary);text-decoration:none;">
         <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i> بازگشت به مرکز فرماندهی
       </a>
     </div>
