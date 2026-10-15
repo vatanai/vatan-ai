@@ -69,7 +69,7 @@ class CalendarController extends Controller
             'publish_date' => 'nullable|date', 'publish_time' => 'nullable|string|max:10', 'format' => 'nullable|in:ریلز,اسلایدی,پست',
             'pillar' => 'nullable|string|max:60', 'sector' => 'nullable|string|max:80', 'goal' => 'nullable|string|max:60', 'audience' => 'nullable|string|max:255',
             'idea' => 'nullable|string|max:3000', 'hook' => 'nullable|string|max:255', 'cta' => 'nullable|string|max:255', 'cover_text' => 'nullable|string|max:255',
-            'style_id' => 'nullable|integer', 'music_id' => 'nullable|integer', 'engine' => 'nullable|string|max:40', 'build_location' => 'nullable|in:mac,server',
+            'style_id' => 'nullable|integer', 'music_id' => 'nullable|integer', 'engine' => 'nullable|string|max:255', 'build_location' => 'nullable|in:mac,server',
             'product' => 'nullable|string|max:200', 'product_url' => 'nullable|string|max:255', 'note' => 'nullable|string|max:2000', 'experiment' => 'nullable|string|max:255',
             'stories_text' => 'nullable|string|max:3000', 'caption' => 'nullable|string|max:5000', 'hashtags' => 'nullable|string|max:1000',
             'keywords_text' => 'nullable|string|max:300', 'visual_prompt' => 'nullable|string|max:3000', 'scenes_json' => 'nullable|string|max:60000',

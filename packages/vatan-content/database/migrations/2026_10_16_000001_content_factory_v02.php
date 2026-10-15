@@ -48,7 +48,7 @@ return new class extends Migration
             'product_url' => fn ($t) => $t->string('product_url')->nullable(),
             'style_id' => fn ($t) => $t->unsignedBigInteger('style_id')->nullable(),
             'music_id' => fn ($t) => $t->unsignedBigInteger('music_id')->nullable(),
-            'engine' => fn ($t) => $t->string('engine', 40)->nullable(),
+            'engine' => fn ($t) => $t->string('engine', 255)->nullable(),
             'build_location' => fn ($t) => $t->string('build_location', 10)->default('mac'),
             'template' => fn ($t) => $t->string('template', 60)->nullable(),
             'duration_sec' => fn ($t) => $t->unsignedSmallInteger('duration_sec')->nullable(),
