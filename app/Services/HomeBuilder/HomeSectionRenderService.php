@@ -5,6 +5,7 @@ namespace App\Services\HomeBuilder;
 use App\Models\Category;
 use App\Models\HomeSection;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -14,6 +15,8 @@ use Illuminate\Support\Collection;
  */
 class HomeSectionRenderService
 {
+    private const PRODUCT_RATIO = 60;
+
     /** Scoped to prepareMany only; never retained between page renders. */
     private ?Collection $manualProducts = null;
 
@@ -213,15 +216,28 @@ class HomeSectionRenderService
                 $query->latest();
         }
 
-        $products = $stableRandom ? $query->get() : $query->limit($limit)->get();
-        if ($stableRandom) {
-            $products = $products
-                ->sortBy(fn (Product $product) => md5('home:' . $section->id . ':' . $product->id))
-                ->take($limit)
-                ->values();
-        }
+        // هر گروه جداگانه واکشی می‌شود؛ محدودکردن Query قبل از تفکیک باعث می‌شد
+        // اگر محصولات جدیدتر عمدتاً پرتره باشند، سهم پروداکتی حتی با وجود موجودی کافی صفر شود.
+        $fetchGroup = function (Builder $groupQuery) use ($stableRandom, $section, $limit): Collection {
+            $products = $stableRandom ? $groupQuery->get() : $groupQuery->limit($limit)->get();
 
-        return $this->mixProductModes($products, 80);
+            return $stableRandom
+                ? $products
+                    ->sortBy(fn (Product $product) => md5('home:' . $section->id . ':' . $product->id))
+                    ->take($limit)
+                    ->values()
+                : $products->values();
+        };
+
+        $productItems = $fetchGroup((clone $query)->where('product_mode', Product::MODE_PRODUCT));
+        $portraitItems = $fetchGroup((clone $query)->where(function (Builder $builder) {
+            $builder->whereNull('product_mode')->orWhere('product_mode', '!=', Product::MODE_PRODUCT);
+        }));
+
+        return $this->mixProductModes(
+            $productItems->concat($portraitItems),
+            self::PRODUCT_RATIO,
+        )->take($limit)->values();
     }
 
     /**
@@ -298,7 +314,7 @@ class HomeSectionRenderService
         return collect($filled);
     }
 
-    /** نسبت نمایشی محصول‌های پروداکتی به پرتره‌ای برای سکشن‌های خودکار هوم. */
+    /** نسبت نمایشی ۶۰/۴۰ محصول‌های پروداکتی به پرتره‌ای برای سکشن‌های خودکار هوم. */
     protected function mixProductModes(Collection $products, int $productRatio): Collection
     {
         if ($products->isEmpty()) {

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Cache;
 
 class TrendsService
 {
+    private const PRODUCT_RATIO = 65;
+
     public function buildPage(int $limit = 24, int $cacheTtl = 300, int $pageVersion = 1, int $page = 1): array
     {
         $limit = max(6, min(100, $limit));
@@ -24,7 +26,7 @@ class TrendsService
         }
 
         $payload = Cache::remember(
-            "app:trends:feed:v5:{$pageVersion}",
+            "app:trends:feed:v6:{$pageVersion}",
             now()->addSeconds($cacheTtl),
             fn (): array => $this->buildUncachedPage($pageVersion),
         );
@@ -46,8 +48,8 @@ class TrendsService
 
         return [
             // همهٔ محصولات فعال در فید هستند؛ ترتیب داخل هر گروه تصادفی اما
-            // با نسخهٔ صفحه و شناسهٔ محصول پایدار است و نسبت هدف ۸۰/۲۰ دارد.
-            'trendProducts' => $this->mixProductModes($productItems, $portraitItems, 80)
+            // با نسخهٔ صفحه و شناسهٔ محصول پایدار است و نسبت هدف ۶۵/۳۵ دارد.
+            'trendProducts' => $this->mixProductModes($productItems, $portraitItems, self::PRODUCT_RATIO)
                 ->map(fn (Product $product) => $this->card($product))
                 ->filter()
                 ->values()
@@ -88,7 +90,7 @@ class TrendsService
         ];
     }
 
-    /** محصول پروداکتی را در حدود ۸۰٪ جایگاه‌ها قرار می‌دهد و همهٔ آیتم‌ها را نگه می‌دارد. */
+    /** محصول پروداکتی را در حدود ۶۵٪ جایگاه‌ها قرار می‌دهد و همهٔ آیتم‌ها را نگه می‌دارد. */
     protected function mixProductModes(Collection $productItems, Collection $portraitItems, int $productRatio): Collection
     {
         if ($productItems->isEmpty() || $portraitItems->isEmpty()) {

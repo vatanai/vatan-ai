@@ -24,6 +24,8 @@ use Illuminate\Support\Collection;
  */
 class ExploreFeedService
 {
+    private const PRODUCT_RATIO = 65;
+
     public function __construct(protected ProductSearchService $productSearch)
     {
     }
@@ -256,9 +258,9 @@ class ExploreFeedService
         })->sortByDesc('sort_key')->values();
 
         $ranked = $this->mixNewProducts($ranked, $newProductRatio);
-        // تمرکز فعلی محصول: حدود ۸۰٪ جایگاه‌های فید از محصولات پروداکتی
+        // تمرکز فعلی محصول: حدود ۶۵٪ جایگاه‌های فید از محصولات پروداکتی
         // پر می‌شود؛ اگر یک نوع کمتر باشد، باقی محصولات حذف نمی‌شوند.
-        $ranked = $this->mixProductModes($ranked, 80);
+        $ranked = $this->mixProductModes($ranked, self::PRODUCT_RATIO);
 
         return $ranked->map(function ($row) {
             $data = $this->resolveDisplayData('product', $row['product']);
@@ -611,6 +613,7 @@ class ExploreFeedService
                 'name' => $model->name_fa,
                 'tag' => $model->category ?: $model->subcategory ?: 'وطن AI',
                 'link' => route('app.product', $model->route_slug),
+                'product_mode' => $model->product_mode ?: Product::MODE_PORTRAIT,
                 '_allowed_sizes' => $this->productAllowedSizes($model),
             ];
         }
@@ -650,6 +653,28 @@ class ExploreFeedService
     /** اندازهٔ کاشی را از قاب‌های مجاز محصول به‌صورت پایدار انتخاب می‌کند. */
     protected function assignTileSizes(array $tiles, FeedSetting $setting): array
     {
+        $layoutStyle = FeedSetting::effectiveLayoutStyle($setting->layout_style);
+        $sequence = (array) (FeedSetting::DISPLAY_PATTERNS[$layoutStyle]['sequence'] ?? []);
+
+        // الگوی اصلی اکسپلور یک چرخهٔ قطعی است. اندازه‌های انتخابی هر محصول فقط
+        // برای الگوهای آزاد استفاده می‌شوند تا تنظیم داشبورد واقعاً بر خروجی غالب باشد.
+        if ($sequence !== []) {
+            $tiles = array_values($tiles);
+            foreach ($tiles as $index => &$tile) {
+                $tile['size'] = $sequence[$index % count($sequence)];
+            }
+            unset($tile);
+
+            return array_map(function (array $tile) {
+                $tile['allowed_sizes'] = $tile['_allowed_sizes'] ?? [
+                    'size-1x1', 'size-wide', 'size-tall', 'size-big',
+                ];
+                unset($tile['_pinned'], $tile['_campaign'], $tile['_product_id'], $tile['_allowed_sizes']);
+
+                return $tile;
+            }, $tiles);
+        }
+
         $weights = $setting->tile_weights ?: FeedSetting::LAYOUT_PRESETS['classic'];
         $pool = [];
         foreach ($weights as $size => $weight) {

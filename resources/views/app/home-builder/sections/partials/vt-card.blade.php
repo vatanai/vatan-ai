@@ -10,7 +10,7 @@
     : ($vtIsVideo ? ['ویدیو', 'vid'] : null));
   $vtMeta = $product->subcategory ?: $product->category;
 @endphp
-<a class="vt-card vt-card--{{ $vtRatio }}" href="{{ route('app.product', $product->route_slug) }}">
+<a class="vt-card vt-card--{{ $vtRatio }}" href="{{ route('app.product', $product->route_slug) }}" data-product-mode="{{ $product->product_mode ?: \App\Models\Product::MODE_PORTRAIT }}">
   @if($vtBadge)<span class="vt-badge vt-badge--{{ $vtBadge[1] }}">{{ $vtBadge[0] }}</span>@endif
   <span class="vt-card-media">
     <img src="{{ $product->displayImageUrl() }}" alt="{{ $product->name_fa }}" loading="{{ !empty($eager) ? 'eager' : 'lazy' }}" decoding="async">

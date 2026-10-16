@@ -40,13 +40,13 @@ class FeedSetting extends Model
      */
     public const DISPLAY_PATTERNS = [
         'excel_11' => [
-            'label' => 'الگوی اکسل ۱۱ ردیفی',
-            'description' => 'همان معماری تأییدشده؛ چرخه‌ی ۱۱ ردیفی و ۲۲ کارت',
-            'rows' => 11,
+            'label' => 'چرخهٔ ثابت محصولات',
+            'description' => 'تکرار دقیق ۱×۱، ۲×۱، ۲×۲، ۲×۱',
+            'rows' => 4,
+            'sequence' => ['size-1x1', 'size-wide', 'size-big', 'size-wide'],
             'anchors' => [
-                ['size-wide', 1, 2], ['size-tall', 2, 1], ['size-big', 4, 2],
-                ['size-wide', 7, 1], ['size-tall', 8, 1], ['size-tall', 8, 3],
-                ['size-big', 10, 1],
+                ['size-1x1', 1, 1], ['size-wide', 1, 2],
+                ['size-big', 2, 1], ['size-wide', 4, 1],
             ],
         ],
         'balanced' => [

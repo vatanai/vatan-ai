@@ -62,7 +62,7 @@
   <section class="xp-grid-section">
     <div class="xp-grid">
       @forelse ($xTiles as $tile)
-        <a href="{{ $tile['link'] ?? '#' }}" class="xp-tile {{ $tile['size'] }} {{ ($tile['type'] ?? 'product') === 'campaign' ? 'xp-tile--campaign' : '' }}" data-tile-size="{{ $tile['size'] }}" data-original-tile-size="{{ $tile['size'] }}" data-tile-type="{{ $tile['type'] ?? 'product' }}" data-allowed-sizes='@json($tile['allowed_sizes'] ?? [$tile['size']])'>
+        <a href="{{ $tile['link'] ?? '#' }}" class="xp-tile {{ $tile['size'] }} {{ ($tile['type'] ?? 'product') === 'campaign' ? 'xp-tile--campaign' : '' }}" data-tile-size="{{ $tile['size'] }}" data-original-tile-size="{{ $tile['size'] }}" data-tile-type="{{ $tile['type'] ?? 'product' }}" data-product-mode="{{ $tile['product_mode'] ?? '' }}" data-allowed-sizes='@json($tile['allowed_sizes'] ?? [$tile['size']])'>
           @if($tile['video'])
             <video class="xp-tile-media" src="{{ $tile['src'] }}" poster="{{ $tile['poster'] ?? '' }}" autoplay muted loop playsinline preload="metadata"></video>
           @else

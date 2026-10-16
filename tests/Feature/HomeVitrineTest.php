@@ -151,6 +151,35 @@ class HomeVitrineTest extends TestCase
         $this->assertStringNotContainsString('ویدیوهای کم', $this->get('/app/home')->getContent());
     }
 
+    public function test_automatic_home_sections_keep_a_sixty_forty_product_mix_before_limiting(): void
+    {
+        $this->clearHome();
+        \App\Models\ProductShotSetting::current()->update(['enabled' => true, 'audience' => 'public']);
+        \App\Models\ProductShotSetting::forgetCache();
+
+        foreach (range(1, 10) as $i) {
+            $this->product("mix-product-$i", null, ['product_mode' => Product::MODE_PRODUCT]);
+        }
+        // پرتره‌ها عمداً دیرتر ساخته می‌شوند تا ثابت شود limit قبل از تفکیک اعمال نمی‌شود.
+        foreach (range(1, 10) as $i) {
+            $this->product("mix-portrait-$i", null, ['product_mode' => Product::MODE_PORTRAIT]);
+        }
+
+        $section = $this->section('vt_row', [
+            'source' => 'latest',
+            'sort' => 'latest',
+            'limit' => 10,
+            'avoid_duplicates' => false,
+        ]);
+
+        $products = app(\App\Services\HomeBuilder\HomeSectionRenderService::class)
+            ->prepare($section)['products'];
+
+        $this->assertCount(10, $products);
+        $this->assertSame(6, $products->where('product_mode', Product::MODE_PRODUCT)->count());
+        $this->assertSame(4, $products->where('product_mode', Product::MODE_PORTRAIT)->count());
+    }
+
     public function test_layout_migration_hides_old_sections_and_rolls_back(): void
     {
         $this->clearHome();
