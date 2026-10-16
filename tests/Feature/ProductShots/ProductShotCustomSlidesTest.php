@@ -67,8 +67,17 @@ class ProductShotCustomSlidesTest extends TestCase
             ->assertOk()
             ->assertSee('عکس ورودی')
             ->assertSee('data-add-custom-slide', false)
+            ->assertSee('ps-shot-optimized-frame', false)
+            ->assertSee('data-shot-target-kb="105"', false)
+            ->assertSee('data-preview-collage', false)
+            ->assertSee('value="1x1" checked', false)
             ->assertSee('sp-custom-slide-template', false)
             ->assertDontSee('انتخاب پیش‌فرض');
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('admin.product-shots.products.preview-draft'))
+            ->assertOk()
+            ->assertSee('data-product-pack', false);
 
         $this->actingAs($this->admin, 'admin')->postJson(route('admin.product-shots.products.store'), $this->payload([
             'input_image' => $this->productImage('input.jpg'),
@@ -100,7 +109,9 @@ class ProductShotCustomSlidesTest extends TestCase
         $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.index'))->assertOk()->assertDontSee('سنگ خیس');
         $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))->assertOk()->assertDontSee('سنگ خیس');
         $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create', $product))
-            ->assertOk()->assertSee('سنگ خیس')->assertSee('اختصاصی')->assertSee('پرامپت ساخت این اسلاید');
+            ->assertOk()->assertSee('سنگ خیس')->assertSee('اختصاصی')->assertSee('پرامپت ساخت این اسلاید')
+            ->assertSee('ps-preview-collage has-single-image', false)
+            ->assertSee('is-filled-ratio-preview', false);
 
         // صفحه‌ی محصول: عکس ورودی در گالری + مقایسه؛ صفحه‌ی ساخت: بدون عکس ورودی و بدون پیش‌انتخاب.
         $inputUrl = 'storage/' . $product->shot_settings['input_image'];
@@ -113,6 +124,24 @@ class ProductShotCustomSlidesTest extends TestCase
         $create = $this->actingAs($user)->get(route('app.crepro', ['product' => $product->short_code]))->assertOk();
         $this->assertStringNotContainsString($inputUrl, $create->getContent());
         $this->assertStringNotContainsString('"is_default":true', $create->getContent());
+    }
+
+    public function test_publishing_uses_default_explore_frame_if_browser_omits_checkbox(): void
+    {
+        $this->enableShots('admins');
+        $payload = $this->payload();
+        unset($payload['explore_tiles']);
+        $payload['new_slides'] = [
+            'nDefault' => ['name' => 'اسلاید تست', 'prompt' => 'A clear product photo on a clean studio background.', 'enabled' => '1', 'allowed_aspect_ratios' => ['4:5']],
+        ];
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('admin.product-shots.products.store'), $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $product = Product::query()->where('name_en', 'Custom Serum Pack')->firstOrFail();
+        $this->assertSame(['1x1'], $product->explore_tiles);
     }
 
     public function test_updating_keeps_input_image_and_removing_a_custom_slide_deletes_its_hidden_library_row(): void

@@ -11,6 +11,31 @@
   $paths = array_values(array_filter((array) ($paths ?? [])));
 @endphp
 <div class="image-optimizer-group flex flex-col gap-2 mb-4 {{ $variant === 'product-shot' ? 'image-optimizer-group--product-shot' : '' }}" data-input="{{ $inputId }}" data-optimizer-variant="{{ $variant }}" data-empty-label="{{ $uploadLabel }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
+  @if($variant === 'product-shot')
+  <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }} @if($required)<span class="text-[var(--red)] mr-0.5">*</span>@endif</label>
+  <div class="ps-shot-optimizer-layout" dir="ltr">
+    <div class="ps-shot-optimizer-controls" dir="rtl">
+      <div class="ps-shot-optimizer-actions">
+        <button type="button" class="btn-pro btn-pro-primary ps-shot-upload-btn" onclick="document.getElementById('{{ $inputId }}').click()"><i class="fa-solid fa-image"></i><span>{{ $uploadLabel }}</span></button>
+        <span class="ps-shot-optimizer-status image-optimize-status" aria-live="polite"></span>
+      </div>
+      <div class="ps-shot-size-options" role="group" aria-label="حجم تصویر بهینه‌شده">
+        @foreach([50, 80, 105, 150, 200] as $size)
+          <button type="button" class="ps-shot-size-choice {{ $size === 105 ? 'is-selected' : '' }}" data-shot-target-kb="{{ $size }}" onclick="applyProductShotTarget(this, {{ $loop->index }})" @if($size !== 105) disabled @endif>
+            <strong data-shot-size-label>حدود {{ $size }} کیلوبایت</strong>
+          </button>
+        @endforeach
+      </div>
+      <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" accept="image/jpeg,image/png,image/webp" class="hidden" @if($variant === 'product-shot') data-shot-sample-file @endif @if($required && empty($paths)) required @endif>
+    </div>
+    <div class="ps-shot-optimized-frame" aria-label="پیش‌نمایش تصویر بهینه‌شده">
+      <img class="ps-shot-optimized-image" alt="پیش‌نمایش تصویر بهینه‌شده" hidden>
+      <span class="ps-shot-optimized-empty"><i class="fa-regular fa-image"></i><small>پیش‌نمایش تصویر</small></span>
+      <span class="ps-shot-optimized-loading" hidden><i class="fa-solid fa-spinner fa-spin"></i><small>در حال بهینه‌سازی</small></span>
+      <span class="ps-shot-optimized-size" hidden></span>
+    </div>
+  </div>
+  @else
   <label class="text-xs font-semibold text-[var(--text2)]">{{ $title }} @if($required)<span class="text-[var(--red)] mr-0.5">*</span>@endif</label>
   <div class="upload-zone border-2 border-dashed border-[var(--b2)] rounded-xl p-5 text-center cursor-pointer bg-[var(--s1)] hover:border-[var(--accent)] transition-colors" onclick="document.getElementById('{{ $inputId }}').click()">
     <i class="fa-solid fa-images text-xl text-[var(--text3)] mb-1 block"></i>
@@ -83,4 +108,5 @@
       </div>
     </div>
   </div>
+  @endif
 </div>

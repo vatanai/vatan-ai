@@ -521,7 +521,7 @@ class ProductShotAdminController extends Controller
             'gallery_layout' => ['nullable', Rule::in(['grid', 'masonry', 'slider'])],
             'card_label_enabled' => ['nullable', 'boolean'],
             'card_label' => ['nullable', 'string', 'max:100'],
-            'explore_tiles' => ['nullable', 'array', 'min:1'],
+            'explore_tiles' => ['nullable', 'array'],
             'explore_tiles.*' => [Rule::in(['1x1', '2x2', '1x2', '2x1'])],
         ], [
             'name_fa.required' => 'نام فارسی محصول را وارد کنید.',
@@ -553,6 +553,12 @@ class ProductShotAdminController extends Controller
             'product_sheet_size.*' => 'اندازه پروداکت‌شیت معتبر نیست.',
         ]);
 
+        // ارسال‌نشدن چک‌باکس‌ها نباید ثبت را متوقف کند؛ قاب مربع پیش‌فرض می‌ماند.
+        $data['explore_tiles'] = array_values(array_unique((array) ($data['explore_tiles'] ?? [])));
+        if (! $data['explore_tiles']) {
+            $data['explore_tiles'] = ['1x1'];
+        }
+
         $qualityKeys = array_keys((array) config('product_shots.quality_levels'));
         foreach ($qualityKeys as $quality) {
             if (empty($data['quality_models'][$quality]['primary_id'])) {
@@ -581,10 +587,6 @@ class ProductShotAdminController extends Controller
         if ($enabled->contains(fn ($row) => empty($row['allowed_aspect_ratios'])) || $newEnabled->contains(fn ($row) => empty($row['allowed_aspect_ratios']))) {
             throw ValidationException::withMessages(['shots' => 'برای هر اسلاید فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.']);
         }
-        if ($publishing && empty($data['explore_tiles'])) {
-            throw ValidationException::withMessages(['explore_tiles' => 'برای انتشار، حداقل یک قاب اکسپلور انتخاب کنید.']);
-        }
-
         return $data;
     }
 

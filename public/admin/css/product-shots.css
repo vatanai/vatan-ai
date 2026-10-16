@@ -174,6 +174,7 @@
 .ps-slide-image-optimizer .image-volume-choice>span{display:-webkit-box!important;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;min-height:2.7em;align-items:flex-start;gap:4px;font-size:9px!important;line-height:1.45}
 .ps-slide-image-optimizer .image-volume-choice>span>i{flex:0 0 auto;margin-top:1px}
 .ps-slide-image-optimizer .image-volume-choice>strong{margin-top:3px;font-size:9.5px;line-height:1.35}
+.ps-slide-image-optimizer .image-optimizer-group--product-shot{margin:0;padding:0;border:0;background:transparent}
 .ps-shot-detail{padding:14px;border-top:1px solid var(--divider);background:var(--input-bg)}
 .ps-shot-editor.is-input-image-slide .ps-slide-image-optimizer,.ps-shot-editor.is-input-image-slide .ps-slide-prompt,.ps-shot-editor.is-input-image-slide .ps-shot-desc,.ps-shot-editor.is-input-image-slide .ps-tags,.ps-shot-editor.is-input-image-slide [data-shot-enabled-label],.ps-shot-editor.is-input-image-slide [data-shot-toggle],.ps-shot-editor.is-input-image-slide .ps-shot-detail{display:none!important}
 .ps-option-switches{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;color:var(--text-soft);font-size:10px}
@@ -196,7 +197,26 @@
 .ps-explore-preview>[data-preview-frame]{margin:0;transition:opacity .16s}.ps-explore-preview>[data-preview-frame].is-disabled{opacity:.38}
 .ps-explore-preview figcaption{margin-top:6px;text-align:center;color:var(--text-soft);font-size:10px}
 .ps-preview-collage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--input-bg)}
-.ps-preview-collage img{width:100%;height:100%;min-height:0;object-fit:cover}.ps-preview-collage>span{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:15px;text-align:center;color:var(--text-soft)}.ps-preview-collage>span i{font-size:24px}.ps-preview-collage>span small{font-size:9px;line-height:1.8}
+.ps-preview-collage img{width:100%;height:100%;min-height:0;object-fit:contain}.ps-preview-collage.has-single-image{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.ps-preview-collage.has-single-image img{grid-column:1;grid-row:1}.ps-preview-collage>span{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:15px;text-align:center;color:var(--text-soft)}.ps-preview-collage>span i{font-size:24px}.ps-preview-collage>span small{font-size:9px;line-height:1.8}
+.ps-preview-collage.is-filled-ratio-preview img{object-fit:cover}
+.image-optimizer-group--product-shot{margin:0;padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--card-bg)}
+.ps-shot-optimizer-layout{display:grid;grid-template-columns:minmax(0,1fr) 190px;align-items:stretch;gap:14px}
+.ps-shot-optimizer-controls{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
+.ps-shot-optimizer-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ps-shot-optimizer-status{font-size:9px;line-height:1.8;color:var(--text-soft)}
+.ps-shot-size-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.ps-shot-size-choice{min-height:50px;padding:7px 4px;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text-main);font:inherit;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.ps-shot-size-choice strong{display:block;font-size:9px;line-height:1.5;font-weight:700}
+.ps-shot-size-choice:hover:not(:disabled),.ps-shot-size-choice.is-selected{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 9%,var(--card-bg));color:var(--primary)}
+.ps-shot-size-choice:disabled{opacity:.55;cursor:wait}
+.ps-shot-optimized-frame{position:relative;display:grid;place-items:center;width:100%;min-height:190px;aspect-ratio:1/1;overflow:hidden;border:1px solid var(--border);border-radius:12px;background:var(--input-bg);color:var(--text-soft)}
+.ps-shot-optimized-frame>img{width:100%;height:100%;object-fit:contain}
+.ps-shot-optimized-frame [hidden]{display:none!important}
+.ps-shot-optimized-empty,.ps-shot-optimized-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--input-bg);font-size:24px}
+.ps-shot-optimized-empty small,.ps-shot-optimized-loading small{font-size:9px}
+.ps-shot-optimized-size{position:absolute;bottom:7px;left:7px;padding:4px 7px;border:1px solid var(--border);border-radius:8px;background:var(--card-bg);color:var(--text-main);font-size:9px}
+@media(max-width:700px){.ps-shot-optimizer-layout{grid-template-columns:minmax(0,1fr) 130px;gap:9px}.ps-shot-optimized-frame{min-height:130px}.ps-shot-size-options{gap:4px}.ps-shot-size-choice{min-height:44px;padding:5px 2px}.ps-shot-size-choice strong{font-size:8px}}
+@media(max-width:480px){.ps-shot-optimizer-layout{grid-template-columns:1fr}.ps-shot-optimized-frame{grid-row:1;max-width:230px;min-height:180px;justify-self:center}.ps-shot-size-options{grid-template-columns:repeat(5,minmax(0,1fr))}.ps-shot-optimizer-actions .btn-pro{min-height:36px;padding:7px 10px}}
 @media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1;justify-content:space-between}.ps-shot-summary .ps-thumb{width:70px}.ps-slide-prompt{grid-template-columns:1fr}.ps-slide-prompt .btn-pro{justify-self:start}}
 @media(max-width:640px){.ps-slide-manager-bar{align-items:flex-start;flex-direction:column}.ps-slide-title-row{grid-template-columns:30px auto 1fr}.ps-slide-name-field{grid-column:1/-1}.ps-shot-removed-state{align-items:flex-start;flex-wrap:wrap}.ps-shot-removed-state .btn-pro{width:100%;justify-content:center}}
 @media(max-width:560px){.ps-slide-image-optimizer{margin-right:10px;margin-left:10px;padding:11px}.ps-slide-image-optimizer .upload-zone{align-items:flex-start;flex-wrap:wrap}.ps-slide-image-optimizer .image-preview-strip{width:100%;max-width:none;justify-content:flex-start;margin-right:50px}}

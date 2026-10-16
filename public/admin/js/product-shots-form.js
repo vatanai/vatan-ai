@@ -471,6 +471,17 @@
   function bindShotRow(row) {
       var enabled = one('[data-shot-enabled]', row);
       if (row.classList.contains('is-removed')) setShotRemoved(row, true, true);
+      var savedSample = one('[data-shot-thumb] img', row);
+      if (savedSample) {
+        var clearBrokenSample = function () {
+          var thumb = one('[data-shot-thumb]', row);
+          if (thumb && !thumb.querySelector('img')) return;
+          if (thumb) thumb.innerHTML = '<i class="fa-solid fa-plus"></i>';
+          refreshSummary();
+        };
+        savedSample.addEventListener('error', clearBrokenSample, {once: true});
+        if (savedSample.complete && !savedSample.naturalWidth) clearBrokenSample();
+      }
       var prompt = one('[data-shot-prompt]', row);
       if (prompt) { updateCharCount(prompt); prompt.addEventListener('input', function () { updateCharCount(prompt); }); }
       enabled.addEventListener('change', function () { row.classList.toggle('is-off', !enabled.checked); refreshSummary(); });
@@ -696,6 +707,7 @@
     var imageUrls = slides.map(function (slide) { return slide.image; }).filter(Boolean).slice(0, 4);
     all('[data-preview-collage]', form).forEach(function (collage) {
       collage.innerHTML = '';
+      collage.classList.toggle('has-single-image', imageUrls.length === 1);
       if (!imageUrls.length) {
         var empty = document.createElement('span');
         var icon = document.createElement('i');
@@ -708,6 +720,18 @@
       imageUrls.forEach(function (url) {
         var image = document.createElement('img');
         image.src = url; image.alt = ''; collage.appendChild(image);
+        image.addEventListener('error', function () {
+          image.remove();
+          var remainingImages = collage.querySelectorAll('img').length;
+          collage.classList.toggle('has-single-image', remainingImages === 1);
+          if (remainingImages) return;
+          var empty = document.createElement('span');
+          var icon = document.createElement('i');
+          var copy = document.createElement('small');
+          icon.className = 'fa-solid fa-images';
+          copy.textContent = 'تصویر نمونه در دسترس نیست';
+          empty.appendChild(icon); empty.appendChild(copy); collage.appendChild(empty);
+        }, {once: true});
       });
     });
   }
@@ -733,6 +757,13 @@
       imageSlides.forEach(function (slide) {
         var image = doc.createElement('img');
         image.src = slide.image; image.alt = ''; hero.appendChild(image);
+        image.addEventListener('error', function () {
+          image.remove();
+          if (!hero.querySelector('img')) {
+            hero.classList.add('pp-hero-collage-empty');
+            hero.textContent = 'پیش‌نمایش تصویر در دسترس نیست';
+          }
+        }, {once: true});
       });
     }
 

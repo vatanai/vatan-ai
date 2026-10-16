@@ -22,7 +22,7 @@
     <div class="ps-explore-preview" data-explore-preview>
       @foreach($tileDefinitions as $key => [$label, $ratio])
         <label class="ps-frame-option {{ in_array($key, $currentTiles, true) ? '' : 'is-disabled' }}" data-preview-frame="{{ $key }}">
-          <div class="ps-preview-collage" style="aspect-ratio:{{ $ratio }}" data-preview-collage>
+          <div class="ps-preview-collage {{ count($collage) === 1 ? 'has-single-image' : '' }} {{ in_array($key, ['1x2', '2x1'], true) ? 'is-filled-ratio-preview' : '' }}" style="aspect-ratio:{{ $ratio }}" data-preview-collage>
             @forelse($collage as $url)
               <img src="{{ $url }}" alt="">
             @empty

@@ -24,6 +24,9 @@ const selectedUploadFiles = new WeakMap();
 const selectedImageIndexes = new WeakMap();
 const imageOptimizationApproved = new WeakMap();
 const selectedImageProfiles = new WeakMap();
+const productShotSizeCandidates = new WeakMap();
+
+const PRODUCT_SHOT_TARGETS_KB = [50, 80, 105, 150, 200];
 
 function uploadFileKey(file) {
   return [file.name, file.size, file.lastModified, file.type].join(':');
@@ -394,6 +397,91 @@ async function applyImageQuickPreset(button, profile) {
   await applySelectedImageToAbsoluteTarget(group, targets[profile], profile);
 }
 
+function renderProductShotImage(group, file, processing) {
+  const frame = group.querySelector('.ps-shot-optimized-frame');
+  const image = frame?.querySelector('.ps-shot-optimized-image');
+  const empty = frame?.querySelector('.ps-shot-optimized-empty');
+  const loading = frame?.querySelector('.ps-shot-optimized-loading');
+  const size = frame?.querySelector('.ps-shot-optimized-size');
+  if (!frame || !image) return;
+  loading.hidden = !processing;
+  empty.hidden = !!(processing || file);
+  image.hidden = !!(processing || !file);
+  size.hidden = !!(processing || !file);
+  if (file && !processing) {
+    image.src = previewUrl(file);
+    size.textContent = formatImageBytes(file.size);
+  }
+}
+
+async function buildProductShotCandidates(group, source) {
+  const current = productShotSizeCandidates.get(group);
+  if (current?.source === source) return current.files;
+  const choices = [];
+  for (const size of PRODUCT_SHOT_TARGETS_KB) {
+    choices.push(await optimizeOneImageToBytes(source, size * 1024));
+  }
+  productShotSizeCandidates.set(group, { source, files: choices });
+  group.querySelectorAll('[data-shot-target-kb]').forEach(function (button, index) {
+    button.querySelector('[data-shot-size-label]').textContent = formatImageBytes(choices[index].size);
+    button.disabled = false;
+  });
+  return choices;
+}
+
+async function applyProductShotTarget(button, index) {
+  const group = button.closest('.image-optimizer-group');
+  const input = document.getElementById(group?.dataset.input || '');
+  const originals = originalImageFiles.get(group) || [];
+  const source = originals[0] || input?.files?.[0];
+  if (!source || !input) return;
+  setImageOptimizeState(group, 'processing', 'در حال بهینه‌سازی عکس انتخاب‌شده…');
+  group.querySelectorAll('[data-shot-target-kb]').forEach(function (choice) { choice.disabled = true; });
+  renderProductShotImage(group, null, true);
+  try {
+    const candidates = await buildProductShotCandidates(group, source);
+    const output = candidates[index];
+    optimizedImageFiles.set(group, [output]);
+    input.files = imageFileList([output]);
+    setImageApproval(group, 1, true);
+    setSelectedImageProfile(group, 0, 'product-shot-' + PRODUCT_SHOT_TARGETS_KB[index]);
+    group.querySelectorAll('[data-shot-target-kb]').forEach(function (choice, choiceIndex) {
+      choice.classList.toggle('is-selected', choiceIndex === index);
+      choice.setAttribute('aria-pressed', choiceIndex === index ? 'true' : 'false');
+      choice.disabled = false;
+    });
+    renderProductShotImage(group, output, false);
+    renderImageGroupPreviews(group, [output]);
+    setImageOptimizeState(group, 'done', 'حجم تصویر آماده‌ی ثبت است.');
+    document.dispatchEvent(new CustomEvent('product-images-changed'));
+  } catch (error) {
+    group.querySelectorAll('[data-shot-target-kb]').forEach(function (choice) { choice.disabled = false; });
+    renderProductShotImage(group, source, false);
+    setImageOptimizeState(group, 'failed', 'بهینه‌سازی عکس انجام نشد؛ دوباره تلاش کنید.');
+  }
+}
+
+async function optimizeProductShotGroup(group, files) {
+  if (!files.length) {
+    renderProductShotImage(group, null, false);
+    setImageOptimizeState(group, 'idle', '');
+    return;
+  }
+  originalImageFiles.set(group, files.slice(0, 1));
+  selectedImageIndexes.set(group, 0);
+  renderProductShotImage(group, null, true);
+  group.querySelectorAll('[data-shot-target-kb]').forEach(function (button) { button.disabled = true; });
+  setImageOptimizeState(group, 'processing', 'در حال بهینه‌سازی خودکار…');
+  try {
+    await buildProductShotCandidates(group, files[0]);
+    await applyProductShotTarget(group.querySelector('[data-shot-target-kb="105"]'), 2);
+  } catch (error) {
+    group.querySelectorAll('[data-shot-target-kb]').forEach(function (button) { button.disabled = false; });
+    renderProductShotImage(group, files[0], false);
+    setImageOptimizeState(group, 'failed', 'بهینه‌سازی انجام نشد؛ دوباره تلاش کنید.');
+  }
+}
+
 function previewImageRange(range) {
   const group = range.closest('.image-optimizer-group');
   const label = group?.querySelector('.image-range-value');
@@ -580,6 +668,10 @@ async function sharpenSelectedImage(button) {
 async function optimizeImageGroup(buttonOrGroup) {
   const group = buttonOrGroup.closest ? buttonOrGroup.closest('.image-optimizer-group') : buttonOrGroup;
   const input = document.getElementById(group.dataset.input);
+  if (group.dataset.optimizerVariant === 'product-shot') {
+    await optimizeProductShotGroup(group, Array.from(input.files || []));
+    return;
+  }
   setImageOptimizeState(group, 'processing', 'لطفاً تا پایان پردازش صبر کنید.');
   try {
     let files = Array.from(input.files || []);
@@ -623,7 +715,12 @@ function initImageOptimizerGroups(root) {
         selectedImageProfiles.set(group, Array(files.length).fill(''));
         selectedImageIndexes.set(group, 0);
         renderImageGroupPreviews(group, files);
-        renderImageComparison(group);
+        if (group.dataset.optimizerVariant === 'product-shot') {
+          renderProductShotImage(group, files[0], false);
+          group.querySelectorAll('[data-shot-target-kb]').forEach(function (button) { button.disabled = false; });
+          const activeSize = group.querySelector('[data-shot-size-label]');
+          if (activeSize) activeSize.textContent = formatImageBytes(files[0]?.size);
+        } else renderImageComparison(group);
       }).catch(function () {
         setImageOptimizeState(group, 'failed', 'نمایش تصاویر فعلی ممکن نبود؛ صفحه را دوباره بارگذاری کنید.');
       });
@@ -642,7 +739,8 @@ function initImageOptimizerGroups(root) {
       selectedImageProfiles.set(group, Array(selected.length).fill(''));
       selectedImageIndexes.set(group, 0);
       renderImageGroupPreviews(group, selected);
-      renderImageComparison(group);
+      if (group.dataset.optimizerVariant === 'product-shot') renderProductShotImage(group, null, false);
+      else renderImageComparison(group);
       setImageOptimizeState(group, 'idle', '');
       optimizeImageGroup(group);
     });
