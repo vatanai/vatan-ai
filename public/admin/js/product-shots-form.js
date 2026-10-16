@@ -8,6 +8,17 @@
   var fa = function (value) { return String(value).replace(/[0-9]/g, function (n) { return '۰۱۲۳۴۵۶۷۸۹'[n]; }); };
   var one = function (selector, context) { return (context || document).querySelector(selector); };
   var all = function (selector, context) { return Array.from((context || document).querySelectorAll(selector)); };
+  var slidePreviewUrls = new WeakMap();
+
+  function previewUrlForFile(file) {
+    if (!file) return '';
+    var url = slidePreviewUrls.get(file);
+    if (!url) {
+      url = URL.createObjectURL(file);
+      slidePreviewUrls.set(file, url);
+    }
+    return url;
+  }
 
   function showStep(next, keepErrors) {
     step = Math.max(1, Math.min(5, Number(next) || 1));
@@ -691,12 +702,22 @@
     return all('[data-shot-row]', form).filter(function (row) {
       return !row.hidden && !row.classList.contains('is-removed') && one('[data-shot-enabled]', row).checked && !row.classList.contains('is-input-image-slide');
     }).map(function (row) {
+      var sampleInput = one('[data-shot-sample-file]', row);
+      var selectedFile = sampleInput && sampleInput.files ? sampleInput.files[0] : null;
+      var optimizerGroup = one('.image-optimizer-group[data-optimizer-variant="product-shot"]', row);
+      var existingImages = [];
+      try { existingImages = JSON.parse(optimizerGroup && optimizerGroup.dataset.existing || '[]'); } catch (e) {}
       var image = one('[data-shot-thumb] img', row);
       var uploadPreview = one('.image-preview-strip img', row);
       var credit = one('[name$="[quality_credits][standard]"]', row);
+      // ابزار بهینه‌سازی نشانی موقت تصویر بندانگشتی را بعد از بارگذاری آزاد می‌کند؛
+      // پیش‌نمایش گام ۵ باید از فایل فعلی ورودی، نشانی موقت مستقل و زنده بسازد.
+      var previewImage = selectedFile
+        ? previewUrlForFile(selectedFile)
+        : (existingImages[0] || (image && image.getAttribute('src') ? image.src : (uploadPreview && uploadPreview.getAttribute('src') ? uploadPreview.src : '')));
       return {
         name: (one('[data-shot-name-input]', row).value || row.dataset.shotName || 'اسلاید محصول').trim(),
-        image: image && image.getAttribute('src') ? image.src : (uploadPreview && uploadPreview.getAttribute('src') ? uploadPreview.src : ''),
+        image: previewImage,
         credits: Number(credit && credit.value || 0),
         selected: false
       };
@@ -823,6 +844,7 @@
 
   var previewFrame = one('[data-product-preview-frame]', form);
   if (previewFrame) previewFrame.addEventListener('load', refreshLivePreview);
+  document.addEventListener('product-images-changed', refreshLivePreview);
   var scrollPreview = one('[data-scroll-product-preview]', form);
   if (scrollPreview) scrollPreview.addEventListener('click', function () { one('#product-shot-live-preview', form).scrollIntoView({behavior: 'smooth'}); });
   var openPreview = one('[data-open-product-preview]', form);
