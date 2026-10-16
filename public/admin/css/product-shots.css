@@ -164,7 +164,18 @@
 .ps-slide-image-optimizer .image-volume-options-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ps-slide-image-optimizer .image-volume-options-grid .image-target-options{display:contents}
 .ps-slide-image-optimizer .image-size-timeline{display:none}
+/* انتخاب کیفیت اسلاید: جمع‌وجور، خوانا و محدود به همین فرم */
+.ps-slide-image-optimizer .image-target-panel{padding:11px}
+.ps-slide-image-optimizer .image-target-panel>div:first-child{align-items:center;margin-bottom:8px}
+.ps-slide-image-optimizer .image-target-panel>div:first-child>div:first-child>div:nth-child(2){max-width:58ch;line-height:1.7}
+.ps-slide-image-optimizer .image-target-panel>div:nth-child(2){margin-bottom:8px}
+.ps-slide-image-optimizer .image-volume-options-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:0}
+.ps-slide-image-optimizer .image-volume-choice{min-width:0;min-height:54px;padding:8px 9px;border-radius:10px}
+.ps-slide-image-optimizer .image-volume-choice>span{display:-webkit-box!important;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;min-height:2.7em;align-items:flex-start;gap:4px;font-size:9px!important;line-height:1.45}
+.ps-slide-image-optimizer .image-volume-choice>span>i{flex:0 0 auto;margin-top:1px}
+.ps-slide-image-optimizer .image-volume-choice>strong{margin-top:3px;font-size:9.5px;line-height:1.35}
 .ps-shot-detail{padding:14px;border-top:1px solid var(--divider);background:var(--input-bg)}
+.ps-shot-editor.is-input-image-slide .ps-slide-image-optimizer,.ps-shot-editor.is-input-image-slide .ps-slide-prompt,.ps-shot-editor.is-input-image-slide .ps-shot-desc,.ps-shot-editor.is-input-image-slide .ps-tags,.ps-shot-editor.is-input-image-slide [data-shot-enabled-label],.ps-shot-editor.is-input-image-slide [data-shot-toggle],.ps-shot-editor.is-input-image-slide .ps-shot-detail{display:none!important}
 .ps-option-switches{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;color:var(--text-soft);font-size:10px}
 .ps-option-switches>span{font-weight:800;color:var(--text-main)}
 .ps-option-switches label{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid var(--border);border-radius:99px;background:var(--card-bg);cursor:pointer}
@@ -189,6 +200,7 @@
 @media(max-width:900px){.ps-check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-shot-summary{grid-template-columns:70px minmax(0,1fr)}.ps-shot-head-actions{grid-column:1/-1;justify-content:space-between}.ps-shot-summary .ps-thumb{width:70px}.ps-slide-prompt{grid-template-columns:1fr}.ps-slide-prompt .btn-pro{justify-self:start}}
 @media(max-width:640px){.ps-slide-manager-bar{align-items:flex-start;flex-direction:column}.ps-slide-title-row{grid-template-columns:30px auto 1fr}.ps-slide-name-field{grid-column:1/-1}.ps-shot-removed-state{align-items:flex-start;flex-wrap:wrap}.ps-shot-removed-state .btn-pro{width:100%;justify-content:center}}
 @media(max-width:560px){.ps-slide-image-optimizer{margin-right:10px;margin-left:10px;padding:11px}.ps-slide-image-optimizer .upload-zone{align-items:flex-start;flex-wrap:wrap}.ps-slide-image-optimizer .image-preview-strip{width:100%;max-width:none;justify-content:flex-start;margin-right:50px}}
+@media(max-width:560px){.ps-slide-image-optimizer .image-volume-options-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-slide-image-optimizer .image-volume-choice{min-height:52px;padding:7px}}
 @media(max-width:560px){.ps-check-grid{grid-template-columns:1fr}.ps-explore-preview{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-occupation-picker{height:210px}}
 
 /* ── نگاشت توکن‌های قدیمی آپلودر مشترک به پالت رسمی پنل ──────────

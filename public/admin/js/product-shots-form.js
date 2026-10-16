@@ -76,14 +76,18 @@
       if (missingModel) return error('مدل اصلی هر سه سطح کیفیت را انتخاب کنید.');
     }
     if (number === 3) {
-      var enabledRows = all('[data-shot-enabled]:checked', form);
-      if (!enabledRows.length) return error('حداقل یک شات را فعال کنید.');
+      var enabledRows = all('[data-shot-enabled]:checked', form).filter(function (checkbox) {
+        return !checkbox.closest('[data-shot-row]').classList.contains('is-input-image-slide');
+      });
+      if (!enabledRows.length) return error('حداقل یک اسلاید خروجی را فعال کنید.');
       var incompleteNew = all('[data-new-slide]', form).some(function (row) {
+        if (row.classList.contains('is-input-image-slide')) return false;
         return !one('[data-shot-name-input]', row).value.trim() || one('[data-shot-prompt]', row).value.trim().length < 10;
       });
       if (incompleteNew) return error('برای هر اسلاید اختصاصی، نام و پرامپت ساخت (حداقل ۱۰ کاراکتر) را بنویسید.');
       var invalidRatio = enabledRows.some(function (checkbox) {
-        return !all('[name$="[allowed_aspect_ratios][]"]:checked', checkbox.closest('[data-shot-row]')).length;
+        var row = checkbox.closest('[data-shot-row]');
+        return !row.classList.contains('is-input-image-slide') && !all('[name$="[allowed_aspect_ratios][]"]:checked', row).length;
       });
       if (invalidRatio) return error('برای هر شات فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.');
     }
@@ -391,7 +395,7 @@
   var draggingShot = null;
 
   function managedShotRows() {
-    return all('[data-shot-row]', shotList).filter(function (row) { return !row.classList.contains('is-removed'); });
+    return all('[data-shot-row]', shotList).filter(function (row) { return !row.classList.contains('is-removed') && !row.hidden; });
   }
 
   function announceShotOrder(message) {
@@ -470,6 +474,7 @@
       var prompt = one('[data-shot-prompt]', row);
       if (prompt) { updateCharCount(prompt); prompt.addEventListener('input', function () { updateCharCount(prompt); }); }
       enabled.addEventListener('change', function () { row.classList.toggle('is-off', !enabled.checked); refreshSummary(); });
+      var nameInput = one('[data-shot-name-input]', row);
       all('[name*="[quality_credits]"]', row).forEach(function (input) { input.addEventListener('change', refreshSummary); input.addEventListener('input', refreshSummary); });
       var toggle = one('[data-shot-toggle]', row);
       if (toggle) toggle.addEventListener('click', function () { var detail = one('[data-shot-detail]', row); detail.hidden = !detail.hidden; });
@@ -477,13 +482,13 @@
       if (previewButton) previewButton.addEventListener('click', function () { previewShot(previewButton); });
       all('[data-shot-sample-file]', row).forEach(bindSampleInput);
 
-      one('[data-shot-name-input]', row).addEventListener('input', function (event) {
+      nameInput.addEventListener('input', function (event) {
         var value = event.target.value.trim();
         row.dataset.shotName = value || row.dataset.shotOriginalName;
         var removedName = one('.ps-shot-removed-state strong', row);
         if (removedName) removedName.textContent = row.dataset.shotName;
       });
-      one('[data-shot-name-input]', row).addEventListener('blur', function (event) {
+      nameInput.addEventListener('blur', function (event) {
         if (event.target.value.trim()) return;
         event.target.value = row.dataset.shotOriginalName;
         row.dataset.shotName = row.dataset.shotOriginalName;
@@ -655,7 +660,7 @@
     Object.keys(config.qualityLevels || {}).forEach(function (quality) {
       var total = 0;
       all('[data-shot-row]', form).forEach(function (row) {
-        if (!one('[data-shot-enabled]', row).checked) return;
+        if (row.hidden || !one('[data-shot-enabled]', row).checked || row.classList.contains('is-input-image-slide')) return;
         var credit = one('[name$="[quality_credits][' + quality + ']"]', row);
         total += Number(credit && credit.value || 0);
       });
@@ -673,13 +678,14 @@
 
   function activeSlideData() {
     return all('[data-shot-row]', form).filter(function (row) {
-      return one('[data-shot-enabled]', row).checked;
+      return !row.hidden && !row.classList.contains('is-removed') && one('[data-shot-enabled]', row).checked && !row.classList.contains('is-input-image-slide');
     }).map(function (row) {
       var image = one('[data-shot-thumb] img', row);
+      var uploadPreview = one('.image-preview-strip img', row);
       var credit = one('[name$="[quality_credits][standard]"]', row);
       return {
         name: (one('[data-shot-name-input]', row).value || row.dataset.shotName || 'اسلاید محصول').trim(),
-        image: image ? image.src : '',
+        image: image && image.getAttribute('src') ? image.src : (uploadPreview && uploadPreview.getAttribute('src') ? uploadPreview.src : ''),
         credits: Number(credit && credit.value || 0),
         selected: false
       };
@@ -766,11 +772,15 @@
     refreshTotals(); refreshFrames();
     var name = one('[name="name_fa"]', form).value.trim() || '—';
     var occupations = all('[name="occupation_ids[]"]:checked', form).map(function (input) { return one('span', input.closest('label')).textContent.trim(); });
-    var enabled = all('[data-shot-enabled]:checked', form).length;
+    var enabledRows = all('[data-shot-enabled]:checked', form).filter(function (input) {
+      var row = input.closest('[data-shot-row]');
+      return !row.hidden && !row.classList.contains('is-removed') && !row.classList.contains('is-input-image-slide');
+    });
+    var enabled = enabledRows.length;
     var standard = one('[name="quality_models[standard][primary_id]"]', form);
     var model = standard && standard.selectedOptions[0] ? standard.selectedOptions[0].textContent.trim() : '—';
     var standardCredits = 0;
-    all('[data-shot-row]', form).forEach(function (row) { if (one('[data-shot-enabled]', row).checked) standardCredits += Number(one('[name$="[quality_credits][standard]"]', row).value || 0); });
+    all('[data-shot-row]', form).forEach(function (row) { if (!row.hidden && !row.classList.contains('is-input-image-slide') && one('[data-shot-enabled]', row).checked) standardCredits += Number(one('[name$="[quality_credits][standard]"]', row).value || 0); });
     var categories = selectedCategoryIds.map(function (id) { return categoryById(id); }).filter(Boolean).map(function (category) { return category.name; });
     var publishStatus = one('#psw-status', form).value === 'active' ? 'ثبت نهایی' : 'پیش‌نویس';
     var values = {name: name, categories: categories.join('، ') || '—', occupations: occupations.join('، ') || '—', shots: fa(enabled), model: model, credits: fa(standardCredits) + ' اعتبار', 'publish-status': publishStatus};

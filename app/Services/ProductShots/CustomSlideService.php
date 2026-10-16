@@ -23,7 +23,7 @@ class CustomSlideService
      * @param array{
      *   name:string, prompt:string, original_prompt?:?string, sample_path?:?string, enabled?:bool, sort?:int,
      *   credits?:array<string,int>, allowed_aspect_ratios?:array, aspect_ratio_default?:?string,
-     *   aspect_ratio_user_selectable?:bool
+     *   aspect_ratio_user_selectable?:bool, input_image_slide?:bool
      * } $slide
      */
     public function create(Product $product, array $slide): ProductShot
@@ -42,14 +42,14 @@ class CustomSlideService
         $library = ShotLibrary::query()->create([
             'product_id' => $product->id,
             'key' => $this->uniqueKey($product),
-            'name_fa' => $name,
+            'name_fa' => ! empty($slide['input_image_slide']) ? 'عکس ورودی' : $name,
             'name_en' => null,
             'description_fa' => null,
             'category' => self::CATEGORY,
             'niche_tags' => [],
             'tokens' => [],
             // پرامپت اصلی مدیر برای مرجع؛ پرامپت نهایی (اصلاح‌شده) روی product_shots است.
-            'prompt_template' => $original,
+            'prompt_template' => ! empty($slide['input_image_slide']) ? '' : $original,
             'default_credits' => $standardCredits,
             'aspect_ratio_default' => $defaultRatio,
             'sample_image' => $sample,
@@ -75,7 +75,7 @@ class CustomSlideService
             'allowed_aspect_ratios' => $ratios,
             'aspect_ratio_default' => $defaultRatio,
             'aspect_ratio_user_selectable' => (bool) ($slide['aspect_ratio_user_selectable'] ?? true),
-            'options_enabled' => ['prompt' => true, 'model' => true, 'ratio' => true, 'credits' => true, 'preview' => true],
+            'options_enabled' => ['prompt' => true, 'model' => true, 'ratio' => true, 'credits' => true, 'preview' => true, 'input_image_slide' => (bool) ($slide['input_image_slide'] ?? false)],
         ]);
     }
 

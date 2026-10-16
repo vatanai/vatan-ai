@@ -46,17 +46,18 @@
   </section>
 
   <section class="content-card p-5">
-    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">اسلاید اختصاصی بسازید (عکس نمونه + پرامپت ساخت) یا از کتابخانه استفاده کنید. ترتیب را با دستگیره مشخص کنید. در صفحه‌ی ساخت هیچ اسلایدی از پیش انتخاب نیست و کاربر خودش انتخاب می‌کند.</div></div><div class="flex items-center gap-2 flex-wrap"><button type="button" class="btn-pro btn-pro-primary" data-add-custom-slide><i class="fa-solid fa-plus"></i> افزودن اسلاید اختصاصی</button><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div></div>
+    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">اسلاید اختصاصی بسازید (عکس نمونه + پرامپت ساخت) یا از کتابخانه استفاده کنید. ترتیب را با دستگیره مشخص کنید. در صفحه‌ی ساخت هیچ اسلایدی از پیش انتخاب نیست و کاربر خودش انتخاب می‌کند.</div></div><div class="flex items-center gap-2 flex-wrap"><button type="button" class="btn-pro btn-pro-primary" data-add-custom-slide><i class="fa-solid fa-plus"></i> افزودن اسلاید</button><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div></div>
     <div class="ps-slide-manager-bar mt-4">
       <div><i class="fa-solid fa-grip-vertical"></i><span>برای جابه‌جایی، اسلاید را از دستگیره بگیرید و بالا یا پایین ببرید.</span></div>
       <span class="ps-slide-count" data-shot-count aria-live="polite"></span>
     </div>
     <div class="ps-shot-list mt-4" id="sp-shot-list">
+      @php $defaultShotId = (int) ($generalShotIds[0] ?? 0); @endphp
       @foreach($shots as $index => $shot)
         @php
           $ps = $productShots->get($shot->id);
           $isGeneral = in_array((int)$shot->id,array_map('intval',$generalShotIds ?? []),true);
-          $enabled = (bool)old("shots.{$shot->id}.enabled",$ps?->enabled ?? (!$product && $isGeneral));
+          $enabled = (bool)old("shots.{$shot->id}.enabled",$ps?->enabled ?? (!$product && $isGeneral && (int) $shot->id === $defaultShotId));
           $isCustom = $shot->isCustom();
           $credits = (array)data_get($ps?->model_configuration,'quality_credits',[]);
           $overrides = (array)data_get($ps?->model_configuration,'quality_models',[]);
@@ -67,8 +68,10 @@
           $samplePath = $ps?->sample_image ?: $shot->sample_image;
           $removed = (bool)old("shots.{$shot->id}.removed",$product && !$ps);
           $slideName = old("shots.{$shot->id}.name_override",$ps?->displayName() ?? $shot->name_fa);
+          $inputImageSlide = (bool) data_get($ps?->options_enabled, 'input_image_slide', false);
+          $showShotRow = $enabled || $removed || $loop->first;
         @endphp
-        <article class="ps-shot-editor {{ $isCustom ? 'is-custom' : '' }} {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}">
+        <article class="ps-shot-editor {{ $isCustom ? 'is-custom' : '' }} {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }} {{ $inputImageSlide ? 'is-input-image-slide' : '' }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}" @if(!$showShotRow) hidden @endif>
           <input type="hidden" name="shots[{{ $shot->id }}][removed]" value="{{ $removed ? 1 : 0 }}" data-shot-removed>
           <div class="ps-shot-removed-state">
             <span class="ps-shot-removed-icon"><i class="fa-solid fa-box-archive"></i></span>
@@ -91,7 +94,7 @@
             </div>
             <div class="ps-shot-head-actions">
               <div class="ps-slide-order-actions" aria-label="کنترل ترتیب اسلاید"><button type="button" data-shot-move="up" title="انتقال به بالا" aria-label="انتقال اسلاید به بالا"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-shot-move="down" title="انتقال به پایین" aria-label="انتقال اسلاید به پایین"><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="is-danger" data-shot-remove title="حذف از این محصول" aria-label="حذف اسلاید از این محصول"><i class="fa-solid fa-trash-can"></i></button></div>
-              <label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label>
+              <label class="ps-check" data-shot-enabled-label><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label>
             </div>
           </div>
           <div class="ps-slide-image-optimizer">
@@ -124,7 +127,6 @@
         </article>
       @endforeach
     </div>
-    <button type="button" class="ps-add-slide" data-add-custom-slide><span><i class="fa-solid fa-plus"></i></span><strong>افزودن اسلاید اختصاصی</strong><small>عکس نمونه + نام + پرامپت ساخت</small></button>
     <div class="ps-hint mt-3" data-shot-order-status aria-live="polite"></div>
     <template id="sp-custom-slide-template">
       @include('admin.product-shots.product-steps.custom-slide-row')

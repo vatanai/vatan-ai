@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductShot;
 use App\Models\ShotLibrary;
 use App\Services\ProductShots\ProductShotFeature;
+use App\Services\ProductShots\ShotPackService;
 use App\Services\ProductShots\ShotVisionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -115,6 +116,7 @@ class ProductShotAdminTest extends TestCase
         $model = $this->imageModel();
         $cat = $this->category();
         $occupation = Occupation::query()->firstOrFail();
+        $longSlidePrompt = str_repeat('Keep the product silhouette, materials, lighting direction, and brand details consistent across every generated slide. ', 120);
 
         $formResponse = $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create'))
             ->assertOk()
@@ -123,6 +125,9 @@ class ProductShotAdminTest extends TestCase
             ->assertSee('پرامپت عکس')
             ->assertSee('سه زاویه از همان محصول')
             ->assertSee('صفحه واقعی محصول')
+            ->assertSee('data-shot-drag-handle', false)
+            ->assertSee('data-shot-remove', false)
+            ->assertSee('name_override', false)
             ->assertSee($shots[0]->name_fa);
         foreach (ShotVisionService::BLOCKING as $issue) {
             $this->assertMatchesRegularExpression(
@@ -151,8 +156,8 @@ class ProductShotAdminTest extends TestCase
             'brand_identity_prompt' => 'Keep the brand palette warm and minimal.',
             'explore_tiles' => ['1x1', '1x2'],
             'shots' => [
-                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'credits' => '', 'prompt_override' => 'Slide-specific hero prompt.', 'sample' => UploadedFile::fake()->image('slide-hero.jpg', 800, 1000), 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5','1:1'], 'aspect_ratio_default' => '4:5', 'sort' => 0],
-                $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'quality_credits' => ['standard'=>8,'professional'=>12,'best'=>18], 'allowed_aspect_ratios' => ['4:5','9:16'], 'aspect_ratio_default' => '4:5', 'aspect_ratio_user_selectable' => '1', 'sort' => 1],
+                $shots[0]->id => ['enabled' => '1', 'is_default' => '1', 'name_override' => 'نمای قهرمان سرم', 'credits' => '', 'prompt_override' => $longSlidePrompt, 'sample' => UploadedFile::fake()->image('slide-hero.jpg', 800, 1000), 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5','1:1'], 'aspect_ratio_default' => '4:5', 'sort' => 1],
+                $shots[1]->id => ['enabled' => '1', 'is_default' => '0', 'credits' => '8', 'quality_credits' => ['standard'=>8,'professional'=>12,'best'=>18], 'allowed_aspect_ratios' => ['4:5','9:16'], 'aspect_ratio_default' => '4:5', 'aspect_ratio_user_selectable' => '1', 'sort' => 0],
                 $shots[2]->id => ['enabled' => '0', 'is_default' => '0', 'credits' => '', 'quality_credits' => ['standard'=>10,'professional'=>15,'best'=>20], 'allowed_aspect_ratios' => ['4:5'], 'aspect_ratio_default' => '4:5', 'sort' => 2],
             ],
         ];
@@ -170,24 +175,46 @@ class ProductShotAdminTest extends TestCase
         $this->assertSame((int) $this->admin->id, (int) $product->created_by);
         $this->assertSame(3, $product->max_reference_images);
         $this->assertSame(2, $product->enabledProductShots()->count());
+        $this->assertSame([$shots[1]->id, $shots[0]->id], $product->enabledProductShots()->pluck('shot_id')->all());
         $this->assertSame([$cat->id], $product->categories()->pluck('categories.id')->all());
         $this->assertSame([$occupation->id], $product->occupations()->pluck('occupations.id')->all());
         $firstSlide = $product->productShots()->where('shot_id', $shots[0]->id)->firstOrFail();
         $this->assertSame(15, $firstSlide->credits('professional'));
-        $this->assertSame('Slide-specific hero prompt.', $firstSlide->prompt_override);
+        $this->assertSame('نمای قهرمان سرم', $firstSlide->name_override);
+        $this->assertSame('نمای قهرمان سرم', $firstSlide->displayName());
+        $this->assertSame(trim($longSlidePrompt), $firstSlide->prompt_override);
         $this->assertStringStartsWith('products/shot-samples/', $firstSlide->sample_image);
+        $this->assertStringEndsWith('.webp', $firstSlide->sample_image);
         Storage::disk('public')->assertExists($firstSlide->sample_image);
+        $cards = app(ShotPackService::class)->shotCards($product->fresh());
+        $this->assertSame($shots[1]->name_fa, $cards[0]['name']);
+        $this->assertSame('نمای قهرمان سرم', $cards[1]['name']);
+        $editForm = $this->actingAs($this->admin, 'admin')->get(route('admin.product-shots.products.create', $product->id))->assertOk();
+        $this->assertLessThan(
+            strpos($editForm->getContent(), 'data-shot-id="' . $shots[0]->id . '"'),
+            strpos($editForm->getContent(), 'data-shot-id="' . $shots[1]->id . '"'),
+            'ترتیب ذخیره‌شده باید هنگام بازکردن دوباره‌ی فرم حفظ شود.'
+        );
 
         // ویرایش از فرم قدیمی به فرم جدید هدایت می‌شود
         $this->actingAs($this->admin, 'admin')->get(route('admin.products.create', $product))
             ->assertRedirect(route('admin.product-shots.products.create', $product->id));
 
-        $payload['shots'][$shots[1]->id]['enabled'] = '0';
-        unset($payload['shots'][$shots[0]->id]['sample']);
+        $otherProduct = $this->makeShotProduct(2);
+        $oldSamplePath = $firstSlide->sample_image;
+        $payload['shots'][$shots[0]->id]['sample'] = UploadedFile::fake()->image('slide-hero-replacement.png', 1200, 900);
+        $payload['shots'][$shots[1]->id]['removed'] = '1';
         $payload['name_fa'] = 'پک سرم ۲';
         $this->actingAs($this->admin, 'admin')->put(route('admin.product-shots.products.update', $product), $payload)->assertRedirect();
         $this->assertSame('پک سرم ۲', $product->fresh()->name_fa);
         $this->assertSame(1, $product->fresh()->enabledProductShots()->count());
+        $replacementSamplePath = $product->productShots()->where('shot_id', $shots[0]->id)->value('sample_image');
+        $this->assertNotSame($oldSamplePath, $replacementSamplePath);
+        $this->assertStringEndsWith('.webp', $replacementSamplePath);
+        Storage::disk('public')->assertMissing($oldSamplePath);
+        $this->assertDatabaseMissing('product_shots', ['product_id' => $product->id, 'shot_id' => $shots[1]->id]);
+        $this->assertDatabaseHas('product_shots', ['product_id' => $otherProduct->id, 'shot_id' => $shots[1]->id]);
+        $this->assertDatabaseHas('shot_library', ['id' => $shots[1]->id]);
         $this->assertSame('serum-pack', $product->fresh()->slug);
     }
 
@@ -216,17 +243,20 @@ class ProductShotAdminTest extends TestCase
 
         $product = Product::query()->where('slug', 'photo-pack')->firstOrFail();
         $this->assertStringStartsWith('products/main/', $product->cover);
+        $this->assertStringEndsWith('.webp', $product->cover);
         $this->assertSame($product->cover, $product->thumbnail);
         $this->assertCount(1, (array) $product->sample_outputs);
         Storage::disk('public')->assertExists($product->cover);
 
         // حذف همه‌ی عکس‌ها از ویرایش
+        $oldCover = $product->cover;
         $payload['main_images'] = [];
         $payload['remove_main_images'] = '1';
         $this->actingAs($this->admin, 'admin')
             ->putJson(route('admin.product-shots.products.update', $product), $payload)
             ->assertOk();
         $this->assertSame([], (array) $product->fresh()->sample_outputs);
+        Storage::disk('public')->assertMissing($oldCover);
 
         // خطای اعتبارسنجی به‌صورت JSON برمی‌گردد تا فرم پیام دقیق نشان دهد
         $this->actingAs($this->admin, 'admin')
@@ -274,6 +304,12 @@ class ProductShotAdminTest extends TestCase
         $sample = ProductShot::query()->where('product_id', $product->id)->where('shot_id', $shot->id)->value('sample_image');
         $this->assertStringStartsWith('products/shot-samples/', $sample);
         Storage::disk('public')->assertExists($sample);
+
+        $this->actingAs($this->admin, 'admin')->postJson(route('admin.product-shots.products.sample', [$product, $shot]), ['image_path' => $res['image_path']])->assertOk();
+        $replacement = ProductShot::query()->where('product_id', $product->id)->where('shot_id', $shot->id)->value('sample_image');
+        $this->assertNotSame($sample, $replacement);
+        Storage::disk('public')->assertMissing($sample);
+        Storage::disk('public')->assertExists($replacement);
     }
 
     public function test_admin_preview_rejects_more_than_three_angles(): void

@@ -39,7 +39,9 @@ class ShotPackService
     {
         $qualityLevels = (array) config('product_shots.quality_levels', []);
 
-        return $product->enabledProductShots()->map(fn (ProductShot $ps) => [
+        return $product->enabledProductShots()
+            ->reject(fn (ProductShot $ps) => $ps->optionEnabled('input_image_slide', false))
+            ->map(fn (ProductShot $ps) => [
             'key' => $ps->shot->key,
             'name' => $ps->displayName(),
             'description' => $ps->shot->description_fa,
@@ -58,6 +60,11 @@ class ShotPackService
     /** عکس ورودی‌ای که اسلایدهای محصول با آن ساخته شده‌اند (فقط صفحه‌ی محصول). */
     public function inputImageUrl(Product $product): ?string
     {
+        $hasInputImageSlide = $product->enabledProductShots()->contains(fn (ProductShot $ps) => $ps->optionEnabled('input_image_slide', false));
+        if (! $hasInputImageSlide) {
+            return null;
+        }
+
         $path = trim((string) data_get($product->shot_settings, 'input_image', ''));
 
         return $path !== '' ? \App\Models\ShotLibrary::publicUrl($path) : null;
@@ -93,6 +100,7 @@ class ShotPackService
         // بعد از تبدیل مدل‌ها به URL باید Collection عمومی باشد؛ Collection الکوئنت
         // در unique() انتظار مدل دارد و برای رشته‌ی URL خطا می‌دهد.
         $urls = collect($product->enabledProductShots()
+            ->reject(fn (ProductShot $ps) => $ps->optionEnabled('input_image_slide', false))
             ->map(fn (ProductShot $ps) => $ps->sampleImageUrl())
             ->filter()
             ->values()
@@ -136,7 +144,9 @@ class ShotPackService
         $qualityLevels = array_keys((array) config('product_shots.quality_levels', ['standard' => 'استاندارد']));
         if (! in_array($qualityLevel, $qualityLevels, true)) $qualityLevel = (string) config('product_shots.default_quality', 'standard');
 
-        $available = $product->enabledProductShots()->keyBy(fn (ProductShot $ps) => $ps->shot->key);
+        $available = $product->enabledProductShots()
+            ->reject(fn (ProductShot $ps) => $ps->optionEnabled('input_image_slide', false))
+            ->keyBy(fn (ProductShot $ps) => $ps->shot->key);
         $shotKeys = array_values(array_unique(array_map('strval', $shotKeys)));
         $selected = collect($shotKeys)->map(fn ($k) => $available->get($k))->filter()->values();
         if ($selected->isEmpty()) {

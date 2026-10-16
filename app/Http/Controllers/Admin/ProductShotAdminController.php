@@ -477,14 +477,16 @@ class ProductShotAdminController extends Controller
             'shots.*.removed' => ['nullable', 'boolean'],
             'shots.*.name_override' => ['nullable', 'string', 'max:120'],
             'shots.*.enabled' => ['nullable', 'boolean'],
+            'shots.*.input_image_slide' => ['nullable', 'boolean'],
             'shots.*.is_default' => ['nullable', 'boolean'],
             'shots.*.credits' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.quality_credits' => ['nullable', 'array'],
             'shots.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.prompt_override' => ['nullable', 'string', 'max:30000'],
             'new_slides' => ['nullable', 'array', 'max:30'],
-            'new_slides.*.name' => ['required', 'string', 'max:120'],
-            'new_slides.*.prompt' => ['required', 'string', 'min:10', 'max:30000'],
+            'new_slides.*.name' => ['nullable', 'string', 'max:120'],
+            'new_slides.*.prompt' => ['nullable', 'string', 'max:30000'],
+            'new_slides.*.input_image_slide' => ['nullable', 'boolean'],
             'new_slides.*.enabled' => ['nullable', 'boolean'],
             'new_slides.*.sort' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'new_slides.*.sample' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
@@ -558,8 +560,21 @@ class ProductShotAdminController extends Controller
             }
         }
 
-        $enabled = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN) && ! filter_var($row['removed'] ?? false, FILTER_VALIDATE_BOOLEAN));
+        foreach ((array) ($data['new_slides'] ?? []) as $key => $row) {
+            if (filter_var($row['input_image_slide'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+            if (trim((string) ($row['name'] ?? '')) === '') {
+                throw ValidationException::withMessages(["new_slides.{$key}.name" => 'نام اسلاید اختصاصی را بنویسید.']);
+            }
+            if (mb_strlen(trim((string) ($row['prompt'] ?? ''))) < 10) {
+                throw ValidationException::withMessages(["new_slides.{$key}.prompt" => 'پرامپت اسلاید اختصاصی حداقل باید ۱۰ کاراکتر باشد.']);
+            }
+        }
+
+        $enabled = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN) && ! filter_var($row['removed'] ?? false, FILTER_VALIDATE_BOOLEAN) && ! filter_var($row['input_image_slide'] ?? false, FILTER_VALIDATE_BOOLEAN));
         $newEnabled = collect((array) ($data['new_slides'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN));
+        $newEnabled = $newEnabled->reject(fn ($row) => filter_var($row['input_image_slide'] ?? false, FILTER_VALIDATE_BOOLEAN));
         if ($enabled->isEmpty() && $newEnabled->isEmpty()) {
             throw ValidationException::withMessages(['shots' => 'حداقل یک اسلاید را فعال کنید.']);
         }
@@ -738,18 +753,21 @@ class ProductShotAdminController extends Controller
                 }
                 continue;
             }
-            $enabled = filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $inputImageSlide = array_key_exists('input_image_slide', $row)
+                ? filter_var($row['input_image_slide'], FILTER_VALIDATE_BOOLEAN)
+                : (bool) ($productShot?->optionEnabled('input_image_slide', false) ?? false);
+            $enabled = $inputImageSlide || filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
             if (! $enabled && ! $productShot) {
                 continue;
             }
             $productShot ??= new ProductShot(['product_id' => $product->id, 'shot_id' => $shotId]);
             $nameOverride = trim((string) ($row['name_override'] ?? ''));
-            $productShot->name_override = $nameOverride !== '' && $nameOverride !== $libraryShot->name_fa ? $nameOverride : null;
+            $productShot->name_override = $inputImageSlide ? 'عکس ورودی' : ($nameOverride !== '' && $nameOverride !== $libraryShot->name_fa ? $nameOverride : null);
             $productShot->enabled = $enabled;
             // هیچ اسلایدی از پیش برای کاربر تیک نمی‌خورد (تصمیم ۲۴ مهر).
             $productShot->is_default = false;
             $productShot->credits_override = isset($row['credits']) && $row['credits'] !== '' ? max(0, (int) $row['credits']) : null;
-            $productShot->prompt_override = trim((string) ($row['prompt_override'] ?? '')) ?: null;
+            $productShot->prompt_override = $inputImageSlide ? null : (trim((string) ($row['prompt_override'] ?? '')) ?: null);
             $productShot->model_configuration = [
                 'quality_credits' => array_map('intval', array_filter((array) ($row['quality_credits'] ?? []), fn ($value) => $value !== null && $value !== '')),
                 'quality_models' => $this->resolveQualityModels((array) ($row['model_overrides'] ?? []), false),
@@ -765,6 +783,7 @@ class ProductShotAdminController extends Controller
                 'ratio' => filter_var($row['option_ratio'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'credits' => filter_var($row['option_credits'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'preview' => filter_var($row['option_preview'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'input_image_slide' => $inputImageSlide,
             ];
             $productShot->sort = (int) ($row['sort'] ?? 0);
             $sampleFile = $request->file("shots.{$shotId}.sample");
@@ -785,7 +804,7 @@ class ProductShotAdminController extends Controller
             if ($oldSamplePath && $oldSamplePath !== $productShot->sample_image) {
                 $this->queueStorageDeletes([$oldSamplePath]);
             }
-            if ($enabled) {
+            if ($enabled && ! $inputImageSlide) {
                 $credits = $productShot->fresh('shot')->credits('standard');
                 $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
             }
@@ -795,11 +814,12 @@ class ProductShotAdminController extends Controller
         foreach ((array) $request->input('new_slides', []) as $key => $row) {
             $row = (array) $row;
             $prompt = trim((string) ($row['prompt'] ?? ''));
-            if ($prompt === '') {
+            $inputImageSlide = filter_var($row['input_image_slide'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($prompt === '' && ! $inputImageSlide) {
                 continue;
             }
             $samplePath = null;
-            $sampleFile = $request->file("new_slides.{$key}.sample");
+            $sampleFile = $inputImageSlide ? null : $request->file("new_slides.{$key}.sample");
             if ($sampleFile) {
                 try {
                     $samplePath = $this->imageOptimizer->store($sampleFile, self::SAMPLE_DIR);
@@ -809,8 +829,8 @@ class ProductShotAdminController extends Controller
             }
             $enabled = filter_var($row['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
             $productShot = $this->customSlides->create($product, [
-                'name' => (string) ($row['name'] ?? ''),
-                'prompt' => $prompt,
+                'name' => $inputImageSlide ? 'عکس ورودی' : (string) ($row['name'] ?? ''),
+                'prompt' => $inputImageSlide ? '' : $prompt,
                 'sample_path' => $samplePath,
                 'enabled' => $enabled,
                 'sort' => (int) ($row['sort'] ?? 999),
@@ -818,8 +838,9 @@ class ProductShotAdminController extends Controller
                 'allowed_aspect_ratios' => (array) ($row['allowed_aspect_ratios'] ?? []),
                 'aspect_ratio_default' => $row['aspect_ratio_default'] ?? null,
                 'aspect_ratio_user_selectable' => filter_var($row['aspect_ratio_user_selectable'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'input_image_slide' => $inputImageSlide,
             ]);
-            if ($enabled) {
+            if ($enabled && ! $inputImageSlide) {
                 $credits = $productShot->credits('standard');
                 $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
             }

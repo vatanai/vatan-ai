@@ -635,6 +635,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
 
     // مدیریت یکپارچه محصولات و بنرهای صفحه ترندز
     Route::get('/trends', [TrendController::class, 'index'])->name('trends.index');
+    Route::post('/trends/product-ratio', [TrendController::class, 'updateProductRatio'])->name('trends.product-ratio.update');
     Route::post('/trends/products/{product}/add', [TrendController::class, 'addProduct'])->name('trends.products.add');
     Route::patch('/trends/products/{product}/toggle', [TrendController::class, 'toggleProduct'])->name('trends.products.toggle');
     Route::post('/trends/banners', [TrendController::class, 'storeBanner'])->name('trends.banners.store');

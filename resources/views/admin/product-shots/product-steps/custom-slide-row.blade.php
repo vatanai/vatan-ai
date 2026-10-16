@@ -23,7 +23,7 @@
       </div>
       <div class="ps-shot-head-actions">
         <div class="ps-slide-order-actions" aria-label="کنترل ترتیب اسلاید"><button type="button" data-shot-move="up" title="انتقال به بالا" aria-label="انتقال اسلاید به بالا"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-shot-move="down" title="انتقال به پایین" aria-label="انتقال اسلاید به پایین"><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="is-danger" data-shot-remove title="حذف این اسلاید" aria-label="حذف این اسلاید"><i class="fa-solid fa-trash-can"></i></button></div>
-        <label class="ps-check"><input type="hidden" name="new_slides[__KEY__][enabled]" value="0"><input type="checkbox" name="new_slides[__KEY__][enabled]" value="1" data-shot-enabled checked> فعال برای کاربر</label>
+        <label class="ps-check" data-shot-enabled-label><input type="hidden" name="new_slides[__KEY__][enabled]" value="0"><input type="checkbox" name="new_slides[__KEY__][enabled]" value="1" data-shot-enabled checked> فعال برای کاربر</label>
       </div>
     </div>
     <div class="ps-slide-image-optimizer">

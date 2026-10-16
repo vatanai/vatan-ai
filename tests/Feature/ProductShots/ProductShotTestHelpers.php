@@ -125,7 +125,7 @@ trait ProductShotTestHelpers
         $qcCalls = 0;
         $mock = Mockery::mock(OpenRouterService::class);
         $mock->shouldReceive('analyzeImagesJson')->andReturnUsing(function (string $model, string $instruction) use (&$qcCalls, $qcResults, $preflight) {
-            if (str_contains($instruction, 'quality inspector')) {
+            if (str_contains($instruction, 'quality inspector') || str_contains($instruction, 'expert e-commerce product photographer')) {
                 return ['content' => $preflight ?? ['usable' => true, 'issues' => [], 'crop_box' => ['x' => 0.1, 'y' => 0.1, 'w' => 0.8, 'h' => 0.8], 'product_description' => 'amber serum bottle', 'suggestion_fa' => ''], 'usage' => [], 'model' => $model];
             }
             $res = $qcResults[$qcCalls++] ?? ['same_product' => true, 'fidelity_score' => 5, 'issues' => [], 'summary' => 'ok'];

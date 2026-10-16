@@ -77,12 +77,13 @@ class ProductShotCustomSlidesTest extends TestCase
                     'quality_credits' => ['standard' => 10, 'professional' => 14, 'best' => 20], 'allowed_aspect_ratios' => ['4:5', '1:1'], 'aspect_ratio_default' => '1:1'],
                 'nB' => ['name' => 'نور صبح', 'prompt' => 'Morning light flat-lay of the exact product with citrus slices.', 'enabled' => '1', 'sort' => 0,
                     'quality_credits' => ['standard' => 8], 'allowed_aspect_ratios' => ['4:5']],
+                'nInput' => ['input_image_slide' => '1', 'enabled' => '1', 'sort' => 2],
             ],
         ]))->assertOk()->assertJson(['ok' => true]);
 
         $product = Product::query()->where('name_en', 'Custom Serum Pack')->firstOrFail();
         $shots = ProductShot::query()->where('product_id', $product->id)->with('shot')->orderBy('sort')->get();
-        $this->assertCount(2, $shots);
+        $this->assertCount(3, $shots);
         $this->assertSame('نور صبح', $shots[0]->displayName());
         $this->assertSame(trim($longPrompt), $shots[1]->prompt_override, 'پرامپت بلند کامل ذخیره می‌شود');
         $this->assertTrue($shots[1]->shot->isCustom());
@@ -161,6 +162,30 @@ class ProductShotCustomSlidesTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')->postJson(route('admin.product-shots.products.store'), $this->payload())
             ->assertStatus(422)->assertJsonValidationErrors(['shots']);
+    }
+
+    public function test_input_image_slide_needs_no_prompt_and_is_not_a_user_build_option(): void
+    {
+        $this->enableShots('public');
+
+        $this->actingAs($this->admin, 'admin')->postJson(route('admin.product-shots.products.store'), $this->payload([
+            'input_image' => $this->productImage('input-only.jpg'),
+            'new_slides' => [
+                'input' => ['input_image_slide' => '1', 'enabled' => '1'],
+                'output' => ['name' => 'نمای محصول', 'prompt' => 'Create a clean product hero image for the product.', 'enabled' => '1', 'allowed_aspect_ratios' => ['4:5']],
+            ],
+        ]))->assertOk()->assertJson(['ok' => true]);
+
+        $product = Product::query()->where('name_en', 'Custom Serum Pack')->firstOrFail();
+        $inputSlide = ProductShot::query()->where('product_id', $product->id)->whereHas('shot', fn ($query) => $query->where('name_fa', 'عکس ورودی'))->firstOrFail();
+        $this->assertSame('عکس ورودی', $inputSlide->displayName());
+        $this->assertTrue($inputSlide->optionEnabled('input_image_slide', false));
+        $this->assertNull($inputSlide->prompt_override);
+
+        $packs = app(\App\Services\ProductShots\ShotPackService::class);
+        $this->assertNotContains('عکس ورودی', array_column($packs->shotCards($product), 'name'));
+        $this->assertSame('input', $packs->productGallery($product)->first()['kind']);
+        $this->assertStringContainsString('عکس ورودی', $packs->productGallery($product)->first()['label']);
     }
 
     public function test_productshot_bot_settings_page_renders_and_saves(): void
