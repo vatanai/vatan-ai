@@ -65,7 +65,9 @@
   shots.forEach(function (s) {
     state.ratios[s.key] = s.default_aspect_ratio || '4:5';
   });
-  var hasHidden = shots.some(function (s) { return !s.is_default; });
+  // همه‌ی صحنه‌ها همیشه دیده می‌شوند و هیچ‌کدام از پیش تیک نخورده‌اند (تصمیم ۲۴ مهر).
+  state.showAll = true;
+  var hasHidden = false;
 
   function selectedShots() { return shots.filter(function (s) { return state.selected[s.key]; }); }
   function selectedKeys() { return selectedShots().map(function (s) { return s.key; }); }

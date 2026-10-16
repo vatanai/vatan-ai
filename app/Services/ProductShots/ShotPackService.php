@@ -55,6 +55,38 @@ class ShotPackService
         ])->values()->all();
     }
 
+    /** عکس ورودی‌ای که اسلایدهای محصول با آن ساخته شده‌اند (فقط صفحه‌ی محصول). */
+    public function inputImageUrl(Product $product): ?string
+    {
+        $path = trim((string) data_get($product->shot_settings, 'input_image', ''));
+
+        return $path !== '' ? \App\Models\ShotLibrary::publicUrl($path) : null;
+    }
+
+    /**
+     * گالری صفحه‌ی محصول: اول «عکس ورودی» (اگر هست) و بعد نمونه‌ی اسلایدها.
+     *
+     * @return Collection<int, array{url:string, label:string, kind:string}>
+     */
+    public function productGallery(Product $product, ?array $shots = null): Collection
+    {
+        $shots ??= $this->shotCards($product);
+        $gallery = collect($shots)
+            ->filter(fn (array $s) => ! empty($s['sample_url']))
+            ->map(fn (array $s) => ['url' => (string) $s['sample_url'], 'label' => (string) $s['name'], 'kind' => 'slide'])
+            ->values();
+        if ($gallery->isEmpty()) {
+            $gallery = collect($this->collage($product, 6))
+                ->map(fn (string $url) => ['url' => $url, 'label' => (string) ($product->name_fa ?: $product->name_en), 'kind' => 'slide']);
+        }
+        $input = $this->inputImageUrl($product);
+        if ($input) {
+            $gallery->prepend(['url' => $input, 'label' => 'عکس ورودی', 'kind' => 'input']);
+        }
+
+        return $gallery->values();
+    }
+
     /** چهار تصویر برای کولاژ کارت «پک» (نمونه‌ی شات‌ها، در نبود آن کاور محصول). */
     public function collage(Product $product, int $limit = 4): array
     {

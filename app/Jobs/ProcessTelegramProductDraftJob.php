@@ -24,23 +24,31 @@ class ProcessTelegramProductDraftJob implements ShouldQueue
     public function handle(TelegramProductDraftService $service): void
     {
         $draft = TelegramProductDraft::query()->find($this->draftId);
-        if ($draft) {
-            $service->process($draft);
-            $this->pushResult($service, $draft);
+        if (! $draft) {
+            return;
         }
+        $finished = $service->process($draft);
+        if (! $finished) {
+            // مسیر پروداکتی: هر گام (اصلاح یک پرامپت) جاب جداست تا از سقف زمانی صف رد نشود.
+            $this->pushResult($service, $draft, true);
+            self::dispatch($this->draftId);
+
+            return;
+        }
+        $this->pushResult($service, $draft);
     }
 
     /**
      * اتصال مستقیم (بدون n8n): نتیجه خودش برای مدیر ارسال می‌شود و پولینگ لازم نیست.
      * در مسیر n8n هیچ کاری نمی‌کند.
      */
-    private function pushResult(TelegramProductDraftService $service, TelegramProductDraft $draft): void
+    private function pushResult(TelegramProductDraftService $service, TelegramProductDraft $draft, bool $progress = false): void
     {
         if (data_get($draft->fresh()?->input_payload, 'transport') !== 'direct') {
             return;
         }
         try {
-            $response = $service->resultResponse($draft->fresh());
+            $response = $service->resultResponse($draft->fresh(), $progress);
             app(\App\Services\TelegramProduct\TelegramProductBotRenderer::class)->deliver($response, ['chat_id' => (string) $draft->chat_id]);
         } catch (\Throwable $exception) {
             \Illuminate\Support\Facades\Log::warning('telegram product result push failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);

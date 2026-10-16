@@ -44,8 +44,8 @@
           <h2 class="ps-desc-title">توضیحات محصول</h2>
           <p class="ps-desc">{{ $description ?: 'یک عکس ساده از محصولت بده؛ چند عکس تبلیغاتی با نور و صحنه‌ی حرفه‌ای بگیر. شکل، رنگ و جنس محصول دقیق حفظ می‌شود.' }}</p>
           <div class="ps-facts">
-            <div><span>شات‌های پیشنهادی</span><b>{{ $fa($defaultCount) }} عکس</b></div>
-            <div><span>کل شات‌ها</span><b>{{ $fa(count($shots)) }} صحنه</b></div>
+            <div><span>اسلایدها</span><b>{{ $fa(count($shots)) }} صحنه</b></div>
+            <div><span>ورودی لازم</span><b>یک عکس محصول</b></div>
             <div><span>شروع از</span><b>{{ $minCredit ? $fa($minCredit) . ' کردیت' : 'رایگان' }}</b></div>
           </div>
         </div>
@@ -74,7 +74,7 @@
 
     <div class="ps-dock-wrap">
     <div class="ps-dock">
-      <div class="ps-dock-info"><b>{{ $minCredit ? 'از ' . $fa($minCredit) . ' کردیت هر عکس' : 'رایگان' }}</b><span>{{ $fa($defaultCount) }} شات پیشنهادی</span></div>
+      <div class="ps-dock-info"><b>{{ $minCredit ? 'از ' . $fa($minCredit) . ' کردیت هر عکس' : 'رایگان' }}</b><span>{{ $fa(count($shots)) }} صحنه برای انتخاب</span></div>
       <a class="ps-cta" href="{{ $createUrl }}"><i class="fa-solid fa-bolt" aria-hidden="true"></i> بساز</a>
     </div>
     </div>
@@ -92,8 +92,9 @@
             <h2 class="ps-block-title">نمونه‌های این پک</h2>
             <div class="ps-thumbs">
               @foreach($gallery as $i => $g)
-                <button type="button" data-gallery-thumb="{{ $i }}" data-src="{{ $g['url'] }}" data-label="{{ $g['label'] }}" class="{{ $i === 0 ? 'is-viewing' : '' }}" aria-label="{{ $g['label'] }}" aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
+                <button type="button" data-gallery-thumb="{{ $i }}" data-src="{{ $g['url'] }}" data-label="{{ $g['label'] }}" data-kind="{{ $g['kind'] ?? 'slide' }}" class="{{ $i === 0 ? 'is-viewing' : '' }}{{ ($g['kind'] ?? '') === 'input' ? ' is-input' : '' }}" aria-label="{{ $g['label'] }}" aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
                   <img src="{{ $g['url'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" decoding="async">
+                  @if(($g['kind'] ?? '') === 'input')<span class="ps-thumb-tag">عکس ورودی</span>@endif
                 </button>
               @endforeach
             </div>
@@ -109,7 +110,14 @@
         @endif
         <span class="ps-counter" data-counter>{{ $gallery->count() > 1 ? $fa(1) . ' / ' . $fa($gallery->count()) : '' }}</span>
         @include('app.productshot-v2.partials.back', ['href' => route('app.explore'), 'label' => 'برگشت', 'class' => 'psb-on-media ps-back-mob'])
-        <span class="ps-pack-badge"><i class="fa-solid fa-images" aria-hidden="true"></i>{{ $gallery->count() > 1 ? $fa($gallery->count()) . ' نمونه' : '' }}</span>
+        <span class="ps-pack-badge" data-pack-badge @if(($first['kind'] ?? '') === 'input') hidden @endif><i class="fa-solid fa-images" aria-hidden="true"></i>{{ $gallery->count() > 1 ? $fa($gallery->where('kind', 'slide')->count()) . ' نمونه' : '' }}</span>
+        @if($inputImage ?? null)
+          <span class="ps-input-badge" data-input-badge @if(($first['kind'] ?? '') !== 'input') hidden @endif><i class="fa-solid fa-camera" aria-hidden="true"></i> عکس ورودی — نمونه‌ها با همین عکس ساخته شده‌اند</span>
+          <img class="ps-compare-image" src="{{ $inputImage }}" alt="عکس ورودی" data-compare-image loading="lazy" decoding="async" aria-hidden="true">
+          <button type="button" class="ps-compare" data-compare @if(($first['kind'] ?? '') === 'input') hidden @endif aria-pressed="false" title="نگه دار تا عکس ورودی را ببینی">
+            <i class="fa-solid fa-code-compare" aria-hidden="true"></i><span data-compare-label>قبل / بعد</span>
+          </button>
+        @endif
         @if($gallery->count() > 1)
           <button type="button" class="ps-stage-nav is-prev" data-prev aria-label="نمونه‌ی قبلی"><i class="fa-solid fa-chevron-right"></i></button>
           <button type="button" class="ps-stage-nav is-next" data-next aria-label="نمونه‌ی بعدی"><i class="fa-solid fa-chevron-left"></i></button>
@@ -125,8 +133,9 @@
         <h2 class="ps-block-title">نمونه‌های این پک</h2>
         <div class="ps-thumbs">
           @foreach($gallery as $i => $g)
-            <button type="button" data-gallery-thumb="{{ $i }}" data-src="{{ $g['url'] }}" data-label="{{ $g['label'] }}" class="{{ $i === 0 ? 'is-viewing' : '' }}" aria-label="{{ $g['label'] }}" aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
+            <button type="button" data-gallery-thumb="{{ $i }}" data-src="{{ $g['url'] }}" data-label="{{ $g['label'] }}" data-kind="{{ $g['kind'] ?? 'slide' }}" class="{{ $i === 0 ? 'is-viewing' : '' }}{{ ($g['kind'] ?? '') === 'input' ? ' is-input' : '' }}" aria-label="{{ $g['label'] }}" aria-pressed="{{ $i === 0 ? 'true' : 'false' }}">
               <img src="{{ $g['url'] }}" alt="" loading="lazy" decoding="async">
+              @if(($g['kind'] ?? '') === 'input')<span class="ps-thumb-tag">عکس ورودی</span>@endif
             </button>
           @endforeach
         </div>
@@ -225,6 +234,7 @@
     var selected = thumbs.filter(function (button) { return Number(button.dataset.galleryThumb) === current; })[0];
     if (!selected) return;
     crossfade(selected.dataset.src, selected.dataset.label || '');
+    syncInputState(selected.dataset.kind === 'input');
     if (counter) counter.textContent = fa(current + 1) + ' / ' + fa({{ $gallery->count() }});
     thumbs.forEach(function (button) {
       var active = Number(button.dataset.galleryThumb) === current;
@@ -234,6 +244,49 @@
       if (button.hasAttribute('aria-selected')) button.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     if (selected.scrollIntoView) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  /* عکس ورودی: نشان روی تصویر + مقایسه‌ی قبل/بعد با نگه داشتن */
+  var inputBadge = root.querySelector('[data-input-badge]');
+  var packBadge = root.querySelector('[data-pack-badge]');
+  var compareButton = root.querySelector('[data-compare]');
+  var compareImage = root.querySelector('[data-compare-image]');
+  var mainWrap = root.querySelector('.ps-main');
+  function syncInputState(isInput) {
+    if (inputBadge) inputBadge.hidden = !isInput;
+    if (packBadge && inputBadge) packBadge.hidden = isInput;
+    if (compareButton) compareButton.hidden = isInput;
+    setCompare(false);
+  }
+  function setCompare(on) {
+    if (!compareImage || !mainWrap) return;
+    if (on && main) {
+      compareImage.style.width = main.offsetWidth + 'px';
+      compareImage.style.height = main.offsetHeight + 'px';
+      compareImage.style.left = main.offsetLeft + 'px';
+      compareImage.style.top = main.offsetTop + 'px';
+    }
+    mainWrap.classList.toggle('is-comparing', !!on);
+    if (compareButton) {
+      compareButton.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var label = compareButton.querySelector('[data-compare-label]');
+      if (label) label.textContent = on ? 'عکس ورودی' : 'قبل / بعد';
+    }
+  }
+  if (compareButton) {
+    var holding = false;
+    var start = function (event) { event.preventDefault(); event.stopPropagation(); holding = true; stopAuto(); setCompare(true); };
+    var end = function (event) { if (!holding) return; event.stopPropagation(); holding = false; setCompare(false); };
+    compareButton.addEventListener('pointerdown', start);
+    compareButton.addEventListener('pointerup', end);
+    compareButton.addEventListener('pointerleave', end);
+    compareButton.addEventListener('pointercancel', end);
+    compareButton.addEventListener('touchstart', function (event) { event.stopPropagation(); }, { passive: true });
+    compareButton.addEventListener('touchend', function (event) { event.stopPropagation(); });
+    compareButton.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); stopAuto(); setCompare(!mainWrap.classList.contains('is-comparing')); }
+    });
+    compareButton.addEventListener('contextmenu', function (event) { event.preventDefault(); });
   }
 
   var autoTimer = null;

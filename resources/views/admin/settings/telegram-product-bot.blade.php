@@ -26,6 +26,8 @@
         <span class="tps-hero__badge"><i class="fa-solid fa-shield-halved"></i> فقط رهبر پنل</span>
       </header>
 
+      @include('admin.settings.partials.telegram-product-tabs', ['active' => 'general'])
+
       <div class="tps-stats">
         <div class="tps-stat"><span class="tps-stat__icon is-primary"><i class="fa-solid fa-user-shield"></i></span><span><small>مدیران ثبت‌شده</small><strong>{{ number_format($stats['managers']) }}</strong></span></div>
         <div class="tps-stat"><span class="tps-stat__icon is-success"><i class="fa-solid fa-circle-check"></i></span><span><small>مدیران فعال</small><strong>{{ number_format($stats['active_managers']) }}</strong></span></div>
@@ -47,7 +49,7 @@
 
         <section class="tps-card tps-card--guide">
           <div class="tps-card__head"><div><h2>مسیر فعال بات</h2><p>نمایش خلاصه‌ی تجربه‌ی مدیر در بات</p></div><i class="fa-solid fa-route tps-card__head-icon"></i></div>
-          <ol class="tps-flow"><li><b>۱</b><span>شروع فرآیند ثبت محصول</span></li><li><b>۲</b><span>دریافت یک یا چند تصویر</span></li><li><b>۳</b><span>دریافت توضیح و تحلیل هوش مصنوعی</span></li><li><b>۴</b><span>بررسی و ثبت نهایی محصول</span></li></ol>
+          <ol class="tps-flow"><li><b>۱</b><span>«ثبت محصول» ← انتخاب پرتره یا پروداکتی</span></li><li><b>۲</b><span>پرتره: تصاویر + پرامپت · پروداکتی: عکس ورودی + اسلایدها</span></li><li><b>۳</b><span>تحلیل هوش مصنوعی و بازبینی</span></li><li><b>۴</b><span>ثبت نهایی؛ فقط پیام ثبت در چت می‌ماند</span></li></ol><p class="tps-muted tps-flow-note">تنظیمات مسیر پروداکتی در سربرگ «پروداکتی» است.</p>
         </section>
       </div>
 
@@ -99,7 +101,7 @@
         </form>
         <div class="tps-table-wrap"><table class="tps-table"><thead><tr><th>محصول</th><th>کد محصول</th><th>مدیر</th><th>وضعیت</th><th>توضیح</th><th>تاریخ ثبت</th></tr></thead><tbody>
           @forelse($drafts as $draft)
-            <tr><td><strong>{{ $draft->product?->name_fa ?: ($draft->product?->name_en ?: 'در انتظار ساخت محصول') }}</strong></td><td dir="ltr">{{ $draft->product?->product_code ?: '—' }}</td><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_prompt' => 'در انتظار پرامپت', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'published' => 'منتشرشده', 'draft_saved' => 'پیش‌نویس', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ \Illuminate\Support\Str::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
+            <tr><td><strong>{{ $draft->product?->name_fa ?: ($draft->product?->name_en ?: 'در انتظار ساخت محصول') }}</strong></td><td dir="ltr">{{ $draft->product?->product_code ?: '—' }}</td><td>{{ $draft->manager?->name ?: 'نامشخص' }}</td><td><span class="tps-state tps-state--{{ $draft->state }}">{{ match($draft->state) { 'awaiting_image' => 'در انتظار تصویر', 'awaiting_prompt' => 'در انتظار پرامپت', 'awaiting_description' => 'در انتظار توضیح', 'processing' => 'در حال پردازش', 'review' => 'در انتظار بررسی', 'duplicate' => 'تکراری', 'published' => 'منتشرشده', 'draft_saved' => 'پیش‌نویس', 'completed' => 'تکمیل‌شده', 'cancelled' => 'لغوشده', 'failed' => 'ناموفق', 'ps_input' => 'پروداکتی: عکس ورودی', 'ps_slides' => 'پروداکتی: اسلایدها', 'ps_review', 'ps_edit', 'ps_slide_list', 'ps_group', 'ps_occupations', 'ps_categories', 'ps_tiles' => 'پروداکتی: بازبینی', default => $draft->state ?: 'نامشخص' } }}</span></td><td>{{ \Illuminate\Support\Str::limit($draft->description ?: 'بدون توضیح', 90) }}</td><td>{{ optional($draft->created_at)->format('Y/m/d H:i') }}</td></tr>
           @empty
             <tr><td colspan="6" class="tps-empty">فرآیندی با این مشخصات پیدا نشد.</td></tr>
           @endforelse

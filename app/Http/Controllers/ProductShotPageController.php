@@ -29,14 +29,8 @@ class ProductShotPageController extends Controller
             $defaultShots = array_slice($shots, 0, 4);
         }
 
-        $gallery = collect($shots)
-            ->filter(fn (array $s) => ! empty($s['sample_url']))
-            ->map(fn (array $s) => ['url' => $s['sample_url'], 'label' => $s['name']])
-            ->values();
-        if ($gallery->isEmpty()) {
-            $gallery = collect($this->packs->collage($product, 6))
-                ->map(fn (string $url) => ['url' => $url, 'label' => $product->name_fa ?: $product->name_en]);
-        }
+        $gallery = $this->packs->productGallery($product, $shots);
+        $inputImage = $this->packs->inputImageUrl($product);
 
         $minCredit = collect($shots)
             ->flatMap(fn (array $s) => array_values((array) ($s['quality_credits'] ?? [])) ?: [(int) ($s['credits'] ?? 0)])
@@ -65,6 +59,7 @@ class ProductShotPageController extends Controller
             'shots' => $shots,
             'defaultCount' => count($defaultShots),
             'gallery' => $gallery,
+            'inputImage' => $inputImage,
             'minCredit' => (int) ($minCredit ?? 0),
             'similar' => $similar,
             'isSaved' => $isSaved,

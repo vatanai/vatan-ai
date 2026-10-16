@@ -24,8 +24,10 @@ class TelegramProductDraft extends Model
         // درفت شکست‌خورده هم «فعال» است تا مدیر بتواند تلاش مجدد کند یا متن تازه بفرستد.
         'failed',
         // مسیر پروداکتی (پک شات) در اتصال مستقیم
-        'ps_images', 'ps_group', 'ps_occupations', 'ps_brief', 'ps_review', 'ps_edit',
-        'ps_shots', 'ps_categories', 'ps_confirm', 'ps_tiles',
+        'ps_input', 'ps_slides', 'ps_review', 'ps_edit', 'ps_group', 'ps_occupations',
+        'ps_categories', 'ps_slide_list', 'ps_tiles',
+        // وضعیت‌های نسخه‌ی قبلی مسیر پروداکتی (فقط برای بستن درفت‌های باز قدیمی)
+        'ps_images', 'ps_brief', 'ps_shots', 'ps_confirm',
     ];
 
     protected $keyType = 'string';

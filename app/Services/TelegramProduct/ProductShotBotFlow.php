@@ -6,7 +6,6 @@ use App\Jobs\ProcessTelegramProductDraftJob;
 use App\Models\Category;
 use App\Models\Occupation;
 use App\Models\Product;
-use App\Models\ShotLibrary;
 use App\Models\TelegramProductDraft;
 use App\Models\TelegramProductManager;
 use App\Models\TelegramProductRegistration;
@@ -23,31 +22,42 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * مسیر «پروداکتی» (پک شات) در بات ثبت محصول.
+ * مسیر «پروداکتی» بات ثبت محصول — درست مثل بات پرتره، ولی با اسلاید.
  *
- * فقط در حالت ارتباط مستقیم با تلگرام (بدون n8n) فعال است و مسیر پرتره را لمس نمی‌کند.
+ * گام‌ها: عکس ورودی (یک عکس) ← اسلایدها (هر اسلاید = عکس نمونه + پرامپت ساخت، پرامپت بلند
+ * در چند پیام) ← آماده‌سازی هوشمند در صف (اصلاح پرامپت با «پرامپت اصلاح‌گر» داشبورد، نام/توضیح/
+ * هشتگ/صنف/دسته/نام اسلایدها با «پرامپت مادر» داشبورد) ← بازبینی و اصلاح ← پیش‌نویس یا انتشار.
+ *
+ * پاک‌سازی: پیام‌های مدیر بلافاصله بعد از دریافت پاک می‌شوند، بات فقط یک «پنل» زنده دارد و
+ * بعد از ثبت، تنها پیام ثبت نهایی در چت می‌ماند. فقط در اتصال مستقیم (بدون n8n) فعال است.
  * همه‌ی دکمه‌ها شیشه‌ای‌اند و callback آن‌ها با «ps:» شروع می‌شود.
- *
- * گام‌ها: عکس‌ها ← صنف ← شغل‌های صنف ← توضیح کوتاه ← آماده‌سازی هوشمند ← بازبینی متن
- *        ← شات‌ها (فعال / بسته‌ی آماده) ← دسته‌بندی ← خلاصه ← پیش‌نویس یا انتشار (+ قاب‌های اکسپلور)
  */
 class ProductShotBotFlow
 {
     public const STATES = [
-        'ps_images', 'ps_group', 'ps_occupations', 'ps_brief', 'ps_review', 'ps_edit',
-        'ps_shots', 'ps_categories', 'ps_confirm', 'ps_tiles',
+        'ps_input', 'ps_slides', 'ps_review', 'ps_edit', 'ps_group', 'ps_occupations',
+        'ps_categories', 'ps_slide_list', 'ps_tiles',
     ];
 
-    public const MAX_IMAGES = 8;
+    /** وضعیت‌های نسخه‌ی قبلی مسیر (پیش از ۲۴ مهر)؛ درفت‌های باز آن‌ها باید از نو شروع شوند. */
+    public const LEGACY_STATES = ['ps_images', 'ps_brief', 'ps_shots', 'ps_confirm'];
+
     private const CATEGORY_PAGE = 16;
-    private const TILE_LABELS = ['1x1' => '۱×۱ مربع', '2x2' => '۲×۲ بزرگ', '1x2' => '۱×۲ عمودی', '2x1' => '۲×۱ افقی'];
     private const GLOBAL_TEXTS = ['ثبت محصول', 'ثبت محصول جدید', 'ویرایش محصول', 'تنظیمات', 'آموزش', 'لغو فرآیند'];
-    private const EDIT_FIELDS = ['name_fa' => 'نام فارسی', 'name_en' => 'نام انگلیسی', 'description_fa' => 'توضیح فارسی', 'brief' => 'توضیح جدید برای بازنویسی کامل'];
+    private const EDIT_FIELDS = ['name_fa' => 'نام فارسی', 'name_en' => 'نام انگلیسی', 'description_fa' => 'توضیح فارسی'];
+    private const INPUT_DIR = 'products/input';
+    private const SAMPLE_DIR = 'products/shot-samples';
+    /** عکس با ضلع بلند کمتر از این، برای نمونه‌ی اسلاید کم‌کیفیت است. */
+    private const LOW_RES_EDGE = 1000;
+
+    /** گزارش بهینه‌سازی آخرین عکس دریافتی (فقط برای همان پاسخ). */
+    private ?string $imageInfo = null;
 
     public function __construct(
         private readonly ShotProductRegistrar $registrar,
         private readonly ProductImageOptimizer $images,
         private readonly OpenRouterService $openRouter,
+        private readonly ProductShotBotSettings $settings,
     ) {
     }
 
@@ -85,17 +95,13 @@ class ProductShotBotFlow
 
     public function typeChoice(string $chatId): array
     {
-        $text = "چه نوع محصولی می‌خواهی ثبت کنی؟\n\n"
-            . "🧑 <b>پرتره (چهره‌محور)</b>\nمحصولی که کاربر عکس چهره‌ی خودش را می‌دهد؛ دقیقاً همان مسیر همیشگی.\n\n"
-            . "📦 <b>پروداکتی (پک عکس محصول)</b>\nپکی برای کسب‌وکارها: مشتری عکس محصول خودش را می‌دهد و چند شات تبلیغاتی حرفه‌ای می‌گیرد.";
-
-        return $this->response($chatId, $text, [
+        return $this->response($chatId, $this->settings->text('type_choice'), [
             [['text' => '🧑 پرتره', 'callback_data' => 'ps:type:portrait'], ['text' => '📦 پروداکتی', 'callback_data' => 'ps:type:product']],
             [['text' => 'لغو', 'callback_data' => 'ps:x']],
-        ], ['status' => 'type_choice']);
+        ], ['status' => 'type_choice', 'consume_input' => true]);
     }
 
-    public function start(TelegramProductManager $manager, string $chatId, array $input): array
+    public function start(TelegramProductManager $manager, string $chatId): array
     {
         if (! $manager->can('create_product')) {
             return $this->response($chatId, 'دسترسی ثبت محصول برای حساب شما فعال نیست.', [], ['status' => 'forbidden']);
@@ -110,122 +116,795 @@ class ProductShotBotFlow
             'telegram_product_manager_id' => $manager->id,
             'telegram_id' => $manager->telegram_id,
             'chat_id' => $chatId,
-            'state' => 'ps_images',
+            'state' => 'ps_input',
             'product_mode' => TelegramProductDraft::MODE_PRODUCT,
-            'input_payload' => ['transport' => 'direct', 'pshot' => ['images' => []]],
+            'input_payload' => ['transport' => 'direct', 'pshot' => ['input_image' => null, 'slides' => []]],
         ]);
 
-        return $this->imagesPrompt($draft, null);
+        return $this->inputPrompt($draft, null);
     }
 
     public function handle(TelegramProductManager $manager, ?TelegramProductDraft $draft, string $chatId, array $input, string $eventType, ?UploadedFile $image): ?array
     {
         $callback = (string) ($input['callback_data'] ?? '');
         if ($callback === 'ps:x') {
-            return $draft ? $this->cancel($draft, $chatId) : $this->response($chatId, 'باشه، چیزی ثبت نشد.', [], ['status' => 'cancelled']);
+            return $draft && $draft->isProductMode() ? $this->cancel($draft, $chatId) : $this->response($chatId, 'باشه، چیزی ثبت نشد.', [], ['status' => 'cancelled']);
         }
         if ($callback === 'ps:type:product') {
-            return $this->start($manager, $chatId, $input);
+            return $this->start($manager, $chatId);
         }
         if (! $draft || ! $draft->isProductMode()) {
             return $this->response($chatId, 'این دکمه دیگر معتبر نیست. برای شروع «ثبت محصول» را بزنید.', [], ['status' => 'no_draft', 'callback_notice' => 'فرآیند فعالی نیست']);
         }
+        if (in_array($draft->state, self::LEGACY_STATES, true)) {
+            $draft->forceFill(['state' => 'cancelled', 'cancelled_at' => now()])->save();
 
-        return match ($eventType) {
-            'photo' => $this->photo($draft, $chatId, $image),
-            'callback' => $this->callback($manager, $draft, $chatId, $callback, $input),
-            default => $this->text($draft, $chatId, trim((string) ($input['text'] ?? ''))),
+            return $this->response($chatId, 'مسیر ثبت پروداکتی به‌روز شده است؛ لطفاً «ثبت محصول» را بزن و از نو شروع کن.', [
+                [['text' => '➕ ثبت محصول', 'callback_data' => 'product:start']],
+            ], ['status' => 'cancelled', 'consume_input' => $eventType !== 'callback']);
+        }
+
+        $response = match ($eventType) {
+            'photo' => $this->photo($draft, $image, $input),
+            'callback' => $this->callback($manager, $draft, $chatId, $callback),
+            default => $this->text($draft, trim((string) ($input['text'] ?? '')), $input),
         };
+        // پیام‌های مدیر (عکس و متن) بعد از دریافت پاک می‌شوند تا چت فقط پنل بات را داشته باشد.
+        if ($eventType !== 'callback' && ! array_key_exists('consume_input', $response)) {
+            $response['consume_input'] = true;
+        }
+
+        return $response;
     }
 
-    // ───────────────────────── گام ۱: عکس‌ها ─────────────────────────
+    // ───────────────────────── گام ۱: عکس ورودی ─────────────────────────
 
-    private function imagesPrompt(TelegramProductDraft $draft, ?string $notice): array
+    private function inputPrompt(TelegramProductDraft $draft, ?string $notice): array
     {
-        $count = count($this->data($draft)['images'] ?? []);
-        $text = "📦 <b>ثبت پک پروداکتی — گام ۱ از ۵: عکس‌های نمایشی</b>\n\n"
-            . "عکس‌هایی را بفرست که روی کارت و صفحه‌ی این پک نشان داده می‌شوند (نمونه‌ی خروجی‌هایی که مشتری می‌گیرد).\n"
-            . "• اولین عکس، کاور کارت می‌شود.\n"
-            . "• حداکثر " . $this->fa(self::MAX_IMAGES) . " عکس؛ می‌توانی چند عکس را با هم بفرستی.\n"
-            . "• بهتر است عکس را «فشرده» (Photo) بفرستی، نه فایل.";
-        if ($count > 0) {
-            $text .= "\n\n✅ تا الان " . $this->fa($count) . " عکس دریافت شد.";
+        if ($draft->state !== 'ps_input') {
+            $draft->forceFill(['state' => 'ps_input'])->save();
         }
+        $text = $this->settings->text('input_image') . $this->takeImageInfo();
         if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
+            $text .= "\n\n⚠️ " . $this->e($notice);
         }
-        $rows = [];
-        if ($count > 0) {
-            $rows[] = [['text' => '✅ ادامه به انتخاب صنف', 'callback_data' => 'ps:img:done']];
-            $rows[] = [['text' => '🗑 حذف عکس‌ها و شروع دوباره', 'callback_data' => 'ps:img:reset']];
-        }
-        $rows[] = [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
 
-        return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_images', 'draft_id' => $draft->id]);
+        return $this->response($draft->chat_id, $text, [
+            [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
+        ], ['status' => 'ps_input', 'draft_id' => $draft->id]);
     }
 
-    private function photo(TelegramProductDraft $draft, string $chatId, ?UploadedFile $image): array
+    private function photo(TelegramProductDraft $draft, ?UploadedFile $image, array $input): array
     {
-        if ($draft->state !== 'ps_images') {
-            return $this->current($draft, 'الان منتظر عکس نیستم؛ ادامه‌ی همین مرحله را انجام بده.');
+        if (! in_array($draft->state, ['ps_input', 'ps_slides'], true)) {
+            return $this->current($draft, 'الان منتظر عکس نیستم؛ از دکمه‌های همین پیام استفاده کن.');
         }
         if (! $image) {
-            return $this->imagesPrompt($draft, 'فایل عکس دریافت نشد؛ دوباره بفرست.');
+            return $this->current($draft, (string) ($input['file_error'] ?? '') ?: 'فایل عکس دریافت نشد؛ دوباره بفرست.');
         }
-
+        $isInput = $draft->state === 'ps_input';
+        $originalBytes = (int) (@filesize($image->getRealPath()) ?: 0);
+        $originalSize = @getimagesize($image->getRealPath()) ?: [0, 0];
         try {
-            $path = $this->images->store($image, 'products/main');
+            // دقیقاً همان بهینه‌ساز ثبت از داشبورد (ProductImageOptimizer):
+            // چرخش خودکار، sRGB، حداکثر ضلع ۱۶۰۰ پیکسل، WebP با کیفیت ۸۸ و حذف متادیتا.
+            $path = $this->images->store($image, $isInput ? self::INPUT_DIR : self::SAMPLE_DIR);
         } catch (\Throwable $exception) {
             Log::warning('telegram product shot image failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
 
-            return $this->imagesPrompt($draft, 'این فایل قابل خواندن نیست؛ یک عکس JPG یا PNG دیگر بفرست.');
+            return $this->current($draft, 'این فایل قابل خواندن نیست؛ یک عکس JPG، PNG یا WebP دیگر بفرست.');
         }
+        $this->imageInfo = $this->optimizationReport($path, $originalBytes, (int) ($originalSize[0] ?? 0), (int) ($originalSize[1] ?? 0), $isInput);
+        $caption = trim((string) ($input['caption'] ?? ''));
+        $messageId = (int) ($input['message_id'] ?? 0);
 
-        $result = DB::transaction(function () use ($draft, $path): array {
+        $result = DB::transaction(function () use ($draft, $path, $isInput, $caption, $messageId): array {
             $locked = TelegramProductDraft::query()->whereKey($draft->id)->lockForUpdate()->firstOrFail();
             $payload = (array) $locked->input_payload;
-            $images = (array) data_get($payload, 'pshot.images', []);
-            if (count($images) >= self::MAX_IMAGES) {
-                return ['draft' => $locked, 'stored' => false];
+            $data = (array) ($payload['pshot'] ?? []);
+            $notice = null;
+            $remove = [];
+
+            if ($isInput && $locked->state === 'ps_input') {
+                if (! empty($data['input_image'])) {
+                    $remove[] = $data['input_image'];
+                }
+                $data['input_image'] = $path;
+                $locked->state = 'ps_slides';
+                $data['slides'] = array_values((array) ($data['slides'] ?? []));
+                if ($data['slides'] === []) {
+                    $data['slides'][] = $this->newSlide();
+                }
+            } else {
+                $slides = array_values((array) ($data['slides'] ?? []));
+                $index = $this->currentIndex($slides);
+                $currentSlide = $index !== null ? $slides[$index] : null;
+                if ($currentSlide && ! empty($currentSlide['image']) && $this->parts($currentSlide) !== []) {
+                    // اسلاید فعلی کامل است؛ این عکس یعنی شروع اسلاید بعدی.
+                    if (count($slides) >= $this->settings->maxSlides()) {
+                        $remove[] = $path;
+
+                        return ['draft' => $locked, 'remove' => $remove, 'notice' => 'سقف ' . $this->fa($this->settings->maxSlides()) . ' اسلاید پر شده است؛ «پایان و آماده‌سازی» را بزن.'];
+                    }
+                    $slides[$index]['done'] = true;
+                    $slides[] = $this->newSlide();
+                    $index = count($slides) - 1;
+                } elseif ($currentSlide === null) {
+                    if (count($slides) >= $this->settings->maxSlides()) {
+                        $remove[] = $path;
+
+                        return ['draft' => $locked, 'remove' => $remove, 'notice' => 'سقف اسلایدها پر شده است.'];
+                    }
+                    $slides[] = $this->newSlide();
+                    $index = count($slides) - 1;
+                } elseif (! empty($currentSlide['image'])) {
+                    $remove[] = $currentSlide['image'];
+                    $notice = 'هر اسلاید یک عکس نمونه دارد؛ عکس قبلی این اسلاید جایگزین شد.';
+                }
+                $slides[$index]['image'] = $path;
+                if ($caption !== '') {
+                    $slides[$index]['parts'][] = ['m' => $messageId, 't' => $caption];
+                }
+                $data['slides'] = $slides;
             }
-            $images[] = $path;
-            data_set($payload, 'pshot.images', array_values($images));
-            $locked->forceFill(['input_payload' => $payload, 'image_paths' => array_values($images)])->save();
 
-            return ['draft' => $locked, 'stored' => true];
+            $payload['pshot'] = $data;
+            $locked->forceFill(['input_payload' => $payload])->save();
+
+            return ['draft' => $locked, 'remove' => $remove, 'notice' => $notice];
         });
-        if (! $result['stored']) {
-            Storage::disk('public')->delete($path);
 
-            return $this->imagesPrompt($result['draft'], 'سقف ' . $this->fa(self::MAX_IMAGES) . ' عکس پر شده است.');
-        }
+        $this->deleteFiles($result['remove']);
 
-        return $this->imagesPrompt($result['draft'], null);
+        return $result['draft']->state === 'ps_input'
+            ? $this->inputPrompt($result['draft'], $result['notice'])
+            : $this->slidesPanel($result['draft'], $result['notice']);
     }
 
-    // ───────────────────────── گام ۲: صنف ─────────────────────────
+    /** گزارش کوتاه بهینه‌سازی برای مدیر: حجم/ابعاد قبل و بعد + هشدار کیفیت پایین. */
+    private function optimizationReport(string $path, int $originalBytes, int $originalWidth, int $originalHeight, bool $isInput): ?string
+    {
+        try {
+            $disk = Storage::disk('public');
+            $newBytes = (int) $disk->size($path);
+            $size = @getimagesize($disk->path($path)) ?: [0, 0];
+        } catch (\Throwable) {
+            return null;
+        }
+        $width = (int) ($size[0] ?? 0);
+        $height = (int) ($size[1] ?? 0);
+        $label = $isInput ? 'عکس ورودی' : 'عکس اسلاید';
+        $line = "🗜 {$label} بهینه شد: "
+            . ($originalBytes > 0 ? $this->humanBytes($originalBytes) . ' ← ' : '')
+            . $this->humanBytes($newBytes)
+            . ($width > 0 ? ' · ' . $this->fa($width) . '×' . $this->fa($height) : '')
+            . ' · WebP';
+        $longest = max($originalWidth, $originalHeight);
+        if ($longest > 0 && $longest < self::LOW_RES_EDGE) {
+            $line .= "\n⚠️ کیفیت این عکس پایین است (" . $this->fa($longest) . ' پیکسل)؛ برای کیفیت بهتر، عکس را «به‌صورت فایل» بفرست.';
+        }
+
+        return "\n\n" . $line;
+    }
+
+    private function takeImageInfo(): string
+    {
+        $info = (string) $this->imageInfo;
+        $this->imageInfo = null;
+
+        return $info;
+    }
+
+    private function humanBytes(int $bytes): string
+    {
+        if ($bytes >= 1024 * 1024) {
+            return $this->fa(number_format($bytes / 1048576, 1)) . ' مگابایت';
+        }
+
+        return $this->fa(max(1, (int) round($bytes / 1024))) . ' کیلوبایت';
+    }
+
+    // ───────────────────────── گام ۲: اسلایدها ─────────────────────────
+
+    private function slidesPanel(TelegramProductDraft $draft, ?string $notice = null, bool $rejectedInput = false): array
+    {
+        if ($draft->state !== 'ps_slides') {
+            $draft->forceFill(['state' => 'ps_slides'])->save();
+        }
+        $slides = $this->slides($draft);
+        $index = $this->currentIndex($slides);
+        $complete = collect($slides)->filter(fn ($s) => $this->isComplete($s))->count();
+        $rows = [];
+
+        if ($index === null) {
+            $text = $this->settings->text('slides_menu', ['n' => $this->fa(count($slides)), 'count' => $this->fa($complete)]);
+            $rows[] = [['text' => '➕ اسلاید بعدی', 'callback_data' => 'ps:sl:new']];
+        } else {
+            $slide = $slides[$index];
+            $n = $this->fa($index + 1);
+            $parts = $this->parts($slide);
+            $chars = mb_strlen($this->joinParts($slide));
+            if (empty($slide['image'])) {
+                $text = $this->settings->text('slide_image', ['n' => $n]);
+            } elseif ($parts === []) {
+                $text = $this->settings->text('slide_prompt', ['n' => $n]);
+            } else {
+                $text = "🖼 <b>اسلاید {$n}</b>\n\n"
+                    . "📝 پرامپت: " . $this->fa(count($parts)) . ' بخش · ' . $this->fa(number_format($chars)) . " کاراکتر دریافت شد ✅\n"
+                    . "اگر پرامپت ادامه دارد، بقیه را بفرست؛ همه پشت سر هم به همین اسلاید اضافه می‌شود.";
+            }
+            $text .= "\n\n<b>وضعیت اسلاید {$n}:</b> " . (empty($slide['image']) ? '⏳ عکس' : '✅ عکس') . ' · ' . ($parts === [] ? '⏳ پرامپت' : '✅ پرامپت');
+            $done = $complete - ($this->isComplete($slide) ? 1 : 0);
+            if ($done > 0) {
+                $text .= "\nاسلایدهای ثبت‌شده‌ی قبلی: " . $this->fa($done);
+            }
+            if ($this->isComplete($slide)) {
+                if (count($slides) < $this->settings->maxSlides()) {
+                    $rows[] = [['text' => '➕ ثبت این اسلاید و اسلاید بعدی', 'callback_data' => 'ps:sl:next']];
+                }
+                $rows[] = [['text' => '🏁 پایان اسلایدها و آماده‌سازی', 'callback_data' => 'ps:sl:finish']];
+                $rows[] = [['text' => '🧹 پاک کردن پرامپت این اسلاید', 'callback_data' => 'ps:sl:clear']];
+            } else {
+                if ($parts !== []) {
+                    $rows[] = [['text' => '🧹 پاک کردن پرامپت این اسلاید', 'callback_data' => 'ps:sl:clear']];
+                }
+                if (count($slides) > 1 || $complete > 0) {
+                    $rows[] = [['text' => '🗑 حذف این اسلاید ناقص', 'callback_data' => 'ps:sl:drop']];
+                }
+            }
+        }
+        if ($index === null && $complete > 0) {
+            $rows[] = [['text' => '🏁 پایان اسلایدها و آماده‌سازی', 'callback_data' => 'ps:sl:finish']];
+        }
+        $text .= $this->takeImageInfo();
+        $text .= "\n\n<i>حداکثر " . $this->fa($this->settings->maxSlides()) . ' اسلاید · هر پرامپت تا ' . $this->fa(number_format($this->settings->maxPromptChars())) . ' کاراکتر</i>';
+        if ($notice) {
+            $text .= "\n\n⚠️ " . $this->e($notice);
+        }
+        if ($draft->ai_result) {
+            $rows[] = [['text' => '⬅️ برگشت به بازبینی', 'callback_data' => 'ps:rv:back']];
+        }
+        $rows[] = [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
+
+        $extra = ['status' => 'ps_slides', 'draft_id' => $draft->id];
+        if ($rejectedInput) {
+            $extra['consume_input'] = false;
+        }
+
+        return $this->response($draft->chat_id, $text, $rows, $extra);
+    }
+
+    private function receivePromptPart(TelegramProductDraft $draft, string $text, array $input): array
+    {
+        $messageId = (int) ($input['message_id'] ?? 0);
+        $max = $this->settings->maxPromptChars();
+
+        $result = DB::transaction(function () use ($draft, $text, $messageId, $max): array {
+            $locked = TelegramProductDraft::query()->whereKey($draft->id)->lockForUpdate()->firstOrFail();
+            $payload = (array) $locked->input_payload;
+            $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+            $index = $this->currentIndex($slides);
+            if ($index === null) {
+                if (count($slides) >= $this->settings->maxSlides()) {
+                    return ['draft' => $locked, 'notice' => 'سقف اسلایدها پر شده است؛ «پایان اسلایدها» را بزن.', 'rejected' => true];
+                }
+                $slides[] = $this->newSlide();
+                $index = count($slides) - 1;
+            }
+            $current = mb_strlen($this->joinParts($slides[$index]));
+            if ($current + mb_strlen($text) > $max) {
+                return ['draft' => $locked, 'notice' => 'پرامپت این اسلاید از سقف ' . $this->fa(number_format($max)) . ' کاراکتر بیشتر می‌شود؛ این بخش اضافه نشد (پیامت پاک نشد تا کوتاهش کنی).', 'rejected' => true];
+            }
+            $slides[$index]['parts'][] = ['m' => $messageId, 't' => $text];
+            data_set($payload, 'pshot.slides', $slides);
+            $locked->forceFill(['input_payload' => $payload])->save();
+
+            return ['draft' => $locked, 'notice' => null, 'rejected' => false];
+        });
+
+        return $this->slidesPanel($result['draft'], $result['notice'], $result['rejected']);
+    }
+
+    private function slideAction(TelegramProductDraft $draft, string $action): array
+    {
+        if (! in_array($draft->state, ['ps_slides', 'ps_slide_list', 'ps_review'], true)) {
+            return $this->current($draft, null);
+        }
+        $payload = (array) $draft->input_payload;
+        $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+        $index = $this->currentIndex($slides);
+        $notice = null;
+        $remove = [];
+
+        switch ($action) {
+            case 'next':
+                if ($index === null || ! $this->isComplete($slides[$index])) {
+                    return $this->slidesPanel($draft, 'اول عکس و پرامپت همین اسلاید را کامل کن.');
+                }
+                if (count($slides) >= $this->settings->maxSlides()) {
+                    return $this->slidesPanel($draft, 'سقف اسلایدها پر شده است.');
+                }
+                $slides[$index]['done'] = true;
+                $slides[] = $this->newSlide();
+                break;
+            case 'new':
+                if (count($slides) >= $this->settings->maxSlides()) {
+                    return $this->slidesPanel($draft, 'سقف اسلایدها پر شده است.');
+                }
+                if ($index === null) {
+                    $slides[] = $this->newSlide();
+                }
+                break;
+            case 'clear':
+                if ($index !== null) {
+                    $slides[$index]['parts'] = [];
+                    $notice = 'پرامپت این اسلاید پاک شد؛ پرامپت جدید را بفرست.';
+                }
+                break;
+            case 'drop':
+                if ($index !== null) {
+                    if (! empty($slides[$index]['image'])) {
+                        $remove[] = $slides[$index]['image'];
+                    }
+                    array_splice($slides, $index, 1);
+                }
+                break;
+            case 'finish':
+                if ($index !== null) {
+                    if ($this->isComplete($slides[$index])) {
+                        $slides[$index]['done'] = true;
+                    } elseif (empty($slides[$index]['image']) && $this->parts($slides[$index]) === []) {
+                        array_splice($slides, $index, 1); // اسلاید خالی
+                    } else {
+                        return $this->slidesPanel($draft, 'این اسلاید ناقص است؛ کاملش کن یا «حذف این اسلاید ناقص» را بزن.');
+                    }
+                }
+                if (! collect($slides)->contains(fn ($s) => $this->isComplete($s))) {
+                    data_set($payload, 'pshot.slides', $slides);
+                    $draft->forceFill(['input_payload' => $payload])->save();
+
+                    return $this->slidesPanel($draft->fresh(), 'حداقل یک اسلاید کامل (عکس + پرامپت) لازم است.');
+                }
+                data_set($payload, 'pshot.slides', $slides);
+                $draft->forceFill(['input_payload' => $payload])->save();
+
+                return $this->beginProcessing($draft->fresh());
+        }
+
+        data_set($payload, 'pshot.slides', array_values($slides));
+        $draft->forceFill(['input_payload' => $payload, 'state' => 'ps_slides'])->save();
+        $this->deleteFiles($remove);
+
+        return $this->slidesPanel($draft->fresh(), $notice);
+    }
+
+    // ───────────────────────── آماده‌سازی هوشمند (در صف) ─────────────────────────
+
+    private function beginProcessing(TelegramProductDraft $draft): array
+    {
+        $draft->forceFill([
+            'state' => 'processing',
+            'pending_edit_field' => null,
+            'error_message' => null,
+            'processing_started_at' => now(),
+            'reviewed_at' => null,
+            'description' => Str::limit($this->slidesDigest($draft), 60000, ''),
+        ])->save();
+        ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
+
+        return $this->processingResponse($draft);
+    }
+
+    private function processingResponse(TelegramProductDraft $draft, bool $editPanel = false): array
+    {
+        $slides = $this->slides($draft);
+        $pending = collect($slides)->filter(fn ($s) => $this->isComplete($s) && empty($s['optimized']))->count();
+        $total = collect($slides)->filter(fn ($s) => $this->isComplete($s))->count();
+        $text = $this->settings->text('processing');
+        if ($total > 0 && (bool) $this->settings->get('ai.optimizer_enabled', true)) {
+            $text .= "\n\n✨ اصلاح پرامپت‌ها: " . $this->fa($total - $pending) . ' از ' . $this->fa($total);
+        }
+
+        return $this->response($draft->chat_id, $text, [
+            [['text' => '🔄 بررسی وضعیت', 'callback_data' => 'ps:status'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
+        ], ['status' => 'processing', 'draft_id' => $draft->id, 'edit_panel' => $editPanel]);
+    }
+
+    /**
+     * یک گام از آماده‌سازی؛ هر بار یک پرامپت اصلاح می‌شود تا هیچ جابی از سقف زمانی صف رد نشود.
+     *
+     * @return bool true یعنی کار تمام شد (بازبینی یا خطا)، false یعنی گام بعدی لازم است.
+     */
+    public function process(TelegramProductDraft $draft): bool
+    {
+        $draft->refresh();
+        if ($draft->state !== 'processing') {
+            return true;
+        }
+
+        try {
+            $payload = (array) $draft->input_payload;
+            $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+            $slides = array_values(array_filter($slides, fn ($s) => $this->isComplete($s)));
+
+            // ۱) اصلاح پرامپت‌ها — فقط بر اساس «پرامپت اصلاح‌گر» داشبورد، یکی‌یکی.
+            foreach ($slides as $i => $slide) {
+                if (! empty($slide['optimized'])) {
+                    continue;
+                }
+                $original = $this->joinParts($slide);
+                $slides[$i]['prompt'] = $original;
+                $slides[$i]['optimized'] = true;
+                $slides[$i]['optimizer_applied'] = false;
+                if ((bool) $this->settings->get('ai.optimizer_enabled', true)) {
+                    $optimized = $this->optimizePrompt($original, $draft->id);
+                    if ($optimized !== null) {
+                        $slides[$i]['prompt'] = $optimized;
+                        $slides[$i]['optimizer_applied'] = true;
+                    }
+                }
+                data_set($payload, 'pshot.slides', $slides);
+                $draft->forceFill(['input_payload' => $payload])->save();
+
+                return false; // گام بعدی (اسلاید بعدی یا اطلاعات محصول) در جاب تازه
+            }
+
+            // ۲) نام، توضیح، هشتگ، صنف، دسته و نام اسلایدها — با «پرامپت مادر» داشبورد.
+            $ai = (array) ($draft->ai_result ?? []);
+            $needsMetadata = $ai === [] || collect($slides)->contains(fn ($s) => trim((string) ($s['name'] ?? '')) === '');
+            if ($needsMetadata) {
+                $generated = $this->generateMetadata($draft, $slides);
+                foreach ($slides as $i => $slide) {
+                    if (trim((string) ($slide['name'] ?? '')) === '') {
+                        $slides[$i]['name'] = $generated['slide_names'][$i] ?? ('اسلاید ' . $this->fa($i + 1));
+                    }
+                }
+                if ($ai === []) {
+                    $ai = $generated;
+                    data_set($payload, 'pshot.occupation_ids', $generated['occupation_ids']);
+                    data_set($payload, 'pshot.category_ids', $generated['category_ids']);
+                }
+                unset($ai['slide_names'], $ai['occupation_ids'], $ai['category_ids']);
+            }
+            $duplicate = $this->duplicateProduct((string) ($ai['name_fa'] ?? ''), (string) ($ai['name_en'] ?? ''));
+            $ai['duplicate_product_name'] = $duplicate ? ($duplicate->name_fa ?: $duplicate->name_en) : null;
+            $ai['duplicate_product_code'] = $duplicate?->product_code;
+            $ai['optimized_count'] = collect($slides)->filter(fn ($s) => ! empty($s['optimizer_applied']))->count();
+
+            data_set($payload, 'pshot.slides', $slides);
+            $draft->forceFill([
+                'ai_result' => $ai,
+                'input_payload' => $payload,
+                'state' => 'ps_review',
+                'error_message' => null,
+                'reviewed_at' => null,
+            ])->save();
+        } catch (\Throwable $exception) {
+            Log::warning('telegram product shot processing failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
+            $draft->forceFill([
+                'state' => 'failed',
+                'error_message' => Str::limit($exception->getMessage(), 1000, ''),
+            ])->save();
+        }
+
+        return true;
+    }
+
+    private function optimizePrompt(string $prompt, string $draftId): ?string
+    {
+        $system = trim((string) $this->settings->get('ai.optimizer_prompt', '')) ?: ProductShotBotSettings::defaultOptimizerPrompt();
+        // فقط قالب خروجی؛ خود قواعد اصلاح همان پرامپت داشبورد است.
+        $system .= "\n\nOutput format: return only a JSON object {\"prompt\": \"<the final prompt>\"}.";
+        try {
+            $result = $this->openRouter->generateStructuredText($system, $prompt, $this->aiModel(), 75);
+            $optimized = trim((string) data_get($result, 'content.prompt', ''));
+        } catch (\Throwable $exception) {
+            Log::info('telegram product shot prompt optimizer skipped', ['draft' => $draftId, 'error' => $exception->getMessage()]);
+
+            return null;
+        }
+        // پاسخ خالی یا ناقص هرگز جایگزین پرامپت مدیر نمی‌شود.
+        if ($optimized === '' || mb_strlen($optimized) < min(40, (int) (mb_strlen($prompt) * 0.3))) {
+            return null;
+        }
+
+        return Str::limit($optimized, 30000, '');
+    }
+
+    private function generateMetadata(TelegramProductDraft $draft, array $slides): array
+    {
+        $occupations = Occupation::query()->active()->ordered()->get(['id', 'name_fa', 'group_key']);
+        $categories = Category::query()->active()->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'name_fa']);
+        $occupationList = $occupations->map(fn (Occupation $o) => "{$o->id}: {$o->name_fa} (" . (Occupation::GROUPS[$o->group_key] ?? $o->group_key) . ')')->implode("\n");
+        $categoryList = $categories->map(fn (Category $c) => $c->name_fa ?: $c->name)->filter()->implode('، ');
+        $slideList = collect($slides)->values()->map(fn ($s, $i) => '--- اسلاید ' . ($i + 1) . " ---\n" . Str::limit((string) ($s['prompt'] ?? $this->joinParts($s)), 1800))->implode("\n\n");
+        $count = count($slides);
+
+        $instruction = trim((string) $this->settings->get('ai.metadata_prompt', '')) ?: ProductShotBotSettings::defaultMetadataPrompt();
+        $instruction .= "\n\n=== داده‌ها ===\n"
+            . "تعداد اسلایدها: {$count}\n\nپرامپت ساخت اسلایدها:\n{$slideList}\n\n"
+            . "صنف‌های مجاز (شناسه: نام (گروه)):\n{$occupationList}\n\n"
+            . "دسته‌بندی‌های مجاز سایت:\n{$categoryList}\n\n"
+            . (((bool) $this->settings->get('ai.use_vision', true)) ? "تصویر اول (اگر هست) عکس ورودی محصول و بقیه نمونه‌ی خروجی اسلایدها هستند.\n\n" : '')
+            // قرارداد ثابت خروجی (برای اینکه تغییر پرامپت در داشبورد ساختار را خراب نکند)
+            . "=== خروجی ===\nفقط یک JSON معتبر با دقیقاً این کلیدها:\n"
+            . "name_fa (string), name_en (string), description_fa (string), tags (array of string, بدون #),\n"
+            . "slide_names (array of {$count} string فارسی، به ترتیب اسلایدها),\n"
+            . "occupation_ids (array of int، ۱ تا ۸ شناسه از صنف‌های مجاز),\n"
+            . "categories (array of string، ۱ تا ۳ نام دقیقاً از دسته‌بندی‌های مجاز),\n"
+            . "product_description (string انگلیسی، حداکثر ۲۵۰ کاراکتر: نوع و شکل فیزیکی محصول بدون نام برند),\n"
+            . "brand_style (string انگلیسی کوتاه), brand_palette (string انگلیسی کوتاه یا خالی).";
+
+        $model = $this->aiModel();
+        $result = null;
+        $images = (bool) $this->settings->get('ai.use_vision', true) ? $this->visionImages($draft, $slides) : [];
+        if ($images !== []) {
+            try {
+                $result = $this->openRouter->analyzeImagesJson($model, $instruction, $images, 75);
+            } catch (\Throwable $exception) {
+                Log::info('telegram product shot vision metadata fallback to text', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
+            }
+        }
+        $result ??= $this->openRouter->generateStructuredText('فقط JSON معتبر برگردان.', $instruction, $model, 75);
+        $ai = (array) ($result['content'] ?? []);
+        foreach (['name_fa', 'name_en', 'description_fa'] as $key) {
+            if (trim((string) ($ai[$key] ?? '')) === '') {
+                throw new \RuntimeException("فیلد {$key} در پاسخ هوش مصنوعی خالی است.");
+            }
+        }
+
+        $validOccupations = $occupations->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $occupationIds = array_values(array_unique(array_intersect(array_map('intval', (array) ($ai['occupation_ids'] ?? [])), $validOccupations)));
+        $categoryIds = collect((array) ($ai['categories'] ?? [($ai['category'] ?? '')]))
+            ->map(fn ($name) => $this->matchCategory((string) $name, $categories)?->id)
+            ->filter()->unique()->take(3)->map(fn ($id) => (int) $id)->values()->all();
+        $names = array_values(array_map(fn ($n) => Str::limit(trim((string) $n), 120, ''), (array) ($ai['slide_names'] ?? [])));
+
+        return [
+            'name_fa' => Str::limit(trim((string) $ai['name_fa']), 120, ''),
+            'name_en' => Str::limit(trim((string) $ai['name_en']), 120, ''),
+            'description_fa' => Str::limit(trim((string) $ai['description_fa']), 1500, ''),
+            'tags' => collect((array) ($ai['tags'] ?? []))->map(fn ($t) => trim(ltrim((string) $t, '#')))->filter()->unique()->take(8)->values()->all(),
+            'product_description' => Str::limit(trim((string) ($ai['product_description'] ?? '')), 300, ''),
+            'brand_style' => Str::limit(trim((string) ($ai['brand_style'] ?? '')), 200, ''),
+            'brand_palette' => Str::limit(trim((string) ($ai['brand_palette'] ?? '')), 120, ''),
+            'slide_names' => array_map(fn ($n) => $n !== '' ? $n : null, $names),
+            'occupation_ids' => $occupationIds,
+            'category_ids' => $categoryIds,
+            'model' => (string) ($result['model'] ?? $model),
+        ];
+    }
+
+    private function visionImages(TelegramProductDraft $draft, array $slides): array
+    {
+        $paths = array_values(array_filter(array_merge(
+            [data_get($draft->input_payload, 'pshot.input_image')],
+            collect($slides)->pluck('image')->take(3)->all(),
+        )));
+        $images = [];
+        foreach ($paths as $path) {
+            if (! is_string($path) || ! Storage::disk('public')->exists($path)) {
+                continue;
+            }
+            $bytes = Storage::disk('public')->get($path);
+            if (! $bytes || strlen($bytes) > 4 * 1024 * 1024) {
+                continue;
+            }
+            $mime = Storage::disk('public')->mimeType($path) ?: 'image/jpeg';
+            $images[] = 'data:' . $mime . ';base64,' . base64_encode($bytes);
+        }
+
+        return $images;
+    }
+
+    /** پیام بعد از اتمام پردازش (برای ارسال خودکار یا دکمه‌ی بررسی وضعیت). */
+    public function resultResponse(TelegramProductDraft $draft, bool $progress = false): array
+    {
+        $draft->refresh();
+
+        return match ($draft->state) {
+            'processing' => $progress
+                ? $this->processingResponse($draft, true)
+                : array_merge($this->processingResponse($draft), ['callback_notice' => 'هنوز آماده نیست']),
+            'failed' => $this->failed($draft),
+            'ps_review' => $this->review($draft),
+            default => $this->current($draft, null),
+        };
+    }
+
+    private function failed(TelegramProductDraft $draft): array
+    {
+        return $this->response($draft->chat_id, "⚠️ آماده‌سازی هوشمند با خطا روبه‌رو شد.\n\nعکس‌ها و پرامپت‌ها حفظ شده‌اند. «تلاش مجدد» را بزن؛ اگر تکرار شد چند دقیقه بعد امتحان کن.", [
+            [['text' => '🔁 تلاش مجدد', 'callback_data' => 'ps:retry']],
+            [['text' => '🖼 ویرایش اسلایدها', 'callback_data' => 'ps:back:slides'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
+        ], ['status' => 'failed', 'draft_id' => $draft->id]);
+    }
+
+    // ───────────────────────── گام ۳: بازبینی ─────────────────────────
+
+    private function review(TelegramProductDraft $draft, ?string $notice = null): array
+    {
+        if ($draft->state !== 'ps_review') {
+            $draft->forceFill(['state' => 'ps_review', 'pending_edit_field' => null])->save();
+        }
+        $ai = (array) $draft->ai_result;
+        $slides = $this->completeSlides($draft);
+        $tags = collect((array) ($ai['tags'] ?? []))->map(fn ($t) => '#' . str_replace([' ', '‌'], '_', $t))->implode(' ');
+        $occupations = $this->selectedOccupations($draft)->pluck('name_fa')->implode('، ');
+        $categories = $this->selectedCategories($draft)->map(fn ($c) => $c->name_fa ?: $c->name)->implode('، ');
+        $credits = $this->settings->slideCredits();
+
+        $text = $this->settings->text('review') . "\n\n"
+            . '<b>' . $this->e($ai['name_fa'] ?? '') . '</b> — ' . $this->e($ai['name_en'] ?? '') . "\n"
+            . $this->e(Str::limit((string) ($ai['description_fa'] ?? ''), 600)) . "\n\n"
+            . '🏷 صنف: ' . $this->e($occupations ?: '⚠️ انتخاب نشده') . "\n"
+            . '🗂 دسته: ' . $this->e($categories ?: '⚠️ انتخاب نشده') . "\n"
+            . '#️⃣ ' . $this->e($tags ?: '—') . "\n\n"
+            . '🖼 <b>اسلایدها (' . $this->fa(count($slides)) . "):</b>\n";
+        foreach ($slides as $i => $slide) {
+            $text .= $this->fa($i + 1) . '. ' . $this->e(Str::limit((string) ($slide['name'] ?? ''), 40)) . ' · ' . $this->fa(number_format(mb_strlen((string) ($slide['prompt'] ?? '')))) . " کاراکتر\n";
+        }
+        $text .= '📷 عکس ورودی: ' . (data_get($draft->input_payload, 'pshot.input_image') ? '✅' : '—')
+            . ' · 💳 هر اسلاید از ' . $this->fa((int) ($credits['standard'] ?? 0)) . ' کردیت';
+        $optimized = (int) ($ai['optimized_count'] ?? 0);
+        if ($optimized > 0) {
+            $text .= "\n\n✨ پرامپت " . $this->fa($optimized) . ' اسلاید با پرامپت اصلاح‌گر اصلاح شد.';
+        }
+        if (! empty($ai['duplicate_product_name'])) {
+            $text .= "\n\n⚠️ محصولی با نام مشابه وجود دارد: " . $this->e($ai['duplicate_product_name'])
+                . (! empty($ai['duplicate_product_code']) ? ' (کد ' . $this->e($ai['duplicate_product_code']) . ')' : '')
+                . '. اگر محصول جدیدی است ادامه بده؛ وگرنه نام را اصلاح کن.';
+        }
+        if (! app(ProductShotFeature::class)->enabled()) {
+            $text .= "\n\nℹ️ «استودیو محصول» در سایت خاموش است؛ محصول ثبت می‌شود ولی تا روشن شدن از پنل برای کاربران دیده نمی‌شود.";
+        }
+        if ($notice) {
+            $text .= "\n\n" . $this->e($notice);
+        }
+
+        $manager = $draft->manager;
+        $first = [['text' => '💾 ذخیره در پیش‌نویس', 'callback_data' => 'ps:save:draft']];
+        if (! $manager || $manager->can('publish_product')) {
+            array_unshift($first, ['text' => '🚀 انتشار در سایت', 'callback_data' => 'ps:save:active']);
+        }
+
+        return $this->response($draft->chat_id, $text, [
+            $first,
+            [['text' => '✏️ نام', 'callback_data' => 'ps:ed:name_fa'], ['text' => '✏️ نام انگلیسی', 'callback_data' => 'ps:ed:name_en'], ['text' => '✏️ توضیح', 'callback_data' => 'ps:ed:description_fa']],
+            [['text' => '🏷 صنف', 'callback_data' => 'ps:rv:occ'], ['text' => '🗂 دسته', 'callback_data' => 'ps:rv:cat'], ['text' => '🖼 اسلایدها', 'callback_data' => 'ps:rv:slides']],
+            [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
+        ], ['status' => 'ps_review', 'draft_id' => $draft->id, 'photo_url' => $this->coverUrl($draft)]);
+    }
+
+    private function editPrompt(TelegramProductDraft $draft, string $field): array
+    {
+        $label = self::EDIT_FIELDS[$field] ?? null;
+        $current = '';
+        if (Str::startsWith($field, 'slide:')) {
+            $index = (int) Str::after($field, 'slide:');
+            $slides = $this->completeSlides($draft);
+            if (! isset($slides[$index])) {
+                return $this->slideList($draft);
+            }
+            $label = 'نام اسلاید ' . $this->fa($index + 1);
+            $current = (string) ($slides[$index]['name'] ?? '');
+        } elseif ($label === null || ! $draft->ai_result) {
+            return $this->review($draft);
+        } else {
+            $current = (string) data_get($draft->ai_result, $field, '');
+        }
+        $draft->forceFill(['state' => 'ps_edit', 'pending_edit_field' => $field])->save();
+
+        return $this->response($draft->chat_id, "✏️ <b>{$label}</b>\n\nمتن فعلی (برای کپی):\n<code>" . $this->e($current) . "</code>\n\n👇 متن جدید را در یک پیام بفرست.", [
+            [['text' => '⬅️ انصراف', 'callback_data' => Str::startsWith($field, 'slide:') ? 'ps:rv:slides' : 'ps:rv:back']],
+        ], ['status' => 'ps_edit', 'draft_id' => $draft->id]);
+    }
+
+    private function applyEdit(TelegramProductDraft $draft, string $text): array
+    {
+        $field = (string) $draft->pending_edit_field;
+        if ($text === '') {
+            return $this->editPrompt($draft, $field);
+        }
+        if (Str::startsWith($field, 'slide:')) {
+            $index = (int) Str::after($field, 'slide:');
+            $payload = (array) $draft->input_payload;
+            $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+            $complete = array_keys(array_filter($slides, fn ($s) => $this->isComplete($s)));
+            if (isset($complete[$index])) {
+                $slides[$complete[$index]]['name'] = Str::limit($text, 120, '');
+                data_set($payload, 'pshot.slides', $slides);
+            }
+            $draft->forceFill(['input_payload' => $payload, 'state' => 'ps_slide_list', 'pending_edit_field' => null])->save();
+
+            return $this->slideList($draft->fresh(), 'نام اسلاید به‌روز شد.');
+        }
+        $limit = $field === 'description_fa' ? 1500 : 120;
+        $ai = (array) $draft->ai_result;
+        $ai[$field] = Str::limit($text, $limit, '');
+        if (in_array($field, ['name_fa', 'name_en'], true)) {
+            $duplicate = $this->duplicateProduct((string) ($ai['name_fa'] ?? ''), (string) ($ai['name_en'] ?? ''));
+            $ai['duplicate_product_name'] = $duplicate ? ($duplicate->name_fa ?: $duplicate->name_en) : null;
+            $ai['duplicate_product_code'] = $duplicate?->product_code;
+        }
+        $draft->forceFill(['ai_result' => $ai, 'state' => 'ps_review', 'pending_edit_field' => null])->save();
+
+        return $this->review($draft, '✅ ' . (self::EDIT_FIELDS[$field] ?? 'متن') . ' به‌روز شد.');
+    }
+
+    // ───────────────────────── فهرست اسلایدها (در بازبینی) ─────────────────────────
+
+    private function slideList(TelegramProductDraft $draft, ?string $notice = null): array
+    {
+        $draft->forceFill(['state' => 'ps_slide_list', 'pending_edit_field' => null])->save();
+        $slides = $this->completeSlides($draft);
+        $rows = [];
+        foreach ($slides as $i => $slide) {
+            $rows[] = [
+                ['text' => '✏️ ' . $this->fa($i + 1) . '. ' . Str::limit((string) ($slide['name'] ?? ''), 24, '…'), 'callback_data' => 'ps:sn:' . $i],
+                ['text' => '🗑', 'callback_data' => 'ps:sd:' . $i],
+            ];
+        }
+        if (count($slides) < $this->settings->maxSlides()) {
+            $rows[] = [['text' => '➕ افزودن اسلاید', 'callback_data' => 'ps:sl:add']];
+        }
+        $rows[] = [['text' => '⬅️ بازبینی', 'callback_data' => 'ps:rv:back']];
+        $text = "🖼 <b>اسلایدها</b>\n\nبرای تغییر نام روی اسلاید بزن؛ 🗑 اسلاید را حذف می‌کند. ترتیب نمایش و پرامپت‌ها بعداً از «ویرایش کامل در داشبورد» هم قابل تغییر است.";
+        if ($notice) {
+            $text .= "\n\n" . $this->e($notice);
+        }
+
+        return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_slide_list', 'draft_id' => $draft->id]);
+    }
+
+    private function deleteSlide(TelegramProductDraft $draft, int $index): array
+    {
+        $payload = (array) $draft->input_payload;
+        $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+        $complete = array_keys(array_filter($slides, fn ($s) => $this->isComplete($s)));
+        if (count($complete) <= 1) {
+            return $this->slideList($draft, '⚠️ حداقل یک اسلاید لازم است.');
+        }
+        if (isset($complete[$index])) {
+            $removed = $slides[$complete[$index]];
+            array_splice($slides, $complete[$index], 1);
+            data_set($payload, 'pshot.slides', array_values($slides));
+            $draft->forceFill(['input_payload' => $payload])->save();
+            $this->deleteFiles([$removed['image'] ?? null]);
+        }
+
+        return $this->slideList($draft->fresh(), 'اسلاید حذف شد.');
+    }
+
+    private function addSlides(TelegramProductDraft $draft): array
+    {
+        $payload = (array) $draft->input_payload;
+        $slides = array_values((array) data_get($payload, 'pshot.slides', []));
+        if (count($slides) >= $this->settings->maxSlides()) {
+            return $this->slideList($draft, '⚠️ سقف اسلایدها پر شده است.');
+        }
+        $slides[] = $this->newSlide();
+        data_set($payload, 'pshot.slides', $slides);
+        $draft->forceFill(['input_payload' => $payload, 'state' => 'ps_slides'])->save();
+
+        return $this->slidesPanel($draft->fresh());
+    }
+
+    // ───────────────────────── صنف ─────────────────────────
 
     private function groupPrompt(TelegramProductDraft $draft): array
     {
         $draft->forceFill(['state' => 'ps_group'])->save();
         $selected = $this->selectedOccupations($draft);
-        $groups = $this->registrar->groups();
         $selectedGroups = $this->registrar->groupsOfOccupations($selected->pluck('id')->all());
         $buttons = [];
-        foreach ($groups as $key => $label) {
+        foreach ($this->registrar->groups() as $key => $label) {
             $buttons[] = ['text' => (in_array($key, $selectedGroups, true) ? '✅ ' : '') . $label, 'callback_data' => 'ps:g:' . $key];
         }
         $rows = array_chunk($buttons, 2);
-        if ($selected->isNotEmpty()) {
-            $rows[] = [['text' => '✅ ادامه (' . $this->fa($selected->count()) . ' صنف انتخاب شده)', 'callback_data' => 'ps:g:done']];
-        }
-        $rows[] = [['text' => '⬅️ عکس‌ها', 'callback_data' => 'ps:back:images'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
-        $text = "🏷 <b>گام ۲ از ۵: این پک برای کدام صنف است؟</b>\n\n"
-            . "گروه اصلی را انتخاب کن تا شغل‌های دقیق آن را تیک بزنی. می‌توانی از چند گروه انتخاب کنی.\n"
-            . "صنف تعیین می‌کند این پک به کدام کسب‌وکارها پیشنهاد شود و کدام شات‌ها در دسترس باشند.";
-        if ($selected->isNotEmpty()) {
-            $text .= "\n\nانتخاب‌شده: " . $selected->pluck('name_fa')->implode('، ');
-        }
+        $rows[] = [['text' => '✅ تأیید و برگشت به بازبینی', 'callback_data' => 'ps:g:done']];
+        $text = "🏷 <b>صنف‌های مناسب این محصول</b>\n\nپیشنهاد هوش مصنوعی از قبل تیک خورده است. گروه را بزن تا شغل‌ها را تیک بزنی یا برداری.";
+        $text .= "\n\nانتخاب‌شده: " . $this->e($selected->pluck('name_fa')->implode('، ') ?: '—');
 
         return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_group', 'draft_id' => $draft->id]);
     }
@@ -247,11 +926,10 @@ class ProductShotBotFlow
         $rows = array_chunk($buttons, 2);
         $allSelected = $occupations->every(fn (Occupation $o) => in_array((int) $o->id, $selected, true));
         $rows[] = [['text' => $allSelected ? '⬜ برداشتن همه' : '☑️ انتخاب همه‌ی این گروه', 'callback_data' => 'ps:o:all']];
-        $rows[] = [['text' => '➕ گروه دیگر', 'callback_data' => 'ps:back:group'], ['text' => '✅ ادامه', 'callback_data' => 'ps:g:done']];
-        $rows[] = [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
+        $rows[] = [['text' => '⬅️ گروه‌ها', 'callback_data' => 'ps:rv:occ'], ['text' => '✅ تأیید', 'callback_data' => 'ps:g:done']];
         $label = Occupation::GROUPS[$group] ?? $group;
 
-        return $this->response($draft->chat_id, "🏷 <b>{$label}</b>\n\nشغل‌هایی که این پک برایشان مناسب است را تیک بزن:", $rows, [
+        return $this->response($draft->chat_id, "🏷 <b>{$label}</b>\n\nشغل‌هایی که این محصول برایشان مناسب است را تیک بزن:", $rows, [
             'status' => 'ps_occupations',
             'draft_id' => $draft->id,
         ]);
@@ -277,395 +955,6 @@ class ProductShotBotFlow
         $draft->forceFill(['input_payload' => $payload])->save();
 
         return $this->occupationsPrompt($draft->fresh(), $group);
-    }
-
-    // ───────────────────────── گام ۳: توضیح ─────────────────────────
-
-    private function briefPrompt(TelegramProductDraft $draft, ?string $notice = null): array
-    {
-        $draft->forceFill(['state' => 'ps_brief'])->save();
-        $text = "✍️ <b>گام ۳ از ۵: یک توضیح کوتاه درباره‌ی این پک بنویس</b>\n\n"
-            . "در یک پیام بنویس (فارسی کافی است):\n"
-            . "• این پک برای چه محصولی است؟ (مثلاً: سرم پوست در بطری شیشه‌ای، کفش ورزشی، انگشتر طلا)\n"
-            . "• حس و سبک دلخواه (مثلاً: لوکس و تمیز، شاد و رنگی، طبیعی و گرم)\n"
-            . "• اگر نام یا رنگ برند خاصی مدنظر است، بنویس.\n\n"
-            . "نام فارسی و انگلیسی، توضیح، هشتگ، دسته‌بندی و پیشنهاد شات‌ها را هوش مصنوعی آماده می‌کند و تو بازبینی می‌کنی.\n\n"
-            . "مثال: «پک تبلیغاتی سرم ویتامین C در بطری قطره‌چکان شیشه‌ای نارنجی؛ حس تازه و آفتابی با پرتقال و قطره‌های آب؛ مناسب پست و استوری فروشگاه آرایشی»";
-        if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
-        }
-
-        return $this->response($draft->chat_id, $text, [
-            [['text' => '⬅️ صنف', 'callback_data' => 'ps:back:group'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
-        ], ['status' => 'ps_brief', 'draft_id' => $draft->id]);
-    }
-
-    private function receiveBrief(TelegramProductDraft $draft, string $text): array
-    {
-        if (mb_strlen($text) < 15) {
-            return $this->briefPrompt($draft, 'توضیح خیلی کوتاه است؛ کمی کامل‌تر بنویس (حداقل یک جمله).');
-        }
-
-        return $this->beginProcessing($draft, Str::limit($text, 2000, ''));
-    }
-
-    private function beginProcessing(TelegramProductDraft $draft, string $brief): array
-    {
-        $draft->forceFill([
-            'description' => $brief,
-            'state' => 'processing',
-            'pending_edit_field' => null,
-            'error_message' => null,
-            'processing_started_at' => now(),
-            'reviewed_at' => null,
-        ])->save();
-        ProcessTelegramProductDraftJob::dispatch($draft->id)->afterCommit();
-
-        return $this->response($draft->chat_id, "⏳ <b>در حال آماده‌سازی هوشمند…</b>\n\nنام، توضیح، هشتگ‌ها، دسته‌بندی و شات‌های پیشنهادی در حال ساخت است. معمولاً کمتر از یک دقیقه طول می‌کشد و نتیجه خودش برایت می‌آید.", [
-            [['text' => '🔄 بررسی وضعیت', 'callback_data' => 'ps:status'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
-        ], ['status' => 'processing', 'draft_id' => $draft->id]);
-    }
-
-    // ───────────────────────── پردازش هوشمند (در صف) ─────────────────────────
-
-    public function process(TelegramProductDraft $draft): void
-    {
-        $draft->refresh();
-        if ($draft->state !== 'processing') {
-            return;
-        }
-
-        try {
-            $occupations = $this->selectedOccupations($draft);
-            $groups = $this->registrar->groupsOfOccupations($occupations->pluck('id')->all());
-            $shots = $this->registrar->shotsForGroups($groups);
-            $categories = Category::query()->active()->orderBy('sort_order')->orderBy('id')->get(['id', 'name', 'name_fa']);
-            $ai = $this->generateMetadata($draft, $occupations, $groups, $shots, $categories);
-
-            $category = $this->matchCategory((string) ($ai['category'] ?? ''), $categories);
-            $payload = (array) $draft->input_payload;
-            $current = (array) data_get($payload, 'pshot', []);
-            // انتخاب‌های دستی قبلی (در بازنویسی) حفظ می‌شوند.
-            if (empty($current['shot_ids'])) {
-                $defaults = $this->registrar->suggestDefaults($shots, (array) ($ai['suggested_shots'] ?? []));
-                // فعال پیش‌فرض: بسته‌ی آماده + همه‌ی شات‌های تخصصی همان صنف (انتخاب بیشتر برای مشتری).
-                $specialized = $shots->reject(fn (ShotLibrary $s) => Str::startsWith($s->key, ShotProductRegistrar::GENERAL_PREFIX))->pluck('id')->map(fn ($id) => (int) $id)->all();
-                $order = $shots->pluck('id')->map(fn ($id) => (int) $id)->all();
-                $current['shot_ids'] = array_values(array_intersect($order, array_unique([...$defaults, ...$specialized])));
-                $current['default_ids'] = array_values(array_intersect($order, $defaults));
-            }
-            if (! array_key_exists('category_ids', $current)) {
-                $current['category_ids'] = $category ? [(int) $category->id] : [];
-            }
-            $payload['pshot'] = $current;
-
-            $duplicate = $this->duplicateProduct((string) $ai['name_fa'], (string) $ai['name_en']);
-            $ai['category_id'] = $category?->id;
-            $ai['category_name'] = $category ? ($category->name_fa ?: $category->name) : null;
-            $ai['duplicate_product_name'] = $duplicate ? ($duplicate->name_fa ?: $duplicate->name_en) : null;
-            $ai['duplicate_product_code'] = $duplicate?->product_code;
-
-            $draft->forceFill([
-                'ai_result' => $ai,
-                'input_payload' => $payload,
-                'state' => 'ps_review',
-                'error_message' => null,
-                'reviewed_at' => null,
-            ])->save();
-        } catch (\Throwable $exception) {
-            Log::warning('telegram product shot metadata failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
-            $draft->forceFill([
-                'state' => 'failed',
-                'error_message' => Str::limit($exception->getMessage(), 1000, ''),
-            ])->save();
-        }
-    }
-
-    private function generateMetadata(TelegramProductDraft $draft, Collection $occupations, array $groups, Collection $shots, Collection $categories): array
-    {
-        $groupLabels = collect($groups)->map(fn ($g) => Occupation::GROUPS[$g] ?? $g)->implode('، ');
-        $shotList = $shots->map(fn (ShotLibrary $s) => "{$s->key}: {$s->name_fa} ({$s->category})")->implode("\n");
-        $categoryList = $categories->map(fn (Category $c) => $c->name_fa ?: $c->name)->filter()->implode('، ');
-        $pack = $this->registrar->defaultPackSize();
-        $instruction = "تو کارشناس محتوای فروشگاهی و عکاسی تبلیغاتی محصول هستی. مدیر یک «پک عکس تبلیغاتی» در پلتفرم وطن ثبت می‌کند: "
-            . "مشتری (یک کسب‌وکار) عکس محصول خودش را می‌دهد و این پک چند شات تبلیغاتی حرفه‌ای از همان محصول می‌سازد.\n\n"
-            . "توضیح مدیر:\n{$draft->description}\n\n"
-            . "صنف‌ها: {$groupLabels}\nشغل‌ها: " . $occupations->pluck('name_fa')->implode('، ') . "\n\n"
-            . "فهرست شات‌های مجاز (کلید: نام):\n{$shotList}\n\n"
-            . "دسته‌بندی‌های مجاز سایت:\n{$categoryList}\n\n"
-            . "اگر تصویری پیوست شده، نمونه‌ی خروجی یا محصول این پک است؛ از آن برای توصیف دقیق‌تر استفاده کن.\n\n"
-            . "فقط یک JSON معتبر با دقیقاً این کلیدها برگردان:\n"
-            . "name_fa: نام کوتاه و جذاب فارسی پک (حداکثر ۶ کلمه، بدون کلمه‌ی «پک» در ابتدا اگر لازم نیست)\n"
-            . "name_en: نام انگلیسی کوتاه\n"
-            . "description_fa: توضیح فارسی ۲ تا ۳ جمله برای مشتری: چه می‌گیرد و برای کجا مناسب است\n"
-            . "tags: آرایه‌ی حداکثر ۸ هشتگ فارسی بدون #\n"
-            . "product_description: یک جمله‌ی انگلیسی حداکثر ۲۵۰ کاراکتر از نوع و شکل فیزیکی محصول (برای مدل تصویر؛ بدون نام برند)\n"
-            . "brand_style: عبارت انگلیسی کوتاه برای حس و سبک (مثلاً clean luxury, warm natural)\n"
-            . "brand_palette: عبارت انگلیسی کوتاه برای پالت رنگی یا خالی\n"
-            . "category: دقیقاً یکی از دسته‌بندی‌های مجاز\n"
-            . "suggested_shots: آرایه‌ای از {$pack} کلید از فهرست شات‌های مجاز که متنوع‌ترین و مناسب‌ترین بسته‌ی آماده را بسازند";
-
-        $model = (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini');
-        $image = $this->firstImageDataUrl($draft);
-        $result = null;
-        if ($image) {
-            try {
-                $result = $this->openRouter->analyzeImagesJson($model, $instruction, [$image], 60);
-            } catch (\Throwable $exception) {
-                Log::info('telegram product shot vision metadata fallback to text', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
-            }
-        }
-        $result ??= $this->openRouter->generateStructuredText('فقط JSON معتبر برگردان.', $instruction, $model, 60);
-        $ai = (array) ($result['content'] ?? []);
-
-        foreach (['name_fa', 'name_en', 'description_fa'] as $key) {
-            if (trim((string) ($ai[$key] ?? '')) === '') {
-                throw new \RuntimeException("فیلد {$key} در پاسخ هوش مصنوعی خالی است.");
-            }
-        }
-
-        return [
-            'name_fa' => Str::limit(trim((string) $ai['name_fa']), 120, ''),
-            'name_en' => Str::limit(trim((string) $ai['name_en']), 120, ''),
-            'description_fa' => Str::limit(trim((string) $ai['description_fa']), 1500, ''),
-            'tags' => collect((array) ($ai['tags'] ?? []))->map(fn ($t) => trim(ltrim((string) $t, '#')))->filter()->unique()->take(8)->values()->all(),
-            'product_description' => Str::limit(trim((string) ($ai['product_description'] ?? '')), 300, ''),
-            'brand_style' => Str::limit(trim((string) ($ai['brand_style'] ?? '')), 200, ''),
-            'brand_palette' => Str::limit(trim((string) ($ai['brand_palette'] ?? '')), 120, ''),
-            'category' => trim((string) ($ai['category'] ?? '')),
-            'suggested_shots' => array_values(array_filter(array_map('strval', (array) ($ai['suggested_shots'] ?? [])))),
-            'model' => (string) ($result['model'] ?? $model),
-        ];
-    }
-
-    private function firstImageDataUrl(TelegramProductDraft $draft): ?string
-    {
-        $path = collect((array) data_get($draft->input_payload, 'pshot.images', []))->first();
-        if (! $path || ! Storage::disk('public')->exists($path)) {
-            return null;
-        }
-        $bytes = Storage::disk('public')->get($path);
-        if (! $bytes || strlen($bytes) > 4 * 1024 * 1024) {
-            return null;
-        }
-        $mime = Storage::disk('public')->mimeType($path) ?: 'image/jpeg';
-
-        return 'data:' . $mime . ';base64,' . base64_encode($bytes);
-    }
-
-    /** پیام بعد از اتمام پردازش (برای ارسال خودکار یا دکمه‌ی بررسی وضعیت). */
-    public function resultResponse(TelegramProductDraft $draft): array
-    {
-        $draft->refresh();
-
-        return match ($draft->state) {
-            'processing' => $this->response($draft->chat_id, '⏳ هنوز در حال آماده‌سازی است؛ چند لحظه‌ی دیگر خودش می‌رسد.', [
-                [['text' => '🔄 بررسی وضعیت', 'callback_data' => 'ps:status'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
-            ], ['status' => 'processing', 'draft_id' => $draft->id, 'callback_notice' => 'هنوز آماده نیست']),
-            'failed' => $this->failed($draft),
-            'ps_review' => $this->review($draft),
-            default => $this->current($draft, null),
-        };
-    }
-
-    private function failed(TelegramProductDraft $draft): array
-    {
-        return $this->response($draft->chat_id, "⚠️ آماده‌سازی هوشمند با خطا روبه‌رو شد.\n\nعکس‌ها و انتخاب‌هایت حفظ شده‌اند. «تلاش مجدد» را بزن یا یک توضیح تازه بفرست.", [
-            [['text' => '🔁 تلاش مجدد', 'callback_data' => 'ps:retry'], ['text' => '✍️ توضیح تازه', 'callback_data' => 'ps:back:brief']],
-            [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
-        ], ['status' => 'failed', 'draft_id' => $draft->id]);
-    }
-
-    // ───────────────────────── گام ۴: بازبینی ─────────────────────────
-
-    private function review(TelegramProductDraft $draft, ?string $notice = null): array
-    {
-        if ($draft->state !== 'ps_review') {
-            $draft->forceFill(['state' => 'ps_review', 'pending_edit_field' => null])->save();
-        }
-        $ai = (array) $draft->ai_result;
-        $tags = collect((array) ($ai['tags'] ?? []))->map(fn ($t) => '#' . str_replace([' ', '‌'], '_', $t))->implode(' ');
-        $text = "🧾 <b>گام ۴ از ۵: بازبینی اطلاعات پک</b>\n\n"
-            . "<b>نام:</b> " . $this->e($ai['name_fa'] ?? '') . "\n"
-            . "<b>نام انگلیسی:</b> " . $this->e($ai['name_en'] ?? '') . "\n\n"
-            . "<b>توضیح:</b>\n" . $this->e($ai['description_fa'] ?? '') . "\n\n"
-            . "<b>صنف:</b> " . $this->e($this->selectedOccupations($draft)->pluck('name_fa')->implode('، ') ?: '—') . "\n"
-            . "<b>دسته‌بندی:</b> " . $this->e($this->selectedCategories($draft)->map(fn ($c) => $c->name_fa ?: $c->name)->implode('، ') ?: '— (در مرحله‌ی بعد انتخاب کن)') . "\n"
-            . "<b>هشتگ‌ها:</b> " . $this->e($tags ?: '—') . "\n\n"
-            . "<b>برای مدل تصویر:</b>\n"
-            . "محصول: " . $this->e(($ai['product_description'] ?? '') ?: '—') . "\n"
-            . "سبک: " . $this->e(($ai['brand_style'] ?? '') ?: '—') . ' • پالت: ' . $this->e(($ai['brand_palette'] ?? '') ?: '—');
-        if (! empty($ai['duplicate_product_name'])) {
-            $text .= "\n\n⚠️ محصولی با نام مشابه وجود دارد: " . $this->e($ai['duplicate_product_name'])
-                . (! empty($ai['duplicate_product_code']) ? ' (کد ' . $ai['duplicate_product_code'] . ')' : '')
-                . "\nاگر پک جدیدی است ادامه بده؛ وگرنه نام را اصلاح کن.";
-        }
-        if ($notice) {
-            $text .= "\n\n✅ {$notice}";
-        }
-
-        return $this->response($draft->chat_id, $text, [
-            [['text' => '✅ تأیید و رفتن به شات‌ها', 'callback_data' => 'ps:rv:ok']],
-            [['text' => '✏️ نام', 'callback_data' => 'ps:ed:name_fa'], ['text' => '✏️ نام انگلیسی', 'callback_data' => 'ps:ed:name_en']],
-            [['text' => '✏️ توضیح', 'callback_data' => 'ps:ed:description_fa'], ['text' => '🔁 بازنویسی کامل', 'callback_data' => 'ps:ed:brief']],
-            [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']],
-        ], ['status' => 'ps_review', 'draft_id' => $draft->id, 'photo_url' => $this->coverUrl($draft)]);
-    }
-
-    private function editPrompt(TelegramProductDraft $draft, string $field): array
-    {
-        if (! array_key_exists($field, self::EDIT_FIELDS)) {
-            return $this->review($draft);
-        }
-        $draft->forceFill(['state' => 'ps_edit', 'pending_edit_field' => $field])->save();
-        $ai = (array) $draft->ai_result;
-        $current = $field === 'brief' ? (string) $draft->description : (string) ($ai[$field] ?? '');
-        $text = "✏️ <b>" . self::EDIT_FIELDS[$field] . "</b>\n\nمتن فعلی (برای کپی):\n<code>" . $this->e($current) . "</code>\n\n👇 متن جدید را در یک پیام بفرست.";
-        if ($field === 'brief') {
-            $text .= "\nبا این متن، همه‌چیز دوباره و از نو آماده می‌شود.";
-        }
-
-        return $this->response($draft->chat_id, $text, [
-            [['text' => '⬅️ انصراف از اصلاح', 'callback_data' => 'ps:rv:back']],
-        ], ['status' => 'ps_edit', 'draft_id' => $draft->id]);
-    }
-
-    private function applyEdit(TelegramProductDraft $draft, string $text): array
-    {
-        $field = (string) $draft->pending_edit_field;
-        if ($text === '') {
-            return $this->editPrompt($draft, $field);
-        }
-        if ($field === 'brief') {
-            return mb_strlen($text) < 15
-                ? $this->editPrompt($draft, $field)
-                : $this->beginProcessing($draft, Str::limit($text, 2000, ''));
-        }
-        $limit = $field === 'description_fa' ? 1500 : 120;
-        $ai = (array) $draft->ai_result;
-        $ai[$field] = Str::limit($text, $limit, '');
-        if (in_array($field, ['name_fa', 'name_en'], true)) {
-            $duplicate = $this->duplicateProduct((string) ($ai['name_fa'] ?? ''), (string) ($ai['name_en'] ?? ''));
-            $ai['duplicate_product_name'] = $duplicate ? ($duplicate->name_fa ?: $duplicate->name_en) : null;
-            $ai['duplicate_product_code'] = $duplicate?->product_code;
-        }
-        $draft->forceFill(['ai_result' => $ai, 'state' => 'ps_review', 'pending_edit_field' => null])->save();
-
-        return $this->review($draft, self::EDIT_FIELDS[$field] . ' به‌روز شد.');
-    }
-
-    // ───────────────────────── گام ۵: شات‌ها ─────────────────────────
-
-    private function shotsPrompt(TelegramProductDraft $draft, ?string $notice = null): array
-    {
-        $draft->forceFill(['state' => 'ps_shots'])->save();
-        $data = $this->data($draft);
-        $mode = ($data['shot_mode'] ?? 'enable') === 'default' ? 'default' : 'enable';
-        $shots = $this->availableShots($draft);
-        $enabled = array_map('intval', (array) ($data['shot_ids'] ?? []));
-        $defaults = array_map('intval', (array) ($data['default_ids'] ?? []));
-        $packCredits = $shots->whereIn('id', $defaults)->sum(fn (ShotLibrary $s) => $this->registrar->shotCredits($s));
-        $minCredits = $shots->whereIn('id', $enabled)->map(fn (ShotLibrary $s) => $this->registrar->shotCredits($s))->min();
-
-        $rows = [];
-        foreach ($shots as $shot) {
-            $isOn = in_array((int) $shot->id, $enabled, true);
-            $isDefault = in_array((int) $shot->id, $defaults, true);
-            $mark = $isOn ? ($isDefault ? '⭐' : '✅') : '⬜';
-            $rows[] = [['text' => Str::limit("{$mark} {$shot->name_fa} · " . $this->fa($this->registrar->shotCredits($shot)) . ' کردیت', 60, '…'), 'callback_data' => 'ps:s:' . $shot->id]];
-        }
-        $rows[] = [
-            ['text' => $mode === 'enable' ? '🔀 حالت: انتخاب شات‌های فعال' : '🔀 حالت: انتخاب بسته‌ی آماده ⭐', 'callback_data' => 'ps:s:mode'],
-        ];
-        $rows[] = [['text' => '✨ پیشنهاد هوشمند', 'callback_data' => 'ps:s:smart'], ['text' => '🖼 نمونه‌ی شات‌ها', 'callback_data' => 'ps:s:samples']];
-        $rows[] = [['text' => '✅ ادامه', 'callback_data' => 'ps:s:done']];
-        $rows[] = [['text' => '⬅️ بازبینی', 'callback_data' => 'ps:rv:back'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
-
-        $text = "🎯 <b>گام ۵ از ۵: شات‌های این پک</b>\n\n"
-            . "✅ <b>فعال</b>: شات در پک هست و مشتری می‌تواند انتخابش کند.\n"
-            . "⭐ <b>بسته‌ی آماده</b>: شات از قبل برای مشتری تیک خورده است (مشتری فقط «بساز» می‌زند).\n\n"
-            . ($mode === 'enable'
-                ? "👆 حالت فعلی: با زدن هر شات، آن را <b>فعال/غیرفعال</b> می‌کنی."
-                : "👆 حالت فعلی: با زدن هر شات، آن را <b>به بسته‌ی آماده اضافه/حذف</b> می‌کنی (حداکثر " . $this->fa($this->registrar->maxPackSize()) . ').')
-            . "\n\nفعال: " . $this->fa(count($enabled)) . ' شات'
-            . ' • بسته‌ی آماده: ' . $this->fa(count($defaults)) . ' شات = ' . $this->fa((int) $packCredits) . ' کردیت'
-            . ($minCredits !== null ? "\nقیمت روی کارت: از " . $this->fa((int) $minCredits) . ' کردیت' : '')
-            . "\n\nقیمت، نمونه‌عکس و تنظیمات پیشرفته‌ی هر شات بعداً از پنل «استودیو محصول» قابل تغییر است.";
-        if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
-        }
-
-        return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_shots', 'draft_id' => $draft->id]);
-    }
-
-    private function shotsAction(TelegramProductDraft $draft, string $action): array
-    {
-        $payload = (array) $draft->input_payload;
-        $data = (array) ($payload['pshot'] ?? []);
-        $enabled = array_map('intval', (array) ($data['shot_ids'] ?? []));
-        $defaults = array_map('intval', (array) ($data['default_ids'] ?? []));
-        $shots = $this->availableShots($draft);
-        $notice = null;
-
-        if ($action === 'mode') {
-            $data['shot_mode'] = ($data['shot_mode'] ?? 'enable') === 'default' ? 'enable' : 'default';
-        } elseif ($action === 'smart') {
-            $defaults = $this->registrar->suggestDefaults($shots, (array) data_get($draft->ai_result, 'suggested_shots', []));
-            $enabled = array_values(array_unique(array_merge($enabled, $defaults)));
-        } elseif ($action === 'samples') {
-            return $this->shotSamples($draft, $shots);
-        } elseif ($action === 'done') {
-            if ($enabled === []) {
-                return $this->shotsPrompt($draft, 'حداقل یک شات را فعال کن.');
-            }
-            if ($defaults === []) {
-                return $this->shotsPrompt($draft, 'حداقل یک شات را با ⭐ در بسته‌ی آماده بگذار (حالت را عوض کن و شات را بزن).');
-            }
-
-            return $this->categoriesPrompt($draft, 0);
-        } else {
-            $id = (int) $action;
-            if ($shots->contains('id', $id)) {
-                if (($data['shot_mode'] ?? 'enable') === 'default') {
-                    if (in_array($id, $defaults, true)) {
-                        $defaults = array_values(array_diff($defaults, [$id]));
-                    } elseif (count($defaults) >= $this->registrar->maxPackSize()) {
-                        $notice = 'بسته‌ی آماده حداکثر ' . $this->fa($this->registrar->maxPackSize()) . ' شات دارد؛ اول یکی را بردار.';
-                    } else {
-                        $defaults[] = $id;
-                        $enabled = array_values(array_unique([...$enabled, $id]));
-                    }
-                } elseif (in_array($id, $enabled, true)) {
-                    $enabled = array_values(array_diff($enabled, [$id]));
-                    $defaults = array_values(array_diff($defaults, [$id]));
-                } else {
-                    $enabled[] = $id;
-                }
-            }
-        }
-
-        // ترتیب ثابت = ترتیب کتابخانه (برای نمایش یکدست به مشتری).
-        $order = $shots->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $data['shot_ids'] = array_values(array_intersect($order, $enabled));
-        $data['default_ids'] = array_values(array_intersect($order, $defaults));
-        $payload['pshot'] = $data;
-        $draft->forceFill(['input_payload' => $payload])->save();
-
-        return $this->shotsPrompt($draft->fresh(), $notice);
-    }
-
-    private function shotSamples(TelegramProductDraft $draft, Collection $shots): array
-    {
-        $media = $shots->map(fn (ShotLibrary $s) => ['url' => $s->sampleImageUrl(), 'caption' => $s->name_fa])
-            ->filter(fn ($m) => filled($m['url']))
-            ->take(10)
-            ->values()
-            ->all();
-        if ($media === []) {
-            return $this->shotsPrompt($draft, 'هنوز برای این شات‌ها نمونه‌عکسی ثبت نشده است؛ از پنل «استودیو محصول» می‌توانی نمونه بسازی.');
-        }
-
-        return array_merge($this->shotsPrompt($draft), ['media' => $media, 'callback_notice' => 'نمونه‌ها ارسال شد']);
     }
 
     // ───────────────────────── دسته‌بندی ─────────────────────────
@@ -695,12 +984,11 @@ class ProductShotBotFlow
             }
             $rows[] = $nav;
         }
-        $rows[] = [['text' => '✅ ادامه به خلاصه', 'callback_data' => 'ps:c:done']];
-        $rows[] = [['text' => '⬅️ شات‌ها', 'callback_data' => 'ps:back:shots'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
+        $rows[] = [['text' => '✅ تأیید و برگشت به بازبینی', 'callback_data' => 'ps:c:done']];
         $names = $all->whereIn('id', $selected)->map(fn ($c) => $c->name_fa ?: $c->name)->implode('، ');
-        $text = "🗂 <b>گام آخر: دسته‌بندی پک در سایت</b>\n\nپیشنهاد هوش مصنوعی از قبل تیک خورده است. برای انتشار حداقل یک دسته لازم است.\n\nانتخاب‌شده: " . ($names ?: '—');
+        $text = "🗂 <b>دسته‌بندی محصول در سایت</b>\n\nپیشنهاد هوش مصنوعی از قبل تیک خورده است. برای انتشار حداقل یک دسته لازم است.\n\nانتخاب‌شده: " . $this->e($names ?: '—');
         if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
+            $text .= "\n\n⚠️ " . $this->e($notice);
         }
 
         return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_categories', 'draft_id' => $draft->id]);
@@ -719,61 +1007,22 @@ class ProductShotBotFlow
         return $this->categoriesPrompt($draft->fresh(), (int) data_get($payload, 'pshot.category_page', 0));
     }
 
-    // ───────────────────────── خلاصه و ثبت ─────────────────────────
-
-    private function confirmPrompt(TelegramProductDraft $draft, TelegramProductManager $manager, ?string $notice = null): array
-    {
-        $draft->forceFill(['state' => 'ps_confirm', 'reviewed_at' => now()])->save();
-        $ai = (array) $draft->ai_result;
-        $data = $this->data($draft);
-        $shots = $this->availableShots($draft);
-        $enabled = $shots->whereIn('id', array_map('intval', (array) ($data['shot_ids'] ?? [])));
-        $defaults = $shots->whereIn('id', array_map('intval', (array) ($data['default_ids'] ?? [])));
-        $packCredits = $defaults->sum(fn (ShotLibrary $s) => $this->registrar->shotCredits($s));
-        $moduleOn = app(ProductShotFeature::class)->enabled();
-
-        $text = "📋 <b>خلاصه‌ی پک، آماده‌ی ثبت</b>\n\n"
-            . "<b>" . $this->e($ai['name_fa'] ?? '') . "</b> — " . $this->e($ai['name_en'] ?? '') . "\n"
-            . $this->e(Str::limit((string) ($ai['description_fa'] ?? ''), 300)) . "\n\n"
-            . "🏷 صنف: " . $this->e($this->selectedOccupations($draft)->pluck('name_fa')->implode('، ')) . "\n"
-            . "🗂 دسته: " . $this->e($this->selectedCategories($draft)->map(fn ($c) => $c->name_fa ?: $c->name)->implode('، ') ?: '—') . "\n"
-            . "🖼 عکس‌ها: " . $this->fa(count((array) ($data['images'] ?? []))) . "\n"
-            . "🎯 شات‌های فعال (" . $this->fa($enabled->count()) . "): " . $this->e($enabled->pluck('name_fa')->implode('، ')) . "\n"
-            . "⭐ بسته‌ی آماده (" . $this->fa($defaults->count()) . "): " . $this->e($defaults->pluck('name_fa')->implode('، ')) . "\n"
-            . "💳 قیمت بسته‌ی آماده: " . $this->fa((int) $packCredits) . " کردیت\n\n"
-            . "مدل‌های کیفیت، فیلتر کیفیت عکس مشتری و کنترل کیفیت خروجی با تنظیمات پیش‌فرض استودیو محصول فعال می‌شوند.";
-        if (! $moduleOn) {
-            $text .= "\n\nℹ️ «استودیو محصول» در سایت هنوز خاموش است؛ پک ثبت می‌شود ولی تا روشن کردن آن از پنل، برای کاربران دیده نمی‌شود.";
-        }
-        if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
-        }
-        $rows = [];
-        $first = [['text' => '💾 ذخیره در پیش‌نویس', 'callback_data' => 'ps:save:draft']];
-        if ($manager->can('publish_product')) {
-            $first[] = ['text' => '🚀 انتشار در سایت', 'callback_data' => 'ps:save:active'];
-        }
-        $rows[] = $first;
-        $rows[] = [['text' => '✏️ متن', 'callback_data' => 'ps:rv:back'], ['text' => '✏️ شات‌ها', 'callback_data' => 'ps:back:shots'], ['text' => '✏️ دسته', 'callback_data' => 'ps:back:categories']];
-        $rows[] = [['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
-
-        return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_confirm', 'draft_id' => $draft->id, 'photo_url' => $this->coverUrl($draft)]);
-    }
+    // ───────────────────────── قاب‌های اکسپلور و ثبت ─────────────────────────
 
     private function tilesPrompt(TelegramProductDraft $draft, ?string $notice = null): array
     {
         $draft->forceFill(['state' => 'ps_tiles'])->save();
         $selected = $this->selectedTiles($draft);
         $buttons = [];
-        foreach (self::TILE_LABELS as $key => $label) {
+        foreach (ProductShotBotSettings::TILES as $key => $label) {
             $buttons[] = ['text' => (in_array($key, $selected, true) ? '✅ ' : '⬜ ') . $label, 'callback_data' => 'ps:t:' . $key];
         }
         $rows = array_chunk($buttons, 2);
         $rows[] = [['text' => '🚀 ثبت و انتشار', 'callback_data' => 'ps:t:done']];
-        $rows[] = [['text' => '⬅️ خلاصه', 'callback_data' => 'ps:back:confirm'], ['text' => 'لغو فرآیند', 'callback_data' => 'ps:x']];
-        $text = "🖼 <b>قاب نمایش در هوم و اکسپلور</b>\n\nقاب‌هایی که این پک اجازه‌ی نمایش در آن‌ها را دارد روشن کن (حداقل یکی).";
+        $rows[] = [['text' => '⬅️ بازبینی', 'callback_data' => 'ps:rv:back']];
+        $text = "🖼 <b>قاب نمایش در هوم و اکسپلور</b>\n\nقاب‌هایی که این محصول اجازه‌ی نمایش در آن‌ها را دارد روشن کن (حداقل یکی).";
         if ($notice) {
-            $text .= "\n\n⚠️ {$notice}";
+            $text .= "\n\n⚠️ " . $this->e($notice);
         }
 
         return $this->response($draft->chat_id, $text, $rows, ['status' => 'ps_tiles', 'draft_id' => $draft->id]);
@@ -783,7 +1032,7 @@ class ProductShotBotFlow
     {
         $selected = $this->selectedTiles($draft);
         $notice = null;
-        if (array_key_exists($key, self::TILE_LABELS)) {
+        if (array_key_exists($key, ProductShotBotSettings::TILES)) {
             if (in_array($key, $selected, true)) {
                 if (count($selected) === 1) {
                     $notice = 'حداقل یک قاب باید روشن بماند.';
@@ -795,7 +1044,7 @@ class ProductShotBotFlow
             }
         }
         $payload = (array) $draft->input_payload;
-        data_set($payload, 'pshot.tiles', array_values(array_intersect(array_keys(self::TILE_LABELS), $selected)));
+        data_set($payload, 'pshot.tiles', array_values(array_intersect(array_keys(ProductShotBotSettings::TILES), $selected)));
         $draft->forceFill(['input_payload' => $payload])->save();
 
         return $this->tilesPrompt($draft->fresh(), $notice);
@@ -803,25 +1052,36 @@ class ProductShotBotFlow
 
     private function save(TelegramProductDraft $draft, TelegramProductManager $manager, string $status): array
     {
-        if (! in_array($draft->state, ['ps_confirm', 'ps_tiles'], true)) {
+        if (! in_array($draft->state, ['ps_review', 'ps_tiles'], true)) {
             return $this->current($draft, 'این مرحله دیگر برای ثبت آماده نیست.');
         }
         if ($status === 'active' && ! $manager->can('publish_product')) {
-            return $this->confirmPrompt($draft, $manager, 'دسترسی انتشار برای حساب شما فعال نیست؛ می‌توانی در پیش‌نویس ذخیره کنی.');
+            return $this->review($draft, '⚠️ دسترسی انتشار برای حساب شما فعال نیست؛ می‌توانی در پیش‌نویس ذخیره کنی.');
+        }
+        if ($this->selectedOccupations($draft)->isEmpty()) {
+            return $this->groupPrompt($draft);
         }
         if ($status === 'active' && $this->selectedCategories($draft)->isEmpty()) {
             return $this->categoriesPrompt($draft, 0, 'برای انتشار حداقل یک دسته‌بندی انتخاب کن.');
         }
-
         $ai = (array) $draft->ai_result;
-        $data = $this->data($draft);
-        $order = array_map('intval', (array) ($data['shot_ids'] ?? []));
-        $defaults = array_map('intval', (array) ($data['default_ids'] ?? []));
-        $shots = [];
-        foreach ($order as $index => $id) {
-            $shots[$id] = ['enabled' => true, 'is_default' => in_array($id, $defaults, true), 'sort' => $index];
-        }
+        $data = (array) data_get($draft->input_payload, 'pshot', []);
+        $slides = $this->completeSlides($draft);
+        $credits = $this->settings->slideCredits();
+        $customSlides = collect($slides)->values()->map(fn ($slide, $i) => [
+            'name' => (string) ($slide['name'] ?? ('اسلاید ' . ($i + 1))),
+            'prompt' => (string) ($slide['prompt'] ?? $this->joinParts($slide)),
+            'original_prompt' => $this->joinParts($slide),
+            'sample_path' => $slide['image'] ?? null,
+            'enabled' => true,
+            'sort' => $i,
+            'credits' => $credits,
+            'allowed_aspect_ratios' => (array) $this->settings->get('slides.allowed_aspect_ratios', []),
+            'aspect_ratio_default' => (string) $this->settings->get('slides.aspect_ratio_default', '4:5'),
+            'aspect_ratio_user_selectable' => (bool) $this->settings->get('slides.aspect_ratio_user_selectable', true),
+        ])->all();
 
+        $quality = (array) $this->settings->get('quality', []);
         try {
             $product = $this->registrar->create([
                 'name_fa' => (string) ($ai['name_fa'] ?? ''),
@@ -834,17 +1094,29 @@ class ProductShotBotFlow
                 'product_description' => (string) ($ai['product_description'] ?? ''),
                 'brand_style' => (string) ($ai['brand_style'] ?? ''),
                 'brand_palette' => (string) ($ai['brand_palette'] ?? ''),
-                'image_paths' => (array) ($data['images'] ?? []),
-                'shots' => $shots,
-                'explore_tiles' => $this->selectedTiles($draft),
+                // کاور = نمونه‌ی اسلاید اول (سازنده خودش از اسلایدها برمی‌دارد)
+                'image_paths' => [],
+                'shots' => [],
+                'custom_slides' => $customSlides,
+                'input_image' => $data['input_image'] ?? null,
+                'quality_models' => $this->settings->qualityModels(),
+                'preflight' => [
+                    'enabled' => (bool) ($quality['preflight_enabled'] ?? true),
+                    'blocking_issues' => (array) ($quality['blocking_issues'] ?? []),
+                    'min_side' => (int) ($quality['min_side'] ?? 900),
+                    'product_sheet_enabled' => (bool) ($quality['product_sheet_enabled'] ?? true),
+                    'product_sheet_size' => (int) ($quality['product_sheet_size'] ?? 2048),
+                ],
+                'display' => (array) $this->settings->get('display', []),
+                'explore_tiles' => $status === 'active' ? $this->selectedTiles($draft) : (array) $this->settings->get('display.explore_tiles', ['1x1']),
                 'created_by' => $manager->admin_id,
             ]);
         } catch (\RuntimeException $exception) {
-            return $this->confirmPrompt($draft, $manager, $exception->getMessage());
+            return $this->review($draft, '⚠️ ' . $exception->getMessage());
         } catch (\Throwable $exception) {
             Log::error('telegram product shot save failed', ['draft' => $draft->id, 'error' => $exception->getMessage()]);
 
-            return $this->confirmPrompt($draft, $manager, 'ثبت پک با خطا روبه‌رو شد؛ چند لحظه بعد دوباره امتحان کن.');
+            return $this->review($draft, '⚠️ ثبت محصول با خطا روبه‌رو شد؛ چند لحظه بعد دوباره امتحان کن.');
         }
 
         $draft->forceFill([
@@ -857,8 +1129,8 @@ class ProductShotBotFlow
                 'telegram_product_manager_id' => $draft->telegram_product_manager_id,
                 'draft_id' => $draft->id,
                 'telegram_id' => $draft->telegram_id,
-                'input_prompt' => $draft->description,
-                'ai_result' => array_merge($ai, ['product_mode' => 'product', 'shots' => $shots]),
+                'input_prompt' => Str::limit((string) $draft->description, 60000, ''),
+                'ai_result' => array_merge($ai, ['product_mode' => 'product', 'slides' => count($customSlides)]),
                 'status' => $status,
             ]);
         }
@@ -869,11 +1141,10 @@ class ProductShotBotFlow
         }
         $buttons[] = [['text' => '🛠 ویرایش کامل در داشبورد', 'url' => route('admin.product-shots.products.create', ['product' => $product->id])]];
         $buttons[] = [['text' => '➕ ثبت محصول بعدی', 'callback_data' => 'product:start']];
-        $text = ($status === 'active' ? "✅ <b>پک با موفقیت ثبت و منتشر شد.</b>" : "✅ <b>پک در پیش‌نویس ذخیره شد.</b>")
-            . "\n\nکد محصول: <code>{$product->product_code}</code>"
-            . "\nنام: " . $this->e($product->name_fa)
-            . "\nشات‌ها: " . $this->fa(count($order)) . ' (بسته‌ی آماده: ' . $this->fa(count($defaults)) . ')'
-            . "\n\nبرای افزودن نمونه‌عکس هر شات، تغییر قیمت یا مدل، «ویرایش کامل در داشبورد» را بزن.";
+        $text = $this->settings->text($status === 'active' ? 'final_published' : 'final_draft')
+            . "\n\nکد محصول: <code>" . $this->e((string) $product->product_code) . '</code>'
+            . "\nنام: " . $this->e((string) $product->name_fa)
+            . "\nاسلایدها: " . $this->fa(count($customSlides));
 
         return $this->response($draft->chat_id, $text, $buttons, [
             'status' => $product->status,
@@ -881,93 +1152,72 @@ class ProductShotBotFlow
             'product_id' => $product->id,
             'final_product' => true,
             'photo_url' => $this->coverUrl($draft),
+            // فقط پیام ثبت نهایی در چت می‌ماند.
+            'delete_message_ids' => array_values(array_filter(array_map('strval', (array) $draft->message_ids))),
         ]);
     }
 
     // ───────────────────────── مسیریابی ─────────────────────────
 
-    private function callback(TelegramProductManager $manager, TelegramProductDraft $draft, string $chatId, string $callback, array $input): array
+    private function callback(TelegramProductManager $manager, TelegramProductDraft $draft, string $chatId, string $callback): array
     {
         $parts = explode(':', $callback, 3);
         $section = $parts[1] ?? '';
         $value = $parts[2] ?? '';
+        $hasAi = (bool) $draft->ai_result && $draft->state !== 'processing';
 
         return match (true) {
             $section === 'status' => $this->resultResponse($draft),
-            $section === 'retry' => $draft->state === 'failed' && trim((string) $draft->description) !== ''
-                ? $this->beginProcessing($draft, (string) $draft->description)
-                : $this->resultResponse($draft),
-            $section === 'img' && $value === 'done' => $draft->state === 'ps_images' && ((array) ($this->data($draft)['images'] ?? [])) !== []
-                ? $this->groupPrompt($draft)
-                : $this->imagesPrompt($draft, 'اول حداقل یک عکس بفرست.'),
-            $section === 'img' && $value === 'reset' => $this->resetImages($draft),
-            $section === 'g' && $value === 'done' => $this->selectedOccupations($draft)->isEmpty()
-                ? $this->groupPrompt($draft)
-                : ($draft->ai_result ? $this->review($draft) : $this->briefPrompt($draft)),
-            $section === 'g' => $this->occupationsPrompt($draft, $value),
+            $section === 'retry' => $draft->state === 'failed' ? $this->beginProcessing($draft) : $this->resultResponse($draft),
+            $section === 'sl' && $value === 'add' => $hasAi ? $this->addSlides($draft) : $this->current($draft, null),
+            $section === 'sl' => $this->slideAction($draft, $value),
+            $section === 'rv' && $value === 'back' => $hasAi ? $this->review($draft) : $this->current($draft, null),
+            $section === 'rv' && $value === 'occ' => $hasAi ? $this->groupPrompt($draft) : $this->current($draft, null),
+            $section === 'rv' && $value === 'cat' => $hasAi ? $this->categoriesPrompt($draft, 0) : $this->current($draft, null),
+            $section === 'rv' && $value === 'slides' => $hasAi ? $this->slideList($draft) : $this->current($draft, null),
+            $section === 'ed' => $hasAi ? $this->editPrompt($draft, $value) : $this->current($draft, null),
+            $section === 'sn' => $hasAi ? $this->editPrompt($draft, 'slide:' . (int) $value) : $this->current($draft, null),
+            $section === 'sd' => $hasAi && $draft->state === 'ps_slide_list' ? $this->deleteSlide($draft, (int) $value) : $this->current($draft, null),
+            $section === 'g' && $value === 'done' => $hasAi ? ($this->selectedOccupations($draft)->isEmpty() ? $this->groupPrompt($draft) : $this->review($draft)) : $this->current($draft, null),
+            $section === 'g' => $hasAi ? $this->occupationsPrompt($draft, $value) : $this->current($draft, null),
             $section === 'o' => $draft->state === 'ps_occupations' ? $this->toggleOccupation($draft, $value) : $this->current($draft, null),
-            $section === 'rv' && $value === 'ok' => $draft->state === 'ps_review' ? $this->shotsPrompt($draft) : $this->current($draft, null),
-            $section === 'rv' && $value === 'back' => $draft->ai_result ? $this->review($draft) : $this->current($draft, null),
-            $section === 'ed' => $draft->ai_result ? $this->editPrompt($draft, $value) : $this->current($draft, null),
-            $section === 's' => $draft->state === 'ps_shots' ? $this->shotsAction($draft, $value) : $this->current($draft, null),
-            $section === 'c' && $value === 'done' => $draft->state === 'ps_categories' ? $this->confirmPrompt($draft, $manager) : $this->current($draft, null),
+            $section === 'c' && $value === 'done' => $draft->state === 'ps_categories' ? $this->review($draft) : $this->current($draft, null),
             $section === 'c' => $draft->state === 'ps_categories' ? $this->toggleCategory($draft, (int) $value) : $this->current($draft, null),
             $section === 'cp' => $draft->state === 'ps_categories' ? $this->categoriesPrompt($draft, (int) $value) : $this->current($draft, null),
-            $section === 'save' && $value === 'active' => $draft->state === 'ps_confirm' ? $this->tilesPrompt($draft) : $this->current($draft, null),
+            $section === 'save' && $value === 'active' => $draft->state === 'ps_review' ? $this->beforePublish($draft, $manager) : $this->current($draft, null),
             $section === 'save' => $this->save($draft, $manager, 'draft'),
             $section === 't' && $value === 'done' => $draft->state === 'ps_tiles' ? $this->save($draft, $manager, 'active') : $this->current($draft, null),
             $section === 't' => $draft->state === 'ps_tiles' ? $this->toggleTile($draft, $value) : $this->current($draft, null),
-            $section === 'back' => $this->back($draft, $manager, $value),
+            $section === 'back' && $value === 'slides' => in_array($draft->state, ['failed', 'ps_slides'], true) ? $this->slidesPanel($draft) : $this->current($draft, null),
             default => $this->current($draft, 'این دکمه دیگر معتبر نیست.'),
         };
     }
 
-    private function back(TelegramProductDraft $draft, TelegramProductManager $manager, string $target): array
+    private function beforePublish(TelegramProductDraft $draft, TelegramProductManager $manager): array
     {
-        if ($draft->state === 'processing') {
-            return $this->resultResponse($draft);
+        if (! $manager->can('publish_product')) {
+            return $this->review($draft, '⚠️ دسترسی انتشار برای حساب شما فعال نیست؛ می‌توانی در پیش‌نویس ذخیره کنی.');
+        }
+        if ($this->selectedOccupations($draft)->isEmpty()) {
+            return $this->groupPrompt($draft);
+        }
+        if ($this->selectedCategories($draft)->isEmpty()) {
+            return $this->categoriesPrompt($draft, 0, 'برای انتشار حداقل یک دسته‌بندی انتخاب کن.');
         }
 
-        return match ($target) {
-            'images' => $this->toImages($draft),
-            'group' => $this->groupPrompt($draft),
-            'brief' => $this->briefPrompt($draft),
-            'shots' => $draft->ai_result ? $this->shotsPrompt($draft) : $this->current($draft, null),
-            'categories' => $draft->ai_result ? $this->categoriesPrompt($draft, (int) data_get($draft->input_payload, 'pshot.category_page', 0)) : $this->current($draft, null),
-            'confirm' => $draft->ai_result ? $this->confirmPrompt($draft, $manager) : $this->current($draft, null),
-            default => $this->current($draft, null),
-        };
+        return $this->tilesPrompt($draft);
     }
 
-    private function toImages(TelegramProductDraft $draft): array
+    private function text(TelegramProductDraft $draft, string $text, array $input): array
     {
-        $draft->forceFill(['state' => 'ps_images'])->save();
-
-        return $this->imagesPrompt($draft, null);
-    }
-
-    private function resetImages(TelegramProductDraft $draft): array
-    {
-        $payload = (array) $draft->input_payload;
-        $paths = (array) data_get($payload, 'pshot.images', []);
-        data_set($payload, 'pshot.images', []);
-        $draft->forceFill(['input_payload' => $payload, 'image_paths' => [], 'state' => 'ps_images'])->save();
-        foreach ($paths as $path) {
-            if (is_string($path) && Str::startsWith($path, 'products/main/')) {
-                Storage::disk('public')->delete($path);
-            }
+        if ($text === '') {
+            return $this->current($draft, null);
         }
 
-        return $this->imagesPrompt($draft->fresh(), 'عکس‌ها حذف شدند؛ عکس‌های جدید را بفرست.');
-    }
-
-    private function text(TelegramProductDraft $draft, string $chatId, string $text): array
-    {
         return match ($draft->state) {
-            'ps_brief' => $this->receiveBrief($draft, $text),
+            'ps_slides' => $this->receivePromptPart($draft, $text, $input),
             'ps_edit' => $this->applyEdit($draft, $text),
-            'failed' => mb_strlen($text) >= 15 ? $this->beginProcessing($draft, Str::limit($text, 2000, '')) : $this->failed($draft),
-            'ps_images' => $this->imagesPrompt($draft, 'در این مرحله فقط عکس بفرست؛ بعد از ارسال عکس‌ها «ادامه» را بزن.'),
+            'ps_input' => $this->inputPrompt($draft, 'اول عکس ورودی را بفرست (عکس، نه متن).'),
             default => $this->current($draft, 'لطفاً از دکمه‌های پیام استفاده کن.'),
         };
     }
@@ -976,16 +1226,15 @@ class ProductShotBotFlow
     private function current(TelegramProductDraft $draft, ?string $notice): array
     {
         $response = match ($draft->state) {
-            'ps_images' => $this->imagesPrompt($draft, $notice),
-            'ps_group' => $this->groupPrompt($draft),
-            'ps_occupations' => $this->occupationsPrompt($draft, (string) data_get($draft->input_payload, 'pshot.group', '')),
-            'ps_brief' => $this->briefPrompt($draft, $notice),
+            'ps_input' => $this->inputPrompt($draft, $notice),
+            'ps_slides' => $this->slidesPanel($draft, $notice),
             'processing', 'failed' => $this->resultResponse($draft),
             'ps_review' => $this->review($draft),
             'ps_edit' => $this->editPrompt($draft, (string) $draft->pending_edit_field),
-            'ps_shots' => $this->shotsPrompt($draft, $notice),
+            'ps_group' => $this->groupPrompt($draft),
+            'ps_occupations' => $this->occupationsPrompt($draft, (string) data_get($draft->input_payload, 'pshot.group', '')),
             'ps_categories' => $this->categoriesPrompt($draft, (int) data_get($draft->input_payload, 'pshot.category_page', 0), $notice),
-            'ps_confirm' => $this->confirmPrompt($draft, $draft->manager ?? new TelegramProductManager(), $notice),
+            'ps_slide_list' => $this->slideList($draft),
             'ps_tiles' => $this->tilesPrompt($draft, $notice),
             default => $this->response($draft->chat_id, 'این فرآیند تمام شده است. برای ثبت جدید «ثبت محصول» را بزن.', [], ['status' => (string) $draft->state, 'draft_id' => $draft->id]),
         };
@@ -999,10 +1248,13 @@ class ProductShotBotFlow
     private function cancel(TelegramProductDraft $draft, string $chatId): array
     {
         $draft->forceFill(['state' => 'cancelled', 'cancelled_at' => now(), 'pending_edit_field' => null])->save();
+        $data = (array) data_get($draft->input_payload, 'pshot', []);
+        $this->deleteFiles(array_merge([$data['input_image'] ?? null], collect((array) ($data['slides'] ?? []))->pluck('image')->all()));
 
-        return $this->response($chatId, 'فرآیند ثبت پک لغو شد؛ هیچ محصولی ثبت یا حذف نشد.', [], [
+        return $this->response($chatId, 'فرآیند ثبت محصول پروداکتی لغو شد؛ هیچ محصولی ثبت نشد.', [], [
             'status' => 'cancelled',
             'draft_id' => $draft->id,
+            'delete_message_ids' => array_values(array_filter(array_map('strval', (array) $draft->message_ids))),
             'reply_markup' => [
                 'keyboard' => [[['text' => 'ثبت محصول'], ['text' => 'آموزش']]],
                 'resize_keyboard' => true,
@@ -1013,44 +1265,108 @@ class ProductShotBotFlow
 
     // ───────────────────────── کمکی‌ها ─────────────────────────
 
-    private function data(TelegramProductDraft $draft): array
+    private function newSlide(): array
     {
-        return (array) data_get($draft->input_payload, 'pshot', []);
+        return ['id' => Str::lower(Str::random(8)), 'image' => null, 'parts' => [], 'name' => null, 'done' => false];
+    }
+
+    private function slides(TelegramProductDraft $draft): array
+    {
+        return array_values((array) data_get($draft->input_payload, 'pshot.slides', []));
+    }
+
+    /** اسلایدهای کامل (عکس + پرامپت) به ترتیب. */
+    private function completeSlides(TelegramProductDraft $draft): array
+    {
+        return array_values(array_filter($this->slides($draft), fn ($s) => $this->isComplete($s)));
+    }
+
+    /** اسلایدی که در حال ساخت است (آخرین اسلایدی که «ثبت» نشده). */
+    private function currentIndex(array $slides): ?int
+    {
+        if ($slides === []) {
+            return null;
+        }
+        $last = count($slides) - 1;
+
+        return empty($slides[$last]['done']) ? $last : null;
+    }
+
+    private function isComplete(array $slide): bool
+    {
+        return ! empty($slide['image']) && $this->parts($slide) !== [];
+    }
+
+    private function parts(array $slide): array
+    {
+        return array_values(array_filter((array) ($slide['parts'] ?? []), fn ($p) => trim((string) ($p['t'] ?? '')) !== ''));
+    }
+
+    /** تکه‌های پرامپت به ترتیب شناسه‌ی پیام تلگرام (پیام‌های بلند ممکن است جابه‌جا برسند). */
+    private function joinParts(array $slide): string
+    {
+        $parts = $this->parts($slide);
+        $indexed = [];
+        foreach ($parts as $i => $part) {
+            $indexed[] = ['m' => (int) ($part['m'] ?? 0), 'i' => $i, 't' => (string) $part['t']];
+        }
+        usort($indexed, fn ($a, $b) => ($a['m'] === 0 || $b['m'] === 0) ? $a['i'] <=> $b['i'] : [$a['m'], $a['i']] <=> [$b['m'], $b['i']]);
+
+        return trim(implode("\n", array_map(fn ($p) => trim($p['t']), $indexed)));
+    }
+
+    private function slidesDigest(TelegramProductDraft $draft): string
+    {
+        return collect($this->completeSlides($draft))->values()
+            ->map(fn ($s, $i) => '[اسلاید ' . ($i + 1) . "]\n" . $this->joinParts($s))
+            ->implode("\n\n");
+    }
+
+    private function aiModel(): string
+    {
+        return trim((string) $this->settings->get('ai.model', '')) ?: (string) config('services.telegram_product.ai_model', 'openai/gpt-4o-mini');
     }
 
     private function selectedOccupations(TelegramProductDraft $draft): Collection
     {
-        $ids = array_map('intval', (array) ($this->data($draft)['occupation_ids'] ?? []));
+        $ids = array_map('intval', (array) data_get($draft->input_payload, 'pshot.occupation_ids', []));
 
         return $ids === [] ? collect() : Occupation::query()->whereIn('id', $ids)->ordered()->get(['id', 'name_fa', 'group_key']);
     }
 
     private function selectedCategories(TelegramProductDraft $draft): Collection
     {
-        $ids = array_map('intval', (array) ($this->data($draft)['category_ids'] ?? []));
+        $ids = array_map('intval', (array) data_get($draft->input_payload, 'pshot.category_ids', []));
 
         return $ids === [] ? collect() : Category::query()->whereIn('id', $ids)->get(['id', 'name', 'name_fa']);
     }
 
-    private function availableShots(TelegramProductDraft $draft): Collection
-    {
-        $groups = $this->registrar->groupsOfOccupations($this->selectedOccupations($draft)->pluck('id')->all());
-
-        return $this->registrar->shotsForGroups($groups);
-    }
-
     private function selectedTiles(TelegramProductDraft $draft): array
     {
-        $tiles = array_values(array_intersect(array_keys(self::TILE_LABELS), (array) ($this->data($draft)['tiles'] ?? [])));
+        $saved = data_get($draft->input_payload, 'pshot.tiles');
+        $tiles = array_values(array_intersect(array_keys(ProductShotBotSettings::TILES), (array) ($saved ?? $this->settings->get('display.explore_tiles', ['1x1']))));
 
         return $tiles ?: ['1x1'];
     }
 
     private function coverUrl(TelegramProductDraft $draft): ?string
     {
-        $path = collect((array) ($this->data($draft)['images'] ?? []))->first();
+        $path = collect($this->completeSlides($draft))->pluck('image')->filter()->first();
 
         return $path ? Storage::disk('public')->url((string) $path) : null;
+    }
+
+    private function deleteFiles(array $paths): void
+    {
+        foreach ($paths as $path) {
+            if (is_string($path) && Str::startsWith($path, [self::INPUT_DIR . '/', self::SAMPLE_DIR . '/'])) {
+                try {
+                    Storage::disk('public')->delete($path);
+                } catch (\Throwable) {
+                    // پاک‌سازی کمکی است.
+                }
+            }
+        }
     }
 
     private function matchCategory(string $value, Collection $categories): ?Category
@@ -1083,10 +1399,10 @@ class ProductShotBotFlow
 
     private function e(mixed $value): string
     {
-        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
-    private function fa(int $number): string
+    private function fa(int|string $number): string
     {
         return strtr((string) $number, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
     }

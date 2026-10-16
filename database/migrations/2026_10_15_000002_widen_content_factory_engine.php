@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SQLite (تست‌ها) طول VARCHAR را اعمال نمی‌کند و MODIFY را نمی‌شناسد.
+        if (DB::getDriverName() !== 'mysql' && DB::getDriverName() !== 'mariadb') {
+            return;
+        }
+
         if (Schema::hasTable('cf_calendar_items') && Schema::hasColumn('cf_calendar_items', 'engine')) {
             DB::statement('ALTER TABLE `cf_calendar_items` MODIFY `engine` VARCHAR(255) NULL');
         }

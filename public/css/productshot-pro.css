@@ -416,3 +416,84 @@
   .ps-shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ps-section-head h2 { font-size: 19px; }
 }
+
+/* ── عکس ورودی در گالری + مقایسه‌ی قبل/بعد (۲۴ مهر ۱۴۰۵) ── */
+.ps-pro [hidden] { display: none !important; }
+.ps-thumbs button { position: relative; }
+.ps-thumb-tag {
+  position: absolute;
+  inset-inline: 6px;
+  bottom: 6px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .62);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+.ps-thumbs button.is-input { border-style: dashed; }
+.ps-input-badge {
+  position: absolute;
+  z-index: 3;
+  bottom: 24px;
+  inset-inline-start: 24px;
+  max-width: calc(100% - 48px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: var(--ps-r-sm);
+  background: rgba(0, 0, 0, .62);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  backdrop-filter: blur(6px);
+}
+.ps-input-badge i { color: var(--vt-brand); }
+.ps-compare-image {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  object-fit: contain;
+  border-radius: var(--ps-r);
+  background: var(--vt-card);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.ps-main.is-comparing .ps-compare-image { opacity: 1; }
+.ps-compare {
+  position: absolute;
+  z-index: 4;
+  bottom: 24px;
+  inset-inline-end: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, .62);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  backdrop-filter: blur(6px);
+  transition: background .2s;
+}
+.ps-compare i { color: var(--vt-brand); }
+.ps-compare[aria-pressed="true"] { background: var(--vt-brand); color: var(--vt-on-brand, #fff); }
+.ps-compare[aria-pressed="true"] i { color: inherit; }
+@media (max-width: 767px) {
+  .ps-input-badge { bottom: 28px; inset-inline-start: 28px; font-size: 11px; }
+  .ps-compare { bottom: 28px; inset-inline-end: 28px; }
+}

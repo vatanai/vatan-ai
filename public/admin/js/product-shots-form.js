@@ -78,7 +78,10 @@
     if (number === 3) {
       var enabledRows = all('[data-shot-enabled]:checked', form);
       if (!enabledRows.length) return error('حداقل یک شات را فعال کنید.');
-      if (!all('[data-shot-default]:checked', form).length) return error('حداقل یک شات را در بسته‌ی آماده قرار دهید.');
+      var incompleteNew = all('[data-new-slide]', form).some(function (row) {
+        return !one('[data-shot-name-input]', row).value.trim() || one('[data-shot-prompt]', row).value.trim().length < 10;
+      });
+      if (incompleteNew) return error('برای هر اسلاید اختصاصی، نام و پرامپت ساخت (حداقل ۱۰ کاراکتر) را بنویسید.');
       var invalidRatio = enabledRows.some(function (checkbox) {
         return !all('[name$="[allowed_aspect_ratios][]"]:checked', checkbox.closest('[data-shot-row]')).length;
       });
@@ -109,7 +112,7 @@
   var FIELD_STEPS = [
     [/^(name_fa|name_en|description_fa|occupation_ids|category_ids|main_images|cover|remove_main_images)/, 1],
     [/^(quality_models|product_description|brand_palette|brand_style|brand_identity|preflight_prompt)/, 2],
-    [/^(preflight_|product_sheet_|shots)/, 3],
+    [/^(preflight_|product_sheet_|shots|new_slides|input_image|remove_input_image)/, 3],
     [/^(watermark_|display_mode|card_|gallery_layout)/, 4],
     [/^(explore_tiles|status)/, 5]
   ];
@@ -155,6 +158,12 @@
     if (group && mainInput && removeFlag) {
       var hadExisting = group.dataset.initialExisting === '1';
       removeFlag.value = hadExisting && group.dataset.existing === '[]' && !mainInput.files.length ? '1' : '0';
+    }
+    var inputGroup = one('.image-optimizer-group[data-input="input-image-file"]', form);
+    var inputFile = one('#input-image-file', form);
+    var inputRemove = one('[data-remove-input-image]', form);
+    if (inputGroup && inputFile && inputRemove) {
+      inputRemove.value = inputGroup.dataset.initialExisting === '1' && inputGroup.dataset.existing === '[]' && !inputFile.files.length ? '1' : '0';
     }
     var body = new FormData(form);
     var samples = all('[data-shot-sample-file]', form);
@@ -263,6 +272,9 @@
     if (!dirty || submitting) return;
     event.preventDefault(); event.returnValue = '';
   });
+
+  var inputImageGroup = one('.image-optimizer-group[data-input="input-image-file"]', form);
+  if (inputImageGroup) inputImageGroup.dataset.initialExisting = JSON.parse(inputImageGroup.dataset.existing || '[]').length ? '1' : '0';
 
   /* کشیدن و رها کردن عکس روی کادر «آپلود عکس محصول» */
   var mainGroup = one('.image-optimizer-group[data-input="main-images-file"]', form);
@@ -409,39 +421,25 @@
       if (control.matches('[data-shot-removed], [data-shot-restore]')) return;
       control.disabled = disabled;
     });
-    if (!disabled) {
-      var enabled = one('[data-shot-enabled]', row);
-      var defaultBox = one('[data-shot-default]', row);
-      if (defaultBox) defaultBox.disabled = !enabled.checked;
-    }
+
   }
 
   function setShotRemoved(row, removed, initializing) {
     var removedInput = one('[data-shot-removed]', row);
     var enabled = one('[data-shot-enabled]', row);
-    var defaultBox = one('[data-shot-default]', row);
-    if (removed && !initializing) {
-      row.dataset.wasEnabled = enabled.checked ? '1' : '0';
-      row.dataset.wasDefault = defaultBox.checked ? '1' : '0';
-    }
-    if (removed && initializing) {
-      row.dataset.wasEnabled = '1';
-      row.dataset.wasDefault = defaultBox.checked ? '1' : '0';
-    }
+    if (removed && !initializing) row.dataset.wasEnabled = enabled.checked ? '1' : '0';
+    if (removed && initializing) row.dataset.wasEnabled = '1';
     row.classList.toggle('is-removed', removed);
     row.classList.toggle('is-off', !removed && !enabled.checked);
     removedInput.value = removed ? '1' : '0';
     if (removed) {
       enabled.checked = false;
-      defaultBox.checked = false;
       row.draggable = false;
       disableRemovedShotControls(row, true);
       shotList.appendChild(row);
     } else {
       disableRemovedShotControls(row, false);
       enabled.checked = row.dataset.wasEnabled !== '0';
-      defaultBox.checked = enabled.checked && row.dataset.wasDefault === '1';
-      defaultBox.disabled = !enabled.checked;
       row.classList.toggle('is-off', !enabled.checked);
       var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
       if (firstRemoved) shotList.insertBefore(row, firstRemoved);
@@ -458,12 +456,26 @@
     announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' به جایگاه ' + fa(managedShotRows().indexOf(row) + 1) + ' منتقل شد.');
   }
 
-  if (shotList) {
-    all('[data-shot-row]', shotList).forEach(function (row) {
+  function updateCharCount(textarea) {
+    var counter = one('[data-char-count]', textarea.closest('.ps-field'));
+    if (!counter) return;
+    var length = textarea.value.length;
+    counter.textContent = length ? '(' + fa(length.toLocaleString('en-US')) + ' کاراکتر)' : '';
+    counter.classList.toggle('is-warn', length > 25000);
+  }
+
+  function bindShotRow(row) {
       var enabled = one('[data-shot-enabled]', row);
-      var defaultBox = one('[data-shot-default]', row);
-      defaultBox.disabled = !enabled.checked;
       if (row.classList.contains('is-removed')) setShotRemoved(row, true, true);
+      var prompt = one('[data-shot-prompt]', row);
+      if (prompt) { updateCharCount(prompt); prompt.addEventListener('input', function () { updateCharCount(prompt); }); }
+      enabled.addEventListener('change', function () { row.classList.toggle('is-off', !enabled.checked); refreshSummary(); });
+      all('[name*="[quality_credits]"]', row).forEach(function (input) { input.addEventListener('change', refreshSummary); input.addEventListener('input', refreshSummary); });
+      var toggle = one('[data-shot-toggle]', row);
+      if (toggle) toggle.addEventListener('click', function () { var detail = one('[data-shot-detail]', row); detail.hidden = !detail.hidden; });
+      var previewButton = one('[data-shot-preview]', row);
+      if (previewButton) previewButton.addEventListener('click', function () { previewShot(previewButton); });
+      all('[data-shot-sample-file]', row).forEach(bindSampleInput);
 
       one('[data-shot-name-input]', row).addEventListener('input', function (event) {
         var value = event.target.value.trim();
@@ -478,10 +490,17 @@
       });
       one('[data-shot-remove]', row).addEventListener('click', function () {
         var name = one('[data-shot-name-input]', row).value.trim() || row.dataset.shotOriginalName;
+        if (row.hasAttribute('data-new-slide')) {
+          row.parentNode.removeChild(row);
+          updateShotOrder();
+          announceShotOrder(name + ' حذف شد.');
+          return;
+        }
         setShotRemoved(row, true, false);
         announceShotOrder(name + ' از این محصول کنار گذاشته شد؛ تا پیش از ذخیره می‌توانید آن را بازگردانید.');
       });
-      one('[data-shot-restore]', row).addEventListener('click', function () {
+      var restore = one('[data-shot-restore]', row);
+      if (restore) restore.addEventListener('click', function () {
         setShotRemoved(row, false, false);
         announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' دوباره به محصول افزوده شد.');
       });
@@ -507,7 +526,28 @@
         updateShotOrder();
         announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' به جایگاه ' + fa(managedShotRows().indexOf(row) + 1) + ' منتقل شد.');
       });
-    });
+  }
+
+  var slideTemplate = one('#sp-custom-slide-template', form);
+  function addCustomSlide() {
+    if (!slideTemplate || !shotList) return;
+    var key = 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1000);
+    var holder = document.createElement('div');
+    holder.innerHTML = slideTemplate.innerHTML.split('__KEY__').join(key);
+    var row = holder.querySelector('[data-shot-row]');
+    var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
+    if (firstRemoved) shotList.insertBefore(row, firstRemoved); else shotList.appendChild(row);
+    bindShotRow(row);
+    if (typeof initImageOptimizerGroups === 'function') initImageOptimizerGroups(row);
+    updateShotOrder();
+    dirty = true;
+    row.scrollIntoView({behavior: 'smooth', block: 'center'});
+    window.setTimeout(function () { one('[data-shot-name-input]', row).focus(); }, 350);
+  }
+  all('[data-add-custom-slide]', form).forEach(function (button) { button.addEventListener('click', addCustomSlide); });
+
+  if (shotList) {
+    all('[data-shot-row]', shotList).forEach(bindShotRow);
 
     shotList.addEventListener('dragover', function (event) {
       if (!draggingShot) return;
@@ -524,18 +564,6 @@
     updateShotOrder();
   }
 
-  all('[data-shot-toggle]', form).forEach(function (button) { button.addEventListener('click', function () { var detail = one('[data-shot-detail]', button.closest('[data-shot-row]')); detail.hidden = !detail.hidden; }); });
-  all('[data-shot-enabled]', form).forEach(function (checkbox) {
-    checkbox.addEventListener('change', function () {
-      var row = checkbox.closest('[data-shot-row]');
-      row.classList.toggle('is-off', !checkbox.checked);
-      var defaultBox = one('[data-shot-default]', row);
-      defaultBox.disabled = !checkbox.checked;
-      if (!checkbox.checked) defaultBox.checked = false;
-      refreshSummary();
-    });
-  });
-  all('[data-shot-default], [name*="[quality_credits]"]', form).forEach(function (input) { input.addEventListener('change', refreshSummary); input.addEventListener('input', refreshSummary); });
   all('[name="explore_tiles[]"]', form).forEach(function (input) {
     input.addEventListener('change', function () {
       if (!all('[name="explore_tiles[]"]:checked', form).length) {
@@ -569,7 +597,7 @@
     if (tooMany) error('حداکثر سه تصویر تست انتخاب کنید.');
   });
 
-  all('[data-shot-sample-file]', form).forEach(function (input) {
+  function bindSampleInput(input) {
     input.addEventListener('change', function () {
       var file = input.files && input.files[0];
       if (!file) return;
@@ -579,7 +607,7 @@
       thumb.innerHTML = '<img src="' + url + '" alt="پیش‌نمایش تصویر نمونه">';
       refreshSummary();
     });
-  });
+  }
 
   function previewShot(button) {
     if (!testImages || !testImages.files.length) return error('برای پیش‌نمایش، حداقل یک تصویر تست انتخاب کنید.');
@@ -596,6 +624,8 @@
     body.append('brand_identity_enabled', brandToggle && brandToggle.checked ? '1' : '0');
     body.append('brand_identity_prompt', one('[name="brand_identity_prompt"]', form).value || '');
     body.append('aspect_ratio', one('#sp-test-ratio', form).value);
+    var promptField = one('[data-shot-prompt]', row);
+    if (promptField && promptField.value.trim()) body.append('prompt_override', promptField.value.trim());
     var result = one('[data-shot-result]', row);
     button.disabled = true; result.textContent = 'در حال ساخت پیش‌نمایش واقعی…';
     Promise.all(testFiles.map(compressIfLarge))
@@ -620,13 +650,12 @@
       .catch(function (caught) { result.textContent = caught.message || 'پیش‌نمایش ساخته نشد.'; })
       .finally(function () { button.disabled = false; });
   }
-  all('[data-shot-preview]', form).forEach(function (button) { button.addEventListener('click', function () { previewShot(button); }); });
 
   function refreshTotals() {
     Object.keys(config.qualityLevels || {}).forEach(function (quality) {
       var total = 0;
       all('[data-shot-row]', form).forEach(function (row) {
-        if (!one('[data-shot-enabled]', row).checked || !one('[data-shot-default]', row).checked) return;
+        if (!one('[data-shot-enabled]', row).checked) return;
         var credit = one('[name$="[quality_credits][' + quality + ']"]', row);
         total += Number(credit && credit.value || 0);
       });
@@ -652,7 +681,7 @@
         name: (one('[data-shot-name-input]', row).value || row.dataset.shotName || 'اسلاید محصول').trim(),
         image: image ? image.src : '',
         credits: Number(credit && credit.value || 0),
-        selected: !!one('[data-shot-default]', row).checked
+        selected: false
       };
     });
   }
@@ -738,16 +767,15 @@
     var name = one('[name="name_fa"]', form).value.trim() || '—';
     var occupations = all('[name="occupation_ids[]"]:checked', form).map(function (input) { return one('span', input.closest('label')).textContent.trim(); });
     var enabled = all('[data-shot-enabled]:checked', form).length;
-    var defaults = all('[data-shot-default]:checked', form).length;
     var standard = one('[name="quality_models[standard][primary_id]"]', form);
     var model = standard && standard.selectedOptions[0] ? standard.selectedOptions[0].textContent.trim() : '—';
     var standardCredits = 0;
-    all('[data-shot-row]', form).forEach(function (row) { if (one('[data-shot-enabled]', row).checked && one('[data-shot-default]', row).checked) standardCredits += Number(one('[name$="[quality_credits][standard]"]', row).value || 0); });
+    all('[data-shot-row]', form).forEach(function (row) { if (one('[data-shot-enabled]', row).checked) standardCredits += Number(one('[name$="[quality_credits][standard]"]', row).value || 0); });
     var categories = selectedCategoryIds.map(function (id) { return categoryById(id); }).filter(Boolean).map(function (category) { return category.name; });
     var publishStatus = one('#psw-status', form).value === 'active' ? 'ثبت نهایی' : 'پیش‌نویس';
-    var values = {name: name, categories: categories.join('، ') || '—', occupations: occupations.join('، ') || '—', shots: fa(enabled), defaults: fa(defaults), model: model, credits: fa(standardCredits) + ' اعتبار', 'publish-status': publishStatus};
+    var values = {name: name, categories: categories.join('، ') || '—', occupations: occupations.join('، ') || '—', shots: fa(enabled), model: model, credits: fa(standardCredits) + ' اعتبار', 'publish-status': publishStatus};
     Object.keys(values).forEach(function (key) { var target = one('[data-summary="' + key + '"]', form); if (target) target.textContent = values[key]; });
-    var ready = name !== '—' && categories.length && occupations.length && enabled && defaults;
+    var ready = name !== '—' && categories.length && occupations.length && enabled;
     var status = one('[data-final-status]', form); if (status) { status.textContent = ready ? 'آماده ثبت' : 'نیازمند تکمیل'; status.classList.toggle('badge-success', !!ready); status.classList.toggle('badge-neutral', !ready); }
     refreshLivePreview();
   }

@@ -49,7 +49,6 @@
       <div class="ps-summary-row"><span>اعتبار استاندارد</span><strong data-summary="credits">—</strong></div>
       <div class="ps-summary-row"><span>نوع خروجی</span><strong>عکس</strong></div>
       <div class="ps-summary-row"><span>اسلایدهای فعال</span><strong data-summary="shots">—</strong></div>
-      <div class="ps-summary-row"><span>اسلایدهای منتخب اولیه</span><strong data-summary="defaults">—</strong></div>
       <div class="ps-summary-row"><span>وضعیت ثبت</span><strong data-summary="publish-status">{{ old('status', $product?->status ?? 'draft') === 'active' ? 'ثبت نهایی' : 'پیش‌نویس' }}</strong></div>
     </div>
     <button type="button" class="btn-pro btn-pro-ghost mt-4" data-scroll-product-preview><i class="fa-solid fa-eye"></i> پیش‌نمایش محصول</button>

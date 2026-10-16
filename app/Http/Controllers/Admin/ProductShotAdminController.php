@@ -46,6 +46,7 @@ class ProductShotAdminController extends Controller
 
     private const PREVIEW_DIR = 'uploads/product-shots/admin-previews';
     private const SAMPLE_DIR = 'products/shot-samples';
+    private const INPUT_DIR = 'products/input';
 
     /** فایل‌های قبلی فقط بعد از موفق‌شدن تراکنش ذخیره حذف می‌شوند. */
     private array $pendingStorageDeletes = [];
@@ -54,12 +55,13 @@ class ProductShotAdminController extends Controller
         private ProductShotFeature $feature,
         private ShotImageStore $images,
         private ProductImageOptimizer $imageOptimizer,
+        private \App\Services\ProductShots\CustomSlideService $customSlides,
     ) {}
 
     public function index(): View
     {
         $settings = ProductShotSetting::current();
-        $shots = ShotLibrary::query()->ordered()->withCount('productShots')->get();
+        $shots = ShotLibrary::query()->library()->ordered()->withCount('productShots')->get();
         $products = Product::query()
             ->where('product_mode', Product::MODE_PRODUCT)
             ->withCount(['productShots as enabled_shots_count' => fn ($q) => $q->where('enabled', true)])
@@ -165,7 +167,10 @@ class ProductShotAdminController extends Controller
         }
 
         $productShots = $product ? $product->productShots->keyBy('shot_id') : collect();
-        $shots = ShotLibrary::query()->ordered()->get()->filter(fn (ShotLibrary $s) => $s->is_active || $productShots->has($s->id))->values();
+        // کتابخانه‌ی عمومی + اسلایدهای اختصاصی همین محصول (اسلاید اختصاصی محصولات دیگر هرگز نمی‌آید).
+        $shots = ShotLibrary::query()->ordered()->get()->filter(fn (ShotLibrary $s) => $s->isCustom()
+            ? ($product && (int) $s->product_id === (int) $product->id && $productShots->has($s->id))
+            : ($s->is_active || $productShots->has($s->id)))->values();
         $generalShotIds = $shots
             ->filter(fn (ShotLibrary $shot) => Str::startsWith($shot->key, 'product-'))
             ->pluck('id')
@@ -200,6 +205,8 @@ class ProductShotAdminController extends Controller
             'settings' => (array) ($product?->shot_settings ?? []),
             'globalSettings' => ProductShotSetting::current(),
             'aspectRatios' => (array) config('product_shots.aspect_ratios'),
+            'slideDefaults' => app(\App\Services\TelegramProduct\ProductShotBotSettings::class)->get('slides'),
+            'inputImage' => data_get($product?->shot_settings, 'input_image'),
         ]);
     }
 
@@ -285,6 +292,7 @@ class ProductShotAdminController extends Controller
             'brand_identity_enabled' => ['nullable', 'boolean'],
             'brand_identity_prompt' => ['nullable', 'string'],
             'aspect_ratio' => ['nullable', Rule::in((array) config('product_shots.aspect_ratios'))],
+            'prompt_override' => ['nullable', 'string', 'max:30000'],
         ]);
 
         $sourcePaths = [];
@@ -330,6 +338,8 @@ class ProductShotAdminController extends Controller
                 $previewReferences,
                 $data['aspect_ratio'] ?? '4:5',
                 $data['product_description'] ?? null,
+                // پیش‌نمایش با همان پرامپتی که الان در فرم نوشته شده است.
+                filled($data['prompt_override'] ?? null) ? new ProductShot(['prompt_override' => trim((string) $data['prompt_override'])]) : null,
             );
         } catch (\Throwable $e) {
             report($e);
@@ -463,7 +473,7 @@ class ProductShotAdminController extends Controller
             'main_images' => ['nullable', 'array', 'max:12'],
             'main_images.*' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
             'remove_main_images' => ['nullable', 'boolean'],
-            'shots' => ['required', 'array', 'min:1'],
+            'shots' => ['nullable', 'array'],
             'shots.*.removed' => ['nullable', 'boolean'],
             'shots.*.name_override' => ['nullable', 'string', 'max:120'],
             'shots.*.enabled' => ['nullable', 'boolean'],
@@ -471,7 +481,21 @@ class ProductShotAdminController extends Controller
             'shots.*.credits' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.quality_credits' => ['nullable', 'array'],
             'shots.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'shots.*.prompt_override' => ['nullable', 'string'],
+            'shots.*.prompt_override' => ['nullable', 'string', 'max:30000'],
+            'new_slides' => ['nullable', 'array', 'max:30'],
+            'new_slides.*.name' => ['required', 'string', 'max:120'],
+            'new_slides.*.prompt' => ['required', 'string', 'min:10', 'max:30000'],
+            'new_slides.*.enabled' => ['nullable', 'boolean'],
+            'new_slides.*.sort' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'new_slides.*.sample' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
+            'new_slides.*.quality_credits' => ['nullable', 'array'],
+            'new_slides.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'new_slides.*.allowed_aspect_ratios' => ['nullable', 'array'],
+            'new_slides.*.allowed_aspect_ratios.*' => [Rule::in((array) config('product_shots.aspect_ratios'))],
+            'new_slides.*.aspect_ratio_default' => ['nullable', Rule::in((array) config('product_shots.aspect_ratios'))],
+            'new_slides.*.aspect_ratio_user_selectable' => ['nullable', 'boolean'],
+            'input_image' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
+            'remove_input_image' => ['nullable', 'boolean'],
             'shots.*.model_overrides' => ['nullable', 'array'],
             'shots.*.model_overrides.*.primary_id' => ['nullable', 'integer', Rule::exists('ai_models', 'id')],
             'shots.*.model_overrides.*.fallback_ids' => ['nullable', 'array', 'max:3'],
@@ -503,7 +527,16 @@ class ProductShotAdminController extends Controller
             'occupation_ids.required' => 'حداقل یک صنف انتخاب کنید.',
             'quality_models.*.primary_id.required' => 'مدل اصلی هر سه سطح کیفیت را انتخاب کنید.',
             'category_ids.required' => 'برای انتشار، حداقل یک دسته انتخاب کنید.',
-            'shots.required' => 'حداقل یک شات انتخاب کنید.',
+            'new_slides.*.name.required' => 'نام اسلاید اختصاصی را بنویسید.',
+            'new_slides.*.prompt.required' => 'پرامپت ساخت اسلاید اختصاصی را بنویسید.',
+            'new_slides.*.prompt.min' => 'پرامپت اسلاید اختصاصی خیلی کوتاه است.',
+            'new_slides.*.prompt.max' => 'پرامپت هر اسلاید حداکثر ۳۰٬۰۰۰ کاراکتر است.',
+            'shots.*.prompt_override.max' => 'پرامپت هر اسلاید حداکثر ۳۰٬۰۰۰ کاراکتر است.',
+            'new_slides.*.sample.image' => 'تصویر نمونه‌ی اسلاید اختصاصی معتبر نیست.',
+            'new_slides.*.sample.max' => 'حجم تصویر نمونه‌ی اسلاید حداکثر ۱۲ مگابایت است.',
+            'input_image.image' => 'عکس ورودی معتبر نیست.',
+            'input_image.mimes' => 'عکس ورودی باید JPG، PNG یا WebP باشد.',
+            'input_image.max' => 'حجم عکس ورودی حداکثر ۱۲ مگابایت است.',
             'main_images.max' => 'حداکثر ۱۲ عکس محصول قابل بارگذاری است.',
             'main_images.*.image' => 'فایل انتخاب‌شده برای عکس محصول، تصویر معتبر نیست.',
             'main_images.*.mimes' => 'عکس محصول باید JPG، PNG یا WebP باشد.',
@@ -525,15 +558,13 @@ class ProductShotAdminController extends Controller
             }
         }
 
-        $enabled = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN));
-        if ($enabled->isEmpty()) {
-            throw ValidationException::withMessages(['shots' => 'حداقل یک شات را فعال کنید.']);
+        $enabled = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN) && ! filter_var($row['removed'] ?? false, FILTER_VALIDATE_BOOLEAN));
+        $newEnabled = collect((array) ($data['new_slides'] ?? []))->filter(fn ($row) => filter_var($row['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN));
+        if ($enabled->isEmpty() && $newEnabled->isEmpty()) {
+            throw ValidationException::withMessages(['shots' => 'حداقل یک اسلاید را فعال کنید.']);
         }
-        if ($enabled->contains(fn ($row) => empty($row['allowed_aspect_ratios']))) {
+        if ($enabled->contains(fn ($row) => empty($row['allowed_aspect_ratios'])) || $newEnabled->contains(fn ($row) => empty($row['allowed_aspect_ratios']))) {
             throw ValidationException::withMessages(['shots' => 'برای هر اسلاید فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.']);
-        }
-        if (! $enabled->contains(fn ($row) => filter_var($row['is_default'] ?? false, FILTER_VALIDATE_BOOLEAN))) {
-            throw ValidationException::withMessages(['shots' => 'حداقل یک شات فعال را در بسته‌ی آماده قرار دهید.']);
         }
         if ($publishing && empty($data['explore_tiles'])) {
             throw ValidationException::withMessages(['explore_tiles' => 'برای انتشار، حداقل یک قاب اکسپلور انتخاب کنید.']);
@@ -544,6 +575,21 @@ class ProductShotAdminController extends Controller
 
     private function fillProduct(Product $product, array $data, Request $request): void
     {
+        $previousInputImage = data_get($product->shot_settings, 'input_image');
+        $inputImage = $previousInputImage;
+        if ($request->hasFile('input_image')) {
+            try {
+                $inputImage = $this->imageOptimizer->store($request->file('input_image'), self::INPUT_DIR);
+            } catch (\Throwable $e) {
+                throw ValidationException::withMessages(['input_image' => 'عکس ورودی قابل خواندن نیست؛ عکس دیگری انتخاب کنید.']);
+            }
+        } elseif ($request->boolean('remove_input_image')) {
+            $inputImage = null;
+        }
+        if ($previousInputImage && $previousInputImage !== $inputImage) {
+            $this->queueStorageDeletes([$previousInputImage]);
+        }
+
         $qualityModels = $this->resolveQualityModels((array) $data['quality_models']);
         $standard = $qualityModels['standard'] ?? reset($qualityModels);
         $occupationIds = array_values(array_unique(array_map('intval', (array) $data['occupation_ids'])));
@@ -575,7 +621,14 @@ class ProductShotAdminController extends Controller
                 'product_sheet_enabled' => $request->boolean('product_sheet_enabled'),
                 'product_sheet_size' => (int) $data['product_sheet_size'],
             ],
+            // عکس ورودی‌ای که اسلایدها با آن ساخته شده‌اند؛ فقط در گالری صفحه‌ی محصول دیده می‌شود.
+            'input_image' => $inputImage ?: null,
         ];
+        if (! empty(data_get($product->getOriginal('shot_settings'), 'registered_via'))) {
+            $settings = (array) $product->shot_settings;
+            $settings['registered_via'] = data_get($product->getOriginal('shot_settings'), 'registered_via');
+            $product->shot_settings = $settings;
+        }
 
         // ستون‌های اجباری/قدیمی با مقادیر امن؛ هیچ‌کدام در مسیر پک خوانده نمی‌شوند
         // ولی فهرست‌ها، گزارش‌ها و سفارش‌ها به آن‌ها تکیه دارند.
@@ -671,11 +724,18 @@ class ProductShotAdminController extends Controller
         foreach ($libraryShots as $shotId => $libraryShot) {
             $row = (array) ($rows[$shotId] ?? []);
             $productShot = $existing->get($shotId);
+            if ($libraryShot->isCustom() && (int) $libraryShot->product_id !== (int) $product->id) {
+                continue; // اسلاید اختصاصی محصول دیگر
+            }
             if (filter_var($row['removed'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 if ($productShot?->sample_image) {
                     $this->queueStorageDeletes([$productShot->sample_image]);
                 }
-                $productShot?->delete();
+                if ($productShot && $libraryShot->isCustom()) {
+                    $this->customSlides->delete($productShot);
+                } else {
+                    $productShot?->delete();
+                }
                 continue;
             }
             $enabled = filter_var($row['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
@@ -686,7 +746,8 @@ class ProductShotAdminController extends Controller
             $nameOverride = trim((string) ($row['name_override'] ?? ''));
             $productShot->name_override = $nameOverride !== '' && $nameOverride !== $libraryShot->name_fa ? $nameOverride : null;
             $productShot->enabled = $enabled;
-            $productShot->is_default = $enabled && filter_var($row['is_default'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            // هیچ اسلایدی از پیش برای کاربر تیک نمی‌خورد (تصمیم ۲۴ مهر).
+            $productShot->is_default = false;
             $productShot->credits_override = isset($row['credits']) && $row['credits'] !== '' ? max(0, (int) $row['credits']) : null;
             $productShot->prompt_override = trim((string) ($row['prompt_override'] ?? '')) ?: null;
             $productShot->model_configuration = [
@@ -726,6 +787,40 @@ class ProductShotAdminController extends Controller
             }
             if ($enabled) {
                 $credits = $productShot->fresh('shot')->credits('standard');
+                $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
+            }
+        }
+
+        // اسلایدهای اختصاصی تازه (عکس نمونه + پرامپت ساخت)
+        foreach ((array) $request->input('new_slides', []) as $key => $row) {
+            $row = (array) $row;
+            $prompt = trim((string) ($row['prompt'] ?? ''));
+            if ($prompt === '') {
+                continue;
+            }
+            $samplePath = null;
+            $sampleFile = $request->file("new_slides.{$key}.sample");
+            if ($sampleFile) {
+                try {
+                    $samplePath = $this->imageOptimizer->store($sampleFile, self::SAMPLE_DIR);
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages(["new_slides.{$key}.sample" => 'تصویر نمونه‌ی اسلاید اختصاصی قابل بهینه‌سازی نیست؛ تصویر دیگری انتخاب کنید.']);
+                }
+            }
+            $enabled = filter_var($row['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $productShot = $this->customSlides->create($product, [
+                'name' => (string) ($row['name'] ?? ''),
+                'prompt' => $prompt,
+                'sample_path' => $samplePath,
+                'enabled' => $enabled,
+                'sort' => (int) ($row['sort'] ?? 999),
+                'credits' => array_map('intval', array_filter((array) ($row['quality_credits'] ?? []), fn ($v) => $v !== null && $v !== '')),
+                'allowed_aspect_ratios' => (array) ($row['allowed_aspect_ratios'] ?? []),
+                'aspect_ratio_default' => $row['aspect_ratio_default'] ?? null,
+                'aspect_ratio_user_selectable' => filter_var($row['aspect_ratio_user_selectable'] ?? true, FILTER_VALIDATE_BOOLEAN),
+            ]);
+            if ($enabled) {
+                $credits = $productShot->credits('standard');
                 $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
             }
         }
@@ -789,7 +884,7 @@ class ProductShotAdminController extends Controller
             if (! is_string($path) || $path === '') {
                 continue;
             }
-            if (Str::startsWith($path, [self::SAMPLE_DIR . '/', 'products/main/'])) {
+            if (Str::startsWith($path, [self::SAMPLE_DIR . '/', 'products/main/', self::INPUT_DIR . '/'])) {
                 $this->pendingStorageDeletes[] = $path;
             }
         }

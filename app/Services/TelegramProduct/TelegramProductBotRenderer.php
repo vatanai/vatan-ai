@@ -56,8 +56,23 @@ class TelegramProductBotRenderer
 
         $messageId = null;
         $edited = false;
+        // به‌روزرسانی پیشرفت (از صف): همان پنل فعلی ویرایش می‌شود، نه پیام تازه.
+        if (! $callbackMessageId && ! empty($response['edit_panel']) && $previousPanel && ! $photo && empty($response['media'])) {
+            $result = $this->telegram->call('editMessageText', array_filter([
+                'chat_id' => $chatId,
+                'message_id' => (int) $previousPanel,
+                'text' => $text,
+                'parse_mode' => $parseMode,
+                'reply_markup' => $markup,
+                'disable_web_page_preview' => true,
+            ], fn ($v) => $v !== null));
+            if ($result !== null) {
+                $messageId = (string) $previousPanel;
+                $edited = true;
+            }
+        }
         // کلیک دکمه بدون عکس و بدون آلبوم: ویرایش همان پیام.
-        if ($callbackMessageId && ! $photo && empty($response['media']) && ($markup === null || isset($markup['inline_keyboard']))) {
+        if (! $edited && $callbackMessageId && ! $photo && empty($response['media']) && ($markup === null || isset($markup['inline_keyboard']))) {
             $result = $this->telegram->call('editMessageText', array_filter([
                 'chat_id' => $chatId,
                 'message_id' => (int) $callbackMessageId,
@@ -80,6 +95,12 @@ class TelegramProductBotRenderer
                     $this->telegram->call('deleteMessage', ['chat_id' => $chatId, 'message_id' => (int) $old], 5);
                 }
             }
+        }
+
+        // پیام خود مدیر (عکس/متن) مصرف شد؛ چت فقط پنل بات را نگه می‌دارد.
+        $incoming = $context['incoming_message_id'] ?? null;
+        if ($incoming && ! empty($response['consume_input']) && (string) $incoming !== (string) $messageId) {
+            $this->telegram->call('deleteMessage', ['chat_id' => $chatId, 'message_id' => (int) $incoming], 5);
         }
 
         // پیام‌های قدیمی‌ای که خود فرآیند خواسته پاک شوند (همان قرارداد n8n).

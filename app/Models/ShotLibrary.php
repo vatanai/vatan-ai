@@ -17,7 +17,7 @@ class ShotLibrary extends Model
     protected $table = 'shot_library';
 
     protected $fillable = [
-        'key', 'name_fa', 'name_en', 'description_fa', 'category', 'niche_tags', 'tokens',
+        'product_id', 'key', 'name_fa', 'name_en', 'description_fa', 'category', 'niche_tags', 'tokens',
         'prompt_template', 'default_credits', 'aspect_ratio_default', 'sample_image', 'is_active', 'sort',
     ];
 
@@ -27,6 +27,7 @@ class ShotLibrary extends Model
         'default_credits' => 'integer',
         'is_active' => 'boolean',
         'sort' => 'integer',
+        'product_id' => 'integer',
     ];
 
     public function productShots(): HasMany
@@ -37,6 +38,31 @@ class ShotLibrary extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /** فقط کتابخانه‌ی عمومی (بدون اسلایدهای اختصاصی محصولات). */
+    public function scopeLibrary(Builder $query): Builder
+    {
+        return self::supportsOwnedSlides() ? $query->whereNull('product_id') : $query;
+    }
+
+    private static ?bool $ownedSlidesColumn = null;
+
+    /** ستون product_id (مایگریشن ۲۰۲۶_۱۰_۱۶) هنوز روی سرور اجرا نشده باشد، رفتار قبلی حفظ می‌شود. */
+    public static function supportsOwnedSlides(): bool
+    {
+        return self::$ownedSlidesColumn ??= \Illuminate\Support\Facades\Schema::hasColumn('shot_library', 'product_id');
+    }
+
+    public static function flushSchemaCache(): void
+    {
+        self::$ownedSlidesColumn = null;
+    }
+
+    /** اسلاید اختصاصی یک محصول (عکس نمونه + پرامپت مخصوص همان محصول). */
+    public function isCustom(): bool
+    {
+        return ! empty($this->attributes['product_id']);
     }
 
     public function scopeOrdered(Builder $query): Builder

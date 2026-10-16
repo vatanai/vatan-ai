@@ -1,7 +1,7 @@
 <div class="space-y-4">
   <section class="content-card p-5">
-    <div class="ps-card-title"><i class="fa-solid fa-bolt"></i> مصرف اعتبار سه‌سطحی</div><div class="ps-card-desc">اعتبار نهایی هر خروجی در خود اسلاید تعیین شده است. جمع کاربر برابر مجموع اسلایدهای انتخابی در سطح کیفیت انتخاب‌شده خواهد بود.</div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">@foreach($qualityLevels as $qualityKey=>$qualityLabel)<div class="ps-quality-total" data-quality-total="{{ $qualityKey }}"><small>{{ $qualityLabel }}</small><strong>۰ اعتبار</strong><span>مجموع اسلایدهای منتخب اولیه</span></div>@endforeach</div>
+    <div class="ps-card-title"><i class="fa-solid fa-bolt"></i> مصرف اعتبار سه‌سطحی</div><div class="ps-card-desc">اعتبار نهایی هر خروجی در خود اسلاید تعیین شده است. در صفحه‌ی ساخت هیچ اسلایدی از پیش انتخاب نیست؛ جمع کاربر برابر مجموع اسلایدهایی است که خودش انتخاب می‌کند.</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">@foreach($qualityLevels as $qualityKey=>$qualityLabel)<div class="ps-quality-total" data-quality-total="{{ $qualityKey }}"><small>{{ $qualityLabel }}</small><strong>۰ اعتبار</strong><span>اگر همه‌ی اسلایدهای فعال انتخاب شوند</span></div>@endforeach</div>
   </section>
 
   <section class="content-card p-5">

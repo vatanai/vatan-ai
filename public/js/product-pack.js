@@ -46,9 +46,10 @@
 
   /* ───── شات‌ها ───── */
   var shots = Array.isArray(cfg.shots) ? cfg.shots : [];
-  shots.forEach(function (s) { if (s.is_default) state.selected[s.key] = true; state.ratios[s.key] = s.default_aspect_ratio || '4:5'; });
-  if (!Object.keys(state.selected).length) shots.slice(0, 4).forEach(function (s) { state.selected[s.key] = true; });
-  var hasHidden = shots.some(function (s) { return !s.is_default; });
+  // هیچ اسلایدی از پیش انتخاب نمی‌شود و همه دیده می‌شوند (تصمیم ۲۴ مهر).
+  shots.forEach(function (s) { state.ratios[s.key] = s.default_aspect_ratio || '4:5'; });
+  state.showAll = true;
+  var hasHidden = false;
 
   function renderShots() {
     var wrap = $('[data-shots]');

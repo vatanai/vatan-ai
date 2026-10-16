@@ -27,8 +27,26 @@
     <div id="sp-preview-status" class="ps-hint mt-2" aria-live="polite"></div>
   </section>
 
+  <section class="content-card p-5" id="sp-input-image-card">
+    <div class="ps-card-title"><i class="fa-solid fa-camera-retro"></i> عکس ورودی</div>
+    <div class="ps-card-desc">همان عکس محصولی که اسلایدها با آن ساخته شده‌اند. در گالری صفحه‌ی محصول با برچسب «عکس ورودی» و مقایسه‌ی قبل/بعد به کاربر نشان داده می‌شود تا بداند چه عکسی بدهد؛ در صفحه‌ی ساخت (انتخاب اسلایدها) نمایش داده نمی‌شود.</div>
+    <input type="hidden" name="remove_input_image" value="0" data-remove-input-image>
+    <div class="ps-input-image mt-4">
+      @include('admin.partials.image-optimizer-group', [
+        'inputId' => 'input-image-file',
+        'inputName' => 'input_image',
+        'title' => 'عکس ورودی (فقط یک عکس)',
+        'hint' => 'یک عکس ساده و واضح از خود محصول؛ نسخه‌ی بهینه‌شده‌ی WebP ذخیره می‌شود.',
+        'paths' => !empty($inputImage) ? [$inputImage] : [],
+        'required' => false,
+        'multiple' => false,
+        'uploadLabel' => 'انتخاب عکس ورودی',
+      ])
+    </div>
+  </section>
+
   <section class="content-card p-5">
-    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">نام هر اسلاید را برای همین محصول تغییر دهید و با دستگیره، ترتیب نمایش و ساخت را مشخص کنید. حذف اسلاید فقط روی همین محصول اثر دارد.</div></div><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div>
+    <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلایدهای خروجی</div><div class="ps-card-desc">اسلاید اختصاصی بسازید (عکس نمونه + پرامپت ساخت) یا از کتابخانه استفاده کنید. ترتیب را با دستگیره مشخص کنید. در صفحه‌ی ساخت هیچ اسلایدی از پیش انتخاب نیست و کاربر خودش انتخاب می‌کند.</div></div><div class="flex items-center gap-2 flex-wrap"><button type="button" class="btn-pro btn-pro-primary" data-add-custom-slide><i class="fa-solid fa-plus"></i> افزودن اسلاید اختصاصی</button><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div></div>
     <div class="ps-slide-manager-bar mt-4">
       <div><i class="fa-solid fa-grip-vertical"></i><span>برای جابه‌جایی، اسلاید را از دستگیره بگیرید و بالا یا پایین ببرید.</span></div>
       <span class="ps-slide-count" data-shot-count aria-live="polite"></span>
@@ -39,7 +57,7 @@
           $ps = $productShots->get($shot->id);
           $isGeneral = in_array((int)$shot->id,array_map('intval',$generalShotIds ?? []),true);
           $enabled = (bool)old("shots.{$shot->id}.enabled",$ps?->enabled ?? (!$product && $isGeneral));
-          $isDefault = (bool)old("shots.{$shot->id}.is_default",$ps?->is_default ?? (!$product && $isGeneral && $index < 4));
+          $isCustom = $shot->isCustom();
           $credits = (array)data_get($ps?->model_configuration,'quality_credits',[]);
           $overrides = (array)data_get($ps?->model_configuration,'quality_models',[]);
           $allowed = (array)old("shots.{$shot->id}.allowed_aspect_ratios",$ps?->allowedRatios() ?? [$shot->aspect_ratio_default]);
@@ -50,7 +68,7 @@
           $removed = (bool)old("shots.{$shot->id}.removed",$product && !$ps);
           $slideName = old("shots.{$shot->id}.name_override",$ps?->displayName() ?? $shot->name_fa);
         @endphp
-        <article class="ps-shot-editor {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}">
+        <article class="ps-shot-editor {{ $isCustom ? 'is-custom' : '' }} {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}">
           <input type="hidden" name="shots[{{ $shot->id }}][removed]" value="{{ $removed ? 1 : 0 }}" data-shot-removed>
           <div class="ps-shot-removed-state">
             <span class="ps-shot-removed-icon"><i class="fa-solid fa-box-archive"></i></span>
@@ -66,14 +84,14 @@
             <div class="min-w-0 flex-1">
               <div class="ps-slide-title-row">
                 <button type="button" class="ps-slide-drag" data-shot-drag-handle aria-label="جابه‌جایی اسلاید" title="برای جابه‌جایی بکشید"><i class="fa-solid fa-grip-vertical"></i></button>
-                <span class="ps-slide-order">اسلاید {{ $index + 1 }}</span>
+                <span class="ps-slide-order">اسلاید {{ $index + 1 }}</span>@if($isCustom)<span class="ps-slide-kind"><i class="fa-solid fa-pen-nib"></i> اختصاصی</span>@endif
                 <label class="ps-slide-name-field"><span>نام نمایشی اسلاید</span><input type="text" name="shots[{{ $shot->id }}][name_override]" value="{{ $slideName }}" maxlength="120" class="input-pro" data-shot-name-input></label>
               </div>
-              <p class="ps-shot-desc">{{ $shot->description_fa }}</p><div class="ps-tags">@foreach(array_slice($shot->tokenLabels(),0,4) as $tag)<span class="ps-tag">{{ $tag }}</span>@endforeach</div><div class="ps-hint" data-shot-result></div>
+              @if(!$isCustom)<p class="ps-shot-desc">{{ $shot->description_fa }}</p>@endif<div class="ps-tags">@foreach(array_slice($shot->tokenLabels(),0,4) as $tag)<span class="ps-tag">{{ $tag }}</span>@endforeach</div><div class="ps-hint" data-shot-result></div>
             </div>
             <div class="ps-shot-head-actions">
               <div class="ps-slide-order-actions" aria-label="کنترل ترتیب اسلاید"><button type="button" data-shot-move="up" title="انتقال به بالا" aria-label="انتقال اسلاید به بالا"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-shot-move="down" title="انتقال به پایین" aria-label="انتقال اسلاید به پایین"><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="is-danger" data-shot-remove title="حذف از این محصول" aria-label="حذف اسلاید از این محصول"><i class="fa-solid fa-trash-can"></i></button></div>
-              <label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label><label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][is_default]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][is_default]" value="1" data-shot-default @checked($isDefault)> انتخاب پیش‌فرض</label>
+              <label class="ps-check"><input type="hidden" name="shots[{{ $shot->id }}][enabled]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][enabled]" value="1" data-shot-enabled @checked($enabled)> فعال برای کاربر</label>
             </div>
           </div>
           <div class="ps-slide-image-optimizer">
@@ -89,7 +107,7 @@
               'uploadLabel' => 'انتخاب تصویر اسلاید',
             ])
           </div>
-          <div class="ps-slide-prompt"><div class="ps-field"><label>پرامپت مخصوص این اسلاید</label><textarea name="shots[{{ $shot->id }}][prompt_override]" class="input-pro" dir="ltr" rows="3" placeholder="خالی = ساخت خودکار از تنظیمات کتابخانه">{{ old("shots.{$shot->id}.prompt_override",$ps?->prompt_override) }}</textarea></div><button type="button" class="btn-pro btn-pro-ghost" data-shot-toggle><i class="fa-solid fa-sliders"></i> تنظیمات پیشرفته</button></div>
+          <div class="ps-slide-prompt"><div class="ps-field"><label>{{ $isCustom ? 'پرامپت ساخت این اسلاید' : 'پرامپت مخصوص این اسلاید' }}<span class="ps-char-count" data-char-count></span></label><textarea name="shots[{{ $shot->id }}][prompt_override]" class="input-pro" dir="ltr" rows="{{ $isCustom ? 6 : 3 }}" maxlength="30000" data-shot-prompt placeholder="{{ $isCustom ? 'پرامپت کامل ساخت این اسلاید' : 'خالی = ساخت خودکار از تنظیمات کتابخانه' }}">{{ old("shots.{$shot->id}.prompt_override",$ps?->prompt_override ?? ($isCustom ? $shot->prompt_template : null)) }}</textarea></div><button type="button" class="btn-pro btn-pro-ghost" data-shot-toggle><i class="fa-solid fa-sliders"></i> تنظیمات پیشرفته</button></div>
           <div class="ps-shot-detail" data-shot-detail hidden>
             <input type="hidden" name="shots[{{ $shot->id }}][sort]" value="{{ $index }}"><input type="hidden" name="shots[{{ $shot->id }}][sample_path]" value="" data-shot-sample>
             <div class="ps-option-switches"><span>قابلیت‌های فعال:</span>@foreach(['prompt'=>'پرامپت','model'=>'مدل اختصاصی','ratio'=>'نسبت تصویر','credits'=>'اعتبار','preview'=>'پیش‌نمایش'] as $optionKey=>$optionLabel)<label><input type="hidden" name="shots[{{ $shot->id }}][option_{{ $optionKey }}]" value="0"><input type="checkbox" name="shots[{{ $shot->id }}][option_{{ $optionKey }}]" value="1" @checked((bool)old("shots.{$shot->id}.option_{$optionKey}",$options[$optionKey] ?? true))> {{ $optionLabel }}</label>@endforeach</div>
@@ -106,6 +124,10 @@
         </article>
       @endforeach
     </div>
+    <button type="button" class="ps-add-slide" data-add-custom-slide><span><i class="fa-solid fa-plus"></i></span><strong>افزودن اسلاید اختصاصی</strong><small>عکس نمونه + نام + پرامپت ساخت</small></button>
     <div class="ps-hint mt-3" data-shot-order-status aria-live="polite"></div>
+    <template id="sp-custom-slide-template">
+      @include('admin.product-shots.product-steps.custom-slide-row')
+    </template>
   </section>
 </div>

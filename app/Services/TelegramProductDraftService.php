@@ -16,6 +16,7 @@ use App\Support\ProviderStatus;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -23,6 +24,10 @@ use Illuminate\Validation\ValidationException;
 
 class TelegramProductDraftService
 {
+    /** سقف دریافت فایل از Bot API تلگرام (getFile). */
+    private const TELEGRAM_MAX_DOWNLOAD = 20 * 1024 * 1024;
+    private const SUPPORTED_IMAGE_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
     /**
      * قاب‌های نمایش محصول در هوم/اکسپلور — کلیدها دقیقاً همان مقادیر ستون `explore_tiles`
      * و چک‌باکس‌های گام ۵ داشبورد هستند.
@@ -76,7 +81,10 @@ class TelegramProductDraftService
             $response = $this->startDraft($manager, $chatId, $input);
         } elseif ($this->shotFlow->owns($draft, $eventType, $input)) {
             if ($eventType === 'photo' && ! $image && filled($input['file_id'] ?? null)) {
-                $image = $this->downloadTelegramImage((string) $input['file_id']);
+                [$image, $fileError] = $this->fetchTelegramImage($input);
+                if ($fileError !== null) {
+                    $input['file_error'] = $fileError;
+                }
             }
             $response = $this->shotFlow->handle($manager, $draft, $chatId, $input, $eventType, $image);
         }
@@ -129,15 +137,15 @@ class TelegramProductDraftService
         ];
     }
 
-    public function process(TelegramProductDraft $draft): void
+    /** @return bool false فقط در مسیر پروداکتی یعنی «گام بعدی لازم است» (جاب دوباره صف می‌شود). */
+    public function process(TelegramProductDraft $draft): bool
     {
         $draft->refresh();
         if ($draft->isProductMode()) {
-            $this->shotFlow->process($draft);
-            return;
+            return $this->shotFlow->process($draft);
         }
         if ($draft->state !== 'processing') {
-            return;
+            return true;
         }
 
         try {
@@ -167,16 +175,15 @@ class TelegramProductDraftService
                 'error_message' => Str::limit($exception->getMessage(), 1000, ''),
             ])->save();
         }
+
+        return true;
     }
 
-    /**
-     * پیام نتیجه‌ی پردازش برای ارسال خودکار در اتصال مستقیم (بدون پولینگ n8n).
-     */
-    public function resultResponse(TelegramProductDraft $draft): array
+    public function resultResponse(TelegramProductDraft $draft, bool $progress = false): array
     {
         $draft->refresh();
         if ($draft->isProductMode()) {
-            return $this->shotFlow->resultResponse($draft);
+            return $this->shotFlow->resultResponse($draft, $progress);
         }
         if (in_array($draft->state, ['review', 'duplicate'], true)) {
             $draft->forceFill(['reviewed_at' => now()])->save();
@@ -263,7 +270,12 @@ class TelegramProductDraftService
             ], ['status' => 'awaiting_description', 'draft_id' => $draft->id]);
         }
         if (! $image && filled($input['file_id'] ?? null)) {
-            $image = $this->downloadTelegramImage((string) $input['file_id']);
+            [$image, $fileError] = $this->fetchTelegramImage($input);
+            if ($fileError !== null) {
+                return $this->response($chatId, '⚠️ ' . $fileError, [
+                    ['text' => 'لغو فرآیند', 'callback_data' => 'product:cancel'],
+                ], ['status' => (string) $draft->state, 'draft_id' => $draft->id]);
+            }
         }
         if (! $image) {
             throw ValidationException::withMessages(['image' => 'فایل تصویر به بک‌اند تحویل داده نشده است.']);
@@ -305,6 +317,31 @@ class TelegramProductDraftService
             'reply_markup' => $this->mainMenuMarkup(),
             'duplicate' => $hasPreviousImage,
         ]);
+    }
+
+    /**
+     * دریافت امن عکس از تلگرام قبل از بهینه‌سازی (همان بهینه‌ساز ثبت از داشبورد).
+     * خطاها به پیام فارسی قابل‌فهم تبدیل می‌شوند و فرآیند را نمی‌شکنند.
+     *
+     * @return array{0: ?UploadedFile, 1: ?string}
+     */
+    private function fetchTelegramImage(array $input): array
+    {
+        $size = (int) ($input['file_size'] ?? 0);
+        if ($size > self::TELEGRAM_MAX_DOWNLOAD) {
+            return [null, 'حجم این فایل بیش از ۲۰ مگابایت است و تلگرام اجازه‌ی دریافت آن را نمی‌دهد؛ عکس را کوچک‌تر کن یا به‌صورت «عکس» (Photo) بفرست.'];
+        }
+        $mime = strtolower(trim((string) ($input['file_mime'] ?? '')));
+        if ($mime !== '' && ! in_array($mime, self::SUPPORTED_IMAGE_MIMES, true)) {
+            return [null, 'فرمت این فایل (' . $mime . ') پشتیبانی نمی‌شود؛ عکس را با فرمت JPG، PNG یا WebP بفرست (مثلاً عکس‌های HEIC آیفون را به‌صورت «عکس» بفرست).'];
+        }
+        try {
+            return [$this->downloadTelegramImage((string) $input['file_id']), null];
+        } catch (\Throwable $exception) {
+            Log::warning('telegram product image download failed', ['error' => $exception->getMessage()]);
+
+            return [null, 'دریافت عکس از تلگرام ناموفق بود؛ چند لحظه بعد همان عکس را دوباره بفرست.'];
+        }
     }
 
     private function downloadTelegramImage(string $fileId): UploadedFile

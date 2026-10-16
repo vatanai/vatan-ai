@@ -266,3 +266,19 @@
 .ps-test-upload-copy small{display:block;margin-top:2px;color:var(--text-soft);font-size:10px}
 .ps-test-upload-thumbs{display:flex;gap:6px}
 .ps-test-upload-thumbs img{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+
+/* ── اسلاید اختصاصی (عکس نمونه + پرامپت) و عکس ورودی — ۲۴ مهر ۱۴۰۵ ── */
+.ps-slide-kind{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:99px;border:1px solid var(--warning-m);background:var(--warning-l);color:var(--warning);font-size:9.5px;font-weight:800;white-space:nowrap}
+.ps-shot-editor.is-custom{border-color:var(--primary-m)}
+.ps-shot-editor.is-new{box-shadow:0 0 0 3px var(--primary-l)}
+.ps-char-count{margin-inline-start:8px;font-size:9.5px;font-weight:600;color:var(--text-soft)}
+.ps-char-count.is-warn{color:var(--warning)}
+.ps-add-slide{display:flex;align-items:center;gap:12px;width:100%;margin-top:12px;padding:14px 16px;border:1.5px dashed var(--primary-m);border-radius:15px;background:var(--primary-l);color:var(--primary);text-align:right;cursor:pointer;transition:border-color .16s,background .16s}
+.ps-add-slide:hover{border-color:var(--primary)}
+.ps-add-slide>span{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:var(--primary);color:var(--on-primary);font-size:13px;flex-shrink:0}
+.ps-add-slide strong{font-size:12.5px;font-weight:800}
+.ps-add-slide small{margin-inline-start:auto;font-size:10.5px;color:var(--text-soft)}
+.ps-input-image .image-optimizer-group{margin-bottom:0}
+.ps-shot-editor.is-custom .ps-slide-title-row{grid-template-columns:30px auto auto minmax(150px,1fr)}
+.ps-slide-title-row .ps-slide-kind{height:34px;border-radius:9px;align-self:end}
+@media(max-width:640px){.ps-shot-editor.is-custom .ps-slide-title-row{grid-template-columns:30px auto auto 1fr}}

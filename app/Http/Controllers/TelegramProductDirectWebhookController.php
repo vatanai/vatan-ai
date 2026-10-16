@@ -7,6 +7,7 @@ use App\Services\TelegramProduct\TelegramProductBotRenderer;
 use App\Services\TelegramProductDraftService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -43,6 +44,7 @@ class TelegramProductDirectWebhookController extends Controller
             'event' => $input['event'],
             'callback_query_id' => $input['callback_query_id'] ?? null,
             'callback_message_id' => $input['event'] === 'callback' ? ($input['message_id'] ?? null) : null,
+            'incoming_message_id' => $input['event'] !== 'callback' ? ($input['message_id'] ?? null) : null,
         ];
 
         // تلگرام در صورت تأخیر همان آپدیت را دوباره می‌فرستد؛ دوباره نمایش نده.
@@ -52,16 +54,33 @@ class TelegramProductDirectWebhookController extends Controller
             return response()->json(['ok' => true, 'duplicate' => true]);
         }
 
+        // پیام بلند در تلگرام چند تکه می‌شود و آلبوم عکس چند آپدیت هم‌زمان می‌فرستد؛
+        // آپدیت‌های یک چت پشت سر هم پردازش می‌شوند تا ترتیب تکه‌ها و «یک پنل» حفظ شود.
+        $lock = null;
         try {
-            $response = $this->drafts->handle($input);
-        } catch (ValidationException $exception) {
-            $response = ['chat_id' => $input['chat_id'], 'text' => '⚠️ ' . collect($exception->errors())->flatten()->first(), 'status' => 'error'];
-        } catch (\Throwable $exception) {
-            Log::error('telegram product direct webhook failed', ['update_id' => $input['update_id'], 'error' => $exception->getMessage()]);
-            $response = ['chat_id' => $input['chat_id'], 'text' => '⚠️ خطای غیرمنتظره‌ای رخ داد؛ چند لحظه بعد دوباره امتحان کنید. اگر تکرار شد، «لغو فرآیند» و شروع دوباره را بزنید.', 'status' => 'error'];
+            $lock = Cache::lock('telegram-product-bot:chat:' . $input['chat_id'], 60);
+            $lock->block(25);
+        } catch (\Throwable) {
+            $lock = null; // نبود قفل نباید پیام را گم کند.
         }
 
-        $this->renderer->deliver($response, $context);
+        try {
+            try {
+                $response = $this->drafts->handle($input);
+            } catch (ValidationException $exception) {
+                $response = ['chat_id' => $input['chat_id'], 'text' => '⚠️ ' . collect($exception->errors())->flatten()->first(), 'status' => 'error'];
+            } catch (\Throwable $exception) {
+                Log::error('telegram product direct webhook failed', ['update_id' => $input['update_id'], 'error' => $exception->getMessage()]);
+                $response = ['chat_id' => $input['chat_id'], 'text' => '⚠️ خطای غیرمنتظره‌ای رخ داد؛ چند لحظه بعد دوباره امتحان کنید. اگر تکرار شد، «لغو فرآیند» و شروع دوباره را بزنید.', 'status' => 'error'];
+            }
+
+            $this->renderer->deliver($response, $context);
+        } finally {
+            try {
+                $lock?->release();
+            } catch (\Throwable) {
+            }
+        }
 
         return response()->json(['ok' => true]);
     }
@@ -113,16 +132,27 @@ class TelegramProductDirectWebhookController extends Controller
         }
 
         $fileId = null;
+        $fileSize = null;
+        $fileMime = null;
         if (! empty($message['photo']) && is_array($message['photo'])) {
             $sizes = $message['photo'];
             usort($sizes, fn ($a, $b) => ((int) ($a['file_size'] ?? 0) + (int) ($a['width'] ?? 0)) <=> ((int) ($b['file_size'] ?? 0) + (int) ($b['width'] ?? 0)));
-            $fileId = (string) (end($sizes)['file_id'] ?? '');
+            $largest = (array) end($sizes);
+            $fileId = (string) ($largest['file_id'] ?? '');
+            $fileSize = isset($largest['file_size']) ? (int) $largest['file_size'] : null;
+            $fileMime = 'image/jpeg';
         } elseif (str_starts_with(strtolower((string) ($message['document']['mime_type'] ?? '')), 'image/')) {
+            // عکس «به‌صورت فایل» (بدون فشرده‌سازی تلگرام) — کیفیت اصلی؛ بعداً مثل داشبورد بهینه می‌شود.
             $fileId = (string) ($message['document']['file_id'] ?? '');
+            $fileSize = isset($message['document']['file_size']) ? (int) $message['document']['file_size'] : null;
+            $fileMime = strtolower((string) $message['document']['mime_type']);
         }
         if ($fileId) {
             $input['event'] = 'photo';
             $input['file_id'] = $fileId;
+            $input['file_size'] = $fileSize;
+            $input['file_mime'] = $fileMime;
+            $input['caption'] = trim((string) ($message['caption'] ?? ''));
             $input['media_group_id'] = $message['media_group_id'] ?? null;
 
             return $input;

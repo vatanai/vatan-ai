@@ -61,7 +61,7 @@ class ShotProductRegistrar
     {
         $groups = array_values(array_filter(array_map('strval', $groups)));
 
-        return ShotLibrary::query()->active()->ordered()->get()
+        return ShotLibrary::query()->library()->active()->ordered()->get()
             ->filter(function (ShotLibrary $shot) use ($groups): bool {
                 if (Str::startsWith($shot->key, self::GENERAL_PREFIX)) {
                     return true;
@@ -193,13 +193,15 @@ class ShotProductRegistrar
      * @param array{
      *   name_fa:string, name_en:string, description_fa?:?string, tags?:array, status:string,
      *   occupation_ids:array, category_ids?:array, product_description?:?string, brand_style?:?string,
-     *   brand_palette?:?string, image_paths:array, shots:array<int,array{enabled:bool,is_default:bool,sort:int}>,
-     *   explore_tiles?:array, created_by?:?int
+     *   brand_palette?:?string, image_paths:array, shots?:array<int,array{enabled:bool,sort:int}>,
+     *   custom_slides?:array<int,array>, input_image?:?string, quality_models?:array, preflight?:array,
+     *   display?:array, explore_tiles?:array, created_by?:?int
      * } $data
      */
     public function create(array $data): Product
     {
-        $qualityModels = $this->defaultQualityModels();
+        // مدل‌های تنظیم‌شده در داشبورد (اگر هست) روی پیش‌فرض عمومی؛ سطح خالی از پیش‌فرض پر می‌شود.
+        $qualityModels = array_merge($this->defaultQualityModels(), array_filter((array) ($data['quality_models'] ?? [])));
         if ($qualityModels === []) {
             throw new RuntimeException('هیچ مدل تصویری فعالی برای استودیو محصول پیدا نشد؛ ابتدا مدل‌ها را در پنل تنظیم کنید.');
         }
@@ -208,11 +210,9 @@ class ShotProductRegistrar
             throw new RuntimeException('حداقل یک صنف باید انتخاب شود.');
         }
         $shotRows = collect((array) ($data['shots'] ?? []))->filter(fn ($row) => ! empty($row['enabled']));
-        if ($shotRows->isEmpty()) {
-            throw new RuntimeException('حداقل یک شات باید فعال باشد.');
-        }
-        if (! $shotRows->contains(fn ($row) => ! empty($row['is_default']))) {
-            throw new RuntimeException('حداقل یک شات باید در بسته‌ی آماده باشد.');
+        $customSlides = array_values(array_filter((array) ($data['custom_slides'] ?? []), fn ($slide) => trim((string) ($slide['prompt'] ?? '')) !== ''));
+        if ($shotRows->isEmpty() && $customSlides === []) {
+            throw new RuntimeException('حداقل یک اسلاید باید فعال باشد.');
         }
 
         $settings = ProductShotSetting::current();
@@ -223,7 +223,10 @@ class ShotProductRegistrar
         $primaryCategory = $categoryIds ? Category::query()->find($categoryIds[0]) : null;
         $status = in_array($data['status'] ?? 'draft', ['draft', 'active', 'inactive'], true) ? $data['status'] : 'draft';
 
-        return DB::transaction(function () use ($data, $qualityModels, $occupationIds, $occupations, $standard, $paths, $categoryIds, $primaryCategory, $status, $shotRows, $settings): Product {
+        $preflight = (array) ($data['preflight'] ?? []);
+        $display = (array) ($data['display'] ?? []);
+
+        return DB::transaction(function () use ($data, $qualityModels, $occupationIds, $occupations, $standard, $paths, $categoryIds, $primaryCategory, $status, $shotRows, $customSlides, $settings, $preflight, $display): Product {
             $product = new Product();
             $product->product_mode = Product::MODE_PRODUCT;
             $product->product_code = Product::generateUniqueProductCode();
@@ -247,17 +250,19 @@ class ShotProductRegistrar
                 'brand_identity_prompt' => null,
                 'quality_models' => $qualityModels,
                 'preflight' => [
-                    'enabled' => (bool) $settings->preflight_enabled,
+                    'enabled' => (bool) ($preflight['enabled'] ?? $settings->preflight_enabled),
                     'model' => null,
                     'prompt' => null,
-                    'blocking_issues' => array_values(array_unique(array_merge(
+                    'blocking_issues' => array_values(array_unique((array) ($preflight['blocking_issues'] ?? array_merge(
                         (array) ($settings->preflight_blocking_issues ?? []),
                         ShotVisionService::BLOCKING,
-                    ))),
-                    'min_side' => (int) ($settings->preflight_min_side ?: config('product_shots.preflight_min_side', 900)),
-                    'product_sheet_enabled' => (bool) $settings->product_sheet_enabled,
-                    'product_sheet_size' => (int) ($settings->product_sheet_size ?: config('product_shots.product_sheet_size', 2048)),
+                    )))),
+                    'min_side' => (int) ($preflight['min_side'] ?? ($settings->preflight_min_side ?: config('product_shots.preflight_min_side', 900))),
+                    'product_sheet_enabled' => (bool) ($preflight['product_sheet_enabled'] ?? $settings->product_sheet_enabled),
+                    'product_sheet_size' => (int) ($preflight['product_sheet_size'] ?? ($settings->product_sheet_size ?: config('product_shots.product_sheet_size', 2048))),
                 ],
+                // عکس ورودی‌ای که اسلایدها با آن ساخته شده‌اند (فقط صفحه‌ی محصول؛ نه صفحه‌ی بساز)
+                'input_image' => trim((string) ($data['input_image'] ?? '')) ?: null,
                 'registered_via' => 'telegram_bot',
             ];
             $product->prompt_template = 'Product shot pack (see shot library).';
@@ -275,11 +280,11 @@ class ShotProductRegistrar
             $product->allowed_resolutions = Product::DEFAULT_OUTPUT_RESOLUTIONS;
             $product->resolution = '1080';
             $product->timeout = 120;
-            $product->watermark_enabled = false;
+            $product->watermark_enabled = (bool) ($display['watermark_enabled'] ?? false);
             $product->watermark_position = 'corner';
-            $product->display_mode = 'card';
-            $product->card_shape = 'portrait';
-            $product->gallery_layout = 'slider';
+            $product->display_mode = in_array($display['display_mode'] ?? 'card', ['card', 'slider'], true) ? (string) ($display['display_mode'] ?? 'card') : 'card';
+            $product->card_shape = in_array($display['card_shape'] ?? 'portrait', ['portrait', 'landscape', 'square'], true) ? (string) ($display['card_shape'] ?? 'portrait') : 'portrait';
+            $product->gallery_layout = in_array($display['gallery_layout'] ?? 'slider', ['grid', 'masonry', 'slider'], true) ? (string) ($display['gallery_layout'] ?? 'slider') : 'slider';
             $product->explore_tiles = array_values((array) ($data['explore_tiles'] ?? ['1x1'])) ?: ['1x1'];
             $product->estimated_time = 45;
             $product->tags = array_values(array_unique(array_filter(array_merge(
@@ -287,7 +292,7 @@ class ShotProductRegistrar
                 ['کسب‌وکار'],
                 $occupations->pluck('name_fa')->all(),
             ))));
-            $product->card_label = 'پک';
+            $product->card_label = trim((string) ($display['card_label'] ?? '')) ?: 'پک';
             $product->card_label_enabled = true;
             $product->category_id = $primaryCategory?->id;
             $product->category = $primaryCategory?->name ?: 'کسب‌وکار';
@@ -322,7 +327,8 @@ class ShotProductRegistrar
                     'shot_id' => $shot->id,
                     'name_override' => null,
                     'enabled' => true,
-                    'is_default' => ! empty($row['is_default']),
+                    // هیچ اسلایدی از پیش برای کاربر تیک نمی‌خورد.
+                    'is_default' => false,
                     'credits_override' => null,
                     'prompt_override' => null,
                     'model_configuration' => [
@@ -335,6 +341,14 @@ class ShotProductRegistrar
                     'options_enabled' => ['prompt' => true, 'model' => true, 'ratio' => true, 'credits' => true, 'preview' => true],
                     'sort' => (int) ($row['sort'] ?? 0),
                 ]);
+                $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
+            }
+
+            foreach ($customSlides as $index => $slide) {
+                $productShot = app(CustomSlideService::class)->create($product, array_merge($slide, [
+                    'sort' => (int) ($slide['sort'] ?? (1000 + $index)),
+                ]));
+                $credits = $productShot->credits('standard');
                 $minCredits = $minCredits === null ? $credits : min($minCredits, $credits);
             }
 
