@@ -234,6 +234,29 @@ class HomeSectionRenderService
             $builder->whereNull('product_mode')->orWhere('product_mode', '!=', Product::MODE_PRODUCT);
         }));
 
+        // «ترند» یک صفت تحریریه‌ای است و ممکن است هنوز روی محصولات پروداکتی جدید
+        // تنظیم نشده باشد. در این حالت سهم پروداکتی صفحهٔ خانه نباید صفر شود؛ کمبود
+        // فقط از تازه‌ترین محصولات پروداکتی فعال جبران می‌شود و پرتره‌های ترند دست‌نخورده می‌مانند.
+        $productTarget = (int) ceil($limit * (self::PRODUCT_RATIO / 100));
+        if ($source === 'trending' && $productItems->count() < $productTarget) {
+            $fallbackQuery = Product::query()
+                ->where('status', 'active')
+                ->hideUnavailableProductModes()
+                ->where('product_mode', Product::MODE_PRODUCT)
+                ->whereNotIn('id', $productItems->pluck('id')->all())
+                ->latest();
+
+            if ($isVideoLayout) {
+                $fallbackQuery->whereIn('media_type', ['video', 'both']);
+            }
+
+            $productItems = $productItems
+                ->concat($fetchGroup($fallbackQuery))
+                ->unique('id')
+                ->take($productTarget)
+                ->values();
+        }
+
         return $this->mixProductModes(
             $productItems->concat($portraitItems),
             self::PRODUCT_RATIO,

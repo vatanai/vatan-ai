@@ -180,6 +180,38 @@ class HomeVitrineTest extends TestCase
         $this->assertSame(4, $products->where('product_mode', Product::MODE_PORTRAIT)->count());
     }
 
+    public function test_trending_home_section_fills_missing_product_mode_from_active_products(): void
+    {
+        $this->clearHome();
+        \App\Models\ProductShotSetting::current()->update(['enabled' => true, 'audience' => 'public']);
+        \App\Models\ProductShotSetting::forgetCache();
+
+        foreach (range(1, 10) as $i) {
+            $this->product("fallback-product-$i", null, [
+                'product_mode' => Product::MODE_PRODUCT,
+                'is_trending' => false,
+            ]);
+            $this->product("fallback-portrait-$i", null, [
+                'product_mode' => Product::MODE_PORTRAIT,
+                'is_trending' => true,
+            ]);
+        }
+
+        $section = $this->section('vt_row', [
+            'source' => 'trending',
+            'sort' => 'latest',
+            'limit' => 10,
+            'avoid_duplicates' => false,
+        ]);
+
+        $products = app(\App\Services\HomeBuilder\HomeSectionRenderService::class)
+            ->prepare($section)['products'];
+
+        $this->assertCount(10, $products);
+        $this->assertSame(6, $products->where('product_mode', Product::MODE_PRODUCT)->count());
+        $this->assertSame(4, $products->where('product_mode', Product::MODE_PORTRAIT)->count());
+    }
+
     public function test_layout_migration_hides_old_sections_and_rolls_back(): void
     {
         $this->clearHome();
