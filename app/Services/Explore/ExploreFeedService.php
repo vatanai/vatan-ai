@@ -24,8 +24,6 @@ use Illuminate\Support\Collection;
  */
 class ExploreFeedService
 {
-    private const PRODUCT_RATIO = 65;
-
     public function __construct(protected ProductSearchService $productSearch)
     {
     }
@@ -61,6 +59,7 @@ class ExploreFeedService
             'tile_weights'       => FeedSetting::LAYOUT_PRESETS['excel_11'],
             'randomness_level'   => 35,
             'campaign_ratio'     => 5,
+            'product_ratio'      => 65,
             'include_filters'    => [],
             'exclude_filters'    => [],
             'is_active_version'  => true,
@@ -98,7 +97,8 @@ class ExploreFeedService
             $limit,
             $usedProductIds,
             $query,
-            $newProductRatio
+            $newProductRatio,
+            (int) ($setting->product_ratio ?? 65)
         );
         $activeCampaigns = $isFiltered
             ? collect()
@@ -191,7 +191,8 @@ class ExploreFeedService
         ?int $limit,
         array $excludeIds = [],
         string $query = '',
-        int $newProductRatio = 0
+        int $newProductRatio = 0,
+        int $productRatio = 65
     ): array
     {
         $productsQuery = Product::query()
@@ -260,7 +261,7 @@ class ExploreFeedService
         $ranked = $this->mixNewProducts($ranked, $newProductRatio);
         // تمرکز فعلی محصول: حدود ۶۵٪ جایگاه‌های فید از محصولات پروداکتی
         // پر می‌شود؛ اگر یک نوع کمتر باشد، باقی محصولات حذف نمی‌شوند.
-        $ranked = $this->mixProductModes($ranked, self::PRODUCT_RATIO);
+        $ranked = $this->mixProductModes($ranked, $productRatio);
 
         return $ranked->map(function ($row) {
             $data = $this->resolveDisplayData('product', $row['product']);
@@ -375,7 +376,7 @@ class ExploreFeedService
         $productItems = $ranked->filter(fn (array $row) => (string) $row['product']->product_mode === 'product')->values();
         $portraitItems = $ranked->reject(fn (array $row) => (string) $row['product']->product_mode === 'product')->values();
 
-        if ($productItems->isEmpty() || $portraitItems->isEmpty() || $productRatio <= 0 || $productRatio >= 100) {
+        if ($productItems->isEmpty() || $portraitItems->isEmpty()) {
             return $ranked->values();
         }
 

@@ -8,6 +8,7 @@
   $xTermRows = $termRows ?? [[], []];
   $xQuery = $query ?? '';
   $xLayoutStyle = $layoutStyle ?? 'excel_11';
+  $xPatternConfig = \App\Models\FeedSetting::DISPLAY_PATTERNS[$xLayoutStyle] ?? [];
 @endphp
 
 <div class="explore-page" dir="rtl">
@@ -373,7 +374,7 @@
   }
 
   /* ══════════════════════════════════
-     TABLET — 640px+
+     TABLET — 640px+ | همان چرخهٔ ۶×۶ دسکتاپ
   ══════════════════════════════════ */
   @media (min-width: 640px) {
     .explore-page { max-width: 720px; }
@@ -395,13 +396,13 @@
     .xp-cat-box { padding: 8px 14px; border-radius: 10px; font-size: 12.5px; }
 
     .xp-grid-section { margin-top: 30px; }
-    .xp-grid { grid-template-columns: repeat(3, 1fr); grid-auto-rows: var(--xp-unit, 237px); gap: 5px; }
+    .xp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: var(--xp-unit, 237px); gap: 5px; }
     .xp-tile-name { font-size: 12.5px; }
     .xp-tile-tag  { font-size: 10.5px; }
   }
 
   /* ══════════════════════════════════
-     TABLET بزرگ‌تر — 768px+  |  ۴ ستون
+     TABLET بزرگ‌تر — 768px+  |  همان چرخهٔ ۶×۶ دسکتاپ
   ══════════════════════════════════ */
   @media (min-width: 768px) {
     .explore-page { max-width: 900px; }
@@ -410,11 +411,11 @@
     .xp-cats-section { padding: 30px 36px 0 36px; }
 
     .xp-grid-section { padding: 0 36px; }
-    .xp-grid { grid-template-columns: repeat(4, 1fr); grid-auto-rows: var(--xp-unit, 203px); gap: 6px; }
+    .xp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: var(--xp-unit, 203px); gap: 6px; }
   }
 
   /* ══════════════════════════════════
-     DESKTOP — 1024px+  |  ۵ ستون
+     DESKTOP — 1024px+  |  شش ستون
   ══════════════════════════════════ */
   @media (min-width: 1024px) {
     .explore-page { max-width: none; padding: 0 114px 60px; }
@@ -431,13 +432,13 @@
     }
 
     .xp-grid-section { padding: 0; }
-    .xp-grid { grid-template-columns: repeat(5, 1fr); grid-auto-rows: var(--xp-unit, 194px); gap: 8px; }
+    .xp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: var(--xp-unit, 194px); gap: 8px; }
     .xp-tile-name { font-size: 13px; }
     .xp-tile-tag  { font-size: 11px; }
   }
 
   /* ══════════════════════════════════
-     LARGE DESKTOP — 1280px+  |  ۶ ستون
+     LARGE DESKTOP — 1280px+  |  شش ستون
   ══════════════════════════════════ */
   @media (min-width: 1280px) {
     .explore-page { max-width: none; padding-right: var(--home-desktop-grid-gutter); padding-left: var(--home-desktop-grid-gutter); }
@@ -446,7 +447,7 @@
     .xp-cats-section { padding: 34px 0 0; }
 
     .xp-grid-section { padding: 0; }
-    .xp-grid { grid-template-columns: repeat(6, 1fr); grid-auto-rows: var(--xp-unit, 188px); gap: 8px; }
+    .xp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: var(--xp-unit, 188px); gap: 8px; }
   }
 </style>
 @endpush
@@ -477,6 +478,34 @@
 
   var tileSizeClasses = ['size-1x1', 'size-wide', 'size-tall', 'size-big'];
   var selectedPattern = @json($xLayoutStyle);
+  var responsivePatternGrids = @json($xPatternConfig['responsive_grids'] ?? null);
+
+  function patternPlacements(pattern) {
+    if (!pattern || !Array.isArray(pattern.cells)) return [];
+    var positions = new Map();
+    pattern.cells.forEach(function (row, rowIndex) {
+      row.forEach(function (token, columnIndex) {
+        if (!positions.has(token)) positions.set(token, []);
+        positions.get(token).push([rowIndex, columnIndex]);
+      });
+    });
+    return Array.from(positions.values()).map(function (cells) {
+      var rows = cells.map(function (cell) { return cell[0]; });
+      var columns = cells.map(function (cell) { return cell[1]; });
+      var row = Math.min.apply(null, rows);
+      var column = Math.min.apply(null, columns);
+      var height = Math.max.apply(null, rows) - row + 1;
+      var width = Math.max.apply(null, columns) - column + 1;
+      return {
+        row: row,
+        column: column,
+        width: width,
+        height: height,
+        size: width === 2 ? (height === 2 ? 'size-big' : 'size-wide')
+          : (height === 2 ? 'size-tall' : 'size-1x1')
+      };
+    });
+  }
 
   function setTileSize(tile, size) {
     tileSizeClasses.forEach(function (className) { tile.classList.remove(className); });
@@ -490,9 +519,28 @@
     var originals = Array.prototype.slice.call(xpGrid.querySelectorAll('.xp-tile'));
     if (!originals.length) return;
 
-    /* چیدمان متراکم مرورگر با موجودی واقعی محصولات سازگار می‌شود. مختصات ثابت
-       قدیمی برای هر چرخه تعداد زیادی کارت ۱×۱ فرض می‌کرد و وقتی محصولات فقط
-       قاب عمودی/بزرگ داشتند، وسط گرید حفره یا cloneهای فراوان می‌ساخت. */
+    var exactPattern = selectedPattern === 'excel_11' && responsivePatternGrids
+      ? (colCount === 3 ? responsivePatternGrids.mobile : responsivePatternGrids.desktop)
+      : null;
+
+    if (exactPattern) {
+      var placements = patternPlacements(exactPattern);
+      if (placements.length) {
+        xpGrid.classList.add('is-pattern-layout');
+        xpGrid.dataset.layoutStyle = selectedPattern;
+        originals.forEach(function (tile, index) {
+          tile.style.display = '';
+          tile.style.order = '';
+          var placement = placements[index % placements.length];
+          var cycle = Math.floor(index / placements.length);
+          setTileSize(tile, placement.size);
+          tile.style.gridColumn = (placement.column + 1) + ' / span ' + placement.width;
+          tile.style.gridRow = (cycle * exactPattern.rows + placement.row + 1) + ' / span ' + placement.height;
+        });
+        return;
+      }
+    }
+
     xpGrid.classList.remove('is-pattern-layout');
     xpGrid.dataset.layoutStyle = selectedPattern;
     originals.forEach(function (tile, index) {
@@ -513,9 +561,7 @@
     var cs = getComputedStyle(xpGrid);
     // تعداد ستون دقیقاً از همان breakpointهای CSS گرفته می‌شود تا اولویت
     // محصولات ابتدای فید در موبایل، تبلت و دسکتاپ ثابت و قابل پیش‌بینی بماند.
-    var colCount = window.matchMedia('(min-width: 1280px)').matches ? 6
-      : (window.matchMedia('(min-width: 1024px)').matches ? 5
-        : (window.matchMedia('(min-width: 768px)').matches ? 4 : 3));
+    var colCount = window.matchMedia('(min-width: 640px)').matches ? 6 : 3;
     var gap = parseFloat(cs.columnGap || cs.gap) || 0;
     var totalGap = gap * (colCount - 1);
     var unit = (xpGrid.clientWidth - totalGap) / colCount;

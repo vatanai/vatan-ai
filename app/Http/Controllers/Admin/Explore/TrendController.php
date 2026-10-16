@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin\Explore;
 
 use App\Http\Controllers\Controller;
+use App\Models\FeedSetting;
 use App\Models\Product;
 use App\Models\ProductMetricEvent;
 use App\Models\TrendBanner;
+use App\Services\Explore\ExploreFeedService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,8 +17,14 @@ use Illuminate\View\View;
 
 class TrendController extends Controller
 {
+    public function __construct(private ExploreFeedService $feed)
+    {
+    }
+
     public function index(Request $request): View
     {
+        $surface = $this->feed->getOrCreateSurface('trending', 'ترندز');
+        $feedSetting = $this->feed->getOrCreateActiveSetting($surface);
         $search = trim((string) $request->input('search'));
 
         $trendingProducts = $this->productQuery()
@@ -63,7 +71,34 @@ class TrendController extends Controller
             'activeTrendingCount' => $activeTrendingCount,
             'viewsCount' => $viewsCount,
             'opensCount' => $opensCount,
+            'feedSetting' => $feedSetting,
         ]);
+    }
+
+    public function updateProductRatio(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['product_ratio' => ['required', 'integer', 'min:0', 'max:100']]);
+        $surface = $this->feed->getOrCreateSurface('trending', 'ترندز');
+        $current = $this->feed->getOrCreateActiveSetting($surface);
+
+        FeedSetting::query()
+            ->where('feed_surface_id', $surface->id)
+            ->where('is_active_version', true)
+            ->update(['is_active_version' => false]);
+
+        FeedSetting::query()->create([
+            'feed_surface_id' => $surface->id,
+            'layout_style' => $current->layout_style,
+            'tile_weights' => $current->tile_weights,
+            'randomness_level' => $current->randomness_level,
+            'campaign_ratio' => $current->campaign_ratio,
+            'product_ratio' => (int) $data['product_ratio'],
+            'include_filters' => $current->include_filters,
+            'exclude_filters' => $current->exclude_filters,
+            'is_active_version' => true,
+        ]);
+
+        return back()->with('success', 'سهم محصولات پروداکتی و پرتره‌ای ترندز ذخیره شد.');
     }
 
     public function addProduct(Product $product): RedirectResponse

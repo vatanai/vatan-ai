@@ -34,6 +34,12 @@
       <div class="stat-card"><div class="stat-card-icon" style="background:var(--success-l);color:var(--success);"><i class="fa-solid fa-image"></i></div><div><div class="stat-card-value">{{ number_format($banners->where('is_active', true)->count()) }}</div><div class="stat-card-label">بنر فعال</div></div></div>
     </div>
 
+    <form method="POST" action="{{ route('admin.trends.product-ratio.update') }}" class="content-card p-4 mb-5">
+      @csrf
+      @include('admin.partials.feed-mode-ratio-control', ['feedSetting' => $feedSetting])
+      <button type="submit" class="btn-pro btn-pro-primary"><i class="fa-solid fa-floppy-disk"></i> ذخیره نسبت ترندز</button>
+    </form>
+
     @include('admin.trends.partials.product-toolbar', ['search' => $search, 'availableProducts' => $availableProducts])
     @include('admin.trends.partials.product-list', ['products' => $trendingProducts])
     @include('admin.trends.partials.banner-form', ['banner' => $editingBanner])

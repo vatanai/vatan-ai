@@ -13,28 +13,33 @@ use Illuminate\Support\Facades\Cache;
 
 class TrendsService
 {
-    private const PRODUCT_RATIO = 65;
+    public function __construct(private ExploreFeedService $feed)
+    {
+    }
 
     public function buildPage(int $limit = 24, int $cacheTtl = 300, int $pageVersion = 1, int $page = 1): array
     {
         $limit = max(6, min(100, $limit));
         $cacheTtl = max(0, min(3600, $cacheTtl));
         $page = max(1, min(1000, $page));
+        $surface = $this->feed->getOrCreateSurface('trending', 'ترندز');
+        $setting = $this->feed->getOrCreateActiveSetting($surface);
+        $productRatio = max(0, min(100, (int) ($setting->product_ratio ?? 65)));
 
         if ($cacheTtl === 0) {
-            return $this->hydratePage($this->buildUncachedPage($pageVersion), $limit, $page);
+            return $this->hydratePage($this->buildUncachedPage($pageVersion, $productRatio), $limit, $page);
         }
 
         $payload = Cache::remember(
-            "app:trends:feed:v6:{$pageVersion}",
+            "app:trends:feed:v7:{$pageVersion}:{$setting->id}",
             now()->addSeconds($cacheTtl),
-            fn (): array => $this->buildUncachedPage($pageVersion),
+            fn (): array => $this->buildUncachedPage($pageVersion, $productRatio),
         );
 
         return $this->hydratePage($payload, $limit, $page);
     }
 
-    protected function buildUncachedPage(int $pageVersion): array
+    protected function buildUncachedPage(int $pageVersion, int $productRatio = 65): array
     {
         $products = $this->productQuery()->get()->values();
         $productItems = $products
@@ -49,7 +54,7 @@ class TrendsService
         return [
             // همهٔ محصولات فعال در فید هستند؛ ترتیب داخل هر گروه تصادفی اما
             // با نسخهٔ صفحه و شناسهٔ محصول پایدار است و نسبت هدف ۶۵/۳۵ دارد.
-            'trendProducts' => $this->mixProductModes($productItems, $portraitItems, self::PRODUCT_RATIO)
+            'trendProducts' => $this->mixProductModes($productItems, $portraitItems, $productRatio)
                 ->map(fn (Product $product) => $this->card($product))
                 ->filter()
                 ->values()

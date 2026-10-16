@@ -12,13 +12,14 @@ class FeedSetting extends Model
 {
     protected $fillable = [
         'feed_surface_id', 'layout_style', 'tile_weights',
-        'randomness_level', 'campaign_ratio', 'is_active_version',
+        'randomness_level', 'campaign_ratio', 'product_ratio', 'is_active_version',
         'include_filters', 'exclude_filters',
     ];
 
     protected $casts = [
         'tile_weights' => 'array',
         'is_active_version' => 'boolean',
+        'product_ratio' => 'integer',
         'include_filters' => 'array',
         'exclude_filters' => 'array',
     ];
@@ -34,20 +35,55 @@ class FeedSetting extends Model
         'banner'   => ['size-1x1' => 58, 'size-wide' => 22, 'size-tall' => 8,  'size-big' => 12],
     ];
 
-    /**
-     * چهار معماری ذخیره‌شونده‌ی اکسپلور. مختصات بر مبنای گرید سه‌ستونه‌ی
-     * موبایل است؛ در تبلت و دسکتاپ همین توالی با فاصله‌گذاری متناسب بازچینی می‌شود.
-     */
+    /** نقشهٔ خانه‌های اشغال‌شده در چرخهٔ دقیق الگوی اکسل برای هر اندازهٔ نمایشگر. */
+    public const EXCEL_RESPONSIVE_GRIDS = [
+        'mobile' => [
+            'columns' => 3,
+            'rows' => 10,
+            'cells' => [
+                ['a', 'b', 'b'],
+                ['c', 'd', 'd'],
+                ['c', 'd', 'd'],
+                ['e', 'f', 'g'],
+                ['h', 'i', 'g'],
+                ['j', 'j', 'k'],
+                ['l', 'l', 'm'],
+                ['l', 'l', 'm'],
+                ['n', 'o', 'p'],
+                ['n', 'q', 'r'],
+            ],
+        ],
+        'desktop' => [
+            'columns' => 6,
+            'rows' => 6,
+            'cells' => [
+                ['a', 'b', 'b', 'c', 'd', 'e'],
+                ['f', 'g', 'g', 'h', 'd', 'i'],
+                ['f', 'g', 'g', 'j', 'j', 'k'],
+                ['l', 'm', 'n', 'o', 'p', 'p'],
+                ['q', 'm', 'r', 's', 't', 't'],
+                ['u', 'u', 'v', 's', 't', 't'],
+            ],
+        ],
+    ];
+
+    /** چهار معماری ذخیره‌شونده‌ی اکسپلور؛ الگوی اکسل روی موبایل و دسکتاپ نقشهٔ دقیق دارد. */
     public const DISPLAY_PATTERNS = [
         'excel_11' => [
-            'label' => 'چرخهٔ ثابت محصولات',
-            'description' => 'تکرار دقیق ۱×۱، ۲×۱، ۲×۲، ۲×۱',
-            'rows' => 4,
-            'sequence' => ['size-1x1', 'size-wide', 'size-big', 'size-wide'],
+            'label' => 'الگوی اکسل',
+            'description' => 'موبایل: ۳ ستون × ۱۰ ردیف؛ تبلت و دسکتاپ: ۶ ستون × ۶ ردیف. هر چرخه دقیقاً تکرار می‌شود.',
+            'responsive_grids' => self::EXCEL_RESPONSIVE_GRIDS,
+            // نگه‌داری شکل‌های کارت برای مصرف‌کننده‌های قدیمی تنظیمات.
+            'sequence' => ['size-1x1', 'size-wide', 'size-tall', 'size-big'],
             'anchors' => [
-                ['size-1x1', 1, 1], ['size-wide', 1, 2],
-                ['size-big', 2, 1], ['size-wide', 4, 1],
+                ['size-1x1', 1, 1], ['size-wide', 1, 2], ['size-tall', 2, 1],
+                ['size-big', 2, 2], ['size-1x1', 4, 1], ['size-1x1', 4, 2],
+                ['size-tall', 4, 3], ['size-1x1', 5, 1], ['size-1x1', 5, 2],
+                ['size-wide', 6, 1], ['size-1x1', 6, 3], ['size-big', 7, 1],
+                ['size-tall', 7, 3], ['size-tall', 9, 1], ['size-1x1', 9, 2],
+                ['size-1x1', 9, 3], ['size-1x1', 10, 2], ['size-1x1', 10, 3],
             ],
+            'rows' => 10,
         ],
         'balanced' => [
             'label' => 'متعادل',

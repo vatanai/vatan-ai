@@ -34,6 +34,9 @@
     gap: 2px; direction: ltr; min-height: 70px; padding: 6px; margin-bottom: 10px;
     border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg);
   }
+  .explore-pattern-preview--excel { min-height: 0; grid-auto-rows: 4px; margin-bottom: 0; }
+  .explore-pattern-previews { display: grid; grid-template-columns: 1fr 1.5fr; gap: 8px; margin-bottom: 10px; }
+  .explore-pattern-preview-label { display: block; margin-bottom: 4px; color: var(--text-soft); font-size: 9px; font-weight: 700; }
   .explore-pattern-cell { border-radius: 2px; background: var(--border); }
   .explore-pattern-cell:not(.size-1x1) { background: var(--primary); }
   .explore-pattern-choice { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); }
@@ -126,7 +129,7 @@
     {{-- ══════════════ ۱. تنظیمات نمایش ══════════════ --}}
     <div class="content-card p-5 mb-5">
       <div class="text-[14px] font-extrabold mb-1" style="color:var(--text-h);"><i class="fa-solid fa-sliders" style="color:var(--primary);"></i> تنظیمات نمایش و چیدمان</div>
-      <div class="text-[11.5px] mb-4" style="color:var(--text-soft);">چهار معماری ذخیره‌شونده؛ هر انتخاب در موبایل، تبلت و دسکتاپ با چرخه‌ی متناسب همان نمایشگر تکرار می‌شود</div>
+      <div class="text-[11.5px] mb-4" style="color:var(--text-soft);">«الگوی اکسل» چیدمان مصوب موبایل و دسکتاپ را دقیق تکرار می‌کند؛ سه الگوی دیگر گزینه‌های جایگزین هستند.</div>
 
       <form method="POST" action="{{ route('admin.explore.settings.update') }}" id="explore-settings-form">
         @csrf
@@ -136,24 +139,67 @@
             @php
               $occupied = [];
               $previewSlots = [];
+              $responsivePreviews = [];
               $dimensions = ['size-1x1' => [1, 1], 'size-wide' => [2, 1], 'size-tall' => [1, 2], 'size-big' => [2, 2]];
-              foreach ($pattern['anchors'] as $anchor) {
-                  [$size, $row, $col] = $anchor;
-                  $previewSlots[] = $anchor;
-                  [$width, $height] = $dimensions[$size];
-                  for ($r = $row; $r < $row + $height; $r++) for ($c = $col; $c < $col + $width; $c++) $occupied[$r.':'.$c] = true;
+              if (!empty($pattern['responsive_grids'])) {
+                  foreach ($pattern['responsive_grids'] as $device => $grid) {
+                      $groups = [];
+                      foreach ($grid['cells'] as $rowIndex => $rowCells) {
+                          foreach ($rowCells as $columnIndex => $token) {
+                              $groups[$token][] = [$rowIndex, $columnIndex];
+                          }
+                      }
+                      $slots = [];
+                      foreach ($groups as $cells) {
+                          $rowIndexes = array_column($cells, 0);
+                          $columnIndexes = array_column($cells, 1);
+                          $top = min($rowIndexes);
+                          $left = min($columnIndexes);
+                          $height = max($rowIndexes) - $top + 1;
+                          $width = max($columnIndexes) - $left + 1;
+                          $size = $width === 2
+                              ? ($height === 2 ? 'size-big' : 'size-wide')
+                              : ($height === 2 ? 'size-tall' : 'size-1x1');
+                          $slots[] = [$size, $top + 1, $left + 1, $width, $height];
+                      }
+                      $responsivePreviews[$device] = ['grid' => $grid, 'slots' => $slots];
+                  }
+              } else {
+                  foreach ($pattern['anchors'] as $anchor) {
+                      [$size, $row, $col] = $anchor;
+                      $previewSlots[] = $anchor;
+                      [$width, $height] = $dimensions[$size];
+                      for ($r = $row; $r < $row + $height; $r++) for ($c = $col; $c < $col + $width; $c++) $occupied[$r.':'.$c] = true;
+                  }
+                  for ($r = 1; $r <= $pattern['rows']; $r++) for ($c = 1; $c <= 3; $c++) if (!isset($occupied[$r.':'.$c])) $previewSlots[] = ['size-1x1', $r, $c];
               }
-              for ($r = 1; $r <= $pattern['rows']; $r++) for ($c = 1; $c <= 3; $c++) if (!isset($occupied[$r.':'.$c])) $previewSlots[] = ['size-1x1', $r, $c];
             @endphp
             <label class="explore-pattern-option">
               <input type="radio" name="layout_style" value="{{ $key }}" {{ $effectiveLayoutStyle === $key ? 'checked' : '' }}>
               <span class="explore-pattern-card block">
-                <span class="explore-pattern-preview" style="grid-template-rows:repeat({{ $pattern['rows'] }}, 6px);">
-                  @foreach($previewSlots as $slot)
-                    @php [$size, $row, $col] = $slot; [$width, $height] = $dimensions[$size]; @endphp
-                    <span class="explore-pattern-cell {{ $size }}" style="grid-column:{{ $col }} / span {{ $width }};grid-row:{{ $row }} / span {{ $height }};"></span>
-                  @endforeach
-                </span>
+                @if($responsivePreviews)
+                  <span class="explore-pattern-previews">
+                    @foreach(['mobile' => 'موبایل · ۳×۱۰', 'desktop' => 'تبلت و دسکتاپ · ۶×۶'] as $device => $deviceLabel)
+                      @php $preview = $responsivePreviews[$device]; @endphp
+                      <span>
+                        <span class="explore-pattern-preview-label">{{ $deviceLabel }}</span>
+                        <span class="explore-pattern-preview explore-pattern-preview--excel" style="grid-template-columns:repeat({{ $preview['grid']['columns'] }}, minmax(0, 1fr));grid-template-rows:repeat({{ $preview['grid']['rows'] }}, 4px);">
+                          @foreach($preview['slots'] as $slot)
+                            @php [$size, $row, $col, $width, $height] = $slot; @endphp
+                            <span class="explore-pattern-cell {{ $size }}" style="grid-column:{{ $col }} / span {{ $width }};grid-row:{{ $row }} / span {{ $height }};"></span>
+                          @endforeach
+                        </span>
+                      </span>
+                    @endforeach
+                  </span>
+                @else
+                  <span class="explore-pattern-preview" style="grid-template-rows:repeat({{ $pattern['rows'] }}, 6px);">
+                    @foreach($previewSlots as $slot)
+                      @php [$size, $row, $col] = $slot; [$width, $height] = $dimensions[$size]; @endphp
+                      <span class="explore-pattern-cell {{ $size }}" style="grid-column:{{ $col }} / span {{ $width }};grid-row:{{ $row }} / span {{ $height }};"></span>
+                    @endforeach
+                  </span>
+                @endif
                 <span class="flex items-start justify-between gap-2">
                   <span>
                     <span class="block text-[12.5px] font-extrabold" style="color:var(--text-h);">{{ $pattern['label'] }}</span>
@@ -174,6 +220,8 @@
             @include('admin.explore.partials.audience-filter', ['mode' => 'exclude'])
           </div>
         </div>
+
+        @include('admin.partials.feed-mode-ratio-control', ['feedSetting' => $setting])
 
         <div class="grid grid-cols-2 max-[768px]:grid-cols-1 gap-4 mb-4">
           <div>
@@ -368,7 +416,7 @@
   <div class="drawer-section">
     <div class="drawer-label">۱. تنظیمات نمایش و چیدمان</div>
     <div class="drawer-value" style="font-weight:400; line-height:2;">
-      یکی از چهار معماری تصویری را انتخاب کنید. «الگوی اکسل ۱۱ ردیفی» همان نمونه‌ی تأییدشده است و سه مدل «متعادل»، «عمودی» و «بنری» نمونه‌های جایگزین هستند. هر الگو در موبایل، تبلت و دسکتاپ چرخه‌ی مخصوص عرض همان دستگاه را دارد و بعد از پایان چرخه دوباره از ابتدا تکرار می‌شود.
+      «الگوی اکسل» در موبایل یک نقشه‌ی ثابت ۳ ستونی و ۱۰ ردیفی دارد. در تبلت و دسکتاپ، نقشه‌ی ۶ ستونی و ۶ ردیفی استفاده می‌شود. پس از آخرین کارت هر نقشه، همان چیدمان از ابتدا تکرار می‌شود. سه مدل «متعادل»، «عمودی» و «بنری» همچنان چیدمان‌های جایگزین هستند.
       <br><br>
       «سطح تصادفی‌بودن» تعیین می‌کند ترتیب محصولات چقدر در هر بازدید عوض شود: عدد بالاتر یعنی تنوع و جابه‌جایی بیشتر بین بازدیدها؛ عدد پایین‌تر یعنی محصولات پرطرفدار/تازه‌تر ثابت‌تر در بالای صفحه می‌مانند.
       <br><br>
