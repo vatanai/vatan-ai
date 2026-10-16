@@ -200,16 +200,16 @@ class HomeVitrineTest extends TestCase
         $section = $this->section('vt_row', [
             'source' => 'trending',
             'sort' => 'latest',
-            'limit' => 10,
+            'limit' => 12,
             'avoid_duplicates' => false,
         ]);
 
         $products = app(\App\Services\HomeBuilder\HomeSectionRenderService::class)
             ->prepare($section)['products'];
 
-        $this->assertCount(10, $products);
-        $this->assertSame(6, $products->where('product_mode', Product::MODE_PRODUCT)->count());
-        $this->assertSame(4, $products->where('product_mode', Product::MODE_PORTRAIT)->count());
+        $this->assertCount(12, $products);
+        $this->assertSame(7, $products->where('product_mode', Product::MODE_PRODUCT)->count());
+        $this->assertSame(5, $products->where('product_mode', Product::MODE_PORTRAIT)->count());
     }
 
     public function test_layout_migration_hides_old_sections_and_rolls_back(): void

@@ -237,7 +237,7 @@ class HomeSectionRenderService
         // «ترند» یک صفت تحریریه‌ای است و ممکن است هنوز روی محصولات پروداکتی جدید
         // تنظیم نشده باشد. در این حالت سهم پروداکتی صفحهٔ خانه نباید صفر شود؛ کمبود
         // فقط از تازه‌ترین محصولات پروداکتی فعال جبران می‌شود و پرتره‌های ترند دست‌نخورده می‌مانند.
-        $productTarget = (int) ceil($limit * (self::PRODUCT_RATIO / 100));
+        $productTarget = (int) round($limit * (self::PRODUCT_RATIO / 100));
         if ($source === 'trending' && $productItems->count() < $productTarget) {
             $fallbackQuery = Product::query()
                 ->where('status', 'active')
@@ -358,7 +358,7 @@ class HomeSectionRenderService
         $usedProducts = 0;
 
         while ($productIndex < $productItems->count() || $portraitIndex < $portraitItems->count()) {
-            $targetProducts = (int) ceil(($mixed->count() + 1) * ($productRatio / 100));
+            $targetProducts = (int) round(($mixed->count() + 1) * ($productRatio / 100));
             $takeProduct = $productIndex < $productItems->count()
                 && ($portraitIndex >= $portraitItems->count() || $usedProducts < $targetProducts);
 
