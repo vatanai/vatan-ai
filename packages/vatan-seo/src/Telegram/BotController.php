@@ -70,12 +70,15 @@ class BotController extends Controller
         $text = trim((string) ($msg['text'] ?? ''));
         $admin = TelegramAdmin::where('chat_id', $chat)->first();
 
-        if (str_starts_with($text, '/start')) {
-            $code = trim(substr($text, 6));
+        if (preg_match('/^\/start(?:@\w+)?(?:\s|$)/iu', $text)) {
+            preg_match('/^\/start(?:@\w+)?(?:\s+(\S+))?/iu', $text, $startMatch);
+            $code = trim((string) ($startMatch[1] ?? ''));
             if ($code !== '' && ($data = $bot->consumeLinkCode($code))) {
                 TelegramAdmin::updateOrCreate(['chat_id' => $chat], [
                     'name' => trim(($msg['from']['first_name'] ?? '').' '.($msg['from']['last_name'] ?? '')),
                     'username' => $msg['from']['username'] ?? null,
+                    'telegram_user_id' => isset($msg['from']['id']) ? (int) $msg['from']['id'] : null,
+                    'message_thread_id' => isset($msg['message_thread_id']) ? (int) $msg['message_thread_id'] : null,
                     'admin_id' => $data['admin_id'] ?? null,
                     'is_active' => true,
                 ]);
@@ -91,7 +94,14 @@ class BotController extends Controller
         if (! $admin || ! $admin->is_active) {
             // اجازه‌ی ارسال کد بدون /start
             if (preg_match('/^[A-Z0-9]{6}$/i', $text) && ($data = $bot->consumeLinkCode($text))) {
-                TelegramAdmin::updateOrCreate(['chat_id' => $chat], ['name' => $msg['from']['first_name'] ?? null, 'username' => $msg['from']['username'] ?? null, 'admin_id' => $data['admin_id'] ?? null, 'is_active' => true]);
+                TelegramAdmin::updateOrCreate(['chat_id' => $chat], [
+                    'name' => $msg['from']['first_name'] ?? null,
+                    'username' => $msg['from']['username'] ?? null,
+                    'telegram_user_id' => isset($msg['from']['id']) ? (int) $msg['from']['id'] : null,
+                    'message_thread_id' => isset($msg['message_thread_id']) ? (int) $msg['message_thread_id'] : null,
+                    'admin_id' => $data['admin_id'] ?? null,
+                    'is_active' => true,
+                ]);
                 $bot->send($chat, '✅ اتصال برقرار شد. /help');
                 return;
             }

@@ -36,7 +36,22 @@ class Ai
         $result = $this->call($site, $role, $purpose, $system, $user, $opt);
         $decoded = $this->decode($result['content']);
         if ($decoded === null) {
-            throw new AiException('پاسخ مدل JSON معتبر نبود ('.$purpose.').');
+            try {
+                $repair = $this->call(
+                    $site,
+                    $role,
+                    $purpose.'-json-repair',
+                    $system."\nThe previous response was not valid JSON. Return a corrected JSON object that satisfies the original schema. Preserve its meaning; do not add facts or commentary.",
+                    "Original request:\n".$user."\n\nInvalid response to repair:\n".$result['content'],
+                    $opt,
+                );
+                $decoded = $this->decode($repair['content']);
+            } catch (\Throwable) {
+                $decoded = null;
+            }
+            if ($decoded === null) {
+                throw new AiException('پاسخ مدل JSON معتبر نبود ('.$purpose.').');
+            }
         }
         return $decoded;
     }

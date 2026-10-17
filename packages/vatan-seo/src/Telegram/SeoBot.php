@@ -40,20 +40,29 @@ class SeoBot
     }
 
     /** @param array<int, array<int, array{text:string, callback_data?:string, url?:string}>>|null $buttons */
-    public function send(string $chatId, string $html, ?array $buttons = null): array
+    public function send(string $chatId, string $html, ?array $buttons = null, bool $mention = false): array
     {
         $params = ['chat_id' => $chatId, 'text' => Str::limit($html, 4000), 'parse_mode' => 'HTML', 'disable_web_page_preview' => true];
+        $admin = TelegramAdmin::where('chat_id', $chatId)->where('is_active', true)->first();
+        if ($admin?->message_thread_id) {
+            $params['message_thread_id'] = (int) $admin->message_thread_id;
+        }
+        if ($mention && str_starts_with($chatId, '-') && $admin?->telegram_user_id) {
+            $name = e((string) ($admin->name ?: 'محسن'));
+            $html = '<a href="tg://user?id='.(int) $admin->telegram_user_id.'">'.$name.'</a> ' . $html;
+            $params['text'] = Str::limit($html, 4000);
+        }
         if ($buttons) {
             $params['reply_markup'] = ['inline_keyboard' => $buttons];
         }
         return $this->api('sendMessage', $params);
     }
 
-    public function broadcast(string $html, ?array $buttons = null): int
+    public function broadcast(string $html, ?array $buttons = null, bool $mention = false): int
     {
         $sent = 0;
         foreach (TelegramAdmin::where('is_active', true)->get() as $admin) {
-            if (($this->send($admin->chat_id, $html, $buttons)['ok'] ?? false) === true) {
+            if (($this->send($admin->chat_id, $html, $buttons, $mention)['ok'] ?? false) === true) {
                 $sent++;
             }
         }

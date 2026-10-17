@@ -52,14 +52,20 @@ class Reporter
         $w = $this->totals($site, 7);
         $p = $this->totals($site, 7, 7);
         $tasks = Task::where('site_id', $site->id)->open()->whereNotNull('due_on')->where('due_on', '<=', now()->toDateString())->orderByDesc('priority')->limit(6)->get();
+        $completed = Task::where('site_id', $site->id)->where('status', 'done')->where('completed_at', '>=', now()->startOfDay())
+            ->orderByDesc('completed_at')->limit(8)->get();
         $done = Task::where('site_id', $site->id)->where('status', 'done')->where('completed_at', '>=', now()->startOfDay())->count();
         $review = ContentItem::where('site_id', $site->id)->where('status', 'review')->count();
+        $keywords = Keyword::where('site_id', $site->id)->targets()->orderByRaw('current_position IS NULL, current_position')->limit(25)->get();
 
         $t = "☀️ <b>خلاصه‌ی سئوی امروز — ".e($site->name)."</b>\n".Fa::date(now())."\n\n";
         $t .= "📈 کلیک ۷ روز: <b>".Fa::n($w['clicks']).'</b>'.$this->change($w['clicks'], $p['clicks'])."\n";
         $t .= "👁 ایمپرشن: <b>".Fa::short($w['impressions']).'</b>'.$this->change($w['impressions'], $p['impressions'])."\n";
         $t .= "🎯 میانگین رتبه: <b>".($w['position'] ? Fa::n($w['position'], 1) : '—').'</b>'.$this->change($w['position'], $p['position'], true)."\n\n";
         $t .= "✅ امروز انجام شد: ".Fa::n($done)." تسک\n";
+        foreach ($completed as $task) {
+            $t .= '• '.e($task->title)."\n";
+        }
         if ($review) {
             $t .= "📝 منتظر تأیید شما: ".Fa::n($review)." مقاله (/review)\n";
         }
@@ -67,6 +73,12 @@ class Reporter
             $t .= "\n<b>اولویت‌های امروز:</b>\n";
             foreach ($tasks as $task) {
                 $t .= '• '.e($task->title).($task->automation === 'auto' ? ' 🤖' : ' 👤')."\n";
+            }
+        }
+        if ($keywords->isNotEmpty()) {
+            $t .= "\n<b>جایگاه کلمات هدف:</b>\n";
+            foreach ($keywords as $keyword) {
+                $t .= ($keyword->current_position ? Fa::n($keyword->current_position, 1) : '—').' · '.e($keyword->keyword)."\n";
             }
         }
         $t .= "\n💰 هزینه‌ی AI این ماه: ".Fa::usd(Budget::spentThisMonth($site)).' از '.Fa::usd(Budget::cap($site));

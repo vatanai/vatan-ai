@@ -29,7 +29,8 @@ class SeoEngineTest extends TestCase
 
     protected function fakeWorld(): void
     {
-        Http::fake(function (Request $request) {
+        $jsonRepairFixtureCalls = 0;
+        Http::fake(function (Request $request) use (&$jsonRepairFixtureCalls) {
             $url = $request->url();
             if (str_contains($url, 'openrouter.ai/api/v1/models')) {
                 return Http::response(['data' => [
@@ -40,6 +41,11 @@ class SeoEngineTest extends TestCase
             }
             if (str_contains($url, 'chat/completions')) {
                 $sys = $request['messages'][0]['content'] ?? '';
+                if (str_contains($sys, 'malformed-json-repair-fixture')) {
+                    $jsonRepairFixtureCalls++;
+                    $content = $jsonRepairFixtureCalls === 1 ? 'not json' : '{"repaired":true}';
+                    return Http::response(['model' => $request['model'], 'choices' => [['message' => ['content' => $content]]], 'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 20, 'cost' => 0.0001]]);
+                }
                 $content = match (true) {
                     str_contains($sys, '۳ تا ۶ عبارت جستجوی واقعی') => json_encode(['products' => [['id' => 1, 'seeds' => [['keyword' => 'ساخت عكس محصول با هوش مصنوعی', 'intent' => 'transactional'], ['keyword' => 'عکاسی صنعتی آنلاین', 'intent' => 'commercial']]], ['id' => 2, 'seeds' => [['keyword' => 'ساخت ویدیو تبلیغاتی', 'intent' => 'transactional']]]]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'relevance') => json_encode(['items' => [['keyword' => 'ساخت عکس محصول با هوش مصنوعی', 'relevance' => 95, 'intent' => 'transactional', 'difficulty' => 40, 'reason' => 'دقیقاً محصول اصلی'], ['keyword' => 'عکاسی صنعتی آنلاین', 'relevance' => 80, 'intent' => 'commercial', 'difficulty' => 55, 'reason' => 'مرتبط'], ['keyword' => 'فوتبال', 'relevance' => 5, 'intent' => 'informational', 'difficulty' => 90, 'reason' => 'نامرتبط']]], JSON_UNESCAPED_UNICODE),
@@ -164,11 +170,29 @@ class SeoEngineTest extends TestCase
         // تلگرام: اتصال و تأیید
         $bot = app(\Vatan\Seo\Telegram\SeoBot::class);
         $code = $bot->linkCode($user->id);
-        $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => 555], 'from' => ['first_name' => 'محسن'], 'text' => '/start '.$code]])->assertOk();
-        $this->assertTrue(TelegramAdmin::where('chat_id', '555')->exists());
-        $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => 555], 'text' => '/today']])->assertOk();
+        $this->postJson(route('seo.telegram.webhook'), ['message' => [
+            'chat' => ['id' => -1003903926314],
+            'message_thread_id' => 18,
+            'from' => ['id' => 217979733, 'first_name' => 'محسن', 'username' => 'Mohsena_aghajani'],
+            'text' => '/start@seovatanai_bot '.$code,
+        ]])->assertOk();
+        $this->assertDatabaseHas('seo_telegram_admins', [
+            'chat_id' => '-1003903926314',
+            'telegram_user_id' => 217979733,
+            'message_thread_id' => 18,
+            'username' => 'Mohsena_aghajani',
+        ]);
+        $this->assertTrue(TelegramAdmin::where('chat_id', '-1003903926314')->exists());
+        config(['seo-engine.telegram.bot_token' => 'test-token']);
+        $this->assertSame(1, $bot->broadcast('اقدام انسانی لازم است.', null, true));
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'api.telegram.org')
+            && $request['chat_id'] === '-1003903926314'
+            && $request['message_thread_id'] === 18
+            && str_contains($request['text'], 'tg://user?id=217979733'));
+        config(['seo-engine.telegram.bot_token' => null]);
+        $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => -1003903926314], 'text' => '/today']])->assertOk();
         $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => 999], 'text' => '/today']])->assertOk(); // چت غریبه
-        $this->postJson(route('seo.telegram.webhook'), ['callback_query' => ['id' => 'cb1', 'data' => 'seo:approve:'.$item->id, 'message' => ['chat' => ['id' => 555]]]])->assertOk();
+        $this->postJson(route('seo.telegram.webhook'), ['callback_query' => ['id' => 'cb1', 'data' => 'seo:approve:'.$item->id, 'message' => ['chat' => ['id' => -1003903926314]]]])->assertOk();
         $item->refresh();
         $this->assertSame('published', $item->status);
         $article = Article::find($item->published_ref);
@@ -256,7 +280,7 @@ class SeoEngineTest extends TestCase
 
         // دستورهای تلگرام
         foreach (['/ask چرا کلیک کم شد؟', '/plan', '/help', '/budget'] as $cmd) {
-            $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => 555], 'text' => $cmd]])->assertOk();
+            $this->postJson(route('seo.telegram.webhook'), ['message' => ['chat' => ['id' => -1003903926314], 'message_thread_id' => 18, 'text' => $cmd]])->assertOk();
         }
         $this->assertTrue(\Vatan\Seo\Models\Run::where('action', 'telegram_ask')->exists());
         $this->get(route('seo.settings'))->assertOk()->assertSee('فعال‌سازی هوش مصنوعی');
@@ -274,6 +298,26 @@ class SeoEngineTest extends TestCase
         \Vatan\Seo\Models\AiCall::create(['site_id' => $site->id, 'role' => 'fast', 'purpose' => 'x', 'model' => 'm', 'cost_usd' => 4.9]);
         $this->expectException(\Vatan\Seo\Ai\BudgetExceededException::class);
         app(\Vatan\Seo\Ai\Ai::class)->text($site, 'writer', 'test', 'x', str_repeat('y', 20000), ['max_tokens' => 8000]);
+    }
+
+    public function test_json_output_gets_one_repair_attempt(): void
+    {
+        $this->fakeWorld();
+        $this->artisan('seo:install', ['--budget' => 20])->assertSuccessful();
+        $decoded = app(\Vatan\Seo\Ai\Ai::class)->json(
+            Site::first(),
+            'fast',
+            'fixture-json-repair',
+            'malformed-json-repair-fixture',
+            'Return a test object.',
+            ['max_tokens' => 100],
+        );
+
+        $this->assertSame(['repaired' => true], $decoded);
+        $this->assertDatabaseHas('seo_ai_calls', [
+            'purpose' => 'fixture-json-repair-json-repair',
+            'ok' => true,
+        ]);
     }
 
     public function test_helpers(): void
