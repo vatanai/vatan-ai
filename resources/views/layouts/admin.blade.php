@@ -12,6 +12,9 @@
     <link href="{{ asset('admin/css/admin-mobile.css') }}?v={{ filemtime(public_path('admin/css/admin-mobile.css')) }}" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if(request()->is('admin/dashboard*', 'admin/quick-access', 'admin/bloggers*', 'admin/finance/purchase-cases/*'))
+      @vite('resources/js/chart.js')
+    @endif
 
     @stack('styles')
 </head>

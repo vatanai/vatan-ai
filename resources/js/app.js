@@ -1,8 +1,3 @@
-import Chart from 'chart.js/auto';
-window.Chart = Chart;
-
-// ۱. خط ایمپورت از public کاملاً حذف شد تا تداخل و خطای کامپایل Vite برطرف شود.
-
 document.addEventListener('DOMContentLoaded', () => {
     
     // ══ مدیریت دراپ‌داون‌های سایدبار ══

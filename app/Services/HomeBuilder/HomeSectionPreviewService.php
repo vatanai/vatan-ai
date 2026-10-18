@@ -117,7 +117,7 @@ class HomeSectionPreviewService
             'vt_tools' => ['category_ids' => $this->topCategoryIds(8), 'hide_quick_chips' => true],
             'vt_row' => ['source' => 'latest', 'limit' => 10, 'show_view_all' => true, 'view_all_link_mode' => 'auto'],
             'vt_tabs' => ['category_ids' => $this->topCategoryIds(5), 'products_per_tab' => 10, 'min_products_per_tab' => 1, 'show_all_tab' => true, 'show_view_all' => true],
-            'vt_before_after' => ['source' => 'with_before', 'limit' => 3, 'cta_label' => 'بساز'],
+            'vt_before_after' => ['source' => 'showcase', 'limit' => 3, 'cta_label' => 'بساز', 'show_meta' => false],
             'vt_video_row' => ['source' => 'video', 'limit' => 10, 'min_items' => 1, 'show_view_all' => true],
             'vt_cta_banner' => [
                 'kicker' => 'ویژه فروشگاه‌ها و برندها', 'heading' => 'کسب‌وکارت رو معرفی کن، اعتبار هدیه بگیر',

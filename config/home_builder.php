@@ -154,19 +154,21 @@ return [
 
         'vt_before_after' => [
             'label' => 'ویترین · قبل / بعد',
-            'description' => 'کارت مقایسه‌ی کشیدنی؛ «قبل» از تصاویر قبل محصول و «بعد» از تصویر اصلی محصول',
+            'description' => 'کارت مقایسه‌ی کشیدنی؛ نمایش نمونه‌های آماده یا محصولات دارای تصویر قبل',
             'icon' => 'fa-solid fa-left-right',
             'layouts' => [
                 'default' => ['label' => 'سه کارت مقایسه', 'thumb' => 'grid-3.svg'],
             ],
             'settings_fields' => [
-                ['key' => 'source', 'label' => 'منبع محصولات', 'type' => 'select', 'options' => [
+                ['key' => 'source', 'label' => 'منبع نمایش', 'type' => 'select', 'options' => [
+                    'showcase' => 'نمونه‌های آمادهٔ قبل / بعد',
                     'with_before' => 'خودکار: محصولاتی که تصویر «قبل» دارند',
                     'manual' => 'انتخاب دستی محصولات',
-                ], 'default' => 'with_before'],
+                ], 'default' => 'showcase'],
                 ['key' => 'product_ids', 'label' => 'انتخاب محصولات (فقط محصولات دارای تصویر «قبل» نمایش داده می‌شوند)', 'type' => 'product_multiselect', 'show_if_source' => ['manual']],
                 ['key' => 'limit', 'label' => 'تعداد کارت', 'type' => 'number', 'default' => 3, 'min' => 1, 'max' => 9],
                 ['key' => 'cta_label', 'label' => 'متن دکمه', 'type' => 'text', 'default' => 'بساز'],
+                ['key' => 'show_meta', 'label' => 'نمایش عنوان و دکمه زیر کارت', 'type' => 'checkbox', 'default' => true],
             ],
         ],
 

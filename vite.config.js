@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [
         tailwindcss(),
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/chart.js'],
             // فایل توسعه نباید داخل بستهٔ استقرار قرار بگیرد یا در production خوانده شود.
             hotFile: 'storage/framework/vite.hot',
             refresh: true,

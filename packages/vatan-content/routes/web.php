@@ -17,12 +17,22 @@ Route::middleware($host['middleware'])
 
         Route::get('/calendar', [C\CalendarController::class, 'index'])->name('calendar');
         Route::patch('/calendar/items/{item}', [C\CalendarController::class, 'updateItem'])->name('calendar.item');
+        Route::get('/calendar/items/{item}', [C\ItemController::class, 'show'])->name('item');
+        Route::get('/calendar/items/{item}/status', [C\ItemController::class, 'status'])->name('item.status');
+        Route::post('/calendar/items/{item}/save', [C\ItemController::class, 'save'])->name('item.save');
+        Route::post('/calendar/items/{item}/order', [C\ItemController::class, 'build'])->name('item.build');
+        Route::post('/calendar/items/{item}/generate', [C\ItemController::class, 'generate'])->name('item.generate');
+        Route::post('/calendar/items/{item}/undo', [C\ItemController::class, 'undo'])->name('item.undo');
+        Route::post('/calendar/items/{item}/prompt-reset', [C\ItemController::class, 'promptReset'])->name('item.prompt-reset');
+        Route::post('/calendar/items/{item}/metrics', [C\ItemController::class, 'metrics'])->name('item.metrics');
+        Route::post('/calendar/items/{item}/snapshot', [C\ItemController::class, 'snapshot'])->name('item.snapshot');
         Route::post('/calendar/items/{item}/build', [C\CalendarController::class, 'build'])->name('calendar.build');
         Route::post('/calendar/{calendar}/approve', [C\CalendarController::class, 'approve'])->name('calendar.approve');
         Route::post('/calendar/{calendar}/new-version', [C\CalendarController::class, 'newVersion'])->name('calendar.version');
 
         Route::get('/productions', [C\ProductionController::class, 'index'])->name('productions');
-        Route::get('/productions/{production}', [C\ProductionController::class, 'show'])->name('productions.show');
+        Route::get('/productions/feed', [C\ProductionController::class, 'feed'])->name('productions.feed');
+        Route::get('/productions/{production}', [C\ProductionController::class, 'show'])->whereNumber('production')->name('productions.show');
         Route::post('/productions/{production}/approve', [C\ProductionController::class, 'approve'])->name('productions.approve');
         Route::post('/productions/{production}/reject', [C\ProductionController::class, 'reject'])->name('productions.reject');
         Route::post('/productions/{production}/edits', [C\ProductionController::class, 'segmentEdit'])->name('productions.edit');
@@ -34,6 +44,11 @@ Route::middleware($host['middleware'])
 
         Route::get('/styles', [C\StyleController::class, 'index'])->name('styles');
         Route::post('/styles', [C\StyleController::class, 'store'])->name('styles.store');
+        Route::get('/styles/create', [C\StyleController::class, 'create'])->name('styles.create');
+        Route::get('/styles/{style}', [C\StyleController::class, 'show'])->whereNumber('style')->name('styles.show');
+        Route::delete('/styles/{style}', [C\StyleController::class, 'destroy'])->whereNumber('style')->name('styles.destroy');
+        Route::post('/styles/{style}/duplicate', [C\StyleController::class, 'duplicate'])->whereNumber('style')->name('styles.duplicate');
+        Route::delete('/styles/references/{reference}', [C\StyleController::class, 'deleteReference'])->name('styles.reference.delete');
         Route::patch('/styles/{style}', [C\StyleController::class, 'update'])->name('styles.update');
         Route::patch('/styles/references/{reference}', [C\StyleController::class, 'assign'])->name('styles.assign');
 
@@ -42,6 +57,9 @@ Route::middleware($host['middleware'])
 
         Route::get('/prompts', [C\PromptController::class, 'index'])->name('prompts');
         Route::post('/prompts', [C\PromptController::class, 'store'])->name('prompts.store');
+        Route::post('/prompts/layers', [C\PromptController::class, 'addLayer'])->name('prompts.layer');
+        Route::delete('/prompts/layers/{layer}', [C\PromptController::class, 'deleteLayer'])->name('prompts.layer.delete');
+        Route::delete('/prompts/{prompt}', [C\PromptController::class, 'destroy'])->whereNumber('prompt')->name('prompts.destroy');
         Route::post('/prompts/{prompt}/activate', [C\PromptController::class, 'activate'])->name('prompts.activate');
         Route::post('/prompts/{prompt}/test', [C\PromptController::class, 'test'])->name('prompts.test');
 
@@ -55,6 +73,7 @@ Route::middleware($host['middleware'])
         Route::get('/settings', [C\SettingsController::class, 'index'])->name('settings');
         Route::post('/settings/sync', [C\SettingsController::class, 'sync'])->name('settings.sync');
         Route::post('/settings/telegram', [C\SettingsController::class, 'telegram'])->name('settings.telegram');
+        Route::post('/settings/agent-install', [C\SettingsController::class, 'agentInstall'])->name('settings.agent-install');
         Route::post('/settings/agent-token', [C\SettingsController::class, 'agentToken'])->name('settings.agent-token');
 
         Route::get('/asset/{file}', C\AssetController::class)->where('file', '[a-z0-9\-]+\.(css|js)')->name('asset');

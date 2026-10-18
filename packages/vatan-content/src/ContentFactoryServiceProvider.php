@@ -32,6 +32,22 @@ class ContentFactoryServiceProvider extends ServiceProvider
             ]);
         }
 
+        // روی مک (محیط local) بعد از به‌روزرسانی پکیج، مایگریشن‌های کارخانه خودکار یک بار اجرا می‌شوند تا لازم نباشد دستی بزنید.
+        if (! $this->app->runningInConsole() && $this->app->environment('local')) {
+            $this->app->booted(function () use ($base) {
+                try {
+                    $ver = trim((string) @file_get_contents($base.'/VERSION'));
+                    $flag = storage_path('framework/cf-migrated-'.$ver);
+                    if ($ver && ! is_file($flag)) {
+                        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true, '--path' => 'packages/vatan-content/database/migrations']);
+                        @touch($flag);
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('ContentFactory auto-migrate: '.$e->getMessage());
+                }
+            });
+        }
+
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->command('content:metrics')->everyTenMinutes()->withoutOverlapping(20)->runInBackground();
         });

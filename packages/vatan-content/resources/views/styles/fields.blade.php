@@ -22,3 +22,10 @@
   <label class="cf-field">موتور ساخت<input name="engine" value="{{ $s->engine ?? '' }}"></label>
 </div>
 <label class="cf-field">دستور صحنه‌ها (هر خط یک قدم)<textarea name="recipe_text">{{ implode("\n", $s->recipe ?? []) }}</textarea></label>
+<div class="cf-grid cf-g3">
+  <label class="cf-field">پالت رنگ (کد رنگ‌ها با فاصله یا ، )<input name="palette_text" dir="ltr" value="{{ implode(', ', $s->palette ?? []) }}" placeholder="#16594f, #C2FD75, #0b1f1c"></label>
+  <label class="cf-field">فونت‌ها (با ، جدا)<input name="fonts_text" value="{{ implode('، ', $s->fonts ?? []) }}" placeholder="Modam، YekanBakh"></label>
+  <label class="cf-field">وضعیت<select name="status">@foreach(config('content-factory.labels.style_status') as $k => $l)<option value="{{ $k }}" @selected(($s->status ?? 'testing') === $k)>{{ $l }}</option>@endforeach</select></label>
+  <label class="cf-field">ترتیب نمایش<input name="sort" type="number" min="0" value="{{ $s->sort ?? '' }}"></label>
+  <label class="cf-field" style="grid-column:span 2">تصویر کارت (اختیاری؛ وگرنه کانتکت‌شیت اولین مرجع)<input name="cover" type="file" accept="image/*"></label>
+</div>

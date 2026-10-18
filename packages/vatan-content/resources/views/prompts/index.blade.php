@@ -7,8 +7,14 @@
   <div class="cf-card" style="padding:8px;display:flex;flex-direction:column;gap:2px">
     @foreach($layers as $k => $l)
       @php $act = ($prompts[$k] ?? collect())->firstWhere('status', 'active'); @endphp
-      <a href="{{ route('cf.prompts', ['layer' => $k]) }}" class="cf-tab {{ $selected === $k ? 'is-active' : '' }}" style="display:flex;justify-content:space-between">{{ $l }}<span style="opacity:.7">{{ $act ? 'v'.Fa::n($act->version) : '—' }}</span></a>
+      <a href="{{ route('cf.prompts', ['layer' => $k]) }}" class="cf-tab {{ $selected === $k ? 'is-active' : '' }}" style="display:flex;justify-content:space-between">{{ $l }}<span style="opacity:.7">{{ in_array($k, $custom, true) ? '★ ' : '' }}{{ $act ? 'v'.Fa::n($act->version) : '—' }}</span></a>
     @endforeach
+    <details style="margin-top:8px;padding:4px"><summary class="cf-btn cf-btn-sm" style="list-style:none"><i class="fa-solid fa-plus"></i> لایه‌ی جدید</summary>
+      <form method="post" action="{{ route('cf.prompts.layer') }}" class="cf-stack" style="gap:6px;margin-top:8px">@csrf
+        <label class="cf-field">شناسه‌ی انگلیسی<input name="key" dir="ltr" placeholder="hashtags" required pattern="[a-z][a-z0-9_]{1,30}"></label>
+        <label class="cf-field">عنوان<input name="title" required></label>
+        <label class="cf-field">کاربرد<textarea name="help"></textarea></label>
+        <button class="cf-btn cf-btn-sm cf-btn-primary">ساخت لایه</button></form></details>
   </div>
   <div class="cf-stack">
     <div class="cf-card">
@@ -20,8 +26,12 @@
         <input type="hidden" name="layer" value="{{ $selected }}">
         <label class="cf-field">متن پرامپت (ذخیره = پیش‌نویس جدید؛ تا «فعال کن» نزنید روی تولید اثری ندارد)<textarea name="body" style="min-height:340px;font-size:12.5px;line-height:2" required>{{ $body }}</textarea></label>
         <label class="cf-field">یادداشت تغییر<input name="notes" placeholder="چه چیزی و چرا عوض شد؟"></label>
-        <div><button class="cf-btn cf-btn-primary"><i class="fa-solid fa-floppy-disk"></i> ذخیره به‌عنوان پیش‌نویس</button></div>
+        <div class="cf-row"><button class="cf-btn cf-btn-primary"><i class="fa-solid fa-floppy-disk"></i> ذخیره به‌عنوان پیش‌نویس</button>
+          <button class="cf-btn" name="activate" value="1"><i class="fa-solid fa-bolt"></i> ذخیره و فعال کن</button></div>
       </form>
+      @if(in_array($selected, $custom, true))
+        <form method="post" action="{{ route('cf.prompts.layer.delete', $selected) }}" style="margin-top:10px" onsubmit="return confirm('لایه و همه‌ی نسخه‌هایش حذف شود؟')">@csrf @method('DELETE')<button class="cf-btn cf-btn-sm cf-btn-danger"><i class="fa-solid fa-trash"></i> حذف این لایه</button></form>
+      @endif
     </div>
     @if($active)
     <div class="cf-card"><h3 class="cf-card-title"><i class="fa-solid fa-vial"></i> آزمایش نسخه‌ی فعال</h3>
@@ -36,7 +46,9 @@
         <div class="cf-between" style="padding:8px 0;border-bottom:1px solid var(--divider)">
           <span>نسخه‌ی {{ Fa::n($pv->version) }} · {{ Fa::date($pv->created_at, false, true) }} · {{ $pv->editor }}@if($pv->notes) · <span class="cf-muted">{{ $pv->notes }}</span>@endif</span>
           <span class="cf-row"><span class="cf-pill {{ $pv->status === 'active' ? 'is-success' : '' }}">{{ Fa::label('prompt_status', $pv->status) }}</span>
-            @if($pv->status !== 'active')<form method="post" action="{{ route('cf.prompts.activate', $pv) }}">@csrf<button class="cf-btn cf-btn-sm">{{ $pv->version < ($active->version ?? 0) ? 'بازگردانی' : 'فعال کن' }}</button></form>@endif</span>
+            @if($pv->status !== 'active')<form method="post" action="{{ route('cf.prompts.activate', $pv) }}">@csrf<button class="cf-btn cf-btn-sm">{{ $pv->version < ($active->version ?? 0) ? 'بازگردانی' : 'فعال کن' }}</button></form>
+              <form method="post" action="{{ route('cf.prompts.destroy', $pv) }}">@csrf @method('DELETE')<button class="cf-btn cf-btn-sm cf-btn-danger" title="حذف نسخه"><i class="fa-solid fa-trash"></i></button></form>@endif
+            <details><summary class="cf-btn cf-btn-sm" style="list-style:none">متن</summary><div class="cf-copy" style="margin-top:6px;max-height:300px;overflow:auto;font-size:12px">{{ $pv->body }}</div></details></span>
         </div>
       @empty <div class="cf-muted">هنوز نسخه‌ای برای این لایه نیست؛ متن را بنویسید و ذخیره کنید.</div> @endforelse
     </div>

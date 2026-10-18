@@ -174,3 +174,55 @@ body:not(.light) .cf-job-bar span { background: var(--accent); }
 .cf-score { font-size: 28px; font-weight: 800; color: var(--text-h); font-variant-numeric: tabular-nums; }
 dialog.cf-dialog { position: fixed; inset: 0; margin: auto; max-height: 92vh; height: fit-content; }
 dialog.cf-dialog .cf-dialog-body { max-height: 88vh; }
+
+/* ── صفحه‌ی کامل پست ── */
+.cf-item-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.cf-item-side { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 14px; }
+.cf-item-nav { position: sticky; top: 0; z-index: 20; margin: 0; overflow-x: auto; flex-wrap: nowrap; box-shadow: var(--shadow-card); }
+.cf-item-layout section { scroll-margin-top: 70px; }
+.cf-scene { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: var(--input-bg); }
+.cf-scene.is-off { opacity: .5; }
+.cf-scene .cf-field input, .cf-scene .cf-field textarea, .cf-scene .cf-field select { background: var(--card-bg); }
+.cf-scene-n { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--primary); color: var(--on-primary); font-size: 12px; }
+.cf-scene-thumb { width: 54px; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+.cf-savebar { position: sticky; bottom: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--card-bg); box-shadow: var(--shadow-card); }
+@media (max-width: 1200px) { .cf-item-layout { grid-template-columns: 1fr; } .cf-item-side { position: static; } }
+
+/* ── صف ساخت و انتشار (هم‌خانواده‌ی صف استودیو) ── */
+.cf-q-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.cf-q-stat { display: grid; gap: 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--input-bg); cursor: pointer; text-align: right; font: inherit; color: inherit; }
+.cf-q-stat strong { font-size: 20px; line-height: 1; color: var(--text-h); font-variant-numeric: tabular-nums; }
+.cf-q-stat span { font-size: 11px; color: var(--text-soft); }
+.cf-q-stat.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-l); }
+.cf-q-stat.success strong { color: var(--success); } .cf-q-stat.warning strong { color: var(--warning); } .cf-q-stat.danger strong { color: var(--danger); } .cf-q-stat.info strong { color: var(--info); }
+.cf-q-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cf-q-search { display: flex; align-items: center; gap: 7px; width: min(420px, 100%); min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--input-bg); color: var(--text-soft); }
+.cf-q-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-l); }
+.cf-q-search input { min-width: 0; width: 100%; height: 34px; border: 0; outline: 0; background: transparent; color: var(--text-main); font: inherit; font-size: 12.5px; }
+.cf-q-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-soft); }
+.cf-q-live i { font-size: 8px; color: var(--success); }
+.cf-q-table td { vertical-align: middle; }
+.cf-q-thumb { width: 44px; aspect-ratio: 9 / 16; border-radius: 7px; object-fit: cover; background: var(--primary-l); display: grid; place-items: center; color: var(--text-soft); overflow: hidden; border: 1px solid var(--border); }
+.cf-q-sub { display: block; margin-top: 3px; font-size: 11px; color: var(--text-soft); }
+.cf-q-pages { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.cf-q-pages button { min-width: 32px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text-main); font: inherit; font-size: 12px; cursor: pointer; }
+.cf-q-pages button.is-active { border-color: var(--primary); background: var(--primary); color: var(--on-primary); font-weight: 800; }
+@media (max-width: 1100px) { .cf-q-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .cf-q-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ── کارت‌های سبک ── */
+.cf-style-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1300px) { .cf-style-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 950px) { .cf-style-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cf-style-grid { grid-template-columns: 1fr; } }
+.cf-style-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; background: var(--card-bg); overflow: hidden; transition: transform .15s, box-shadow .15s; }
+.cf-style-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); border-color: var(--primary); }
+.cf-style-cover { position: relative; aspect-ratio: 4 / 3; background: var(--primary-l); display: grid; place-items: center; color: var(--text-soft); overflow: hidden; }
+.cf-style-cover img { width: 100%; height: 100%; object-fit: cover; }
+.cf-style-cover .cf-pill { position: absolute; top: 8px; inset-inline-start: 8px; }
+.cf-style-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.cf-style-body b { color: var(--text-h); font-size: 14px; }
+.cf-style-body p { margin: 0; font-size: 12px; color: var(--text-soft); line-height: 1.8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cf-style-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--divider); font-size: 11.5px; color: var(--text-soft); }
+.cf-style-new { display: grid; place-items: center; min-height: 260px; border: 2px dashed var(--border); border-radius: 16px; color: var(--text-soft); cursor: pointer; background: transparent; font: inherit; }
+.cf-style-new:hover { border-color: var(--primary); color: var(--text-h); }

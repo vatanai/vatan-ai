@@ -11,7 +11,7 @@ class JobController extends Controller
 {
     public function store(Request $request)
     {
-        $d = $request->validate(['type' => 'required|in:ingest_videos,ingest_music,sync_files']);
+        $d = $request->validate(['type' => 'required|in:ingest_videos,ingest_music,sync_files,doctor']);
         $exists = Job::where('workspace_id', $this->ws())->where('type', $d['type'])->whereIn('status', ['queued', 'running'])->exists();
         if ($exists) {
             return back()->with('warning', 'همین کار الان در صف یا در حال اجراست.');

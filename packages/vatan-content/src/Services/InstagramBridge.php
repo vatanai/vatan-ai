@@ -15,6 +15,9 @@ use Vatan\Content\Models\Production;
  */
 class InstagramBridge
 {
+    // زمان‌بند هر ۱۰ دقیقه اجرا می‌شود؛ این مهلت، تأخیر عادی صف را می‌پذیرد اما آمار دیررس را به پنجره‌ی قدیمی نسبت نمی‌دهد.
+    private const METRIC_WINDOW_GRACE_MINUTES = 20;
+
     public function available(): bool
     {
         return class_exists(\App\Models\SmartInstagram\Post::class) && class_exists(\App\Services\SmartInstagram\Posts\PostSyncService::class);
@@ -98,8 +101,36 @@ class InstagramBridge
         }
         $age = $p->published_at->diffInMinutes(now());
         $have = $p->snapshots()->pluck('window')->all();
+        foreach (config('content-factory.metric_windows', []) as $window => $minutes) {
+            if ($age >= $minutes && $age <= $minutes + self::METRIC_WINDOW_GRACE_MINUTES && ! in_array($window, $have, true)) {
+                return [$window];
+            }
+        }
 
-        return array_keys(array_filter(config('content-factory.metric_windows'), fn ($m, $w) => $age >= $m && ! in_array($w, $have, true), ARRAY_FILTER_USE_BOTH));
+        // پنجره‌ای که از مهلت برداشتش گذشته باشد، با عدد امروز بازسازی نمی‌شود.
+        return [];
+    }
+
+    /** برداشت لحظه‌ای (پنجره‌ی «live» همیشه به‌روز می‌شود) */
+    public function snapshotNow(Production $p): int
+    {
+        if (! ($post = $this->postFor($p))) {
+            return 0;
+        }
+        try {
+            app(\App\Services\SmartInstagram\Posts\PostSyncService::class)->syncOne($post);
+            $post->refresh();
+        } catch (\Throwable $e) {
+            Log::info('ContentFactory: syncOne failed', ['e' => $e->getMessage()]);
+        }
+        $snap = MetricSnapshot::firstOrNew(['production_id' => $p->id, 'window' => 'live']);
+        $snap->fill(['captured_at' => now(), 'source' => 'smart_instagram', 'raw' => $post->only(['media_id', 'permalink', 'stats_synced_at', 'sync_error']),
+            'metrics' => array_merge((array) ($snap->metrics ?? []), array_filter(['likes' => $post->like_count, 'comments' => $post->comments_count, 'saves' => $post->saved_count,
+                'shares' => $post->shares_count, 'reach' => $post->reach_count], fn ($v) => $v !== null))])->save();
+        $this->snapshot($p);
+        app(Scorer::class)->score($p->fresh());
+
+        return 1;
     }
 
     public function snapshot(Production $p): int

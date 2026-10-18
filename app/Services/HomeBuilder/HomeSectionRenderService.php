@@ -444,7 +444,15 @@ class HomeSectionRenderService
     {
         $limit = max(1, min(9, (int) $section->setting('limit', 3)));
 
-        if ($section->setting('source', 'with_before') === 'manual') {
+        $source = (string) $section->setting('source', 'with_before');
+        if ($source === 'showcase') {
+            return [
+                'section' => $section,
+                'items' => $this->curatedBeforeAfterItems()->take($limit)->values(),
+            ];
+        }
+
+        if ($source === 'manual') {
             $candidates = $this->resolveManualProducts($section, 24);
         } else {
             $candidates = Product::query()
@@ -472,6 +480,39 @@ class HomeSectionRenderService
         $this->rememberSeen($items->pluck('product'));
 
         return ['section' => $section, 'items' => $items];
+    }
+
+    /** نمونه‌های ثابت و همراه کد؛ برای نمایش حتی وقتی محصولی با تصویر «قبل» در پایگاه‌داده نیست. */
+    protected function curatedBeforeAfterItems(): Collection
+    {
+        $showcaseUrl = route('products.index');
+
+        return collect([
+            [
+                'title' => 'کرم ضدآفتاب مدیسان',
+                'before' => asset('assets/before-after/medisun-before.webp'),
+                'after' => asset('assets/before-after/medisun-after.webp'),
+                'url' => $showcaseUrl,
+            ],
+            [
+                'title' => 'کرم‌پودر فنوم',
+                'before' => asset('assets/before-after/fanoma-before.webp'),
+                'after' => asset('assets/before-after/fanoma-after.webp'),
+                'url' => $showcaseUrl,
+            ],
+            [
+                'title' => 'ماسک موی سان‌وی',
+                'before' => asset('assets/before-after/sunway-before.webp'),
+                'after' => asset('assets/before-after/sunway-after.webp'),
+                'url' => $showcaseUrl,
+            ],
+            [
+                'title' => 'دستبند گل',
+                'before' => asset('assets/before-after/bracelet-before.webp'),
+                'after' => asset('assets/before-after/bracelet-after.webp'),
+                'url' => $showcaseUrl,
+            ],
+        ]);
     }
 
     /** کاشی‌های دسته‌بندی (نوار ابزارها و مناسبت‌ها) با تصویر آخرین محصول و تعداد قالب هر دسته. */

@@ -30,11 +30,30 @@
   </div>
   <div class="cf-stack">
     <div class="cf-card"><h3 class="cf-card-title"><i class="fa-solid fa-laptop-code"></i> ایجنت مک @include('cf::partials.help', ['k' => 'agent'])</h3>
-      <div class="cf-muted" style="font-size:12.5px;line-height:2">اگر داشبورد روی همین مک (MAMP) باز است، دکمه‌های «تحلیل» و «ساخت» ایجنت را خودکار روشن می‌کنند. برای کار با سرور اصلی یا روشن نگه‌داشتن دائمی، یک بار در ترمینال، در پوشه‌ی پروژه:</div>
-      <div class="cf-section-title" style="margin-top:8px">۱. نصب ابزارها (فقط بار اول)</div>
-      <div class="cf-code">bash content-lab/_system/setup-mac.sh</div>
-      <div class="cf-section-title" style="margin-top:8px">۲. روشن کردن ایجنت <button type="button" class="cf-btn cf-btn-sm" data-cf-copy="cf-agent-cmd"><i class="fa-regular fa-copy"></i> کپی</button></div>
-      <div class="cf-code" id="cf-agent-cmd">{{ $agentCmd }}</div>
+      @php $caps = $agent['caps'] ?? []; @endphp
+      @if($caps)
+        <div class="cf-row" style="font-size:12px;margin-bottom:8px">
+          @foreach(['ffmpeg' => 'ffmpeg', 'node' => 'Node', 'render_deps' => 'موتور رندر', 'brew' => 'Homebrew', 'launch_agent' => 'ایجنت دائمی'] as $ck => $cl)
+            <span class="cf-pill {{ !empty($caps[$ck]) ? 'is-success' : 'is-warning' }}"><i class="fa-solid {{ !empty($caps[$ck]) ? 'fa-check' : 'fa-xmark' }}"></i> {{ $cl }}</span>
+          @endforeach
+          @if(!empty($caps['python']))<span class="cf-pill">Python {{ $caps['python'] }}</span>@endif
+        </div>
+      @endif
+      <form method="post" action="{{ route('cf.jobs.store') }}" style="margin-bottom:10px">@csrf<input type="hidden" name="type" value="doctor"><button class="cf-btn cf-btn-sm"><i class="fa-solid fa-stethoscope"></i> بررسی ابزارهای مک</button></form>
+      @if($isLocal)
+        <div class="cf-section-title">ایجنت دائمی (یک کلیک) @include('cf::partials.help', ['k' => 'agent_install'])</div>
+        <form method="post" action="{{ route('cf.settings.agent-install') }}" class="cf-stack" style="gap:8px">@csrf
+          <label class="cf-field">آدرس داشبورد آنلاین<input name="online_url" dir="ltr" value="{{ $remote['url'] ?? 'https://aivatan.com' }}"></label>
+          <label class="cf-field">توکن ایجنتِ داشبورد آنلاین (از صفحه‌ی تنظیمات آنلاین کپی کنید)<input name="online_token" dir="ltr" value="{{ $remote['token'] ?? '' }}"></label>
+          <div><button class="cf-btn cf-btn-primary"><i class="fa-solid fa-power-off"></i> نصب و روشن کردن ایجنت دائمی</button></div>
+        </form>
+        <div class="cf-muted" style="font-size:11.5px;margin-top:6px">ایجنت با روشن شدن مک خودکار اجرا می‌شود و هم کارهای داشبورد لوکال و هم آنلاین را انجام می‌دهد. ffmpeg و node اگر نباشند با Homebrew خودکار نصب می‌شوند.</div>
+      @else
+        <div class="cf-section-title" style="margin-top:4px">توکن این داشبورد برای ایجنت مک <button type="button" class="cf-btn cf-btn-sm" data-cf-copy="cf-agent-token"><i class="fa-regular fa-copy"></i> کپی</button></div>
+        <div class="cf-code" id="cf-agent-token">{{ $agentToken }}</div>
+        <div class="cf-muted" style="font-size:12px;line-height:2;margin-top:6px">در داشبورد لوکال مک ← تنظیمات ← «ایجنت دائمی»، این توکن را بچسبانید و دکمه را بزنید. یا در ترمینال:</div>
+        <div class="cf-code" id="cf-agent-cmd">{{ $agentCmd }}</div>
+      @endif
       <form method="post" action="{{ route('cf.settings.agent-token') }}" style="margin-top:10px">@csrf<button class="cf-btn cf-btn-sm">ساخت توکن جدید</button></form>
       @if(!empty($agent['last_seen']))<div class="cf-muted" style="font-size:12px;margin-top:8px">آخرین تماس: {{ Fa::date($agent['last_seen'], false, true) }} · {{ $agent['host'] ?? '' }} · نسخه {{ Fa::digits($agent['version'] ?? '') }}</div>@endif
     </div>

@@ -108,6 +108,32 @@ class ProductLabCostServiceTest extends TestCase
         self::assertStringContainsString('ساخت موفق کاربر', $summary[0]['source_label']);
     }
 
+    public function test_ignores_a_missing_main_quality_without_emitting_a_php_warning(): void
+    {
+        $product = new Product();
+        $request = new AiProviderRequest([
+            'status' => 'completed',
+            'actual_cost_usd' => 0.12,
+            'estimated_cost_usd' => 0.12,
+        ]);
+        $order = new Order([
+            'model_tier_key' => 'pro',
+            'input_payload' => [],
+            'completed_at' => now(),
+        ]);
+        $order->setRelation('providerRequests', collect([$request]));
+
+        $summary = app(ProductLabCostService::class)->summarize(
+            $product,
+            100_000,
+            collect(),
+            collect([$order]),
+        );
+
+        self::assertSame('حرفه‌ای', $summary[1]['label']);
+        self::assertSame(0.12, $summary[1]['usd']);
+    }
+
     public function test_falls_back_to_model_catalog_price_with_estimated_tone(): void
     {
         $product = new Product([

@@ -115,10 +115,12 @@ class TelegramProductDraftServiceTest extends TestCase
         ]);
 
         $this->assertSame("سلام عزیز، خوش اومدی به سیستم\nهوشمند ثبت محصول پلتفرم وطن", $response['text']);
+        // n8n دکمه‌های شیشه‌ای را از buttons می‌سازد و reply_markup منوی ثابت پایین چت است.
         $this->assertSame([
-            ['text' => 'ثبت محصول جدید', 'callback_data' => 'product:start'],
-            ['text' => 'ویرایش محصولات', 'callback_data' => 'product:edit'],
-        ], $response['reply_markup']['inline_keyboard'][0]);
+            ['text' => 'ثبت محصول', 'callback_data' => 'product:start'],
+            ['text' => 'آموزش', 'callback_data' => 'product:education'],
+        ], $response['buttons']);
+        $this->assertSame([[['text' => 'ثبت محصول'], ['text' => 'آموزش']]], $response['reply_markup']['keyboard']);
     }
 
     public function test_the_same_update_id_returns_the_cached_response_without_creating_a_second_draft(): void
@@ -270,6 +272,7 @@ class TelegramProductDraftServiceTest extends TestCase
             'chat_id' => '991007',
         ]);
         $this->assertSame('review', $ready['status']);
-        $this->assertSame('product:save_draft', $ready['buttons'][3]['callback_data']);
+        $this->assertSame('product:confirm', $ready['buttons'][0]['callback_data']);
+        $this->assertSame('product:edit:metadata', $ready['buttons'][1]['callback_data']);
     }
 }

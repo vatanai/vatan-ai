@@ -34,6 +34,8 @@ class SettingsController extends Controller
             'models' => config('content-factory.ai.roles'),
             'agentToken' => AgentController::token(), 'agent' => $agent, 'tg' => $tc,
             'serverUrl' => url('/'),
+            'isLocal' => is_file(rtrim((string) $lab, '/').'/_system/agent/agent.py'),
+            'remote' => (array) Setting::get('remote_server', [], $this->ws()),
         ]);
     }
 
@@ -46,6 +48,32 @@ class SettingsController extends Controller
         Setting::put('last_sync', ['at' => now()->toIso8601String(), 'log' => $log], $this->ws());
 
         return back()->with('success', 'همگام‌سازی انجام شد: '.implode(' · ', $log));
+    }
+
+    /** نصب ایجنت دائمی (LaunchAgent) روی همین مک — فقط وقتی داشبورد روی مک اجرا می‌شود. */
+    public function agentInstall(Request $request)
+    {
+        $d = $request->validate(['online_url' => 'nullable|url|max:200', 'online_token' => 'nullable|string|max:120']);
+        $lab = rtrim((string) config('content-factory.lab_path'), '/');
+        $agent = $lab.'/_system/agent/agent.py';
+        if (! is_file($agent) || ! function_exists('exec')) {
+            return back()->with('warning', 'این دکمه فقط روی داشبورد لوکالِ مک کار می‌کند (پوشه‌ی content-lab اینجا نیست).');
+        }
+        Setting::put('remote_server', ['url' => $d['online_url'] ?? null, 'token' => $d['online_token'] ?? null], $this->ws());
+        $python = (string) config('content-factory.runner.python', 'python3');
+        $path = implode(':', (array) config('content-factory.runner.extra_paths', [])).':'.getenv('PATH');
+        $args = ' --install --server '.escapeshellarg(rtrim((string) config('content-factory.runner.local_url', config('app.url')), '/')).' --token '.escapeshellarg(AgentController::token());
+        if (! empty($d['online_url']) && ! empty($d['online_token'])) {
+            $args .= ' --server '.escapeshellarg(rtrim($d['online_url'], '/')).' --token '.escapeshellarg($d['online_token']);
+        }
+        $out = [];
+        @exec('PATH='.escapeshellarg($path).' '.escapeshellcmd($python).' '.escapeshellarg($agent).$args.' 2>&1', $out, $code);
+        $res = json_decode((string) end($out), true);
+        if ($code === 0 && ($res['ok'] ?? false)) {
+            return back()->with('success', 'ایجنت دائمی نصب و روشن شد؛ از این به بعد با روشن شدن مک خودکار اجرا می‌شود.');
+        }
+
+        return back()->with('error', 'نصب ایجنت ناموفق: '.mb_substr(implode(' ', $out), -400));
     }
 
     public function agentToken()

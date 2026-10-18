@@ -15,6 +15,8 @@ class Job extends Model
         'ingest_music' => 'تحلیل موزیک‌های پوشه‌ی مک',
         'render' => 'ساخت ویدیو، کاور و استوری',
         'sync_files' => 'همگام‌سازی فایل‌ها',
+        'doctor' => 'بررسی ابزارهای مک',
+        'ai_write' => 'نوشتن سناریو با Claude Code',
     ];
     public const STATUSES = ['queued' => 'در صف', 'running' => 'در حال اجرا', 'done' => 'انجام شد', 'failed' => 'خطا', 'cancelled' => 'لغو شد'];
 

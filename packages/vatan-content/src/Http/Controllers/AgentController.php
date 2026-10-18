@@ -90,8 +90,18 @@ class AgentController extends Controller
         if ($r->filled('log')) {
             $job->appendLog((string) $r->input('log'));
         }
+        if ($ok && $job->type === 'ai_write') {
+            $item = \Vatan\Content\Models\CalendarItem::find($job->payload['item_id'] ?? 0);
+            $applied = $item ? app(\Vatan\Content\Services\MasterPrompt::class)->apply($item, (string) ($r->input('result.text') ?? '')) : null;
+            $job->message = $applied ? 'Claude Code نوشت: '.$applied : 'خروجی Claude Code قابل استفاده نبود';
+            $job->status = $applied ? 'done' : 'failed';
+            $job->result = ['applied' => (bool) $applied, 'chars' => mb_strlen((string) $r->input('result.text'))];
+            $job->save();
+
+            return ['ok' => true];
+        }
         $job->save();
-        if (! $ok && $job->production_id) {
+        if (! $ok && $job->production_id && $job->type === 'render') {
             Production::whereKey($job->production_id)->update(['status' => 'queued']);
         }
 
@@ -193,6 +203,8 @@ class AgentController extends Controller
             'video_path' => $files['video'] ?? null, 'cover_path' => $files['cover'] ?? ($files['slides'][0] ?? null),
             'stories' => $files['stories'] ?? [], 'slides' => $files['slides'] ?? [], 'duration' => $r->input('duration'),
             'notes' => $r->input('notes'), 'qc' => $r->input('qc'), 'status' => 'review',
+            'build_seconds' => $r->integer('build_seconds') ?: null,
+            'build_prompt' => data_get($production->jobs()->where('type', 'render')->first(), 'payload.prompt') ?? $production->build_prompt,
         ]);
         $production->update(['current_version' => $v, 'cover_path' => $pv->cover_path, 'status' => 'review',
             'build_seconds' => $r->integer('build_seconds') ?: $production->build_seconds]);

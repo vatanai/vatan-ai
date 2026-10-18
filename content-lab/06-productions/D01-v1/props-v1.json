@@ -1,0 +1,11 @@
+{"music":"media/1109eeeae0bb32a48c346563489be4df_t4-8369a6.m4a","musicVolume":0.85,"scenes":[
+{"type":"text","kicker":"عکس محصولت رو","text":"با موبایل گرفتی؟","hl":["موبایل"],"bg":"dark","dur":45},
+{"type":"text","kicker":"مشتری توی اسکرول","text":"فقط یه لحظه نگاه می‌کنه","hl":["لحظه"],"bg":"light","dur":45,"size":124},
+{"type":"text","kicker":"اگه عکست","text":"اون لحظه رو نگیره…","hl":["نگیره…"],"bg":"dark","dur":45},
+{"type":"card","image":"media/d01.webp","tag":"طلا و جواهر","text":"با وطن عکس تبلیغاتی بساز","hl":["وطن"],"bg":"dark","dur":34},
+{"type":"card","image":"media/d02.webp","tag":"آرایشی و مراقبتی","bg":"light","dur":30},
+{"type":"card","image":"media/d05.webp","tag":"زیورآلات","bg":"dark","dur":30},
+{"type":"card","image":"media/d12.webp","tag":"اکسسوری","bg":"light","dur":30},
+{"type":"text","lines":["بدون عکاس","بدون استودیو","در چند ثانیه"],"text":"","hl":["ثانیه"],"bg":"green","dur":51,"size":120},
+{"type":"cta","text":"اولین عکس محصولت مهمون وطن","sub":"لینک در بایو","dur":80}
+]}

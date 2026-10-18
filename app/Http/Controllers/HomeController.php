@@ -97,6 +97,18 @@ class HomeController extends Controller
             ]);
         }
 
+        // جست‌وجوی «کارکتر شیت» هم باید به لندینگ همان محصول وصل شود (نام محصول‌ها این عبارت را ندارد).
+        $characterTerm = str_replace("\u{0643}", "\u{06A9}", $normalizedTerm);
+        if (str_contains($characterTerm, 'کارکتر') || str_contains($characterTerm, 'کاراکتر') || str_contains($characterTerm, 'character')) {
+            $products->prepend([
+                'name' => 'کارکتر شیت؛ یکبار خودتو بساز',
+                'meta' => 'راهنمای کامل + نمونه‌های آماده',
+                'image' => asset('assets/img/moody-portrait-of-a-young-man-with-a-black-horse-on-a-ranch-ai-photo-editing-prompt.avif'),
+                'url' => route('landing.character-sheet'),
+                'kind' => 'landing',
+            ]);
+        }
+
         return response()->json([
             'items' => $products,
             'all_results_url' => route('products.index', ['search' => $term]),

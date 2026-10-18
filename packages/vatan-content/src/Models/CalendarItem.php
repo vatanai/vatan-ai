@@ -8,7 +8,7 @@ class CalendarItem extends Model
 {
     protected $table = 'cf_calendar_items';
     protected $guarded = ['id'];
-    protected $casts = ['stories' => 'array', 'result' => 'array', 'publish_date' => 'date', 'scenes' => 'array', 'story_specs' => 'array', 'keywords' => 'array', 'ai_plan' => 'array', 'assets' => 'array'];
+    protected $casts = ['stories' => 'array', 'result' => 'array', 'publish_date' => 'date', 'scenes' => 'array', 'story_specs' => 'array', 'keywords' => 'array', 'ai_plan' => 'array', 'assets' => 'array', 'build_prompt' => 'array'];
 
     public function calendar() { return $this->belongsTo(Calendar::class, 'calendar_id'); }
     public function production() { return $this->hasOne(Production::class, 'calendar_item_id'); }

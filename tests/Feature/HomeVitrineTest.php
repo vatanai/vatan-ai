@@ -111,7 +111,7 @@ class HomeVitrineTest extends TestCase
         $html = $this->get('/app/home')->assertOk()->getContent();
 
         $this->assertStringContainsString('تیتر هیرو ویترین', $html);
-        $this->assertLessThan(strpos($html, 'id="home-search-form"'), strpos($html, 'تیتر هیرو ویترین'), 'هیرو باید قبل از جست‌وجو باشد');
+        $this->assertLessThan(strpos($html, 'class="hsv-hero-line"'), strpos($html, 'تیتر هیرو ویترین'), 'هیرو باید قبل از جست‌وجو باشد');
         $this->assertStringNotContainsString('home-greeting-title', $html);
         $this->assertStringContainsString('طلا و جواهر', $html);
         $this->assertStringContainsString('class="vt-tabbar"', $html);

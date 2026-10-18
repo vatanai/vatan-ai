@@ -13,8 +13,8 @@ class Nav
     {
         return [
             ['cf.overview', 'fa-gauge-high', 'فرماندهی', 'cf.overview'],
-            ['cf.calendar', 'fa-calendar-days', 'تقویم محتوایی', 'cf.calendar*'],
-            ['cf.productions', 'fa-clapperboard', 'تولید و صف تأیید', 'cf.productions*'],
+            ['cf.calendar', 'fa-calendar-days', 'تقویم محتوایی', 'cf.calendar*|cf.item*'],
+            ['cf.productions', 'fa-clapperboard', 'صف ساخت و انتشار', 'cf.productions*'],
             ['cf.styles', 'fa-swatchbook', 'بانک سبک‌ها', 'cf.styles*'],
             ['cf.music', 'fa-music', 'کتابخانه‌ی موسیقی', 'cf.music*'],
             ['cf.prompts', 'fa-flask', 'آزمایشگاه پرامپت', 'cf.prompts*'],

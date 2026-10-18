@@ -73,9 +73,11 @@ class Builder
     {
         $p = $this->production($item);
         $cap = $this->caption($item, $p, $regenCaption);
+        $compiled = app(MasterPrompt::class)->compile($item);
+        $p->update(['build_prompt' => $compiled['text']]);
         $job = Job::create([
             'workspace_id' => $item->workspace_id, 'type' => 'render', 'location' => $item->build_location ?: 'mac', 'status' => 'queued',
-            'production_id' => $p->id, 'payload' => $this->spec($item, $p), 'created_by' => $by,
+            'production_id' => $p->id, 'payload' => $this->spec($item, $p) + ['prompt' => $compiled['text']], 'created_by' => $by,
             'message' => 'کپشن: '.['ai' => 'نوشته‌شده با کلاد', 'calendar' => 'متن آماده‌ی تقویم', 'existing' => 'قبلی'][$cap['source']],
         ]);
         $p->update(['status' => 'rendering']);

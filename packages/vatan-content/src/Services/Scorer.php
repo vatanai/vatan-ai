@@ -5,44 +5,136 @@ namespace Vatan\Content\Services;
 use Vatan\Content\Models\Production;
 
 /**
- * امتیاز چندلایه‌ی هر محتوا (۰ تا ۱۰۰) نسبت به میانگین پست‌های خود پیج:
- * توجه (دسترسی) · تعامل (ذخیره، اشتراک، کامنت) · کسب‌وکار (دایرکت/جریان کامنت) · اقتصادی (هزینه به نتیجه).
- * با کمتر از ۵ پست مقایسه، اطمینان «کم» و با کمتر از ۲۴ ساعت «نامشخص» است.
+ * امتیازدهی نسبی هر محتوا (۰ تا ۱۰۰) در برابر پست‌های هم‌قالب و هم‌بازه‌ی خود پیج.
+ * مقایسه‌ی برداشت‌های ۱۰ دقیقه‌ای با ۲۸ روزه ممنوع است؛ داده‌ی ناقص هم صفر فرض نمی‌شود.
  */
 class Scorer
 {
     public function score(Production $p): ?array
     {
-        $snap = $p->snapshots()->get()->sortByDesc(fn ($s) => array_search($s->window, array_keys(config('content-factory.metric_windows')), true))->first();
+        if ($p->status !== 'published' || ! $p->published_at) {
+            return null;
+        }
+
+        $windows = config('content-factory.metric_windows', []);
+        $rank = array_flip(array_keys($windows));
+        $snapshots = $p->snapshots()->get()->filter(fn ($s) => isset($rank[$s->window]))
+            ->sortByDesc(fn ($s) => $rank[$s->window]);
+        $snap = $snapshots->first();
         if (! $snap) {
             return null;
         }
-        $m = $snap->metrics ?? [];
-        $peers = Production::where('workspace_id', $p->workspace_id)->where('status', 'published')->where('id', '!=', $p->id)->with('snapshots')->get()
-            ->map(fn ($x) => optional($x->snapshots->sortByDesc('captured_at')->first())->metrics)->filter();
-        $base = fn (string $k, float $d) => max($d, (float) ($peers->avg($k) ?: $d));
-        $rel = fn (?float $v, float $b) => $v === null ? null : max(0, min(100, round(50 * $v / $b)));
-        $eng = ($m['saves'] ?? 0) * 3 + ($m['shares'] ?? 0) * 4 + ($m['comments'] ?? 0) * 2 + ($m['likes'] ?? 0);
-        $peerEng = $peers->avg(fn ($x) => ($x['saves'] ?? 0) * 3 + ($x['shares'] ?? 0) * 4 + ($x['comments'] ?? 0) * 2 + ($x['likes'] ?? 0)) ?: 20;
-        $scores = [
-            'attention' => $rel(isset($m['reach']) ? (float) $m['reach'] : null, $base('reach', 300)),
-            'engagement' => $rel((float) $eng, (float) $peerEng),
-            'business' => array_key_exists('dm_flows', $m) && $m['dm_flows'] !== null ? $rel((float) $m['dm_flows'], $base('dm_flows', 3)) : null,
-            'economic' => null,
+
+        // فقط پست‌هایی وارد گروه مقایسه می‌شوند که همان قالب و همان پنجره‌ی برداشت را دارند.
+        $peers = Production::where('workspace_id', $p->workspace_id)
+            ->where('status', 'published')
+            ->where('id', '!=', $p->id)
+            ->where('format', $p->format)
+            ->where('published_at', '>=', now()->subDays(90))
+            ->with(['snapshots' => fn ($q) => $q->where('window', $snap->window)])
+            ->get()
+            ->map(function ($peer) {
+                return ['production' => $peer, 'metrics' => $peer->snapshots->first()?->metrics ?? []];
+            })
+            ->filter(fn ($peer) => ! empty($peer['metrics']))
+            ->values();
+
+        $m = (array) ($snap->metrics ?? []);
+        $reach = $this->positive($m['reach'] ?? null);
+        $weightedEngagement = $this->weightedEngagement($m);
+        $perThousand = fn (?float $value) => $value !== null && $reach ? $value * 1000 / $reach : null;
+
+        $dimensions = [
+            'attention' => ['value' => $this->positive($m['reach'] ?? null), 'peer' => fn ($x) => $this->positive($x['reach'] ?? null)],
+            'engagement' => ['value' => $perThousand($weightedEngagement), 'peer' => function ($x) {
+                $r = $this->positive($x['reach'] ?? null);
+                $e = $this->weightedEngagement($x);
+
+                return $r && $e !== null ? $e * 1000 / $r : null;
+            }],
+            'business' => ['value' => $perThousand($this->positive($m['dm_flows'] ?? null)), 'peer' => function ($x) {
+                $r = $this->positive($x['reach'] ?? null);
+                $d = $this->positive($x['dm_flows'] ?? null);
+
+                return $r && $d !== null ? $d * 1000 / $r : null;
+            }],
+            'economic' => ['value' => $this->economicEfficiency($weightedEngagement, (float) $p->cost_usd), 'peer' => function ($x, $peer) {
+                return $this->economicEfficiency($this->weightedEngagement($x), (float) $peer->production->cost_usd);
+            }],
         ];
-        if ($p->cost_usd > 0 && $scores['engagement'] !== null) {
-            $scores['economic'] = max(0, min(100, round($scores['engagement'] / max(0.2, (float) $p->cost_usd * 4))));
-        } elseif ((float) $p->cost_usd == 0.0) {
-            $scores['economic'] = $scores['engagement'];
+
+        $scores = [];
+        foreach ($dimensions as $key => $dimension) {
+            $value = $dimension['value'];
+            $benchmarks = $peers->map(fn ($peer) => $dimension['peer']($peer['metrics'], $peer))
+                ->filter(fn ($v) => $v !== null && $v > 0)->values()->all();
+            $baseline = $this->median($benchmarks);
+            $scores[$key] = $value !== null && $baseline !== null
+                ? max(0, min(100, round(50 * $value / $baseline)))
+                : null;
         }
-        $vals = array_filter($scores, fn ($v) => $v !== null);
-        $w = ['attention' => 0.3, 'engagement' => 0.35, 'business' => 0.25, 'economic' => 0.1];
-        $tw = array_sum(array_intersect_key($w, $vals));
-        $total = $tw ? round(array_sum(array_map(fn ($k) => $vals[$k] * $w[$k], array_keys($vals))) / $tw, 1) : null;
-        $age = $p->published_at ? $p->published_at->diffInHours(now()) : 0;
-        $conf = $age < 24 ? 'نامشخص' : ($peers->count() < 5 ? 'کم' : ($peers->count() < 15 ? 'متوسط' : 'زیاد'));
-        $p->update(['scores' => $scores + ['window' => $snap->window, 'peers' => $peers->count()], 'score_total' => $total, 'score_confidence' => $conf, 'scored_at' => now()]);
+
+        $weights = ['attention' => 0.30, 'engagement' => 0.35, 'business' => 0.25, 'economic' => 0.10];
+        $available = array_filter($scores, fn ($value) => $value !== null);
+        $weight = array_sum(array_intersect_key($weights, $available));
+        $total = $weight > 0
+            ? round(array_sum(array_map(fn ($key) => $available[$key] * $weights[$key], array_keys($available))) / $weight, 1)
+            : null;
+
+        $ageHours = $p->published_at->diffInHours(now());
+        $confidence = $ageHours < 24 ? 'نامشخص' : ($peers->count() < 5 ? 'کم' : ($peers->count() < 15 ? 'متوسط' : 'زیاد'));
+        $scores += [
+            'window' => $snap->window,
+            'format' => $p->format,
+            'peers' => $peers->count(),
+            'basis' => 'قالب و بازه‌ی یکسان؛ تعامل و دایرکت به‌ازای هر ۱۰۰۰ دسترسی',
+        ];
+
+        $p->update([
+            'scores' => $scores,
+            'score_total' => $total,
+            'score_confidence' => $confidence,
+            'scored_at' => now(),
+        ]);
 
         return $scores;
+    }
+
+    private function positive(mixed $value): ?float
+    {
+        return is_numeric($value) && (float) $value >= 0 ? (float) $value : null;
+    }
+
+    private function weightedEngagement(array $metrics): ?float
+    {
+        $weights = ['saves' => 3, 'shares' => 4, 'comments' => 2, 'likes' => 1];
+        $hasValue = false;
+        $total = 0.0;
+        foreach ($weights as $key => $weight) {
+            if (array_key_exists($key, $metrics) && $metrics[$key] !== null && is_numeric($metrics[$key])) {
+                $total += max(0, (float) $metrics[$key]) * $weight;
+                $hasValue = true;
+            }
+        }
+
+        return $hasValue ? $total : null;
+    }
+
+    private function economicEfficiency(?float $engagement, float $cost): ?float
+    {
+        return $engagement !== null && $cost > 0 ? $engagement / $cost : null;
+    }
+
+    private function median(array $values): ?float
+    {
+        if (! $values) {
+            return null;
+        }
+        sort($values, SORT_NUMERIC);
+        $middle = intdiv(count($values), 2);
+
+        return count($values) % 2
+            ? (float) $values[$middle]
+            : ((float) $values[$middle - 1] + (float) $values[$middle]) / 2;
     }
 }

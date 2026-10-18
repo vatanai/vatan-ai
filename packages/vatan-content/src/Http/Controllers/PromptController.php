@@ -12,7 +12,7 @@ class PromptController extends Controller
         'product' => 'شناخت محصول', 'fidelity' => 'وفاداری محصول و لوگو', 'style' => 'انتخاب سبک', 'hook' => 'ساخت هوک',
         'scenario' => 'ساخت سناریو', 'motion' => 'انتخاب حرکت', 'music' => 'پیشنهاد موسیقی', 'caption' => 'ساخت کپشن',
         'cta' => 'دعوت به اقدام', 'qc' => 'کنترل کیفیت', 'analysis' => 'تحلیل عملکرد', 'experiment' => 'پیشنهاد آزمایش بعدی',
-        'calendar' => 'تقویم محتوایی', 'story' => 'استوری‌های همراه پست', 'visual' => 'تصویر و کلیپ هوش مصنوعی',
+        'calendar' => 'تقویم محتوایی', 'story' => 'استوری‌های همراه پست', 'visual' => 'تصویر و کلیپ هوش مصنوعی', 'master' => 'پرامپت جامع ساخت پست',
     ];
 
     public const HELP = [
@@ -31,25 +31,77 @@ class PromptController extends Controller
         'calendar' => 'ساخت تقویم ماهانه از پرسش‌نامه و عملکرد ماه قبل.',
         'story' => 'طراحی ۱ تا ۳ استوری مخصوص هر پست.',
         'visual' => 'پرامپت تصویر/کلیپ برای مدل‌های تصویری و ویدیویی (fal).',
+        'master' => 'قالب کامل دستور ساخت هر پست؛ بخش‌ها با «## عنوان» جدا می‌شوند. هر پست در صفحه‌ی خودش نسخه‌ی شخصی این قالب را دارد (ویرایش، حذف و افزودن بخش). صحنه‌ها، استوری و کپشن با همین پرامپت نوشته می‌شوند و پرامپت نهایی کنار هر نسخه‌ی ساخته‌شده ذخیره می‌شود.',
     ];
+
+    /** لایه‌های پایه + لایه‌های افزوده‌ی ادمین */
+    public static function layers(int $ws): array
+    {
+        $custom = (array) \Vatan\Content\Models\Setting::get('custom_layers', [], $ws);
+
+        return self::LAYERS + collect($custom)->mapWithKeys(fn ($v, $k) => [$k => $v['title'] ?? $k])->all();
+    }
+
+    public function addLayer(Request $request)
+    {
+        $d = $request->validate(['key' => 'required|regex:/^[a-z][a-z0-9_]{1,30}$/', 'title' => 'required|string|max:80', 'help' => 'nullable|string|max:500']);
+        abort_if(isset(self::layers($this->ws())[$d['key']]), 422, 'این شناسه قبلاً هست.');
+        $custom = (array) \Vatan\Content\Models\Setting::get('custom_layers', [], $this->ws());
+        $custom[$d['key']] = ['title' => $d['title'], 'help' => $d['help'] ?? null];
+        \Vatan\Content\Models\Setting::put('custom_layers', $custom, $this->ws());
+
+        return redirect()->route('cf.prompts', ['layer' => $d['key']])->with('success', 'لایه‌ی «'.$d['title'].'» ساخته شد؛ متنش را بنویسید و فعال کنید.');
+    }
+
+    public function deleteLayer(string $layer)
+    {
+        abort_if(isset(self::LAYERS[$layer]), 422, 'لایه‌های پایه حذف نمی‌شوند؛ می‌توانید نسخه‌هایشان را حذف یا عوض کنید.');
+        $custom = (array) \Vatan\Content\Models\Setting::get('custom_layers', [], $this->ws());
+        unset($custom[$layer]);
+        \Vatan\Content\Models\Setting::put('custom_layers', $custom, $this->ws());
+        PromptVersion::where('workspace_id', $this->ws())->where('layer', $layer)->delete();
+
+        return redirect()->route('cf.prompts')->with('success', 'لایه حذف شد.');
+    }
+
+    public function destroy(PromptVersion $prompt)
+    {
+        abort_unless($prompt->workspace_id === $this->ws(), 404);
+        if ($prompt->status === 'active') {
+            return back()->with('warning', 'نسخه‌ی فعال حذف نمی‌شود؛ اول نسخه‌ی دیگری را فعال کنید.');
+        }
+        $layer = $prompt->layer;
+        $prompt->delete();
+
+        return redirect()->route('cf.prompts', ['layer' => $layer])->with('success', 'نسخه حذف شد.');
+    }
 
     public function index(Request $request)
     {
         $all = PromptVersion::where('workspace_id', $this->ws())->orderBy('layer')->orderByDesc('version')->get()->groupBy('layer');
 
+        $custom = (array) \Vatan\Content\Models\Setting::get('custom_layers', [], $this->ws());
+
         return view('cf::prompts.index', [
-            'cfTitle' => 'آزمایشگاه پرامپت', 'cfIcon' => 'fa-flask', 'cfHelp' => 'prompts', 'help' => self::HELP, 'testResult' => session('cf_test'),
+            'cfTitle' => 'آزمایشگاه پرامپت', 'cfIcon' => 'fa-flask', 'cfHelp' => 'prompts', 'testResult' => session('cf_test'),
+            'help' => self::HELP + collect($custom)->map(fn ($v) => $v['help'] ?? 'لایه‌ی افزوده‌ی ادمین.')->all(), 'custom' => array_keys($custom),
             'cfSubtitle' => 'پرامپت‌ها لایه‌لایه و نسخه‌دار هستند. هیچ تغییری بدون تأیید شما فعال نمی‌شود.',
-            'layers' => self::LAYERS, 'prompts' => $all, 'selected' => $request->get('layer', 'scenario'),
+            'layers' => self::layers($this->ws()), 'prompts' => $all, 'selected' => $request->get('layer', 'master'),
         ]);
     }
 
     public function store(Request $request)
     {
-        $d = $request->validate(['layer' => 'required|in:'.implode(',', array_keys(self::LAYERS)), 'body' => 'required|string', 'notes' => 'nullable|string|max:2000']);
+        $layers = self::layers($this->ws());
+        $d = $request->validate(['layer' => 'required|in:'.implode(',', array_keys($layers)), 'body' => 'required|string', 'notes' => 'nullable|string|max:2000', 'activate' => 'nullable|boolean']);
+        $activate = (bool) ($d['activate'] ?? false);
+        unset($d['activate']);
         $prev = PromptVersion::where('workspace_id', $this->ws())->where('layer', $d['layer'])->orderByDesc('version')->first();
-        PromptVersion::create($d + ['workspace_id' => $this->ws(), 'title' => self::LAYERS[$d['layer']], 'version' => ($prev->version ?? 0) + 1,
+        $pv = PromptVersion::create($d + ['workspace_id' => $this->ws(), 'title' => $layers[$d['layer']], 'version' => ($prev->version ?? 0) + 1,
             'status' => 'draft', 'parent_id' => $prev?->id, 'editor' => $this->adminName()]);
+        if ($activate) {
+            return $this->activate($pv);
+        }
 
         return redirect()->route('cf.prompts', ['layer' => $d['layer']])->with('success', 'پیش‌نویس جدید ذخیره شد.');
     }

@@ -10,19 +10,60 @@ class ProductionController extends Controller
 {
     public function index(Request $request)
     {
-        $ws = $this->ws();
-        $q = Production::where('workspace_id', $ws)->with(['item', 'latestVersion']);
-        if ($request->filled('status')) {
-            $q->where('status', $request->status);
-        }
-        $productions = $q->get()->sortBy(fn ($p) => $p->item?->publish_date?->timestamp ?? PHP_INT_MAX)->values();
-        $counts = Production::where('workspace_id', $ws)->selectRaw('status, count(*) c')->groupBy('status')->pluck('c', 'status');
-
         return view('cf::productions.index', [
-            'cfTitle' => 'کارخانه‌ی تولید و صف تأیید', 'cfIcon' => 'fa-clapperboard', 'cfHelp' => 'productions',
-            'cfSubtitle' => 'هر آیتم تأییدشده‌ی تقویم اینجا ساخته، بازبینی، اصلاح و برای انتشار آماده می‌شود.',
-            'productions' => $productions, 'counts' => $counts, 'status' => $request->status,
+            'cfTitle' => 'صف ساخت و انتشار', 'cfIcon' => 'fa-clapperboard', 'cfHelp' => 'queue',
+            'cfSubtitle' => 'همه‌ی پست‌های تقویم، وضعیت ساخت روی مک، نسخه‌ها، هزینه، انتشار و آمار — زنده.',
+            'rows' => $this->rows(), 'status' => $request->get('status'),
         ]);
+    }
+
+    public function feed()
+    {
+        return ['rows' => $this->rows(), 'agent' => JobController::agentOnline(), 'at' => \Vatan\Content\Support\Fa::digits(now(config('content-factory.host.timezone'))->format('H:i:s'))];
+    }
+
+    /** ردیف‌های صف: هر پست تقویم فعال + تولیدهای بی‌ردیف */
+    private function rows(): array
+    {
+        $ws = $this->ws();
+        $disk = \Illuminate\Support\Facades\Storage::disk(config('content-factory.disk', 'public'));
+        $cal = \Vatan\Content\Models\Calendar::where('workspace_id', $ws)->orderByRaw("status = 'approved' desc")->latest('id')->first();
+        $items = $cal ? $cal->items()->with(['production.latestVersion', 'production.snapshots', 'styleModel', 'musicTrack'])->orderBy('publish_date')->get() : collect();
+        $prodIds = $items->pluck('production.id')->filter()->all();
+        $jobs = \Vatan\Content\Models\Job::where('workspace_id', $ws)->whereIn('production_id', $prodIds)->whereIn('type', ['render'])->latest('id')->get()->groupBy('production_id');
+        $F = \Vatan\Content\Support\Fa::class;
+        $today = now(config('content-factory.host.timezone'))->toDateString();
+
+        return $items->map(function ($i) use ($disk, $jobs, $F, $today) {
+            $p = $i->production;
+            $j = $p ? optional($jobs->get($p->id))->first() : null;
+            $v = $p?->latestVersion;
+            $snap = $p ? $p->snapshots->sortByDesc('captured_at')->first() : null;
+            $m = (array) ($snap->metrics ?? []);
+            $st = $p->status ?? 'planned';
+            if ($j && in_array($j->status, ['queued', 'running'], true)) {
+                $st = $j->status === 'running' ? 'rendering' : 'queued';
+            } elseif ($j && $j->status === 'failed' && in_array($p->status, ['queued', 'rendering'], true)) {
+                $st = 'failed';
+            }
+            $labels = config('content-factory.labels.production_status') + ['planned' => 'در تقویم', 'failed' => 'ناموفق'];
+
+            return [
+                'id' => $i->id, 'code' => $F::digits($i->code), 'date' => $F::date($i->publish_date, false, true), 'weekday' => $F::weekday($i->publish_date),
+                'time' => $F::digits($i->publish_time), 'iso' => $i->publish_date?->toDateString(), 'past' => $i->publish_date?->toDateString() < $today,
+                'format' => $i->format, 'hook' => (string) $i->hook, 'product' => (string) $i->product_label, 'style' => $i->styleModel->name_fa ?? $i->style,
+                'music' => $i->musicTrack ? trim(($i->musicTrack->mood ?: 'موزیک #'.$i->musicTrack->id).($i->musicTrack->tempo_bpm ? ' · '.$F::n($i->musicTrack->tempo_bpm).' BPM' : '')) : 'انتخاب خودکار', 'stories' => count((array) $i->story_specs), 'scenes' => count((array) $i->scenes),
+                'rejected' => $i->approval_status === 'rejected', 'status' => $st, 'status_fa' => $labels[$st] ?? $st,
+                'version' => $p?->current_version ?: 0, 'cover' => ($v?->cover_path ?? $p?->cover_path) ? $disk->url($v?->cover_path ?? $p->cover_path) : null,
+                'video' => $v?->video_path ? $disk->url($v->video_path) : null,
+                'job' => $j ? ['status' => $j->status, 'progress' => $j->progress, 'message' => $j->message, 'agent' => $j->agent, 'at' => $F::digits($j->updated_at?->locale('fa')->diffForHumans())] : null,
+                'location' => $i->build_location === 'server' ? 'سرور' : 'مک', 'seconds' => $p?->build_seconds, 'cost' => $p ? round((float) $p->cost_usd, 3) : 0,
+                'published' => $p?->published_at ? $F::date($p->published_at, false, true) : null, 'permalink' => $p?->ig_permalink,
+                'reach' => $m['reach'] ?? $m['views'] ?? null, 'likes' => $m['likes'] ?? null, 'saves' => $m['saves'] ?? null, 'comments' => $m['comments'] ?? null,
+                'score' => $p?->score_total !== null && $p ? (float) $p->score_total : null, 'window' => $snap?->window,
+                'url' => route('cf.item', $i), 'prod_url' => $p ? route('cf.productions.show', $p) : null, 'build_url' => route('cf.item.build', $i),
+            ];
+        })->values()->all();
     }
 
     public function show(Production $production)

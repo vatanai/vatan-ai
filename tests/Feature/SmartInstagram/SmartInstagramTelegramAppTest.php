@@ -211,6 +211,28 @@ class SmartInstagramTelegramAppTest extends TestCase
         $this->assertDatabaseMissing('instagram_telegram_admins', ['telegram_id' => 1234567]);
     }
 
+    public function test_notify_window_checks_every_5_minutes_inside_and_hourly_outside(): void
+    {
+        $bot = app(InstagramTelegramBot::class);
+        $this->assertSame(['start' => '11:00', 'end' => '01:00'], $bot->notifyWindow());
+        $at = fn (string $hm) => \Illuminate\Support\Carbon::parse('2026-10-14 '.$hm, 'Asia/Tehran');
+
+        $this->assertTrue($bot->shouldCheckNow($at('11:35')));
+        $this->assertTrue($bot->shouldCheckNow($at('00:40')), 'عبور از نیمه‌شب');
+        $this->assertFalse($bot->shouldCheckNow($at('03:35')));
+        $this->assertTrue($bot->shouldCheckNow($at('03:00')), 'تور ایمنی ساعتی');
+
+        $this->actingAs($this->leader(), 'admin');
+        $this->post(route('admin.smart-instagram.connections.telegram.schedule'), ['notify_start' => '23:00', 'notify_end' => '01:00'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(['start' => '23:00', 'end' => '01:00'], $bot->notifyWindow());
+        $this->assertFalse($bot->shouldCheckNow($at('11:35')));
+        $this->get(route('admin.smart-instagram.connections'))->assertOk()->assertSee('ساعت انتشار پست')->assertSee('value="23:00"', false);
+
+        TelegramAdmin::query()->delete();
+        $bot->forgetMembersCache();
+        $this->assertFalse($bot->shouldCheckNow($at('23:30')), 'بدون عضو، هیچ بررسی‌ای');
+    }
+
     public function test_unknown_user_gets_private_bot_message(): void
     {
         $this->postJson('/webhooks/telegram/instagram', ['message' => ['chat' => ['id' => 42, 'type' => 'private'], 'from' => ['id' => 42], 'text' => '/start']], ['X-Telegram-Bot-Api-Secret-Token' => app(InstagramTelegramBot::class)->webhookSecret()])->assertOk();

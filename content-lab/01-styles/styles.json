@@ -1,0 +1,340 @@
+{
+ "version": "v1",
+ "status": "pending_review",
+ "styles": [
+  {
+   "slug": "editorial-brand-story",
+   "name_fa": "داستان برند ادیتوریال",
+   "name_en": "Editorial Brand Story",
+   "desc": "پس‌زمینه‌ی خاکستری روشن با گرید محو، ترکیب فونت سریف ایتالیک و سنس ضخیم، محصول دوربُری‌شده‌ی سه‌بعدی وسط کادر، المان‌های پرنده (اسکناس، تاج) و خط منحنی. روایت «اونا X نمی‌فروختن، Y می‌فروختن».",
+   "goals": [
+    "آگاهی",
+    "اعتماد",
+    "ذخیره"
+   ],
+   "sectors": [
+    "همه",
+    "جواهر",
+    "آرایشی",
+    "پوشاک"
+   ],
+   "duration": "10-18s",
+   "aspect": "9:16",
+   "shots": "4-8",
+   "motion": "زوم آرام + ورود کلمه‌به‌کلمه + المان پرنده",
+   "text": "دو خط: سریف ایتالیک کم‌رنگ + سنس پررنگ",
+   "hook_family": "روایت برند / راز موفقیت",
+   "cta_family": "ذخیره کن / لینک بایو",
+   "music": "ملایم-کینماتیک، ۸۰ تا ۱۱۰ BPM",
+   "engine": "Remotion (بدون هزینه‌ی API) + عکس محصول وطن",
+   "refs": [
+    "058619437763d4d2f938c98d82b45863_720w",
+    "2npc9ftpdsch5uujszys",
+    "ctoyf6vuq9q0yxg204s7",
+    "t8s7m1hdhcty3fnmjr79",
+    "67b0c4e3aed4e86abf65507e2eab40b0_720w",
+    "ol7urqme15h3vuvr0gwk"
+   ],
+   "template": "editorial",
+   "recipe": [
+    "کیکر نازک بالا + پانچ درشت با یک کلمه‌ی هایلایت",
+    "کارت محصول روی زمینه‌ی روشن با خط منحنی",
+    "عدد یا آمار بزرگ",
+    "نقل‌قول کوتاه",
+    "دعوت با لوگو"
+   ],
+   "sort": 1,
+   "folder": "editorial-brand-story",
+   "status": "active"
+  },
+  {
+   "slug": "contrast-punch",
+   "name_fa": "پانچ تضادی با ایموجی",
+   "name_en": "Contrast Punch",
+   "desc": "تناوب سریع صحنه‌ی تیره و روشن، کلمه‌ی کلیدی قرمز/رنگی درشت، ایموجی سه‌بعدی و آبجکت‌های نمادین (لامپ، کت‌وشلوار، میکروفون). ریتم تند، هر ۱ تا ۲ ثانیه یک جمله.",
+   "goals": [
+    "جذب",
+    "کامنت",
+    "دایرکت"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "15-40s",
+   "aspect": "9:16",
+   "shots": "10-20",
+   "motion": "کات روی بیت + پاپ کلمه",
+   "text": "یک جمله‌ی کوتاه + یک کلمه‌ی هایلایت",
+   "hook_family": "سؤال درد / مقایسه",
+   "cta_family": "کامنت کلمه‌ی کلیدی / دایرکت",
+   "music": "پرانرژی ۱۲۰ تا ۱۷۰ BPM",
+   "engine": "Remotion",
+   "refs": [
+    "9155ec81841c2e4acc20a249038e3e32_720w",
+    "AQNsS1BnnXosPLlKx_Th2c8ek16mw7y9xrsswS0FLsmw6xHh4JkVh1dJJOtIHu1"
+   ],
+   "template": "punch",
+   "recipe": [
+    "۳ جمله‌ی کوتاه با تناوب تیره/روشن",
+    "نمایش نتیجه دقیقاً روی دراپ موسیقی",
+    "۳ تا ۴ کارت محصول پشت‌سرهم",
+    "فهرست مزیت سه‌خطی روی سبز",
+    "دعوت + کلمه‌ی کامنت"
+   ],
+   "sort": 2,
+   "folder": "contrast-punch",
+   "status": "active"
+  },
+  {
+   "slug": "kinetic-type-beat",
+   "name_fa": "تایپوگرافی ضرب‌آهنگی",
+   "name_en": "Kinetic Type on Beat",
+   "desc": "فقط تایپوگرافی درشت روی پس‌زمینه‌ی تک‌رنگ که با هر ضرب عوض می‌شود (سیاه/سفید یا رنگ برند). سؤال‌های تکراری «نیاز به ...؟» و جواب «ما هستیم».",
+   "goals": [
+    "آگاهی",
+    "یادآوری برند"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "8-13s",
+   "aspect": "9:16",
+   "shots": "6-12",
+   "motion": "کات روی بیت، شمارش معکوس",
+   "text": "یک تا سه کلمه، خیلی درشت",
+   "hook_family": "سؤال پشت سؤال",
+   "cta_family": "لینک بایو",
+   "music": "بیت‌دار ۱۰۰ تا ۱۲۰ BPM",
+   "engine": "Remotion",
+   "refs": [
+    "1109eeeae0bb32a48c346563489be4df_t4",
+    "AQOBpeyOENs9CquU_J9jtqV6KKVPTHIFgPZXidmoBnyh2AJq_hZuiWfmjn1cVOz"
+   ],
+   "template": "kinetic",
+   "recipe": [
+    "یک تا سه کلمه در هر ضرب",
+    "پشت‌سرهم سؤال «نیاز به …؟»",
+    "جواب «وطن» روی زمینه‌ی لیمویی",
+    "دعوت کوتاه"
+   ],
+   "sort": 3,
+   "folder": "kinetic-type-beat",
+   "status": "active"
+  },
+  {
+   "slug": "before-after-split",
+   "name_fa": "قبل/بعد اسپلیت",
+   "name_en": "Before/After Split",
+   "desc": "دو کارت کنار هم: «قبل» کوچک و کم‌رنگ، «بعد» بزرگ و رنگی؛ یا اسپلیت بالا/پایین. نتیجه مرحله‌به‌مرحله ساخته می‌شود.",
+   "goals": [
+    "جذب",
+    "اثبات نتیجه"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "9-15s",
+   "aspect": "9:16",
+   "shots": "4-7",
+   "motion": "وایپ و ورود کارت",
+   "text": "برچسب قبل/بعد + یک خط توضیح",
+   "hook_family": "شوک نتیجه",
+   "cta_family": "رایگان امتحان کن",
+   "music": "مدرن ۹۰ تا ۱۲۰ BPM",
+   "engine": "Remotion + نمونه‌ی واقعی قبل/بعد",
+   "refs": [
+    "AQOTZJKDkIspV5n1DWLifDQ4_MLp60X6fW8sZqE7hPCA_cR2k8AMpIZDdW3i27o",
+    "AQMcSHJR7wqytLbvH63QeaznpRn4grAg29PLGBZ0wfs5SFW6uQWzQnhtS7QoRX0",
+    "AQMh4v_12fPp47mG5fsVohvr78CGQeMxX43Qe4kyP_tYVfKME22E2TerN6qGj_f"
+   ],
+   "template": "punch",
+   "recipe": [
+    "قبل با برچسب «عکس موبایل»",
+    "وایپ لیمویی به بعد",
+    "کارت‌های قبل/بعد سریع",
+    "جمله‌ی نتیجه",
+    "دعوت"
+   ],
+   "sort": 4,
+   "folder": "before-after-split",
+   "status": "active"
+  },
+  {
+   "slug": "ui-walkthrough",
+   "name_fa": "آموزش با رابط کاربری",
+   "name_en": "UI Walkthrough",
+   "desc": "اسکرین‌شات/اسکرین‌رکورد روی پس‌زمینه‌ی گرادیان یا گرم، شماره‌ی مرحله، کاراکتر ماسکات کوچک، پایان با «کلمه‌ی X رو کامنت کن».",
+   "goals": [
+    "ذخیره",
+    "کامنت",
+    "آموزش"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "25-45s",
+   "aspect": "9:16",
+   "shots": "6-10",
+   "motion": "زوم روی بخش‌های رابط",
+   "text": "تیتر مرحله + زیرنویس",
+   "hook_family": "«ببین چطور ...»",
+   "cta_family": "کامنت کلمه‌ی کلیدی",
+   "music": "آرام-مثبت",
+   "engine": "Remotion + اسکرین‌رکورد وطن",
+   "refs": [
+    "AQMV3NLW1Jo34XzaFEzrDAy_6X9yPweSZqeP_DfoK82qOo7m2fcyDqGscVzeU0y",
+    "AQNrGFhlNsjo_HW2hyl5G7wX4zHYfPloeRsYG4Eg7y_F8WMJgh1yh7519gSyyew",
+    "AQPqMA_7eVGrpdbtmcFNwVt98hYUUe6GkCGBRd_oNEMX_Vi_2Rc76nCc1OzJwjg",
+    "AQOHKqDrcCj8LpEbYD9dmM330u0LGyxKpfCWFOXa_4ky5FCxLu1VeOFshVk2KZJ"
+   ],
+   "template": "stage",
+   "recipe": [
+    "هوک «ببین چطور…»",
+    "مرحله‌ی ۱ تا ۳ با کارت",
+    "نتیجه",
+    "کامنت کلمه‌ی کلیدی"
+   ],
+   "sort": 5,
+   "folder": "ui-walkthrough",
+   "status": "testing"
+  },
+  {
+   "slug": "stage-card-showcase",
+   "name_fa": "کارت روی صحنه",
+   "name_en": "Stage Card Showcase",
+   "desc": "یک کارت عمودی بزرگ روی پایه/سکو با بنر ثابت پایین (مثلاً «کامنت کن ...») و تغییر محتوای داخل کارت. مناسب نمایش چند خروجی پشت‌سرهم.",
+   "goals": [
+    "نمایش نمونه",
+    "کامنت"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "10-15s",
+   "aspect": "9:16",
+   "shots": "5-8",
+   "motion": "تعویض محتوای کارت",
+   "text": "تیتر کوچک داخل کارت + بنر ثابت",
+   "hook_family": "نمونه‌کار",
+   "cta_family": "کامنت کلمه‌ی کلیدی",
+   "music": "کینماتیک",
+   "engine": "Remotion",
+   "refs": [
+    "AQMGmaFMshfseRr6nIjg4TqoHGtIrCpyInXeZKCTEiMQMieiteTMatfDbT5VXDp"
+   ],
+   "template": "stage",
+   "recipe": [
+    "کارت عمودی بزرگ با نمونه‌ها",
+    "بنر ثابت «کامنت کن»",
+    "تعویض نمونه‌ها روی ضرب"
+   ],
+   "sort": 6,
+   "folder": "stage-card-showcase",
+   "status": "active"
+  },
+  {
+   "slug": "persian-tech-grid",
+   "name_fa": "گرید فنی فارسی",
+   "name_en": "Persian Tech Grid",
+   "desc": "پس‌زمینه‌ی آبی تیره با گرید و نشانگرهای HUD، متن فارسی درشت با یک کلمه‌ی نارنجی، صحنه‌ی تمام‌نارنجی برای تأکید، پایان با فیلد «کلمه رو کامنت کن».",
+   "goals": [
+    "کامنت",
+    "آموزش"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "30-45s",
+   "aspect": "9:16",
+   "shots": "8-12",
+   "motion": "تایپ‌شدن متن، گلیچ ملایم",
+   "text": "فارسی محاوره‌ای",
+   "hook_family": "«اگه بهت بگم...»",
+   "cta_family": "کامنت کلمه‌ی کلیدی",
+   "music": "الکترونیک",
+   "engine": "Remotion",
+   "refs": [
+    "AQMlH7JLEvS0nLfjUVN59M3WeWU_Cl7awk1Z3sSFEfuY3BW5rgEAtDIhmmdRtGZyRwGyG2HjAEYJH"
+   ],
+   "template": "techgrid",
+   "recipe": [
+    "گرید HUD تیره با متن فارسی",
+    "صحنه‌ی تمام‌رنگ برای تأکید",
+    "پایان با فیلد کلمه‌ی کلیدی"
+   ],
+   "sort": 7,
+   "folder": "persian-tech-grid",
+   "status": "testing"
+  },
+  {
+   "slug": "tactile-desk",
+   "name_fa": "میز کار لمسی",
+   "name_en": "Tactile Desk",
+   "desc": "رومیزی کاغذی گرم با سایه‌ی برگ نخل، اشیای فیزیکی (ساعت، کیبورد قدیمی، گوشی)، متن فارسی روی کاغذ، خط‌کشی قرمز. حس دست‌ساز و صمیمی.",
+   "goals": [
+    "اعتماد",
+    "کامنت"
+   ],
+   "sectors": [
+    "همه",
+    "پوشاک",
+    "آرایشی"
+   ],
+   "duration": "30-60s",
+   "aspect": "9:16",
+   "shots": "6-10",
+   "motion": "حرکت آرام، ورود اشیا",
+   "text": "فارسی روی کاغذ",
+   "hook_family": "«اگه هنوز...»",
+   "cta_family": "کامنت کلمه‌ی کلیدی",
+   "music": "آرام-گرم",
+   "engine": "Remotion + عکس اشیا",
+   "refs": [
+    "AQObuJuXcA4az4DpdR0SvvyrlqZHsR7HzO9SXUfqT1i5c3SZ2SVMbiqQ9NqFPXFt1INwU"
+   ],
+   "template": "tactile",
+   "recipe": [
+    "زمینه‌ی کاغذی گرم",
+    "متن فارسی روی کاغذ",
+    "اشیای فیزیکی و حرکت آرام",
+    "کامنت کلمه‌ی کلیدی"
+   ],
+   "sort": 8,
+   "folder": "tactile-desk",
+   "status": "testing"
+  },
+  {
+   "slug": "site-scroll-showcase",
+   "name_fa": "نمایش اسکرول سایت",
+   "name_en": "Site Scroll Showcase",
+   "desc": "اسکرول سریع صفحات سایت/اپ با موشن‌بلور و پایان روی کارت تماس یا ثبت سفارش.",
+   "goals": [
+    "معرفی محصول",
+    "کلیک"
+   ],
+   "sectors": [
+    "همه"
+   ],
+   "duration": "20-30s",
+   "aspect": "9:16",
+   "shots": "5-8",
+   "motion": "اسکرول و بلور",
+   "text": "کم",
+   "hook_family": "معرفی",
+   "cta_family": "لینک بایو",
+   "music": "پرانرژی",
+   "engine": "Remotion + اسکرین‌شات سایت وطن",
+   "refs": [
+    "AQNGDNIHKGW5eezO9HOhkHibelXA9LtMtyujGYdnVTVkFfVjpeQopHM8l4szFcY"
+   ],
+   "template": "stage",
+   "recipe": [
+    "اسکرول صفحات سایت/اپ",
+    "کارت پایانی ثبت‌نام"
+   ],
+   "sort": 9,
+   "folder": "site-scroll-showcase",
+   "status": "testing"
+  }
+ ]
+}
