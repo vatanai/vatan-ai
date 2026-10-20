@@ -159,7 +159,19 @@ return new class extends Migration
             throw new RuntimeException('A ShootKits product is missing its name or slides.');
         }
 
-        $categorySlugs = array_values(array_filter(array_map('strval', (array) ($entry['category_slugs'] ?? []))));
+        $categorySlugMap = [
+            // A few source taxonomy values are missing from Vatan or describe
+            // a visual style rather than a product category. Resolve them to
+            // the closest existing Vatan categories before attaching products.
+            'cartoon' => 'کارتونی',
+            'id-photo' => 'product-photo',
+            'ششسی' => 'product-photo',
+            'luxury' => 'product-photo',
+        ];
+        $categorySlugs = array_values(array_unique(array_filter(array_map(
+            fn ($slug) => $categorySlugMap[(string) $slug] ?? (string) $slug,
+            (array) ($entry['category_slugs'] ?? [])
+        ))));
         $occupationSlugs = array_values(array_filter(array_map('strval', (array) ($entry['occupation_slugs'] ?? []))));
         $categories = Category::query()->whereIn('slug', $categorySlugs)->get()->keyBy('slug');
         $occupations = Occupation::query()->whereIn('slug', $occupationSlugs)->get()->keyBy('slug');
