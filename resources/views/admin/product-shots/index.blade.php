@@ -7,7 +7,7 @@
 
 @section('content')
 @php
-  $tab = in_array(request('tab'), ['overview', 'library', 'products'], true) ? request('tab') : 'overview';
+  $tab = in_array(request('tab'), ['overview', 'library', 'products', 'import'], true) ? request('tab') : 'overview';
   $shotPayload = fn ($shot) => [
     'id' => $shot->id, 'key' => $shot->key, 'name_fa' => $shot->name_fa, 'name_en' => $shot->name_en,
     'description_fa' => $shot->description_fa, 'category' => $shot->category, 'niche_tags' => implode(', ', (array) $shot->niche_tags),
@@ -59,6 +59,7 @@
       <a href="?tab=overview" class="chip-filter {{ $tab === 'overview' ? 'active' : '' }}" data-ps-tab="overview" role="tab">نمای کلی و فلگ</a>
       <a href="?tab=library" class="chip-filter {{ $tab === 'library' ? 'active' : '' }}" data-ps-tab="library" role="tab">کتابخانه‌ی شات <span class="chip-count">{{ $fa($shots->count()) }}</span></a>
       <a href="?tab=products" class="chip-filter {{ $tab === 'products' ? 'active' : '' }}" data-ps-tab="products" role="tab">محصولات پروداکتی <span class="chip-count">{{ $fa($products->count()) }}</span></a>
+      <a href="?tab=import" class="chip-filter {{ $tab === 'import' ? 'active' : '' }}" data-ps-tab="import" role="tab">ورود محصولات از سایت</a>
     </div>
 
     {{-- ═══ نمای کلی ═══ --}}
@@ -239,6 +240,8 @@
         @endif
       </div>
     </section>
+
+    @include('admin.product-shots.importer')
   </div>
 </main>
 

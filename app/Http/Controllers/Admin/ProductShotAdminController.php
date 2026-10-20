@@ -8,6 +8,8 @@ use App\Models\AiModel;
 use App\Models\Category;
 use App\Models\Occupation;
 use App\Models\Product;
+use App\Models\ProductImportRun;
+use App\Models\ProductImportSetting;
 use App\Models\ProductShot;
 use App\Models\ProductShotSetting;
 use App\Models\ShotBatchItem;
@@ -80,6 +82,8 @@ class ProductShotAdminController extends Controller
             'niches' => self::NICHES,
             'moduleEnabled' => $this->feature->enabled(),
             'masterSwitch' => (bool) config('product_shots.enabled', true),
+            'importSetting' => ProductImportSetting::current(),
+            'importRuns' => ProductImportRun::query()->latest('id')->limit(8)->get(),
         ]);
     }
 

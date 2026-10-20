@@ -78,10 +78,33 @@ class ShotPackService
     public function productGallery(Product $product, ?array $shots = null): Collection
     {
         $shots ??= $this->shotCards($product);
-        $gallery = collect($shots)
-            ->filter(fn (array $s) => ! empty($s['sample_url']))
-            ->map(fn (array $s) => ['url' => (string) $s['sample_url'], 'label' => (string) $s['name'], 'kind' => 'slide'])
+        $fallbackImages = collect(array_merge([$product->cover, $product->thumbnail], (array) $product->sample_outputs))
+            ->filter(fn ($path) => is_string($path) && trim($path) !== '')
+            ->map(fn (string $path) => \App\Models\ShotLibrary::publicUrl($path))
+            ->filter()
             ->values();
+        $usedFallbackImages = [];
+        $gallery = collect($shots)->values()->map(function (array $shot) use ($fallbackImages, &$usedFallbackImages): ?array {
+            $url = trim((string) ($shot['sample_url'] ?? ''));
+            if ($url === '') {
+                $fallback = $fallbackImages->first(fn (string $candidate) => ! in_array($candidate, $usedFallbackImages, true));
+                // Keep every configured slide navigable even when older products
+                // only have one preview image saved for the whole pack.
+                if (! $fallback && $fallbackImages->isNotEmpty()) {
+                    $fallback = $fallbackImages->first();
+                }
+                if ($fallback) {
+                    $url = $fallback;
+                    $usedFallbackImages[] = $fallback;
+                }
+            } else {
+                $usedFallbackImages[] = $url;
+            }
+
+            return $url !== ''
+                ? ['url' => $url, 'label' => (string) ($shot['name'] ?? 'اسلاید محصول'), 'kind' => 'slide']
+                : null;
+        })->filter()->values();
         if ($gallery->isEmpty()) {
             $gallery = collect($this->collage($product, 6))
                 ->map(fn (string $url) => ['url' => $url, 'label' => (string) ($product->name_fa ?: $product->name_en), 'kind' => 'slide']);

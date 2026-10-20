@@ -7,6 +7,7 @@
 */
 
 use App\Http\Controllers\Admin\ProductShotAdminController;
+use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\ProductShotController;
 use App\Http\Middleware\EnsureProductShotsAvailable;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,11 @@ Route::prefix('admin/product-shots')
         Route::post('/library', [ProductShotAdminController::class, 'storeShot'])->name('library.store');
         Route::put('/library/{shot}', [ProductShotAdminController::class, 'updateShot'])->name('library.update');
         Route::patch('/library/{shot}/toggle', [ProductShotAdminController::class, 'toggleShot'])->name('library.toggle');
+
+        Route::put('/imports/settings', [ProductImportController::class, 'updateSettings'])->name('imports.settings');
+        Route::post('/imports', [ProductImportController::class, 'createRun'])->middleware('throttle:3,1')->name('imports.store');
+        Route::post('/imports/{run}/process-next', [ProductImportController::class, 'processNext'])->middleware('throttle:30,1')->name('imports.process-next');
+        Route::post('/imports/{run}/retry-failed', [ProductImportController::class, 'retryFailed'])->name('imports.retry-failed');
 
         // ثبت محصول پروداکتی — فقط وقتی ماژول روشن است
         Route::middleware(EnsureProductShotsAvailable::class . ':admin')->group(function () {
