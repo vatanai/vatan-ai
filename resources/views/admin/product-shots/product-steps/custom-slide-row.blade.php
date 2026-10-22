@@ -17,7 +17,7 @@
         <div class="ps-slide-title-row">
           <button type="button" class="ps-slide-drag" data-shot-drag-handle aria-label="جابه‌جایی اسلاید" title="برای جابه‌جایی بکشید"><i class="fa-solid fa-grip-vertical"></i></button>
           <span class="ps-slide-order">اسلاید جدید</span><span class="ps-slide-kind"><i class="fa-solid fa-pen-nib"></i> اختصاصی · ذخیره‌نشده</span>
-          <label class="ps-slide-name-field"><span>نام نمایشی اسلاید</span><input type="text" name="new_slides[__KEY__][name]" value="" maxlength="120" class="input-pro" data-shot-name-input placeholder="مثلاً روی سنگ مرمر با نور صبح" required></label>
+          <label class="ps-slide-name-field"><input type="text" name="new_slides[__KEY__][name]" value="" maxlength="120" class="input-pro" data-shot-name-input aria-label="نام نمایشی اسلاید" placeholder="نام نمایشی اسلاید" required></label>
         </div>
         <div class="ps-hint" data-shot-result>بعد از ذخیره‌ی محصول، پیش‌نمایش واقعی این اسلاید هم فعال می‌شود.</div>
       </div>
@@ -39,7 +39,7 @@
         'uploadLabel' => 'انتخاب تصویر اسلاید',
       ])
     </div>
-    <div class="ps-slide-prompt"><div class="ps-field"><label>پرامپت ساخت این اسلاید<span class="ps-char-count" data-char-count></span></label><textarea name="new_slides[__KEY__][prompt]" class="input-pro" dir="ltr" rows="6" maxlength="30000" data-shot-prompt placeholder="پرامپت کامل ساخت این اسلاید" required></textarea></div><button type="button" class="btn-pro btn-pro-ghost" data-shot-toggle><i class="fa-solid fa-sliders"></i> تنظیمات پیشرفته</button></div>
+    <div class="ps-slide-prompt"><div class="ps-slide-prompt-panel"><div class="ps-field"><label>پرامپت ساخت این اسلاید<span class="ps-char-count" data-char-count></span></label><textarea name="new_slides[__KEY__][prompt]" class="input-pro" dir="ltr" rows="6" maxlength="30000" data-shot-prompt placeholder="پرامپت کامل ساخت این اسلاید" required></textarea></div><button type="button" class="btn-pro btn-pro-ghost" data-shot-toggle><i class="fa-solid fa-sliders"></i> تنظیمات پیشرفته</button></div></div>
     <div class="ps-shot-detail" data-shot-detail hidden>
       <input type="hidden" name="new_slides[__KEY__][sort]" value="999">
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">

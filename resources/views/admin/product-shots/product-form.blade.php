@@ -3,7 +3,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/products-create.css') }}">
-<link rel="stylesheet" href="{{ asset('admin/css/product-shots.css') }}?v={{ filemtime(public_path('admin/css/product-shots.css')) }}">
+<link rel="stylesheet" href="{{ asset('admin/css/product-shots.css') }}?v={{ md5_file(public_path('admin/css/product-shots.css')) }}">
 @endpush
 
 @php

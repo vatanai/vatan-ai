@@ -428,6 +428,8 @@
     });
     var count = one('[data-shot-count]', form);
     if (count) count.textContent = fa(rows.length) + ' اسلاید در محصول';
+    var quantity = one('[data-shot-quantity]', form);
+    if (quantity) quantity.value = String(rows.length);
     refreshSummary();
   }
 
@@ -456,8 +458,12 @@
       disableRemovedShotControls(row, false);
       enabled.checked = row.dataset.wasEnabled !== '0';
       row.classList.toggle('is-off', !enabled.checked);
-      var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
-      if (firstRemoved) shotList.insertBefore(row, firstRemoved);
+      var addFooter = one('[data-shot-add-footer]', shotList);
+      if (addFooter) shotList.insertBefore(row, addFooter);
+      else {
+        var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
+        if (firstRemoved) shotList.insertBefore(row, firstRemoved);
+      }
     }
     updateShotOrder();
   }
@@ -510,11 +516,6 @@
         var removedName = one('.ps-shot-removed-state strong', row);
         if (removedName) removedName.textContent = row.dataset.shotName;
       });
-      nameInput.addEventListener('blur', function (event) {
-        if (event.target.value.trim()) return;
-        event.target.value = row.dataset.shotOriginalName;
-        row.dataset.shotName = row.dataset.shotOriginalName;
-      });
       one('[data-shot-remove]', row).addEventListener('click', function () {
         var name = one('[data-shot-name-input]', row).value.trim() || row.dataset.shotOriginalName;
         if (row.hasAttribute('data-new-slide')) {
@@ -529,7 +530,11 @@
       var restore = one('[data-shot-restore]', row);
       if (restore) restore.addEventListener('click', function () {
         setShotRemoved(row, false, false);
+        var detail = one('[data-shot-detail]', row);
+        if (detail) detail.hidden = false;
+        dirty = true;
         announceShotOrder((one('[data-shot-name-input]', row).value || 'اسلاید') + ' دوباره به محصول افزوده شد.');
+        row.scrollIntoView({behavior: 'smooth', block: 'center'});
       });
       all('[data-shot-move]', row).forEach(function (button) {
         button.addEventListener('click', function () { moveShot(row, button.dataset.shotMove); });
@@ -558,12 +563,19 @@
   var slideTemplate = one('#sp-custom-slide-template', form);
   function addCustomSlide() {
     if (!slideTemplate || !shotList) return;
+    if (all('[data-new-slide]', shotList).length >= 30) {
+      announceShotOrder('حداکثر ۳۰ اسلاید اختصاصی را می‌توانید هم‌زمان اضافه کنید.');
+      return;
+    }
     var key = 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1000);
     var holder = document.createElement('div');
     holder.innerHTML = slideTemplate.innerHTML.split('__KEY__').join(key);
     var row = holder.querySelector('[data-shot-row]');
+    var addFooter = one('[data-shot-add-footer]', shotList);
     var firstRemoved = all('[data-shot-row].is-removed', shotList)[0];
-    if (firstRemoved) shotList.insertBefore(row, firstRemoved); else shotList.appendChild(row);
+    if (addFooter) shotList.insertBefore(row, addFooter);
+    else if (firstRemoved) shotList.insertBefore(row, firstRemoved);
+    else shotList.appendChild(row);
     bindShotRow(row);
     if (typeof initImageOptimizerGroups === 'function') initImageOptimizerGroups(row);
     updateShotOrder();
@@ -572,6 +584,40 @@
     window.setTimeout(function () { one('[data-shot-name-input]', row).focus(); }, 350);
   }
   all('[data-add-custom-slide]', form).forEach(function (button) { button.addEventListener('click', addCustomSlide); });
+
+  var shotQuantity = one('[data-shot-quantity]', form);
+  if (shotQuantity) {
+    var initialShotCount = managedShotRows().length;
+    shotQuantity.max = String(Math.max(30, initialShotCount + 30));
+    function setShotQuantity(target) {
+      var rows = managedShotRows();
+      var desired = Math.max(1, Math.min(Number(shotQuantity.max) || 30, Math.floor(Number(target) || 1)));
+      while (rows.length < desired) {
+        var before = rows.length;
+        addCustomSlide();
+        rows = managedShotRows();
+        if (rows.length === before) break;
+      }
+      while (rows.length > desired) {
+        var last = rows[rows.length - 1];
+        var remove = one('[data-shot-remove]', last);
+        if (!remove) break;
+        remove.click();
+        rows = managedShotRows();
+      }
+      updateShotOrder();
+      if (rows.length !== desired) announceShotOrder('تعداد اسلایدها تا ' + fa(rows.length) + ' مورد تنظیم شد.');
+    }
+    shotQuantity.addEventListener('change', function () { setShotQuantity(shotQuantity.value); });
+    shotQuantity.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') { event.preventDefault(); setShotQuantity(shotQuantity.value); }
+    });
+    all('[data-shot-quantity-step]', form).forEach(function (button) {
+      button.addEventListener('click', function () {
+        setShotQuantity((Number(shotQuantity.value) || 1) + Number(button.dataset.shotQuantityStep));
+      });
+    });
+  }
 
   if (shotList) {
     all('[data-shot-row]', shotList).forEach(bindShotRow);
