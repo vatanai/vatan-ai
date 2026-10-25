@@ -24,9 +24,9 @@
   $brandIdentityEnabled = (bool)old('brand_identity_enabled', $settings['brand_identity_enabled'] ?? true);
   $brandIdentityPrompt = old('brand_identity_prompt', $settings['brand_identity_prompt'] ?? \App\Services\ProductShots\ShotPromptBuilder::defaultBrandIdentityPrompt());
   $steps = [
-    1 => ['هویت محصول','اطلاعات پایه و اصناف','fa-id-card'],
+    1 => ['هویت محصول','اطلاعات پایه، عکس‌ها و اسلایدها','fa-id-card'],
     2 => ['هوش مصنوعی','مدل، کیفیت و پرامپت','fa-wand-magic-sparkles'],
-    3 => ['ویژگی‌های محصول','ورودی، کنترل کیفیت و شات‌ها','fa-camera-retro'],
+    3 => ['ویژگی‌های محصول','کنترل کیفیت و تصاویر تست','fa-camera-retro'],
     4 => ['خروجی و اعتبار','نمایش، واترمارک و انتشار','fa-file-export'],
     5 => ['بازبینی نهایی','مرور و پیش‌نمایش واقعی','fa-clipboard-check'],
   ];

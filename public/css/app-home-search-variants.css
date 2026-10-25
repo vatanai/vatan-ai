@@ -143,6 +143,10 @@
 .hsv-marquee {
   margin-top: 18px;
   overflow: hidden;
+  /* هیچ‌وقت اسکرول دستی نشود؛ لمس فقط برای اسکرول عمودی صفحه */
+  overflow-x: hidden;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
   direction: ltr;
   -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
@@ -150,6 +154,9 @@
 .hsv-marquee-track {
   display: flex;
   width: max-content;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-animation: hsv-marquee 70s linear infinite;
   animation: hsv-marquee 70s linear infinite;
 }
 /* هاور روی نوار: توقف؛ خروج از هاور: ادامه‌ی حرکت از همان نقطه */
@@ -160,9 +167,13 @@
   padding-inline-end: 10px;
   flex: none;
 }
+@-webkit-keyframes hsv-marquee {
+  from { -webkit-transform: translate3d(-50%, 0, 0); transform: translate3d(-50%, 0, 0); }
+  to { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
+}
 @keyframes hsv-marquee {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
+  from { transform: translate3d(-50%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
 }
 
 .hsv-chip {
@@ -214,8 +225,11 @@
 /* ── واکنش‌گرا: موبایل همان عرض صفحه ── */
 @media (max-width: 639px) {
   .hsv-card { padding: 16px 12px 12px; }
-  .hsv-bar { min-height: 48px; padding: 0 4px 0 10px; }
+  /* فاصله‌ی دکمه از لبه‌ی چپ = فاصله‌ی بالا/پایین آن: (۴۸ − ۲ حاشیه − ۳۶) ÷ ۲ = ۵px */
+  .hsv-bar { min-height: 48px; padding: 0 10px 0 5px; }
   .hsv-input { font-size: 14px; }
+  /* متن‌های چرخان کنار ذره‌بین ۱۰٪ کوچک‌تر تا کامل دیده شوند */
+  .hsv-input::placeholder { font-size: 12.6px; }
   .hsv-btn { width: 92px; height: 36px; }
   .hsv-btn-txt { font-size: 12px; }
   .hsv-bar:hover .hsv-btn-txt { font-size: 14.4px; }
@@ -223,10 +237,12 @@
   .hsv-chip { height: 32px; padding: 0 11px; font-size: 11px; }
   .hsv-chip svg { width: 14px; height: 14px; }
   .hsv-marquee-group { gap: 8px; padding-inline-end: 8px; }
-  .hsv-marquee-track { animation-duration: 55s; }
+  .hsv-marquee-track { -webkit-animation-duration: 55s; animation-duration: 55s; }
+  /* موبایل: لمس نوار را متوقف نکند (هاورِ چسبنده در گوشی‌ها) */
+  .hsv-marquee:hover .hsv-marquee-track { animation-play-state: running; }
 }
 
+/* نوار میانبرها عمداً در «کاهش حرکت» هم رونده می‌ماند (قبلاً در برخی گوشی‌ها حالت اسکرولی می‌گرفت) */
 @media (prefers-reduced-motion: reduce) {
-  .hsv-marquee-track, .hsv-typed::after { animation: none; }
-  .hsv-marquee { overflow-x: auto; }
+  .hsv-typed::after { animation: none; }
 }

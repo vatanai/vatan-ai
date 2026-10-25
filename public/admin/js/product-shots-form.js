@@ -81,12 +81,7 @@
       if (!one('[name="name_fa"]', form).value.trim() || !one('[name="name_en"]', form).value.trim()) return error('نام فارسی و انگلیسی محصول را کامل کنید.');
       if (!all('[name="occupation_ids[]"]:checked', form).length) return error('حداقل یک صنف مناسب برای محصول انتخاب کنید.');
       if (finalSubmit && !all('[data-category-input]', form).length) return error('برای انتشار، حداقل یک دسته‌بندی انتخاب کنید.');
-    }
-    if (number === 2) {
-      var missingModel = all('[name^="quality_models"][name$="[primary_id]"]', form).some(function (input) { return !input.value; });
-      if (missingModel) return error('مدل اصلی هر سه سطح کیفیت را انتخاب کنید.');
-    }
-    if (number === 3) {
+      /* اسلاید‌های محصول از گام ۳ به گام ۱ منتقل شده‌اند */
       var enabledRows = all('[data-shot-enabled]:checked', form).filter(function (checkbox) {
         return !checkbox.closest('[data-shot-row]').classList.contains('is-input-image-slide');
       });
@@ -101,6 +96,10 @@
         return !row.classList.contains('is-input-image-slide') && !all('[name$="[allowed_aspect_ratios][]"]:checked', row).length;
       });
       if (invalidRatio) return error('برای هر شات فعال، حداقل یک نسبت تصویر مجاز انتخاب کنید.');
+    }
+    if (number === 2) {
+      var missingModel = all('[name^="quality_models"][name$="[primary_id]"]', form).some(function (input) { return !input.value; });
+      if (missingModel) return error('مدل اصلی هر سه سطح کیفیت را انتخاب کنید.');
     }
     if (number === 5 && finalSubmit && !all('[name="explore_tiles[]"]:checked', form).length) return error('حداقل یک قاب نمایش در هوم و اکسپلور انتخاب کنید.');
     return true;
@@ -125,9 +124,9 @@
   var submitting = false;
   var dirty = false;
   var FIELD_STEPS = [
-    [/^(name_fa|name_en|description_fa|occupation_ids|category_ids|main_images|cover|remove_main_images)/, 1],
+    [/^(name_fa|name_en|description_fa|occupation_ids|category_ids|main_images|cover|remove_main_images|shots|new_slides|input_image|remove_input_image)/, 1],
     [/^(quality_models|product_description|brand_palette|brand_style|brand_identity|preflight_prompt)/, 2],
-    [/^(preflight_|product_sheet_|shots|new_slides|input_image|remove_input_image)/, 3],
+    [/^(preflight_|product_sheet_)/, 3],
     [/^(watermark_|display_mode|card_|gallery_layout)/, 4],
     [/^(explore_tiles|status)/, 5]
   ];
@@ -683,7 +682,7 @@
   }
 
   function previewShot(button) {
-    if (!testImages || !testImages.files.length) return error('برای پیش‌نمایش، حداقل یک تصویر تست انتخاب کنید.');
+    if (!testImages || !testImages.files.length) return showErrors([{message: 'برای پیش‌نمایش، حداقل یک تصویر تست در گام ۳ انتخاب کنید.', step: 3}]);
     var row = button.closest('[data-shot-row]');
     var body = new FormData();
     body.append('shot_id', button.dataset.shotPreview);

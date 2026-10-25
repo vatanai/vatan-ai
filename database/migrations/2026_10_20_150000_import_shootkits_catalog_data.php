@@ -163,7 +163,6 @@ return new class extends Migration
             // A few source taxonomy values are missing from Vatan or describe
             // a visual style rather than a product category. Resolve them to
             // the closest existing Vatan categories before attaching products.
-            'cartoon' => 'کارتونی',
             'id-photo' => 'product-photo',
             'ششسی' => 'product-photo',
             'luxury' => 'product-photo',

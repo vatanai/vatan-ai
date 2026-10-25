@@ -846,6 +846,8 @@ class UserGalleryController extends Controller
             return [
                 'type' => $type,
                 'url' => $url,
+                // کلیک روی بندانگشتی باید فایل اصلی باکیفیت را باز کند، نه همان بندانگشتی ۱۶۰ پیکسلی
+                'full_url' => $type === 'image' ? ($this->galleryItemMediaUrl($item, (int) $order->user_id) ?: $url) : $url,
                 'label' => $type === 'video' ? 'ویدیوی ورودی' : ($type === 'text' ? 'متن ورودی' : 'عکس ورودی'),
                 'text' => $type === 'text' ? data_get($item->metadata, 'text') : null,
             ];

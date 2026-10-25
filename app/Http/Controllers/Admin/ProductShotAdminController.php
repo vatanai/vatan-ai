@@ -518,6 +518,7 @@ class ProductShotAdminController extends Controller
             'shots.*.sort' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.sample_path' => ['nullable', 'string', 'max:255'],
             'shots.*.sample' => ['nullable', 'file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:12288'],
+            'shots.*.remove_sample' => ['nullable', 'boolean'],
             'watermark_enabled' => ['nullable', 'boolean'],
             'watermark_position' => ['nullable', Rule::in(['corner', 'center', 'none'])],
             'display_mode' => ['nullable', Rule::in(['card', 'slider'])],
@@ -805,6 +806,9 @@ class ProductShotAdminController extends Controller
                 if ($copied) {
                     $productShot->sample_image = $copied;
                 }
+            } elseif (filter_var($row['remove_sample'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                // دکمه‌ی سطل آشغال زیر عکس اسلاید
+                $productShot->sample_image = null;
             }
             $productShot->save();
             if ($oldSamplePath && $oldSamplePath !== $productShot->sample_image) {

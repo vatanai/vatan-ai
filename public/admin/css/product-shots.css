@@ -393,3 +393,20 @@
 .ps-shot-card-main{grid-template-columns:minmax(0,.82fr) minmax(300px,1fr)}
 .ps-slide-image-optimizer .ps-shot-optimizer-controls{width:79%}
 @media(max-width:900px){.ps-shot-card-main{grid-template-columns:minmax(0,1fr)}.ps-slide-image-optimizer .ps-shot-optimizer-controls{width:100%}}
+
+/* ── کارت عکس اسلاید (۲ آبان ۱۴۰۵): کارت ۲۰٪ بزرگ‌تر، ۶ باکس ۱۰٪ کوتاه‌تر و کمی به چپ،
+      حجم عکس + رفرش + سطل آشغال زیر کارت ── */
+.ps-slide-image-optimizer .ps-shot-optimizer-layout{grid-template-columns:minmax(0,1fr) clamp(144px,24%,228px)}
+.ps-slide-image-optimizer .ps-shot-optimizer-controls{height:auto;align-self:center;grid-template-rows:repeat(3,47px) auto;margin-right:18px}
+.ps-slide-image-optimizer .ps-shot-upload-btn,.ps-slide-image-optimizer .ps-shot-size-choice{min-height:47px;height:47px}
+.ps-shot-frame-col{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;width:100%;align-self:center}
+.ps-slide-image-optimizer .ps-shot-optimized-frame{width:100%;max-width:228px}
+.ps-shot-frame-meta{display:flex;align-items:center;justify-content:space-between;gap:6px;width:100%;max-width:228px;min-height:24px}
+.ps-shot-frame-meta .ps-shot-optimized-size{position:static;padding:3px 7px;border-radius:8px;font-size:9px;line-height:1.5;white-space:nowrap}
+.ps-shot-frame-meta [hidden]{display:none!important}
+.ps-shot-frame-tools{display:inline-flex;align-items:center;gap:4px;margin-inline-start:auto}
+.ps-shot-frame-tool{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:1px solid var(--border);border-radius:7px;background:var(--card-bg);color:var(--text-soft);font-size:10px;cursor:pointer;transition:color .15s,border-color .15s}
+.ps-shot-frame-tool:hover{color:var(--primary);border-color:var(--primary)}
+.ps-shot-frame-tool.is-danger:hover{color:var(--danger);border-color:var(--danger)}
+@media(max-width:900px){.ps-slide-image-optimizer .ps-shot-optimizer-controls{margin-right:0}}
+@media(max-width:480px){.ps-slide-image-optimizer .ps-shot-frame-col{grid-row:1;justify-self:center;width:min(100%,228px)}.ps-slide-image-optimizer .ps-shot-optimizer-controls{grid-row:2}}

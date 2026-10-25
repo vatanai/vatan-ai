@@ -9,6 +9,7 @@
   $variant = $variant ?? 'default';
   $uploadLabel = $uploadLabel ?? ($multiple ? 'انتخاب تصاویر' : 'انتخاب تصویر');
   $paths = array_values(array_filter((array) ($paths ?? [])));
+  $removeName = $removeName ?? null; // فقط product-shot: فیلد مخفی حذف تصویر ذخیره‌شده
 @endphp
 <div class="image-optimizer-group flex flex-col gap-2 mb-4 {{ $variant === 'product-shot' ? 'image-optimizer-group--product-shot' : '' }}" data-input="{{ $inputId }}" data-optimizer-variant="{{ $variant }}" data-empty-label="{{ $uploadLabel }}" data-existing='@json(array_map(fn($p) => asset("storage/$p"), $paths))'>
   @if($variant === 'product-shot')
@@ -16,7 +17,7 @@
   <div class="ps-shot-optimizer-layout" dir="ltr">
     <div class="ps-shot-optimizer-controls" dir="rtl">
       <div class="ps-shot-optimizer-actions">
-        <button type="button" class="btn-pro btn-pro-primary ps-shot-upload-btn" onclick="document.getElementById('{{ $inputId }}').click()"><i class="fa-solid fa-image"></i><span>{{ $uploadLabel }}</span></button>
+        <button type="button" class="btn-pro btn-pro-primary ps-shot-upload-btn" onclick="document.getElementById('{{ $inputId }}').click()"><span>{{ $uploadLabel }}</span></button>
         <span class="ps-shot-optimizer-status image-optimize-status" aria-live="polite"></span>
       </div>
       <div class="ps-shot-size-options" role="group" aria-label="حجم تصویر بهینه‌شده">
@@ -28,11 +29,21 @@
       </div>
       <input type="file" id="{{ $inputId }}" name="{{ $inputName }}" accept="image/jpeg,image/png,image/webp" class="hidden" @if($variant === 'product-shot') data-shot-sample-file @endif @if($required && empty($paths)) required @endif>
     </div>
-    <div class="ps-shot-optimized-frame" aria-label="پیش‌نمایش تصویر بهینه‌شده">
-      <img class="ps-shot-optimized-image" alt="پیش‌نمایش تصویر بهینه‌شده" hidden>
-      <span class="ps-shot-optimized-empty"><i class="fa-regular fa-image"></i><small>پیش‌نمایش تصویر</small></span>
-      <span class="ps-shot-optimized-loading" hidden><i class="fa-solid fa-spinner fa-spin"></i><small>در حال بهینه‌سازی</small></span>
-      <span class="ps-shot-optimized-size" hidden></span>
+    <div class="ps-shot-frame-col">
+      <div class="ps-shot-optimized-frame" aria-label="پیش‌نمایش تصویر بهینه‌شده">
+        <img class="ps-shot-optimized-image" alt="پیش‌نمایش تصویر بهینه‌شده" hidden>
+        <span class="ps-shot-optimized-empty"><i class="fa-regular fa-image"></i><small>پیش‌نمایش تصویر</small></span>
+        <span class="ps-shot-optimized-loading" hidden><i class="fa-solid fa-spinner fa-spin"></i><small>در حال بهینه‌سازی</small></span>
+      </div>
+      {{-- زیر کارت: حجم تصویر + جایگزینی (رفرش) + حذف (سطل آشغال) --}}
+      <div class="ps-shot-frame-meta" dir="rtl">
+        <span class="ps-shot-optimized-size" hidden></span>
+        <span class="ps-shot-frame-tools" data-shot-image-tools hidden>
+          <button type="button" class="ps-shot-frame-tool" onclick="replaceProductShotImage(this)" title="جایگزینی با عکس دیگر" aria-label="جایگزینی با عکس دیگر"><i class="fa-solid fa-rotate"></i></button>
+          <button type="button" class="ps-shot-frame-tool is-danger" onclick="removeProductShotImage(this)" title="حذف عکس اسلاید" aria-label="حذف عکس اسلاید"><i class="fa-solid fa-trash-can"></i></button>
+        </span>
+      </div>
+      @if($removeName)<input type="hidden" name="{{ $removeName }}" value="0" data-shot-remove-sample>@endif
     </div>
   </div>
   @else

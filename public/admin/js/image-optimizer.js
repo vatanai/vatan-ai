@@ -402,16 +402,61 @@ function renderProductShotImage(group, file, processing) {
   const image = frame?.querySelector('.ps-shot-optimized-image');
   const empty = frame?.querySelector('.ps-shot-optimized-empty');
   const loading = frame?.querySelector('.ps-shot-optimized-loading');
-  const size = frame?.querySelector('.ps-shot-optimized-size');
+  // حجم تصویر و ابزارهای حذف/جایگزینی زیر کارت هستند (نه داخل قاب)
+  const size = group.querySelector('.ps-shot-optimized-size');
+  const tools = group.querySelector('[data-shot-image-tools]');
   if (!frame || !image) return;
   loading.hidden = !processing;
   empty.hidden = !!(processing || file);
   image.hidden = !!(processing || !file);
-  size.hidden = !!(processing || !file);
+  if (size) size.hidden = !!(processing || !file);
+  if (tools) tools.hidden = !!(processing || !file);
+  if (!file && !processing) image.removeAttribute('src');
   if (file && !processing) {
     image.src = previewUrl(file);
-    size.textContent = formatImageBytes(file.size);
+    if (size) size.textContent = formatImageBytes(file.size);
   }
+}
+
+/* جایگزینی عکس اسلاید: انتخاب فایل جدید به‌جای عکس فعلی (نه افزودن کنار آن) */
+function replaceProductShotImage(button) {
+  const group = button.closest('.image-optimizer-group');
+  const input = document.getElementById(group?.dataset.input || '');
+  if (!group || !input) return;
+  group.dataset.replacing = '1';
+  input.click();
+}
+
+/* حذف عکس اسلاید: فایل انتخاب‌شده و عکس ذخیره‌شده (پس از ذخیره‌ی فرم) پاک می‌شود */
+function removeProductShotImage(button) {
+  const group = button.closest('.image-optimizer-group');
+  const input = document.getElementById(group?.dataset.input || '');
+  if (!group || !input) return;
+  input.value = '';
+  try { input.files = imageFileList([]); } catch (e) {}
+  selectedUploadFiles.set(group, []);
+  originalImageFiles.set(group, []);
+  optimizedImageFiles.set(group, []);
+  imageOptimizationApproved.set(group, []);
+  selectedImageProfiles.set(group, []);
+  selectedImageIndexes.set(group, 0);
+  productShotSizeCandidates.delete(group);
+  group.dataset.existing = '[]';
+  const flag = group.querySelector('[data-shot-remove-sample]');
+  if (flag) flag.value = '1';
+  const row = group.closest('[data-shot-row]');
+  const previewPath = row?.querySelector('[data-shot-sample]');
+  if (previewPath) previewPath.value = '';
+  group.querySelectorAll('[data-shot-target-kb]').forEach(function (choice) {
+    const label = choice.querySelector('[data-shot-size-label]');
+    if (label) label.textContent = 'حدود ' + imageOptToFa(choice.dataset.shotTargetKb) + ' کیلوبایت';
+    choice.classList.toggle('is-selected', choice.dataset.shotTargetKb === '105');
+    choice.disabled = choice.dataset.shotTargetKb !== '105';
+  });
+  renderProductShotImage(group, null, false);
+  syncProductShotSummary(group, null);
+  setImageOptimizeState(group, 'idle', 'عکس اسلاید حذف شد؛ با ذخیره‌ی فرم اعمال می‌شود.');
+  document.dispatchEvent(new CustomEvent('product-images-changed'));
 }
 
 async function buildProductShotCandidates(group, source) {
@@ -729,8 +774,23 @@ function initImageOptimizerGroups(root) {
     }
     input.addEventListener('change', function () {
       const newlySelected = Array.from(input.files || []);
-      const previous = selectedUploadFiles.get(group) || [];
+      // ورودی تک‌عکسی (اسلاید/عکس ورودی): عکس جدید جایگزین قبلی می‌شود، نه اضافه کنار آن
+      const singleImage = !input.multiple || group.dataset.optimizerVariant === 'product-shot';
+      if (singleImage && !newlySelected.length) {
+        // لغو پنجره‌ی انتخاب فایل: عکس فعلی دست نخورد
+        delete group.dataset.replacing;
+        const keep = selectedUploadFiles.get(group) || [];
+        if (keep.length) { try { input.files = imageFileList(keep); } catch (e) {} }
+        return;
+      }
+      const previous = singleImage ? [] : (selectedUploadFiles.get(group) || []);
       const selected = mergeUploadFiles(previous, newlySelected);
+      delete group.dataset.replacing;
+      if (newlySelected.length) {
+        const removeFlag = group.querySelector('[data-shot-remove-sample]');
+        if (removeFlag) removeFlag.value = '0';
+        if (singleImage) productShotSizeCandidates.delete(group);
+      }
       if (selected.length !== newlySelected.length) input.files = imageFileList(selected);
       selectedUploadFiles.set(group, selected.slice());
       originalImageFiles.set(group, selected.slice());

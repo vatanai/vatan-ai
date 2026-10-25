@@ -53,9 +53,9 @@ class AdminUserController extends Controller
         $totalGeneratedImagesCount = GeneratedImage::count();
 
         // اطلاعات عملیاتی کاربر در کاربران، سفارش‌ها و پرونده مالی از همین روابط مشترک تغذیه می‌شود.
+        // خروجی‌های هر کاربر دیگر اینجا بارگذاری نمی‌شوند (قبلاً کل تصاویر + کل محصول هر تصویر
+        // برای همه‌ی کاربران داخل HTML جاسازی می‌شد ≈ ۲۲ مگابایت)؛ با کلیک «نمایش» از generatedImages() می‌آیند.
         $userRelations = [
-                'generatedImages.product',
-                'generatedImages.order:id,order_number',
                 'plan',
                 'referrer:id,name,last_name,phone,referral_code',
                 'referralConversion:id,visit_id,inviter_id,invitee_id,status',
@@ -96,44 +96,45 @@ class AdminUserController extends Controller
         }
         $this->applyQuickUserFilter($usersQuery, $quickFilter);
 
-        $users = $usersQuery->get()
-            ->filter(function (User $user) use ($birthMonth, $birthDay) {
-                if (!$birthMonth && !$birthDay) {
-                    return true;
-                }
-                if (!$user->birth_date) {
-                    return false;
-                }
+        if ($birthMonth || $birthDay) {
+            // تبدیل تاریخ تولد شمسی فقط برای شناسه‌ها انجام می‌شود تا فهرست اصلی
+            // بتواند در دیتابیس فیلتر و صفحه‌بندی شود، نه اینکه همه‌ی کاربران hydrate شوند.
+            $matchingBirthUserIds = User::query()
+                ->whereNotNull('birth_date')
+                ->get(['id', 'birth_date'])
+                ->filter(function (User $user) use ($birthMonth, $birthDay): bool {
+                    [, $jalaliMonth, $jalaliDay] = Jalali::toJalaliYmd(
+                        (int) $user->birth_date->format('Y'),
+                        (int) $user->birth_date->format('n'),
+                        (int) $user->birth_date->format('j'),
+                    );
 
-                [, $jalaliMonth, $jalaliDay] = Jalali::toJalaliYmd(
-                    (int) $user->birth_date->format('Y'),
-                    (int) $user->birth_date->format('n'),
-                    (int) $user->birth_date->format('j'),
-                );
+                    return (!$birthMonth || $jalaliMonth === $birthMonth)
+                        && (!$birthDay || $jalaliDay === $birthDay);
+                })
+                ->pluck('id');
 
-                return (!$birthMonth || $jalaliMonth === $birthMonth)
-                    && (!$birthDay || $jalaliDay === $birthDay);
-            })
-            ->values();
+            $usersQuery->whereIn('users.id', $matchingBirthUserIds);
+        }
 
+        // هر بار فقط ۵۰ ردیف همراه روابط لازم رندر می‌شود؛ این بخش قبلاً تمام
+        // کاربران و روابطشان را یک‌جا به صفحه می‌آورد.
+        $users = $usersQuery->paginate(50)->withQueryString();
+
+        // بررسی جدول‌ها یک بار برای کل صفحه (قبلاً برای هر کاربر جداگانه از information_schema پرسیده می‌شد)
         $financeCasesAvailable = Schema::hasTable('finance_cases');
-        $users->each(function (User $user) use ($financeCasesAvailable): void {
+        $referralLinksAvailable = Schema::hasTable('referral_links');
+        $referralVisitsAvailable = Schema::hasTable('referral_visits');
+        $users->each(function (User $user) use ($financeCasesAvailable, $referralLinksAvailable, $referralVisitsAvailable): void {
             if (! $financeCasesAvailable) {
                 $user->setAttribute('finance_cases_count', 0);
             }
-            if (! Schema::hasTable('referral_links')) {
+            if (! $referralLinksAvailable) {
                 $user->setAttribute('referral_links_count', 0);
             }
-            if (! Schema::hasTable('referral_visits')) {
+            if (! $referralVisitsAvailable) {
                 $user->setAttribute('referral_visits_count', 0);
             }
-            $user->generatedImages->each(function (GeneratedImage $image): void {
-                $image->setAttribute('jalali_created_at', Jalali::formatNumeric($image->created_at));
-                $image->setAttribute(
-                    'admin_image_url',
-                    $image->image_path ? asset('storage/' . ltrim((string) $image->image_path, '/')) : null,
-                );
-            });
         });
 
         $autoOpenUserId = isset($filters['show_user']) ? (int) $filters['show_user'] : null;
@@ -143,6 +144,10 @@ class AdminUserController extends Controller
         $canManageUserPlans = (bool) $request->user('admin')?->isLeader();
         $canManageUserStatuses = (bool) $request->user('admin');
         $canBulkManageUsers = $canManageUserPlans || $canManageUserStatuses;
+
+        $autoOpenUser = $autoOpenUserId
+            ? User::query()->with('plan')->withCount('generatedImages')->find($autoOpenUserId)
+            : null;
 
         return view('admin.users.index', compact(
             'users',
@@ -157,6 +162,7 @@ class AdminUserController extends Controller
             'canManageUserStatuses',
             'canBulkManageUsers',
             'autoOpenUserId',
+            'autoOpenUser',
             'quickFilter',
         ));
     }
@@ -577,7 +583,36 @@ class AdminUserController extends Controller
         return view('admin.users.all-logs', compact('generatedImages', 'logs'));
     }
 
-    /** تایم‌لاین رویدادها و خروجی‌های تصویری یک کاربر مشخص. */
+    /** خروجی‌های عکس یک کاربر برای پنجره‌ی «نمایش» فهرست کاربران (فقط فیلدهای لازم). */
+    public function generatedImages($id)
+    {
+        $user = User::query()->select('id')->findOrFail($id);
+        $images = GeneratedImage::query()
+            ->where('user_id', $user->id)
+            ->with([
+                'product:id,name_fa,name_en,category',
+                'order:id,order_number',
+            ])
+            ->latest()
+            ->limit(500)
+            ->get(['id', 'user_id', 'product_id', 'order_id', 'image_path', 'created_at'])
+            ->map(fn (GeneratedImage $image) => [
+                'id' => $image->id,
+                'order_id' => $image->order_id,
+                'product' => $image->product ? [
+                    'name_fa' => $image->product->name_fa,
+                    'name' => $image->product->name_en,
+                    'category' => $image->product->category,
+                ] : null,
+                'order' => $image->order ? ['order_number' => $image->order->order_number] : null,
+                'jalali_created_at' => Jalali::formatNumeric($image->created_at),
+                'admin_image_url' => $image->image_path ? asset('storage/' . ltrim((string) $image->image_path, '/')) : null,
+            ])
+            ->values();
+
+        return response()->json(['images' => $images]);
+    }
+
     public function logs($id)
     {
         $user = User::query()->findOrFail($id);

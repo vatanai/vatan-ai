@@ -153,7 +153,7 @@
                   @elseif($input['type'] === 'video')
                     <a href="{{ $input['url'] }}" target="_blank" rel="noopener" class="user-gallery-build-thumb"><video src="{{ $input['url'] }}" preload="metadata" muted playsinline></video><i class="fa-solid fa-play"></i></a>
                   @else
-                    <a href="{{ $input['url'] }}" target="_blank" rel="noopener" class="user-gallery-build-thumb"><img src="{{ $input['url'] }}" alt="{{ $input['label'] }}" loading="lazy"></a>
+                    <a href="{{ $input['full_url'] ?? $input['url'] }}" target="_blank" rel="noopener" class="user-gallery-build-thumb"><img src="{{ $input['url'] }}" alt="{{ $input['label'] }}" loading="lazy"></a>
                   @endif
                 @empty
                   <span class="user-gallery-build-empty">ورودی ذخیره نشده</span>
@@ -192,7 +192,7 @@
           <article class="overflow-hidden rounded-2xl border bg-[var(--page-bg)] border-[var(--border)]">
             <div class="relative aspect-square bg-[var(--input-bg)] flex items-center justify-center overflow-hidden">
               @if($item->input_kind === 'image')
-                <a href="{{ route('admin.users.gallery.preview', [$user->id, $item->id]) }}" target="_blank" rel="noopener" class="block w-full h-full"><img src="{{ route('admin.users.gallery.preview', [$user->id, $item->id]) }}" alt="عکس ورودی" class="w-full h-full object-cover" loading="lazy"></a>
+                <a href="{{ route('admin.users.gallery.original', [$user->id, $item->id]) }}" target="_blank" rel="noopener" class="block w-full h-full"><img src="{{ route('admin.users.gallery.preview', [$user->id, $item->id]) }}" alt="عکس ورودی" class="w-full h-full object-cover" loading="lazy"></a>
               @elseif($item->input_kind === 'video')
                 <video src="{{ route('admin.users.gallery.original', [$user->id, $item->id]) }}" class="w-full h-full object-contain" controls preload="metadata"></video>
               @elseif($item->input_kind === 'text')

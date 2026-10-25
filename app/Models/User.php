@@ -108,11 +108,15 @@ class User extends Authenticatable
     }
 
     /** موجودی قابل‌استفاده پس از کنار گذاشتن دسته‌های هدیه‌ی منقضی. */
+    /** نتیجه‌ی وجود جدول اعتبارهای زمان‌دار، یک بار در هر درخواست (نه برای هر کاربر). */
+    private static ?bool $tokenGrantsTableExists = null;
+
     public function getEffectiveTokenBalanceAttribute(): int
     {
         $balance = (int) $this->getRawOriginal('tokens');
         try {
-            if (Schema::hasTable('user_token_grants')) {
+            self::$tokenGrantsTableExists ??= Schema::hasTable('user_token_grants');
+            if (self::$tokenGrantsTableExists) {
                 $expired = $this->relationLoaded('tokenGrants')
                     ? (int) $this->tokenGrants->filter(fn ($grant) => (int) $grant->remaining_amount > 0 && $grant->expires_at && $grant->expires_at->isPast())->sum('remaining_amount')
                     : (int) $this->tokenGrants()->where('remaining_amount', '>', 0)->whereNotNull('expires_at')->where('expires_at', '<=', now())->sum('remaining_amount');

@@ -104,7 +104,7 @@
     </aside>
 
     <section class="ps-stage" aria-label="گالری نمونه‌های محصول">
-      <div class="ps-main">
+      <div class="ps-main{{ ($first['kind'] ?? '') === 'input' ? ' is-input-view' : '' }}">
         @if($first)
           <img src="{{ $first['url'] }}" alt="{{ $first['label'] }}" data-main-image fetchpriority="high" decoding="async">
         @endif
@@ -253,6 +253,7 @@
   var compareImage = root.querySelector('[data-compare-image]');
   var mainWrap = root.querySelector('.ps-main');
   function syncInputState(isInput) {
+    if (mainWrap) mainWrap.classList.toggle('is-input-view', !!isInput);
     if (inputBadge) inputBadge.hidden = !isInput;
     if (packBadge && inputBadge) packBadge.hidden = isInput;
     if (compareButton) compareButton.hidden = isInput;
@@ -276,7 +277,7 @@
   if (compareButton) {
     var holding = false;
     var start = function (event) { event.preventDefault(); event.stopPropagation(); holding = true; stopAuto(); setCompare(true); };
-    var end = function (event) { if (!holding) return; event.stopPropagation(); holding = false; setCompare(false); };
+    var end = function (event) { if (!holding) return; event.stopPropagation(); holding = false; setCompare(false); startAuto(); };
     compareButton.addEventListener('pointerdown', start);
     compareButton.addEventListener('pointerup', end);
     compareButton.addEventListener('pointerleave', end);
@@ -284,25 +285,37 @@
     compareButton.addEventListener('touchstart', function (event) { event.stopPropagation(); }, { passive: true });
     compareButton.addEventListener('touchend', function (event) { event.stopPropagation(); });
     compareButton.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); stopAuto(); setCompare(!mainWrap.classList.contains('is-comparing')); }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        var on = !mainWrap.classList.contains('is-comparing');
+        setCompare(on);
+        if (on) stopAuto(); else startAuto();
+      }
     });
     compareButton.addEventListener('contextmenu', function (event) { event.preventDefault(); });
   }
 
+  /* چرخش خودکار: هر ۵ ثانیه، بی‌پایان (کاور ← عکس ورودی ← اسلایدها ← دوباره کاور).
+     انتخاب دستی فقط شمارنده را از نو شروع می‌کند و چرخش متوقف نمی‌شود. */
+  var AUTO_MS = 5000;
   var autoTimer = null;
   function stopAuto() {
     if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
   }
+  function startAuto() {
+    stopAuto();
+    if (thumbs.length > 1) autoTimer = setInterval(function () { show(current + 1); }, AUTO_MS);
+  }
   thumbs.forEach(function (button) {
     button.addEventListener('click', function () {
-      stopAuto();
       show(Number(button.dataset.galleryThumb));
+      startAuto();
     });
   });
   var previous = root.querySelector('[data-prev]');
   var next = root.querySelector('[data-next]');
-  if (previous) previous.addEventListener('click', function () { show(current - 1); });
-  if (next) next.addEventListener('click', function () { show(current + 1); });
+  if (previous) previous.addEventListener('click', function () { show(current - 1); startAuto(); });
+  if (next) next.addEventListener('click', function () { show(current + 1); startAuto(); });
 
   var stage = root.querySelector('.ps-stage');
   var startX = null;
@@ -314,14 +327,11 @@
       if (startX === null) return;
       var delta = event.changedTouches[0].clientX - startX;
       startX = null;
-      if (Math.abs(delta) > 40) show(current + (delta > 0 ? 1 : -1));
+      if (Math.abs(delta) > 40) { show(current + (delta > 0 ? 1 : -1)); startAuto(); }
     });
   }
 
-  /* چرخش خودکار تصاویر هر ۴ ثانیه (بدون توقف) */
-  if (thumbs.length > 1) {
-    autoTimer = setInterval(function () { show(current + 1); }, 4800);
-  }
+  startAuto();
 
   /* اسلایدر محصولات مشابه */
   var simTrack = root.querySelector('[data-sim-track]');

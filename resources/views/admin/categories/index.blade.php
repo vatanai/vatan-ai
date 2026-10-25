@@ -11,7 +11,7 @@
         <p class="text-xs text-[var(--text-soft)]">مدیریت ساختار محتوایی محصولات و صنف‌های قابل انتخاب در محصولات پروداکتی</p>
       </div>
       @if(request('tab') !== 'occupations')
-      <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold bg-[var(--primary)] text-[var(--accent)] no-underline">
+      <a href="{{ route('admin.categories.create') }}" class="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-xs font-bold bg-[var(--primary)] text-white no-underline">
         <i class="fa-solid fa-plus"></i> افزودن دسته‌بندی
       </a>
       @endif
@@ -27,8 +27,8 @@
     @endif
 
     <div class="inline-flex gap-1 p-1 mb-5 rounded-xl bg-[var(--card-bg)] border border-[var(--border)]">
-      <a href="{{ route('admin.categories.index') }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') !== 'occupations' ? 'bg-[var(--primary)] text-[var(--accent)]' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-folder-tree"></i> دسته‌بندی‌ها</a>
-      <a href="{{ route('admin.categories.index', ['tab' => 'occupations']) }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') === 'occupations' ? 'bg-[var(--primary)] text-[var(--accent)]' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-store"></i> اصناف <span class="opacity-70">{{ number_format($occupationTotal) }}</span></a>
+      <a href="{{ route('admin.categories.index') }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') !== 'occupations' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-folder-tree"></i> دسته‌بندی‌ها</a>
+      <a href="{{ route('admin.categories.index', ['tab' => 'occupations']) }}" class="h-9 px-4 inline-flex items-center gap-2 rounded-lg text-xs font-bold no-underline {{ request('tab') === 'occupations' ? 'bg-[var(--primary)] text-white' : 'text-[var(--text-soft)]' }}"><i class="fa-solid fa-store"></i> اصناف <span class="opacity-70">{{ number_format($occupationTotal) }}</span></a>
     </div>
 
     @if(request('tab') !== 'occupations')
@@ -61,7 +61,7 @@
         <select name="content" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت محتوا</option><option value="active" @selected(request('content')==='active')>دارای محصول</option><option value="empty" @selected(request('content')==='empty')>بدون محصول</option></select>
         <select name="visibility" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">وضعیت نمایش</option><option value="enabled" @selected(request('visibility')==='enabled')>فعال سیستمی</option><option value="disabled" @selected(request('visibility')==='disabled')>غیرفعال سیستمی</option></select>
         <select name="type" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">نوع دسته</option><option value="root" @selected(request('type')==='root')>دسته اصلی</option><option value="child" @selected(request('type')==='child')>زیر‌دسته</option><option value="featured" @selected(request('type')==='featured')>ویژه</option></select>
-        <div class="flex gap-2"><button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold cursor-pointer"><i class="fa-solid fa-filter ml-1"></i> اعمال</button>@if(request()->hasAny(['search','content','visibility','type','sort']))<a href="{{ route('admin.categories.index') }}" class="h-10 w-10 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] text-[var(--text-soft)] inline-flex items-center justify-center" title="پاک‌کردن فیلترها"><i class="fa-solid fa-xmark"></i></a>@endif</div>
+        <div class="flex gap-2"><button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-white text-xs font-bold cursor-pointer"><i class="fa-solid fa-filter ml-1"></i> اعمال</button>@if(request()->hasAny(['search','content','visibility','type','sort']))<a href="{{ route('admin.categories.index') }}" class="h-10 w-10 rounded-lg border border-[var(--border)] bg-[var(--input-bg)] text-[var(--text-soft)] inline-flex items-center justify-center" title="پاک‌کردن فیلترها"><i class="fa-solid fa-xmark"></i></a>@endif</div>
       </div>
       @php
         $currentSort = request('sort', 'products_desc');
@@ -80,7 +80,7 @@
         <legend class="text-[10px] font-bold text-[var(--text-soft)] px-1">مرتب‌سازی تک‌انتخابی</legend>
         <div class="flex flex-wrap gap-2 mt-1">
           @foreach($sortOptions as $sortValue => [$sortLabel, $sortIcon])
-            <label class="h-9 px-3 rounded-lg border inline-flex items-center gap-2 text-[11px] font-bold cursor-pointer transition-colors {{ $currentSort === $sortValue ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--accent)]' : 'bg-[var(--input-bg)] border-[var(--border)] text-[var(--text-soft)] hover:border-[var(--primary)] hover:text-[var(--primary)]' }}">
+            <label class="h-9 px-3 rounded-lg border inline-flex items-center gap-2 text-[11px] font-bold cursor-pointer transition-colors {{ $currentSort === $sortValue ? 'bg-[var(--primary)] border-[var(--primary)] text-white' : 'bg-[var(--input-bg)] border-[var(--border)] text-[var(--text-soft)] hover:border-[var(--primary)] hover:text-[var(--primary)]' }}">
               <input type="radio" name="sort" value="{{ $sortValue }}" class="sr-only" @checked($currentSort === $sortValue) onchange="this.form.submit()">
               <i class="fa-solid {{ $sortIcon }}"></i>{{ $sortLabel }}
             </label>
@@ -146,14 +146,14 @@
             <label class="block text-xs font-bold text-[var(--text-main)]">توضیح<textarea name="description" rows="3" class="mt-2 w-full p-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></textarea></label>
             <div class="grid grid-cols-2 gap-3"><label class="block text-xs font-bold text-[var(--text-main)]">ترتیب<input type="number" name="sort" min="0" value="0" class="mt-2 w-full h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-[var(--text-main)]"></label><label class="flex items-center gap-2 mt-7 text-xs text-[var(--text-main)]"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" checked> فعال</label></div>
           </div>
-          <button class="mt-4 w-full h-10 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold"><i class="fa-solid fa-plus ml-1"></i> افزودن صنف</button>
+          <button class="mt-4 w-full h-10 rounded-lg bg-[var(--primary)] text-white text-xs font-bold"><i class="fa-solid fa-plus ml-1"></i> افزودن صنف</button>
         </form>
 
         <div class="space-y-4">
           <form method="GET" action="{{ route('admin.categories.index') }}" class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-3 flex flex-wrap gap-2">
             <input type="hidden" name="tab" value="occupations"><input name="occupation_search" value="{{ request('occupation_search') }}" placeholder="جستجوی صنف..." class="flex-1 min-w-[220px] h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]">
             <select name="occupation_group" class="h-10 px-3 rounded-lg bg-[var(--input-bg)] border border-[var(--border)] text-xs text-[var(--text-main)]"><option value="">همه گروه‌ها</option>@foreach(\App\Models\Occupation::GROUPS as $key => $label)<option value="{{ $key }}" @selected(request('occupation_group')===$key)>{{ $label }}</option>@endforeach</select>
-            <button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold">اعمال</button>
+            <button class="h-10 px-4 rounded-lg bg-[var(--primary)] text-white text-xs font-bold">اعمال</button>
           </form>
           @forelse($occupations as $groupKey => $groupOccupations)
             <section class="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl overflow-hidden shadow-[var(--shadow-card)]">

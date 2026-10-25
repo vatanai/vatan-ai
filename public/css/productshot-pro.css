@@ -497,3 +497,38 @@
   .ps-input-badge { bottom: 28px; inset-inline-start: 28px; font-size: 11px; }
   .ps-compare { bottom: 28px; inset-inline-end: 28px; }
 }
+
+/* ── عکس ورودی: ظاهر متفاوت با اسلایدها — خط دور سبز + نوشته‌ی ریز «عکس ورودی» زیر تصویر (۲ آبان ۱۴۰۵) ── */
+.ps-thumbs { align-items: start; }
+.ps-thumbs button.is-input {
+  aspect-ratio: auto;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.ps-thumbs button.is-input img {
+  aspect-ratio: 4 / 5;
+  height: auto;
+  border: 2px solid var(--vt-success);
+  border-radius: var(--ps-r);
+  box-shadow: 0 0 0 3px var(--vt-success-soft);
+}
+.ps-thumbs button.is-input:hover { transform: translateY(-2px); }
+.ps-thumbs button.is-input.is-viewing { border: 0; }
+.ps-thumbs button.is-input.is-viewing img { border-width: 3px; }
+.ps-thumbs button.is-input .ps-thumb-tag {
+  position: static;
+  padding: 0;
+  background: none;
+  backdrop-filter: none;
+  color: var(--vt-success);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+/* تصویر بزرگ وقتی عکس ورودی نمایش داده می‌شود */
+.ps-main.is-input-view img[data-main-image] { box-shadow: 0 0 0 2px var(--vt-success), 0 0 0 6px var(--vt-success-soft); }

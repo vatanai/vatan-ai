@@ -38,8 +38,8 @@
         </div>
         <div class="p-4 rounded-xl border bg-[var(--card-bg)] border-[var(--border)]">
           <div class="text-[11px] text-[var(--text-soft)] mb-1.5">صفحه فعلی</div>
-          <div class="text-[22px] font-extrabold leading-none text-[var(--text-h)]">1</div>
-          <div class="text-[10px] text-[var(--text-soft)] mt-1">بدون صفحه‌بندی</div>
+          <div class="text-[22px] font-extrabold leading-none text-[var(--text-h)]">{{ number_format($users->currentPage()) }}</div>
+          <div class="text-[10px] text-[var(--text-soft)] mt-1">{{ number_format($users->perPage()) }} کاربر در هر صفحه</div>
         </div>
       </div>
 
@@ -191,7 +191,7 @@
                       {{ mb_substr($user->name ?? 'ک', 0, 1) }}
                     </div>
                   @endif
-                  <div class="inline-flex items-center justify-center gap-1 text-[9.5px] text-[var(--text-soft)]"><i class="fa-solid fa-list-ol text-[9px]" title="تعداد در فهرست"></i><span>تعداد: {{ $i + 1 }}</span></div>
+                  <div class="inline-flex items-center justify-center gap-1 text-[9.5px] text-[var(--text-soft)]"><i class="fa-solid fa-list-ol text-[9px]" title="تعداد در فهرست"></i><span>تعداد: {{ ($users->firstItem() ?? 1) + $i }}</span></div>
                   <div class="inline-flex max-w-full items-center justify-center gap-1.5 text-[9.5px] text-[var(--text-soft)]">
                     <span class="inline-flex items-center gap-1 font-mono dir-ltr"><i class="fa-regular fa-id-badge text-[9px]" title="شناسه کاربر"></i><span>ID: {{ $user->id }}</span></span>
                     <span class="text-[var(--border)]">•</span>
@@ -289,7 +289,7 @@
               </td>
               <td class="users-desktop-actions p-2 text-center">
                 <div class="grid grid-cols-2 gap-1.5 justify-center w-fit mx-auto">
-                  <button type="button" onclick="window.openUserModal(@js(trim(($user->name ?? 'کاربر').' '.($user->last_name ?? ''))), @js($user->generatedImages), {{ $user->id }}, @js($selectedPlanId ?: ''), @js(\App\Support\Jalali::formatNumeric($joinedAt)))" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--info-l)] border-[var(--info-m)] hover:bg-[var(--info-l)] text-[var(--info)] text-[10px] font-medium transition-colors cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> نمایش</button>
+                  <button type="button" onclick="window.openUserModal(@js(trim(($user->name ?? 'کاربر').' '.($user->last_name ?? ''))), {{ (int) $user->generated_images_count }}, {{ $user->id }}, @js($selectedPlanId ?: ''), @js(\App\Support\Jalali::formatNumeric($joinedAt)))" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--info-l)] border-[var(--info-m)] hover:bg-[var(--info-l)] text-[var(--info)] text-[10px] font-medium transition-colors cursor-pointer"><i class="fa-solid fa-eye ml-1"></i> نمایش</button>
                   <a href="{{ route('admin.users.logs', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--page-bg)] border-[var(--border)] text-[var(--text-main)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="مشاهده لاگ‌ها"><i class="fa-solid fa-history"></i> لاگ‌ها</a>
                   <a href="{{ route('admin.users.gallery.show', $user->id) }}" class="w-[66px] px-1.5 py-1 rounded-md border bg-[var(--primary-l)] border-[var(--primary-m)] text-[var(--primary)] inline-flex items-center justify-center gap-1 cursor-pointer text-[10px] transition-all hover:border-[var(--info)] hover:text-[var(--info)]" title="گالری و پروفایل کامل ورودی‌های کاربر"><i class="fa-solid fa-images"></i> گالری</a>
                   <div class="admin-user-credit-action-stack">
@@ -316,6 +316,33 @@
           </tbody>
         </table>
       </div>
+
+      @if($users->hasPages())
+        @php
+          $paginationStart = max(1, $users->currentPage() - 2);
+          $paginationEnd = min($users->lastPage(), $users->currentPage() + 2);
+        @endphp
+        <nav class="mt-4 flex items-center justify-between gap-3 flex-wrap rounded-xl border border-[var(--border)] bg-[var(--card-bg)] p-3" aria-label="صفحه‌بندی کاربران">
+          <span class="text-[10.5px] text-[var(--text-soft)]">
+            نمایش {{ number_format($users->firstItem()) }} تا {{ number_format($users->lastItem()) }} از {{ number_format($users->total()) }} کاربر
+          </span>
+          <div class="flex items-center gap-1" dir="ltr">
+            @if($users->onFirstPage())
+              <span class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-[var(--text-soft)] opacity-50" aria-disabled="true" aria-label="صفحه قبلی"><i class="fa-solid fa-chevron-left"></i></span>
+            @else
+              <a href="{{ $users->previousPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]" rel="prev" aria-label="صفحه قبلی"><i class="fa-solid fa-chevron-left"></i></a>
+            @endif
+            @foreach($users->getUrlRange($paginationStart, $paginationEnd) as $pageNumber => $pageUrl)
+              <a href="{{ $pageUrl }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-[11px] {{ $pageNumber === $users->currentPage() ? 'border-[var(--primary)] bg-[var(--primary)] text-white' : 'border-[var(--border)] text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]' }}" @if($pageNumber === $users->currentPage()) aria-current="page" @endif>{{ number_format($pageNumber) }}</a>
+            @endforeach
+            @if($users->hasMorePages())
+              <a href="{{ $users->nextPageUrl() }}" class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-[var(--text-main)] hover:border-[var(--primary)] hover:text-[var(--primary)]" rel="next" aria-label="صفحه بعدی"><i class="fa-solid fa-chevron-right"></i></a>
+            @else
+              <span class="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-[var(--border)] px-2 text-[var(--text-soft)] opacity-50" aria-disabled="true" aria-label="صفحه بعدی"><i class="fa-solid fa-chevron-right"></i></span>
+            @endif
+          </div>
+        </nav>
+      @endif
 
     </div>
   </main>
@@ -742,7 +769,36 @@ window.filterTable = function(q) {
   if (typeof window.updateUserBulkSelection === 'function') window.updateUserBulkSelection();
 }
 
+/* خروجی‌های کاربر فقط هنگام باز کردن پنجره از سرور گرفته می‌شوند (نه داخل HTML کل صفحه) */
+window.userGeneratedImagesUrl = @json(route('admin.users.generated-images', ['id' => '__ID__']));
+window.userGeneratedImagesCache = {};
+window.userModalSeq = 0;
 window.openUserModal = function(fullName, generatedImages, userId, currentPlanId, joinedAt) {
+  const requestId = ++window.userModalSeq;
+  if (!Array.isArray(generatedImages)) {
+    const safeId = Number(userId);
+    const cached = window.userGeneratedImagesCache[safeId];
+    if (cached) return window.renderUserModal(fullName, cached, userId, currentPlanId, joinedAt, false, cached.length);
+    window.renderUserModal(fullName, [], userId, currentPlanId, joinedAt, true, Number(generatedImages) || 0);
+    fetch(window.userGeneratedImagesUrl.replace('__ID__', String(safeId)), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+      .then(response => { if (!response.ok) throw new Error('load'); return response.json(); })
+      .then(body => {
+        const images = Array.isArray(body.images) ? body.images : [];
+        window.userGeneratedImagesCache[safeId] = images;
+        if (requestId !== window.userModalSeq) return;
+        window.renderUserModal(fullName, images, userId, currentPlanId, joinedAt, false, images.length);
+      })
+      .catch(() => {
+        if (requestId !== window.userModalSeq) return;
+        const container = document.getElementById('modalContent');
+        if (container) container.querySelectorAll('[data-user-images-loading]').forEach(el => { el.innerHTML = '<span class="text-[var(--danger)]">بارگذاری خروجی‌ها انجام نشد؛ دوباره امتحان کنید.</span>'; });
+      });
+    return;
+  }
+  window.renderUserModal(fullName, generatedImages, userId, currentPlanId, joinedAt, false, generatedImages.length);
+}
+
+window.renderUserModal = function(fullName, generatedImages, userId, currentPlanId, joinedAt, isLoading, totalCount) {
   document.getElementById('modalUserName').innerText = fullName;
   const container = document.getElementById('modalContent');
   const safeUserId = Number(userId);
@@ -757,7 +813,7 @@ window.openUserModal = function(fullName, generatedImages, userId, currentPlanId
       </div>
       <div class="p-2.5 rounded-xl border bg-[var(--page-bg)] border-[var(--border)] text-center">
         <div class="text-[10px] text-[var(--text-soft)]">تصاویر خلق‌شده</div>
-        <div class="mt-1 text-[14px] font-extrabold text-[var(--info)]">${Array.isArray(generatedImages) ? generatedImages.length.toLocaleString('fa-IR') : '۰'}</div>
+        <div class="mt-1 text-[14px] font-extrabold text-[var(--info)]">${Number(totalCount || 0).toLocaleString('fa-IR')}</div>
       </div>
     </section>`;
 
@@ -776,7 +832,9 @@ window.openUserModal = function(fullName, generatedImages, userId, currentPlanId
       </section>`;
   }
 
-  if (!generatedImages || generatedImages.length === 0) {
+  if (isLoading) {
+    contentHtml += `<div class="text-center p-6 text-[12.5px] text-[var(--text-soft)]" data-user-images-loading><i class="fa-solid fa-spinner fa-spin ml-1"></i> در حال بارگذاری خروجی‌ها…</div>`;
+  } else if (!generatedImages || generatedImages.length === 0) {
     contentHtml += `<div class="text-center p-6 text-[12.5px] text-[var(--text-soft)]">این کاربر هنوز از هیچ محصولی برای تولید تصویر استفاده نکرده است.</div>`;
   } else {
     let listHtml = `<div class="mb-2 text-[11px] font-bold text-[var(--text-soft)]">محصولات استفاده‌شده</div><div class="divide-y divide-[var(--border)]">`;
@@ -808,6 +866,7 @@ window.openUserModal = function(fullName, generatedImages, userId, currentPlanId
   container.innerHTML = contentHtml;
 
   const modal = document.getElementById('productModal');
+  if (modal.classList.contains('flex') && !modal.classList.contains('opacity-0')) return;
   modal.classList.remove('hidden');
   modal.classList.add('flex');
   setTimeout(() => {
@@ -904,12 +963,11 @@ window.changeUserPlan = function(userId, select) {
   });
 }
 
-@php($autoOpenUser = $autoOpenUserId ? $users->firstWhere('id', $autoOpenUserId) : null)
 @if($autoOpenUser)
 const openRequestedUser = function() {
   window.openUserModal(
     @js(trim(($autoOpenUser->name ?? 'کاربر').' '.($autoOpenUser->last_name ?? ''))),
-    @js($autoOpenUser->generatedImages),
+    {{ (int) $autoOpenUser->generated_images_count }},
     {{ $autoOpenUser->id }},
     @js($autoOpenUser->hasFreePlan() ? '' : $autoOpenUser->plan_id),
     @js(\App\Support\Jalali::formatNumeric($autoOpenUser->registered_at ?? $autoOpenUser->created_at))

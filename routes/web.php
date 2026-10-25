@@ -499,6 +499,7 @@ Route::post('ai-models/{aiModel}/test-image', [AiTestController::class, 'testIma
     Route::get('/users/all-logs',       [AdminUserController::class, 'allLogs'])->name('users.all_logs');
     Route::get('/users/all-activities', [AdminUserController::class, 'allActivities'])->name('users.all_activities');
     Route::get('/users/{id}/logs',      [AdminUserController::class, 'logs'])->name('users.logs');
+    Route::get('/users/{id}/generated-images', [AdminUserController::class, 'generatedImages'])->whereNumber('id')->name('users.generated-images');
     Route::get('/users/tokens',         [AdminUserController::class, 'tokens'])->name('users.tokens'); // پشتیبانی از دکمه مدیریت توکن قالب شما
 
     // مدیریت تیکت‌های پشتیبانی؛ این مسیرها توسط منوی سایت و صفحهٔ جزئیات تیکت استفاده می‌شوند.

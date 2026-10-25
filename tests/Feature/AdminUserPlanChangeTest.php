@@ -44,6 +44,13 @@ class AdminUserPlanChangeTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('plan_settings', function (Blueprint $table): void {
+            $table->id();
+            $table->string('key')->unique();
+            $table->text('value')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->string('name')->nullable();
@@ -73,10 +80,24 @@ class AdminUserPlanChangeTest extends TestCase
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('product_id')->nullable();
+            $table->uuid('build_uuid')->nullable();
             $table->string('image_path');
             $table->text('user_prompt')->nullable();
             $table->decimal('cost', 10, 6)->default(0);
             $table->unsignedBigInteger('size')->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('generated_videos', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('plan_purchases', function (Blueprint $table): void {
+            $table->id();
+            $table->string('status')->default('pending');
+            $table->timestamp('purchased_at')->nullable();
             $table->timestamps();
         });
 
@@ -365,6 +386,39 @@ class AdminUserPlanChangeTest extends TestCase
         $this->actingAs($admin, 'admin')
             ->get(route('admin.users.tokens'))
             ->assertOk();
+    }
+
+    public function test_user_index_paginates_users_and_keeps_search_filters(): void
+    {
+        $admin = $this->admin('leader');
+
+        foreach (range(1, 51) as $number) {
+            User::query()->create([
+                'name' => 'کاربر صفحه‌بندی ' . $number,
+                'email' => 'pagination-' . $number . '@example.test',
+                'password' => 'password',
+                'status' => 'active',
+                'registered_at' => now()->subMinutes($number),
+            ]);
+        }
+
+        $firstPage = $this->actingAs($admin, 'admin')
+            ->get(route('admin.users.index', ['q' => 'صفحه‌بندی']))
+            ->assertOk()
+            ->assertSee('کاربر صفحه‌بندی 1')
+            ->assertDontSee('کاربر صفحه‌بندی 51');
+
+        $firstPage->assertViewHas('users', function ($users): bool {
+            return $users->total() === 51 && $users->perPage() === 50 && $users->currentPage() === 1;
+        });
+
+        $secondPage = $this->get(route('admin.users.index', ['q' => 'صفحه‌بندی', 'page' => 2]))
+            ->assertOk()
+            ->assertSee('کاربر صفحه‌بندی 51');
+
+        $secondPage->assertViewHas('users', function ($users): bool {
+            return $users->total() === 51 && $users->perPage() === 50 && $users->currentPage() === 2;
+        });
     }
 
     private function admin(string $role): Admin

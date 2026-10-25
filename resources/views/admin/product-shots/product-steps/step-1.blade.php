@@ -42,7 +42,7 @@
       ->unique()->values()->all();
   @endphp
   <section class="content-card p-5" id="ps-product-images">
-    <div class="ps-card-title"><i class="fa-solid fa-cloud-arrow-up"></i> آپلود عکس محصول</div>
+    <div class="ps-card-title"><i class="fa-solid fa-cloud-arrow-up"></i> عکس کاور محصول</div>
     <div class="ps-card-desc">عکس‌های معرفی محصول را انتخاب کنید؛ اولین عکس کاور کارت محصول است و بقیه در گالری نمایش داده می‌شوند. ترتیب و کاور را با کشیدن تصاویر کوچک تغییر دهید. اگر عکسی بارگذاری نشود، کولاژ نمونه‌ی اسلایدها مبنای کارت خواهد بود.</div>
     <div class="mt-4">
       @include('admin.partials.image-optimizer-group', [
@@ -56,4 +56,8 @@
       <input type="hidden" name="remove_main_images" value="0" data-remove-main-images>
     </div>
   </section>
+
+  @include('admin.product-shots.product-steps.input-image')
+
+  @include('admin.product-shots.product-steps.slides')
 </div>

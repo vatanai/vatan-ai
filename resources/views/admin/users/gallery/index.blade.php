@@ -107,7 +107,7 @@
                     @if(!empty($pair['before'][0]))
                       @php($media = $pair['before'][0])
                       <span class="absolute inset-0 flex items-center justify-center px-2 text-center text-[9px] text-[var(--text-soft)]">تصویر در دسترس نیست</span>
-                      @if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline data-gallery-media></video>@else<img src="{{ $media['url'] }}" alt="" class="absolute inset-0 w-full h-full object-cover" loading="lazy" data-gallery-media>@endif
+                      @if($media['type'] === 'video')<video src="{{ $media['url'] }}" class="absolute inset-0 w-full h-full object-cover" preload="metadata" muted playsinline data-gallery-media></video>@else<a href="{{ $media['full_url'] ?? $media['url'] }}" target="_blank" rel="noopener" class="absolute inset-0 block" title="بازکردن عکس ورودی با کیفیت اصلی"><img src="{{ $media['url'] }}" alt="" class="w-full h-full object-cover" loading="lazy" data-gallery-media></a>@endif
                       @if(count($pair['before']) > 1)<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-[var(--card-bg)]/90 text-[8px] text-[var(--text-main)]">+{{ count($pair['before']) - 1 }}</span>@endif
                     @else
                       <span class="w-full h-full flex items-center justify-center text-center text-[9px] text-[var(--text-soft)]">ورودی ثبت نشده</span>

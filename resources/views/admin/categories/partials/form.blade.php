@@ -23,5 +23,5 @@
       <p class="text-[10px] text-[var(--text-soft)] mt-2">JPEG، PNG یا WebP تا ۲ مگابایت</p>
     </div>
   </div>
-  <div class="mt-5 flex justify-end"><button class="h-10 px-5 rounded-lg bg-[var(--primary)] text-[var(--accent)] text-xs font-bold cursor-pointer"><i class="fa-solid fa-floppy-disk ml-1"></i> ذخیره دسته‌بندی</button></div>
+  <div class="mt-5 flex justify-end"><button class="h-10 px-5 rounded-lg bg-[var(--primary)] text-white text-xs font-bold cursor-pointer"><i class="fa-solid fa-floppy-disk ml-1"></i> ذخیره دسته‌بندی</button></div>
 </form>

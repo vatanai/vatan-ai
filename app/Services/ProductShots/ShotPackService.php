@@ -57,21 +57,30 @@ class ShotPackService
         ])->values()->all();
     }
 
-    /** عکس ورودی‌ای که اسلایدهای محصول با آن ساخته شده‌اند (فقط صفحه‌ی محصول). */
+    /**
+     * عکس ورودی‌ای که اسلایدهای محصول با آن ساخته شده‌اند (فقط صفحه‌ی محصول، نه صفحه‌ی ساخت).
+     * هر وقت ادمین عکس ورودی ثبت کرده باشد نمایش داده می‌شود؛ دیگر به اسلاید قدیمی «عکس ورودی» وابسته نیست.
+     */
     public function inputImageUrl(Product $product): ?string
     {
-        $hasInputImageSlide = $product->enabledProductShots()->contains(fn (ProductShot $ps) => $ps->optionEnabled('input_image_slide', false));
-        if (! $hasInputImageSlide) {
-            return null;
-        }
-
         $path = trim((string) data_get($product->shot_settings, 'input_image', ''));
 
         return $path !== '' ? \App\Models\ShotLibrary::publicUrl($path) : null;
     }
 
+    /** عکس کاور محصول (اولین «عکس کاور محصول» گام ۱)؛ پیش‌فرض خالی نادیده گرفته می‌شود. */
+    public function coverImageUrl(Product $product): ?string
+    {
+        $path = trim((string) $product->cover);
+        if ($path === '' || str_starts_with($path, 'products/thumbnails/default_placeholder')) {
+            return null;
+        }
+
+        return \App\Models\ShotLibrary::publicUrl($path);
+    }
+
     /**
-     * گالری صفحه‌ی محصول: اول «عکس ورودی» (اگر هست) و بعد نمونه‌ی اسلایدها.
+     * گالری صفحه‌ی محصول به این ترتیب: ۱) عکس کاور ۲) عکس ورودی (اگر هست) ۳) نمونه‌ی اسلایدها.
      *
      * @return Collection<int, array{url:string, label:string, kind:string}>
      */
@@ -109,9 +118,19 @@ class ShotPackService
             $gallery = collect($this->collage($product, 6))
                 ->map(fn (string $url) => ['url' => $url, 'label' => (string) ($product->name_fa ?: $product->name_en), 'kind' => 'slide']);
         }
+
+        // ۱) کاور همیشه اول؛ اگر همان تصویر بین اسلایدها هم بود، تکراری حذف می‌شود.
+        $cover = $this->coverImageUrl($product);
+        if ($cover) {
+            $gallery = $gallery->reject(fn (array $item) => $item['url'] === $cover)->values();
+            $gallery->prepend(['url' => $cover, 'label' => (string) ($product->name_fa ?: $product->name_en ?: 'عکس کاور محصول'), 'kind' => 'cover']);
+        }
+
+        // ۲) عکس ورودی بلافاصله بعد از کاور
         $input = $this->inputImageUrl($product);
         if ($input) {
-            $gallery->prepend(['url' => $input, 'label' => 'عکس ورودی', 'kind' => 'input']);
+            $gallery = $gallery->reject(fn (array $item) => $item['url'] === $input)->values();
+            $gallery->splice($cover ? 1 : 0, 0, [['url' => $input, 'label' => 'عکس ورودی', 'kind' => 'input']]);
         }
 
         return $gallery->values();
