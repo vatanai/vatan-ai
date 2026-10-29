@@ -196,46 +196,56 @@
   }
 
   var thumbs = [].slice.call(root.querySelectorAll('[data-gallery-thumb]'));
+  var galleryCount = {{ $gallery->count() }};
   var main = root.querySelector('[data-main-image]');
   var counter = root.querySelector('[data-counter]');
   var current = 0;
 
-  /* دیزالو: تصویر قبلی تدریجاً محو می‌شود و تصویر جدید تدریجاً ظاهر می‌شود */
+  var imageChangeSequence = 0;
+  /* تصویر بعدی پیش‌بارگذاری می‌شود تا کلیک‌های سریع، تصویر قبلی را روی صحنه نگه ندارند. */
   function crossfade(src, label) {
-    if (!main) return;
-    if (main.getAttribute('src') === src) return;
-    var stage = main.parentNode;
-    var old = main.cloneNode(true);
-    old.removeAttribute('data-main-image');
-    old.removeAttribute('fetchpriority');
-    old.classList.add('ps-ghost');
-    old.style.left = main.offsetLeft + 'px';
-    old.style.top = main.offsetTop + 'px';
-    old.style.width = main.offsetWidth + 'px';
-    old.style.height = main.offsetHeight + 'px';
-    old.style.opacity = '1';
-    stage.querySelectorAll('.ps-ghost').forEach(function (g) { g.parentNode.removeChild(g); });
-    stage.insertBefore(old, main.nextSibling);
-    main.style.opacity = '0';
-    var finish = function () {
-      main.style.opacity = '1';
-      old.style.opacity = '0';
-      setTimeout(function () { if (old.parentNode) old.parentNode.removeChild(old); }, 650);
-    };
-    main.onload = function () { main.onload = null; main.onerror = null; finish(); };
-    main.onerror = function () { main.onload = null; main.onerror = null; finish(); };
-    main.src = src;
+    if (!main || !src) return;
     main.alt = label;
+    var targetUrl = new URL(src, document.baseURI).href;
+    var sequence = ++imageChangeSequence;
+    if (main.src === targetUrl) {
+      main.style.opacity = '1';
+      return;
+    }
+
+    var incoming = new Image();
+    var commit = function () {
+      if (sequence !== imageChangeSequence) return;
+      main.style.opacity = '0';
+      main.src = targetUrl;
+      main.alt = label;
+      requestAnimationFrame(function () {
+        if (sequence === imageChangeSequence) main.style.opacity = '1';
+      });
+    };
+    incoming.onload = commit;
+    // اگر تصویر خراب/غیرقابل‌دسترسی باشد، تصویر اصلی هم پنهان نمی‌ماند.
+    incoming.onerror = commit;
+    incoming.src = targetUrl;
   }
 
-  function show(index) {
-    if (!thumbs.length || !main) return;
-    current = (index + {{ $gallery->count() ?: 1 }}) % {{ $gallery->count() ?: 1 }};
-    var selected = thumbs.filter(function (button) { return Number(button.dataset.galleryThumb) === current; })[0];
+  function show(index, preferredThumb) {
+    if (!galleryCount || !thumbs.length || !main) return;
+    current = ((Number(index) % galleryCount) + galleryCount) % galleryCount;
+    // دسکتاپ و موبایل هر دو فهرست thumbnail دارند. همیشه همان فهرست قابل‌مشاهده
+    // را مبنا بگیر تا انتخاب موبایل روی نمونه‌ی مخفی دسکتاپ اسکرول نکند.
+    var selected = preferredThumb && Number(preferredThumb.dataset.galleryThumb) === current
+      ? preferredThumb
+      : thumbs.filter(function (button) {
+          return Number(button.dataset.galleryThumb) === current && button.getClientRects().length > 0;
+        })[0];
+    if (!selected) {
+      selected = thumbs.filter(function (button) { return Number(button.dataset.galleryThumb) === current; })[0];
+    }
     if (!selected) return;
     crossfade(selected.dataset.src, selected.dataset.label || '');
     syncInputState(selected.dataset.kind === 'input');
-    if (counter) counter.textContent = fa(current + 1) + ' / ' + fa({{ $gallery->count() }});
+    if (counter) counter.textContent = fa(current + 1) + ' / ' + fa(galleryCount);
     thumbs.forEach(function (button) {
       var active = Number(button.dataset.galleryThumb) === current;
       button.classList.toggle('is-viewing', active);
@@ -243,7 +253,9 @@
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
       if (button.hasAttribute('aria-selected')) button.setAttribute('aria-selected', active ? 'true' : 'false');
     });
-    if (selected.scrollIntoView) selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (selected.scrollIntoView && selected.getClientRects().length > 0) {
+      selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   /* عکس ورودی: نشان روی تصویر + مقایسه‌ی قبل/بعد با نگه داشتن */
@@ -304,11 +316,11 @@
   }
   function startAuto() {
     stopAuto();
-    if (thumbs.length > 1) autoTimer = setInterval(function () { show(current + 1); }, AUTO_MS);
+    if (galleryCount > 1) autoTimer = setInterval(function () { show(current + 1); }, AUTO_MS);
   }
   thumbs.forEach(function (button) {
     button.addEventListener('click', function () {
-      show(Number(button.dataset.galleryThumb));
+      show(Number(button.dataset.galleryThumb), button);
       startAuto();
     });
   });
