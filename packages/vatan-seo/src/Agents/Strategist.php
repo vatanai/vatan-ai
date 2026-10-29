@@ -112,9 +112,6 @@ class Strategist
         if (! empty($d['low_ctr'][0])) {
             $actions[] = ['title' => 'بازنویسی عنوان و توضیحات برای «'.$d['low_ctr'][0]['query'].'»', 'why' => 'CTR کمتر از نصف حد انتظار برای رتبه‌ی فعلی.', 'type' => 'onpage', 'impact' => 4, 'effort' => 1];
         }
-        if (($d['content']['in_review'] ?? 0) > 0) {
-            $actions[] = ['title' => 'تأیید '.Fa::n($d['content']['in_review']).' پیش‌نویس آماده', 'why' => 'محتوای آماده‌ی منتشرنشده ارزشی تولید نمی‌کند.', 'type' => 'content', 'impact' => 3, 'effort' => 1];
-        }
         return ['focus' => $theme['theme'], 'summary' => 'برنامه‌ی قاعده‌محور (هوش مصنوعی در دسترس نبود).', 'actions' => array_slice($actions, 0, 5), 'pages_to_optimize' => []];
     }
 }

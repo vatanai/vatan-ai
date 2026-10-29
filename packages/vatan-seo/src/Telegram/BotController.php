@@ -4,7 +4,7 @@ namespace Vatan\Seo\Telegram;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Vatan\Seo\Agents\Publisher;
+use Illuminate\Support\Facades\Log;
 use Vatan\Seo\Models\ContentItem;
 use Vatan\Seo\Models\TelegramAdmin;
 use Vatan\Seo\Services\Reporter;
@@ -13,21 +13,24 @@ use Vatan\Seo\Services\SiteManager;
 /** وب‌هوک بات سئو — هیچ‌وقت خطا به تلگرام برنمی‌گرداند (تا تلگرام پیام را تکرار نکند) */
 class BotController extends Controller
 {
-    public function __invoke(Request $request, SeoBot $bot, Reporter $reporter, SiteManager $sites, Publisher $publisher)
+    public function __invoke(Request $request, SeoBot $bot, Reporter $reporter, SiteManager $sites)
     {
         $secret = (string) config('seo-engine.telegram.webhook_secret');
         if ($secret !== '' && ! hash_equals($secret, (string) $request->header('X-Telegram-Bot-Api-Secret-Token'))) {
             return response()->json(['ok' => false], 403);
         }
         try {
-            $this->handle($request->all(), $bot, $reporter, $sites, $publisher);
+            $this->handle($request->all(), $bot, $reporter, $sites);
         } catch (\Throwable $e) {
-            report($e);
+            Log::error('SEO Telegram webhook failed', [
+                'exception' => class_basename($e),
+                'message' => \Vatan\Seo\Support\SecretRedactor::redact($e->getMessage()),
+            ]);
         }
         return response()->json(['ok' => true]);
     }
 
-    protected function handle(array $u, SeoBot $bot, Reporter $reporter, SiteManager $sites, Publisher $publisher): void
+    protected function handle(array $u, SeoBot $bot, Reporter $reporter, SiteManager $sites): void
     {
         if (isset($u['callback_query'])) {
             $cb = $u['callback_query'];
@@ -37,28 +40,8 @@ class BotController extends Controller
                 $bot->api('answerCallbackQuery', ['callback_query_id' => $cb['id'], 'text' => 'این چت به پنل متصل نیست.']);
                 return;
             }
-            [$ns, $action, $id] = array_pad(explode(':', (string) $cb['data']), 3, null);
-            $item = $ns === 'seo' ? ContentItem::find((int) $id) : null;
-            if (! $item) {
-                $bot->api('answerCallbackQuery', ['callback_query_id' => $cb['id'], 'text' => 'مورد پیدا نشد.']);
-                return;
-            }
-            $site = $item->site;
-            $by = 'telegram:'.$chat;
-            $text = match ($action) {
-                'approve' => (function () use ($publisher, $site, $item, $by) {
-                    $item->update(['status' => 'approved', 'approved_by' => $by, 'approved_at' => now()]);
-                    $item = $publisher->publish($site, $item, $by);
-                    return '✅ منتشر شد: '.urldecode((string) $item->published_url);
-                })(),
-                'reject' => (function () use ($item, $by) {
-                    $item->update(['status' => 'rejected', 'approved_by' => $by, 'reviewer_note' => 'رد از تلگرام']);
-                    return '⛔️ رد شد. از پنل می‌توانید بازنویسی بخواهید.';
-                })(),
-                default => 'دستور نامعتبر',
-            };
+            $text = 'سامانه‌ی تأیید دستی غیرفعال شده است؛ انتشار فقط پس از عبور از کنترل کیفیت خودکار انجام می‌شود.';
             $bot->api('answerCallbackQuery', ['callback_query_id' => $cb['id'], 'text' => mb_substr($text, 0, 190)]);
-            $bot->send($chat, e($text).' — «'.e((string) $item->title).'»');
             return;
         }
 
@@ -82,11 +65,11 @@ class BotController extends Controller
                     'admin_id' => $data['admin_id'] ?? null,
                     'is_active' => true,
                 ]);
-                $bot->send($chat, "✅ <b>اتصال برقرار شد.</b>\nاز این به بعد هشدارها، گزارش‌ها و مقاله‌های منتظر تأیید اینجا می‌آید.\n\n/today برنامه‌ی امروز\n/keywords رتبه‌ی کلمات\n/help راهنما");
+                $bot->send($chat, "✅ <b>اتصال برقرار شد.</b>\nگزارش‌ها، هشدارها و نشانی مقاله‌های منتشرشده به این مقصد می‌آیند.\n\n/today برنامه‌ی امروز\n/keywords رتبه‌ی کلمات\n/help راهنما");
                 return;
             }
             $bot->send($chat, $admin && $admin->is_active
-                ? 'سلام دوباره 👋 دستورها: /today /keywords /report /review /budget'
+                ? 'سلام دوباره 👋 دستورها: /today /keywords /report /budget'
                 : "سلام 👋 این بات دستیار سئوی وطن است.\nبرای اتصال، از پنل مدیریت ← سئوی هوشمند ← تنظیمات ← تلگرام «کد اتصال» بگیرید و اینجا بفرستید:\n<code>/start کد</code>");
             return;
         }
@@ -120,8 +103,9 @@ class BotController extends Controller
                 try {
                     $bot->send($chat, $job());
                 } catch (\Throwable $e) {
-                    report($e);
-                    $bot->send($chat, '⚠️ انجام نشد: '.e(mb_substr($e->getMessage(), 0, 300)));
+                    $safeMessage = \Vatan\Seo\Support\SecretRedactor::redact($e->getMessage());
+                    Log::error('SEO Telegram command failed', ['exception' => class_basename($e), 'message' => $safeMessage]);
+                    $bot->send($chat, '⚠️ انجام نشد: '.e(mb_substr($safeMessage, 0, 300)));
                 }
             });
         };
@@ -134,8 +118,7 @@ class BotController extends Controller
             '/keywords' => $bot->send($chat, $reporter->keywords($site)),
             '/report' => $bot->send($chat, $reporter->weekly($site, false)),
             '/budget' => $bot->send($chat, $reporter->budget($site)),
-            '/review' => $this->review($bot, $reporter, $site, $chat),
-            default => $bot->send($chat, "دستورها:\n/today خلاصه و کارهای امروز\n/keywords رتبه‌ی کلمات هدف\n/report گزارش هفتگی\n/review مقاله‌های منتظر تأیید\n/budget هزینه‌ی هوش مصنوعی\n\n<b>دستور به ایجنت‌ها:</b>\n/ask سؤال — پرسش از مدیر سئو با داده‌ی واقعی سایت\n/write کلمه — نوشتن مقاله برای یک کلمه‌ی هدف\n/plan — برنامه‌ی هفته از استراتژیست\n/discover — کشف کلمات تازه از محصولات\n/audit — خزش و ممیزی فنی همین حالا"),
+            default => $bot->send($chat, "دستورها:\n/today خلاصه و کارهای امروز\n/keywords رتبه‌ی کلمات هدف\n/report گزارش هفتگی\n/budget هزینه‌ی هوش مصنوعی\n\n<b>دستور به ایجنت‌ها:</b>\n/ask سؤال — پرسش از مدیر سئو با داده‌ی واقعی سایت\n/write کلمه — نگارش و انتشار خودکار پس از کنترل کیفیت\n/plan — برنامه‌ی هفته از استراتژیست\n/discover — کشف کلمات تازه از محصولات\n/audit — خزش و ممیزی فنی همین حالا"),
         };
     }
 
@@ -172,19 +155,18 @@ class BotController extends Controller
                     $bot->send($chat, 'سهمیه‌ی مقاله‌ی این ماه پر است.');
                     return;
                 }
-                $later('✍️ نوشتن مقاله برای «'.e($kw->keyword).'» شروع شد (۱ تا ۳ دقیقه)…', function () use ($site, $kw, $recorder, $ctx, $reporter, $bot, $chat) {
+                $later('✍️ نگارش و کنترل کیفیت مقاله برای «'.e($kw->keyword).'» شروع شد…', function () use ($site, $kw, $recorder, $ctx) {
                     $item = null;
-                    $recorder->record($site, 'writer', 'content_generate', function () use ($site, $kw, &$item) {
+                    $run = $recorder->record($site, 'writer', 'content_generate', function () use ($site, $kw, &$item) {
                         $w = app(\Vatan\Seo\Agents\ContentWriter::class);
                         $item = $w->draft($site, $w->brief($site, $kw));
-                        return [$item->status === 'failed' ? 'failed' : 'success', 'مقاله از تلگرام: '.$kw->keyword];
+                        if ($item->status === 'review') $item = app(\Vatan\Seo\Services\AutoPublisher::class)->publish($site, $item, 'telegram-auto');
+                        return [$item->status === 'failed' ? 'failed' : 'success', 'مقاله از تلگرام: '.$kw->keyword, ['content_item_id' => $item->id, 'url' => $item->published_url]];
                     }, $ctx);
-                    if ($item && $item->status === 'review') {
-                        [$text, $buttons] = $reporter->approvalCard($item);
-                        $bot->send($chat, $text, $buttons);
-                        return '✅ پیش‌نویس آماده شد.';
+                    if ($item && $item->status === 'published') {
+                        return '✅ منتشر شد: <a href="'.e((string) $item->published_url).'">'.e((string) $item->title).'</a>';
                     }
-                    return '⚠️ پیش‌نویس ساخته نشد.';
+                    return '⚠️ مقاله از کنترل کیفیت عبور نکرد؛ جزئیات در پنل محتوا ثبت شد.'.($run->summary ? ' '.e($run->summary) : '');
                 });
                 return;
             case '/plan':
@@ -220,16 +202,4 @@ class BotController extends Controller
         }
     }
 
-    protected function review(SeoBot $bot, Reporter $reporter, $site, string $chat): void
-    {
-        $items = ContentItem::where('site_id', $site->id)->where('status', 'review')->latest()->limit(5)->get();
-        if ($items->isEmpty()) {
-            $bot->send($chat, 'مقاله‌ای منتظر تأیید نیست. ✨');
-            return;
-        }
-        foreach ($items as $item) {
-            [$text, $buttons] = $reporter->approvalCard($item);
-            $bot->send($chat, $text, $buttons);
-        }
-    }
 }

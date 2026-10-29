@@ -46,21 +46,23 @@ class SeoEngineTest extends TestCase
                     $content = $jsonRepairFixtureCalls === 1 ? 'not json' : '{"repaired":true}';
                     return Http::response(['model' => $request['model'], 'choices' => [['message' => ['content' => $content]]], 'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 20, 'cost' => 0.0001]]);
                 }
+                $longParagraph = str_repeat('برای انتخاب ابزار مناسب، فروشگاه باید نمونه خروجی را با هویت برند، نوع محصول و نیاز مشتریان خود مقایسه کند. ', 25);
                 $content = match (true) {
                     str_contains($sys, '۳ تا ۶ عبارت جستجوی واقعی') => json_encode(['products' => [['id' => 1, 'seeds' => [['keyword' => 'ساخت عكس محصول با هوش مصنوعی', 'intent' => 'transactional'], ['keyword' => 'عکاسی صنعتی آنلاین', 'intent' => 'commercial']]], ['id' => 2, 'seeds' => [['keyword' => 'ساخت ویدیو تبلیغاتی', 'intent' => 'transactional']]]]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'relevance') => json_encode(['items' => [['keyword' => 'ساخت عکس محصول با هوش مصنوعی', 'relevance' => 95, 'intent' => 'transactional', 'difficulty' => 40, 'reason' => 'دقیقاً محصول اصلی'], ['keyword' => 'عکاسی صنعتی آنلاین', 'relevance' => 80, 'intent' => 'commercial', 'difficulty' => 55, 'reason' => 'مرتبط'], ['keyword' => 'فوتبال', 'relevance' => 5, 'intent' => 'informational', 'difficulty' => 90, 'reason' => 'نامرتبط']]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'خوشه‌بندی') => json_encode(['clusters' => [['name' => 'عکس محصول', 'intent' => 'transactional', 'keywords' => ['ساخت عکس محصول با هوش مصنوعی', 'عکاسی صنعتی آنلاین']]]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'SEO researcher') => '- نتایج برتر فهرست ابزارها هستند\n- شکاف: مثال ایرانی ندارند',
-                    str_contains($sys, 'سردبیر ارشد') => json_encode(['angle' => 'راهنمای عملی با مثال فروشگاه‌های ایرانی', 'title_options' => ['ساخت عکس محصول با هوش مصنوعی: راهنمای کامل ۱۴۰۵'], 'outline' => [['h2' => 'ساخت عکس محصول با هوش مصنوعی چیست', 'notes' => 'تعریف'], ['h2' => 'مراحل', 'notes' => '']], 'faqs' => ['هزینه چقدر است؟'], 'secondary_keywords' => ['عکس محصول'], 'internal_links' => [], 'word_target' => 50, 'cta' => ['title' => 'امتحان کن', 'button_label' => 'شروع', 'url' => '/']], JSON_UNESCAPED_UNICODE),
-                    str_contains($sys, 'نویسنده‌ی متخصص') => json_encode(['title' => 'ساخت عکس محصول با هوش مصنوعی: راهنمای کامل', 'slug' => 'ai-product-photo-guide', 'meta_title' => 'ساخت عکس محصول با هوش مصنوعی | راهنمای کامل وطن', 'meta_description' => str_repeat('توضیح کوتاه و جذاب درباره‌ی ساخت عکس محصول ', 4), 'blocks' => [
-                        ['type' => 'lead', 'content' => 'ساخت عکس محصول با هوش مصنوعی یعنی تولید عکس حرفه‌ای بدون استودیو.'],
-                        ['type' => 'heading', 'content' => 'چرا ساخت عکس محصول با هوش مصنوعی', 'level' => 2], ['type' => 'paragraph', 'content' => 'متن [صفحه اصلی](/) و [محصولات](/products) و [مقالات](/articles).'],
-                        ['type' => 'heading', 'content' => 'مراحل', 'level' => 2], ['type' => 'list', 'items' => ['آپلود', 'انتخاب سبک']],
-                        ['type' => 'heading', 'content' => 'نکات', 'level' => 2], ['type' => 'paragraph', 'content' => 'نکته‌ها'],
-                        ['type' => 'heading', 'content' => 'جمع‌بندی', 'level' => 2], ['type' => 'cta', 'title' => 'شروع', 'button_label' => 'بساز', 'button_url' => '/'],
+                    str_contains($sys, 'سردبیر ارشد') => json_encode(['angle' => 'راهنمای عملی با مثال فروشگاه‌های ایرانی', 'title_options' => ['ساخت عکس محصول با هوش مصنوعی: راهنمای کامل ۱۴۰۵'], 'outline' => [['h2' => 'ساخت عکس محصول با هوش مصنوعی چیست', 'notes' => 'تعریف'], ['h2' => 'مراحل', 'notes' => '']], 'faqs' => ['هزینه چقدر است؟'], 'secondary_keywords' => ['عکس محصول'], 'internal_links' => [], 'word_target' => 1200, 'cta' => ['title' => 'امتحان کن', 'button_label' => 'شروع', 'url' => '/']], JSON_UNESCAPED_UNICODE),
+                    str_contains($sys, 'نویسنده و ویراستار ارشد') => json_encode(['title' => 'ساخت عکس محصول با هوش مصنوعی: راهنمای کامل', 'slug' => 'ai-product-photo-guide', 'meta_title' => 'ساخت عکس محصول با هوش مصنوعی | راهنمای وطن', 'meta_description' => 'راهنمای کاربردی ساخت عکس محصول با هوش مصنوعی برای فروشگاه‌ها؛ روش انتخاب محصول، آماده‌سازی تصویر، بررسی خروجی و پیوند به ابزارهای واقعی وطن.', 'blocks' => [
+                        ['type' => 'lead', 'content' => 'ساخت عکس محصول با هوش مصنوعی به فروشگاه کمک می‌کند تصاویر متناسب با نیاز هر محصول را آماده کند. نتیجه‌ی مناسب به انتخاب ابزار، ورودی باکیفیت و بازبینی دقیق وابسته است. در این راهنما مراحل انتخاب و ارزیابی را می‌خوانید.'],
+                        ['type' => 'heading', 'content' => 'ساخت عکس محصول با هوش مصنوعی برای فروشگاه', 'level' => 2], ['type' => 'paragraph', 'content' => 'متن [صفحه اصلی](/) و [محصول عکس](/product/p1) و [ابزار ویدیویی](/product/p2). '.$longParagraph],
+                        ['type' => 'heading', 'content' => 'معیارهای انتخاب ابزار', 'level' => 2], ['type' => 'paragraph', 'content' => $longParagraph],
+                        ['type' => 'heading', 'content' => 'آماده‌سازی تصویر ورودی', 'level' => 2], ['type' => 'list', 'items' => ['نور مناسب', 'انتخاب سبک']],
+                        ['type' => 'heading', 'content' => 'بررسی و اصلاح خروجی', 'level' => 2], ['type' => 'paragraph', 'content' => $longParagraph],
+                        ['type' => 'heading', 'content' => 'جمع‌بندی و گام بعدی', 'level' => 2], ['type' => 'paragraph', 'content' => '[صفحه‌ی هدف](/) و '.$longParagraph], ['type' => 'cta', 'title' => 'شروع', 'button_label' => 'دیدن ابزارها', 'button_url' => '/'],
                         ['type' => 'script', 'content' => 'bad'],
-                    ], 'faq' => [['q' => 'رایگان است؟', 'a' => 'بخشی بله.']]], JSON_UNESCAPED_UNICODE),
-                    str_contains($sys, 'ویراستار ارشد') => json_encode(['quality' => 82, 'eeat' => 70, 'ai_likeness' => 30, 'issues' => ['مثال بیشتر'], 'fixes' => [], 'verdict' => 'publish'], JSON_UNESCAPED_UNICODE),
+                    ], 'faq' => [['q' => 'چطور شروع کنم؟', 'a' => 'با یک ابزار مرتبط و تصویر ورودی مناسب شروع کنید.'], ['q' => 'آیا هر محصولی مناسب است؟', 'a' => 'باید خروجی را با نوع محصول و برند بسنجید.'], ['q' => 'چطور کیفیت را بررسی کنم؟', 'a' => 'جزئیات محصول و تناسب تصویر را بازبینی کنید.']]], JSON_UNESCAPED_UNICODE),
+                    str_contains($sys, 'ممیز مستقل کیفیت') => json_encode(['quality' => 88, 'eeat' => 75, 'ai_likeness' => 25, 'issues' => [], 'fixes' => [], 'verdict' => 'publish'], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'Head of SEO') => json_encode(['focus' => 'تقویت کلمات صفحه‌ی دوم', 'summary' => 'وضعیت پایدار', 'actions' => [['title' => 'لینک داخلی به صفحه‌ی عکس محصول', 'why' => 'رتبه ۶', 'type' => 'onpage', 'impact' => 4, 'effort' => 2], ['title' => 'رفع عنوان‌های تکراری', 'why' => 'خزش', 'type' => 'technical', 'impact' => 4, 'effort' => 2]], 'pages_to_optimize' => ['https://aivatan.com/p1']], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'competitive analyst') => json_encode(['competitors' => [['domain' => 'rival.ir', 'appearances' => 4, 'note' => 'رقیب اصلی'], ['domain' => 'https://www.other.com/x', 'appearances' => 2, 'note' => '']]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'helpful AI search assistant') => json_encode(['answer' => 'سرویس‌های خوبی هست', 'recommended' => [['name' => 'وطن', 'domain' => 'aivatan.com'], ['name' => 'رقیب', 'domain' => 'rival.ir']]], JSON_UNESCAPED_UNICODE),
@@ -130,6 +132,8 @@ class SeoEngineTest extends TestCase
 
         $user = $this->admin();
         $this->actingAs($user, 'admin');
+        config(['seo-engine.telegram.bot_token' => 'test-token']);
+        TelegramAdmin::create(['site_id' => $site->id, 'chat_id' => '-1003903926314', 'name' => 'مدیر تست', 'telegram_user_id' => 217979733, 'message_thread_id' => 18, 'is_active' => true]);
 
         // همه‌ی صفحات
         foreach (['seo.overview', 'seo.keywords.index', 'seo.plan', 'seo.technical', 'seo.content.index', 'seo.scenarios.index', 'seo.activity', 'seo.settings'] as $r) {
@@ -162,12 +166,12 @@ class SeoEngineTest extends TestCase
         // تولید محتوا
         $this->post(route('seo.content.generate'), ['keyword_id' => $kw->id, 'mode' => 'full'])->assertRedirect();
         $item = ContentItem::first();
-        $this->assertSame('review', $item->status, (string) $item->reviewer_note);
+        $this->assertSame('published', $item->status, (string) $item->reviewer_note);
         $this->assertGreaterThanOrEqual(70, $item->seo_score);
         $this->assertNotContains('script', array_column($item->blocks, 'type'));
         $this->get(route('seo.content.show', $item))->assertOk()->assertSee('href="/products"', false);
 
-        // تلگرام: اتصال و تأیید
+        // تلگرام: اتصال و گزارش انتشار خودکار
         $bot = app(\Vatan\Seo\Telegram\SeoBot::class);
         $code = $bot->linkCode($user->id);
         $this->postJson(route('seo.telegram.webhook'), ['message' => [

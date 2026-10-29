@@ -3,6 +3,7 @@
 namespace Vatan\Seo\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Vatan\Seo\Models\Alert;
 use Vatan\Seo\Models\Run;
 use Vatan\Seo\Models\Scenario;
 
@@ -16,7 +17,7 @@ class ScenarioRunner
         'WeeklyReport' => 'reporter', 'StrategistReview' => 'strategist',
     ];
 
-    public function __construct(private RunRecorder $recorder, private Scheduler $scheduler) {}
+    public function __construct(private RunRecorder $recorder, private Scheduler $scheduler, private Notifier $notifier) {}
 
     public function run(Scenario $scenario, string $trigger = 'schedule'): ?Run
     {
@@ -35,6 +36,7 @@ class ScenarioRunner
                 return app($class)->handle($site, $scenario);
             }, ['scenario_id' => $scenario->id, 'trigger' => $trigger]);
 
+            $wasFailing = $scenario->last_status === 'failed' || $scenario->fail_count > 0;
             $scenario->forceFill([
                 'last_run_at' => now(),
                 'last_status' => $run->status,
@@ -43,6 +45,20 @@ class ScenarioRunner
                 'fail_count' => $run->status === 'failed' ? $scenario->fail_count + 1 : 0,
                 'next_run_at' => $this->scheduler->nextRun($scenario),
             ])->save();
+
+            if ($run->status === 'failed') {
+                $recent = Alert::where('site_id', $site->id)->where('type', 'scenario_failure')
+                    ->where('title', 'شکست سناریو: '.$scenario->title)->where('created_at', '>=', now()->subHours(6))->exists();
+                if (! $recent) {
+                    $this->notifier->alert($site, 'danger', 'scenario_failure', 'شکست سناریو: '.$scenario->title,
+                        mb_substr((string) $run->summary, 0, 900)."\n\nسامانه اجرای بعدی را طبق برنامه تلاش می‌کند؛ اگر نیاز به اقدام فوری باشد، تنظیمات اتصال را بررسی کنید.",
+                        ['scenario_id' => $scenario->id, 'scenario_key' => $scenario->key, 'run_id' => $run->id, 'fail_count' => $scenario->fail_count]);
+                }
+            } elseif ($wasFailing) {
+                $this->notifier->alert($site, 'success', 'scenario_recovered', 'سناریو دوباره فعال شد: '.$scenario->title,
+                    mb_substr((string) $run->summary, 0, 700),
+                    ['scenario_id' => $scenario->id, 'scenario_key' => $scenario->key, 'run_id' => $run->id]);
+            }
 
             return $run;
         } finally {

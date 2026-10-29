@@ -158,7 +158,7 @@
     <section class="seo-card">
       <div class="seo-card-head"><div class="seo-card-title"><i class="fa-solid fa-calendar-day"></i> کارهای پیش‌رو @include('seo::partials.help', ['k' => 'overview.today'])</div><a class="seo-link" href="{{ route('seo.plan', ['view' => 'today']) }}">همه <i class="fa-solid fa-angle-left"></i></a></div>
       @if($review)
-        <a href="{{ route('seo.content.index', ['status' => 'review']) }}" class="seo-callout" style="margin-bottom:10px;padding:10px 12px"><i class="fa-solid fa-feather-pointed"></i><div><b>{{ Fa::n($review) }} مقاله منتظر تأیید شماست</b></div></a>
+        <a href="{{ route('seo.content.index', ['status' => 'review']) }}" class="seo-callout" style="margin-bottom:10px;padding:10px 12px"><i class="fa-solid fa-feather-pointed"></i><div><b>{{ Fa::n($review) }} مقاله در صف پردازش خودکار است</b></div></a>
       @endif
       <div class="seo-rows">
         @forelse($today as $t)

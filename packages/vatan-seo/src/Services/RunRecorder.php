@@ -2,10 +2,12 @@
 
 namespace Vatan\Seo\Services;
 
+use Illuminate\Support\Facades\Log;
 use Vatan\Seo\Ai\RunContext;
 use Vatan\Seo\Models\AiCall;
 use Vatan\Seo\Models\Run;
 use Vatan\Seo\Models\Site;
+use Vatan\Seo\Support\SecretRedactor;
 
 /** هر کاری که ایجنت انجام می‌دهد، یک «اجرا» با خلاصه، خروجی، مدت و هزینه‌ی دقیق ثبت می‌کند. */
 class RunRecorder
@@ -33,15 +35,18 @@ class RunRecorder
             [$status, $summary] = [$result[0] ?? 'success', $result[1] ?? null];
             $output = $result[2] ?? null;
         } catch (\Throwable $e) {
-            report($e);
-            [$status, $summary, $output] = ['failed', mb_substr($e->getMessage(), 0, 1000), ['exception' => class_basename($e)]];
+            Log::error('SEO scenario failed', [
+                'exception' => class_basename($e),
+                'message' => SecretRedactor::redact($e->getMessage()),
+            ]);
+            [$status, $summary, $output] = ['failed', SecretRedactor::redact($e->getMessage()), ['exception' => class_basename($e)]];
         } finally {
             RunContext::$runId = $previous;
         }
         $run->update([
             'status' => $status,
-            'summary' => $summary,
-            'output' => $output,
+            'summary' => is_string($summary) ? SecretRedactor::redact($summary) : $summary,
+            'output' => SecretRedactor::sanitize($output),
             'cost_usd' => (float) AiCall::where('run_id', $run->id)->sum('cost_usd'),
             'duration_ms' => (int) ((microtime(true) - $started) * 1000),
             'finished_at' => now(),

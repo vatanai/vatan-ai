@@ -12,7 +12,7 @@ class ContentItem extends SeoModel
         'idea' => 'ایده',
         'brief' => 'بریف آماده',
         'drafting' => 'در حال نگارش',
-        'review' => 'منتظر تأیید',
+        'review' => 'در صف پردازش خودکار',
         'approved' => 'تأیید شد',
         'published' => 'منتشر شد',
         'rejected' => 'رد شد',

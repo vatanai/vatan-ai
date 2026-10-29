@@ -17,19 +17,21 @@ use Vatan\Seo\Support\Prompt;
  *  ۱. بریف (پژوهش زنده‌ی SERP با Grok در صورت مجاز بودن + محصولات و مقالات موجود)
  *  ۲. پیش‌نویس (مدل نویسنده)
  *  ۳. ممیزی: امتیاز سئوی قاعده‌محور + ممیزی کیفیت با مدل سریع
- *  ۴. «منتظر تأیید» ← تلگرام / داشبورد ← انتشار
+ *  ۴. عبور از دروازه‌ی سخت‌گیرانه‌ی کیفیت ← انتشار خودکار
  */
 class ContentWriter
 {
-    public function __construct(private Ai $ai) {}
+    public function __construct(private Ai $ai, private ContentQualityGate $gate) {}
 
     public function brief(Site $site, Keyword $kw, ?ContentItem $item = null): ContentItem
     {
         $connector = ConnectorFactory::for($site);
-        $existing = collect($connector->articles(80))->map(fn ($a) => '- '.$a['title'].' | '.$a['url'])->implode("\n");
-        $products = collect($connector->products(200))
+        $articles = collect($connector->articles(120));
+        $existing = $articles->map(fn ($a) => '- '.$a['title'].' | '.$a['url'])->implode("\n");
+        $productCatalog = collect($connector->products(200))
             ->sortByDesc(fn ($p) => similar_text(Fa::normalizeKeyword($p['title']), $kw->normalized))
-            ->take(6)->map(fn ($p) => '- '.$p['title'].' | '.$p['url'])->implode("\n");
+            ->filter(fn ($p) => ! empty($p['url']))->take(8)->values();
+        $products = $productCatalog->map(fn ($p) => '- '.$p['title'].' | دسته: '.($p['category'] ?: 'نامشخص').' | '.($p['description'] ?: '').' | '.$p['url'])->implode("\n");
 
         $research = '';
         if ($this->ai->available($site, 'research') && Budget::limit($site, 'research_calls_per_month') > Budget::researchCallsThisMonth($site)) {
@@ -53,11 +55,20 @@ class ContentWriter
         ]), 'بریف را بساز.', ['max_tokens' => 3000, 'temperature' => 0.5]);
 
         $item ??= new ContentItem(['site_id' => $site->id, 'keyword_id' => $kw->id, 'type' => 'article']);
+        $targetUrl = $kw->target_url ?: data_get($kw->meta, 'product_url', $site->url('/'));
+        $catalog = array_values(array_unique(array_filter(array_merge(
+            [$targetUrl], $productCatalog->pluck('url')->all(), $articles->pluck('url')->all(),
+            array_map(fn ($link) => (string) ($link['url'] ?? ''), (array) ($brief['internal_links'] ?? [])),
+        ))));
         $item->fill([
             'status' => 'brief',
             'title' => $brief['title_options'][0] ?? $kw->keyword,
-            'target_url' => $kw->target_url,
-            'brief' => $brief + ['research_used' => $research !== ''],
+            'target_url' => $targetUrl,
+            'brief' => $brief + [
+                'research_used' => $research !== '',
+                'product_links' => $productCatalog->pluck('url')->values()->all(),
+                'internal_link_catalog' => $catalog,
+            ],
         ]);
         $item->cost_usd = (float) $item->cost_usd;
         $item->save();
@@ -67,39 +78,39 @@ class ContentWriter
 
     public function draft(Site $site, ContentItem $item): ContentItem
     {
-        $item->update(['status' => 'drafting']);
-        $json = $this->ai->json($site, 'writer', 'content-draft', Prompt::get('content-draft', [
-            'brand' => Prompt::brand($site),
-            'brief' => array_merge(['keyword' => $item->keyword?->keyword, 'title' => $item->title], (array) $item->brief),
-        ]), 'مقاله را کامل بنویس.', ['max_tokens' => 9000, 'temperature' => 0.65]);
+        $feedback = [];
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            $item->update(['status' => 'drafting']);
+            $brief = array_merge(['keyword' => $item->keyword?->keyword, 'title' => $item->title], (array) $item->brief);
+            if ($feedback) $brief['editor_feedback'] = $feedback;
+            $json = $this->ai->json($site, 'writer', 'content-draft', Prompt::get('content-draft', [
+                'brand' => Prompt::brand($site), 'brief' => $brief,
+            ]), $attempt ? 'مقاله را با رفع همه‌ی ایرادهای ممیزی، از نو و کامل بنویس.' : 'مقاله را کامل بنویس.', ['max_tokens' => 9000, 'temperature' => 0.45]);
 
-        $blocks = $this->normalizeBlocks((array) ($json['blocks'] ?? []));
-        if (count($blocks) < 4) {
-            $item->update(['status' => 'failed', 'reviewer_note' => 'پیش‌نویس ناقص بود.']);
-            return $item;
-        }
-        $faq = array_values(array_filter((array) ($json['faq'] ?? []), fn ($f) => ! empty($f['q']) && ! empty($f['a'])));
-        if ($faq) {
-            $blocks[] = ['type' => 'heading', 'content' => 'سؤالات متداول', 'level' => 2];
-            foreach ($faq as $f) {
-                $blocks[] = ['type' => 'heading', 'content' => (string) $f['q'], 'level' => 3];
-                $blocks[] = ['type' => 'paragraph', 'content' => (string) $f['a']];
+            $blocks = $this->normalizeBlocks((array) ($json['blocks'] ?? []));
+            $faq = array_values(array_filter((array) ($json['faq'] ?? []), fn ($f) => ! empty($f['q']) && ! empty($f['a'])));
+            if ($faq) {
+                $blocks[] = ['type' => 'heading', 'content' => 'سؤالات متداول', 'level' => 2];
+                foreach ($faq as $f) {
+                    $blocks[] = ['type' => 'heading', 'content' => (string) $f['q'], 'level' => 3];
+                    $blocks[] = ['type' => 'paragraph', 'content' => (string) $f['a']];
+                }
             }
+            $slug = Str::slug((string) ($json['slug'] ?? ''), '-') ?: Str::slug(Str::ascii((string) $item->title)) ?: 'article-'.$item->id;
+            $item->fill([
+                'title' => $json['title'] ?? $item->title, 'slug' => Str::limit($slug, 80, ''),
+                'meta_title' => Str::limit((string) ($json['meta_title'] ?? $json['title'] ?? ''), 65, ''),
+                'meta_description' => Str::limit((string) ($json['meta_description'] ?? ''), 160, ''),
+                'blocks' => $blocks, 'faq' => $faq, 'word_count' => $this->words($blocks),
+            ])->save();
+
+            $item = $this->review($site, $item);
+            if (data_get($item->quality, 'gate.passed')) return $item;
+            $feedback = (array) data_get($item->quality, 'gate.errors', []);
+            $feedback = array_merge($feedback, (array) data_get($item->quality, 'ai.issues', []));
+            $feedback = array_merge($feedback, (array) data_get($item->quality, 'ai.fixes', []));
         }
-        $slug = Str::slug((string) ($json['slug'] ?? ''), '-') ?: Str::slug(Str::ascii((string) $item->title)) ?: 'article-'.$item->id;
-
-        $item->fill([
-            'title' => $json['title'] ?? $item->title,
-            'slug' => Str::limit($slug, 80, ''),
-            'meta_title' => Str::limit((string) ($json['meta_title'] ?? $json['title'] ?? ''), 65, ''),
-            'meta_description' => Str::limit((string) ($json['meta_description'] ?? ''), 160, ''),
-            'blocks' => $blocks,
-            'faq' => $faq,
-            'word_count' => $this->words($blocks),
-        ]);
-        $item->save();
-
-        return $this->review($site, $item);
+        return $item->fresh();
     }
 
     public function review(Site $site, ContentItem $item): ContentItem
@@ -109,13 +120,17 @@ class ContentWriter
         try {
             $text = collect((array) $item->blocks)->map(fn ($b) => $b['content'] ?? implode("\n", (array) ($b['items'] ?? [])))->implode("\n\n");
             $quality['ai'] = $this->ai->json($site, 'fast', 'content-review', Prompt::get('content-review', ['keyword' => $item->keyword?->keyword, 'article' => mb_substr($text, 0, 14000)]), 'ممیزی کن.', ['max_tokens' => 1200, 'temperature' => 0.1]);
-        } catch (\Throwable) {
-            // ممیزی AI اختیاری است
+        } catch (\Throwable $e) {
+            $quality['ai'] = ['verdict' => 'revise', 'quality' => 0, 'eeat' => 0, 'ai_likeness' => 100, 'issues' => ['ممیزی هوش مصنوعی انجام نشد: '.mb_substr($e->getMessage(), 0, 180)], 'fixes' => []];
         }
+        $item->quality = $quality;
+        $gate = $this->gate->evaluate($site, $item);
+        $quality['gate'] = collect($gate)->except('rendered_html')->all();
         $item->update([
             'seo_score' => $score,
             'quality' => $quality,
-            'status' => 'review',
+            'status' => $gate['passed'] ? 'review' : 'failed',
+            'reviewer_note' => $gate['passed'] ? null : 'دروازه‌ی کیفیت رد شد: '.implode('، ', $gate['errors']),
             'cost_usd' => (float) \Vatan\Seo\Models\AiCall::where('site_id', $site->id)->whereIn('purpose', ['content-brief', 'content-draft', 'content-review', 'serp-research'])->where('created_at', '>=', $item->created_at)->sum('cost_usd'),
         ]);
         return $item;

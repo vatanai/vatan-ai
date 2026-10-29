@@ -35,7 +35,7 @@ return [
             'why' => 'ایجنت صفحه را با نتایج برتر مقایسه می‌کند و پیشنهاد دقیق تغییر می‌دهد.'],
         ['key' => 'kw.brief', 'title' => 'بریف محتوای پشتیبان برای «{keyword}»', 'category' => 'content', 'impact' => 4, 'effort' => 1, 'automation' => 'auto', 'check' => 'kw:brief', 'offset_days' => 4,
             'why' => 'بریف = نیت جستجو، سؤال‌های کاربر، سرفصل‌ها و لینک‌های داخلی؛ پایه‌ی یک مقاله‌ی یونیک.'],
-        ['key' => 'kw.article', 'title' => 'نگارش مقاله‌ی پشتیبان برای «{keyword}» (با تأیید شما)', 'category' => 'content', 'impact' => 4, 'effort' => 1, 'automation' => 'assisted', 'check' => 'kw:article', 'offset_days' => 7,
+        ['key' => 'kw.article', 'title' => 'نگارش و انتشار خودکار مقاله‌ی پشتیبان برای «{keyword}» پس از کنترل کیفیت', 'category' => 'content', 'impact' => 4, 'effort' => 1, 'automation' => 'auto', 'check' => 'kw:article', 'offset_days' => 7,
             'why' => 'مقاله‌ی پشتیبان با لینک به صفحه‌ی هدف، اعتبار موضوعی (Topical Authority) می‌سازد.'],
         ['key' => 'kw.internal_links', 'title' => 'حداقل ۳ لینک داخلی با انکر مرتبط به صفحه‌ی «{keyword}»', 'category' => 'onpage', 'impact' => 4, 'effort' => 2, 'automation' => 'assisted', 'check' => 'kw:internal_links', 'offset_days' => 9,
             'why' => 'لینک داخلی ارزان‌ترین و سریع‌ترین اهرم بالا بردن رتبه‌ی یک صفحه است.'],

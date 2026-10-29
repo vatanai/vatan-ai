@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use Vatan\Seo\Models\TelegramAdmin;
 
 /**
- * بات اختصاصی سئو (@seovatanai_bot): هشدار، گزارش، و تأیید/رد مقاله با یک دکمه.
+ * بات اختصاصی سئو (@seovatanai_bot): هشدارها، گزارش‌ها و پیوند مقاله‌های منتشرشده.
  * فقط چت‌هایی که با «کد اتصال» از داخل پنل وصل شده‌اند پیام دریافت می‌کنند و دستور می‌دهند.
  */
 class SeoBot
@@ -34,8 +34,8 @@ class SeoBot
                 ->post(rtrim((string) config('seo-engine.telegram.api_base', 'https://api.telegram.org'), '/').'/bot'.$this->token().'/'.$method, $params);
             return (array) $res->json() + ['ok' => $res->successful()];
         } catch (\Throwable $e) {
-            Log::warning('SEO bot: telegram call failed', ['method' => $method, 'error' => $e->getMessage()]);
-            return ['ok' => false, 'description' => $e->getMessage()];
+            Log::warning('SEO bot: telegram call failed', ['method' => $method, 'error' => \Vatan\Seo\Support\SecretRedactor::redact($e->getMessage())]);
+            return ['ok' => false, 'description' => \Vatan\Seo\Support\SecretRedactor::redact($e->getMessage())];
         }
     }
 
@@ -104,7 +104,6 @@ class SeoBot
                 ['command' => 'today', 'description' => 'برنامه و خلاصه‌ی امروز'],
                 ['command' => 'keywords', 'description' => 'رتبه‌ی کلمات هدف'],
                 ['command' => 'report', 'description' => 'گزارش هفتگی همین حالا'],
-                ['command' => 'review', 'description' => 'مقاله‌های منتظر تأیید'],
                 ['command' => 'budget', 'description' => 'هزینه‌ی هوش مصنوعی این ماه'],
                 ['command' => 'ask', 'description' => 'سؤال از مدیر سئو (با داده‌ی واقعی)'],
                 ['command' => 'write', 'description' => 'نوشتن مقاله برای یک کلمه'],
@@ -113,7 +112,7 @@ class SeoBot
                 ['command' => 'audit', 'description' => 'خزش و ممیزی فنی'],
                 ['command' => 'help', 'description' => 'راهنما'],
             ]]),
-            'setMyDescription' => $this->api('setMyDescription', ['description' => 'دستیار سئوی هوشمند وطن: هشدار رتبه، گزارش روزانه و هفتگی، و تأیید مقاله‌ها با یک دکمه.']),
+            'setMyDescription' => $this->api('setMyDescription', ['description' => 'دستیار سئوی هوشمند وطن: هشدار خطا، گزارش روزانه و هفتگی، و پیوند مقاله‌های منتشرشده.']),
         ];
     }
 

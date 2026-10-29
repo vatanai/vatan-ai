@@ -8,13 +8,22 @@ use Vatan\Seo\Models\ContentItem;
 use Vatan\Seo\Models\Site;
 use Vatan\Seo\Models\Task;
 
-/** انتشار مقاله‌ی تأییدشده در سایت + اعلام فوری به موتورها (IndexNow) */
+/** انتشار مقاله‌ی عبورکرده از دروازه‌ی سخت کیفیت + اعلام فوری به موتورها (IndexNow) */
 class Publisher
 {
+    public function __construct(private ContentQualityGate $gate) {}
+
     public function publish(Site $site, ContentItem $item, string $by): ContentItem
     {
-        if (! in_array($item->status, ['review', 'approved', 'failed'], true) || empty($item->blocks)) {
-            throw new \RuntimeException('این محتوا آماده‌ی انتشار نیست.');
+        if ($item->status === 'published') {
+            return $item;
+        }
+        if (! in_array($item->status, ['review', 'approved'], true) || empty($item->blocks)) {
+            throw new \RuntimeException('محتوا از تولید عبور نکرده یا بلوک محتوایی ندارد.');
+        }
+        $gate = $this->gate->evaluate($site, $item);
+        if (! $gate['passed'] || ! data_get($item->quality, 'gate.passed')) {
+            throw new \RuntimeException('دروازه‌ی کیفیت انتشار را رد کرد: '.implode('، ', $gate['errors']));
         }
         [$ref, $url] = ConnectorFactory::for($site)->publish($item);
         $item->update([
@@ -22,8 +31,8 @@ class Publisher
             'published_ref' => $ref,
             'published_url' => $url,
             'published_at' => now(),
-            'approved_by' => $item->approved_by ?: $by,
-            'approved_at' => $item->approved_at ?: now(),
+            'approved_by' => $by,
+            'approved_at' => now(),
         ]);
         $this->indexNow($site, [$url]);
 

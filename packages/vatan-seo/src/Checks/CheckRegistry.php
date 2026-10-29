@@ -446,8 +446,8 @@ class CheckRegistry
                 ? CheckResult::ok('خلاصه‌ی امروز مرور شد.')
                 : CheckResult::wait('با باز کردن «نمای کلی» یا دستور /today در تلگرام تیک می‌خورد.'),
             'queue' => ($n = ContentItem::where('site_id', $site->id)->where('status', 'review')->count()) === 0
-                ? CheckResult::ok('محتوایی منتظر تأیید نیست.')
-                : CheckResult::wait(Fa::n($n).' محتوا منتظر تأیید شماست.'),
+                ? CheckResult::ok('محتوایی در صف پردازش خودکار نیست.')
+                : CheckResult::wait(Fa::n($n).' محتوا در صف پردازش خودکار است.'),
             default => CheckResult::wait('ناشناخته'),
         };
     }
@@ -465,7 +465,7 @@ class CheckRegistry
                 $review = ContentItem::where('site_id', $site->id)->where('status', 'review')->count();
                 return $n >= $target
                     ? CheckResult::ok(Fa::n($n).' مقاله در این هفته منتشر شد.')
-                    : ($review ? CheckResult::fail(Fa::n($n).' از '.Fa::n($target).' مقاله منتشر شده؛ '.Fa::n($review).' پیش‌نویس منتظر تأیید شماست.') : CheckResult::wait(Fa::n($n).' از '.Fa::n($target).' مقاله منتشر شده؛ خط تولید در حال آماده‌سازی است.'));
+                    : ($review ? CheckResult::fail(Fa::n($n).' از '.Fa::n($target).' مقاله منتشر شده؛ '.Fa::n($review).' مورد در صف کنترل خودکار است.') : CheckResult::wait(Fa::n($n).' از '.Fa::n($target).' مقاله منتشر شده؛ خط تولید در حال آماده‌سازی است.'));
             })(),
             'tech' => (function () use ($site) {
                 $audit = $this->latestAudit($site, 'crawl', 8);
@@ -520,7 +520,7 @@ class CheckRegistry
                 $item = ContentItem::where('keyword_id', $kw->id)->latest()->first();
                 return match ($item?->status) {
                     'published' => CheckResult::ok('مقاله منتشر شد: '.urldecode((string) $item->published_url)),
-                    'review' => CheckResult::wait('پیش‌نویس منتظر تأیید شماست.'),
+                    'review' => CheckResult::wait('پیش‌نویس در صف پردازش خودکار است.'),
                     default => CheckResult::wait('مقاله هنوز آماده نیست.'),
                 };
             case 'internal_links':

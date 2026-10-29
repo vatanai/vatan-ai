@@ -37,7 +37,7 @@ return [
     ['key' => 'opportunities', 'title' => 'کشف فرصت‌ها: کلمات نزدیک صفحه‌ی اول، CTR پایین، کوئری‌های تازه', 'pillar' => 'goals', 'frequency' => 'weekly', 'weekday' => 1, 'at' => '08:00', 'handler' => 'Opportunities',
         'why' => 'سریع‌ترین مسیر رشد: صفحاتی که الان دیده می‌شوند ولی کلیک نمی‌گیرند یا کمی با صفحه‌ی اول فاصله دارند.'],
     ['key' => 'content_pipeline', 'title' => 'خط تولید محتوا: بریف و پیش‌نویس از روی تقویم', 'pillar' => 'goals', 'frequency' => 'twice_weekly', 'weekday' => 6, 'at' => '10:00', 'handler' => 'ContentPipeline',
-        'why' => 'تا سقف پروفایل بودجه، از روی کلمات هدف بریف و پیش‌نویس می‌سازد و برای تأیید به تلگرام می‌فرستد.'],
+        'why' => 'تا سقف ماهانه و بر پایه‌ی کلمات هدف مقاله می‌سازد؛ کنترل قطعی کیفیت و ممیزی مستقل را اجرا می‌کند، سپس منتشر و پیوندش را در تلگرام گزارش می‌دهد.'],
     ['key' => 'weekly_report', 'title' => 'گزارش هفتگی تلگرام', 'pillar' => 'goals', 'frequency' => 'weekly', 'weekday' => 4, 'at' => '18:00', 'handler' => 'WeeklyReport',
         'why' => 'خلاصه‌ی کلیک، رتبه، کلمات برنده/بازنده، کارهای انجام‌شده و هزینه‌ی هوش مصنوعی هفته.'],
     ['key' => 'discovery', 'title' => 'کشف دوره‌ای کلمات کلیدی جدید', 'pillar' => 'goals', 'frequency' => 'monthly', 'day' => 1, 'at' => '05:00', 'handler' => 'Discovery', 'profile_key' => 'discovery',

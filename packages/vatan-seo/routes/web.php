@@ -40,8 +40,6 @@ Route::middleware($host['middleware'])
         Route::get('/content', [C\ContentController::class, 'index'])->name('content.index');
         Route::post('/content/generate', [C\ContentController::class, 'generate'])->name('content.generate');
         Route::get('/content/{item}', [C\ContentController::class, 'show'])->name('content.show');
-        Route::post('/content/{item}/publish', [C\ContentController::class, 'publish'])->name('content.publish');
-        Route::post('/content/{item}/reject', [C\ContentController::class, 'reject'])->name('content.reject');
         Route::post('/content/{item}/redraft', [C\ContentController::class, 'redraft'])->name('content.redraft');
 
         Route::get('/scenarios', [C\ScenarioController::class, 'index'])->name('scenarios.index');

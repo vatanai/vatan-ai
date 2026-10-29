@@ -55,7 +55,7 @@ class Reporter
         $completed = Task::where('site_id', $site->id)->where('status', 'done')->where('completed_at', '>=', now()->startOfDay())
             ->orderByDesc('completed_at')->limit(8)->get();
         $done = Task::where('site_id', $site->id)->where('status', 'done')->where('completed_at', '>=', now()->startOfDay())->count();
-        $review = ContentItem::where('site_id', $site->id)->where('status', 'review')->count();
+        $publishedToday = ContentItem::where('site_id', $site->id)->where('status', 'published')->whereDate('published_at', now()->toDateString())->count();
         $keywords = Keyword::where('site_id', $site->id)->targets()->orderByRaw('current_position IS NULL, current_position')->limit(25)->get();
 
         $t = "☀️ <b>خلاصه‌ی سئوی امروز — ".e($site->name)."</b>\n".Fa::date(now())."\n\n";
@@ -66,9 +66,7 @@ class Reporter
         foreach ($completed as $task) {
             $t .= '• '.e($task->title)."\n";
         }
-        if ($review) {
-            $t .= "📝 منتظر تأیید شما: ".Fa::n($review)." مقاله (/review)\n";
-        }
+        if ($publishedToday) $t .= "📰 مقاله‌ی امروز منتشرشده: ".Fa::n($publishedToday)."\n";
         if ($tasks->isNotEmpty()) {
             $t .= "\n<b>اولویت‌های امروز:</b>\n";
             foreach ($tasks as $task) {
@@ -144,22 +142,15 @@ class Reporter
         return $t;
     }
 
-    public function approvalCard(ContentItem $item): array
+    public function published(ContentItem $item): string
     {
         $q = (array) $item->quality;
-        $text = "📝 <b>مقاله‌ی آماده‌ی تأیید</b>\n\n<b>".e((string) $item->title)."</b>\n"
+        return "✅ <b>مقاله با کنترل کیفیت منتشر شد</b>\n\n<b>".e((string) $item->title)."</b>\n"
             .'کلمه: '.e((string) $item->keyword?->keyword)."\n"
-            .'طول: '.Fa::n($item->word_count).' کلمه · امتیاز سئو: '.Fa::n($item->seo_score).'/۱۰۰'
-            .(isset($q['ai']['quality']) ? ' · کیفیت: '.Fa::n($q['ai']['quality']).'/۱۰۰' : '')."\n"
-            .'هزینه‌ی تولید: '.Fa::usd($item->cost_usd)."\n\n"
-            .'<i>'.e(mb_substr((string) $item->meta_description, 0, 200)).'</i>';
-        $buttons = [
-            [['text' => '✅ تأیید و انتشار', 'callback_data' => 'seo:approve:'.$item->id], ['text' => '⛔️ رد', 'callback_data' => 'seo:reject:'.$item->id]],
-        ];
-        $url = $this->panelUrl('content/'.$item->id);
-        if (str_starts_with($url, 'https://')) { // تلگرام فقط لینک https عمومی را می‌پذیرد
-            $buttons[] = [['text' => '👁 مشاهده در پنل', 'url' => $url]];
-        }
-        return [$text, $buttons];
+            .'طول: '.Fa::n($item->word_count).' کلمه · امتیاز محتوا: '.Fa::n($item->seo_score).'/۱۰۰'
+            .(isset($q['ai']['quality']) ? ' · ممیزی: '.Fa::n($q['ai']['quality']).'/۱۰۰' : '')."\n"
+            .'هزینه‌ی تولید: '.Fa::usd($item->cost_usd)."\n"
+            .'<i>'.e(mb_substr((string) $item->meta_description, 0, 180))."</i>\n\n"
+            .'<a href="'.e((string) $item->published_url).'">مشاهده‌ی مقاله</a>';
     }
 }

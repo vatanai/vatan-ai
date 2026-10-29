@@ -11,10 +11,6 @@
 
 @section('seo-actions')
   <a href="{{ route('seo.content.index') }}" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-right"></i> بازگشت</a>
-  @if(in_array($item->status, ['review', 'approved', 'failed'], true) && $item->blocks)
-    <form method="POST" action="{{ route('seo.content.reject', $item) }}">@csrf<button class="btn-pro btn-pro-danger" data-confirm="رد شود؟"><i class="fa-solid fa-ban"></i> رد</button></form>
-    <form method="POST" action="{{ route('seo.content.publish', $item) }}">@csrf<button class="btn-pro btn-pro-primary" data-confirm="در سایت منتشر شود؟" data-loading="در حال انتشار…"><i class="fa-solid fa-upload"></i> تأیید و انتشار</button></form>
-  @endif
   @if($item->published_url)<a href="{{ $item->published_url }}" target="_blank" rel="noopener" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-up-right-from-square"></i> مشاهده در سایت</a>@endif
 @endsection
 
@@ -36,7 +32,7 @@
         @if(!empty($brief['outline']))<div><b>سرفصل‌ها:</b><ul style="margin:4px 0;padding-right:18px">@foreach($brief['outline'] as $o)<li>{{ $o['h2'] ?? '' }} <span class="seo-muted">— {{ $o['notes'] ?? '' }}</span></li>@endforeach</ul></div>@endif
         @if(!empty($brief['faqs']))<div><b>سؤالات کاربران:</b> {{ implode(' · ', array_map(fn ($f) => is_array($f) ? ($f['q'] ?? '') : $f, $brief['faqs'])) }}</div>@endif
       </div>
-      <form method="POST" action="{{ route('seo.content.redraft', $item) }}" style="margin-top:14px">@csrf<button class="btn-pro btn-pro-primary" data-loading="در حال نگارش… (۱ تا ۲ دقیقه)"><i class="fa-solid fa-feather"></i> نگارش مقاله از روی این بریف</button></form>
+      <form method="POST" action="{{ route('seo.content.redraft', $item) }}" style="margin-top:14px">@csrf<button class="btn-pro btn-pro-primary" data-loading="در حال نگارش و کنترل کیفیت…"><i class="fa-solid fa-feather"></i> نگارش و انتشار خودکار پس از کنترل کیفیت</button></form>
     @else
       <div class="seo-empty"><i class="fa-solid fa-hourglass-half"></i><b>{{ ContentItem::STATUSES[$item->status] }}</b>{{ $item->reviewer_note }}</div>
     @endif

@@ -4,11 +4,11 @@ namespace Vatan\Seo\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Vatan\Seo\Agents\ContentWriter;
-use Vatan\Seo\Agents\Publisher;
 use Vatan\Seo\Connectors\BlocksToHtml;
 use Vatan\Seo\Models\ContentItem;
 use Vatan\Seo\Models\Keyword;
 use Vatan\Seo\Services\RunRecorder;
+use Vatan\Seo\Services\AutoPublisher;
 use Vatan\Seo\Support\Budget;
 use Vatan\Seo\Support\Fa;
 
@@ -32,22 +32,27 @@ class ContentController extends BaseController
         ]);
     }
 
-    public function generate(Request $request, ContentWriter $writer, RunRecorder $recorder)
+    public function generate(Request $request, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher)
     {
         $site = $this->site();
         $data = $request->validate(['keyword_id' => 'required|integer', 'mode' => 'in:brief,full']);
         $kw = Keyword::where('site_id', $site->id)->findOrFail($data['keyword_id']);
+        $existing = ContentItem::where('site_id', $site->id)->where('keyword_id', $kw->id)->latest()->first();
+        if ($existing) {
+            return redirect()->route('seo.content.show', $existing)->with('warning', 'برای این کلمه محتوا وجود دارد؛ برای جلوگیری از مقاله‌ی تکراری همان مورد باز شد.');
+        }
         if (($data['mode'] ?? 'full') === 'full' && Budget::articlesThisMonth($site) >= Budget::limit($site, 'articles_per_month')) {
             return back()->with('warning', 'سهمیه‌ی مقاله‌ی ماهانه‌ی پروفایل بودجه پر شده است. فقط بریف بسازید یا بودجه را افزایش دهید.');
         }
         @set_time_limit(600);
         $item = null;
-        $run = $recorder->record($site, 'writer', 'content_generate', function () use ($writer, $site, $kw, $data, &$item) {
+        $run = $recorder->record($site, 'writer', 'content_generate', function () use ($writer, $publisher, $site, $kw, $data, &$item) {
             $item = $writer->brief($site, $kw);
             if (($data['mode'] ?? 'full') === 'full') {
                 $item = $writer->draft($site, $item);
+                if ($item->status === 'review') $item = $publisher->publish($site, $item, 'seo-dashboard-auto');
             }
-            return [$item->status === 'failed' ? 'failed' : 'success', 'محتوا برای «'.$kw->keyword.'» ← '.ContentItem::STATUSES[$item->status]];
+            return [$item->status === 'failed' ? 'failed' : 'success', 'محتوا برای «'.$kw->keyword.'» ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
         }, ['trigger' => 'manual']);
         return $item ? redirect()->route('seo.content.show', $item)->with($run->status === 'failed' ? 'error' : 'success', $run->summary) : back()->with('error', $run->summary);
     }
@@ -62,36 +67,20 @@ class ContentController extends BaseController
         ]);
     }
 
-    public function publish(ContentItem $item, Publisher $publisher)
-    {
-        abort_unless($item->site_id === $this->site()->id, 404);
-        try {
-            $publisher->publish($this->site(), $item, $this->adminRef());
-        } catch (\Throwable $e) {
-            return back()->with('error', 'انتشار ناموفق بود: '.$e->getMessage());
-        }
-        return back()->with('success', 'منتشر شد: '.urldecode((string) $item->published_url));
-    }
-
-    public function reject(Request $request, ContentItem $item)
-    {
-        abort_unless($item->site_id === $this->site()->id, 404);
-        $item->update(['status' => 'rejected', 'reviewer_note' => $request->input('note'), 'approved_by' => $this->adminRef()]);
-        return back()->with('success', 'رد شد.');
-    }
-
-    public function redraft(Request $request, ContentItem $item, ContentWriter $writer, RunRecorder $recorder)
+    public function redraft(Request $request, ContentItem $item, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher)
     {
         $site = $this->site();
         abort_unless($item->site_id === $site->id, 404);
+        abort_if($item->status === 'published', 409, 'بازنویسی مستقیم مقاله‌ی منتشرشده هنوز پشتیبانی نمی‌شود.');
         @set_time_limit(600);
         if ($note = trim((string) $request->input('note'))) {
             $item->brief = array_merge((array) $item->brief, ['editor_feedback' => $note]);
             $item->save();
         }
-        $run = $recorder->record($site, 'writer', 'content_redraft', function () use ($writer, $site, $item) {
+        $run = $recorder->record($site, 'writer', 'content_redraft', function () use ($writer, $publisher, $site, $item) {
             $item = $writer->draft($site, $item);
-            return [$item->status === 'failed' ? 'failed' : 'success', 'بازنویسی انجام شد ← '.ContentItem::STATUSES[$item->status]];
+            if ($item->status === 'review') $item = $publisher->publish($site, $item, 'seo-dashboard-auto');
+            return [$item->status === 'failed' ? 'failed' : 'success', 'بازنویسی/انتشار ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
         }, ['trigger' => 'manual']);
         return back()->with($run->status === 'failed' ? 'error' : 'success', $run->summary);
     }

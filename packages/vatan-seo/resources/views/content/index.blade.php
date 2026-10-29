@@ -5,7 +5,7 @@
   $seoTitle = 'تولید محتوا';
   $seoIcon = 'fa-feather-pointed';
   $seoHelp = 'content.page';
-  $seoSubtitle = 'خط تولید مقاله‌ی یونیک: پژوهش نتایج گوگل ← بریف ← نگارش ← ممیزی کیفیت ← تأیید شما (پنل یا تلگرام) ← انتشار خودکار در سایت.';
+  $seoSubtitle = 'خط تولید مقاله‌ی یونیک: پژوهش ← بریف ← نگارش ← کنترل کیفیت سخت‌گیرانه ← انتشار خودکار و گزارش لینک در تلگرام.';
   $tones = ['published' => 'success', 'review' => 'warning', 'approved' => 'info', 'failed' => 'danger', 'rejected' => 'danger', 'drafting' => 'info', 'brief' => 'info', 'idea' => ''];
 @endphp
 
@@ -65,7 +65,7 @@
         <span><span class="seo-tag is-info">۲</span> بریف: زاویه‌ی یونیک، سرفصل‌ها، سؤالات کاربران، لینک داخلی</span>
         <span><span class="seo-tag is-info">۳</span> نگارش فارسی انسانی با مدل نویسنده</span>
         <span><span class="seo-tag is-info">۴</span> ممیزی: ۱۰ معیار سئو + کیفیت، E-E-A-T و متن ماشینی</span>
-        <span><span class="seo-tag is-warning">۵</span> تأیید شما (پنل یا یک دکمه در تلگرام)</span>
+        <span><span class="seo-tag is-warning">۵</span> کنترل خودکار؛ انتشار فقط پس از عبور از همه‌ی معیارهای کیفیت</span>
         <span><span class="seo-tag is-success">۶</span> انتشار در سایت + اعلام فوری به موتورها (IndexNow)</span>
       </div>
     </section>
