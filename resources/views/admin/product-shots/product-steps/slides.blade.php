@@ -1,6 +1,16 @@
 {{-- اسلاید‌های دیگر محصول (از گام ۳ به گام ۱ منتقل شد؛ ساختار و نام فیلدها بدون تغییر) --}}
   <section class="content-card p-5">
     <div class="flex items-start justify-between gap-3 flex-wrap"><div><div class="ps-card-title"><i class="fa-solid fa-images"></i> اسلاید‌های دیگر محصول</div><div class="ps-card-desc">اسلاید اختصاصی بسازید (عکس نمونه + پرامپت ساخت) یا از کتابخانه استفاده کنید. ترتیب را با دستگیره مشخص کنید. در صفحه‌ی ساخت هیچ اسلایدی از پیش انتخاب نیست و کاربر خودش انتخاب می‌کند.</div></div><div class="flex items-center gap-2 flex-wrap"><button type="button" class="btn-pro btn-pro-primary" data-add-custom-slide><i class="fa-solid fa-plus"></i> افزودن اسلاید</button><a href="{{ route('admin.product-shots.index',['tab'=>'library']) }}" target="_blank" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-layer-group"></i> کتابخانه اسلایدها</a></div></div>
+    <div class="flex items-center gap-2 flex-wrap mt-3">
+      <select class="input-pro max-w-xs" data-library-shot-select aria-label="انتخاب اسلاید از کتابخانه"><option value="">افزودن از کتابخانه</option>
+        @foreach($shots as $libraryShot)
+          @if(!$productShots->has($libraryShot->id) && !(!$product && (int) $libraryShot->id === (int) ($generalShotIds[0] ?? 0)))
+            <option value="{{ $libraryShot->id }}">{{ $libraryShot->name_fa }}</option>
+          @endif
+        @endforeach
+      </select>
+      <button type="button" class="btn-pro btn-pro-ghost" data-add-library-shot>افزودن به محصول</button>
+    </div>
     <div class="ps-slide-quantity mt-3" data-shot-quantity-control>
       <span class="ps-slide-quantity-label"><i class="fa-solid fa-layer-group"></i> تعداد اسلایدهای محصول</span>
       <div class="ps-slide-quantity-stepper" role="group" aria-label="تعیین تعداد اسلایدهای محصول">
@@ -29,12 +39,13 @@
           $options = (array)($ps?->options_enabled ?? []);
           $sample = $ps?->sampleImageUrl() ?? $shot->sampleImageUrl();
           $samplePath = $ps?->sample_image ?: $shot->sample_image;
-          $removed = (bool)old("shots.{$shot->id}.removed",$product && !$ps);
+          $removed = (bool)old("shots.{$shot->id}.removed", false) && (bool) $ps;
           $slideName = old("shots.{$shot->id}.name_override",$ps?->displayName() ?? $shot->name_fa);
           $inputImageSlide = (bool) data_get($ps?->options_enabled, 'input_image_slide', false);
-          $showShotRow = $enabled || $removed || $loop->first;
+          $showShotRow = (bool) $ps || (!$product && (int) $shot->id === $defaultShotId) || (!$product && $loop->first && !$defaultShotId);
+          $libraryAvailable = !$showShotRow;
         @endphp
-        <article class="ps-shot-editor {{ $isCustom ? 'is-custom' : '' }} {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }} {{ $inputImageSlide ? 'is-input-image-slide' : '' }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}" @if(!$showShotRow) hidden @endif>
+        <article class="ps-shot-editor {{ $isCustom ? 'is-custom' : '' }} {{ $removed ? 'is-removed' : ($enabled ? '' : 'is-off') }} {{ $inputImageSlide ? 'is-input-image-slide' : '' }}" data-shot-row data-shot-id="{{ $shot->id }}" data-shot-name="{{ $slideName }}" data-shot-original-name="{{ $shot->name_fa }}" @if($libraryAvailable) data-library-available hidden @endif>
           <input type="hidden" name="shots[{{ $shot->id }}][removed]" value="{{ $removed ? 1 : 0 }}" data-shot-removed>
           <div class="ps-shot-removed-state">
             <span class="ps-shot-removed-icon"><i class="fa-solid fa-box-archive"></i></span>

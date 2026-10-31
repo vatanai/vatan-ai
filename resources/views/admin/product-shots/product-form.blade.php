@@ -64,11 +64,14 @@
     <form method="POST" enctype="multipart/form-data" id="shot-product-form" action="{{ $product ? route('admin.product-shots.products.update',$product) : route('admin.product-shots.products.store') }}">
       @csrf @if($product) @method('PUT') @endif
       <input type="hidden" name="status" id="psw-status" value="{{ old('status',$product?->status ?? 'draft') }}">
+      <input type="hidden" name="expected_new_slides" value="0">
+      <input type="hidden" name="expected_existing_shots" value="0">
       <div data-step-panel="1">@include('admin.product-shots.product-steps.step-1')</div>
       <div data-step-panel="2" hidden>@include('admin.product-shots.product-steps.step-2')</div>
       <div data-step-panel="3" hidden>@include('admin.product-shots.product-steps.step-3')</div>
       <div data-step-panel="4" hidden>@include('admin.product-shots.product-steps.step-4')</div>
       <div data-step-panel="5" hidden>@include('admin.product-shots.product-steps.step-5')</div>
+      <input type="hidden" name="slide_payload_complete" value="1">
     </form>
   </div>
 

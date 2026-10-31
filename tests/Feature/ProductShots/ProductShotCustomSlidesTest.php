@@ -144,6 +144,34 @@ class ProductShotCustomSlidesTest extends TestCase
         $this->assertSame(['1x1'], $product->explore_tiles);
     }
 
+    public function test_truncated_slide_form_is_rejected_without_creating_a_partial_product(): void
+    {
+        $this->enableShots('admins');
+        $payload = $this->payload([
+            'status' => 'draft',
+            'expected_new_slides' => 2,
+            'expected_existing_shots' => 0,
+            'slide_payload_complete' => '1',
+            'new_slides' => [
+                'n1' => ['name' => 'اسلاید اول', 'prompt' => 'First product slide prompt.', 'enabled' => '1', 'allowed_aspect_ratios' => ['4:5']],
+            ],
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('admin.product-shots.products.store'), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('shots');
+        $this->assertDatabaseMissing('products', ['name_en' => 'Custom Serum Pack']);
+
+        $payload['new_slides']['n2'] = ['name' => 'اسلاید دوم', 'prompt' => 'Second product slide prompt.', 'enabled' => '1', 'allowed_aspect_ratios' => ['4:5']];
+        unset($payload['slide_payload_complete']);
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('admin.product-shots.products.store'), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('shots');
+        $this->assertDatabaseMissing('products', ['name_en' => 'Custom Serum Pack']);
+    }
+
     public function test_updating_keeps_input_image_and_removing_a_custom_slide_deletes_its_hidden_library_row(): void
     {
         $this->enableShots('admins');

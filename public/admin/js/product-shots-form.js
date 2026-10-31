@@ -83,7 +83,8 @@
       if (finalSubmit && !all('[data-category-input]', form).length) return error('برای انتشار، حداقل یک دسته‌بندی انتخاب کنید.');
       /* اسلاید‌های محصول از گام ۳ به گام ۱ منتقل شده‌اند */
       var enabledRows = all('[data-shot-enabled]:checked', form).filter(function (checkbox) {
-        return !checkbox.closest('[data-shot-row]').classList.contains('is-input-image-slide');
+        var row = checkbox.closest('[data-shot-row]');
+        return !checkbox.disabled && !row.hidden && !row.classList.contains('is-input-image-slide');
       });
       if (!enabledRows.length) return error('حداقل یک اسلاید خروجی را فعال کنید.');
       var incompleteNew = all('[data-new-slide]', form).some(function (row) {
@@ -166,6 +167,8 @@
   }
 
   async function buildPayload() {
+    one('[name="expected_new_slides"]', form).value = String(all('[data-new-slide]', form).filter(function (row) { return !row.hidden && !row.classList.contains('is-removed'); }).length);
+    one('[name="expected_existing_shots"]', form).value = String(all('[data-shot-row]:not([data-new-slide])', form).filter(function (row) { return !row.hidden; }).length);
     var group = one('.image-optimizer-group[data-input="main-images-file"]', form);
     var mainInput = one('#main-images-file', form);
     var removeFlag = one('[data-remove-main-images]', form);
@@ -486,6 +489,9 @@
 
   function bindShotRow(row) {
       var enabled = one('[data-shot-enabled]', row);
+      if (row.hasAttribute('data-library-available')) {
+        all('input, select, textarea, button', row).forEach(function (control) { control.disabled = true; });
+      }
       if (row.classList.contains('is-removed')) setShotRemoved(row, true, true);
       var savedSample = one('[data-shot-thumb] img', row);
       if (savedSample) {
@@ -521,6 +527,16 @@
           row.parentNode.removeChild(row);
           updateShotOrder();
           announceShotOrder(name + ' حذف شد.');
+          return;
+        }
+        if (row.hasAttribute('data-library-available')) {
+          row.hidden = true;
+          enabled.checked = false;
+          all('input, select, textarea, button', row).forEach(function (control) { control.disabled = true; });
+          var libraryOption = one('[data-library-shot-select] option[value="' + row.dataset.shotId + '"]', form);
+          if (libraryOption) libraryOption.disabled = false;
+          updateShotOrder();
+          announceShotOrder(name + ' از محصول کنار گذاشته شد.');
           return;
         }
         setShotRemoved(row, true, false);
@@ -583,6 +599,25 @@
     window.setTimeout(function () { one('[data-shot-name-input]', row).focus(); }, 350);
   }
   all('[data-add-custom-slide]', form).forEach(function (button) { button.addEventListener('click', addCustomSlide); });
+
+  var librarySelect = one('[data-library-shot-select]', form);
+  var addLibraryButton = one('[data-add-library-shot]', form);
+  if (librarySelect && addLibraryButton) addLibraryButton.addEventListener('click', function () {
+    var row = one('[data-shot-row][data-shot-id="' + librarySelect.value + '"]', shotList);
+    if (!row || !row.hasAttribute('data-library-available') || !row.hidden) return;
+    row.hidden = false;
+    all('input, select, textarea, button', row).forEach(function (control) { control.disabled = false; });
+    one('[data-shot-enabled]', row).checked = true;
+    one('[data-shot-removed]', row).value = '0';
+    row.classList.remove('is-off', 'is-removed');
+    var option = librarySelect.selectedOptions[0];
+    if (option) option.disabled = true;
+    librarySelect.value = '';
+    shotList.insertBefore(row, one('[data-shot-add-footer]', shotList));
+    updateShotOrder();
+    dirty = true;
+    row.scrollIntoView({behavior: 'smooth', block: 'center'});
+  });
 
   var shotQuantity = one('[data-shot-quantity]', form);
   if (shotQuantity) {

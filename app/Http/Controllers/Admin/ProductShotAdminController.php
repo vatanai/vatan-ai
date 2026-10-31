@@ -488,6 +488,9 @@ class ProductShotAdminController extends Controller
             'shots.*.quality_credits.*' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'shots.*.prompt_override' => ['nullable', 'string', 'max:30000'],
             'new_slides' => ['nullable', 'array', 'max:30'],
+            'expected_new_slides' => ['nullable', 'integer', 'min:0', 'max:30'],
+            'expected_existing_shots' => ['nullable', 'integer', 'min:0'],
+            'slide_payload_complete' => ['nullable', 'in:1'],
             'new_slides.*.name' => ['nullable', 'string', 'max:120'],
             'new_slides.*.prompt' => ['nullable', 'string', 'max:30000'],
             'new_slides.*.input_image_slide' => ['nullable', 'boolean'],
@@ -557,6 +560,14 @@ class ProductShotAdminController extends Controller
             'preflight_min_side.*' => 'حداقل ضلع تصویر باید بین ۵۰۰ تا ۳۰۰۰ پیکسل باشد.',
             'product_sheet_size.*' => 'اندازه پروداکت‌شیت معتبر نیست.',
         ]);
+
+        // PHP ممکن است بعد از max_input_vars فیلدهای انتهایی فرم را بی‌صدا حذف کند.
+        // تعداد اسلایدهای ارسالی در ابتدای فرم می‌آید تا ثبت ناقص محصول متوقف شود.
+        if (($request->has('expected_new_slides') && (int) $data['expected_new_slides'] !== count((array) ($data['new_slides'] ?? [])))
+            || ($request->has('expected_existing_shots') && (int) $data['expected_existing_shots'] !== count((array) ($data['shots'] ?? [])))
+            || ($request->has('expected_new_slides') && ! $request->has('slide_payload_complete'))) {
+            throw ValidationException::withMessages(['shots' => 'بخشی از اسلایدها به سرور نرسیده و ذخیره انجام نشده است. بدون تازه‌کردن صفحه، تعداد اسلایدها را کمتر کنید و دوباره تلاش کنید.']);
+        }
 
         // ارسال‌نشدن چک‌باکس‌ها نباید ثبت را متوقف کند؛ قاب مربع پیش‌فرض می‌ماند.
         $data['explore_tiles'] = array_values(array_unique((array) ($data['explore_tiles'] ?? [])));

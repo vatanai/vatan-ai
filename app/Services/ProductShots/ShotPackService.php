@@ -87,50 +87,30 @@ class ShotPackService
     public function productGallery(Product $product, ?array $shots = null): Collection
     {
         $shots ??= $this->shotCards($product);
-        $fallbackImages = collect(array_merge([$product->cover, $product->thumbnail], (array) $product->sample_outputs))
-            ->filter(fn ($path) => is_string($path) && trim($path) !== '')
-            ->map(fn (string $path) => \App\Models\ShotLibrary::publicUrl($path))
-            ->filter()
-            ->values();
-        $usedFallbackImages = [];
-        $gallery = collect($shots)->values()->map(function (array $shot) use ($fallbackImages, &$usedFallbackImages): ?array {
-            $url = trim((string) ($shot['sample_url'] ?? ''));
-            if ($url === '') {
-                $fallback = $fallbackImages->first(fn (string $candidate) => ! in_array($candidate, $usedFallbackImages, true));
-                // Keep every configured slide navigable even when older products
-                // only have one preview image saved for the whole pack.
-                if (! $fallback && $fallbackImages->isNotEmpty()) {
-                    $fallback = $fallbackImages->first();
-                }
-                if ($fallback) {
-                    $url = $fallback;
-                    $usedFallbackImages[] = $fallback;
-                }
-            } else {
-                $usedFallbackImages[] = $url;
+        $gallery = collect();
+        $add = function (?string $url, string $label, string $kind) use ($gallery): void {
+            if ($url && ! $gallery->contains(fn (array $item) => $item['url'] === $url)) {
+                $gallery->push(compact('url', 'label', 'kind'));
             }
+        };
 
-            return $url !== ''
-                ? ['url' => $url, 'label' => (string) ($shot['name'] ?? 'اسلاید محصول'), 'kind' => 'slide']
-                : null;
-        })->filter()->values();
+        // عکس‌های گام اول مستقل از عکس نمونه‌ی شات‌ها ذخیره می‌شوند؛ هیچ‌کدام نباید
+        // صرفاً به‌خاطر داشتن عکس نمونه روی شات از گالری حذف شوند.
+        $add($this->coverImageUrl($product), (string) ($product->name_fa ?: $product->name_en ?: 'عکس کاور محصول'), 'cover');
+        $add($this->inputImageUrl($product), 'عکس ورودی', 'input');
+        foreach ((array) $product->sample_outputs as $path) {
+            if (is_string($path) && trim($path) !== '') {
+                $add(\App\Models\ShotLibrary::publicUrl($path), 'اسلاید محصول', 'slide');
+            }
+        }
+        foreach ($shots as $shot) {
+            $add(trim((string) ($shot['sample_url'] ?? '')), (string) ($shot['name'] ?? 'اسلاید محصول'), 'slide');
+        }
+
         if ($gallery->isEmpty()) {
-            $gallery = collect($this->collage($product, 6))
-                ->map(fn (string $url) => ['url' => $url, 'label' => (string) ($product->name_fa ?: $product->name_en), 'kind' => 'slide']);
-        }
-
-        // ۱) کاور همیشه اول؛ اگر همان تصویر بین اسلایدها هم بود، تکراری حذف می‌شود.
-        $cover = $this->coverImageUrl($product);
-        if ($cover) {
-            $gallery = $gallery->reject(fn (array $item) => $item['url'] === $cover)->values();
-            $gallery->prepend(['url' => $cover, 'label' => (string) ($product->name_fa ?: $product->name_en ?: 'عکس کاور محصول'), 'kind' => 'cover']);
-        }
-
-        // ۲) عکس ورودی بلافاصله بعد از کاور
-        $input = $this->inputImageUrl($product);
-        if ($input) {
-            $gallery = $gallery->reject(fn (array $item) => $item['url'] === $input)->values();
-            $gallery->splice($cover ? 1 : 0, 0, [['url' => $input, 'label' => 'عکس ورودی', 'kind' => 'input']]);
+            foreach ($this->collage($product, 6) as $url) {
+                $add($url, (string) ($product->name_fa ?: $product->name_en), 'slide');
+            }
         }
 
         return $gallery->values();
