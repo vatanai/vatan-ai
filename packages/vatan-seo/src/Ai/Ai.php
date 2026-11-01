@@ -37,6 +37,10 @@ class Ai
         $decoded = $this->decode($result['content']);
         if ($decoded === null) {
             try {
+                // A syntactically invalid response is usually model-specific.
+                // Retry the repair with the next configured candidate first;
+                // retrying the same model with the same prompt often repeats
+                // malformed JSON and leaves scheduled content stuck.
                 $repair = $this->call(
                     $site,
                     $role,
@@ -44,6 +48,7 @@ class Ai
                     $system."\nThe previous response was not valid JSON. Return a corrected JSON object that satisfies the original schema. Preserve its meaning; do not add facts or commentary.",
                     "Original request:\n".$user."\n\nInvalid response to repair:\n".$result['content'],
                     $opt,
+                    [(string) ($result['model'] ?? '')],
                 );
                 $decoded = $this->decode($repair['content']);
             } catch (\Throwable) {
@@ -143,7 +148,7 @@ class Ai
         return $out;
     }
 
-    protected function call(Site $site, string $role, string $purpose, string $system, string $user, array $opt): array
+    protected function call(Site $site, string $role, string $purpose, string $system, string $user, array $opt, array $excludeModels = []): array
     {
         if (! $this->client->configured()) {
             throw new AiException('کلید OpenRouter تنظیم نشده است.');
@@ -159,6 +164,10 @@ class Ai
         $candidates = $this->router->candidates($site, $role);
         if (! $candidates) {
             throw new AiException("نقش «{$role}» در پروفایل بودجه‌ی فعلی خاموش است.");
+        }
+        $alternates = array_values(array_filter($candidates, fn ($candidate) => ! in_array($candidate, $excludeModels, true)));
+        if ($alternates) {
+            $candidates = $alternates;
         }
 
         $maxTokens = (int) ($opt['max_tokens'] ?? 2000);
