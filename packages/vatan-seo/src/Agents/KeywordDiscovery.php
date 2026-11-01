@@ -41,16 +41,33 @@ class KeywordDiscovery
 
         // ۱) بذر از محصولات
         $seeds = [];
+        $aiFallback = false;
         if ($useAi && $products->isNotEmpty()) {
             foreach ($products->chunk(12) as $chunk) {
                 $payload = $chunk->map(fn ($p) => ['id' => $p['id'], 'title' => $p['title'], 'category' => $p['category'], 'description' => mb_substr((string) $p['description'], 0, 300)])->values()->all();
-                $json = $this->ai->json($site, 'fast', 'keyword-seeds', Prompt::get('keyword-seeds', ['brand' => Prompt::brand($site)]), json_encode($payload, JSON_UNESCAPED_UNICODE), ['max_tokens' => 2500, 'temperature' => 0.5]);
-                foreach ((array) ($json['products'] ?? []) as $row) {
-                    $product = $products->firstWhere('id', $row['id'] ?? null);
-                    foreach ((array) ($row['seeds'] ?? []) as $seed) {
-                        if (! empty($seed['keyword'])) {
-                            $seeds[] = $seed['keyword'];
-                            $add($seed['keyword'], 'products', ['intent' => $seed['intent'] ?? null, 'product_id' => $product['id'] ?? null, 'meta' => ['product_url' => $product['url'] ?? null, 'product' => $product['title'] ?? null]]);
+                $seedCount = count($seeds);
+                try {
+                    $json = $this->ai->json($site, 'fast', 'keyword-seeds', Prompt::get('keyword-seeds', ['brand' => Prompt::brand($site)]), json_encode($payload, JSON_UNESCAPED_UNICODE), ['max_tokens' => 2500, 'temperature' => 0.5]);
+                    foreach ((array) ($json['products'] ?? []) as $row) {
+                        $product = $products->firstWhere('id', $row['id'] ?? null);
+                        foreach ((array) ($row['seeds'] ?? []) as $seed) {
+                            if (! empty($seed['keyword'])) {
+                                $seeds[] = $seed['keyword'];
+                                $add($seed['keyword'], 'products', ['intent' => $seed['intent'] ?? null, 'product_id' => $product['id'] ?? null, 'meta' => ['product_url' => $product['url'] ?? null, 'product' => $product['title'] ?? null]]);
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+                    $aiFallback = true;
+                }
+                if (count($seeds) === $seedCount) {
+                    // AI/JSON failure must not discard the free product and GSC discovery path.
+                    $aiFallback = true;
+                    foreach ($chunk as $product) {
+                        foreach (array_merge([$product['title']], array_slice((array) ($product['keywords'] ?? []), 0, 4)) as $seed) {
+                            $seeds[] = $seed;
+                            $add($seed, 'products', ['product_id' => $product['id'], 'meta' => ['product_url' => $product['url'], 'product' => $product['title']]]);
                         }
                     }
                 }
@@ -141,7 +158,7 @@ class KeywordDiscovery
             $created++;
         }
 
-        return ['products' => $products->count(), 'pool' => count($pool), 'created' => $created, 'updated' => $updated, 'ai' => $useAi];
+        return ['products' => $products->count(), 'pool' => count($pool), 'created' => $created, 'updated' => $updated, 'ai' => $useAi, 'ai_fallback' => $aiFallback];
     }
 
     /** امتیاز فرصت ۰ تا ۱۰۰: ارتباط + تقاضای واقعی + نزدیکی به صفحه‌ی اول − سختی */

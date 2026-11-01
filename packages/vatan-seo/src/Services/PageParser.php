@@ -5,7 +5,7 @@ namespace Vatan\Seo\Services;
 /** استخراج سیگنال‌های سئوی یک صفحه‌ی HTML */
 class PageParser
 {
-    public function parse(string $html, string $url): array
+    public function parse(string $html, string $url, array $headers = []): array
     {
         $out = [
             'title' => null, 'description' => null, 'h1' => [], 'h2_count' => 0, 'canonical' => null, 'robots' => null,
@@ -29,7 +29,10 @@ class PageParser
         }
         $out['h2_count'] = $x->query('//h2')->length;
         $out['canonical'] = trim((string) $x->evaluate('string(//link[@rel="canonical"]/@href)')) ?: null;
-        $out['robots'] = mb_strtolower(trim((string) $x->evaluate('string(//meta[translate(@name,"ROBOTS","robots")="robots"]/@content)'))) ?: null;
+        $metaRobots = trim((string) $x->evaluate('string(//meta[translate(@name,"ROBOTS","robots")="robots"]/@content)'));
+        $headerRobots = trim((string) ($headers['x-robots-tag'] ?? ''));
+        $robots = implode(', ', array_filter([$metaRobots, $headerRobots]));
+        $out['robots'] = mb_strtolower($robots) ?: null;
         $out['lang'] = trim((string) $x->evaluate('string(//html/@lang)')) ?: null;
         $out['dir'] = trim((string) $x->evaluate('string(//html/@dir)')) ?: null;
         $out['viewport'] = $x->query('//meta[@name="viewport"]')->length > 0;

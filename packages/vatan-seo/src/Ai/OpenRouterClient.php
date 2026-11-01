@@ -118,7 +118,7 @@ class OpenRouterClient
                         throw new AiException('OpenRouter: '.data_get($json, 'error.message', 'خطای نامشخص'), (int) data_get($json, 'error.code', 0));
                     }
                     return [
-                        'content' => trim((string) data_get($json, 'choices.0.message.content', '')),
+                        'content' => $this->messageContent(data_get($json, 'choices.0.message.content', '')),
                         'model' => (string) data_get($json, 'model', $payload['model'] ?? ''),
                         'tokens_in' => (int) data_get($json, 'usage.prompt_tokens', 0),
                         'tokens_out' => (int) data_get($json, 'usage.completion_tokens', 0),
@@ -142,6 +142,16 @@ class OpenRouterClient
         }
 
         throw new AiException($lastError);
+    }
+
+    private function messageContent(mixed $content): string
+    {
+        if (is_string($content)) return trim($content);
+        if (! is_array($content)) return '';
+        return trim(collect($content)->map(function ($part) {
+            if (is_string($part)) return $part;
+            return (string) data_get($part, 'text', '');
+        })->filter()->implode("\n"));
     }
 
     /**

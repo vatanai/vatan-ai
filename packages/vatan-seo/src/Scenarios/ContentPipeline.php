@@ -38,13 +38,45 @@ class ContentPipeline implements Handler
             $articleLeft--;
         }
 
-        if ($articleLeft > 0 && $briefsLeft > 0) {
+        // Existing briefs and interrupted drafts do not consume new-brief quota.
+        if ($articleLeft > 0) {
             $pendingBriefs = ContentItem::where('site_id', $site->id)->where('status', 'brief')->where('type', 'article')->oldest()->limit($perRun)->get();
-            $taken = ContentItem::where('site_id', $site->id)->whereNotNull('keyword_id')->pluck('keyword_id');
+
+            // Recover interrupted drafts and one-time transient/quality failures.
+            // Without this, a single timeout leaves an item in `drafting` or
+            // `failed`; its keyword is then permanently excluded by `taken`.
+            $recoverable = ContentItem::where('site_id', $site->id)
+                ->where('type', 'article')
+                ->whereIn('status', ['drafting', 'failed'])
+                ->whereNotNull('brief')
+                ->whereNotNull('keyword_id')
+                ->where('updated_at', '<=', now()->subMinutes(30))
+                ->oldest()
+                ->limit($perRun)
+                ->get()
+                ->filter(fn (ContentItem $item) => (int) data_get($item->brief, 'pipeline_retry_count', 0) < 1)
+                ->take(max(0, $perRun - $pendingBriefs->count()))
+                ->values();
+
+            foreach ($recoverable as $item) {
+                $brief = (array) $item->brief;
+                $brief['pipeline_retry_count'] = (int) ($brief['pipeline_retry_count'] ?? 0) + 1;
+                $item->update(['brief' => $brief, 'status' => 'brief', 'reviewer_note' => null]);
+                $pendingBriefs->push($item->fresh());
+            }
+
+            $retryKeywordIds = $recoverable->pluck('keyword_id')->all();
+            $taken = ContentItem::where('site_id', $site->id)
+                ->whereNotNull('keyword_id')
+                ->when($recoverable->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $recoverable->pluck('id')))
+                ->pluck('keyword_id');
             $dueIds = Task::where('site_id', $site->id)->where('playbook_key', 'kw.brief')->whereNotIn('status', ['done', 'skipped'])
                 ->where('due_on', '<=', now()->addDays(3)->toDateString())->orderBy('due_on')->pluck('keyword_id');
-            $keywords = $site->keywords()->targets()->whereNotIn('id', $taken)->whereIn('id', $dueIds)->get()
-                ->sortBy(fn ($keyword) => $dueIds->search($keyword->id))->take(min($perRun - $pendingBriefs->count(), $briefsLeft))->values();
+            $newBriefCapacity = max(0, min($perRun - $pendingBriefs->count(), $briefsLeft));
+            $keywords = $site->keywords()->targets()->whereNotIn('id', $taken)
+                ->when($retryKeywordIds, fn ($q) => $q->whereNotIn('id', $retryKeywordIds))
+                ->whereIn('id', $dueIds)->get()
+                ->sortBy(fn ($keyword) => $dueIds->search($keyword->id))->take($newBriefCapacity)->values();
 
             foreach ($keywords as $keyword) {
                 $pendingBriefs->push($this->writer->brief($site, $keyword));
@@ -67,7 +99,16 @@ class ContentPipeline implements Handler
         if ($stats['blocked'] > 0) {
             return ['failed', sprintf('%s محتوا از کنترل کیفیت عبور نکرد؛ چیزی منتشر نشد. جزئیات در صف محتواست.', Fa::n($stats['blocked'])), $stats];
         }
-        if (! array_sum($stats)) return ['skipped', 'مقاله‌ی سررسیدشده‌ای برای تولید نبود یا سقف ماهانه/هوش مصنوعی اجازه نمی‌داد.', $stats];
+        if (! array_sum($stats)) {
+            $nextBrief = Task::where('site_id', $site->id)->where('playbook_key', 'kw.brief')
+                ->whereNotIn('status', ['done', 'skipped'])->whereNotNull('due_on')->min('due_on');
+            $reason = $articleLeft <= 0
+                ? 'سقف مقاله‌ی ماهانه مصرف شده است.'
+                : ($briefsLeft <= 0 ? 'سقف بریف ماهانه مصرف شده است.'
+                    : 'هنوز تسک بریفِ سررسیدشده‌ای برای کلمات هدف وجود ندارد.');
+            if ($nextBrief) $reason .= ' نوبت بعدی: '.Fa::n($nextBrief).'.';
+            return ['skipped', $reason, $stats + ['next_brief_due' => $nextBrief]];
+        }
 
         return ['success', sprintf('%s بریف، %s پیش‌نویس و %s مقاله پس از کنترل کیفیت منتشر و به تلگرام گزارش شد.', Fa::n($stats['briefs']), Fa::n($stats['drafts']), Fa::n($stats['published'])), $stats];
     }

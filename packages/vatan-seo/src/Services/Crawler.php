@@ -32,7 +32,7 @@ class Crawler
             }
             $seen[$key] = true;
             $res = $this->fetcher->get($url);
-            $info = $res['status'] === 200 && $res['body'] !== '' ? $this->parser->parse($res['body'], $res['final_url']) : [];
+            $info = $res['status'] === 200 && $res['body'] !== '' ? $this->parser->parse($res['body'], $res['final_url'], $res['headers'] ?? []) : [];
             $pages[$key] = [
                 'url' => $url,
                 'status' => $res['status'],

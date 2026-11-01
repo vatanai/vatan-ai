@@ -2,12 +2,41 @@
 
 namespace Vatan\Seo\Data\Google;
 
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
+use Throwable;
 
 /** PageSpeed Insights (Lighthouse + داده‌ی واقعی کاربران CrUX) — رایگان */
 class PageSpeed
 {
     public function run(string $url, string $strategy = 'mobile'): array
+    {
+        $strategy = strtolower($strategy) === 'desktop' ? 'desktop' : 'mobile';
+        $cacheKey = 'seo-engine:pagespeed:v1:'.hash('sha256', $url."\n".$strategy);
+        $failureKey = $cacheKey.':failure';
+        if (($cached = Cache::get($cacheKey)) !== null) {
+            return $cached;
+        }
+        if (($failure = Cache::get($failureKey)) !== null) {
+            throw new RuntimeException((string) $failure);
+        }
+
+        try {
+            $result = $this->request($url, $strategy);
+            Cache::put($cacheKey, $result, now()->addDays(7));
+            Cache::forget($failureKey);
+            return $result;
+        } catch (Throwable $e) {
+            // Quota errors get a longer cooldown; transient network/config
+            // failures get a shorter one so recovery is detected promptly.
+            $message = mb_strtolower($e->getMessage());
+            $quotaFailure = str_contains($message, 'quota') || str_contains($message, '429') || str_contains($message, 'rate limit');
+            Cache::put($failureKey, $e->getMessage(), now()->addMinutes($quotaFailure ? 720 : 15));
+            throw $e;
+        }
+    }
+
+    private function request(string $url, string $strategy): array
     {
         $params = ['url' => $url, 'strategy' => $strategy, 'category' => ['performance', 'seo', 'best-practices', 'accessibility'], 'locale' => 'fa'];
         if ($key = config('seo-engine.google.pagespeed_key')) {

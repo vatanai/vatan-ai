@@ -73,7 +73,10 @@ class SearchConsole
 
     public function submitSitemap(string $property, string $sitemapUrl): void
     {
-        $res = $this->client(20)->put(GoogleHttp::url(self::BASE.'/sites/'.rawurlencode($property).'/sitemaps/'.rawurlencode($sitemapUrl)));
+        // The Search Console API explicitly requires an empty request body here.
+        // PendingRequest::put() defaults to an empty JSON array, which Google
+        // rejects as an invalid protobuf/JSON payload.
+        $res = $this->client(20)->send('PUT', GoogleHttp::url(self::BASE.'/sites/'.rawurlencode($property).'/sitemaps/'.rawurlencode($sitemapUrl)));
         $this->ensure($res);
     }
 

@@ -44,18 +44,24 @@ class ContentWriter
             }
         }
 
-        $brief = $this->ai->json($site, 'strategist', 'content-brief', Prompt::get('content-brief', [
-            'brand' => Prompt::brand($site),
-            'keyword' => $kw->keyword,
-            'intent' => $kw->intent ?: 'informational',
-            'target_url' => $kw->target_url ?: data_get($kw->meta, 'product_url', $site->url('/')),
-            'existing' => $existing ?: '—',
-            'products' => $products ?: '—',
-            'research' => $research,
-        ]), 'بریف را بساز.', ['max_tokens' => 3000, 'temperature' => 0.5]);
-
         $item ??= new ContentItem(['site_id' => $site->id, 'keyword_id' => $kw->id, 'type' => 'article']);
         $targetUrl = $kw->target_url ?: data_get($kw->meta, 'product_url', $site->url('/'));
+        try {
+            $brief = $this->ai->json($site, 'strategist', 'content-brief', Prompt::get('content-brief', [
+                'brand' => Prompt::brand($site),
+                'keyword' => $kw->keyword,
+                'intent' => $kw->intent ?: 'informational',
+                'target_url' => $targetUrl,
+                'existing' => $existing ?: '—',
+                'products' => $products ?: '—',
+                'research' => $research,
+            ]), 'بریف را بساز.', ['max_tokens' => 3000, 'temperature' => 0.5]);
+        } catch (\Throwable $e) {
+            // Keep the calendar moving when the strategist returns malformed
+            // JSON; the same strict writing and independent quality gate still apply.
+            report($e);
+            $brief = $this->fallbackBrief($kw, $targetUrl, $productCatalog->all(), $articles->all());
+        }
         $catalog = array_values(array_unique(array_filter(array_merge(
             [$targetUrl], $productCatalog->pluck('url')->all(), $articles->pluck('url')->all(),
             array_map(fn ($link) => (string) ($link['url'] ?? ''), (array) ($brief['internal_links'] ?? [])),
@@ -74,6 +80,42 @@ class ContentWriter
         $item->save();
 
         return $item;
+    }
+
+    private function fallbackBrief(Keyword $keyword, string $targetUrl, array $products, array $articles): array
+    {
+        $outline = [
+            ['h2' => $keyword->keyword.' چیست و چه مسئله‌ای را حل می‌کند؟', 'notes' => 'پاسخ مستقیم و دقیق؛ از ادعای بدون منبع پرهیز کن.', 'h3' => []],
+            ['h2' => 'معیارهای انتخاب راهکار مناسب', 'notes' => 'معیارهای قابل‌بررسی را توضیح بده و تفاوت نیازها را روشن کن.', 'h3' => []],
+            ['h2' => 'مراحل انجام کار و آماده‌سازی ورودی', 'notes' => 'مراحل عملی، محدودیت‌ها و راه‌های بازبینی نتیجه را شرح بده.', 'h3' => []],
+            ['h2' => 'نمونه‌ی کاربرد برای فروشگاه‌ها', 'notes' => 'فقط بر پایه‌ی توضیحات واقعی محصولات زیر مثال بزن.', 'h3' => []],
+            ['h2' => 'جمع‌بندی و گام بعدی', 'notes' => 'جمع‌بندی بی‌اغراق و پیوند طبیعی به صفحه‌ی هدف.', 'h3' => []],
+        ];
+        $links = [['url' => $targetUrl, 'anchor' => 'صفحه‌ی راهنمای '.$keyword->keyword]];
+        foreach (array_slice($products, 0, 4) as $product) {
+            if (! empty($product['url'])) $links[] = ['url' => $product['url'], 'anchor' => (string) $product['title']];
+        }
+        foreach (array_slice($articles, 0, 2) as $article) {
+            if (! empty($article['url'])) $links[] = ['url' => $article['url'], 'anchor' => (string) $article['title']];
+        }
+
+        return [
+            'angle' => 'راهنمای کاربردی و بی‌طرف برای پاسخ به نیاز جستجوی «'.$keyword->keyword.'»',
+            'audience' => 'فروشگاه‌ها و کسب‌وکارهای ایرانی متناسب با نیت جستجو',
+            'search_intent' => $keyword->intent ?: 'informational',
+            'title_options' => [$keyword->keyword.'؛ راهنمای کاربردی انتخاب و استفاده', 'چطور '.$keyword->keyword.' را درست انتخاب کنیم؟', 'راهنمای '.$keyword->keyword.' برای فروشگاه‌ها'],
+            'outline' => $outline,
+            'faqs' => [
+                ['q' => $keyword->keyword.' برای چه کسانی مناسب است؟', 'a' => 'پاسخ را با توجه به نیاز و شرایط مخاطب توضیح بده و از تعمیم بی‌پشتوانه پرهیز کن.'],
+                ['q' => 'برای انتخاب راهکار مناسب چه چیزهایی را باید بررسی کرد؟', 'a' => 'معیارهای انتخاب را بر اساس اطلاعات قابل‌راستی‌آزمایی و نیاز واقعی شرح بده.'],
+                ['q' => 'چطور کیفیت نتیجه را ارزیابی کنیم؟', 'a' => 'روش ارزیابی عملی و محدودیت‌های احتمالی را روشن کن.'],
+            ],
+            'secondary_keywords' => [],
+            'internal_links' => $links,
+            'word_target' => 1200,
+            'cta' => ['title' => 'گام بعدی', 'button_label' => 'دیدن صفحه‌ی راهنما', 'url' => $targetUrl],
+            'fallback_used' => true,
+        ];
     }
 
     public function draft(Site $site, ContentItem $item): ContentItem

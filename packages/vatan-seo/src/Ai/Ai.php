@@ -58,12 +58,89 @@ class Ai
 
     public function decode(string $content): ?array
     {
-        $content = trim(preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($content)));
-        $decoded = json_decode($content, true);
-        if (! is_array($decoded) && preg_match('/\{.*\}/su', $content, $m)) {
-            $decoded = json_decode($m[0], true);
+        $content = trim(preg_replace('/^\xEF\xBB\xBF/', '', trim($content)));
+        $content = trim(preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content));
+
+        $candidates = [$content];
+        if ($candidate = $this->firstJsonValue($content)) {
+            $candidates[] = $candidate;
         }
-        return is_array($decoded) ? $decoded : null;
+        foreach (array_unique($candidates) as $candidate) {
+            $decoded = json_decode($candidate, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+            $repaired = $this->removeTrailingCommas($candidate);
+            if ($repaired !== $candidate) {
+                $decoded = json_decode($repaired, true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** Extract one balanced JSON object/array from surrounding prose safely. */
+    private function firstJsonValue(string $content): ?string
+    {
+        $length = strlen($content);
+        for ($start = 0; $start < $length; $start++) {
+            if ($content[$start] !== '{' && $content[$start] !== '[') continue;
+            $stack = [];
+            $inString = false;
+            $escaped = false;
+            for ($i = $start; $i < $length; $i++) {
+                $char = $content[$i];
+                if ($inString) {
+                    if ($escaped) $escaped = false;
+                    elseif ($char === '\\') $escaped = true;
+                    elseif ($char === '"') $inString = false;
+                    continue;
+                }
+                if ($char === '"') {
+                    $inString = true;
+                } elseif ($char === '{' || $char === '[') {
+                    $stack[] = $char === '{' ? '}' : ']';
+                } elseif ($char === '}' || $char === ']') {
+                    if (array_pop($stack) !== $char) break;
+                    if ($stack === []) return substr($content, $start, $i - $start + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Drop dangling commas outside JSON strings without altering string content. */
+    private function removeTrailingCommas(string $json): string
+    {
+        $out = '';
+        $length = strlen($json);
+        $inString = false;
+        $escaped = false;
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+            if ($inString) {
+                $out .= $char;
+                if ($escaped) $escaped = false;
+                elseif ($char === '\\') $escaped = true;
+                elseif ($char === '"') $inString = false;
+                continue;
+            }
+            if ($char === '"') {
+                $inString = true;
+                $out .= $char;
+            } elseif ($char === ',') {
+                $next = $i + 1;
+                while ($next < $length && ctype_space($json[$next])) $next++;
+                if ($next < $length && ($json[$next] === '}' || $json[$next] === ']')) continue;
+                $out .= $char;
+            } else {
+                $out .= $char;
+            }
+        }
+        return $out;
     }
 
     protected function call(Site $site, string $role, string $purpose, string $system, string $user, array $opt): array

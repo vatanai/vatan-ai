@@ -150,6 +150,7 @@ class Reporter
             .'طول: '.Fa::n($item->word_count).' کلمه · امتیاز محتوا: '.Fa::n($item->seo_score).'/۱۰۰'
             .(isset($q['ai']['quality']) ? ' · ممیزی: '.Fa::n($q['ai']['quality']).'/۱۰۰' : '')."\n"
             .'هزینه‌ی تولید: '.Fa::usd($item->cost_usd)."\n"
+            .(data_get($item->brief, 'fallback_used') ? "⚠️ بریف جایگزین استفاده شد؛ مقاله از کنترل کیفیت مستقل عبور کرده است.\n" : '')
             .'<i>'.e(mb_substr((string) $item->meta_description, 0, 180))."</i>\n\n"
             .'<a href="'.e((string) $item->published_url).'">مشاهده‌ی مقاله</a>';
     }
