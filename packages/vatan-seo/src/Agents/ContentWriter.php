@@ -32,6 +32,14 @@ class ContentWriter
             ->sortByDesc(fn ($p) => similar_text(Fa::normalizeKeyword($p['title']), $kw->normalized))
             ->filter(fn ($p) => ! empty($p['url']))->take(8)->values();
         $products = $productCatalog->map(fn ($p) => '- '.$p['title'].' | دسته: '.($p['category'] ?: 'نامشخص').' | '.($p['description'] ?: '').' | '.$p['url'])->implode("\n");
+        $brandFacts = array_values(array_filter(array_merge(
+            [trim((string) $site->brand_brief), trim((string) $site->niche)],
+            (array) config('seo-engine.host.editorial_facts', []),
+        ), fn ($fact) => is_string($fact) && trim($fact) !== ''));
+        $productFacts = $productCatalog->map(fn ($p) => [
+            'title' => $p['title'], 'category' => $p['category'], 'description' => $p['description'],
+            'keywords' => $p['keywords'] ?? [], 'url' => $p['url'],
+        ])->all();
 
         $research = '';
         if ($this->ai->available($site, 'research') && Budget::limit($site, 'research_calls_per_month') > Budget::researchCallsThisMonth($site)) {
@@ -54,6 +62,7 @@ class ContentWriter
                 'target_url' => $targetUrl,
                 'existing' => $existing ?: '—',
                 'products' => $products ?: '—',
+                'brand_facts' => $brandFacts,
                 'research' => $research,
             ]), 'بریف را بساز.', ['max_tokens' => 3000, 'temperature' => 0.5]);
         } catch (\Throwable $e) {
@@ -72,6 +81,7 @@ class ContentWriter
             'target_url' => $targetUrl,
             'brief' => $brief + [
                 'research_used' => $research !== '',
+                'source_context' => ['brand_facts' => $brandFacts, 'products' => $productFacts, 'target_url' => $targetUrl],
                 'product_links' => $productCatalog->pluck('url')->values()->all(),
                 'internal_link_catalog' => $catalog,
             ],
@@ -91,7 +101,9 @@ class ContentWriter
             ['h2' => 'نمونه‌ی کاربرد برای فروشگاه‌ها', 'notes' => 'فقط بر پایه‌ی توضیحات واقعی محصولات زیر مثال بزن.', 'h3' => []],
             ['h2' => 'جمع‌بندی و گام بعدی', 'notes' => 'جمع‌بندی بی‌اغراق و پیوند طبیعی به صفحه‌ی هدف.', 'h3' => []],
         ];
-        $links = [['url' => $targetUrl, 'anchor' => 'صفحه‌ی راهنمای '.$keyword->keyword]];
+        $isHomeTarget = trim((string) parse_url($targetUrl, PHP_URL_PATH), '/') === '';
+        $targetAnchor = $isHomeTarget ? 'صفحه‌ی اصلی سایت' : 'صفحه‌ی '.$keyword->keyword;
+        $links = [['url' => $targetUrl, 'anchor' => $targetAnchor]];
         foreach (array_slice($products, 0, 4) as $product) {
             if (! empty($product['url'])) $links[] = ['url' => $product['url'], 'anchor' => (string) $product['title']];
         }
@@ -113,7 +125,7 @@ class ContentWriter
             'secondary_keywords' => [],
             'internal_links' => $links,
             'word_target' => 1200,
-            'cta' => ['title' => 'گام بعدی', 'button_label' => 'دیدن صفحه‌ی راهنما', 'url' => $targetUrl],
+            'cta' => ['title' => 'گام بعدی', 'button_label' => $isHomeTarget ? 'دیدن صفحه‌ی اصلی' : 'دیدن صفحه‌ی هدف', 'url' => $targetUrl],
             'fallback_used' => true,
         ];
     }
@@ -161,7 +173,12 @@ class ContentWriter
         $quality = ['checks' => $checks];
         try {
             $text = collect((array) $item->blocks)->map(fn ($b) => $b['content'] ?? implode("\n", (array) ($b['items'] ?? [])))->implode("\n\n");
-            $quality['ai'] = $this->ai->json($site, 'fast', 'content-review', Prompt::get('content-review', ['keyword' => $item->keyword?->keyword, 'article' => mb_substr($text, 0, 14000)]), 'ممیزی کن.', ['max_tokens' => 1200, 'temperature' => 0.1]);
+            $sourceContext = $this->sourceContext($site, $item);
+            $quality['ai'] = $this->ai->json($site, 'fast', 'content-review', Prompt::get('content-review', [
+                'keyword' => $item->keyword?->keyword,
+                'source_context' => $sourceContext,
+                'article' => mb_substr($text, 0, 14000),
+            ]), 'ممیزی کن.', ['max_tokens' => 1600, 'temperature' => 0.1]);
         } catch (\Throwable $e) {
             $quality['ai'] = ['verdict' => 'revise', 'quality' => 0, 'eeat' => 0, 'ai_likeness' => 100, 'issues' => ['ممیزی هوش مصنوعی انجام نشد: '.mb_substr($e->getMessage(), 0, 180)], 'fixes' => []];
         }
@@ -176,6 +193,35 @@ class ContentWriter
             'cost_usd' => (float) \Vatan\Seo\Models\AiCall::where('site_id', $site->id)->whereIn('purpose', ['content-brief', 'content-draft', 'content-review', 'serp-research'])->where('created_at', '>=', $item->created_at)->sum('cost_usd'),
         ]);
         return $item;
+    }
+
+    /** Keep legacy redrafts and scheduled retries grounded in the same first-party facts. */
+    private function sourceContext(Site $site, ContentItem $item): array
+    {
+        $context = (array) data_get($item->brief, 'source_context', []);
+        if (empty($context['brand_facts'])) {
+            $context['brand_facts'] = array_values(array_filter(array_merge(
+                [trim((string) $site->brand_brief), trim((string) $site->niche)],
+                (array) config('seo-engine.host.editorial_facts', []),
+            ), fn ($fact) => is_string($fact) && trim($fact) !== ''));
+        }
+        if (empty($context['products'])) {
+            $urls = array_fill_keys((array) data_get($item->brief, 'product_links', []), true);
+            $context['products'] = collect(ConnectorFactory::for($site)->products(200))
+                ->filter(fn ($product) => ! empty($product['url']) && isset($urls[$product['url']]))
+                ->take(8)->map(fn ($product) => [
+                    'title' => $product['title'], 'category' => $product['category'],
+                    'description' => $product['description'], 'keywords' => $product['keywords'] ?? [],
+                    'url' => $product['url'],
+                ])->values()->all();
+        }
+        $context['target_url'] ??= $item->target_url;
+        $brief = (array) $item->brief;
+        $brief['source_context'] = $context;
+        $item->brief = $brief;
+        $item->save();
+
+        return $context;
     }
 
     /** امتیاز سئوی قاعده‌محور (بدون هزینه) */
