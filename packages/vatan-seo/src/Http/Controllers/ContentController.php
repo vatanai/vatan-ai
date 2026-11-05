@@ -10,6 +10,7 @@ use Vatan\Seo\Models\Keyword;
 use Vatan\Seo\Services\RunRecorder;
 use Vatan\Seo\Services\AutoPublisher;
 use Vatan\Seo\Services\Notifier;
+use Vatan\Seo\Services\ContentOperationLock;
 use Vatan\Seo\Support\Budget;
 use Vatan\Seo\Support\Fa;
 
@@ -38,6 +39,12 @@ class ContentController extends BaseController
         $site = $this->site();
         $data = $request->validate(['keyword_id' => 'required|integer', 'mode' => 'in:brief,full']);
         $kw = Keyword::where('site_id', $site->id)->findOrFail($data['keyword_id']);
+        $lock = ContentOperationLock::forKeyword($site, $kw->id);
+        if (! $lock->get()) {
+            return back()->with('warning', 'تولید همین کلمه در حال اجراست؛ برای جلوگیری از مقاله و هزینه‌ی تکراری تا پایان همان اجرا صبر کنید.');
+        }
+
+        try {
         $existing = ContentItem::where('site_id', $site->id)->where('keyword_id', $kw->id)->latest()->first();
         if ($existing) {
             return redirect()->route('seo.content.show', $existing)->with('warning', 'برای این کلمه محتوا وجود دارد؛ برای جلوگیری از مقاله‌ی تکراری همان مورد باز شد.');
@@ -59,6 +66,9 @@ class ContentController extends BaseController
             $notifier->alert($site, 'danger', 'content_generation_failed', 'تولید یا انتشار مقاله ناموفق بود', (string) $run->summary, ['content_item_id' => $item?->id, 'run_id' => $run->id]);
         }
         return $item ? redirect()->route('seo.content.show', $item)->with($run->status === 'failed' ? 'error' : 'success', $run->summary) : back()->with('error', $run->summary);
+        } finally {
+            $lock->release();
+        }
     }
 
     public function show(ContentItem $item, ContentWriter $writer)
@@ -76,6 +86,13 @@ class ContentController extends BaseController
         $site = $this->site();
         abort_unless($item->site_id === $site->id, 404);
         abort_if($item->status === 'published', 409, 'بازنویسی مستقیم مقاله‌ی منتشرشده هنوز پشتیبانی نمی‌شود.');
+        $keywordKey = $item->keyword_id ?: 'item-'.$item->id;
+        $lock = ContentOperationLock::forKeyword($site, $keywordKey);
+        if (! $lock->get()) {
+            return back()->with('warning', 'این مقاله یا کلمه در حال تولید است؛ اجرای دوم شروع نشد تا کار و هزینه تکراری ایجاد نشود.');
+        }
+
+        try {
         @set_time_limit(600);
         if ($note = trim((string) $request->input('note'))) {
             $item->brief = array_merge((array) $item->brief, ['editor_feedback' => $note]);
@@ -90,5 +107,8 @@ class ContentController extends BaseController
             $notifier->alert($site, 'danger', 'content_redraft_failed', 'بازنویسی یا انتشار مقاله ناموفق بود', (string) $run->summary, ['content_item_id' => $item->id, 'run_id' => $run->id]);
         }
         return back()->with($run->status === 'failed' ? 'error' : 'success', $run->summary);
+        } finally {
+            $lock->release();
+        }
     }
 }
