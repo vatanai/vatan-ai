@@ -24,6 +24,11 @@ class LaravelLocalConnector implements SiteConnector
 
     protected function cfg(string $key, mixed $default = null): mixed
     {
+        $siteConfig = $this->site->connectorConfig();
+        if (array_key_exists($key, $siteConfig)) {
+            return $siteConfig[$key];
+        }
+
         return config('seo-engine.host.'.$key, $default);
     }
 
@@ -147,7 +152,7 @@ class LaravelLocalConnector implements SiteConnector
         $columns = DB::getSchemaBuilder()->getColumnListing($instance->getTable());
         $article = $model::create(array_intersect_key($attributes, array_flip($columns)));
 
-        return [(string) $article->getKey(), $this->articleUrl($slug)];
+        return [(string) $article->getKey(), $this->articleUrl($slug), $article->status === 'published'];
     }
 
     protected function firstId(?string $model): ?int

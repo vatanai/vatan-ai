@@ -9,6 +9,7 @@ use Vatan\Seo\Models\ContentItem;
 use Vatan\Seo\Models\Keyword;
 use Vatan\Seo\Services\RunRecorder;
 use Vatan\Seo\Services\AutoPublisher;
+use Vatan\Seo\Services\Notifier;
 use Vatan\Seo\Support\Budget;
 use Vatan\Seo\Support\Fa;
 
@@ -32,7 +33,7 @@ class ContentController extends BaseController
         ]);
     }
 
-    public function generate(Request $request, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher)
+    public function generate(Request $request, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher, Notifier $notifier)
     {
         $site = $this->site();
         $data = $request->validate(['keyword_id' => 'required|integer', 'mode' => 'in:brief,full']);
@@ -52,8 +53,11 @@ class ContentController extends BaseController
                 $item = $writer->draft($site, $item);
                 if ($item->status === 'review') $item = $publisher->publish($site, $item, 'seo-dashboard-auto');
             }
-            return [$item->status === 'failed' ? 'failed' : 'success', 'محتوا برای «'.$kw->keyword.'» ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
+            return [in_array($item->status, ['failed', 'draft'], true) ? 'failed' : 'success', 'محتوا برای «'.$kw->keyword.'» ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
         }, ['trigger' => 'manual']);
+        if ($run->status === 'failed') {
+            $notifier->alert($site, 'danger', 'content_generation_failed', 'تولید یا انتشار مقاله ناموفق بود', (string) $run->summary, ['content_item_id' => $item?->id, 'run_id' => $run->id]);
+        }
         return $item ? redirect()->route('seo.content.show', $item)->with($run->status === 'failed' ? 'error' : 'success', $run->summary) : back()->with('error', $run->summary);
     }
 
@@ -67,7 +71,7 @@ class ContentController extends BaseController
         ]);
     }
 
-    public function redraft(Request $request, ContentItem $item, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher)
+    public function redraft(Request $request, ContentItem $item, ContentWriter $writer, RunRecorder $recorder, AutoPublisher $publisher, Notifier $notifier)
     {
         $site = $this->site();
         abort_unless($item->site_id === $site->id, 404);
@@ -80,8 +84,11 @@ class ContentController extends BaseController
         $run = $recorder->record($site, 'writer', 'content_redraft', function () use ($writer, $publisher, $site, $item) {
             $item = $writer->draft($site, $item);
             if ($item->status === 'review') $item = $publisher->publish($site, $item, 'seo-dashboard-auto');
-            return [$item->status === 'failed' ? 'failed' : 'success', 'بازنویسی/انتشار ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
+            return [in_array($item->status, ['failed', 'draft'], true) ? 'failed' : 'success', 'بازنویسی/انتشار ← '.ContentItem::STATUSES[$item->status], ['content_item_id' => $item->id, 'url' => $item->published_url]];
         }, ['trigger' => 'manual']);
+        if ($run->status === 'failed') {
+            $notifier->alert($site, 'danger', 'content_redraft_failed', 'بازنویسی یا انتشار مقاله ناموفق بود', (string) $run->summary, ['content_item_id' => $item->id, 'run_id' => $run->id]);
+        }
         return back()->with($run->status === 'failed' ? 'error' : 'success', $run->summary);
     }
 }

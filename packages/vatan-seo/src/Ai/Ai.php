@@ -28,7 +28,7 @@ class Ai
         return $this->call($site, $role, $purpose, $system, $user, $opt)['content'];
     }
 
-    /** خروجی JSON تضمین‌شده (با یک بار تلاش برای ترمیم) */
+    /** خروجی JSON تضمین‌شده با تلاش محدود روی مدل‌های جایگزین */
     public function json(Site $site, string $role, string $purpose, string $system, string $user, array $opt = []): array
     {
         $opt['json'] = true;
@@ -36,26 +36,35 @@ class Ai
         $result = $this->call($site, $role, $purpose, $system, $user, $opt);
         $decoded = $this->decode($result['content']);
         if ($decoded === null) {
-            try {
-                // A syntactically invalid response is usually model-specific.
-                // Retry the repair with the next configured candidate first;
-                // retrying the same model with the same prompt often repeats
-                // malformed JSON and leaves scheduled content stuck.
-                $repair = $this->call(
-                    $site,
-                    $role,
-                    $purpose.'-json-repair',
-                    $system."\nThe previous response was not valid JSON. Return a corrected JSON object that satisfies the original schema. Preserve its meaning; do not add facts or commentary.",
-                    "Original request:\n".$user."\n\nInvalid response to repair:\n".$result['content'],
-                    $opt,
-                    [(string) ($result['model'] ?? '')],
-                );
-                $decoded = $this->decode($repair['content']);
-            } catch (\Throwable) {
-                $decoded = null;
+            $excluded = array_values(array_filter([(string) ($result['model'] ?? '')]));
+            $invalidResponse = (string) $result['content'];
+            $repairAttempts = 0;
+            for ($attempt = 0; $attempt < 2; $attempt++) {
+                try {
+                    // A model can return HTTP 200 with malformed JSON. Validate each
+                    // repair and move to a distinct configured candidate if needed.
+                    $repair = $this->call(
+                        $site,
+                        $role,
+                        $purpose.'-json-repair',
+                        $system."\nThe previous response was not valid JSON. Return a corrected JSON object that satisfies the original schema. Preserve its meaning; do not add facts or commentary.",
+                        "Original request:\n".$user."\n\nInvalid response to repair:\n".$invalidResponse,
+                        $opt,
+                        $excluded,
+                    );
+                } catch (\Throwable) {
+                    break;
+                }
+                $repairAttempts++;
+                $repairModel = (string) ($repair['model'] ?? '');
+                if ($repairModel !== '') $excluded[] = $repairModel;
+                $decoded = $this->decode((string) $repair['content']);
+                if ($decoded !== null) break;
+                $invalidResponse = (string) $repair['content'];
             }
             if ($decoded === null) {
-                throw new AiException('پاسخ مدل JSON معتبر نبود ('.$purpose.').');
+                $reason = trim((string) $result['content']) === '' ? 'پاسخ مدل خالی بود' : 'خروجی اولیه ساختار JSON معتبر نداشت';
+                throw new AiException($reason.' و پس از '.$repairAttempts.' تلاش برای ترمیم پاسخ JSON معتبر نشد ('.$purpose.').');
             }
         }
         return $decoded;
@@ -165,9 +174,11 @@ class Ai
         if (! $candidates) {
             throw new AiException("نقش «{$role}» در پروفایل بودجه‌ی فعلی خاموش است.");
         }
-        $alternates = array_values(array_filter($candidates, fn ($candidate) => ! in_array($candidate, $excludeModels, true)));
-        if ($alternates) {
-            $candidates = $alternates;
+        if ($excludeModels) {
+            $candidates = array_values(array_filter($candidates, fn ($candidate) => ! in_array($candidate, $excludeModels, true)));
+            if (! $candidates) {
+                throw new AiException('مدل جایگزین دیگری برای ترمیم پاسخ JSON باقی نمانده است.');
+            }
         }
 
         $maxTokens = (int) ($opt['max_tokens'] ?? 2000);

@@ -6,6 +6,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\TestCase;
+use Vatan\Seo\Agents\ContentQualityGate;
 use Vatan\Seo\Agents\ContentWriter;
 use Vatan\Seo\Ai\Ai;
 use Vatan\Seo\Models\ContentItem;
@@ -40,8 +41,11 @@ class ContentPipelineRecoveryTest extends TestCase
         });
         Schema::create('seo_content_items', function (Blueprint $table) {
             $table->id(); $table->unsignedBigInteger('site_id'); $table->unsignedBigInteger('keyword_id')->nullable();
-            $table->string('type'); $table->string('status'); $table->string('title')->nullable(); $table->json('brief')->nullable();
-            $table->json('quality')->nullable(); $table->text('reviewer_note')->nullable(); $table->timestamps();
+            $table->string('type'); $table->string('status'); $table->string('title')->nullable(); $table->string('slug')->nullable();
+            $table->string('meta_title')->nullable(); $table->text('meta_description')->nullable(); $table->json('blocks')->nullable();
+            $table->json('faq')->nullable(); $table->unsignedInteger('word_count')->default(0); $table->unsignedInteger('seo_score')->nullable();
+            $table->json('brief')->nullable(); $table->json('quality')->nullable(); $table->text('reviewer_note')->nullable();
+            $table->decimal('cost_usd', 10, 4)->default(0); $table->timestamps();
         });
     }
 
@@ -99,14 +103,17 @@ class ContentPipelineRecoveryTest extends TestCase
         $publisher = \Mockery::mock(AutoPublisher::class);
         $publisher->shouldReceive('publish')->once()->withArgs(fn (Site $publishSite, ContentItem $publishItem, string $source) =>
             $publishSite->is($site) && $publishItem->is($item) && $source === 'seo-auto'
-        )->andReturnUsing(fn (Site $publishSite, ContentItem $publishItem) => $publishItem);
+        )->andReturnUsing(function (Site $publishSite, ContentItem $publishItem) {
+            $publishItem->update(['status' => 'published']);
+            return $publishItem->fresh();
+        });
 
         $result = (new ContentPipeline($writer, $ai, $publisher))->handle($site, $scenario);
 
         self::assertSame('success', $result[0]);
         self::assertSame(1, $result[2]['published']);
         self::assertSame(1, $item->fresh()->brief['pipeline_retry_count']);
-        self::assertSame('review', $item->fresh()->status);
+        self::assertSame('published', $item->fresh()->status);
     }
 
     #[RunInSeparateProcess]
@@ -145,6 +152,38 @@ class ContentPipelineRecoveryTest extends TestCase
     }
 
     #[RunInSeparateProcess]
+    public function test_destination_draft_is_reported_as_pipeline_failure_not_publication(): void
+    {
+        [$site, $scenario] = $this->siteAndScenario();
+        $item = ContentItem::create([
+            'site_id' => $site->id,
+            'type' => 'article',
+            'status' => 'review',
+            'title' => 'راهنمای آزمایشی',
+            'brief' => ['word_target' => 1200],
+            'quality' => ['gate' => ['passed' => true]],
+        ]);
+
+        $ai = \Mockery::mock(Ai::class);
+        $ai->shouldReceive('available')->once()->with($site, 'strategist')->andReturnTrue();
+        $writer = \Mockery::mock(ContentWriter::class);
+        $writer->shouldNotReceive('brief');
+        $writer->shouldNotReceive('draft');
+        $publisher = \Mockery::mock(AutoPublisher::class);
+        $publisher->shouldReceive('publish')->once()->andReturnUsing(function (Site $publishSite, ContentItem $publishItem) {
+            $publishItem->update(['status' => 'draft']);
+            return $publishItem->fresh();
+        });
+
+        $result = (new ContentPipeline($writer, $ai, $publisher))->handle($site, $scenario);
+
+        self::assertSame('failed', $result[0]);
+        self::assertSame(0, $result[2]['published']);
+        self::assertSame(1, $result[2]['blocked']);
+        self::assertSame('draft', $item->fresh()->status);
+    }
+
+    #[RunInSeparateProcess]
     public function test_existing_stale_brief_is_recovered_even_when_new_brief_quota_is_exhausted(): void
     {
         [$site, $scenario] = $this->siteAndScenario(0);
@@ -179,5 +218,30 @@ class ContentPipelineRecoveryTest extends TestCase
 
         self::assertSame('failed', $result[0]);
         self::assertSame(1, $item->fresh()->brief['pipeline_retry_count']);
+    }
+
+    #[RunInSeparateProcess]
+    public function test_empty_writer_output_is_retried_and_never_sent_to_quality_review(): void
+    {
+        [$site] = $this->siteAndScenario();
+        $item = ContentItem::create([
+            'site_id' => $site->id,
+            'type' => 'article',
+            'status' => 'brief',
+            'title' => 'راهنمای آزمایشی',
+            'brief' => ['word_target' => 1200],
+        ]);
+
+        $ai = \Mockery::mock(Ai::class);
+        $ai->shouldReceive('json')->twice()->andReturn([]);
+        $gate = \Mockery::mock(ContentQualityGate::class);
+        $gate->shouldNotReceive('evaluate');
+
+        $result = (new ContentWriter($ai, $gate))->draft($site, $item);
+
+        self::assertSame('failed', $result->status);
+        self::assertSame(0, $result->word_count);
+        self::assertSame(false, data_get($result->quality, 'gate.passed'));
+        self::assertStringContainsString('خالی یا فاقد بلوک متنی معتبر', $result->reviewer_note);
     }
 }

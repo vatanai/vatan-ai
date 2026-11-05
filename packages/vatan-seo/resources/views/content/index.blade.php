@@ -6,7 +6,7 @@
   $seoIcon = 'fa-feather-pointed';
   $seoHelp = 'content.page';
   $seoSubtitle = 'خط تولید مقاله‌ی یونیک: پژوهش ← بریف ← نگارش ← کنترل کیفیت سخت‌گیرانه ← انتشار خودکار و گزارش لینک در تلگرام.';
-  $tones = ['published' => 'success', 'review' => 'warning', 'approved' => 'info', 'failed' => 'danger', 'rejected' => 'danger', 'drafting' => 'info', 'brief' => 'info', 'idea' => ''];
+  $tones = ['published' => 'success', 'review' => 'warning', 'approved' => 'info', 'draft' => 'warning', 'failed' => 'danger', 'rejected' => 'danger', 'drafting' => 'info', 'brief' => 'info', 'idea' => ''];
 @endphp
 
 @section('seo-page')
@@ -14,7 +14,7 @@
   <div class="seo-stack">
     <div class="seo-chips">
       <a href="{{ route('seo.content.index') }}" class="seo-chip {{ ! $status ? 'is-active' : '' }}">همه</a>
-      @foreach(['review', 'brief', 'published', 'idea', 'rejected', 'failed'] as $st)
+      @foreach(['review', 'brief', 'published', 'draft', 'idea', 'rejected', 'failed'] as $st)
         <a href="{{ route('seo.content.index', ['status' => $st]) }}" class="seo-chip {{ $status === $st ? 'is-active' : '' }}">{{ ContentItem::STATUSES[$st] }} <span class="n">{{ Fa::n($counts[$st] ?? 0) }}</span></a>
       @endforeach
     </div>

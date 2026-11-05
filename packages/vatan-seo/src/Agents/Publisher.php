@@ -25,7 +25,21 @@ class Publisher
         if (! $gate['passed'] || ! data_get($item->quality, 'gate.passed')) {
             throw new \RuntimeException('دروازه‌ی کیفیت انتشار را رد کرد: '.implode('، ', $gate['errors']));
         }
-        [$ref, $url] = ConnectorFactory::for($site)->publish($item);
+        [$ref, $url, $isPubliclyPublished] = ConnectorFactory::for($site)->publish($item);
+        if (! $isPubliclyPublished) {
+            $item->update([
+                'status' => 'draft',
+                'published_ref' => $ref,
+                'published_url' => null,
+                'published_at' => null,
+                'approved_by' => null,
+                'approved_at' => null,
+                'reviewer_note' => 'مقصد محتوا را به‌صورت پیش‌نویس ذخیره کرد؛ انتشار عمومی انجام نشده و تسک کلمه انجام‌شده نیست.',
+            ]);
+
+            return $item->fresh();
+        }
+
         $item->update([
             'status' => 'published',
             'published_ref' => $ref,

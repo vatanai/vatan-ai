@@ -33,9 +33,13 @@ class ContentPipeline implements Handler
                 $stats['blocked']++;
                 continue;
             }
-            $this->publisher->publish($site, $item, 'seo-auto');
-            $stats['published']++;
-            $articleLeft--;
+            $item = $this->publisher->publish($site, $item, 'seo-auto');
+            if ($item->status === 'published') {
+                $stats['published']++;
+                $articleLeft--;
+            } else {
+                $stats['blocked']++;
+            }
         }
 
         // Existing briefs and interrupted drafts do not consume new-brief quota.
@@ -87,9 +91,13 @@ class ContentPipeline implements Handler
                 $item = $this->writer->draft($site, $item);
                 if ($item->status === 'review' && data_get($item->quality, 'gate.passed')) {
                     $stats['drafts']++;
-                    $this->publisher->publish($site, $item, 'seo-auto');
-                    $stats['published']++;
-                    $articleLeft--;
+                    $item = $this->publisher->publish($site, $item, 'seo-auto');
+                    if ($item->status === 'published') {
+                        $stats['published']++;
+                        $articleLeft--;
+                    } else {
+                        $stats['blocked']++;
+                    }
                 } else {
                     $stats['blocked']++;
                 }
@@ -97,7 +105,7 @@ class ContentPipeline implements Handler
         }
 
         if ($stats['blocked'] > 0) {
-            return ['failed', sprintf('%s محتوا از کنترل کیفیت عبور نکرد؛ چیزی منتشر نشد. جزئیات در صف محتواست.', Fa::n($stats['blocked'])), $stats];
+            return ['failed', sprintf('%s محتوا از کنترل کیفیت یا انتشار عمومی عبور نکرد؛ چیزی به‌عنوان انتشار موفق ثبت نشد. جزئیات در صف محتواست.', Fa::n($stats['blocked'])), $stats];
         }
         if (! array_sum($stats)) {
             $nextBrief = Task::where('site_id', $site->id)->where('playbook_key', 'kw.brief')

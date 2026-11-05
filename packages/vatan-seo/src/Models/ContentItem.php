@@ -14,6 +14,7 @@ class ContentItem extends SeoModel
         'drafting' => 'در حال نگارش',
         'review' => 'در صف پردازش خودکار',
         'approved' => 'تأیید شد',
+        'draft' => 'پیش‌نویس در مقصد',
         'published' => 'منتشر شد',
         'rejected' => 'رد شد',
         'failed' => 'خطا',

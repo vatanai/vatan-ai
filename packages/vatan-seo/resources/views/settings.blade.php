@@ -143,7 +143,7 @@
         <div class="seo-field"><label>آدرس وردپرس</label><input name="url" class="seo-input seo-ltr" style="display:block" value="{{ $connectorConfig['url'] ?? '' }}"></div>
         <div class="seo-field"><label>نام کاربری</label><input name="username" class="seo-input seo-ltr" style="display:block" value="{{ $connectorConfig['username'] ?? '' }}"></div>
         <div class="seo-field"><label>رمز برنامه</label><input name="app_password" type="password" class="seo-input" placeholder="{{ ! empty($site->connectorConfig()['app_password']) ? '•••••• (ذخیره شده)' : '' }}"></div>
-        <div class="seo-field"><label>وضعیت انتشار</label><select name="publish_status" class="seo-select"><option value="draft" @selected(($connectorConfig['publish_status'] ?? 'draft') === 'draft')>پیش‌نویس در وردپرس</option><option value="publish" @selected(($connectorConfig['publish_status'] ?? '') === 'publish')>انتشار مستقیم</option></select></div>
+        <div class="seo-field"><label>وضعیت انتشار</label><select name="publish_status" class="seo-select"><option value="draft" @selected(($connectorConfig['publish_status'] ?? '') === 'draft')>پیش‌نویس؛ بدون انتشار عمومی</option><option value="publish" @selected(($connectorConfig['publish_status'] ?? 'publish') === 'publish')>انتشار مستقیم پس از کنترل کیفیت</option></select></div>
         <div class="full seo-row-gap"><button class="btn-pro btn-pro-primary seo-btn-sm"><i class="fa-solid fa-check"></i> ذخیره و تست</button></div>
       </form>
       <form method="POST" action="{{ route('seo.settings.test', 'connector') }}" style="margin-top:8px">@csrf<button class="btn-pro btn-pro-ghost seo-btn-sm" data-loading="تست…"><i class="fa-solid fa-vial"></i> تست خواندن محصولات</button></form>

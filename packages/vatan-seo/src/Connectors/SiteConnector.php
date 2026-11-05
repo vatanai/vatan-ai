@@ -26,6 +26,6 @@ interface SiteConnector
      */
     public function articles(int $limit = 300): array;
 
-    /** انتشار مقاله؛ خروجی: [ref, url] */
+    /** انتشار مقاله؛ خروجی: [ref, url, is_publicly_published] */
     public function publish(ContentItem $item): array;
 }

@@ -142,6 +142,24 @@ class ContentWriter
             ]), $attempt ? 'مقاله را با رفع همه‌ی ایرادهای ممیزی، از نو و کامل بنویس.' : 'مقاله را کامل بنویس.', ['max_tokens' => 9000, 'temperature' => 0.45]);
 
             $blocks = $this->normalizeBlocks((array) ($json['blocks'] ?? []));
+            if ($this->words($blocks) === 0) {
+                $feedback = ['پاسخ قبلی بلوک مقاله‌ی قابل‌استفاده نداشت؛ مقاله را با متن کامل و غیرخالی در بلوک‌های معتبر برگردان.'];
+                $item->fill([
+                    'blocks' => [],
+                    'faq' => [],
+                    'word_count' => 0,
+                    'seo_score' => 0,
+                    'quality' => [
+                        'generation' => ['valid' => false, 'reason' => 'پاسخ نویسنده بلوک متنی قابل‌استفاده نداشت.'],
+                        'gate' => ['passed' => false, 'errors' => ['متن مقاله تولید نشد؛ انتشار مسدود شد.']],
+                    ],
+                    'status' => 'failed',
+                    'reviewer_note' => 'پاسخ مدل نویسنده خالی یا فاقد بلوک متنی معتبر بود؛ ممیزی هوش مصنوعی اجرا نشد و انتشار مسدود ماند.',
+                ])->save();
+
+                continue;
+            }
+
             $faq = array_values(array_filter((array) ($json['faq'] ?? []), fn ($f) => ! empty($f['q']) && ! empty($f['a'])));
             if ($faq) {
                 $blocks[] = ['type' => 'heading', 'content' => 'سؤالات متداول', 'level' => 2];

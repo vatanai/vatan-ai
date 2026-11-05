@@ -27,10 +27,10 @@ class SeoEngineTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function fakeWorld(): void
+    protected function fakeWorld(bool $emptyWriterFixture = false): void
     {
         $jsonRepairFixtureCalls = 0;
-        Http::fake(function (Request $request) use (&$jsonRepairFixtureCalls) {
+        Http::fake(function (Request $request) use (&$jsonRepairFixtureCalls, $emptyWriterFixture) {
             $url = $request->url();
             if (str_contains($url, 'openrouter.ai/api/v1/models')) {
                 return Http::response(['data' => [
@@ -53,6 +53,7 @@ class SeoEngineTest extends TestCase
                     str_contains($sys, 'خوشه‌بندی') => json_encode(['clusters' => [['name' => 'عکس محصول', 'intent' => 'transactional', 'keywords' => ['ساخت عکس محصول با هوش مصنوعی', 'عکاسی صنعتی آنلاین']]]], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'SEO researcher') => '- نتایج برتر فهرست ابزارها هستند\n- شکاف: مثال ایرانی ندارند',
                     str_contains($sys, 'سردبیر ارشد') => json_encode(['angle' => 'راهنمای عملی با مثال فروشگاه‌های ایرانی', 'title_options' => ['ساخت عکس محصول با هوش مصنوعی: راهنمای کامل ۱۴۰۵'], 'outline' => [['h2' => 'ساخت عکس محصول با هوش مصنوعی چیست', 'notes' => 'تعریف'], ['h2' => 'مراحل', 'notes' => '']], 'faqs' => ['هزینه چقدر است؟'], 'secondary_keywords' => ['عکس محصول'], 'internal_links' => [], 'word_target' => 1200, 'cta' => ['title' => 'امتحان کن', 'button_label' => 'شروع', 'url' => '/']], JSON_UNESCAPED_UNICODE),
+                    $emptyWriterFixture && str_contains($sys, 'نویسنده و ویراستار ارشد') => json_encode(['title' => 'مقاله‌ی آزمایشی', 'blocks' => [], 'faq' => []], JSON_UNESCAPED_UNICODE),
                     str_contains($sys, 'نویسنده و ویراستار ارشد') => json_encode(['title' => 'ساخت عکس محصول با هوش مصنوعی: راهنمای کامل', 'slug' => 'ai-product-photo-guide', 'meta_title' => 'ساخت عکس محصول با هوش مصنوعی | راهنمای وطن', 'meta_description' => 'راهنمای کاربردی ساخت عکس محصول با هوش مصنوعی برای فروشگاه‌ها؛ روش انتخاب محصول، آماده‌سازی تصویر، بررسی خروجی و پیوند به ابزارهای واقعی وطن.', 'blocks' => [
                         ['type' => 'lead', 'content' => 'ساخت عکس محصول با هوش مصنوعی به فروشگاه کمک می‌کند تصاویر متناسب با نیاز هر محصول را آماده کند. نتیجه‌ی مناسب به انتخاب ابزار، ورودی باکیفیت و بازبینی دقیق وابسته است. در این راهنما مراحل انتخاب و ارزیابی را می‌خوانید.'],
                         ['type' => 'heading', 'content' => 'ساخت عکس محصول با هوش مصنوعی برای فروشگاه', 'level' => 2], ['type' => 'paragraph', 'content' => 'متن [صفحه اصلی](/) و [محصول عکس](/product/p1) و [ابزار ویدیویی](/product/p2). '.$longParagraph],
@@ -205,6 +206,19 @@ class SeoEngineTest extends TestCase
         $this->assertSame('published', $article->status);
         $this->assertTrue(Task::where('keyword_id', $kw->id)->where('playbook_key', 'kw.article')->where('status', 'done')->exists());
 
+        // تنظیم پیش‌نویس باید وضعیت واقعی مقصد را حفظ کند و به‌عنوان انتشار گزارش نشود.
+        $draftKeyword = Keyword::create(['site_id' => $site->id, 'keyword' => 'عکاسی محصول با هوش مصنوعی', 'normalized' => Fa::normalizeKeyword('عکاسی محصول با هوش مصنوعی'), 'status' => 'target', 'source' => 'manual']);
+        $site->setConnectorConfig(['publish_status' => 'draft']);
+        $site->save();
+        $this->post(route('seo.content.generate'), ['keyword_id' => $draftKeyword->id, 'mode' => 'full'])->assertRedirect();
+        $draftItem = ContentItem::where('keyword_id', $draftKeyword->id)->firstOrFail();
+        $this->assertSame('draft', $draftItem->status);
+        $this->assertSame('draft', Article::whereKey($draftItem->published_ref)->value('status'));
+        $this->assertNull($draftItem->published_at);
+        $this->assertFalse(Task::where('keyword_id', $draftKeyword->id)->where('playbook_key', 'kw.article')->where('status', 'done')->exists());
+        $site->setConnectorConfig(['publish_status' => 'publish']);
+        $site->save();
+
         // سناریوها
         foreach (['health_check', 'crawl_audit', 'audit_runner', 'daily_plan', 'weekly_report', 'opportunities', 'cannibalization', 'content_decay', 'gsc_sync'] as $key) {
             $s = Scenario::where('key', $key)->first();
@@ -322,6 +336,37 @@ class SeoEngineTest extends TestCase
             'purpose' => 'fixture-json-repair-json-repair',
             'ok' => true,
         ]);
+    }
+
+    public function test_empty_writer_payload_stays_failed_without_running_review_or_publishing(): void
+    {
+        $this->fakeWorld(emptyWriterFixture: true);
+        config(['seo-engine.host.url' => 'https://aivatan.com']);
+        $this->artisan('seo:install', ['--budget' => 20])->assertSuccessful();
+        $site = Site::firstOrFail();
+        $keyword = Keyword::create([
+            'site_id' => $site->id,
+            'keyword' => 'ساخت عکس محصول با هوش مصنوعی',
+            'normalized' => Fa::normalizeKeyword('ساخت عکس محصول با هوش مصنوعی'),
+            'status' => 'target',
+            'source' => 'manual',
+        ]);
+
+        ArticleCategory::create(['name' => 'آموزش', 'slug' => 'amoozesh']);
+        ArticleAuthor::create(['name' => 'تیم وطن', 'slug' => 'vatan-team']);
+        $user = $this->admin();
+        $this->actingAs($user, 'admin');
+        config(['seo-engine.telegram.bot_token' => 'test-token']);
+        TelegramAdmin::create(['site_id' => $site->id, 'chat_id' => '-1003903926314', 'name' => 'مدیر تست', 'telegram_user_id' => 217979733, 'message_thread_id' => 18, 'is_active' => true]);
+
+        $this->post(route('seo.content.generate'), ['keyword_id' => $keyword->id, 'mode' => 'full'])->assertRedirect();
+        $item = ContentItem::where('keyword_id', $keyword->id)->firstOrFail();
+
+        $this->assertSame('failed', $item->status);
+        $this->assertSame(0, $item->word_count);
+        $this->assertStringContainsString('فاقد بلوک متنی معتبر', $item->reviewer_note);
+        $this->assertSame(0, (int) \Vatan\Seo\Models\AiCall::where('site_id', $site->id)->where('purpose', 'content-review')->count());
+        $this->assertSame(0, Article::count());
     }
 
     public function test_helpers(): void

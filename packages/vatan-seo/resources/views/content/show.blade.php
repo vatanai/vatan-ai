@@ -11,7 +11,7 @@
 
 @section('seo-actions')
   <a href="{{ route('seo.content.index') }}" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-right"></i> بازگشت</a>
-  @if($item->published_url)<a href="{{ $item->published_url }}" target="_blank" rel="noopener" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-up-right-from-square"></i> مشاهده در سایت</a>@endif
+  @if($item->status === 'published' && $item->published_url)<a href="{{ $item->published_url }}" target="_blank" rel="noopener" class="btn-pro btn-pro-ghost"><i class="fa-solid fa-arrow-up-right-from-square"></i> مشاهده در سایت</a>@endif
 @endsection
 
 @section('seo-page')

@@ -104,6 +104,6 @@ class WordPressConnector implements SiteConnector
         if (! $res->successful()) {
             throw new RuntimeException('انتشار در وردپرس ناموفق بود: '.mb_substr($res->body(), 0, 300));
         }
-        return [(string) $res->json('id'), (string) $res->json('link')];
+        return [(string) $res->json('id'), (string) $res->json('link'), $res->json('status') === 'publish'];
     }
 }
