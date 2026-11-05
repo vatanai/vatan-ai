@@ -55,4 +55,17 @@ class ContentQualityGateTest extends TestCase
         self::assertFalse($result['passed']);
         self::assertContains('همه‌ی لینک‌ها داخلی و از فهرست واقعی', $result['errors']);
     }
+
+    public function test_gate_rejects_internal_prompt_or_editor_workflow_leaks(): void
+    {
+        [$site, $item] = $this->validItem(str_repeat('هر فروشگاه باید تصویر و ابزار را با نیاز واقعی مشتری بسنجد. ', 180));
+        $blocks = $item->blocks;
+        $blocks[2]['content'] .= ' قانون ثابتی در این بریف تعریف نشده است.';
+        $item->blocks = $blocks;
+
+        $result = (new ContentQualityGate())->evaluate($site, $item);
+
+        self::assertFalse($result['passed']);
+        self::assertContains('نبودِ نشانه‌های فرایند داخلی در متن نهایی', $result['errors']);
+    }
 }

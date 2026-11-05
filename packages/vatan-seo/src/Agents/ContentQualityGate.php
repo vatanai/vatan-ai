@@ -42,6 +42,13 @@ class ContentQualityGate
         $targetLinked = $targetUrl && collect($validInternal)->contains(fn ($link) => $this->normalizeUrl($site, $link['url']) === $targetUrl);
         $leadWords = $this->words([['content' => $lead]]);
         $ai = (array) data_get($item->quality, 'ai', []);
+        $articleText = collect($blocks)->map(fn ($block) => implode(' ', array_filter([
+            (string) ($block['content'] ?? ''),
+            implode(' ', (array) ($block['items'] ?? [])),
+            (string) ($block['title'] ?? ''),
+            (string) ($block['button_label'] ?? ''),
+        ])))->push(collect((array) $item->faq)->map(fn ($faq) => ($faq['q'] ?? '').' '.($faq['a'] ?? ''))->implode(' '))->implode("\n");
+        $leaksInternalWorkflow = preg_match('/(?:در\s+این\s+بریف|قانون\s+ثابت.{0,40}بریف|بازخورد\s+(?:ویراستار|ممیزی)|طبق\s+بازخورد|منابع\s+مجاز|editor_feedback|word_target|internal_link_catalog)/iu', $articleText) === 1;
 
         $checks = [
             'حداقل ۴ سرفصل H2' => $headings->count() >= 4,
@@ -59,6 +66,7 @@ class ContentQualityGate
             'لینک به صفحه‌ی هدف کلمه' => (bool) $targetLinked,
             'حداقل ۳ پرسش متداول' => count((array) $item->faq) >= 3,
             'فراخوان اقدام موجود' => $blocks->contains('type', 'cta'),
+            'نبودِ نشانه‌های فرایند داخلی در متن نهایی' => ! $leaksInternalWorkflow,
             'ممیزی هوش مصنوعی قابل‌قبول' => ($ai['verdict'] ?? null) === 'publish'
                 && (int) ($ai['quality'] ?? 0) >= 80 && (int) ($ai['eeat'] ?? 0) >= 70 && (int) ($ai['ai_likeness'] ?? 100) <= 40,
         ];
